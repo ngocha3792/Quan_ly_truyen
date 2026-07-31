@@ -186,6 +186,56 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(50)
   WORKER_CONCURRENCY = 5;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  CLOUDINARY_ENABLED = false;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_CLOUD_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_API_SECRET?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  CLOUDINARY_ROOT_FOLDER = 'quan-ly-truyen';
+
+  @IsString()
+  @IsNotEmpty()
+  CLOUDINARY_SIGNATURE_ALGORITHM = 'sha256';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(1)
+  CLOUDINARY_UPLOAD_INTENT_TTL_SECONDS = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(1)
+  CLOUDINARY_WEBHOOK_SIGNATURE_TTL_SECONDS = 300;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_AVATAR_UPLOAD_PRESET?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_STORY_COVER_UPLOAD_PRESET?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET?: string;
 }
 
 export function validateEnvironment(
@@ -238,6 +288,34 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     throw new Error(
       'SWAGGER_ENABLED must be false in production unless explicitly reviewed',
     );
+  }
+
+  if (config.CLOUDINARY_ENABLED) {
+    const requiredVars: (keyof EnvironmentVariables)[] = [
+      'CLOUDINARY_CLOUD_NAME',
+      'CLOUDINARY_API_KEY',
+      'CLOUDINARY_API_SECRET',
+      'CLOUDINARY_AVATAR_UPLOAD_PRESET',
+      'CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET',
+      'CLOUDINARY_STORY_COVER_UPLOAD_PRESET',
+      'CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET',
+    ];
+
+    for (const key of requiredVars) {
+      if (!config[key]) {
+        throw new Error(`${key} is required when CLOUDINARY_ENABLED=true`);
+      }
+    }
+
+    if (
+      !['sha256', 'sha1'].includes(
+        config.CLOUDINARY_SIGNATURE_ALGORITHM.toLowerCase(),
+      )
+    ) {
+      throw new Error(
+        'CLOUDINARY_SIGNATURE_ALGORITHM must be either "sha256" or "sha1"',
+      );
+    }
   }
 }
 

@@ -15,6 +15,7 @@ const bootstrapLogger = new Logger('Bootstrap');
 export async function bootstrapApplication(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
+    rawBody: true,
   });
 
   const configService = app.get(ConfigService);

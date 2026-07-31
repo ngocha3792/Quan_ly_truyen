@@ -183,12 +183,24 @@ enum ModerationActionType {
 }
 
 enum MediaStatus {
-  PENDING @map("pending")
-  READY   @map("ready")
-  FAILED  @map("failed")
-  DELETED @map("deleted")
+  PENDING       @map("pending")
+  UPLOADED      @map("uploaded")
+  PROCESSING    @map("processing")
+  READY         @map("ready")
+  FAILED        @map("failed")
+  DELETING      @map("deleting")
+  DELETE_FAILED @map("delete_failed")
+  DELETED       @map("deleted")
 
   @@map("media_status")
+}
+
+enum MediaResourceType {
+  IMAGE @map("image")
+  VIDEO @map("video")
+  RAW   @map("raw")
+
+  @@map("media_resource_type")
 }
 
 enum MediaPurpose {
@@ -406,34 +418,68 @@ model AuthorProfile {
 }
 
 model MediaAsset {
-  id              String       @id @default(uuid()) @db.Uuid
-  uploaderId      String?      @map("uploader_id") @db.Uuid
+  id              String             @id @default(uuid()) @db.Uuid
+  uploaderId      String?            @map("uploader_id") @db.Uuid
   purpose         MediaPurpose
-  status          MediaStatus  @default(PENDING)
-  storageProvider String       @map("storage_provider") @db.VarChar(50)
-  bucket          String       @db.VarChar(120)
-  storageKey      String       @unique @map("storage_key") @db.VarChar(1024)
-  publicUrl       String?      @map("public_url") @db.VarChar(2048)
-  originalName    String       @map("original_name") @db.VarChar(255)
-  mimeType        String       @map("mime_type") @db.VarChar(120)
-  sizeBytes       BigInt       @map("size_bytes")
-  checksumSha256  String?      @map("checksum_sha256") @db.VarChar(64)
+  status          MediaStatus        @default(PENDING)
+  storageProvider String             @map("storage_provider") @db.VarChar(50)
+  bucket          String?            @db.VarChar(120)
+  storageKey      String?            @unique @map("storage_key") @db.VarChar(1024)
+  publicUrl       String?            @map("public_url") @db.VarChar(2048)
+  providerAssetId String?            @unique @map("provider_asset_id") @db.VarChar(255)
+  publicId        String?            @unique @map("public_id") @db.VarChar(512)
+  version         Int?
+  resourceType    MediaResourceType? @map("resource_type")
+  deliveryType    String?            @map("delivery_type") @db.VarChar(50)
+  format          String?            @db.VarChar(30)
+  assetFolder     String?            @map("asset_folder") @db.VarChar(1024)
+  secureUrl       String?            @map("secure_url") @db.VarChar(2048)
+  originalName    String?            @map("original_name") @db.VarChar(255)
+  mimeType        String?            @map("mime_type") @db.VarChar(120)
+  sizeBytes       BigInt?            @map("size_bytes")
+  checksumSha256  String?            @map("checksum_sha256") @db.VarChar(64)
   width           Int?
   height          Int?
+  duration        Decimal?           @db.Decimal(12, 3)
+  uploadExpiresAt DateTime?          @map("upload_expires_at") @db.Timestamptz(3)
+  uploadedAt      DateTime?          @map("uploaded_at") @db.Timestamptz(3)
+  readyAt         DateTime?          @map("ready_at") @db.Timestamptz(3)
   metadata        Json?
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(3)
 
   uploader        User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   avatarOfUsers   User[]          @relation("UserAvatar")
   bannerOfAuthors AuthorProfile[] @relation("AuthorBanner")
   coverOfStories  Story[]         @relation("StoryCover")
+  chapterLinks    ChapterMedia[]
 
   @@index([uploaderId, createdAt])
   @@index([purpose, status])
+  @@index([status, uploadExpiresAt])
+  @@index([storageProvider, providerAssetId])
   @@index([deletedAt])
   @@map("media_assets")
+}
+
+model ChapterMedia {
+  chapterId    String @map("chapter_id") @db.Uuid
+  mediaAssetId String @map("media_asset_id") @db.Uuid
+
+  sortOrder Int     @default(0) @map("sort_order")
+  altText   String? @map("alt_text") @db.VarChar(500)
+  caption   String? @db.VarChar(1000)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter    Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@id([chapterId, mediaAssetId])
+  @@unique([chapterId, sortOrder])
+  @@index([mediaAssetId])
+  @@map("chapter_media")
 }
 
 model Story {
@@ -582,6 +628,7 @@ model Chapter {
   createdBy         User               @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy         User               @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   versions          ChapterVersion[]
+  media             ChapterMedia[]
   comments          Comment[]
   lastReadEntries   LibraryEntry[]     @relation("LibraryLastReadChapter")
   currentProgress   ReadingProgress[]  @relation("CurrentProgressChapter")
