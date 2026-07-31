@@ -2,8 +2,8 @@ import {
   Inject,
   Injectable,
   NestMiddleware,
-  UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import { UnsupportedMediaTypeException } from '@/common/exceptions';
 
 import {
   COMMON_MIDDLEWARE_OPTIONS,
@@ -72,10 +72,8 @@ export class JsonContentTypeMiddleware
 
     next(
       new UnsupportedMediaTypeException({
-        code: 'UNSUPPORTED_CONTENT_TYPE',
-        message:
-          'Endpoint này chỉ chấp nhận nội dung JSON',
-        received: contentType ?? null,
+        message: 'Endpoint này chỉ chấp nhận nội dung JSON',
+        received: contentType ?? undefined,
         supported: [
           'application/json',
           'application/*+json',

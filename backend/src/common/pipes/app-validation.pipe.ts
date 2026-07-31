@@ -1,14 +1,9 @@
-import {
-    BadRequestException,
-    ValidationPipe,
-} from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
-
-export interface ValidationIssue {
-    field: string;
-    code: string;
-    message: string;
-}
+import {
+    ValidationException,
+    type ValidationIssue,
+} from '@/common/exceptions';
 
 function flattenValidationErrors(
     errors: ValidationError[],
@@ -19,7 +14,7 @@ function flattenValidationErrors(
             ? `${parentPath}.${error.property}`
             : error.property;
 
-        const currentIssues = Object.entries(
+        const currentIssues: ValidationIssue[] = Object.entries(
             error.constraints ?? {},
         ).map(([code, message]) => ({
             field,
@@ -55,9 +50,7 @@ export class AppValidationPipe extends ValidationPipe {
             },
 
             exceptionFactory: (errors: ValidationError[]) =>
-                new BadRequestException({
-                    code: 'VALIDATION_ERROR',
-                    message: 'Dữ liệu gửi lên không hợp lệ',
+                new ValidationException({
                     issues: flattenValidationErrors(errors),
                 }),
         });

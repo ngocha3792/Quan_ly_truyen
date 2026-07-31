@@ -4,7 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import {
   COMMON_HTTP_TIMEOUT_MS,
   DEFAULT_HTTP_TIMEOUT_MS,
-} from './common-interceptors.constants';
+} from '@/common/constants';
 import { LoggingInterceptor } from './logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './response-envelope.interceptor';
 import { TimeoutInterceptor } from './timeout.interceptor';

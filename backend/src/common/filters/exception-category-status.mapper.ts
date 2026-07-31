@@ -17,6 +17,7 @@ const CATEGORY_STATUS_MAP: Readonly<Record<ExceptionCategory, number>> = {
   [ExceptionCategory.REQUEST_TIMEOUT]: HttpStatus.REQUEST_TIMEOUT,
   [ExceptionCategory.BAD_GATEWAY]: HttpStatus.BAD_GATEWAY,
   [ExceptionCategory.SERVICE_UNAVAILABLE]: HttpStatus.SERVICE_UNAVAILABLE,
+  [ExceptionCategory.INFRASTRUCTURE]: HttpStatus.SERVICE_UNAVAILABLE,
   [ExceptionCategory.INTERNAL]: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 

@@ -9,12 +9,16 @@ import { Reflector } from '@nestjs/core';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import {
-  ApiEnvelope,
-  ApiSuccessResponse,
-} from './api-success-response.interface';
-import { SKIP_RESPONSE_ENVELOPE_KEY } from './interceptor-metadata.constants';
+import { SKIP_RESPONSE_ENVELOPE_KEY } from '@/common/constants';
+import type { ApiSuccessResponse } from '@/common/interfaces/http';
 import type { HttpRequestWithContext } from './request-context.interface';
+
+export interface ApiErrorEnvelopeLike {
+  success: false;
+  error: unknown;
+}
+
+export type ApiEnvelope<T> = ApiSuccessResponse<T> | ApiErrorEnvelopeLike;
 
 @Injectable()
 export class ResponseEnvelopeInterceptor<T>

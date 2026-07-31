@@ -11,16 +11,3 @@ export interface NormalizedException {
   retryable: boolean;
   logLevel: 'warn' | 'error';
 }
-
-export interface ApiErrorResponse {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    details?: PublicExceptionDetails;
-    retryable: boolean;
-  };
-  requestId: string;
-  timestamp: string;
-  path: string;
-}

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CommonFiltersModule } from './common/filters';
 import { CommonInterceptorsModule } from './common/interceptors';
 import {
   CommonMiddlewaresModule,
@@ -38,6 +39,7 @@ import {
       },
     }),
     CommonInterceptorsModule,
+    CommonFiltersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

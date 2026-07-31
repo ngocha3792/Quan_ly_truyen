@@ -1,21 +1,10 @@
-import type { PermissionCode, RoleCode } from '../enums';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 
-/**
- * Minimal authenticated-principal shape consumed by common guards.
- * The JWT strategy may attach additional properties without affecting guards.
- */
-export interface GuardPrincipal {
-  userId?: string;
+export type GuardPrincipal = AuthPrincipal & {
   sub?: string;
-  sessionId?: string;
   sid?: string;
-
-  roles?: readonly (RoleCode | string)[];
-  permissions?: readonly (PermissionCode | string)[];
-
-  emailVerified?: boolean;
   emailVerifiedAt?: Date | string | null;
-}
+};
 
 export interface GuardHttpRequest {
   user?: GuardPrincipal;

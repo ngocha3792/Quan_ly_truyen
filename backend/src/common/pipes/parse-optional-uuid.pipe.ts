@@ -1,9 +1,9 @@
 import {
     ArgumentMetadata,
-    BadRequestException,
     ParseUUIDPipe,
     PipeTransform,
 } from '@nestjs/common';
+import { InvalidInputException } from '@/common/exceptions';
 
 export class ParseOptionalUuidPipe
     implements PipeTransform<unknown, Promise<string | undefined>> {
@@ -24,10 +24,9 @@ export class ParseOptionalUuidPipe
         }
 
         if (typeof value !== 'string') {
-            throw new BadRequestException({
+            throw new InvalidInputException({
                 code: 'INVALID_UUID',
-                message: `${metadata.data ?? 'value'
-                    } phải là UUID hợp lệ`,
+                message: `${metadata.data ?? 'value'} phải là UUID hợp lệ`,
             });
         }
 

@@ -1,9 +1,9 @@
 import {
     ArgumentMetadata,
-    BadRequestException,
     PipeTransform,
 } from '@nestjs/common';
 import { isISO8601 } from 'class-validator';
+import { InvalidInputException } from '@/common/exceptions';
 
 export interface ParseIsoDatePipeOptions {
     optional?: boolean;
@@ -31,7 +31,7 @@ export class ParseIsoDatePipe
                 return undefined;
             }
 
-            throw new BadRequestException({
+            throw new InvalidInputException({
                 code: 'DATE_REQUIRED',
                 message: `${field} là bắt buộc`,
             });
@@ -44,7 +44,7 @@ export class ParseIsoDatePipe
                 strictSeparator: true,
             })
         ) {
-            throw new BadRequestException({
+            throw new InvalidInputException({
                 code: 'INVALID_ISO_DATE',
                 message:
                     `${field} phải là ngày giờ ` +

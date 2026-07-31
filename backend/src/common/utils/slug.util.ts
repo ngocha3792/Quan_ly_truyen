@@ -1,3 +1,5 @@
+import { escapeRegExp } from './string.util';
+
 export interface SlugifyOptions {
   separator?: string;
   lowercase?: boolean;
@@ -51,8 +53,4 @@ export function createUniqueSlug(baseSlug: string, suffix: string | number): str
   const normalizedSuffix = slugify(String(suffix));
 
   return [normalizedBase, normalizedSuffix].filter(Boolean).join('-');
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

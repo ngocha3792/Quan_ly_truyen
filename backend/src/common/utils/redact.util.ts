@@ -1,15 +1,8 @@
-const DEFAULT_SENSITIVE_KEYS = new Set([
-  'password',
-  'passwordhash',
-  'currentpassword',
-  'newpassword',
-  'accesstoken',
-  'refreshtoken',
-  'authorization',
-  'cookie',
-  'secret',
-  'clientsecret',
-]);
+import { REDACTED_VALUE, SENSITIVE_FIELD_NAMES } from '@/common/constants';
+
+const DEFAULT_SENSITIVE_KEYS = new Set(
+  SENSITIVE_FIELD_NAMES.map((key) => key.toLowerCase()),
+);
 
 export interface RedactOptions {
   replacement?: string;
@@ -21,7 +14,7 @@ export function redactSensitiveData(
   value: unknown,
   options: RedactOptions = {},
 ): unknown {
-  const replacement = options.replacement ?? '[REDACTED]';
+  const replacement = options.replacement ?? REDACTED_VALUE;
   const maxDepth = options.maxDepth ?? 8;
   const sensitiveKeys = new Set(
     (options.sensitiveKeys ?? [...DEFAULT_SENSITIVE_KEYS]).map((key) =>

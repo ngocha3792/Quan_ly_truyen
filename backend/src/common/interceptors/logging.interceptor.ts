@@ -9,7 +9,7 @@ import { Reflector } from '@nestjs/core';
 import type { Observable } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';
 
-import { SKIP_REQUEST_LOGGING_KEY } from './interceptor-metadata.constants';
+import { SKIP_REQUEST_LOGGING_KEY } from '@/common/constants';
 import type { HttpRequestWithContext } from './request-context.interface';
 
 interface HttpResponseLike {

@@ -1,8 +1,8 @@
 import {
     ArgumentMetadata,
-    BadRequestException,
     PipeTransform,
 } from '@nestjs/common';
+import { InvalidInputException } from '@/common/exceptions';
 
 export interface ParsePositiveIntPipeOptions {
     optional?: boolean;
@@ -41,7 +41,7 @@ export class ParsePositiveIntPipe
                 return undefined;
             }
 
-            throw new BadRequestException({
+            throw new InvalidInputException({
                 code: 'INTEGER_REQUIRED',
                 message: `${field} là bắt buộc`,
             });
@@ -74,7 +74,7 @@ export class ParsePositiveIntPipe
             Number.MAX_SAFE_INTEGER;
 
         if (value < min || value > max) {
-            throw new BadRequestException({
+            throw new InvalidInputException({
                 code: 'INTEGER_OUT_OF_RANGE',
                 message:
                     `${field} phải nằm trong khoảng ` +
@@ -87,8 +87,8 @@ export class ParsePositiveIntPipe
 
     private invalidIntegerException(
         field: string,
-    ): BadRequestException {
-        return new BadRequestException({
+    ): InvalidInputException {
+        return new InvalidInputException({
             code: 'INVALID_INTEGER',
             message: `${field} phải là số nguyên`,
         });

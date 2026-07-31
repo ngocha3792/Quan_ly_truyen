@@ -4,8 +4,8 @@ import {
   Inject,
   Injectable,
   NestMiddleware,
-  ServiceUnavailableException,
 } from '@nestjs/common';
+import { ServiceUnavailableException } from '@/common/exceptions';
 
 import {
   COMMON_MIDDLEWARE_OPTIONS,
@@ -48,12 +48,11 @@ function safeTokenEquals(
 
 @Injectable()
 export class MaintenanceModeMiddleware
-  implements NestMiddleware
-{
+  implements NestMiddleware {
   constructor(
     @Inject(COMMON_MIDDLEWARE_OPTIONS)
     private readonly options: CommonMiddlewaresOptions,
-  ) {}
+  ) { }
 
   async use(
     request: MiddlewareHttpRequest,
@@ -86,8 +85,8 @@ export class MaintenanceModeMiddleware
 
     const path = normalizePath(
       nonEmptyString(request.originalUrl) ??
-        nonEmptyString(request.url) ??
-        '/',
+      nonEmptyString(request.url) ??
+      '/',
     );
     const allowedPaths =
       maintenanceOptions.allowedPaths ??
@@ -131,7 +130,7 @@ export class MaintenanceModeMiddleware
         message:
           state.message ??
           'Hệ thống đang bảo trì, vui lòng thử lại sau',
-        retryAfterSeconds: state.retryAfterSeconds,
+        details: state.retryAfterSeconds ? { retryAfterSeconds: state.retryAfterSeconds } : undefined,
       }),
     );
   }

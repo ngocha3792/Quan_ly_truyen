@@ -6,11 +6,9 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
+import type { ApiErrorResponse } from '@/common/interfaces/http';
 import { ExceptionNormalizer } from './exception-normalizer';
-import {
-  ApiErrorResponse,
-  NormalizedException,
-} from './normalized-exception.interface';
+import { NormalizedException } from './normalized-exception.interface';
 import {
   extractRequestMetadata,
   HttpRequestLike,

@@ -13,12 +13,12 @@ import {
 } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 
-import { RequestTimeoutException } from '../exceptions';
-import { COMMON_HTTP_TIMEOUT_MS } from './common-interceptors.constants';
 import {
+  COMMON_HTTP_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS_KEY,
   SKIP_REQUEST_TIMEOUT_KEY,
-} from './interceptor-metadata.constants';
+} from '@/common/constants';
+import { RequestTimeoutException } from '../exceptions';
 
 @Injectable()
 export class TimeoutInterceptor<T>

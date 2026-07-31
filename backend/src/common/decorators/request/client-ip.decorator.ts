@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 
 import { HTTP_HEADERS } from '@/common/constants';
+import { resolveClientIp } from '@/common/utils';
 
 interface RequestWithIp {
   ip?: unknown;
@@ -14,13 +15,6 @@ interface RequestWithIp {
   socket?: {
     remoteAddress?: unknown;
   };
-}
-
-function normalizeForwardedFor(
-  value: string | string[] | undefined,
-): string | undefined {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return raw?.split(',')[0]?.trim() || undefined;
 }
 
 /**
@@ -36,18 +30,19 @@ export const ClientIp = createParamDecorator(
       .switchToHttp()
       .getRequest<RequestWithIp>();
 
-    const values: unknown[] = [
-      request.requestContext?.ipAddress,
-      request.ip,
-      normalizeForwardedFor(
-        request.headers?.[HTTP_HEADERS.X_FORWARDED_FOR],
-      ),
-      request.socket?.remoteAddress,
-    ];
+    if (
+      typeof request.requestContext?.ipAddress === 'string' &&
+      request.requestContext.ipAddress.length > 0
+    ) {
+      return request.requestContext.ipAddress;
+    }
 
-    return values.find(
-      (value): value is string =>
-        typeof value === 'string' && value.length > 0,
-    );
+    const resolved = resolveClientIp({
+      forwardedFor: request.headers?.[HTTP_HEADERS.X_FORWARDED_FOR],
+      realIp: request.headers?.[HTTP_HEADERS.X_REAL_IP],
+      socketIp: typeof request.ip === 'string' ? request.ip : typeof request.socket?.remoteAddress === 'string' ? request.socket.remoteAddress : undefined,
+    });
+
+    return resolved ?? undefined;
   },
 );
