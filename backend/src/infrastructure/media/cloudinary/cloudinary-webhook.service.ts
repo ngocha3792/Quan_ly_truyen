@@ -61,8 +61,12 @@ export class CloudinaryWebhookService {
     let payload: Record<string, unknown>;
     try {
       const parsed: unknown = JSON.parse(rawText);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-        throw new Error('payload must be an object');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new InvalidInputException({
+          code: MEDIA_ERROR_CODES.WEBHOOK_PAYLOAD_INVALID,
+          message: 'Payload Cloudinary webhook phải là JSON object',
+        });
+      }
       payload = parsed as Record<string, unknown>;
     } catch (error: unknown) {
       throw new InvalidInputException({
@@ -72,17 +76,23 @@ export class CloudinaryWebhookService {
       });
     }
     const payloadHash = createHash('sha256')
+      .update('cloudinary:')
       .update(input.rawBody)
       .digest('hex');
     const providerKey = payload.notification_id ?? payload.id;
     const eventKey =
-      typeof providerKey === 'string' && providerKey.length <= 255
-        ? providerKey
+      typeof providerKey === 'string' &&
+      providerKey.trim().length > 0 &&
+      providerKey.length <= 255
+        ? providerKey.trim()
         : payloadHash;
     const eventTypeValue =
       payload.notification_type ?? payload.event_type ?? payload.type;
-    const eventType =
-      typeof eventTypeValue === 'string' ? eventTypeValue.slice(0, 120) : null;
+    const eventType = readRequiredString(eventTypeValue, 'notification_type');
+    if (eventType.length > 120) {
+      throw invalidWebhookPayload('notification_type vượt quá 120 ký tự');
+    }
+    validateAssetEventPayload(eventType, payload);
     try {
       await this.prisma.inboundWebhookEvent.create({
         data: {
@@ -119,4 +129,47 @@ export class CloudinaryWebhookService {
       });
     }
   }
+}
+
+const ASSET_EVENT_TYPES = new Set([
+  'upload',
+  'resource_created',
+  'resource_uploaded',
+  'delete',
+  'resource_deleted',
+]);
+
+function validateAssetEventPayload(
+  eventType: string,
+  payload: Record<string, unknown>,
+): void {
+  if (!ASSET_EVENT_TYPES.has(eventType.toLowerCase())) return;
+  readRequiredString(payload.public_id, 'public_id');
+  const resourceType = readRequiredString(
+    payload.resource_type,
+    'resource_type',
+  ).toLowerCase();
+  if (!['image', 'video', 'raw'].includes(resourceType)) {
+    throw invalidWebhookPayload('resource_type không được hỗ trợ');
+  }
+  if (
+    payload.version !== undefined &&
+    (!Number.isSafeInteger(payload.version) || Number(payload.version) <= 0)
+  ) {
+    throw invalidWebhookPayload('version không hợp lệ');
+  }
+}
+
+function readRequiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw invalidWebhookPayload(`${field} là bắt buộc`);
+  }
+  return value.trim();
+}
+
+function invalidWebhookPayload(message: string): InvalidInputException {
+  return new InvalidInputException({
+    code: MEDIA_ERROR_CODES.WEBHOOK_PAYLOAD_INVALID,
+    message,
+  });
 }

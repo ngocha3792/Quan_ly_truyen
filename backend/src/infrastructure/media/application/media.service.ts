@@ -17,6 +17,7 @@ import {
   StorageException,
   UnsupportedMediaTypeException,
 } from '@/common/exceptions';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import {
   MEDIA_STORAGE,
@@ -37,7 +38,7 @@ import {
 import { MediaOwnershipAuthorizationService } from './media-ownership-authorization.service';
 
 export interface CreateMediaUploadIntentInput {
-  uploaderId: string;
+  principal: AuthPrincipal;
   purpose: MediaPurpose;
   ownerId: string;
   originalName: string;
@@ -63,7 +64,7 @@ export class MediaService {
     const policy = MEDIA_UPLOAD_POLICIES[input.purpose];
     this.validateDeclaredFile(input, policy);
     await this.ownership.assertCanCreate(
-      input.uploaderId,
+      input.principal,
       input.purpose,
       input.ownerId,
     );
@@ -90,7 +91,7 @@ export class MediaService {
     await this.prisma.mediaAsset.create({
       data: {
         id: mediaAssetId,
-        uploaderId: input.uploaderId,
+        uploaderId: input.principal.userId,
         purpose: input.purpose,
         status: MediaStatus.PENDING,
         storageProvider: 'cloudinary',
@@ -128,12 +129,12 @@ export class MediaService {
   }
 
   async confirmUpload(input: {
-    userId: string;
+    principal: AuthPrincipal;
     mediaAssetId: string;
     dto: ConfirmMediaUploadDto;
   }): Promise<MediaAsset> {
     const media = await this.requireMedia(input.mediaAssetId);
-    this.ownership.assertUploader(input.userId, media.uploaderId);
+    this.ownership.assertUploader(input.principal, media.uploaderId);
     if (media.status === MediaStatus.READY) return media;
     if (media.uploadExpiresAt && media.uploadExpiresAt.getTime() < Date.now()) {
       await this.prisma.mediaAsset.updateMany({
@@ -153,6 +154,16 @@ export class MediaService {
       input.dto.publicId !== media.publicId ||
       input.dto.resourceType !== media.resourceType?.toLowerCase()
     ) {
+      await this.prisma.mediaAsset.updateMany({
+        where: {
+          id: media.id,
+          status: { in: [MediaStatus.PENDING, MediaStatus.UPLOADED] },
+        },
+        data: {
+          status: MediaStatus.FAILED,
+          lastProviderErrorCode: MEDIA_ERROR_CODES.CONFIRMATION_INVALID,
+        },
+      });
       throw new InvalidInputException({
         code: MEDIA_ERROR_CODES.CONFIRMATION_INVALID,
         message: 'Thông tin xác nhận upload không khớp intent',
@@ -164,7 +175,10 @@ export class MediaService {
         id: media.id,
         status: { in: [MediaStatus.PENDING, MediaStatus.UPLOADED] },
       },
-      data: { status: MediaStatus.PROCESSING },
+      data: {
+        status: MediaStatus.PROCESSING,
+        processingStartedAt: new Date(),
+      },
     });
     if (claim.count !== 1) {
       const current = await this.requireMedia(media.id);
@@ -200,6 +214,8 @@ export class MediaService {
           duration: stored.duration,
           uploadedAt: readyAt,
           readyAt,
+          processingStartedAt: null,
+          lastProviderErrorCode: null,
         },
       });
       if (updated.count !== 1)
@@ -219,6 +235,11 @@ export class MediaService {
         where: { id: media.id, status: MediaStatus.PROCESSING },
         data: {
           status: MediaStatus.FAILED,
+          processingStartedAt: null,
+          lastProviderErrorCode:
+            error instanceof StorageException
+              ? String(error.code)
+              : MEDIA_ERROR_CODES.CONFIRMATION_INVALID,
           metadata: mergeMetadata(media.metadata, {
             providerOperation: 'confirm',
             errorCode:

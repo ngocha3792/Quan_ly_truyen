@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { MediaStatus } from '@/generated/prisma/client';
+import {
+  InboundWebhookStatus,
+  MediaResourceType,
+} from '@/generated/prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { CloudinaryWebhookInboxProcessor } from './cloudinary-webhook-inbox.processor';
 
 describe('CloudinaryWebhookInboxProcessor', () => {
@@ -7,7 +12,12 @@ describe('CloudinaryWebhookInboxProcessor', () => {
     inboundWebhookEvent: { findMany: jest.fn(), updateMany: jest.fn() },
     mediaAsset: { updateMany: jest.fn() },
   };
-  const processor = new CloudinaryWebhookInboxProcessor(prisma as never);
+  const processor = new CloudinaryWebhookInboxProcessor(
+    prisma as never,
+    new ConfigService({
+      cloudinary: { webhookMaxAttempts: 3, webhookRetryBaseMs: 100 },
+    }),
+  );
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -17,7 +27,9 @@ describe('CloudinaryWebhookInboxProcessor', () => {
         id: 'event-1',
         eventKey: 'key-1',
         eventType: 'upload',
-        payload: { public_id: 'asset-1' },
+        status: InboundWebhookStatus.PENDING,
+        attempts: 0,
+        payload: { public_id: 'asset-1', resource_type: 'image' },
       },
     ]);
     prisma.inboundWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
@@ -30,7 +42,10 @@ describe('CloudinaryWebhookInboxProcessor', () => {
       skipped: 0,
     });
     expect(prisma.mediaAsset.updateMany).toHaveBeenCalledWith({
-      where: { publicId: 'asset-1', status: MediaStatus.PENDING },
+      where: {
+        status: MediaStatus.PENDING,
+        OR: [{ publicId: 'asset-1', resourceType: MediaResourceType.IMAGE }],
+      },
       data: { status: MediaStatus.UPLOADED, uploadedAt: expect.any(Date) },
     });
   });
@@ -41,7 +56,9 @@ describe('CloudinaryWebhookInboxProcessor', () => {
         id: 'event-1',
         eventKey: 'key-1',
         eventType: 'upload',
-        payload: { public_id: 'asset-1' },
+        status: InboundWebhookStatus.PENDING,
+        attempts: 0,
+        payload: { public_id: 'asset-1', resource_type: 'image' },
       },
     ]);
     prisma.inboundWebhookEvent.updateMany.mockResolvedValue({ count: 0 });
@@ -60,7 +77,9 @@ describe('CloudinaryWebhookInboxProcessor', () => {
         id: 'event-1',
         eventKey: 'key-1',
         eventType: 'delete',
-        payload: { public_id: 'asset-1' },
+        status: InboundWebhookStatus.PENDING,
+        attempts: 0,
+        payload: { public_id: 'asset-1', resource_type: 'image' },
       },
     ]);
     prisma.inboundWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
@@ -76,8 +95,54 @@ describe('CloudinaryWebhookInboxProcessor', () => {
     expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: 'pending',
+          status: InboundWebhookStatus.FAILED,
           lastError: 'temporary database failure',
+        }),
+      }),
+    );
+  });
+
+  it('marks unsupported valid events as ignored', async () => {
+    prisma.inboundWebhookEvent.findMany.mockResolvedValue([
+      {
+        id: 'event-ignored',
+        eventKey: 'key-ignored',
+        eventType: 'ping',
+        status: InboundWebhookStatus.PENDING,
+        attempts: 0,
+        payload: {},
+      },
+    ]);
+    prisma.inboundWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    await processor.processBatch();
+    expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: InboundWebhookStatus.IGNORED }),
+      }),
+    );
+    expect(prisma.mediaAsset.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('guards delete updates against an older provider version', async () => {
+    prisma.inboundWebhookEvent.findMany.mockResolvedValue([
+      {
+        id: 'event-delete',
+        eventKey: 'key-delete',
+        eventType: 'delete',
+        status: InboundWebhookStatus.PENDING,
+        attempts: 0,
+        payload: { public_id: 'asset-1', resource_type: 'image', version: 1 },
+      },
+    ]);
+    prisma.inboundWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.mediaAsset.updateMany.mockResolvedValue({ count: 0 });
+    await processor.processBatch();
+    expect(prisma.mediaAsset.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            { OR: [{ version: null }, { version: { lte: 1 } }] },
+          ]),
         }),
       }),
     );

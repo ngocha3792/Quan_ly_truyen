@@ -11,6 +11,20 @@ const logger = new Logger('QueueModule');
 @Module({})
 export class QueueModule {
   static register(): DynamicModule {
+    const enabled =
+      process.env.QUEUE_ENABLED === 'true' &&
+      process.env.REDIS_ENABLED === 'true';
+
+    if (!enabled) {
+      logger.log(
+        'Queue system disabled (QUEUE_ENABLED=false or REDIS_ENABLED=false)',
+      );
+      return {
+        module: QueueModule,
+        global: true,
+      };
+    }
+
     return {
       module: QueueModule,
       global: true,
@@ -18,24 +32,8 @@ export class QueueModule {
         BullModule.forRootAsync({
           inject: [ConfigService],
           useFactory: (configService: ConfigService) => {
-            const queueConfig = configService.get<QueueConfig>('queue');
-            const redisConfig = configService.get<RedisConfig>('redis');
-
-            if (!queueConfig?.enabled || !redisConfig?.enabled) {
-              logger.log(
-                'Queue system disabled (QUEUE_ENABLED=false or REDIS_ENABLED=false)',
-              );
-
-              return {
-                connection: {
-                  host: 'localhost',
-                  port: 6379,
-                  lazyConnect: true,
-                  maxRetriesPerRequest: null,
-                  enableOfflineQueue: false,
-                },
-              };
-            }
+            const queueConfig = configService.getOrThrow<QueueConfig>('queue');
+            const redisConfig = configService.getOrThrow<RedisConfig>('redis');
 
             const redisUrl = new URL(redisConfig.url);
 

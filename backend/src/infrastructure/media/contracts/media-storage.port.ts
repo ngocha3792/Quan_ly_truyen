@@ -31,6 +31,10 @@ export interface DeleteStoredMediaInput {
   invalidate?: boolean;
 }
 
+export interface DeleteStoredMediaResult {
+  outcome: 'deleted' | 'not_found';
+}
+
 export interface BuildMediaUrlInput {
   publicId: string;
   resourceType: 'image' | 'video';
@@ -55,7 +59,7 @@ export interface MediaStoragePort {
     uploadPreset?: string;
   }): Promise<StoredMedia>;
 
-  delete(input: DeleteStoredMediaInput): Promise<void>;
+  delete(input: DeleteStoredMediaInput): Promise<DeleteStoredMediaResult>;
 
   buildUrl(input: BuildMediaUrlInput): string;
 }

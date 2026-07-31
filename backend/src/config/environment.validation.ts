@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  MinLength,
   Max,
   Min,
   validateSync,
@@ -114,6 +115,19 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   DATABASE_URL!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(32)
+  JWT_ACCESS_SECRET!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_ISSUER = 'quan-ly-truyen-api';
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_AUDIENCE = 'quan-ly-truyen-web';
+
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
   MAINTENANCE_MODE = false;
@@ -220,6 +234,39 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   CLOUDINARY_WEBHOOK_SIGNATURE_TTL_SECONDS = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1000))
+  @IsInt()
+  @Min(100)
+  CLOUDINARY_WEBHOOK_POLL_INTERVAL_MS = 1000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 100))
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  CLOUDINARY_WEBHOOK_BATCH_SIZE = 100;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  CLOUDINARY_WEBHOOK_MAX_ATTEMPTS = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5000))
+  @IsInt()
+  @Min(100)
+  CLOUDINARY_WEBHOOK_RETRY_BASE_MS = 5000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  CLOUDINARY_DELETE_MAX_ATTEMPTS = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5000))
+  @IsInt()
+  @Min(100)
+  CLOUDINARY_DELETE_RETRY_BASE_MS = 5000;
 
   @IsOptional()
   @IsString()

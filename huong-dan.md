@@ -1,1173 +1,742 @@
-# HƯỚNG DẪN SỬA MODULE CLOUDINARY
-
-> Tài liệu giao việc cho Codex trong dự án **Quan_ly_truyen-main**.
->
-> Phạm vi chính: `backend/src/infrastructure/media`, cấu hình Cloudinary, Prisma migration, API media, webhook, cleanup và test.
-
----
+# HƯỚNG DẪN SỬA NỐT CLOUDINARY, AUTH VÀ MEDIA
 
 ## 1. Mục tiêu
 
-Hãy sửa và hoàn thiện phần tích hợp Cloudinary để đạt các yêu cầu sau:
+Hoàn thiện phần Cloudinary/media để chạy end-to-end trong backend thực tế.
 
-1. Backend vẫn khởi động bình thường khi `CLOUDINARY_ENABLED=false`.
-2. Khi Cloudinary bị tắt, chỉ các thao tác media mới trả lỗi phù hợp; không được làm toàn bộ API hoặc worker crash lúc bootstrap.
-3. Signed direct upload phải hoạt động end-to-end: tạo intent, upload trực tiếp lên Cloudinary, xác minh kết quả, xác nhận asset và lưu dữ liệu authoritative vào PostgreSQL.
-4. Hỗ trợ đúng các loại media đã khai báo, bao gồm `ATTACHMENT` dạng `raw`.
-5. Không để lại orphan asset khi intent hết hạn hoặc frontend không gọi confirm.
-6. Confirm và delete phải chống race condition, có state transition rõ ràng và idempotent hợp lý.
-7. Webhook không được nhận HTTP 200 rồi bỏ payload; phải có xác minh chữ ký, chống xử lý trùng và lưu bền vững trước khi trả thành công.
-8. Có controller/DTO để frontend có thể sử dụng module media.
-9. Không dùng generic `Error` cho lỗi nghiệp vụ hoặc hạ tầng đã biết.
-10. Có Prisma migration, test, tài liệu cấu hình và các lệnh kiểm tra hoàn tất.
+Các vấn đề còn lại:
 
----
+1. Media API chưa có JWT principal thật.
+2. Passport strategy/global guard chưa được wire vào `AppModule`.
+3. E2E đang mock toàn bộ service và tự gắn `req.user`.
+4. Webhook payload validation/lifecycle còn lỏng.
+5. Webhook inbox processor chưa tự chạy trong worker.
+6. Cleanup có thể bỏ orphan khi actual resource type khác expected.
+7. Event key webhook có thể rỗng.
+8. Delete chưa có admin permission.
+9. Test coverage thiếu.
+10. Hai `.env.example` có thể mâu thuẫn.
+11. `AGENTS.md` tại root đang rỗng.
 
-## 2. Quy tắc bắt buộc khi sửa
-
-- Giữ kiến trúc NestJS hiện tại, gồm port/adapter, service, module và Prisma.
-- Không gọi trực tiếp Cloudinary từ module user, author, story hoặc chapter.
-- Không đưa `CLOUDINARY_API_SECRET` ra response, log, frontend hoặc test snapshot.
-- Không hard-code credential hay upload preset.
-- Không dùng `as any` để bỏ qua lỗi type nếu có thể tạo mapper/type guard rõ ràng.
-- Không xóa enum hoặc model hiện có chỉ để tránh sửa lỗi.
-- Không đổi API công khai một cách tùy tiện; nếu cần đổi field thì phải cập nhật DTO, interface, test và tài liệu cùng lúc.
-- Không đánh dấu hoàn thành khi build, lint hoặc test còn lỗi.
-- Không sửa lan sang nghiệp vụ truyện ngoài phần cần thiết để xác thực quyền sở hữu media.
-- Các message lỗi trả cho client không được chứa Cloudinary secret, full provider response hoặc stack trace.
+Không refactor ngoài auth, media, Cloudinary, webhook, worker, Prisma và test liên quan.
 
 ---
 
-## 3. Hiện trạng cần lưu ý
+## 2. Kiểm tra trước khi sửa
 
-Các file chính đang có:
+1. Đọc toàn bộ `AGENTS.md`.
+2. Đọc toàn bộ file này.
+3. Chạy:
 
-```text
-backend/src/config/cloudinary.config.ts
-backend/src/config/environment.validation.ts
-backend/src/infrastructure/media/media.module.ts
-backend/src/infrastructure/media/application/media.service.ts
-backend/src/infrastructure/media/application/media-query.service.ts
-backend/src/infrastructure/media/application/media-cleanup.service.ts
-backend/src/infrastructure/media/cloudinary/cloudinary.provider.ts
-backend/src/infrastructure/media/cloudinary/cloudinary-media.adapter.ts
-backend/src/infrastructure/media/cloudinary/cloudinary-signature.service.ts
-backend/src/infrastructure/media/cloudinary/cloudinary-url.service.ts
-backend/src/infrastructure/media/cloudinary/cloudinary-webhook.controller.ts
-backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.ts
-backend/src/infrastructure/media/policies/media-upload-policy.registry.ts
-backend/prisma/schema.prisma
+```bash
+git status --short
+git diff --stat
+git diff
 ```
 
-Các lỗi chính của code hiện tại:
+4. Đọc tối thiểu:
 
-- `cloudinaryProvider` ném lỗi ngay lúc bootstrap khi `CLOUDINARY_ENABLED=false`.
-- Policy `ATTACHMENT` tham chiếu `cloudinary.uploadPresets.attachment`, nhưng config và `.env.example` không có preset này.
-- `raw` attachment dùng `public_id` không chứa extension.
-- `expiresAt` hiện chỉ là hạn confirm phía backend, không phải thời gian Cloudinary vô hiệu hóa signed upload.
-- DB chưa lưu `publicId`, `resourceType`, `assetFolder` dự kiến khi tạo intent, khiến cleanup không xóa được unconfirmed upload.
-- Webhook xác minh xong nhưng `processIdempotently()` rỗng.
-- Chưa có MediaController để frontend tạo và confirm intent.
-- Nhiều lỗi đang dùng generic `Error` và dễ biến thành HTTP 500.
-- Confirm/delete chưa có transition nguyên tử để chống hai request chạy đồng thời.
-- Chưa có migration SQL được commit; `.gitignore` đang ignore `backend/prisma/migrations/**/*.sql`.
-- Chưa có test Cloudinary/media đủ dùng.
+```text
+backend/src/app.module.ts
+backend/src/worker.module.ts
+backend/src/common/guards/
+backend/src/common/decorators/
+backend/src/common/interfaces/
+backend/src/config/
+backend/src/infrastructure/media/
+backend/src/infrastructure/queue/
+backend/src/infrastructure/idempotency/
+backend/prisma/schema.prisma
+backend/prisma/migrations/
+backend/test/
+backend/package.json
+backend/.env.example
+backend/docs/.env.example
+```
+
+5. Xác minh tên strategy, permission, token và module thực tế trước khi sửa.
 
 ---
 
 # PHẦN A — BLOCKER P0
 
-## 4. Làm Cloudinary thực sự optional
+## A1. Hoàn thiện JWT authentication
+
+### Vấn đề
+
+`MediaController` dùng `@CurrentUser('userId')`, nhưng runtime chưa đảm bảo:
+
+- Passport strategy tồn tại.
+- Strategy name trùng với guard.
+- JWT được verify.
+- Guard được import/đăng ký.
+- `request.user` có principal.
+
+Controller test tự gắn `req.user`, nên không phát hiện lỗi này.
 
 ### Yêu cầu
 
-Khi cấu hình:
-
-```env
-CLOUDINARY_ENABLED=false
-```
-
-cả hai lệnh sau phải khởi động được:
-
-```bash
-npm run start:dev
-npm run start:worker:dev
-```
-
-Không được ném lỗi lúc Nest khởi tạo module/provider.
-
-### Cách triển khai yêu cầu
-
-Tạo một adapter fallback, ví dụ:
+Tạo hoặc hoàn thiện auth module theo kiến trúc hiện có. Có thể dùng:
 
 ```text
-backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.ts
+src/modules/auth/
+├── auth.module.ts
+├── strategies/
+│   └── jwt-access.strategy.ts
+├── services/
+│   └── access-token-validation.service.ts
+└── interfaces/
+    └── authenticated-principal.interface.ts
 ```
 
-Adapter này phải implement đầy đủ `MediaStoragePort`. Mọi thao tác cần Cloudinary phải ném `ServiceUnavailableException` hoặc exception hạ tầng phù hợp với:
-
-- code ổn định, ví dụ `MEDIA_STORAGE_DISABLED`;
-- HTTP status 503;
-- message không chứa secret;
-- `retryable: false` khi tính năng bị tắt do config.
-
-Chọn implementation của token `MEDIA_STORAGE` theo `cloudinary.enabled`:
-
-```text
-true  -> CloudinaryMediaAdapter
-false -> DisabledMediaStorageAdapter
-```
-
-`cloudinaryProvider` không được tự ném lỗi chỉ vì feature đang disabled.
-
-Các provider phụ thuộc trực tiếp vào Cloudinary client như:
-
-- `CloudinarySignatureService`
-- `CloudinaryUrlService`
-- `CloudinaryWebhookService`
-- `CloudinaryMediaAdapter`
-
-phải được tổ chức để không làm bootstrap thất bại khi disabled. Có thể dùng dynamic module, nullable client token có guard rõ ràng, hoặc provider factory có điều kiện. Chọn một cách nhất quán, dễ test.
-
-Webhook khi Cloudinary disabled phải trả 404 hoặc 503 rõ ràng; không được crash ứng dụng.
-
-### Tiêu chí Done
-
-- Test module bootstrap với `CLOUDINARY_ENABLED=false` pass.
-- `AppModule` và `WorkerModule` đều compile/khởi tạo được.
-- Gọi thao tác tạo upload intent khi disabled trả lỗi có cấu trúc, không phải generic 500.
-- Không cần khai báo cloud name, key, secret hoặc preset khi disabled.
-
----
-
-## 5. Hoàn thiện config cho `ATTACHMENT`
-
-Không được bỏ `MediaPurpose.ATTACHMENT`. Hãy hỗ trợ đầy đủ.
-
-### Thêm biến môi trường
-
-Trong `backend/.env.example`:
-
-```env
-CLOUDINARY_ATTACHMENT_UPLOAD_PRESET=qlt_attachment_signed
-```
-
-Trong `cloudinary.config.ts`:
-
-```typescript
-uploadPresets: {
-  avatar: ...,
-  authorBanner: ...,
-  storyCover: ...,
-  chapterImage: ...,
-  attachment: process.env.CLOUDINARY_ATTACHMENT_UPLOAD_PRESET,
-}
-```
-
-Trong `environment.validation.ts`:
-
-- thêm field tương ứng;
-- yêu cầu field này khi `CLOUDINARY_ENABLED=true`;
-- giữ validation có điều kiện, không bắt buộc khi feature disabled.
-
-### Policy attachment
-
-Không để `allowedFormats: []`, vì điều đó đang có nghĩa là chấp nhận tùy ý. Dùng whitelist rõ ràng, tối thiểu:
-
-```typescript
-allowedFormats: ['pdf', 'txt', 'doc', 'docx', 'zip']
-```
-
-Nếu dự án chưa có use case cho một định dạng thì không thêm định dạng đó.
-
-Thêm MIME whitelist tương ứng vào policy, ví dụ:
-
-```typescript
-allowedMimeTypes: [
-  'application/pdf',
-  'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/zip',
-]
-```
-
-Mọi policy nên có cả `allowedFormats` và `allowedMimeTypes`.
-
-### Tiêu chí Done
-
-- Config load được khi bật Cloudinary và có đủ attachment preset.
-- Thiếu attachment preset khi enabled phải fail fast với lỗi cấu hình rõ ràng.
-- Attachment ngoài whitelist bị từ chối trước khi tạo upload intent.
-
----
-
-## 6. Chuẩn hóa `publicId` và lưu thông tin dự kiến ngay khi tạo intent
-
-### Vấn đề cần giải quyết
-
-Hiện code mặc định:
-
-```typescript
-publicId = mediaAssetId
-```
-
-Cách này không đúng cho Cloudinary raw asset vì attachment cần extension trong `public_id`.
-
-### Cách sửa bắt buộc
-
-Tạo helper/service thuần, có test, ví dụ:
-
-```text
-backend/src/infrastructure/media/policies/media-public-id.service.ts
-```
-
-Quy tắc:
-
-- image/video: `publicId = mediaAssetId`;
-- raw attachment: `publicId = mediaAssetId + '.' + extensionĐãValidate`;
-- extension lấy từ `originalName`, lowercase và phải nằm trong whitelist;
-- không được dùng nguyên tên file người dùng làm public ID;
-- từ chối tên không có extension hoặc extension giả/không hợp lệ;
-- không cho slash, backslash, null byte hoặc path traversal từ input ảnh hưởng folder/public ID.
-
-Nên tạo UUID ở application layer trước khi insert:
-
-```typescript
-const mediaAssetId = randomUUID();
-```
-
-Sau đó tính:
-
-- expected public ID;
-- expected resource type;
-- expected asset folder.
-
-Ngay khi tạo bản ghi `MediaAsset` trạng thái `PENDING`, phải lưu:
-
-```text
-id
-publicId
-resourceType
-assetFolder
-uploadExpiresAt
-storageProvider
-```
-
-Không chờ confirm mới lưu các trường dự kiến này.
-
-Sửa contract `CreateSignedUploadInput` để nhận giá trị đã được chuẩn hóa, không tự tính lại ở nhiều nơi. Ví dụ:
-
-```typescript
-interface CreateSignedUploadInput {
-  mediaAssetId: string;
-  purpose: MediaPurpose;
-  publicId: string;
-  assetFolder: string;
-  resourceType: MediaStorageResourceType;
-  expiresAt: Date;
-}
-```
-
-`CloudinarySignatureService` chỉ ký đúng các giá trị application service đã quyết định.
-
-Khi confirm, so sánh:
-
-```typescript
-input.dto.publicId === media.publicId
-```
-
-không so sánh với `media.id`.
-
-### Tiêu chí Done
-
-- Image public ID là UUID không extension.
-- Raw public ID là UUID kèm extension hợp lệ.
-- Public ID và asset folder đã có trong DB từ trạng thái `PENDING`.
-- Confirm raw asset không thất bại do so sánh với `media.id`.
-- Có test path traversal và extension không hợp lệ.
-
----
-
-## 7. Sửa ý nghĩa TTL và cleanup orphan asset
-
-### Ý nghĩa bắt buộc
-
-`CLOUDINARY_UPLOAD_INTENT_TTL_SECONDS` là **thời hạn backend chấp nhận confirm**, không được mô tả như signed URL chắc chắn hết hiệu lực tại Cloudinary.
-
-Đổi tên field response từ:
-
-```typescript
-expiresAt
-```
-
-thành:
-
-```typescript
-confirmExpiresAt
-```
-
-Nếu cần giữ tương thích, có thể tạm trả cả hai field nhưng đánh dấu `expiresAt` deprecated trong interface/tài liệu. Vì frontend hiện chưa triển khai, ưu tiên đổi sạch sang `confirmExpiresAt`.
-
-### Cleanup bắt buộc
-
-Khi intent `PENDING`, `PROCESSING` hoặc `FAILED` quá hạn:
-
-1. Lấy `publicId` và `resourceType` đã lưu dự kiến.
-2. Gọi delete Cloudinary kể cả khi asset chưa từng được confirm.
-3. Cloudinary trả `not found` vẫn được coi là thành công/idempotent.
-4. Chỉ sau đó mới chuyển DB thành `DELETED`.
-5. Nếu provider delete lỗi, chuyển `DELETE_FAILED`, giữ đủ metadata để retry.
-
-Thêm method batch, ví dụ:
-
-```typescript
-cleanupExpiredUploadIntents(options?: {
-  batchSize?: number;
-  olderThan?: Date;
-}): Promise<CleanupSummary>
-```
-
-Yêu cầu:
-
-- xử lý theo batch;
-- không load toàn bộ bảng vào RAM;
-- có giới hạn số item;
-- trả summary: scanned, deleted, failed, skipped;
-- có log có cấu trúc nhưng không log secret/signature.
-
-Thêm script maintenance, ví dụ:
-
-```text
-backend/scripts/maintenance/cleanup-expired-media.ts
-```
-
-và package script:
-
-```json
-"maintenance:media-cleanup": "tsx scripts/maintenance/cleanup-expired-media.ts"
-```
-
-Nếu hạ tầng queue hiện tại phù hợp, có thể thêm recurring worker job, nhưng script thủ công vẫn phải tồn tại để vận hành và khắc phục sự cố.
-
-### Tiêu chí Done
-
-- Upload thành công lên Cloudinary nhưng không confirm vẫn bị cleanup xóa.
-- Asset không tồn tại trên Cloudinary vẫn chuyển `DELETED` an toàn.
-- Delete provider lỗi chuyển `DELETE_FAILED` và có thể retry.
-- Metadata cũ không bị ghi đè mất khi thêm thông tin lỗi delete.
-
----
-
-## 8. Sửa state machine và race condition
-
-Sử dụng đầy đủ các trạng thái đã có:
-
-```text
-PENDING -> PROCESSING -> READY
-PENDING -> FAILED
-PROCESSING -> FAILED
-READY -> DELETING -> DELETED
-DELETE_FAILED -> DELETING -> DELETED
-DELETING -> DELETE_FAILED
-```
-
-`UPLOADED` chỉ giữ nếu có event thực tế dùng trạng thái này. Nếu dùng webhook upload để ghi nhận trước confirm thì có thể dùng `UPLOADED`; nếu không, phải ghi tài liệu rõ vì sao chưa dùng. Không tạo transition giả chỉ để “dùng đủ enum”.
-
-### Confirm
-
-Không làm theo pattern không nguyên tử:
-
-```text
-findUnique -> check PENDING -> gọi provider -> update READY
-```
-
-Hãy claim intent bằng conditional update/transaction:
-
-```typescript
-updateMany({
-  where: { id, status: PENDING },
-  data: { status: PROCESSING },
-})
-```
-
-- `count === 1`: request hiện tại được quyền xử lý;
-- nếu đã `READY`: trả asset hiện có;
-- nếu đang `PROCESSING`: trả conflict hoặc kết quả idempotent theo chính sách đã định;
-- trạng thái khác: `InvalidStateTransitionException`.
-
-Nếu xác minh/chuyển đổi thất bại:
-
-- cập nhật `FAILED`;
-- lưu error code ngắn gọn, thời gian và provider operation vào metadata;
-- không lưu secret hoặc toàn bộ response nhạy cảm.
-
-### Delete
-
-Trước khi gọi provider, chuyển nguyên tử:
-
-```text
-READY hoặc DELETE_FAILED -> DELETING
-```
-
-Sau đó:
-
-- provider delete thành công/not found -> `DELETED`;
-- provider lỗi -> `DELETE_FAILED`.
-
-Hai request delete đồng thời không được gọi provider hai lần một cách không kiểm soát.
-
-### Tiêu chí Done
-
-- Hai confirm đồng thời chỉ một request gọi Cloudinary authoritative lookup.
-- Confirm lặp sau khi `READY` trả cùng asset, không tạo lỗi.
-- Hai delete đồng thời không làm state quay ngược.
-- Mọi transition sai dùng exception conflict phù hợp.
-
----
-
-## 9. Thay generic `Error` bằng exception chuẩn
-
-Không để các lỗi dự kiến trong media module dùng `throw new Error(...)`.
-
-Dùng các exception có sẵn trong `src/common/exceptions`, ví dụ:
-
-| Trường hợp | Exception đề xuất |
-|---|---|
-| Intent không tồn tại | `ResourceNotFoundException` |
-| Intent không thuộc user | `AccessDeniedException` |
-| Intent hết hạn | `ResourceGoneException` |
-| Sai trạng thái | `InvalidStateTransitionException` |
-| File quá lớn | `PayloadTooLargeException` |
-| MIME/format không hỗ trợ | `UnsupportedMediaTypeException` |
-| Input/public ID sai | `InvalidInputException` hoặc `ValidationException` |
-| Cloudinary tắt | `ServiceUnavailableException` |
-| Cloudinary API lỗi | `StorageException` với `cause`, operation và retryable |
-| Signature response sai | exception xác thực/input phù hợp, không trả secret |
-| Webhook signature sai | unauthorized/invalid input phù hợp |
-
-Bọc lỗi từ Cloudinary SDK tại adapter boundary thành `StorageException`. Không để object lỗi SDK đi thẳng ra controller.
-
-Bổ sung mã lỗi media ổn định, ví dụ:
-
-```text
-MEDIA_STORAGE_DISABLED
-MEDIA_UPLOAD_INTENT_NOT_FOUND
-MEDIA_UPLOAD_INTENT_EXPIRED
-MEDIA_UPLOAD_CONFIRMATION_INVALID
-MEDIA_ASSET_POLICY_VIOLATION
-MEDIA_DELETE_FAILED
-CLOUDINARY_WEBHOOK_SIGNATURE_INVALID
-```
-
-Các code nên được đặt trong enum/constant theo convention chung của dự án.
-
----
-
-# PHẦN B — API END-TO-END
-
-## 10. Tạo DTO và MediaController
-
-Tạo tối thiểu:
-
-```text
-backend/src/infrastructure/media/dto/create-media-upload-intent.dto.ts
-backend/src/infrastructure/media/dto/confirm-media-upload.dto.ts
-backend/src/infrastructure/media/media.controller.ts
-```
-
-### Endpoint 1 — tạo upload intent
-
-```http
-POST /media/upload-intents
-Authorization: Bearer <access-token>
-```
-
-Body:
-
-```json
+Không tạo bản trùng nếu repository đã có vị trí khác.
+
+JWT strategy phải:
+
+- Dùng đúng strategy name mà `JwtAuthGuard` gọi, ví dụ `jwt-access`.
+- Đọc secret/config qua `ConfigService`.
+- Verify expiration và signature.
+- Kiểm tra token type nếu payload có.
+- Dùng `sub` làm user ID.
+- Kiểm tra session/token version nếu schema hiện tại hỗ trợ.
+- Trả principal:
+
+```ts
 {
-  "purpose": "STORY_COVER",
-  "ownerId": "uuid",
-  "originalName": "cover.webp",
-  "declaredMimeType": "image/webp",
-  "declaredSizeBytes": 123456,
-  "metadata": {}
+  userId: string;
+  sessionId?: string;
+  roles?: string[];
+  permissions?: string[];
 }
 ```
 
-Validation tối thiểu:
+Module wiring:
 
-- `purpose`: enum;
-- `ownerId`: UUID;
-- `originalName`: string có giới hạn độ dài;
-- `declaredMimeType`: MIME hợp lệ và nằm trong policy;
-- `declaredSizeBytes`: integer dương và không vượt policy;
-- metadata giới hạn kích thước/độ sâu, hoặc tạm không nhận metadata từ public API nếu chưa cần.
+- `AppModule` import auth/security module.
+- Global guard đăng ký thực sự bằng `APP_GUARD` hoặc bootstrap convention hiện có.
+- Không import guard mà thiếu strategy.
+- `WorkerModule` không phụ thuộc HTTP guard nếu không cần.
 
-`uploaderId` phải lấy từ:
+Public route:
 
-```typescript
-@CurrentUser('userId')
-```
+- Health.
+- Cloudinary webhook.
 
-không nhận từ body.
+Dùng `@Public()` hiện có. Webhook vẫn bắt buộc Cloudinary signature.
 
-Response phải gồm dữ liệu frontend cần gửi tới Cloudinary:
+### Done
 
-- `mediaAssetId`;
-- `uploadUrl`;
-- `apiKey`;
-- `timestamp`;
-- `signature`;
-- `resourceType`;
-- `confirmExpiresAt`;
-- signed parameters.
-
-Không trả API secret.
-
-### Endpoint 2 — confirm upload
-
-```http
-POST /media/upload-intents/:mediaAssetId/confirm
-Authorization: Bearer <access-token>
-```
-
-Body:
-
-```json
-{
-  "publicId": "uuid-or-uuid.pdf",
-  "version": 1234567890,
-  "signature": "cloudinary-response-signature",
-  "resourceType": "image"
-}
-```
-
-Không cần lặp `mediaAssetId` trong body. Lấy từ route param và validate UUID.
-
-Response trả media asset đã chuẩn hóa hoặc response DTO, không trả metadata nội bộ nhạy cảm.
-
-### Endpoint 3 — đọc media
-
-```http
-GET /media/:mediaAssetId
-```
-
-- Chỉ trả asset phù hợp quyền truy cập.
-- Không tự mặc định raw thành image.
-- Image/video có thể trả delivery URL theo preset được whitelist.
-- Raw trả `secureUrl` hoặc URL delivery raw hợp lệ; không gửi vào image transformation service.
-
-### Endpoint 4 — xóa media
-
-```http
-DELETE /media/:mediaAssetId
-Authorization: Bearer <access-token>
-```
-
-- Chỉ uploader hoặc người có permission quản trị phù hợp được xóa.
-- Chưa có permission cụ thể thì tạo policy/service authorization rõ ràng; không tin `ownerId` từ client.
-
-### Quyền sở hữu tối thiểu
-
-- `AVATAR`: `ownerId` bắt buộc bằng `currentUser.userId`.
-- `AUTHOR_BANNER`: `ownerId` phải khớp author profile của principal.
-- `STORY_COVER` và `CHAPTER_IMAGE`: phải xác minh user là owner/contributor có quyền chỉnh sửa đối tượng tương ứng trước khi cấp intent.
-- `ATTACHMENT`: phải có context nghiệp vụ rõ ràng; không cho upload raw tùy ý chỉ vì đã đăng nhập.
-
-Nếu module story/chapter chưa đủ để xác minh, tạo một `MediaOwnershipAuthorizationPort` và implementation Prisma tối thiểu. Không bỏ qua authorization và không để TODO làm lỗ hổng public.
-
-### Webhook public route
-
-Thêm `@Public()` cho webhook vì global JWT guard đã tồn tại. Webhook chỉ tin request sau khi xác minh Cloudinary signature.
+- Không token → 401.
+- Token sai → 401.
+- Token đúng → `request.user`.
+- `@CurrentUser('userId')` nhận đúng ID.
+- Không có lỗi `Unknown authentication strategy`.
+- API/worker bootstrap khi Cloudinary disabled.
 
 ---
 
-## 11. Xác thực file ở ba lớp
+## A2. Hoàn thiện media authorization
 
-### Lớp 1 — trước khi tạo intent
+### Yêu cầu
 
-`validateDeclaredFile()` phải kiểm tra:
-
-- size > 0;
-- size <= maxBytes;
-- MIME nằm trong whitelist;
-- extension nằm trong whitelist;
-- MIME và extension có cặp hợp lệ;
-- tên file không có path traversal/null byte;
-- owner ID hợp lệ và đã authorization.
-
-### Lớp 2 — upload preset trên Cloudinary
-
-Tạo tài liệu cấu hình preset, ví dụ:
+Tái sử dụng permission system hiện có. Có thể cần các permission tương đương:
 
 ```text
-backend/docs/infrastructure/CLOUDINARY_SETUP.md
+media:create
+media:read
+media:delete:own
+media:delete:any
+story:media:manage
+chapter:media:manage
 ```
 
-Với từng preset phải mô tả:
+Không bắt buộc đúng chuỗi nếu convention hiện tại khác.
 
-- signed preset;
-- `overwrite=false`;
-- allowed formats;
-- max file size;
-- resource type;
-- incoming transformation/size limit phù hợp;
-- folder mode được hỗ trợ;
-- không cho client tùy ý override các tham số bảo mật.
+Tạo/tái sử dụng `MediaAuthorizationService` để xử lý:
 
-Module đang dùng `asset_folder`, vì vậy tài liệu phải yêu cầu Cloudinary **Dynamic Folder Mode**. Nếu muốn hỗ trợ legacy mode thì thêm config và test riêng; không trộn hai mode ngầm.
+- Avatar thuộc user hiện tại.
+- Author banner thuộc author profile hợp lệ.
+- Story cover thuộc story actor được quản lý.
+- Chapter image thuộc chapter/story actor được quản lý.
+- Uploader được xóa media của mình.
+- Admin chỉ được override khi có permission `delete:any` hoặc tương đương.
+- Không tin `ownerId` từ client.
 
-### Lớp 3 — sau upload
+Service nên nhận principal/actor, không chỉ user ID nếu cần kiểm tra permission.
 
-Dữ liệu authoritative lấy từ Cloudinary Admin API phải được kiểm tra lại:
+### Done
 
-- provider asset ID có tồn tại;
-- public ID đúng với intent;
-- resource type đúng;
-- delivery type đúng chính sách;
-- format đúng whitelist;
-- bytes không vượt max;
-- image width/height hợp lý nếu policy có giới hạn;
-- asset folder đúng folder đã ký;
-- version là số hợp lệ;
-- secure URL dùng HTTPS;
-- original filename không được dùng làm nguồn tin xác thực.
-
-Nếu authoritative validation thất bại, chuyển `FAILED` và schedule cleanup asset.
+- User khác → 403.
+- Admin có permission → được phép.
+- Admin thiếu permission → không bypass.
+- Author không sở hữu story/chapter → 403.
+- Ownership được test với database/repository thật.
 
 ---
 
-# PHẦN C — WEBHOOK
+## A3. Viết lại media E2E
 
-## 12. Không được để webhook “nhận rồi bỏ”
+Test hiện tại nếu mock toàn bộ `MediaService` phải đổi tên thành controller/integration test, không gọi là E2E.
 
-`CloudinaryWebhookService.processIdempotently()` hiện đang rỗng. Phải triển khai persistence trước khi trả HTTP 200.
+E2E mới phải dùng:
 
-### Thêm inbox model trong Prisma
+- `AppModule`, hoặc
+- Root testing module gần runtime thật.
 
-Ưu tiên model generic để sau này dùng cho provider khác, ví dụ:
+Áp dụng:
 
-```prisma
-model InboundWebhookEvent {
-  id             String   @id @default(uuid()) @db.Uuid
-  provider       String   @db.VarChar(50)
-  eventKey       String   @map("event_key") @db.VarChar(255)
-  payloadHash    String   @map("payload_hash") @db.VarChar(64)
-  eventType      String?  @map("event_type") @db.VarChar(120)
-  status         String   @default("pending") @db.VarChar(30)
-  payload        Json
-  receivedAt     DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
-  processedAt    DateTime? @map("processed_at") @db.Timestamptz(3)
-  attempts       Int      @default(0)
-  lastError      String?  @map("last_error") @db.Text
+- Global prefix.
+- Validation pipe.
+- Exception filters.
+- Response interceptors.
+- Auth guard và JWT strategy.
 
-  @@unique([provider, eventKey])
-  @@index([provider, status, receivedAt])
-  @@map("inbound_webhook_events")
-}
-```
+Có thể override:
 
-Có thể điều chỉnh tên/type theo convention dự án, nhưng phải có unique idempotency key và payload lưu bền vững.
+- `MEDIA_STORAGE` bằng fake adapter.
+- External queue/provider.
+- Network call.
 
-### Event key
+Không mock `MediaService` trong workflow E2E chính.
 
-Ưu tiên ID do Cloudinary gửi nếu payload có trường ổn định. Nếu không có, tính:
+### Luồng bắt buộc
+
+#### Image
 
 ```text
-SHA-256(rawBody)
+token hợp lệ
+→ POST upload intent
+→ DB PENDING
+→ fake provider authoritative lookup
+→ POST confirm
+→ DB READY
+→ GET media
+→ có delivery URL
+→ DELETE media
+→ DB DELETED
 ```
 
-và dùng làm event key/hash. Không dùng timestamp một mình.
-
-### Luồng xử lý
+#### Raw attachment
 
 ```text
-Nhận raw body
-  -> kiểm tra timestamp hợp lệ
-  -> verify Cloudinary signature
-  -> parse JSON có validation
-  -> insert inbox event bằng unique key
-  -> nếu duplicate: trả 200 idempotent
-  -> commit thành công
-  -> trả 200
-  -> worker/process service xử lý event
+token hợp lệ
+→ tạo PDF intent
+→ public ID có .pdf
+→ confirm
+→ resourceType RAW
+→ delete dùng đúng public ID có extension
 ```
 
-Không trả 200 nếu chưa lưu được event. Khi DB lỗi tạm thời, trả lỗi để Cloudinary có cơ hội retry.
+#### Auth/authz
 
-### Event processing tối thiểu
+- Không token → 401.
+- Token sai → 401.
+- Token user khác → 403.
+- Admin permission → thành công.
 
-Xử lý hoặc ghi nhận rõ các event liên quan đến:
+#### Concurrency
 
-- upload thành công;
-- eager/transformation hoàn tất nếu dùng;
-- moderation/analysis nếu dùng;
-- deletion nếu Cloudinary phát event tương ứng.
+- Hai confirm đồng thời.
+- Chỉ một claim PROCESSING thành công.
+- Provider lookup không bị gọi hai lần ngoài thiết kế.
+- Request còn lại idempotent hoặc conflict đúng convention.
 
-Không tự chuyển asset thành `READY` chỉ dựa vào payload webhook chưa được đối chiếu với intent/policy. Webhook có thể chuyển `PENDING` sang `UPLOADED`, sau đó confirm hoặc worker authoritative verification mới chuyển `READY`.
+### Done
 
-### Validation webhook
-
-- Thiếu header -> exception 400/401 phù hợp.
-- Timestamp không phải số -> từ chối.
-- Timestamp quá cũ -> từ chối.
-- Signature sai -> từ chối.
-- JSON invalid -> 400.
-- Duplicate event -> 200 và không xử lý lặp.
-- Log request ID/event key, không log signature đầy đủ.
+- Không tự gắn `req.user`.
+- Không mock toàn bộ MediaService.
+- Kiểm tra DB state.
+- Chứng minh auth wiring hoạt động.
 
 ---
 
-# PHẦN D — QUERY VÀ DELIVERY URL
+# PHẦN B — WEBHOOK
 
-## 13. Sửa `MediaQueryService`
+## B1. Siết payload validation
 
-Không được dùng logic:
+Webhook không được chấp nhận mọi JSON object rồi đánh dấu processed.
 
-```typescript
-raw -> image
+Tạo DTO/schema/validator tối thiểu cho:
+
+```text
+notification_id hoặc provider event identifier
+notification_type/event type
+public_id khi event yêu cầu
+resource_type khi event liên quan asset
+asset_id/provider asset id nếu có
+version/timestamp nếu có
 ```
 
-Quy tắc:
+Phân loại:
 
-- `IMAGE`: cho phép các image preset hợp lệ.
-- `VIDEO`: chỉ cho preset/URL phù hợp video; hiện chưa có video purpose thì có thể trả URL gốc hoặc từ chối preset ảnh.
-- `RAW`: không gọi `CloudinaryUrlService` với image transformation; trả secure URL đã lưu hoặc build URL raw riêng.
-- Chỉ asset `READY` mới được delivery mặc định.
-- Asset `DELETED`, `FAILED`, `PENDING`, `PROCESSING` không trả URL public.
+- Supported và xử lý được.
+- Hợp lệ nhưng không cần xử lý.
+- Invalid.
+- Unsupported.
 
-Tạo response DTO thay vì trả thẳng toàn bộ Prisma entity nếu endpoint public.
+Status nên có:
+
+```text
+PENDING
+PROCESSING
+PROCESSED
+IGNORED
+FAILED
+DEAD_LETTER
+```
+
+hoặc tên tương đương.
+
+Sửa event key:
+
+```ts
+typeof providerKey === 'string'
+&& providerKey.trim().length > 0
+&& providerKey.length <= 255
+```
+
+Nếu thiếu/rỗng, dùng deterministic hash từ raw body và provider.
+
+### Done
+
+- Invalid JSON bị từ chối.
+- Thiếu header bị từ chối.
+- Stale timestamp bị từ chối.
+- Signature sai bị từ chối.
+- Payload thiếu field bắt buộc không thành processed giả.
+- Unsupported event → IGNORED.
+- Duplicate không xử lý hai lần.
+- Event key không rỗng.
 
 ---
 
-# PHẦN E — PRISMA VÀ MIGRATION
+## B2. Worker tự xử lý webhook inbox
 
-## 14. Commit migration thực tế
+Maintenance command chạy một batch không đủ.
 
-Trong root `.gitignore`, xóa dòng:
+Ưu tiên tích hợp worker hiện có.
 
-```gitignore
-backend/prisma/migrations/**/*.sql
+### Cách ưu tiên: BullMQ
+
+- Receiver persist inbox event.
+- Enqueue job bằng event ID.
+- Job ID dùng event ID/event key để deduplicate.
+- Worker gọi inbox processor.
+- Có retry/backoff.
+- Có reconciliation cho event đã persist nhưng enqueue thất bại.
+
+### Hoặc polling worker
+
+- Interval có kiểm soát.
+- Claim batch atomically.
+- Có shutdown hook.
+- Không busy loop.
+- Có retry/dead-letter.
+
+Giữ maintenance script làm công cụ thủ công nếu hữu ích.
+
+Không query PENDING rồi xử lý mà không claim.
+
+### Done
+
+- Không cần chạy command tay.
+- Hai worker không xử lý cùng event.
+- Lỗi retryable được retry.
+- Lỗi non-retryable → ignored/dead-letter.
+- Có log context.
+
+---
+
+## B3. Cập nhật media từ webhook an toàn
+
+- Match bằng provider asset ID hoặc public ID + resource type.
+- Kiểm tra version/timestamp để event cũ không ghi đè event mới.
+- Chỉ cập nhật field được phép.
+- Không đổi ownership/purpose.
+- Không tự chuyển READY nếu chưa đủ authoritative validation.
+- Delete event idempotent.
+- Có test event đến sai thứ tự.
+
+---
+
+# PHẦN C — CLEANUP
+
+## C1. Resource type mismatch fallback
+
+Client có thể sửa endpoint từ image sang raw/video. Confirm có thể fail đúng nhưng cleanup expected type có thể bỏ orphan.
+
+Cleanup phải:
+
+1. Thử expected resource type.
+2. Nếu not found và record chưa confirm:
+   - Lookup/thử các resource type hợp lý: image, video, raw.
+3. Không đánh dấu xóa thành công nếu actual provider asset vẫn tồn tại.
+4. Log fallback.
+5. Không xóa asset thuộc record khác.
+
+Có thể mở rộng port:
+
+```ts
+findResourceAcrossTypes(publicId: string)
 ```
 
-Migration SQL phải được commit vào repository.
+hoặc:
 
-Tạo migration cho:
+```ts
+destroyCandidates([
+  { publicId, resourceType: 'image' },
+  { publicId, resourceType: 'video' },
+  { publicId, resourceType: 'raw' },
+])
+```
 
-- các field media còn thiếu nếu database hiện tại chưa có;
-- inbox webhook model;
-- index/unique cần thiết;
-- thay đổi enum/model nếu có.
+Raw public ID giữ extension.
 
-Dùng command theo project:
+### Done
+
+- Image intent nhưng actual raw asset được cleanup.
+- Cleanup idempotent.
+- Provider not found xử lý đúng.
+- Không xóa nhầm READY asset.
+- Có test fallback.
+
+---
+
+## C2. Cleanup lifecycle
+
+Xử lý:
+
+| Status | Điều kiện | Hành động |
+|---|---|---|
+| PENDING | confirm TTL hết | destroy rồi DELETED/DELETE_FAILED |
+| UPLOADED | treo | verify hoặc cleanup |
+| PROCESSING | treo | recover hoặc FAILED |
+| FAILED | có expected ID | cleanup provider |
+| DELETE_FAILED | đến retry time | retry |
+| DELETING | treo | resume/retry |
+
+Thêm field khi thực sự cần:
+
+```text
+deleteAttempts
+nextDeleteAttemptAt
+lastProviderErrorCode
+processingStartedAt
+```
+
+Kèm migration thật.
+
+Retry có backoff và giới hạn.
+
+---
+
+# PHẦN D — CONFIG VÀ DOCS
+
+## D1. Khôi phục `AGENTS.md`
+
+Đặt file `AGENTS.md` ở root và bảo đảm không còn 0 byte.
+
+Kiểm tra:
 
 ```bash
-npm run db:migrate -- --name harden_cloudinary_media
+wc -c AGENTS.md
 ```
 
-Sau đó kiểm tra:
+## D2. Giải quyết hai `.env.example`
+
+Ưu tiên:
+
+- Giữ `backend/.env.example` là nguồn chính.
+- Xóa `backend/docs/.env.example`, hoặc đổi tên rõ mục đích.
+- Docs link đến file chính.
+
+Không để hai file cùng tên nhưng nội dung khác.
+
+## D3. Cập nhật Cloudinary docs
+
+Phải mô tả:
+
+- Enable/disable.
+- Credential.
+- Signed presets.
+- Attachment preset.
+- Folder mode.
+- Allowed formats/max size.
+- Webhook URL/timestamp tolerance.
+- Worker processing.
+- Cleanup/retry.
+- Raw public ID extension.
+- Confirm TTL khác Cloudinary signature lifetime.
+- Migration.
+- Local mode disabled.
+- Fake adapter trong test.
+
+---
+
+# PHẦN E — TEST BẮT BUỘC
+
+## Authentication
+
+- AuthModule bootstrap.
+- Strategy name đúng.
+- Token valid/expired/bad signature.
+- Public route.
+- Protected media route.
+- CurrentUser đọc đúng.
+
+## Config/module
+
+- AppModule bootstrap khi disabled.
+- WorkerModule bootstrap khi disabled.
+- Enabled thiếu credential/preset fail fast.
+- `MEDIA_STORAGE` chọn đúng adapter.
+
+## Upload intent
+
+- Avatar.
+- Story/chapter ownership.
+- PDF attachment.
+- Raw `.pdf`.
+- Traversal.
+- MIME-extension mismatch.
+- Size quá lớn.
+- Purpose sai.
+- Expected identity lưu trước upload.
+
+## Confirm
+
+- Signature sai.
+- Public ID/resource type/folder/format/size sai.
+- Expired.
+- User khác.
+- Thành công.
+- Lặp sau READY.
+- Concurrent confirm.
+- Provider error state.
+
+## Delete
+
+- Uploader.
+- User khác.
+- Admin permission.
+- Provider ok/not found/error.
+- Retry DELETE_FAILED.
+- Concurrent delete.
+- Metadata merge.
+- Raw extension.
+
+## Cleanup
+
+- PENDING hết hạn.
+- PENDING có image.
+- Image intent/actual raw.
+- FAILED orphan.
+- PROCESSING treo.
+- DELETE_FAILED retry.
+- Retry limit.
+- Idempotency.
+
+## Webhook
+
+- Header/timestamp/signature/JSON sai.
+- Empty event key fallback.
+- Duplicate.
+- DB failure không trả success giả.
+- Unsupported → IGNORED.
+- Supported → PROCESSED.
+- Worker failure/retry.
+- Hai worker.
+- Out-of-order event.
+
+## E2E
+
+Tối thiểu:
+
+1. Authenticated image lifecycle.
+2. Raw attachment lifecycle.
+3. Unauthorized.
+4. Ownership forbidden.
+5. Admin override.
+6. Duplicate confirm.
+7. Delete not found/retry.
+8. Webhook receive → inbox → worker process.
+
+---
+
+# PHẦN F — MIGRATION
+
+Nếu thay đổi enum/status/retry field/permission seed, tạo migration thật:
 
 ```bash
-npm run db:migrate:deploy
+npm run db:migrate -- --name complete_media_auth_webhook_lifecycle
 ```
 
-Migration phải chạy được trên database rỗng và database đang có schema trước đó. Không sửa tay migration cũ đã được áp dụng ở môi trường khác; tạo migration mới.
+Không dùng `prisma db push`.
 
-Nếu `manual-constraints.sql` liên quan, cập nhật script verify tương ứng.
+Kiểm tra:
+
+```bash
+git check-ignore -v prisma/migrations/<migration>/migration.sql
+```
+
+Migration SQL không được bị ignore.
 
 ---
 
-# PHẦN F — TEST BẮT BUỘC
+# PHẦN G — THỨ TỰ SỬA
 
-## 15. Unit test
-
-Tạo test tối thiểu cho:
-
-### Config/module
-
-1. Cloudinary disabled vẫn bootstrap module.
-2. Cloudinary enabled nhưng thiếu credential/preset thì validation fail rõ ràng.
-3. Token `MEDIA_STORAGE` chọn đúng adapter.
-
-### Public ID/policy
-
-4. Image public ID không có extension.
-5. Raw public ID có extension lowercase hợp lệ.
-6. MIME sai bị từ chối.
-7. Extension sai bị từ chối.
-8. MIME-extension mismatch bị từ chối.
-9. File size 0 và vượt max bị từ chối.
-10. Tên file path traversal bị từ chối.
-
-### Signature
-
-11. Signed parameters chứa đúng timestamp, preset, public ID, asset folder, overwrite và tags.
-12. API secret không xuất hiện trong response.
-13. Response signature sai bị từ chối bằng timing-safe comparison.
-
-### Confirm
-
-14. Intent không tồn tại -> 404.
-15. Intent không thuộc user -> 403.
-16. Intent hết hạn -> 410/409 theo exception đã chọn.
-17. Confirm hợp lệ -> `READY` và lưu authoritative fields.
-18. Authoritative public ID/resource type/format/size/folder sai -> `FAILED`.
-19. Confirm lặp sau `READY` idempotent.
-20. Hai confirm cạnh tranh chỉ một request claim được `PROCESSING`.
-
-### Delete/cleanup
-
-21. Delete provider `ok` -> `DELETED`.
-22. Delete provider `not found` -> `DELETED`.
-23. Delete provider lỗi -> `DELETE_FAILED`.
-24. Cleanup unconfirmed upload dùng expected public ID đã lưu.
-25. Metadata cũ được merge, không bị mất khi ghi lỗi delete.
-
-### Webhook
-
-26. Thiếu headers bị từ chối.
-27. Timestamp invalid/stale bị từ chối.
-28. Signature sai bị từ chối.
-29. Payload invalid JSON bị từ chối.
-30. Event mới được lưu inbox trước khi trả thành công.
-31. Event duplicate không tạo hai row và không xử lý hai lần.
-
-### Query URL
-
-32. Raw asset không bị build như image.
-33. Non-READY asset không trả delivery URL.
-34. Preset không phù hợp resource type bị từ chối.
+1. Khôi phục `AGENTS.md`.
+2. Hoàn thiện JWT strategy/auth module.
+3. Wire global guard.
+4. Hoàn thiện media authorization/admin permission.
+5. Viết auth/module tests.
+6. Viết lại media E2E.
+7. Siết webhook validation/event key.
+8. Hoàn thiện webhook status.
+9. Tích hợp processor vào worker.
+10. Sửa cleanup resource type mismatch.
+11. Hoàn thiện cleanup retry.
+12. Tạo migration nếu cần.
+13. Đồng bộ env/docs.
+14. Chạy quality gates.
+15. Rà soát diff.
 
 ---
 
-## 16. Integration/e2e test
+# PHẦN H — QUALITY GATES
 
-Tạo e2e test với Cloudinary adapter mock/fake, không gọi tài khoản Cloudinary thật trong CI mặc định.
-
-Luồng bắt buộc:
-
-1. User đăng nhập hoặc mock principal hợp lệ.
-2. `POST /media/upload-intents` tạo row `PENDING` có expected public ID/folder.
-3. Mock Cloudinary upload response và authoritative resource.
-4. `POST /media/upload-intents/:id/confirm` chuyển sang `READY`.
-5. `GET /media/:id` trả response đúng.
-6. `DELETE /media/:id` chuyển `DELETED`.
-7. Cloudinary disabled trả 503 cho media operation nhưng `/health/live` vẫn hoạt động.
-8. Webhook duplicate trả 200 và chỉ có một inbox record.
-
-Có thể thêm một integration test thật với Cloudinary sandbox bằng env riêng, nhưng phải skip mặc định và không để credential trong repo.
-
----
-
-# PHẦN G — TÀI LIỆU VÀ VẬN HÀNH
-
-## 17. Tạo tài liệu Cloudinary setup
-
-Tạo:
-
-```text
-backend/docs/infrastructure/CLOUDINARY_SETUP.md
-```
-
-Nội dung tối thiểu:
-
-- kiến trúc direct signed upload;
-- sequence tạo intent -> upload -> confirm;
-- ý nghĩa `confirmExpiresAt`;
-- cảnh báo signed request có thể vẫn được Cloudinary chấp nhận sau thời hạn confirm của app;
-- danh sách env;
-- cách tạo từng upload preset;
-- yêu cầu Dynamic Folder Mode;
-- whitelist format/MIME/size;
-- webhook URL và cách cấu hình notification;
-- cách rotate API secret;
-- cách chạy cleanup;
-- cách retry `DELETE_FAILED`;
-- cách kiểm tra orphan assets;
-- cách chạy test sandbox;
-- không bao giờ đưa API secret ra frontend.
-
-Cập nhật `backend/README.md` hoặc infrastructure documentation để link tới file trên.
-
----
-
-## 18. Script kiểm tra Cloudinary config
-
-Thêm script, ví dụ:
-
-```text
-backend/scripts/ci/verify-cloudinary-config.ts
-```
-
-Package script:
-
-```json
-"ci:verify-cloudinary": "tsx scripts/ci/verify-cloudinary-config.ts"
-```
-
-Khi `CLOUDINARY_ENABLED=false`, script có thể skip thành công với message rõ ràng.
-
-Khi enabled, script phải kiểm tra tối thiểu:
-
-- credential gọi được API;
-- các upload preset tồn tại;
-- preset đúng signed mode;
-- resource type/format/size policy không mâu thuẫn với code;
-- không in API secret.
-
-Nếu Cloudinary Admin API không cho kiểm tra một thuộc tính cụ thể, ghi cảnh báo và tài liệu bước kiểm tra thủ công; không giả vờ đã verify.
-
----
-
-# PHẦN H — CHẤT LƯỢNG CODE
-
-## 19. Type safety
-
-- Tạo type alias chung cho resource type thay vì lặp union string ở nhiều file.
-- Mapper từ Cloudinary phải validate các field bắt buộc trước khi cast.
-- Không dùng:
-
-```typescript
-stored.resourceType.toUpperCase() as any
-```
-
-Tạo mapper rõ ràng:
-
-```typescript
-function toPrismaMediaResourceType(
-  value: StorageResourceType,
-): MediaResourceType
-```
-
-- Xử lý `asset.format` có thể undefined với raw asset.
-- Xử lý `asset.secure_url`, `asset_id`, `public_id`, `version`, `bytes` thiếu bằng `StorageException`/mapping exception.
-- `duration` phải map đúng kiểu Decimal/number theo Prisma.
-
----
-
-## 20. Logging và observability
-
-Log có cấu trúc cho các event:
-
-- upload intent created;
-- upload confirmed;
-- authoritative validation failed;
-- cleanup attempted/succeeded/failed;
-- webhook accepted/duplicate/rejected;
-- delete attempted/succeeded/failed.
-
-Log field được phép:
-
-```text
-mediaAssetId
-publicId đã mask nếu cần
-purpose
-resourceType
-operation
-status
-requestId/correlationId
-eventKey
-retryable
-```
-
-Không log:
-
-```text
-apiSecret
-full signature
-credential URL
-raw authorization header
-full webhook payload nếu có dữ liệu nhạy cảm
-```
-
-Nếu project đã có logger/interceptor/request context thì tái sử dụng, không tạo logger framework mới.
-
----
-
-# PHẦN I — THỨ TỰ THỰC HIỆN
-
-Codex phải làm theo thứ tự để tránh code nửa vời:
-
-1. Sửa optional module/provider để app bootstrap khi disabled.
-2. Hoàn thiện config và policy attachment.
-3. Chuẩn hóa public ID/folder và lưu expected fields ở `PENDING`.
-4. Sửa DTO/contracts/type mapper.
-5. Sửa MediaService confirm state machine và exception.
-6. Sửa delete/cleanup orphan asset.
-7. Thêm MediaController và authorization policy.
-8. Sửa MediaQueryService cho raw/image/video.
-9. Thêm webhook inbox/idempotency và migration.
-10. Thêm maintenance/config verification scripts.
-11. Viết unit test và e2e test.
-12. Cập nhật tài liệu.
-13. Chạy toàn bộ quality gate và sửa sạch lỗi.
-
-Không triển khai webhook trước khi migration/inbox model đã rõ. Không thêm controller trước khi authorization và validation đầu vào đã có.
-
----
-
-# PHẦN J — QUALITY GATE
-
-## 21. Các lệnh bắt buộc phải chạy
-
-Trong thư mục `backend`:
+Chạy từ `backend/` theo script thực tế:
 
 ```bash
 npm ci
-npm run build
-npm run lint
+npx prisma validate --config prisma.config.ts
+npx prisma generate --config prisma.config.ts
 npm run typecheck:scripts
+npm run lint
+npm run build
 npm test -- --runInBand
 npm run test:e2e -- --runInBand
 ```
 
-Với database test/local đã sẵn sàng:
+Nếu package mirror lỗi:
+
+- Ghi package/registry lỗi.
+- Không nói pass.
+- Tiếp tục static review.
+- Phân loại `FAIL_ENVIRONMENT`.
+
+Sau lint:
 
 ```bash
-npm run db:migrate:deploy
-npm run db:check
-npm run db:verify:constraints
+git diff --stat
+git diff
 ```
 
-Khi Cloudinary disabled:
-
-```bash
-CLOUDINARY_ENABLED=false npm run build
-CLOUDINARY_ENABLED=false npm test -- --runInBand
-```
-
-Khi có sandbox credential:
-
-```bash
-npm run ci:verify-cloudinary
-```
-
-Nếu lint script đang dùng `--fix`, sau khi chạy phải kiểm tra git diff để chắc chắn không có sửa format ngoài phạm vi không mong muốn.
+Hoàn tác format ngoài phạm vi.
 
 ---
 
-## 22. Definition of Done
+# PHẦN I — DEFINITION OF DONE
 
-Chỉ được báo hoàn thành khi tất cả điều sau đúng:
-
-- [ ] App và worker khởi động được khi Cloudinary disabled.
-- [ ] Media operation khi disabled trả lỗi có cấu trúc, không crash bootstrap.
-- [ ] Có đủ config/preset cho avatar, author banner, story cover, chapter image và attachment.
-- [ ] Raw attachment dùng public ID có extension đã validate.
-- [ ] Expected public ID/resource type/folder được lưu từ lúc `PENDING`.
-- [ ] Upload intent API và confirm API dùng được end-to-end.
-- [ ] User không thể giả uploader ID từ body.
-- [ ] Owner authorization được kiểm tra theo purpose.
-- [ ] Confirm chống race condition và idempotent sau `READY`.
-- [ ] Delete có `DELETING`, retry được từ `DELETE_FAILED`.
-- [ ] Cleanup xóa được unconfirmed/orphan Cloudinary asset.
-- [ ] Webhook được verify, persist và deduplicate trước khi trả 200.
-- [ ] Raw asset không bị xử lý như image.
-- [ ] Không còn generic `Error` cho các lỗi media dự kiến.
-- [ ] Không còn `as any` ở phần mapping media resource type.
-- [ ] Prisma migration SQL được commit và không còn bị `.gitignore` bỏ qua.
-- [ ] Có unit test và e2e test theo danh sách tối thiểu.
-- [ ] Có `CLOUDINARY_SETUP.md` và `.env.example` đầy đủ.
-- [ ] Build, lint, typecheck, test và migration đều pass.
-- [ ] Không có credential/secret trong source, log, fixture hoặc commit.
-
----
-
-# PHẦN K — ĐẦU RA CODEX PHẢI BÁO CÁO
-
-Sau khi sửa, Codex phải trả báo cáo theo mẫu:
-
-```markdown
-## Files changed
-- đường dẫn file: mô tả ngắn
-
-## Architecture decisions
-- cách làm Cloudinary optional
-- cách tạo public ID raw/image
-- state machine confirm/delete
-- cách webhook idempotency hoạt động
-- cách authorization owner hoạt động
-
-## Database changes
-- tên migration
-- model/index/constraint mới
-
-## API changes
-- method + route
-- request/response chính
-- auth/permission
-
-## Tests added
-- danh sách test suite
-- số test pass/fail
-
-## Commands executed
-- command
-- kết quả
-
-## Remaining limitations
-- chỉ ghi các giới hạn có thật; không để TODO bảo mật hoặc blocker production
-```
-
-Nếu có lệnh không chạy được do môi trường ngoài code, phải ghi chính xác lỗi, phần nào đã kiểm tra thay thế và tuyệt đối không tuyên bố “all tests pass”.
+- [ ] `AGENTS.md` không rỗng.
+- [ ] AppModule có JWT strategy hoạt động.
+- [ ] Media route không token trả 401.
+- [ ] `@CurrentUser()` nhận principal thật.
+- [ ] Webhook public đối với JWT nhưng verify provider signature.
+- [ ] Ownership hoạt động.
+- [ ] Admin permission hoạt động.
+- [ ] E2E không tự gắn `req.user`.
+- [ ] E2E không mock toàn bộ MediaService.
+- [ ] E2E kiểm tra DB lifecycle.
+- [ ] Event key không rỗng.
+- [ ] Unsupported event không thành processed giả.
+- [ ] Worker tự xử lý inbox.
+- [ ] Hai worker không xử lý cùng event.
+- [ ] Cleanup xử lý actual type khác expected.
+- [ ] Raw extension xuyên suốt upload-confirm-delete.
+- [ ] Migration tồn tại nếu schema đổi.
+- [ ] Migration không bị ignore.
+- [ ] `.env.example` không mâu thuẫn.
+- [ ] Docs khớp code.
+- [ ] Test bắt buộc được thêm.
+- [ ] Build/lint/test pass hoặc lỗi môi trường được báo đúng.
+- [ ] Không secret.
+- [ ] Không placeholder.
+- [ ] Không thay đổi ngoài phạm vi chưa giải thích.
 
 ---
 
-## 23. Gợi ý cấu trúc file sau khi hoàn thiện
-
-Codex có thể điều chỉnh tên theo convention, nhưng module nên gần cấu trúc sau:
+# PHẦN J — PROMPT DÁN CHO CODEX
 
 ```text
-src/infrastructure/media/
-├── adapters/
-│   └── disabled-media-storage.adapter.ts
-├── application/
-│   ├── media-cleanup.service.ts
-│   ├── media-ownership-authorization.service.ts
-│   ├── media-query.service.ts
-│   └── media.service.ts
-├── cloudinary/
-│   ├── cloudinary-media.adapter.ts
-│   ├── cloudinary-response.mapper.ts
-│   ├── cloudinary-signature.service.ts
-│   ├── cloudinary-url.service.ts
-│   ├── cloudinary-webhook.controller.ts
-│   ├── cloudinary-webhook.service.ts
-│   ├── cloudinary.constants.ts
-│   └── cloudinary.provider.ts
-├── contracts/
-│   ├── media-ownership-authorization.port.ts
-│   ├── media-storage.port.ts
-│   ├── signed-upload.interface.ts
-│   └── stored-media.interface.ts
-├── dto/
-│   ├── confirm-media-upload.dto.ts
-│   ├── create-media-upload-intent.dto.ts
-│   └── media-response.dto.ts
-├── policies/
-│   ├── media-public-id.service.ts
-│   └── media-upload-policy.registry.ts
-├── media.controller.ts
-├── media.module.ts
-└── index.ts
+Hãy sửa hoàn chỉnh các vấn đề còn lại của authentication, Cloudinary media lifecycle, webhook inbox/worker, cleanup và test theo `huong-dan.md`.
+
+Trước khi sửa:
+
+1. Đọc toàn bộ `AGENTS.md`.
+2. Đọc toàn bộ `huong-dan.md`.
+3. Kiểm tra `git status`, `git diff --stat` và `git diff`.
+4. Đọc code thực tế liên quan trước khi quyết định.
+
+Xem `huong-dan.md` là đặc tả triển khai chính.
+
+Yêu cầu:
+
+- Trực tiếp sửa code, migration, test và tài liệu.
+- Không chỉ phân tích/lập kế hoạch.
+- Không refactor ngoài phạm vi.
+- Không hoàn tác thay đổi không liên quan.
+- Không thêm placeholder hoặc endpoint success giả.
+- Hoàn thiện JWT access strategy và module wiring thật.
+- Media API dùng authenticated principal thật.
+- Hoàn thiện authorization uploader/owner/admin permission.
+- Viết E2E gần runtime thật, không mock toàn bộ MediaService.
+- Webhook validate payload, event key không rỗng, deduplicate và có ignored/failed rõ.
+- Inbox được worker xử lý tự động và atomically.
+- Cleanup xử lý orphan khi actual resource type khác expected.
+- Raw public ID giữ extension qua upload, confirm và delete.
+- Tạo migration Prisma thật nếu schema đổi.
+- Không dùng prisma db push.
+- Đồng bộ `.env.example` và docs.
+- Thêm test theo danh sách trong `huong-dan.md`.
+
+Chạy quality gates có trong package.json, tối thiểu:
+
+npm ci
+npx prisma validate --config prisma.config.ts
+npx prisma generate --config prisma.config.ts
+npm run typecheck:scripts
+npm run lint
+npm run build
+npm test -- --runInBand
+npm run test:e2e -- --runInBand
+
+Nếu command thất bại do môi trường/package mirror:
+
+- Không nói pass.
+- Ghi command và lỗi cụ thể.
+- Phân loại lỗi.
+- Tiếp tục phần còn có thể làm.
+
+Trước khi kết thúc:
+
+- Đối chiếu từng checkbox Definition of Done.
+- Kiểm tra migration SQL không bị ignore.
+- Kiểm tra API/worker bootstrap khi Cloudinary disabled.
+- Kiểm tra không log secret/signature.
+- Kiểm tra git diff và thay đổi ngoài phạm vi.
+
+Báo cáo cuối:
+
+## Files changed
+## Architecture decisions
+## Database changes
+## API changes
+## Security and authorization
+## Tests added or updated
+## Commands executed
+## Git diff summary
+## Remaining limitations
+
+Không mô tả phần chưa hoàn thành là đã hoàn thành.
 ```
-
-Không bắt buộc tạo mọi abstraction nếu không mang lại giá trị, nhưng mọi yêu cầu bảo mật, state, cleanup, webhook và test trong tài liệu này vẫn bắt buộc.
-
----
-
-## 24. Ưu tiên khi có xung đột
-
-Nếu một yêu cầu kỹ thuật xung đột với code hiện tại, ưu tiên theo thứ tự:
-
-1. Không lộ secret và không có lỗ hổng authorization.
-2. Dữ liệu DB và Cloudinary không bị lệch hoặc để orphan lâu dài.
-3. App không crash khi feature optional bị tắt.
-4. State transition nguyên tử và idempotency.
-5. Type safety và exception chuẩn.
-6. Tương thích API.
-7. Tối ưu hiệu năng và cleanup code.
-
-Không hy sinh bảo mật hoặc tính đúng đắn chỉ để giữ nguyên vài dòng API chưa có frontend sử dụng.

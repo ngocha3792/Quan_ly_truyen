@@ -1,10 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ConfigService } from '@nestjs/config';
 import { MediaPurpose, MediaStatus } from '@/generated/prisma/client';
+import { PermissionCode, RoleCode } from '@/common/enums';
 import { MediaService } from './media.service';
 import { MediaPublicIdService } from '../policies/media-public-id.service';
 
 describe('MediaService upload intent', () => {
+  const principal = {
+    userId: '00000000-0000-4000-8000-000000000001',
+    sessionId: '00000000-0000-4000-8000-000000000011',
+    emailVerified: true,
+    roles: [RoleCode.USER],
+    permissions: [PermissionCode.MEDIA_UPLOAD],
+  };
   const prisma = { mediaAsset: { create: jest.fn(), delete: jest.fn() } };
   const storage = { createSignedUpload: jest.fn() };
   const ownership = { assertCanCreate: jest.fn(), assertUploader: jest.fn() };
@@ -24,7 +32,7 @@ describe('MediaService upload intent', () => {
     prisma.mediaAsset.create.mockResolvedValue({});
     storage.createSignedUpload.mockImplementation((input: unknown) => input);
     const result = await service.createUploadIntent({
-      uploaderId: '00000000-0000-4000-8000-000000000001',
+      principal,
       ownerId: '00000000-0000-4000-8000-000000000002',
       purpose: MediaPurpose.ATTACHMENT,
       originalName: 'file.PDF',
@@ -66,7 +74,7 @@ describe('MediaService upload intent', () => {
   ])('rejects invalid declaration before DB insert', async (input) => {
     await expect(
       service.createUploadIntent({
-        uploaderId: 'u',
+        principal,
         ownerId: 'o',
         purpose: MediaPurpose.ATTACHMENT,
         ...input,

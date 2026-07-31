@@ -222,6 +222,17 @@ enum OutboxStatus {
   @@map("outbox_status")
 }
 
+enum InboundWebhookStatus {
+  PENDING     @map("pending")
+  PROCESSING  @map("processing")
+  PROCESSED   @map("processed")
+  IGNORED     @map("ignored")
+  FAILED      @map("failed")
+  DEAD_LETTER @map("dead_letter")
+
+  @@map("inbound_webhook_status")
+}
+
 // ============================================================
 // IDENTITY, AUTHENTICATION, AUTHORIZATION
 // ============================================================
@@ -444,6 +455,10 @@ model MediaAsset {
   uploadExpiresAt DateTime?          @map("upload_expires_at") @db.Timestamptz(3)
   uploadedAt      DateTime?          @map("uploaded_at") @db.Timestamptz(3)
   readyAt         DateTime?          @map("ready_at") @db.Timestamptz(3)
+  processingStartedAt  DateTime? @map("processing_started_at") @db.Timestamptz(3)
+  deleteAttempts       Int       @default(0) @map("delete_attempts")
+  nextDeleteAttemptAt  DateTime? @map("next_delete_attempt_at") @db.Timestamptz(3)
+  lastProviderErrorCode String?  @map("last_provider_error_code") @db.VarChar(120)
   metadata        Json?
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -458,6 +473,7 @@ model MediaAsset {
   @@index([uploaderId, createdAt])
   @@index([purpose, status])
   @@index([status, uploadExpiresAt])
+  @@index([status, nextDeleteAttemptAt])
   @@index([storageProvider, providerAssetId])
   @@index([deletedAt])
   @@map("media_assets")
@@ -988,15 +1004,18 @@ model InboundWebhookEvent {
   eventKey    String    @map("event_key") @db.VarChar(255)
   payloadHash String    @map("payload_hash") @db.VarChar(64)
   eventType   String?   @map("event_type") @db.VarChar(120)
-  status      String    @default("pending") @db.VarChar(30)
+  status      InboundWebhookStatus @default(PENDING)
   payload     Json
   receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
   processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
   attempts    Int       @default(0)
   lastError   String?   @map("last_error") @db.Text
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  processingStartedAt DateTime? @map("processing_started_at") @db.Timestamptz(3)
 
   @@unique([provider, eventKey])
   @@index([provider, status, receivedAt])
+  @@index([provider, status, nextAttemptAt])
   @@map("inbound_webhook_events")
 }
 

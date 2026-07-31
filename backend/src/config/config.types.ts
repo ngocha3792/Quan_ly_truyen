@@ -14,6 +14,12 @@ export interface AppConfig {
   supportedLocales: readonly string[];
 }
 
+export interface AuthConfig {
+  accessTokenSecret: string;
+  issuer: string;
+  audience: string;
+}
+
 export interface DatabaseConfig {
   url: string;
 }

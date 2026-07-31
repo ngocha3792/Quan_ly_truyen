@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { MediaStoragePort } from '../contracts/media-storage.port';
+import type {
+  DeleteStoredMediaResult,
+  MediaStoragePort,
+} from '../contracts/media-storage.port';
 import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
 import type { StoredMedia } from '../contracts/stored-media.interface';
 import { MediaStorageDisabledException } from '../media.exceptions';
@@ -18,7 +21,7 @@ export class DisabledMediaStorageAdapter implements MediaStoragePort {
   uploadBuffer(): Promise<StoredMedia> {
     return this.unavailable();
   }
-  delete(): Promise<void> {
+  delete(): Promise<DeleteStoredMediaResult> {
     return this.unavailable();
   }
   buildUrl(): string {

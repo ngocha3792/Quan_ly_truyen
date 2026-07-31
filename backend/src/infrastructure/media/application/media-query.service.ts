@@ -9,6 +9,7 @@ import {
   InvalidInputException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import { CloudinaryUrlService } from '../cloudinary/cloudinary-url.service';
 import { MediaOwnershipAuthorizationService } from './media-ownership-authorization.service';
@@ -25,14 +26,17 @@ export class MediaQueryService {
     return this.prisma.mediaAsset.findUnique({ where: { id } });
   }
 
-  async getAccessibleById(id: string, userId: string): Promise<MediaAsset> {
+  async getAccessibleById(
+    id: string,
+    principal: AuthPrincipal,
+  ): Promise<MediaAsset> {
     const media = await this.findById(id);
     if (!media || media.status !== MediaStatus.READY)
       throw new ResourceNotFoundException({
         resource: 'media asset',
         identifier: id,
       });
-    this.ownership.assertUploader(userId, media.uploaderId);
+    this.ownership.assertUploader(principal, media.uploaderId);
     return media;
   }
 

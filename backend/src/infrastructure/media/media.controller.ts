@@ -8,7 +8,9 @@ import {
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
-import { CurrentUser } from '@/common/decorators/auth';
+import { CurrentUser, Permissions } from '@/common/decorators/auth';
+import { PermissionCode } from '@/common/enums';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { MediaCleanupService } from './application/media-cleanup.service';
 import { MediaQueryService } from './application/media-query.service';
 import { MediaService } from './application/media.service';
@@ -28,21 +30,23 @@ export class MediaController {
   ) {}
 
   @Post('upload-intents')
+  @Permissions(PermissionCode.MEDIA_UPLOAD)
   createIntent(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() principal: AuthPrincipal,
     @Body() dto: CreateMediaUploadIntentDto,
   ) {
-    return this.mediaService.createUploadIntent({ uploaderId: userId, ...dto });
+    return this.mediaService.createUploadIntent({ principal, ...dto });
   }
 
   @Post('upload-intents/:mediaAssetId/confirm')
+  @Permissions(PermissionCode.MEDIA_UPLOAD)
   async confirm(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() principal: AuthPrincipal,
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
     @Body() dto: ConfirmMediaUploadDto,
   ): Promise<MediaResponseDto> {
     const media = await this.mediaService.confirmUpload({
-      userId,
+      principal,
       mediaAssetId,
       dto,
     });
@@ -51,12 +55,12 @@ export class MediaController {
 
   @Get(':mediaAssetId')
   async findOne(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() principal: AuthPrincipal,
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
   ): Promise<MediaResponseDto> {
     const media = await this.queryService.getAccessibleById(
       mediaAssetId,
-      userId,
+      principal,
     );
     return toMediaResponse(media, this.queryService.getDeliveryUrl(media));
   }
@@ -64,9 +68,9 @@ export class MediaController {
   @Delete(':mediaAssetId')
   @HttpCode(204)
   async remove(
-    @CurrentUser('userId') userId: string,
+    @CurrentUser() principal: AuthPrincipal,
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
   ): Promise<void> {
-    await this.cleanupService.deleteById(mediaAssetId, userId);
+    await this.cleanupService.deleteById(mediaAssetId, principal);
   }
 }

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { PermissionCode } from '@/common/enums';
 import { AccessDeniedException } from '@/common/exceptions';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { MediaPurpose } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma';
 
@@ -8,10 +10,11 @@ export class MediaOwnershipAuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async assertCanCreate(
-    userId: string,
+    principal: AuthPrincipal,
     purpose: MediaPurpose,
     ownerId: string,
   ): Promise<void> {
+    const userId = principal.userId;
     let allowed = false;
     if (purpose === MediaPurpose.AVATAR) allowed = ownerId === userId;
     else if (purpose === MediaPurpose.AUTHOR_BANNER) {
@@ -88,10 +91,21 @@ export class MediaOwnershipAuthorizationService {
       });
   }
 
-  assertUploader(userId: string, uploaderId: string | null): void {
-    if (uploaderId !== userId)
+  assertUploader(principal: AuthPrincipal, uploaderId: string | null): void {
+    if (uploaderId !== principal.userId)
       throw new AccessDeniedException({
         message: 'Media không thuộc người dùng hiện tại',
       });
+  }
+
+  assertCanDelete(principal: AuthPrincipal, uploaderId: string | null): void {
+    if (
+      uploaderId !== principal.userId &&
+      !principal.permissions.includes(PermissionCode.MEDIA_MANAGE_ANY)
+    ) {
+      throw new AccessDeniedException({
+        message: 'Không có quyền xóa media này',
+      });
+    }
   }
 }

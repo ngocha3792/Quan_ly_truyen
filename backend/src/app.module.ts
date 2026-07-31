@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommonFiltersModule } from './common/filters';
+import { CommonGuardsModule } from './common/guards';
 import { CommonInterceptorsModule } from './common/interceptors';
 import {
   CommonMiddlewaresModule,
@@ -21,10 +22,13 @@ import { AppConfigModule } from './config';
 import type { AppConfig, MaintenanceConfig } from './config';
 import { HealthModule } from './health';
 import { InfrastructureModule } from './infrastructure';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    AuthModule,
+    CommonGuardsModule,
     InfrastructureModule,
     HealthModule,
     CommonMiddlewaresModule.registerAsync({

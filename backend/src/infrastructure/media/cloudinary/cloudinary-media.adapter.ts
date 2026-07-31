@@ -11,6 +11,7 @@ import type {
   ConfirmUploadInput,
   CreateSignedUploadInput,
   DeleteStoredMediaInput,
+  DeleteStoredMediaResult,
   MediaStoragePort,
 } from '../contracts/media-storage.port';
 import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
@@ -115,7 +116,9 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     return mapCloudinaryAsset(result);
   }
 
-  async delete(input: DeleteStoredMediaInput): Promise<void> {
+  async delete(
+    input: DeleteStoredMediaInput,
+  ): Promise<DeleteStoredMediaResult> {
     const client = this.requireClient('delete');
     try {
       const result: unknown = await client.uploader.destroy(input.publicId, {
@@ -133,6 +136,7 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
           retryable: true,
         });
       }
+      return { outcome: outcome === 'ok' ? 'deleted' : 'not_found' };
     } catch (error: unknown) {
       if (error instanceof StorageException) throw error;
       throw new StorageException({

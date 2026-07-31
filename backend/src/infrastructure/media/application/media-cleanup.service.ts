@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   MediaAsset,
   MediaResourceType,
@@ -8,7 +9,9 @@ import {
 import {
   InvalidStateTransitionException,
   ResourceNotFoundException,
+  StorageException,
 } from '@/common/exceptions';
+import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import {
   MEDIA_STORAGE,
@@ -32,9 +35,10 @@ export class MediaCleanupService {
     private readonly prisma: PrismaService,
     @Inject(MEDIA_STORAGE) private readonly mediaStorage: MediaStoragePort,
     private readonly ownership: MediaOwnershipAuthorizationService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async deleteById(mediaId: string, userId?: string): Promise<void> {
+  async deleteById(mediaId: string, principal?: AuthPrincipal): Promise<void> {
     const media = await this.prisma.mediaAsset.findUnique({
       where: { id: mediaId },
     });
@@ -43,14 +47,19 @@ export class MediaCleanupService {
         resource: 'media asset',
         identifier: mediaId,
       });
-    if (userId) this.ownership.assertUploader(userId, media.uploaderId);
+    if (principal) this.ownership.assertCanDelete(principal, media.uploaderId);
     if (media.status === MediaStatus.DELETED) return;
     const claim = await this.prisma.mediaAsset.updateMany({
       where: {
         id: mediaId,
         status: { in: [MediaStatus.READY, MediaStatus.DELETE_FAILED] },
       },
-      data: { status: MediaStatus.DELETING },
+      data: {
+        status: MediaStatus.DELETING,
+        deleteAttempts: { increment: 1 },
+        processingStartedAt: new Date(),
+        nextDeleteAttemptAt: null,
+      },
     });
     if (claim.count !== 1)
       throw new InvalidStateTransitionException({
@@ -58,7 +67,7 @@ export class MediaCleanupService {
         from: media.status,
         to: MediaStatus.DELETING,
       });
-    await this.deleteClaimed(media);
+    await this.deleteClaimed(media, media.deleteAttempts + 1);
   }
 
   async cleanupExpiredUploadIntents(
@@ -66,19 +75,40 @@ export class MediaCleanupService {
   ): Promise<CleanupSummary> {
     const batchSize = Math.min(Math.max(options.batchSize ?? 100, 1), 500);
     const olderThan = options.olderThan ?? new Date();
+    const staleProcessingBefore = new Date(olderThan.getTime() - 5 * 60_000);
+    const maxAttempts = this.configService.get<number>(
+      'cloudinary.deleteMaxAttempts',
+      5,
+    );
     const candidates = await this.prisma.mediaAsset.findMany({
       where: {
-        uploadExpiresAt: { lt: olderThan },
-        status: {
-          in: [
-            MediaStatus.PENDING,
-            MediaStatus.PROCESSING,
-            MediaStatus.FAILED,
-            MediaStatus.DELETE_FAILED,
-          ],
-        },
+        deleteAttempts: { lt: maxAttempts },
+        OR: [
+          {
+            uploadExpiresAt: { lt: olderThan },
+            status: {
+              in: [
+                MediaStatus.PENDING,
+                MediaStatus.UPLOADED,
+                MediaStatus.PROCESSING,
+                MediaStatus.FAILED,
+              ],
+            },
+          },
+          {
+            status: MediaStatus.DELETE_FAILED,
+            OR: [
+              { nextDeleteAttemptAt: null },
+              { nextDeleteAttemptAt: { lte: olderThan } },
+            ],
+          },
+          {
+            status: MediaStatus.DELETING,
+            processingStartedAt: { lt: staleProcessingBefore },
+          },
+        ],
       },
-      orderBy: { uploadExpiresAt: 'asc' },
+      orderBy: { updatedAt: 'asc' },
       take: batchSize,
     });
     const summary: CleanupSummary = {
@@ -89,15 +119,24 @@ export class MediaCleanupService {
     };
     for (const media of candidates) {
       const claim = await this.prisma.mediaAsset.updateMany({
-        where: { id: media.id, status: media.status },
-        data: { status: MediaStatus.DELETING },
+        where: {
+          id: media.id,
+          status: media.status,
+          deleteAttempts: media.deleteAttempts,
+        },
+        data: {
+          status: MediaStatus.DELETING,
+          deleteAttempts: { increment: 1 },
+          processingStartedAt: new Date(),
+          nextDeleteAttemptAt: null,
+        },
       });
       if (claim.count !== 1) {
         summary.skipped++;
         continue;
       }
       try {
-        await this.deleteClaimed(media);
+        await this.deleteClaimed(media, media.deleteAttempts + 1);
         summary.deleted++;
       } catch {
         summary.failed++;
@@ -106,17 +145,38 @@ export class MediaCleanupService {
     return summary;
   }
 
-  private async deleteClaimed(media: MediaAsset): Promise<void> {
+  private async deleteClaimed(
+    media: MediaAsset,
+    attempt: number,
+  ): Promise<void> {
     try {
-      if (media.publicId && media.resourceType)
-        await this.mediaStorage.delete({
+      if (media.publicId && media.resourceType) {
+        const expectedType = toStorageResourceType(media.resourceType);
+        const result = await this.mediaStorage.delete({
           publicId: media.publicId,
-          resourceType: toStorageResourceType(media.resourceType),
+          resourceType: expectedType,
           invalidate: true,
         });
+        if (
+          result.outcome === 'not_found' &&
+          media.status !== MediaStatus.READY
+        ) {
+          await this.deleteAcrossAlternateResourceTypes(
+            media.id,
+            media.publicId,
+            expectedType,
+          );
+        }
+      }
       await this.prisma.mediaAsset.updateMany({
         where: { id: media.id, status: MediaStatus.DELETING },
-        data: { status: MediaStatus.DELETED, deletedAt: new Date() },
+        data: {
+          status: MediaStatus.DELETED,
+          deletedAt: new Date(),
+          processingStartedAt: null,
+          nextDeleteAttemptAt: null,
+          lastProviderErrorCode: null,
+        },
       });
       this.logger.log({
         message: 'media delete succeeded',
@@ -124,10 +184,24 @@ export class MediaCleanupService {
         operation: 'delete',
       });
     } catch (error: unknown) {
+      const retryBaseMs = this.configService.get<number>(
+        'cloudinary.deleteRetryBaseMs',
+        5000,
+      );
+      const nextDeleteAttemptAt = new Date(
+        Date.now() + retryBaseMs * 2 ** Math.max(attempt - 1, 0),
+      );
+      const providerErrorCode =
+        error instanceof StorageException
+          ? String(error.code)
+          : MEDIA_ERROR_CODES.DELETE_FAILED;
       await this.prisma.mediaAsset.updateMany({
         where: { id: media.id, status: MediaStatus.DELETING },
         data: {
           status: MediaStatus.DELETE_FAILED,
+          processingStartedAt: null,
+          nextDeleteAttemptAt,
+          lastProviderErrorCode: providerErrorCode,
           metadata: mergeMetadata(media.metadata, {
             providerOperation: 'delete',
             errorCode: MEDIA_ERROR_CODES.DELETE_FAILED,
@@ -142,6 +216,30 @@ export class MediaCleanupService {
         retryable: true,
       });
       throw error;
+    }
+  }
+
+  private async deleteAcrossAlternateResourceTypes(
+    mediaAssetId: string,
+    publicId: string,
+    expectedType: MediaStorageResourceType,
+  ): Promise<void> {
+    for (const resourceType of ['image', 'video', 'raw'] as const) {
+      if (resourceType === expectedType) continue;
+      const result = await this.mediaStorage.delete({
+        publicId,
+        resourceType,
+        invalidate: true,
+      });
+      if (result.outcome === 'deleted') {
+        this.logger.warn({
+          message: 'media cleanup used resource type fallback',
+          mediaAssetId,
+          operation: 'delete',
+          resourceType,
+        });
+        return;
+      }
     }
   }
 }

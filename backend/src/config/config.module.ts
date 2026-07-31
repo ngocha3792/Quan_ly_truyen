@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 
 import appConfig from './app.config';
+import authConfig from './auth.config';
 import cloudinaryConfig from './cloudinary.config';
 import corsConfig from './cors.config';
 import databaseConfig from './database.config';
@@ -32,6 +33,7 @@ function resolveEnvFilePaths(): string[] {
       ignoreEnvFile: process.env.NODE_ENV === 'production',
       load: [
         appConfig,
+        authConfig,
         cloudinaryConfig,
         databaseConfig,
         corsConfig,
