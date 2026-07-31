@@ -1,0 +1,974 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum AccountStatus {
+  ACTIVE    @map("active")
+  SUSPENDED @map("suspended")
+  BANNED    @map("banned")
+  DELETED   @map("deleted")
+
+  @@map("account_status")
+}
+
+enum AuthorVerificationStatus {
+  PENDING  @map("pending")
+  VERIFIED @map("verified")
+  REJECTED @map("rejected")
+
+  @@map("author_verification_status")
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION @map("email_verification")
+  PASSWORD_RESET     @map("password_reset")
+  CHANGE_EMAIL       @map("change_email")
+
+  @@map("token_type")
+}
+
+enum OAuthProvider {
+  GOOGLE   @map("google")
+  FACEBOOK @map("facebook")
+  GITHUB   @map("github")
+
+  @@map("oauth_provider")
+}
+
+enum StoryStatus {
+  DRAFT          @map("draft")
+  PENDING_REVIEW @map("pending_review")
+  REJECTED       @map("rejected")
+  PUBLISHED      @map("published")
+  SUSPENDED      @map("suspended")
+  COMPLETED      @map("completed")
+  ARCHIVED       @map("archived")
+
+  @@map("story_status")
+}
+
+enum StoryVisibility {
+  PUBLIC   @map("public")
+  UNLISTED @map("unlisted")
+  PRIVATE  @map("private")
+
+  @@map("story_visibility")
+}
+
+enum ContentRating {
+  EVERYONE @map("everyone")
+  TEEN     @map("teen")
+  MATURE   @map("mature")
+
+  @@map("content_rating")
+}
+
+enum ContributorRole {
+  CO_AUTHOR   @map("co_author")
+  EDITOR      @map("editor")
+  TRANSLATOR  @map("translator")
+  ILLUSTRATOR @map("illustrator")
+
+  @@map("contributor_role")
+}
+
+enum ChapterStatus {
+  DRAFT     @map("draft")
+  SCHEDULED @map("scheduled")
+  PUBLISHED @map("published")
+  HIDDEN    @map("hidden")
+  ARCHIVED  @map("archived")
+
+  @@map("chapter_status")
+}
+
+enum ContentFormat {
+  MARKDOWN   @map("markdown")
+  HTML       @map("html")
+  PLAIN_TEXT @map("plain_text")
+
+  @@map("content_format")
+}
+
+enum LibraryStatus {
+  PLAN_TO_READ @map("plan_to_read")
+  READING      @map("reading")
+  COMPLETED    @map("completed")
+  ON_HOLD      @map("on_hold")
+  DROPPED      @map("dropped")
+
+  @@map("library_status")
+}
+
+enum ModerationStatus {
+  VISIBLE @map("visible")
+  HIDDEN  @map("hidden")
+  DELETED @map("deleted")
+
+  @@map("moderation_status")
+}
+
+enum ReactionType {
+  LIKE       @map("like")
+  LOVE       @map("love")
+  LAUGH      @map("laugh")
+  INSIGHTFUL @map("insightful")
+
+  @@map("reaction_type")
+}
+
+enum ReportTargetType {
+  STORY   @map("story")
+  CHAPTER @map("chapter")
+  COMMENT @map("comment")
+  USER    @map("user")
+
+  @@map("report_target_type")
+}
+
+enum ReportReason {
+  SPAM           @map("spam")
+  HARASSMENT     @map("harassment")
+  HATE_SPEECH    @map("hate_speech")
+  SEXUAL_CONTENT @map("sexual_content")
+  VIOLENCE       @map("violence")
+  COPYRIGHT      @map("copyright")
+  MISINFORMATION @map("misinformation")
+  OTHER          @map("other")
+
+  @@map("report_reason")
+}
+
+enum ReportStatus {
+  OPEN      @map("open")
+  IN_REVIEW @map("in_review")
+  RESOLVED  @map("resolved")
+  REJECTED  @map("rejected")
+
+  @@map("report_status")
+}
+
+enum SubmissionStatus {
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+  CANCELED @map("canceled")
+
+  @@map("submission_status")
+}
+
+enum ModerationActionType {
+  APPROVE_STORY   @map("approve_story")
+  REJECT_STORY    @map("reject_story")
+  SUSPEND_STORY   @map("suspend_story")
+  RESTORE_STORY   @map("restore_story")
+  HIDE_CHAPTER    @map("hide_chapter")
+  RESTORE_CHAPTER @map("restore_chapter")
+  HIDE_COMMENT    @map("hide_comment")
+  DELETE_COMMENT  @map("delete_comment")
+  SUSPEND_USER    @map("suspend_user")
+  BAN_USER        @map("ban_user")
+  RESTORE_USER    @map("restore_user")
+
+  @@map("moderation_action_type")
+}
+
+enum MediaStatus {
+  PENDING @map("pending")
+  READY   @map("ready")
+  FAILED  @map("failed")
+  DELETED @map("deleted")
+
+  @@map("media_status")
+}
+
+enum MediaPurpose {
+  AVATAR        @map("avatar")
+  AUTHOR_BANNER @map("author_banner")
+  STORY_COVER   @map("story_cover")
+  CHAPTER_IMAGE @map("chapter_image")
+  ATTACHMENT    @map("attachment")
+
+  @@map("media_purpose")
+}
+
+enum OutboxStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  PUBLISHED  @map("published")
+  FAILED     @map("failed")
+
+  @@map("outbox_status")
+}
+
+// ============================================================
+// IDENTITY, AUTHENTICATION, AUTHORIZATION
+// ============================================================
+
+model User {
+  id              String        @id @default(uuid()) @db.Uuid
+  email           String        @unique @db.VarChar(320)
+  username        String        @unique @db.VarChar(50)
+  passwordHash    String?       @map("password_hash") @db.VarChar(255)
+  displayName     String        @map("display_name") @db.VarChar(120)
+  bio             String?       @db.Text
+  status          AccountStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?     @map("email_verified_at") @db.Timestamptz(3)
+  lastLoginAt     DateTime?     @map("last_login_at") @db.Timestamptz(3)
+  avatarMediaId   String?       @map("avatar_media_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(3)
+
+  avatarMedia            MediaAsset?             @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  authorProfile          AuthorProfile?
+  oauthAccounts          OAuthAccount[]
+  sessions               Session[]
+  tokens                 UserToken[]
+  userRoles              UserRole[]              @relation("UserRoles")
+  rolesAssigned          UserRole[]              @relation("AssignedUserRoles")
+  uploadedMedia          MediaAsset[]            @relation("MediaUploader")
+  storyContributions     StoryContributor[]
+  chaptersCreated        Chapter[]               @relation("ChapterCreatedBy")
+  chaptersUpdated        Chapter[]               @relation("ChapterUpdatedBy")
+  chapterVersions        ChapterVersion[]
+  comments               Comment[]
+  commentReactions       CommentReaction[]
+  ratings                Rating[]
+  libraryEntries         LibraryEntry[]
+  storyFollows           StoryFollow[]
+  readingProgresses      ReadingProgress[]
+  readingSessions        ReadingSession[]
+  reportsFiled           Report[]                @relation("ReportsFiled")
+  reportsAssigned        Report[]                @relation("ReportsAssigned")
+  reportedInReports      Report[]                @relation("ReportedUserReports")
+  storySubmissions       StorySubmission[]       @relation("StorySubmittedBy")
+  storyReviews           StorySubmission[]       @relation("StoryReviewedBy")
+  moderationActions      ModerationAction[]      @relation("ModerationActor")
+  moderationTarget       ModerationAction[]      @relation("ModerationTargetUser")
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
+  auditLogs              AuditLog[]
+
+  @@index([status, createdAt])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String        @map("provider_account_id") @db.VarChar(255)
+  accessToken       String?       @map("access_token") @db.Text
+  refreshToken      String?       @map("refresh_token") @db.Text
+  expiresAt         DateTime?     @map("expires_at") @db.Timestamptz(3)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(255)
+  deviceId         String?   @map("device_id") @db.VarChar(120)
+  deviceName       String?   @map("device_name") @db.VarChar(200)
+  ipAddress        String?   @map("ip_address") @db.VarChar(45)
+  userAgent        String?   @map("user_agent") @db.Text
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model UserToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  type       TokenType
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(255)
+  payload    Json?
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("user_tokens")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(120)
+  name        String   @db.VarChar(120)
+  description String?  @db.Text
+  resource    String   @db.VarChar(80)
+  action      String   @db.VarChar(80)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  roles RolePermission[]
+
+  @@index([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  userId       String    @map("user_id") @db.Uuid
+  roleId       String    @map("role_id") @db.Uuid
+  assignedById String?   @map("assigned_by_id") @db.Uuid
+  assignedAt   DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(3)
+  expiresAt    DateTime? @map("expires_at") @db.Timestamptz(3)
+
+  user       User  @relation("UserRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role       Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy User? @relation("AssignedUserRoles", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@index([assignedById])
+  @@index([expiresAt])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  grantedAt    DateTime @default(now()) @map("granted_at") @db.Timestamptz(3)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================
+// AUTHORS, MEDIA, STORIES, CHAPTERS
+// ============================================================
+
+model AuthorProfile {
+  userId             String                   @id @map("user_id") @db.Uuid
+  penName            String                   @unique @map("pen_name") @db.VarChar(120)
+  biography          String?                  @db.Text
+  verificationStatus AuthorVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt         DateTime?                @map("verified_at") @db.Timestamptz(3)
+  websiteUrl         String?                  @map("website_url") @db.VarChar(500)
+  socialLinks        Json?                    @map("social_links")
+  bannerMediaId      String?                  @map("banner_media_id") @db.Uuid
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bannerMedia MediaAsset? @relation("AuthorBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
+  stories     Story[]
+
+  @@index([verificationStatus])
+  @@map("author_profiles")
+}
+
+model MediaAsset {
+  id              String       @id @default(uuid()) @db.Uuid
+  uploaderId      String?      @map("uploader_id") @db.Uuid
+  purpose         MediaPurpose
+  status          MediaStatus  @default(PENDING)
+  storageProvider String       @map("storage_provider") @db.VarChar(50)
+  bucket          String       @db.VarChar(120)
+  storageKey      String       @unique @map("storage_key") @db.VarChar(1024)
+  publicUrl       String?      @map("public_url") @db.VarChar(2048)
+  originalName    String       @map("original_name") @db.VarChar(255)
+  mimeType        String       @map("mime_type") @db.VarChar(120)
+  sizeBytes       BigInt       @map("size_bytes")
+  checksumSha256  String?      @map("checksum_sha256") @db.VarChar(64)
+  width           Int?
+  height          Int?
+  metadata        Json?
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  uploader        User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  avatarOfUsers   User[]          @relation("UserAvatar")
+  bannerOfAuthors AuthorProfile[] @relation("AuthorBanner")
+  coverOfStories  Story[]         @relation("StoryCover")
+
+  @@index([uploaderId, createdAt])
+  @@index([purpose, status])
+  @@index([deletedAt])
+  @@map("media_assets")
+}
+
+model Story {
+  id            String          @id @default(uuid()) @db.Uuid
+  authorId      String          @map("author_id") @db.Uuid
+  title         String          @db.VarChar(255)
+  slug          String          @unique @db.VarChar(255)
+  synopsis      String          @db.Text
+  languageCode  String          @default("vi") @map("language_code") @db.VarChar(10)
+  status        StoryStatus     @default(DRAFT)
+  visibility    StoryVisibility @default(PRIVATE)
+  contentRating ContentRating   @default(TEEN) @map("content_rating")
+  coverMediaId  String?         @map("cover_media_id") @db.Uuid
+  publishedAt   DateTime?       @map("published_at") @db.Timestamptz(3)
+  completedAt   DateTime?       @map("completed_at") @db.Timestamptz(3)
+  lastChapterAt DateTime?       @map("last_chapter_at") @db.Timestamptz(3)
+  viewCount     BigInt          @default(0) @map("view_count")
+  followerCount Int             @default(0) @map("follower_count")
+  ratingCount   Int             @default(0) @map("rating_count")
+  ratingAverage Decimal         @default(0) @map("rating_average") @db.Decimal(3, 2)
+  chapterCount  Int             @default(0) @map("chapter_count")
+  commentCount  Int             @default(0) @map("comment_count")
+  version       Int             @default(1)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?       @map("deleted_at") @db.Timestamptz(3)
+
+  author            AuthorProfile      @relation(fields: [authorId], references: [userId], onDelete: Restrict)
+  coverMedia        MediaAsset?        @relation("StoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  contributors      StoryContributor[]
+  categories        StoryCategory[]
+  tags              StoryTag[]
+  chapters          Chapter[]
+  comments          Comment[]
+  ratings           Rating[]
+  libraryEntries    LibraryEntry[]
+  follows           StoryFollow[]
+  readingProgress   ReadingProgress[]
+  readingSessions   ReadingSession[]
+  submissions       StorySubmission[]
+  reports           Report[]           @relation("StoryReports")
+  moderationActions ModerationAction[] @relation("ModerationStory")
+  dailyStats        StoryDailyStat[]
+
+  @@index([authorId, status, updatedAt])
+  @@index([status, visibility, publishedAt])
+  @@index([contentRating, status])
+  @@index([lastChapterAt])
+  @@index([deletedAt])
+  @@map("stories")
+}
+
+model StoryContributor {
+  storyId    String          @map("story_id") @db.Uuid
+  userId     String          @map("user_id") @db.Uuid
+  role       ContributorRole
+  creditName String?         @map("credit_name") @db.VarChar(120)
+  canEdit    Boolean         @default(false) @map("can_edit")
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, userId, role])
+  @@index([userId])
+  @@map("story_contributors")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(120)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  parent   Category?       @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[]      @relation("CategoryTree")
+  stories  StoryCategory[]
+
+  @@index([parentId, sortOrder])
+  @@index([isActive, sortOrder])
+  @@map("categories")
+}
+
+model StoryCategory {
+  storyId    String   @map("story_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, categoryId])
+  @@index([categoryId, storyId])
+  @@map("story_categories")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(80)
+  slug      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  stories StoryTag[]
+
+  @@map("tags")
+}
+
+model StoryTag {
+  storyId String @map("story_id") @db.Uuid
+  tagId   String @map("tag_id") @db.Uuid
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, tagId])
+  @@index([tagId, storyId])
+  @@map("story_tags")
+}
+
+model Chapter {
+  id            String        @id @default(uuid()) @db.Uuid
+  storyId       String        @map("story_id") @db.Uuid
+  createdById   String        @map("created_by_id") @db.Uuid
+  updatedById   String        @map("updated_by_id") @db.Uuid
+  number        Decimal       @db.Decimal(10, 2)
+  title         String        @db.VarChar(255)
+  slug          String        @db.VarChar(255)
+  content       String        @db.Text
+  contentFormat ContentFormat @default(MARKDOWN) @map("content_format")
+  status        ChapterStatus @default(DRAFT)
+  wordCount     Int           @default(0) @map("word_count")
+  version       Int           @default(1)
+  scheduledAt   DateTime?     @map("scheduled_at") @db.Timestamptz(3)
+  publishedAt   DateTime?     @map("published_at") @db.Timestamptz(3)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz(3)
+
+  story             Story              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy         User               @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy         User               @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  versions          ChapterVersion[]
+  comments          Comment[]
+  lastReadEntries   LibraryEntry[]     @relation("LibraryLastReadChapter")
+  currentProgress   ReadingProgress[]  @relation("CurrentProgressChapter")
+  readingSessions   ReadingSession[]
+  reports           Report[]           @relation("ChapterReports")
+  moderationActions ModerationAction[] @relation("ModerationChapter")
+  dailyStats        ChapterDailyStat[]
+
+  @@unique([storyId, number])
+  @@unique([storyId, slug])
+  @@index([storyId, status, publishedAt])
+  @@index([scheduledAt, status])
+  @@index([deletedAt])
+  @@map("chapters")
+}
+
+model ChapterVersion {
+  id            String        @id @default(uuid()) @db.Uuid
+  chapterId     String        @map("chapter_id") @db.Uuid
+  createdById   String        @map("created_by_id") @db.Uuid
+  version       Int
+  title         String        @db.VarChar(255)
+  content       String        @db.Text
+  contentFormat ContentFormat @map("content_format")
+  wordCount     Int           @map("word_count")
+  changeSummary String?       @map("change_summary") @db.VarChar(500)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([chapterId, version])
+  @@index([createdById])
+  @@map("chapter_versions")
+}
+
+// ============================================================
+// READER ENGAGEMENT
+// ============================================================
+
+model LibraryEntry {
+  userId            String        @map("user_id") @db.Uuid
+  storyId           String        @map("story_id") @db.Uuid
+  status            LibraryStatus @default(PLAN_TO_READ)
+  isFavorite        Boolean       @default(false) @map("is_favorite")
+  lastReadChapterId String?       @map("last_read_chapter_id") @db.Uuid
+  progressPercent   Decimal       @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  startedAt         DateTime?     @map("started_at") @db.Timestamptz(3)
+  completedAt       DateTime?     @map("completed_at") @db.Timestamptz(3)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story           Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  lastReadChapter Chapter? @relation("LibraryLastReadChapter", fields: [lastReadChapterId], references: [id], onDelete: SetNull)
+
+  @@id([userId, storyId])
+  @@index([userId, status, updatedAt])
+  @@index([storyId, status])
+  @@index([lastReadChapterId])
+  @@map("library_entries")
+}
+
+model StoryFollow {
+  userId               String   @map("user_id") @db.Uuid
+  storyId              String   @map("story_id") @db.Uuid
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+  @@index([storyId, createdAt])
+  @@map("story_follows")
+}
+
+model Rating {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  storyId          String           @map("story_id") @db.Uuid
+  score            Int              @db.SmallInt
+  review           String?          @db.Text
+  moderationStatus ModerationStatus @default(VISIBLE) @map("moderation_status")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@index([storyId, moderationStatus, createdAt])
+  @@index([deletedAt])
+  @@map("ratings")
+}
+
+model Comment {
+  id               String           @id @default(uuid()) @db.Uuid
+  storyId          String           @map("story_id") @db.Uuid
+  chapterId        String?          @map("chapter_id") @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  parentId         String?          @map("parent_id") @db.Uuid
+  body             String           @db.Text
+  moderationStatus ModerationStatus @default(VISIBLE) @map("moderation_status")
+  likeCount        Int              @default(0) @map("like_count")
+  replyCount       Int              @default(0) @map("reply_count")
+  editedAt         DateTime?        @map("edited_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz(3)
+
+  story             Story              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter           Chapter?           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  parent            Comment?           @relation("CommentThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies           Comment[]          @relation("CommentThread")
+  reactions         CommentReaction[]
+  reports           Report[]           @relation("CommentReports")
+  moderationActions ModerationAction[] @relation("ModerationComment")
+
+  @@index([storyId, moderationStatus, createdAt])
+  @@index([chapterId, moderationStatus, createdAt])
+  @@index([parentId, createdAt])
+  @@index([userId, createdAt])
+  @@index([deletedAt])
+  @@map("comments")
+}
+
+model CommentReaction {
+  commentId String       @map("comment_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@index([userId, createdAt])
+  @@map("comment_reactions")
+}
+
+model ReadingProgress {
+  userId           String   @map("user_id") @db.Uuid
+  storyId          String   @map("story_id") @db.Uuid
+  currentChapterId String?  @map("current_chapter_id") @db.Uuid
+  position         Int      @default(0)
+  progressPercent  Decimal  @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  lastReadAt       DateTime @default(now()) @map("last_read_at") @db.Timestamptz(3)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story          Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  currentChapter Chapter? @relation("CurrentProgressChapter", fields: [currentChapterId], references: [id], onDelete: SetNull)
+
+  @@id([userId, storyId])
+  @@index([userId, lastReadAt])
+  @@index([storyId, lastReadAt])
+  @@index([currentChapterId])
+  @@map("reading_progress")
+}
+
+model ReadingSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  storyId         String    @map("story_id") @db.Uuid
+  chapterId       String    @map("chapter_id") @db.Uuid
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt         DateTime? @map("ended_at") @db.Timestamptz(3)
+  durationSeconds Int?      @map("duration_seconds")
+  startPosition   Int       @default(0) @map("start_position")
+  endPosition     Int?      @map("end_position")
+  completed       Boolean   @default(false)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+  @@index([storyId, startedAt])
+  @@index([chapterId, startedAt])
+  @@map("reading_sessions")
+}
+
+// ============================================================
+// MODERATION, REPORTING, NOTIFICATIONS, AUDITING
+// ============================================================
+
+model StorySubmission {
+  id            String           @id @default(uuid()) @db.Uuid
+  storyId       String           @map("story_id") @db.Uuid
+  submittedById String           @map("submitted_by_id") @db.Uuid
+  reviewedById  String?          @map("reviewed_by_id") @db.Uuid
+  status        SubmissionStatus @default(PENDING)
+  authorNote    String?          @map("author_note") @db.Text
+  reviewerNote  String?          @map("reviewer_note") @db.Text
+  submittedAt   DateTime         @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  reviewedAt    DateTime?        @map("reviewed_at") @db.Timestamptz(3)
+  canceledAt    DateTime?        @map("canceled_at") @db.Timestamptz(3)
+
+  story             Story              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  submittedBy       User               @relation("StorySubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewedBy        User?              @relation("StoryReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  moderationActions ModerationAction[]
+
+  @@index([storyId, status, submittedAt])
+  @@index([reviewedById, status])
+  @@map("story_submissions")
+}
+
+model Report {
+  id             String           @id @default(uuid()) @db.Uuid
+  reporterId     String           @map("reporter_id") @db.Uuid
+  assignedToId   String?          @map("assigned_to_id") @db.Uuid
+  targetType     ReportTargetType @map("target_type")
+  storyId        String?          @map("story_id") @db.Uuid
+  chapterId      String?          @map("chapter_id") @db.Uuid
+  commentId      String?          @map("comment_id") @db.Uuid
+  reportedUserId String?          @map("reported_user_id") @db.Uuid
+  reason         ReportReason
+  description    String?          @db.Text
+  evidence       Json?
+  status         ReportStatus     @default(OPEN)
+  resolutionNote String?          @map("resolution_note") @db.Text
+  resolvedAt     DateTime?        @map("resolved_at") @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  reporter          User               @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Restrict)
+  assignedTo        User?              @relation("ReportsAssigned", fields: [assignedToId], references: [id], onDelete: SetNull)
+  story             Story?             @relation("StoryReports", fields: [storyId], references: [id], onDelete: Cascade)
+  chapter           Chapter?           @relation("ChapterReports", fields: [chapterId], references: [id], onDelete: Cascade)
+  comment           Comment?           @relation("CommentReports", fields: [commentId], references: [id], onDelete: Cascade)
+  reportedUser      User?              @relation("ReportedUserReports", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  moderationActions ModerationAction[]
+
+  @@index([status, createdAt])
+  @@index([assignedToId, status])
+  @@index([storyId])
+  @@index([chapterId])
+  @@index([commentId])
+  @@index([reportedUserId])
+  @@map("reports")
+}
+
+model ModerationAction {
+  id           String               @id @default(uuid()) @db.Uuid
+  actorId      String               @map("actor_id") @db.Uuid
+  reportId     String?              @map("report_id") @db.Uuid
+  submissionId String?              @map("submission_id") @db.Uuid
+  storyId      String?              @map("story_id") @db.Uuid
+  chapterId    String?              @map("chapter_id") @db.Uuid
+  commentId    String?              @map("comment_id") @db.Uuid
+  targetUserId String?              @map("target_user_id") @db.Uuid
+  action       ModerationActionType
+  reason       String?              @db.Text
+  metadata     Json?
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor      User             @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+  report     Report?          @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  submission StorySubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  story      Story?           @relation("ModerationStory", fields: [storyId], references: [id], onDelete: SetNull)
+  chapter    Chapter?         @relation("ModerationChapter", fields: [chapterId], references: [id], onDelete: SetNull)
+  comment    Comment?         @relation("ModerationComment", fields: [commentId], references: [id], onDelete: SetNull)
+  targetUser User?            @relation("ModerationTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([reportId])
+  @@index([submissionId])
+  @@index([storyId])
+  @@index([chapterId])
+  @@index([commentId])
+  @@index([targetUserId])
+  @@map("moderation_actions")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String    @db.VarChar(100)
+  title     String    @db.VarChar(255)
+  body      String    @db.Text
+  data      Json?
+  readAt    DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  userId              String   @id @map("user_id") @db.Uuid
+  emailEnabled        Boolean  @default(true) @map("email_enabled")
+  pushEnabled         Boolean  @default(true) @map("push_enabled")
+  inAppEnabled        Boolean  @default(true) @map("in_app_enabled")
+  newChapterEnabled   Boolean  @default(true) @map("new_chapter_enabled")
+  commentReplyEnabled Boolean  @default(true) @map("comment_reply_enabled")
+  moderationEnabled   Boolean  @default(true) @map("moderation_enabled")
+  preferences         Json?
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(120)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.VarChar(100)
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  metadata   Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.Text
+  requestId  String?  @map("request_id") @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([requestId])
+  @@map("audit_logs")
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  aggregateType String       @map("aggregate_type") @db.VarChar(100)
+  aggregateId   String       @map("aggregate_id") @db.VarChar(100)
+  eventType     String       @map("event_type") @db.VarChar(150)
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)
+  processedAt   DateTime?    @map("processed_at") @db.Timestamptz(3)
+  lastError     String?      @map("last_error") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+// ============================================================
+// AGGREGATED ANALYTICS
+// ============================================================
+
+model StoryDailyStat {
+  storyId        String   @map("story_id") @db.Uuid
+  date           DateTime @db.Date
+  viewCount      BigInt   @default(0) @map("view_count")
+  uniqueReaders  Int      @default(0) @map("unique_readers")
+  followCount    Int      @default(0) @map("follow_count")
+  ratingCount    Int      @default(0) @map("rating_count")
+  commentCount   Int      @default(0) @map("comment_count")
+  readingSeconds BigInt   @default(0) @map("reading_seconds")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, date])
+  @@index([date, viewCount])
+  @@map("story_daily_stats")
+}
+
+model ChapterDailyStat {
+  chapterId       String   @map("chapter_id") @db.Uuid
+  date            DateTime @db.Date
+  viewCount       BigInt   @default(0) @map("view_count")
+  uniqueReaders   Int      @default(0) @map("unique_readers")
+  completionCount Int      @default(0) @map("completion_count")
+  readingSeconds  BigInt   @default(0) @map("reading_seconds")
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@id([chapterId, date])
+  @@index([date, viewCount])
+  @@map("chapter_daily_stats")
+}

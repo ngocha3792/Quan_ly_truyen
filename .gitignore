@@ -48,6 +48,7 @@ frontend/.angular/cache/
 # =============================================================================
 # PRISMA
 # =============================================================================
+backend/src/generated/
 backend/prisma/migrations/**/*.sql
 # Keep migrations folder but ignore generated files if needed
 
