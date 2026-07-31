@@ -24,8 +24,7 @@ export function Idempotent(
 ): MethodDecorator & ClassDecorator {
   if (
     options.ttlSeconds !== undefined &&
-    (!Number.isSafeInteger(options.ttlSeconds) ||
-      options.ttlSeconds <= 0)
+    (!Number.isSafeInteger(options.ttlSeconds) || options.ttlSeconds <= 0)
   ) {
     throw new TypeError(
       'Idempotent ttlSeconds must be a positive safe integer',

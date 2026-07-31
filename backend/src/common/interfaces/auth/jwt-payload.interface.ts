@@ -1,39 +1,38 @@
-import { JwtTokenType } from "@/common/enums";
-
+import { JwtTokenType } from '@/common/enums';
 
 export interface JwtPayload {
-    /**
-     * Subject: user ID.
-     */
-    sub: string;
+  /**
+   * Subject: user ID.
+   */
+  sub: string;
 
-    /**
-     * Session ID.
-     */
-    sid: string;
+  /**
+   * Session ID.
+   */
+  sid: string;
 
-    /**
-     * Token type.
-     */
-    typ: JwtTokenType;
+  /**
+   * Token type.
+   */
+  typ: JwtTokenType;
 
-    /**
-     * Token version, dùng để revoke token.
-     */
-    ver: number;
+  /**
+   * Token version, dùng để revoke token.
+   */
+  ver: number;
 
-    /**
-     * JWT standard claims.
-     */
-    iat?: number;
-    exp?: number;
-    jti?: string;
+  /**
+   * JWT standard claims.
+   */
+  iat?: number;
+  exp?: number;
+  jti?: string;
 }
 export interface AccessTokenPayload extends JwtPayload {
-    typ: JwtTokenType.ACCESS;
+  typ: JwtTokenType.ACCESS;
 }
 
 export interface RefreshTokenPayload extends JwtPayload {
-    typ: JwtTokenType.REFRESH;
-    familyId: string;
+  typ: JwtTokenType.REFRESH;
+  familyId: string;
 }

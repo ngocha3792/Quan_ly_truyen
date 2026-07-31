@@ -1,15 +1,15 @@
 import { AuthPrincipal } from '@/common/interfaces/auth';
 
 export interface RequestContext {
-    requestId: string;
-    correlationId?: string;
-    traceId?: string;
+  requestId: string;
+  correlationId?: string;
+  traceId?: string;
 
-    principal: AuthPrincipal | null;
+  principal: AuthPrincipal | null;
 
-    ipAddress?: string;
-    userAgent?: string;
-    locale?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  locale?: string;
 
-    startedAt: Date;
+  startedAt: Date;
 }

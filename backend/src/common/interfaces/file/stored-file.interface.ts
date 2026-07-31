@@ -1,15 +1,15 @@
 export interface StoredFile {
-    id: string;
+  id: string;
 
-    storageProvider: 'local' | 's3' | 'gcs';
-    storageKey: string;
+  storageProvider: 'local' | 's3' | 'gcs';
+  storageKey: string;
 
-    originalName: string;
-    mimeType: string;
-    size: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
 
-    url?: string;
-    checksum?: string;
+  url?: string;
+  checksum?: string;
 
-    createdAt: Date;
+  createdAt: Date;
 }

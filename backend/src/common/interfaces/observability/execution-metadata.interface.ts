@@ -1,9 +1,9 @@
 export interface ExecutionMetadata {
-    operation: string;
-    module: string;
+  operation: string;
+  module: string;
 
-    startedAt: Date;
-    durationMs?: number;
+  startedAt: Date;
+  durationMs?: number;
 
-    success?: boolean;
+  success?: boolean;
 }

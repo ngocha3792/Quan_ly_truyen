@@ -46,11 +46,7 @@ export function throwPassportAuthenticationFailure(
     });
   }
 
-  if (
-    name === 'JsonWebTokenError' ||
-    name === 'NotBeforeError' ||
-    failure
-  ) {
+  if (name === 'JsonWebTokenError' || name === 'NotBeforeError' || failure) {
     throw new InvalidTokenException({
       message: 'Access token không hợp lệ',
       ...(name ? { details: { reason: name } } : {}),

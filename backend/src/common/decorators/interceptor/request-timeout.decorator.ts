@@ -6,17 +6,11 @@ import { REQUEST_TIMEOUT_MS_KEY } from '@/common/constants';
 export function RequestTimeout(
   milliseconds: number,
 ): MethodDecorator & ClassDecorator {
-  if (
-    !Number.isSafeInteger(milliseconds) ||
-    milliseconds <= 0
-  ) {
+  if (!Number.isSafeInteger(milliseconds) || milliseconds <= 0) {
     throw new TypeError(
       'RequestTimeout milliseconds must be a positive safe integer',
     );
   }
 
-  return SetMetadata(
-    REQUEST_TIMEOUT_MS_KEY,
-    milliseconds,
-  );
+  return SetMetadata(REQUEST_TIMEOUT_MS_KEY, milliseconds);
 }

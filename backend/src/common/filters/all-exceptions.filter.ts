@@ -1,9 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  Logger,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
 import type { ApiErrorResponse } from '@/common/interfaces/http';
@@ -22,7 +17,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   constructor(
     private readonly adapterHost: HttpAdapterHost,
     private readonly normalizer: ExceptionNormalizer,
-  ) { }
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     if (host.getType() !== 'http') {
@@ -45,11 +40,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     this.writeLog(exception, normalized, requestMetadata);
 
-    httpAdapter.setHeader(
-      response,
-      'x-request-id',
-      requestMetadata.requestId,
-    );
+    httpAdapter.setHeader(response, 'x-request-id', requestMetadata.requestId);
 
     httpAdapter.reply(response, responseBody, normalized.status);
   }
@@ -63,9 +54,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: {
         code: exception.code,
         message: exception.message,
-        ...(exception.details
-          ? { details: exception.details }
-          : {}),
+        ...(exception.details ? { details: exception.details } : {}),
         retryable: exception.retryable,
       },
       requestId: request.requestId,
@@ -90,9 +79,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       .join(' ');
 
     if (normalized.logLevel === 'error') {
-      const stack = exception instanceof Error
-        ? exception.stack
-        : undefined;
+      const stack = exception instanceof Error ? exception.stack : undefined;
 
       this.logger.error(logMessage, stack);
       return;

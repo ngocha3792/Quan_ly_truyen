@@ -1,7 +1,4 @@
-import type {
-  CanActivate,
-  ExecutionContext,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 
 import { AccessDeniedException } from '../exceptions';
@@ -18,14 +15,13 @@ export class VerifiedEmailGuard implements CanActivate {
 
     const isVerified =
       principal.emailVerified === true ||
-      principal.emailVerifiedAt !== undefined &&
-        principal.emailVerifiedAt !== null;
+      (principal.emailVerifiedAt !== undefined &&
+        principal.emailVerifiedAt !== null);
 
     if (!isVerified) {
       throw new AccessDeniedException({
         code: 'EMAIL_VERIFICATION_REQUIRED',
-        message:
-          'Bạn cần xác minh email để thực hiện thao tác này',
+        message: 'Bạn cần xác minh email để thực hiện thao tác này',
       });
     }
 

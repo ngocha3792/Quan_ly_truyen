@@ -1,9 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 
-import {
-  InvalidTokenException,
-  TokenExpiredException,
-} from '../exceptions';
+import { InvalidTokenException, TokenExpiredException } from '../exceptions';
 
 export interface CommonJwtClaims extends jwt.JwtPayload {
   sub: string;
@@ -27,10 +24,7 @@ export interface JwtVerifyConfig {
   key: jwt.Secret | jwt.PublicKey;
   algorithms: [jwt.Algorithm, ...jwt.Algorithm[]];
   issuer: string | [string, ...string[]];
-  audience:
-    | string
-    | RegExp
-    | [string | RegExp, ...(string | RegExp)[]];
+  audience: string | RegExp | [string | RegExp, ...(string | RegExp)[]];
   subject?: string;
   clockToleranceSeconds?: number;
   maxAge?: jwt.VerifyOptions['maxAge'];
@@ -94,25 +88,17 @@ export function verifyJwt<TClaims extends jwt.JwtPayload>(
   const options: jwt.VerifyOptions = {
     algorithms: [...config.algorithms],
     issuer: Array.isArray(config.issuer)
-      ? [...config.issuer] as [string, ...string[]]
+      ? ([...config.issuer] as [string, ...string[]])
       : config.issuer,
     audience:
-      typeof config.audience === 'string' ||
-      config.audience instanceof RegExp
+      typeof config.audience === 'string' || config.audience instanceof RegExp
         ? config.audience
-        : [...config.audience] as [
-            string | RegExp,
-            ...(string | RegExp)[],
-          ],
+        : ([...config.audience] as [string | RegExp, ...(string | RegExp)[]]),
     complete: false,
   };
 
   assignDefined(options, 'subject', config.subject);
-  assignDefined(
-    options,
-    'clockTolerance',
-    config.clockToleranceSeconds,
-  );
+  assignDefined(options, 'clockTolerance', config.clockToleranceSeconds);
   assignDefined(options, 'maxAge', config.maxAge);
 
   try {
@@ -212,7 +198,6 @@ export function isJwtExpired(
   }
 
   return (
-    expirationDate.getTime() + clockToleranceSeconds * 1_000 <=
-    now.getTime()
+    expirationDate.getTime() + clockToleranceSeconds * 1_000 <= now.getTime()
   );
 }

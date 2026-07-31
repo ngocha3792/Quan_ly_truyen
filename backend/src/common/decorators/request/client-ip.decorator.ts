@@ -1,7 +1,4 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 import { HTTP_HEADERS } from '@/common/constants';
 import { resolveClientIp } from '@/common/utils';
@@ -22,13 +19,8 @@ interface RequestWithIp {
  * still required; never trust x-forwarded-for from arbitrary clients.
  */
 export const ClientIp = createParamDecorator(
-  (
-    _data: unknown,
-    context: ExecutionContext,
-  ): string | undefined => {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestWithIp>();
+  (_data: unknown, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<RequestWithIp>();
 
     if (
       typeof request.requestContext?.ipAddress === 'string' &&
@@ -40,7 +32,12 @@ export const ClientIp = createParamDecorator(
     const resolved = resolveClientIp({
       forwardedFor: request.headers?.[HTTP_HEADERS.X_FORWARDED_FOR],
       realIp: request.headers?.[HTTP_HEADERS.X_REAL_IP],
-      socketIp: typeof request.ip === 'string' ? request.ip : typeof request.socket?.remoteAddress === 'string' ? request.socket.remoteAddress : undefined,
+      socketIp:
+        typeof request.ip === 'string'
+          ? request.ip
+          : typeof request.socket?.remoteAddress === 'string'
+            ? request.socket.remoteAddress
+            : undefined,
     });
 
     return resolved ?? undefined;

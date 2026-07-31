@@ -1,13 +1,13 @@
 import { StoredFile } from './stored-file.interface';
 
 export interface FileUploadResult {
-    file: StoredFile;
+  file: StoredFile;
 
-    variants?: ReadonlyArray<{
-        name: string;
-        storageKey: string;
-        width?: number;
-        height?: number;
-        url?: string;
-    }>;
+  variants?: ReadonlyArray<{
+    name: string;
+    storageKey: string;
+    width?: number;
+    height?: number;
+    url?: string;
+  }>;
 }

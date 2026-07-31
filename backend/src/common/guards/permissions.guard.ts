@@ -1,7 +1,4 @@
-import type {
-  CanActivate,
-  ExecutionContext,
-} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
@@ -15,38 +12,26 @@ import { requireGuardPrincipal } from './guard-request.util';
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector,
-  ) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions =
-      this.reflector.getAllAndOverride<
-        readonly PermissionCode[]
-      >(PERMISSIONS_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<
+      readonly PermissionCode[]
+    >(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
 
     if (!requiredPermissions?.length) {
       return true;
     }
 
     const principal = requireGuardPrincipal(context);
-    const actualPermissions = new Set(
-      principal.permissions ?? [],
+    const actualPermissions = new Set(principal.permissions ?? []);
+
+    const missingPermissions = requiredPermissions.filter(
+      (permission) => !actualPermissions.has(permission),
     );
 
-    const missingPermissions =
-      requiredPermissions.filter(
-        (permission) =>
-          !actualPermissions.has(permission),
-      );
-
     if (missingPermissions.length > 0) {
-      throw new MissingPermissionException(
-        missingPermissions,
-      );
+      throw new MissingPermissionException(missingPermissions);
     }
 
     return true;

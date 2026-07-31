@@ -1,15 +1,15 @@
 export interface OutboxEvent {
-    id: string;
+  id: string;
 
-    aggregateType: string;
-    aggregateId: string;
+  aggregateType: string;
+  aggregateId: string;
 
-    eventType: string;
-    payload: Record<string, unknown>;
+  eventType: string;
+  payload: Record<string, unknown>;
 
-    occurredAt: Date;
-    processedAt: Date | null;
+  occurredAt: Date;
+  processedAt: Date | null;
 
-    retryCount: number;
-    lastError: string | null;
+  retryCount: number;
+  lastError: string | null;
 }

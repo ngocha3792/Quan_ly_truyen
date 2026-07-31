@@ -1,8 +1,8 @@
 export interface RateLimitContext {
-    key: string;
+  key: string;
 
-    limit: number;
-    remaining: number;
+  limit: number;
+  remaining: number;
 
-    resetAt: Date;
+  resetAt: Date;
 }

@@ -15,9 +15,7 @@ import type {
 
 const DEFAULT_MAX_EXTERNAL_ID_LENGTH = 128;
 
-export function nonEmptyString(
-  value: unknown,
-): string | undefined {
+export function nonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }
@@ -27,10 +25,7 @@ export function nonEmptyString(
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-export function readHeader(
-  headers: unknown,
-  name: string,
-): string | undefined {
+export function readHeader(headers: unknown, name: string): string | undefined {
   if (!headers || typeof headers !== 'object') {
     return undefined;
   }
@@ -44,8 +39,7 @@ export function readHeader(
     return nonEmptyString(container.get(name));
   }
 
-  const value =
-    container[name] ?? container[name.toLowerCase()];
+  const value = container[name] ?? container[name.toLowerCase()];
 
   if (Array.isArray(value)) {
     return nonEmptyString(value[0]);
@@ -71,12 +65,9 @@ export function sanitizeExternalId(
   return text;
 }
 
-function resolveIpAddress(
-  request: MiddlewareHttpRequest,
-): string | undefined {
+function resolveIpAddress(request: MiddlewareHttpRequest): string | undefined {
   return (
-    nonEmptyString(request.ip) ??
-    nonEmptyString(request.socket?.remoteAddress)
+    nonEmptyString(request.ip) ?? nonEmptyString(request.socket?.remoteAddress)
   );
 }
 
@@ -85,8 +76,7 @@ export function createRequestContext(
   options: RequestContextMiddlewareOptions = {},
 ): MutableRequestContext {
   const maxLength =
-    options.maxExternalIdLength ??
-    DEFAULT_MAX_EXTERNAL_ID_LENGTH;
+    options.maxExternalIdLength ?? DEFAULT_MAX_EXTERNAL_ID_LENGTH;
 
   const requestId =
     sanitizeExternalId(request.requestId, maxLength) ??
@@ -104,28 +94,20 @@ export function createRequestContext(
     (options.trustIncomingCorrelationId === false
       ? undefined
       : sanitizeExternalId(
-          readHeader(
-            request.headers,
-            'x-correlation-id',
-          ),
+          readHeader(request.headers, 'x-correlation-id'),
           maxLength,
         )) ??
     requestId;
 
   const ipAddress = resolveIpAddress(request);
-  const userAgent = readHeader(
-    request.headers,
-    'user-agent',
-  );
+  const userAgent = readHeader(request.headers, 'user-agent');
 
   return {
     requestId,
     correlationId,
     method: nonEmptyString(request.method) ?? 'UNKNOWN',
     path:
-      nonEmptyString(request.originalUrl) ??
-      nonEmptyString(request.url) ??
-      '/',
+      nonEmptyString(request.originalUrl) ?? nonEmptyString(request.url) ?? '/',
     startedAt: new Date(),
     ...(ipAddress ? { ipAddress } : {}),
     ...(userAgent ? { userAgent } : {}),
@@ -138,9 +120,7 @@ interface ParsedLanguage {
   index: number;
 }
 
-function parseAcceptLanguage(
-  value: string,
-): ParsedLanguage[] {
+function parseAcceptLanguage(value: string): ParsedLanguage[] {
   return value
     .split(',')
     .map((part, index) => {
@@ -149,24 +129,18 @@ function parseAcceptLanguage(
       const qualityParameter = parameters
         .map((parameter) => parameter.trim())
         .find((parameter) => parameter.startsWith('q='));
-      const quality = qualityParameter
-        ? Number(qualityParameter.slice(2))
-        : 1;
+      const quality = qualityParameter ? Number(qualityParameter.slice(2)) : 1;
 
       return {
         tag,
         quality:
-          Number.isFinite(quality) && quality >= 0
-            ? Math.min(quality, 1)
-            : 0,
+          Number.isFinite(quality) && quality >= 0 ? Math.min(quality, 1) : 0,
         index,
       };
     })
     .filter((item) => item.tag.length > 0)
     .sort(
-      (left, right) =>
-        right.quality - left.quality ||
-        left.index - right.index,
+      (left, right) => right.quality - left.quality || left.index - right.index,
     );
 }
 
@@ -191,8 +165,7 @@ function matchSupportedLocale(
   }
 
   return supportedLocales.find(
-    (locale) =>
-      locale.toLowerCase().split('-')[0] === language,
+    (locale) => locale.toLowerCase().split('-')[0] === language,
   );
 }
 
@@ -201,28 +174,19 @@ export function resolveLocale(
   options: LocaleMiddlewareOptions = {},
 ): string {
   const supportedLocales =
-    options.supportedLocales ??
-    DEFAULT_SUPPORTED_LOCALES;
-  const defaultLocale =
-    options.defaultLocale ??
-    supportedLocales[0] ??
-    'vi-VN';
+    options.supportedLocales ?? DEFAULT_SUPPORTED_LOCALES;
+  const defaultLocale = options.defaultLocale ?? supportedLocales[0] ?? 'vi-VN';
 
   if (!acceptLanguageHeader) {
     return defaultLocale;
   }
 
-  for (const requested of parseAcceptLanguage(
-    acceptLanguageHeader,
-  )) {
+  for (const requested of parseAcceptLanguage(acceptLanguageHeader)) {
     if (requested.tag === '*') {
       return defaultLocale;
     }
 
-    const matched = matchSupportedLocale(
-      requested.tag,
-      supportedLocales,
-    );
+    const matched = matchSupportedLocale(requested.tag, supportedLocales);
 
     if (matched) {
       return matched;
@@ -236,10 +200,7 @@ export function isJsonContentType(
   value: string,
   allowVendorJson = true,
 ): boolean {
-  const mediaType = value
-    .split(';', 1)[0]
-    ?.trim()
-    .toLowerCase();
+  const mediaType = value.split(';', 1)[0]?.trim().toLowerCase();
 
   if (mediaType === 'application/json') {
     return true;
@@ -253,17 +214,9 @@ export function isJsonContentType(
   );
 }
 
-export function requestHasBody(
-  request: MiddlewareHttpRequest,
-): boolean {
-  const contentLength = readHeader(
-    request.headers,
-    'content-length',
-  );
-  const transferEncoding = readHeader(
-    request.headers,
-    'transfer-encoding',
-  );
+export function requestHasBody(request: MiddlewareHttpRequest): boolean {
+  const contentLength = readHeader(request.headers, 'content-length');
+  const transferEncoding = readHeader(request.headers, 'transfer-encoding');
 
   if (transferEncoding) {
     return true;
@@ -275,7 +228,5 @@ export function requestHasBody(
 
   const parsedLength = Number(contentLength);
 
-  return Number.isFinite(parsedLength)
-    ? parsedLength > 0
-    : true;
+  return Number.isFinite(parsedLength) ? parsedLength > 0 : true;
 }

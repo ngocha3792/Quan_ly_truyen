@@ -1,10 +1,10 @@
 export interface EventMetadata {
-    correlationId?: string;
-    causationId?: string;
-    traceId?: string;
+  correlationId?: string;
+  causationId?: string;
+  traceId?: string;
 
-    actorId?: string;
-    source: string;
+  actorId?: string;
+  source: string;
 
-    schemaVersion: number;
+  schemaVersion: number;
 }

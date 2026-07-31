@@ -3,16 +3,18 @@ import { CommonExceptionCode } from './common-exception-code.enum';
 import { InfrastructureException } from './infrastructure.exception';
 
 export class QueueException extends InfrastructureException {
-  constructor(options: {
-    code?: string;
-    message?: string;
-    queue?: string;
-    operation?: string;
-    jobId?: string;
-    details?: ExceptionDetails;
-    cause?: unknown;
-    retryable?: boolean;
-  } = {}) {
+  constructor(
+    options: {
+      code?: string;
+      message?: string;
+      queue?: string;
+      operation?: string;
+      jobId?: string;
+      details?: ExceptionDetails;
+      cause?: unknown;
+      retryable?: boolean;
+    } = {},
+  ) {
     super({
       code: options.code ?? CommonExceptionCode.QUEUE_ERROR,
       message: options.message ?? 'Không thể xử lý hàng đợi',

@@ -15,7 +15,11 @@ export function roundTo(value: number, decimalPlaces = 2): number {
     throw new TypeError('value phải là số hữu hạn');
   }
 
-  if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 10) {
+  if (
+    !Number.isInteger(decimalPlaces) ||
+    decimalPlaces < 0 ||
+    decimalPlaces > 10
+  ) {
     throw new RangeError('decimalPlaces phải nằm trong khoảng 0-10');
   }
 

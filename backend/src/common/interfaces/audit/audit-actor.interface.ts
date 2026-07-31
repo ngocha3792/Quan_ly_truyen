@@ -1,14 +1,10 @@
-export type AuditActorType =
-    | 'USER'
-    | 'SYSTEM'
-    | 'JOB'
-    | 'WEBHOOK';
+export type AuditActorType = 'USER' | 'SYSTEM' | 'JOB' | 'WEBHOOK';
 
 export interface AuditActor {
-    type: AuditActorType;
+  type: AuditActorType;
 
-    userId?: string;
-    sessionId?: string;
-    jobName?: string;
-    externalSystem?: string;
+  userId?: string;
+  sessionId?: string;
+  jobName?: string;
+  externalSystem?: string;
 }

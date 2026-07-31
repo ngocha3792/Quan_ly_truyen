@@ -1,16 +1,16 @@
 import { EventMetadata } from './event-metadata.interface';
 
 export interface DomainEvent<
-    TPayload extends object = Record<string, unknown>,
+  TPayload extends object = Record<string, unknown>,
 > {
-    eventId: string;
-    eventName: string;
+  eventId: string;
+  eventName: string;
 
-    aggregateType: string;
-    aggregateId: string;
+  aggregateType: string;
+  aggregateId: string;
 
-    occurredAt: Date;
-    payload: TPayload;
+  occurredAt: Date;
+  payload: TPayload;
 
-    metadata: EventMetadata;
+  metadata: EventMetadata;
 }

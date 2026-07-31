@@ -1,0 +1,201 @@
+import { plainToInstance, Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  Min,
+  validateSync,
+} from 'class-validator';
+
+import { AppEnvironment } from '@/common/enums';
+
+function parseBooleanValue(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`Expected boolean string, received ${typeof value}`);
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'true') {
+    return true;
+  }
+
+  if (normalized === 'false') {
+    return false;
+  }
+
+  throw new Error(`Expected "true" or "false", received "${value}"`);
+}
+
+function parseIntegerValue(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`Expected integer, received "${String(value)}"`);
+  }
+
+  return parsed;
+}
+
+export class EnvironmentVariables {
+  @IsEnum(AppEnvironment)
+  NODE_ENV: AppEnvironment = AppEnvironment.DEVELOPMENT;
+
+  @IsString()
+  @IsNotEmpty()
+  HOST = '0.0.0.0';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3000))
+  @IsInt()
+  @Min(1)
+  @Max(65_535)
+  PORT = 3000;
+
+  @IsUrl({ require_tld: false })
+  APP_PUBLIC_URL = 'http://localhost:3000';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  TRUST_PROXY = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 15_000))
+  @IsInt()
+  @Min(100)
+  @Max(120_000)
+  HTTP_REQUEST_TIMEOUT_MS = 15_000;
+
+  @IsString()
+  @IsNotEmpty()
+  JSON_BODY_LIMIT = '2mb';
+
+  @IsString()
+  @IsNotEmpty()
+  URL_ENCODED_BODY_LIMIT = '2mb';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  SWAGGER_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  DEFAULT_LOCALE = 'vi-VN';
+
+  @IsString()
+  @IsNotEmpty()
+  SUPPORTED_LOCALES = 'vi-VN,en-US';
+
+  @IsString()
+  @IsNotEmpty()
+  CORS_ALLOWED_ORIGINS = 'http://localhost:4200';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  CORS_CREDENTIALS = true;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 86_400))
+  @IsInt()
+  @Min(0)
+  CORS_MAX_AGE_SECONDS = 86_400;
+
+  @IsString()
+  @IsNotEmpty()
+  DATABASE_URL!: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  MAINTENANCE_MODE = false;
+
+  @IsString()
+  @IsNotEmpty()
+  MAINTENANCE_MESSAGE = 'Hệ thống đang bảo trì';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(0)
+  MAINTENANCE_RETRY_AFTER_SECONDS = 300;
+
+  @IsString()
+  @IsNotEmpty()
+  MAINTENANCE_BYPASS_HEADER = 'x-maintenance-key';
+
+  @IsOptional()
+  @IsString()
+  MAINTENANCE_BYPASS_TOKEN?: string;
+}
+
+export function validateEnvironment(
+  rawConfig: Record<string, unknown>,
+): Record<string, unknown> {
+  const config = plainToInstance(EnvironmentVariables, rawConfig, {
+    enableImplicitConversion: false,
+    exposeDefaultValues: true,
+  });
+
+  const errors = validateSync(config, {
+    skipMissingProperties: false,
+    whitelist: false,
+    forbidUnknownValues: true,
+  });
+
+  if (errors.length > 0) {
+    const messages = errors.flatMap((error) =>
+      Object.values(error.constraints ?? {}).map(
+        (message) => `${error.property}: ${message}`,
+      ),
+    );
+
+    throw new Error(
+      `Invalid environment configuration:\n${messages.join('\n')}`,
+    );
+  }
+
+  validateCrossFieldRules(config);
+
+  return { ...rawConfig, ...config };
+}
+
+function validateCrossFieldRules(config: EnvironmentVariables): void {
+  const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
+
+  if (config.CORS_CREDENTIALS && origins.includes('*')) {
+    throw new Error(
+      'CORS_ALLOWED_ORIGINS cannot contain "*" when CORS_CREDENTIALS=true',
+    );
+  }
+
+  const supportedLocales = parseCsv(config.SUPPORTED_LOCALES);
+
+  if (!supportedLocales.includes(config.DEFAULT_LOCALE)) {
+    throw new Error('DEFAULT_LOCALE must be included in SUPPORTED_LOCALES');
+  }
+
+  if (config.NODE_ENV === AppEnvironment.PRODUCTION && config.SWAGGER_ENABLED) {
+    throw new Error(
+      'SWAGGER_ENABLED must be false in production unless explicitly reviewed',
+    );
+  }
+}
+
+export function parseCsv(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
+}

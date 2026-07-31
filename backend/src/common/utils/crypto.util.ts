@@ -34,10 +34,7 @@ export function hmacSha256(
   return createHmac('sha256', secret).update(value).digest(encoding);
 }
 
-export function timingSafeEqualStrings(
-  left: string,
-  right: string,
-): boolean {
+export function timingSafeEqualStrings(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
 

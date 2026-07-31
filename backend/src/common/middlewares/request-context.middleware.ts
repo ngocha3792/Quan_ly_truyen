@@ -1,8 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 
 import { COMMON_MIDDLEWARE_OPTIONS } from './common-middlewares.constants';
 import type { CommonMiddlewaresOptions } from './common-middlewares-options.interface';
@@ -15,9 +11,7 @@ import type {
 import { RequestContextStore } from './request-context.store';
 
 @Injectable()
-export class RequestContextMiddleware
-  implements NestMiddleware
-{
+export class RequestContextMiddleware implements NestMiddleware {
   constructor(
     private readonly store: RequestContextStore,
     @Inject(COMMON_MIDDLEWARE_OPTIONS)
@@ -29,23 +23,14 @@ export class RequestContextMiddleware
     response: MiddlewareHttpResponse,
     next: MiddlewareNext,
   ): void {
-    const context = createRequestContext(
-      request,
-      this.options.requestContext,
-    );
+    const context = createRequestContext(request, this.options.requestContext);
 
     request.requestId = context.requestId;
     request.correlationId = context.correlationId;
     request.requestContext = context;
 
-    response.setHeader(
-      'x-request-id',
-      context.requestId,
-    );
-    response.setHeader(
-      'x-correlation-id',
-      context.correlationId,
-    );
+    response.setHeader('x-request-id', context.requestId);
+    response.setHeader('x-correlation-id', context.correlationId);
 
     this.store.run(context, () => next());
   }

@@ -1,15 +1,8 @@
-import {
-  Inject,
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 
 import { COMMON_MIDDLEWARE_OPTIONS } from './common-middlewares.constants';
 import type { CommonMiddlewaresOptions } from './common-middlewares-options.interface';
-import {
-  readHeader,
-  resolveLocale,
-} from './middleware-request.util';
+import { readHeader, resolveLocale } from './middleware-request.util';
 import type {
   MiddlewareHttpRequest,
   MiddlewareHttpResponse,

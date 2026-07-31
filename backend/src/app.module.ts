@@ -4,6 +4,8 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommonFiltersModule } from './common/filters';
@@ -15,27 +17,40 @@ import {
   MaintenanceModeMiddleware,
   RequestContextMiddleware,
 } from './common/middlewares';
+import { AppConfigModule } from './config';
+import type { AppConfig, MaintenanceConfig } from './config';
 
 @Module({
   imports: [
-    CommonMiddlewaresModule.register({
-      requestContext: {
-        trustIncomingRequestId: true,
-        trustIncomingCorrelationId: true,
-      },
-      locale: {
-        defaultLocale: 'vi-VN',
-        supportedLocales: ['vi-VN', 'en-US'],
-      },
-      maintenance: {
-        resolveState: () => ({
-          enabled: process.env.MAINTENANCE_MODE === 'true',
-          message: 'Hệ thống đang bảo trì',
-          retryAfterSeconds: 300,
-        }),
-        allowedPaths: ['/api/v1/health'],
-        bypassHeaderName: 'x-maintenance-key',
-        bypassToken: process.env.MAINTENANCE_BYPASS_TOKEN,
+    AppConfigModule,
+    CommonMiddlewaresModule.registerAsync({
+      imports: [AppConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const app = configService.getOrThrow<AppConfig>('app');
+        const maintenance =
+          configService.getOrThrow<MaintenanceConfig>('maintenance');
+
+        return {
+          requestContext: {
+            trustIncomingRequestId: true,
+            trustIncomingCorrelationId: true,
+          },
+          locale: {
+            defaultLocale: app.defaultLocale,
+            supportedLocales: app.supportedLocales,
+          },
+          maintenance: {
+            resolveState: () => ({
+              enabled: maintenance.enabled,
+              message: maintenance.message,
+              retryAfterSeconds: maintenance.retryAfterSeconds,
+            }),
+            allowedPaths: maintenance.allowedPaths,
+            bypassHeaderName: maintenance.bypassHeaderName,
+            bypassToken: maintenance.bypassToken,
+          },
+        };
       },
     }),
     CommonInterceptorsModule,

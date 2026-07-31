@@ -1,11 +1,12 @@
 import type { ExecutionContext } from '@nestjs/common';
 
 import { AuthenticationRequiredException } from '../exceptions';
-import type { GuardHttpRequest, GuardPrincipal } from './guard-principal.interface';
+import type {
+  GuardHttpRequest,
+  GuardPrincipal,
+} from './guard-principal.interface';
 
-export function getGuardRequest(
-  context: ExecutionContext,
-): GuardHttpRequest {
+export function getGuardRequest(context: ExecutionContext): GuardHttpRequest {
   return context.switchToHttp().getRequest<GuardHttpRequest>();
 }
 

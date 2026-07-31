@@ -1,7 +1,4 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 interface RequestWithPrincipal {
   user?: {
@@ -11,13 +8,8 @@ interface RequestWithPrincipal {
 
 /** Returns the current user's author profile ID, when the user is an author. */
 export const CurrentAuthorProfileId = createParamDecorator(
-  (
-    _data: unknown,
-    context: ExecutionContext,
-  ): string | undefined => {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestWithPrincipal>();
+  (_data: unknown, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<RequestWithPrincipal>();
 
     const value = request.user?.authorProfileId;
 

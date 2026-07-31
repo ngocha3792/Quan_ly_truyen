@@ -1,19 +1,19 @@
 export interface ClientInfo {
-    ipAddress?: string;
-    userAgent?: string;
+  ipAddress?: string;
+  userAgent?: string;
 
-    deviceId?: string;
-    deviceName?: string;
+  deviceId?: string;
+  deviceName?: string;
 
-    platform?: string;
-    browser?: string;
+  platform?: string;
+  browser?: string;
 }
 export interface SessionContext {
-    sessionId: string;
-    userId: string;
+  sessionId: string;
+  userId: string;
 
-    client: ClientInfo;
+  client: ClientInfo;
 
-    createdAt: Date;
-    expiresAt: Date;
+  createdAt: Date;
+  expiresAt: Date;
 }

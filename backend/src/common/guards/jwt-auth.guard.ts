@@ -3,10 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 
-import {
-  AUTH_STRATEGIES,
-  IS_PUBLIC_KEY,
-} from '../constants';
+import { AUTH_STRATEGIES, IS_PUBLIC_KEY } from '../constants';
 import { AuthenticationRequiredException } from '../exceptions';
 import type { GuardPrincipal } from './guard-principal.interface';
 import { throwPassportAuthenticationFailure } from './passport-auth-failure.util';
@@ -15,21 +12,17 @@ import { throwPassportAuthenticationFailure } from './passport-auth-failure.util
  * Global access-token guard. Routes marked with @Public() bypass authentication.
  */
 @Injectable()
-export class JwtAuthGuard extends AuthGuard(
-  AUTH_STRATEGIES.JWT_ACCESS,
-) {
-  constructor(
-    private readonly reflector: Reflector,
-  ) {
+export class JwtAuthGuard extends AuthGuard(AUTH_STRATEGIES.JWT_ACCESS) {
+  constructor(private readonly reflector: Reflector) {
     super();
   }
 
   canActivate(context: ExecutionContext) {
     const isPublic =
-      this.reflector.getAllAndOverride<boolean>(
-        IS_PUBLIC_KEY,
-        [context.getHandler(), context.getClass()],
-      ) ?? false;
+      this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false;
 
     if (isPublic) {
       return true;

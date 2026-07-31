@@ -3,14 +3,16 @@ import { CommonExceptionCode } from './common-exception-code.enum';
 import { ExceptionCategory } from './exception-category.enum';
 
 export class ServiceUnavailableException extends AppException {
-  constructor(options: {
-    code?: string;
-    message?: string;
-    service?: string;
-    retryAfterSeconds?: number;
-    details?: ExceptionDetails;
-    cause?: unknown;
-  } = {}) {
+  constructor(
+    options: {
+      code?: string;
+      message?: string;
+      service?: string;
+      retryAfterSeconds?: number;
+      details?: ExceptionDetails;
+      cause?: unknown;
+    } = {},
+  ) {
     super({
       code: options.code ?? CommonExceptionCode.SERVICE_UNAVAILABLE,
       message: options.message ?? 'Dịch vụ tạm thời không khả dụng',

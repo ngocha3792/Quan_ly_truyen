@@ -21,9 +21,11 @@ export interface ApiErrorEnvelopeLike {
 export type ApiEnvelope<T> = ApiSuccessResponse<T> | ApiErrorEnvelopeLike;
 
 @Injectable()
-export class ResponseEnvelopeInterceptor<T>
-  implements NestInterceptor<T, ApiEnvelope<T> | T> {
-  constructor(private readonly reflector: Reflector) { }
+export class ResponseEnvelopeInterceptor<T> implements NestInterceptor<
+  T,
+  ApiEnvelope<T> | T
+> {
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(
     executionContext: ExecutionContext,
@@ -35,10 +37,7 @@ export class ResponseEnvelopeInterceptor<T>
 
     const shouldSkip = this.reflector.getAllAndOverride<boolean>(
       SKIP_RESPONSE_ENVELOPE_KEY,
-      [
-        executionContext.getHandler(),
-        executionContext.getClass(),
-      ],
+      [executionContext.getHandler(), executionContext.getClass()],
     );
 
     if (shouldSkip) {
@@ -51,19 +50,14 @@ export class ResponseEnvelopeInterceptor<T>
 
     return next.handle().pipe(
       map((data) => {
-        if (
-          data instanceof StreamableFile ||
-          this.isEnvelope(data)
-        ) {
+        if (data instanceof StreamableFile || this.isEnvelope(data)) {
           return data;
         }
 
         const ctx = request.requestContext;
         const requestId =
           ctx?.requestId ??
-          (typeof request.requestId === 'string'
-            ? request.requestId
-            : 'N/A');
+          (typeof request.requestId === 'string' ? request.requestId : 'N/A');
 
         const response: ApiSuccessResponse<T> = {
           success: true,
@@ -84,9 +78,6 @@ export class ResponseEnvelopeInterceptor<T>
 
     const candidate = value as Record<string, unknown>;
 
-    return (
-      candidate.success === true ||
-      candidate.success === false
-    );
+    return candidate.success === true || candidate.success === false;
   }
 }

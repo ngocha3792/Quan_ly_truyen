@@ -19,10 +19,7 @@ export function Match(
         ? {}
         : { options: validationOptions }),
       validator: {
-        validate(
-          value: unknown,
-          args: ValidationArguments,
-        ): boolean {
+        validate(value: unknown, args: ValidationArguments): boolean {
           const [property] = args.constraints as [string];
           const object = args.object as Record<string, unknown>;
           return value === object[property];

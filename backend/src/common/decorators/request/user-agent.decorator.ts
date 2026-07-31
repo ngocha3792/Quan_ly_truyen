@@ -1,7 +1,4 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 import { HTTP_HEADERS } from '@/common/constants';
 
@@ -14,16 +11,10 @@ interface RequestWithHeaders {
 
 /** Returns the request user-agent header. */
 export const UserAgent = createParamDecorator(
-  (
-    _data: unknown,
-    context: ExecutionContext,
-  ): string | undefined => {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestWithHeaders>();
+  (_data: unknown, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<RequestWithHeaders>();
 
-    const header =
-      request.headers?.[HTTP_HEADERS.USER_AGENT];
+    const header = request.headers?.[HTTP_HEADERS.USER_AGENT];
 
     const value =
       request.requestContext?.userAgent ??

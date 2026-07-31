@@ -3,15 +3,17 @@ import { CommonExceptionCode } from './common-exception-code.enum';
 import { ExceptionCategory } from './exception-category.enum';
 
 export class InfrastructureException extends AppException {
-  constructor(options: {
-    code?: string;
-    message?: string;
-    component?: string;
-    operation?: string;
-    details?: ExceptionDetails;
-    cause?: unknown;
-    retryable?: boolean;
-  } = {}) {
+  constructor(
+    options: {
+      code?: string;
+      message?: string;
+      component?: string;
+      operation?: string;
+      details?: ExceptionDetails;
+      cause?: unknown;
+      retryable?: boolean;
+    } = {},
+  ) {
     super({
       code: options.code ?? CommonExceptionCode.INFRASTRUCTURE_ERROR,
       message: options.message ?? 'Hạ tầng hệ thống gặp sự cố',

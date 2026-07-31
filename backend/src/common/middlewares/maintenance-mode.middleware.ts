@@ -1,10 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 
-import {
-  Inject,
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 import { ServiceUnavailableException } from '@/common/exceptions';
 
 import {
@@ -15,10 +11,7 @@ import type {
   CommonMiddlewaresOptions,
   MaintenanceModeState,
 } from './common-middlewares-options.interface';
-import {
-  nonEmptyString,
-  readHeader,
-} from './middleware-request.util';
+import { nonEmptyString, readHeader } from './middleware-request.util';
 import type {
   MiddlewareHttpRequest,
   MiddlewareHttpResponse,
@@ -40,27 +33,22 @@ function safeTokenEquals(
   const left = Buffer.from(supplied);
   const right = Buffer.from(expected);
 
-  return (
-    left.length === right.length &&
-    timingSafeEqual(left, right)
-  );
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 @Injectable()
-export class MaintenanceModeMiddleware
-  implements NestMiddleware {
+export class MaintenanceModeMiddleware implements NestMiddleware {
   constructor(
     @Inject(COMMON_MIDDLEWARE_OPTIONS)
     private readonly options: CommonMiddlewaresOptions,
-  ) { }
+  ) {}
 
   async use(
     request: MiddlewareHttpRequest,
     response: MiddlewareHttpResponse,
     next: MiddlewareNext,
   ): Promise<void> {
-    const maintenanceOptions =
-      this.options.maintenance;
+    const maintenanceOptions = this.options.maintenance;
 
     if (!maintenanceOptions?.resolveState) {
       next();
@@ -84,31 +72,22 @@ export class MaintenanceModeMiddleware
     }
 
     const path = normalizePath(
-      nonEmptyString(request.originalUrl) ??
-      nonEmptyString(request.url) ??
-      '/',
+      nonEmptyString(request.originalUrl) ?? nonEmptyString(request.url) ?? '/',
     );
     const allowedPaths =
-      maintenanceOptions.allowedPaths ??
-      DEFAULT_MAINTENANCE_ALLOWED_PATHS;
+      maintenanceOptions.allowedPaths ?? DEFAULT_MAINTENANCE_ALLOWED_PATHS;
 
     if (allowedPaths.includes(path)) {
       next();
       return;
     }
 
-    const bypassHeaderName =
-      maintenanceOptions.bypassHeaderName;
+    const bypassHeaderName = maintenanceOptions.bypassHeaderName;
     const bypassValue = bypassHeaderName
       ? readHeader(request.headers, bypassHeaderName)
       : undefined;
 
-    if (
-      safeTokenEquals(
-        bypassValue,
-        maintenanceOptions.bypassToken,
-      )
-    ) {
+    if (safeTokenEquals(bypassValue, maintenanceOptions.bypassToken)) {
       next();
       return;
     }
@@ -118,19 +97,16 @@ export class MaintenanceModeMiddleware
       Number.isFinite(state.retryAfterSeconds) &&
       state.retryAfterSeconds > 0
     ) {
-      response.setHeader(
-        'retry-after',
-        Math.floor(state.retryAfterSeconds),
-      );
+      response.setHeader('retry-after', Math.floor(state.retryAfterSeconds));
     }
 
     next(
       new ServiceUnavailableException({
         code: 'MAINTENANCE_MODE',
-        message:
-          state.message ??
-          'Hệ thống đang bảo trì, vui lòng thử lại sau',
-        details: state.retryAfterSeconds ? { retryAfterSeconds: state.retryAfterSeconds } : undefined,
+        message: state.message ?? 'Hệ thống đang bảo trì, vui lòng thử lại sau',
+        details: state.retryAfterSeconds
+          ? { retryAfterSeconds: state.retryAfterSeconds }
+          : undefined,
       }),
     );
   }

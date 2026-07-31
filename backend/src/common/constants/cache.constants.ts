@@ -20,9 +20,7 @@ export const CACHE_TTL_SECONDS = {
  * Builds deterministic technical cache keys.
  * Feature-specific prefixes still belong to their owning module.
  */
-export function joinCacheKey(
-  ...parts: ReadonlyArray<string | number>
-): string {
+export function joinCacheKey(...parts: ReadonlyArray<string | number>): string {
   return parts
     .map((part) => String(part).trim())
     .filter((part) => part.length > 0)

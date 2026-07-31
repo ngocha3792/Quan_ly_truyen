@@ -7,24 +7,35 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"{src,scripts,test}/**/*.ts\" --fix",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "postinstall": "prisma generate --config prisma.config.ts",
-    "db:seed": "prisma migrate reset --config prisma.config.ts --skip-seed; tsx prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset:local": "tsx scripts/database/reset-local-database.ts",
+    "db:check": "tsx scripts/database/check-connection.ts",
+    "db:verify:constraints": "tsx scripts/database/verify-manual-constraints.ts",
+    "db:verify:seed": "tsx scripts/database/verify-seed-data.ts",
+    "ci:check-env": "tsx scripts/ci/check-environment.ts",
+    "ci:wait-db": "tsx scripts/ci/wait-for-postgres.ts",
+    "admin:create": "tsx scripts/development/create-admin.ts",
+    "maintenance:auth-cleanup": "tsx scripts/maintenance/cleanup-expired-auth-records.ts",
+    "maintenance:story-counters": "tsx scripts/maintenance/reconcile-story-counters.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",
     "db:migrate:deploy": "prisma migrate deploy --config prisma.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.28",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
@@ -87,6 +98,9 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    }
   }
 }

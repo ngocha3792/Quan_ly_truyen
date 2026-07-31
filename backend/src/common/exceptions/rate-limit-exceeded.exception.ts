@@ -5,13 +5,15 @@ import { ExceptionCategory } from './exception-category.enum';
 export class RateLimitExceededException extends AppException {
   readonly retryAfterSeconds?: number;
 
-  constructor(options: {
-    code?: string;
-    message?: string;
-    retryAfterSeconds?: number;
-    limit?: number;
-    details?: ExceptionDetails;
-  } = {}) {
+  constructor(
+    options: {
+      code?: string;
+      message?: string;
+      retryAfterSeconds?: number;
+      limit?: number;
+      details?: ExceptionDetails;
+    } = {},
+  ) {
     super({
       code: options.code ?? CommonExceptionCode.RATE_LIMIT_EXCEEDED,
       message: options.message ?? 'Bạn đã gửi quá nhiều yêu cầu',

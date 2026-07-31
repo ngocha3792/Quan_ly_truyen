@@ -47,9 +47,7 @@ export function IsStrongPassword(
     resolved.minLength <= 0 ||
     resolved.maxLength < resolved.minLength
   ) {
-    throw new TypeError(
-      'Invalid strong-password length configuration',
-    );
+    throw new TypeError('Invalid strong-password length configuration');
   }
 
   return (target: object, propertyName: string | symbol): void => {
@@ -81,9 +79,7 @@ export function IsStrongPassword(
             (!resolved.requireSymbol || /[^A-Za-z0-9]/.test(value))
           );
         },
-        defaultMessage(
-          args: ValidationArguments,
-        ): string {
+        defaultMessage(args: ValidationArguments): string {
           return `${args.property} does not meet the password policy`;
         },
       },

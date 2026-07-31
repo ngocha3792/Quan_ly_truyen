@@ -23,10 +23,7 @@ function nonEmptyString(value: unknown): string | undefined {
     : undefined;
 }
 
-function readHeader(
-  headers: unknown,
-  name: string,
-): string | undefined {
+function readHeader(headers: unknown, name: string): string | undefined {
   if (!headers || typeof headers !== 'object') {
     return undefined;
   }
@@ -78,9 +75,7 @@ export function extractRequestMetadata(
     requestId,
     method: nonEmptyString(request.method) ?? 'UNKNOWN',
     path:
-      nonEmptyString(request.originalUrl) ??
-      nonEmptyString(request.url) ??
-      '/',
+      nonEmptyString(request.originalUrl) ?? nonEmptyString(request.url) ?? '/',
     ...(userId ? { userId } : {}),
   };
 }

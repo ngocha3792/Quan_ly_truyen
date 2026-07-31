@@ -1,5 +1,6 @@
 export * from './common-middlewares.constants';
 export * from './common-middlewares-options.interface';
+export * from './common-middlewares-async-options.interface';
 export * from './common-middlewares.module';
 export * from './json-content-type.middleware';
 export * from './locale.middleware';

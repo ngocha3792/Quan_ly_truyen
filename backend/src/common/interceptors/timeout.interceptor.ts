@@ -6,11 +6,7 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  Observable,
-  TimeoutError,
-  throwError,
-} from 'rxjs';
+import { Observable, TimeoutError, throwError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 
 import {
@@ -21,9 +17,7 @@ import {
 import { RequestTimeoutException } from '../exceptions';
 
 @Injectable()
-export class TimeoutInterceptor<T>
-  implements NestInterceptor<T, T>
-{
+export class TimeoutInterceptor<T> implements NestInterceptor<T, T> {
   constructor(
     private readonly reflector: Reflector,
     @Inject(COMMON_HTTP_TIMEOUT_MS)
@@ -40,27 +34,19 @@ export class TimeoutInterceptor<T>
 
     const shouldSkip = this.reflector.getAllAndOverride<boolean>(
       SKIP_REQUEST_TIMEOUT_KEY,
-      [
-        executionContext.getHandler(),
-        executionContext.getClass(),
-      ],
+      [executionContext.getHandler(), executionContext.getClass()],
     );
 
     if (shouldSkip) {
       return next.handle();
     }
 
-    const routeTimeoutMs =
-      this.reflector.getAllAndOverride<number>(
-        REQUEST_TIMEOUT_MS_KEY,
-        [
-          executionContext.getHandler(),
-          executionContext.getClass(),
-        ],
-      );
+    const routeTimeoutMs = this.reflector.getAllAndOverride<number>(
+      REQUEST_TIMEOUT_MS_KEY,
+      [executionContext.getHandler(), executionContext.getClass()],
+    );
 
-    const timeoutMs =
-      routeTimeoutMs ?? this.defaultTimeoutMs;
+    const timeoutMs = routeTimeoutMs ?? this.defaultTimeoutMs;
 
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return next.handle();

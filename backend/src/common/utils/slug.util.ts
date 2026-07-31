@@ -19,10 +19,7 @@ export function removeVietnameseDiacritics(value: string): string {
     .replace(COMBINING_MARKS_PATTERN, '');
 }
 
-export function slugify(
-  value: string,
-  options: SlugifyOptions = {},
-): string {
+export function slugify(value: string, options: SlugifyOptions = {}): string {
   const separator = options.separator ?? '-';
   const lowercase = options.lowercase ?? true;
   const maxLength = options.maxLength ?? 200;
@@ -34,7 +31,13 @@ export function slugify(
   let slug = removeVietnameseDiacritics(value.trim())
     .replace(NON_ALPHANUMERIC_PATTERN, separator)
     .replace(new RegExp(`${escapeRegExp(separator)}+`, 'g'), separator)
-    .replace(new RegExp(`^${escapeRegExp(separator)}|${escapeRegExp(separator)}$`, 'g'), '');
+    .replace(
+      new RegExp(
+        `^${escapeRegExp(separator)}|${escapeRegExp(separator)}$`,
+        'g',
+      ),
+      '',
+    );
 
   if (lowercase) {
     slug = slug.toLowerCase();
@@ -48,7 +51,10 @@ export function slugify(
   return slug;
 }
 
-export function createUniqueSlug(baseSlug: string, suffix: string | number): string {
+export function createUniqueSlug(
+  baseSlug: string,
+  suffix: string | number,
+): string {
   const normalizedBase = slugify(baseSlug);
   const normalizedSuffix = slugify(String(suffix));
 

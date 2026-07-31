@@ -1,8 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 import { UnsupportedMediaTypeException } from '@/common/exceptions';
 
 import {
@@ -23,9 +19,7 @@ import type {
 } from './request-context.interface';
 
 @Injectable()
-export class JsonContentTypeMiddleware
-  implements NestMiddleware
-{
+export class JsonContentTypeMiddleware implements NestMiddleware {
   constructor(
     @Inject(COMMON_MIDDLEWARE_OPTIONS)
     private readonly options: CommonMiddlewaresOptions,
@@ -37,33 +31,24 @@ export class JsonContentTypeMiddleware
     next: MiddlewareNext,
   ): void {
     const configuredMethods =
-      this.options.jsonContentType?.methods ??
-      JSON_MUTATION_METHODS;
-    const method = (
-      nonEmptyString(request.method) ?? ''
-    ).toUpperCase();
+      this.options.jsonContentType?.methods ?? JSON_MUTATION_METHODS;
+    const method = (nonEmptyString(request.method) ?? '').toUpperCase();
 
     if (
-      !configuredMethods.some(
-        (item) => item.toUpperCase() === method,
-      ) ||
+      !configuredMethods.some((item) => item.toUpperCase() === method) ||
       !requestHasBody(request)
     ) {
       next();
       return;
     }
 
-    const contentType = readHeader(
-      request.headers,
-      'content-type',
-    );
+    const contentType = readHeader(request.headers, 'content-type');
 
     if (
       contentType &&
       isJsonContentType(
         contentType,
-        this.options.jsonContentType
-          ?.allowVendorJson ?? true,
+        this.options.jsonContentType?.allowVendorJson ?? true,
       )
     ) {
       next();
@@ -74,10 +59,7 @@ export class JsonContentTypeMiddleware
       new UnsupportedMediaTypeException({
         message: 'Endpoint này chỉ chấp nhận nội dung JSON',
         received: contentType ?? undefined,
-        supported: [
-          'application/json',
-          'application/*+json',
-        ],
+        supported: ['application/json', 'application/*+json'],
       }),
     );
   }

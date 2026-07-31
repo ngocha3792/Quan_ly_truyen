@@ -1,13 +1,13 @@
 export interface LogContext {
-    requestId?: string;
-    correlationId?: string;
-    traceId?: string;
+  requestId?: string;
+  correlationId?: string;
+  traceId?: string;
 
-    userId?: string;
-    sessionId?: string;
+  userId?: string;
+  sessionId?: string;
 
-    module?: string;
-    action?: string;
+  module?: string;
+  action?: string;
 
-    metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }

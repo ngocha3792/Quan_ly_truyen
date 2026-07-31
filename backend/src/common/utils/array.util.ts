@@ -1,7 +1,4 @@
-export function chunkArray<T>(
-  values: readonly T[],
-  size: number,
-): T[][] {
+export function chunkArray<T>(values: readonly T[], size: number): T[][] {
   if (!Number.isSafeInteger(size) || size < 1) {
     throw new RangeError('size phải là số nguyên dương');
   }

@@ -2,16 +2,10 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-import {
-  AUTH_SCHEMES,
-  AUTH_STRATEGIES,
-} from '../constants';
+import { AUTH_SCHEMES, AUTH_STRATEGIES } from '../constants';
 import { InvalidTokenException } from '../exceptions';
 import type { GuardPrincipal } from './guard-principal.interface';
-import {
-  getAuthorizationHeader,
-  getGuardRequest,
-} from './guard-request.util';
+import { getAuthorizationHeader, getGuardRequest } from './guard-request.util';
 import { throwPassportAuthenticationFailure } from './passport-auth-failure.util';
 
 /**
@@ -31,15 +25,11 @@ export class OptionalJwtAuthGuard extends AuthGuard(
       return true;
     }
 
-    const bearerPattern = new RegExp(
-      `^${AUTH_SCHEMES.BEARER}\\s+\\S+$`,
-      'i',
-    );
+    const bearerPattern = new RegExp(`^${AUTH_SCHEMES.BEARER}\\s+\\S+$`, 'i');
 
     if (!bearerPattern.test(authorization.trim())) {
       throw new InvalidTokenException({
-        message:
-          'Authorization header phải có dạng Bearer <token>',
+        message: 'Authorization header phải có dạng Bearer <token>',
       });
     }
 

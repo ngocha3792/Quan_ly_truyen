@@ -1,7 +1,4 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 import { HTTP_HEADERS } from '@/common/constants';
 
@@ -21,20 +18,13 @@ function firstHeaderValue(
 
 /** Returns the resolved request ID. */
 export const RequestId = createParamDecorator(
-  (
-    _data: unknown,
-    context: ExecutionContext,
-  ): string | undefined => {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestWithMetadata>();
+  (_data: unknown, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<RequestWithMetadata>();
 
     const value =
       request.requestContext?.requestId ??
       request.requestId ??
-      firstHeaderValue(
-        request.headers?.[HTTP_HEADERS.REQUEST_ID],
-      );
+      firstHeaderValue(request.headers?.[HTTP_HEADERS.REQUEST_ID]);
 
     return typeof value === 'string' ? value : undefined;
   },

@@ -3,9 +3,7 @@ export function sleep(
   signal?: AbortSignal,
 ): Promise<void> {
   if (!Number.isFinite(milliseconds) || milliseconds < 0) {
-    return Promise.reject(
-      new RangeError('milliseconds phải là số không âm'),
-    );
+    return Promise.reject(new RangeError('milliseconds phải là số không âm'));
   }
 
   return new Promise<void>((resolve, reject) => {

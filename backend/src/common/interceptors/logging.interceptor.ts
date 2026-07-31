@@ -32,10 +32,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     const shouldSkip = this.reflector.getAllAndOverride<boolean>(
       SKIP_REQUEST_LOGGING_KEY,
-      [
-        executionContext.getHandler(),
-        executionContext.getClass(),
-      ],
+      [executionContext.getHandler(), executionContext.getClass()],
     );
 
     if (shouldSkip) {
@@ -43,15 +40,23 @@ export class LoggingInterceptor implements NestInterceptor {
     }
 
     const httpContext = executionContext.switchToHttp();
-    const request =
-      httpContext.getRequest<HttpRequestWithContext>();
-    const response =
-      httpContext.getResponse<HttpResponseLike>();
+    const request = httpContext.getRequest<HttpRequestWithContext>();
+    const response = httpContext.getResponse<HttpResponseLike>();
 
     const ctx = request.requestContext;
-    const method = ctx?.method ?? (typeof request.method === 'string' ? request.method : 'UNKNOWN');
-    const path = ctx?.path ?? (typeof request.originalUrl === 'string' ? request.originalUrl : typeof request.url === 'string' ? request.url : '/');
-    const requestId = ctx?.requestId ?? (typeof request.requestId === 'string' ? request.requestId : 'N/A');
+    const method =
+      ctx?.method ??
+      (typeof request.method === 'string' ? request.method : 'UNKNOWN');
+    const path =
+      ctx?.path ??
+      (typeof request.originalUrl === 'string'
+        ? request.originalUrl
+        : typeof request.url === 'string'
+          ? request.url
+          : '/');
+    const requestId =
+      ctx?.requestId ??
+      (typeof request.requestId === 'string' ? request.requestId : 'N/A');
     const userId = ctx?.userId;
 
     const startedAt = performance.now();
@@ -69,14 +74,9 @@ export class LoggingInterceptor implements NestInterceptor {
           return;
         }
 
-        const durationMs = Math.max(
-          0,
-          performance.now() - startedAt,
-        );
+        const durationMs = Math.max(0, performance.now() - startedAt);
         const statusCode =
-          typeof response.statusCode === 'number'
-            ? response.statusCode
-            : 200;
+          typeof response.statusCode === 'number' ? response.statusCode : 200;
         const controller = executionContext.getClass().name;
         const handler = executionContext.getHandler().name;
 

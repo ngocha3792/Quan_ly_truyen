@@ -1,7 +1,4 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 type UserRecord = Readonly<Record<string, unknown>>;
 
@@ -21,9 +18,7 @@ export const CurrentUser = createParamDecorator(
     property: string | undefined,
     context: ExecutionContext,
   ): UserRecord | unknown | undefined => {
-    const request = context
-      .switchToHttp()
-      .getRequest<RequestWithUser>();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
 
     const user = request.user;
 

@@ -1,8 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 import {
   AppException,
@@ -45,23 +41,17 @@ export class ExceptionNormalizer {
     };
   }
 
-  private normalizeAppException(
-    exception: AppException,
-  ): NormalizedException {
+  private normalizeAppException(exception: AppException): NormalizedException {
     const status = mapExceptionCategoryToHttpStatus(exception.category);
     const expose = exception.expose && status < 500;
 
     return {
       status,
-      code: expose
-        ? exception.code
-        : CommonExceptionCode.INTERNAL_ERROR,
+      code: expose ? exception.code : CommonExceptionCode.INTERNAL_ERROR,
       message: expose
         ? exception.message
         : this.defaultMessageForStatus(status),
-      ...(expose && exception.details
-        ? { details: exception.details }
-        : {}),
+      ...(expose && exception.details ? { details: exception.details } : {}),
       retryable: exception.retryable,
       logLevel: status >= 500 ? 'error' : 'warn',
     };
@@ -84,7 +74,8 @@ export class ExceptionNormalizer {
     }
 
     const body = this.asRecord(response);
-    const code = this.readString(body.code) ?? this.defaultCodeForStatus(status);
+    const code =
+      this.readString(body.code) ?? this.defaultCodeForStatus(status);
     const retryable =
       typeof body.retryable === 'boolean'
         ? body.retryable
@@ -110,7 +101,8 @@ export class ExceptionNormalizer {
     const code =
       this.readString(exception.code) ?? this.defaultCodeForStatus(status);
     const message =
-      this.readString(exception.message) ?? this.defaultMessageForStatus(status);
+      this.readString(exception.message) ??
+      this.defaultMessageForStatus(status);
 
     return {
       status,
@@ -121,10 +113,7 @@ export class ExceptionNormalizer {
     };
   }
 
-  private extractHttpMessage(
-    body: UnknownRecord,
-    status: number,
-  ): string {
+  private extractHttpMessage(body: UnknownRecord, status: number): string {
     if (typeof body.message === 'string' && body.message.trim()) {
       return body.message;
     }

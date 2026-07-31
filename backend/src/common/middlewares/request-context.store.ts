@@ -6,13 +6,9 @@ import type { MutableRequestContext } from './request-context.interface';
 
 @Injectable()
 export class RequestContextStore {
-  private readonly storage =
-    new AsyncLocalStorage<MutableRequestContext>();
+  private readonly storage = new AsyncLocalStorage<MutableRequestContext>();
 
-  run<T>(
-    context: MutableRequestContext,
-    callback: () => T,
-  ): T {
+  run<T>(context: MutableRequestContext, callback: () => T): T {
     return this.storage.run(context, callback);
   }
 
@@ -32,9 +28,7 @@ export class RequestContextStore {
     return context;
   }
 
-  patch(
-    values: Partial<MutableRequestContext>,
-  ): MutableRequestContext {
+  patch(values: Partial<MutableRequestContext>): MutableRequestContext {
     const context = this.require();
 
     Object.assign(context, values);

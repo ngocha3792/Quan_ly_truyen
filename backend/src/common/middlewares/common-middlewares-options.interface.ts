@@ -16,9 +16,7 @@ export interface MaintenanceModeState {
 }
 
 export interface MaintenanceModeMiddlewareOptions {
-  resolveState?: () =>
-    | MaintenanceModeState
-    | Promise<MaintenanceModeState>;
+  resolveState?: () => MaintenanceModeState | Promise<MaintenanceModeState>;
   allowedPaths?: readonly string[];
   bypassHeaderName?: string;
   bypassToken?: string;
