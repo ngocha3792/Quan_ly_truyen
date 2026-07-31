@@ -11,7 +11,7 @@ export function normalizeIpAddress(value: string): string {
 }
 
 export function getFirstForwardedIp(value: HeaderValue): string | null {
-  const header = Array.isArray(value) ? value[0] : value;
+  const header = typeof value === 'string' ? value : value?.[0];
 
   if (!header) {
     return null;
@@ -32,7 +32,8 @@ export function resolveClientIp(input: {
     return forwarded;
   }
 
-  const realIp = Array.isArray(input.realIp) ? input.realIp[0] : input.realIp;
+  const realIp =
+    typeof input.realIp === 'string' ? input.realIp : input.realIp?.[0];
 
   if (realIp) {
     return normalizeIpAddress(realIp);

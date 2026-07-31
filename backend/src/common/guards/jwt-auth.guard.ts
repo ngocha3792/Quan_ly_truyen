@@ -38,6 +38,8 @@ export class JwtAuthGuard extends AuthGuard(AUTH_STRATEGIES.JWT_ACCESS) {
     _context: ExecutionContext,
     _status?: unknown,
   ): TUser {
+    void _context;
+    void _status;
     if (error || info) {
       throwPassportAuthenticationFailure(error, info);
     }

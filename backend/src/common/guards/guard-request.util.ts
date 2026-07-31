@@ -39,9 +39,6 @@ export function getAuthorizationHeader(
 ): string | undefined {
   const raw = request.headers?.authorization;
 
-  if (Array.isArray(raw)) {
-    return raw[0];
-  }
-
-  return typeof raw === 'string' ? raw : undefined;
+  if (typeof raw === 'string') return raw;
+  return raw?.[0];
 }

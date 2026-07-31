@@ -7,6 +7,7 @@ export function getFileExtension(filename: string): string {
 export function sanitizeFilename(filename: string): string {
   const normalized = filename
     .normalize('NFKC')
+    // eslint-disable-next-line no-control-regex -- control characters must be removed from user supplied filenames.
     .replace(/[\u0000-\u001f\u007f]/g, '')
     .replace(/[\\/:*?"<>|]/g, '-')
     .replace(/\s+/g, ' ')

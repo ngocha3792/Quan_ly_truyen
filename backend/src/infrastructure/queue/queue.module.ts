@@ -13,6 +13,7 @@ export class QueueModule {
   static register(): DynamicModule {
     return {
       module: QueueModule,
+      global: true,
       imports: [
         BullModule.forRootAsync({
           inject: [ConfigService],

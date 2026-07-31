@@ -1,3 +1,5 @@
+export type MediaStorageResourceType = 'image' | 'video' | 'raw';
+
 export interface StoredMedia {
   provider: 'cloudinary';
 
@@ -5,9 +7,9 @@ export interface StoredMedia {
   publicId: string;
   version: number;
 
-  resourceType: 'image' | 'video' | 'raw';
+  resourceType: MediaStorageResourceType;
   deliveryType: string;
-  format: string;
+  format?: string;
   assetFolder?: string;
 
   secureUrl: string;

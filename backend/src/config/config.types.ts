@@ -49,3 +49,33 @@ export interface QueueConfig {
   defaultBackoffMs: number;
   workerConcurrency: number;
 }
+
+export interface MailConfig {
+  enabled: boolean;
+  fromName: string;
+  fromAddress: string;
+  replyTo?: string;
+  frontendPublicUrl: string;
+  smtp: {
+    host: string;
+    port: number;
+    secure: boolean;
+    requireTls: boolean;
+    username?: string;
+    password?: string;
+    poolEnabled: boolean;
+    maxConnections: number;
+    maxMessages: number;
+    rateLimitPerSecond: number;
+    connectionTimeoutMs: number;
+    greetingTimeoutMs: number;
+    socketTimeoutMs: number;
+    verifyOnStartup: boolean;
+  };
+  dkim: {
+    enabled: boolean;
+    domain?: string;
+    selector?: string;
+    privateKey?: string;
+  };
+}

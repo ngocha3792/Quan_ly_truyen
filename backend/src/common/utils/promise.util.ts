@@ -8,7 +8,7 @@ export function sleep(
 
   return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(signal.reason ?? new Error('Operation aborted'));
+      reject(toAbortError(signal.reason));
       return;
     }
 
@@ -18,11 +18,16 @@ export function sleep(
       'abort',
       () => {
         clearTimeout(timeoutId);
-        reject(signal.reason ?? new Error('Operation aborted'));
+        reject(toAbortError(signal.reason));
       },
       { once: true },
     );
   });
+}
+
+function toAbortError(reason: unknown): Error {
+  if (reason instanceof Error) return reason;
+  return new Error(typeof reason === 'string' ? reason : 'Operation aborted');
 }
 
 export async function withTimeout<T>(

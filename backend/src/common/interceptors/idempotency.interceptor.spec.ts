@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-import { ExecutionContext } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
 
@@ -53,7 +52,7 @@ describe('IdempotencyInterceptor', () => {
         getRequest: () => mockRequest,
         getResponse: () => mockResponse,
       }),
-    } as unknown as ExecutionContext;
+    };
   });
 
   it('passes through if no @Idempotent() metadata', async () => {

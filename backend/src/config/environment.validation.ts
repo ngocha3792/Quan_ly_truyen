@@ -236,6 +236,108 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET?: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDINARY_ATTACHMENT_UPLOAD_PRESET?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  MAIL_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_FROM_NAME = 'Quan Ly Truyen';
+
+  @IsString()
+  @IsNotEmpty()
+  MAIL_FROM_ADDRESS = 'no-reply@example.com';
+
+  @IsOptional()
+  @IsString()
+  MAIL_REPLY_TO?: string;
+
+  @IsUrl({ require_tld: false })
+  FRONTEND_PUBLIC_URL = 'http://localhost:4200';
+
+  @IsString()
+  SMTP_HOST = 'localhost';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1025))
+  @IsInt()
+  @Min(1)
+  @Max(65_535)
+  SMTP_PORT = 1025;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  SMTP_SECURE = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  SMTP_REQUIRE_TLS = false;
+
+  @IsOptional()
+  @IsString()
+  SMTP_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_PASSWORD?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  SMTP_POOL_ENABLED = true;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3))
+  @IsInt()
+  @Min(1)
+  SMTP_MAX_CONNECTIONS = 3;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 100))
+  @IsInt()
+  @Min(1)
+  SMTP_MAX_MESSAGES = 100;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  SMTP_RATE_LIMIT_PER_SECOND = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(100)
+  SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(100)
+  SMTP_GREETING_TIMEOUT_MS = 10_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30_000))
+  @IsInt()
+  @Min(100)
+  SMTP_SOCKET_TIMEOUT_MS = 30_000;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  SMTP_VERIFY_ON_STARTUP = true;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  MAIL_DKIM_ENABLED = false;
+
+  @IsOptional()
+  @IsString()
+  MAIL_DKIM_DOMAIN?: string;
+
+  @IsOptional()
+  @IsString()
+  MAIL_DKIM_SELECTOR?: string;
+
+  @IsOptional()
+  @IsString()
+  MAIL_DKIM_PRIVATE_KEY_BASE64?: string;
 }
 
 export function validateEnvironment(
@@ -299,6 +401,7 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET',
       'CLOUDINARY_STORY_COVER_UPLOAD_PRESET',
       'CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET',
+      'CLOUDINARY_ATTACHMENT_UPLOAD_PRESET',
     ];
 
     for (const key of requiredVars) {
@@ -316,6 +419,34 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
         'CLOUDINARY_SIGNATURE_ALGORITHM must be either "sha256" or "sha1"',
       );
     }
+  }
+
+  validateMailRules(config);
+}
+
+function validateMailRules(config: EnvironmentVariables): void {
+  if (!config.MAIL_ENABLED) return;
+
+  if (!config.SMTP_HOST.trim()) {
+    throw new Error('SMTP_HOST is required when MAIL_ENABLED=true');
+  }
+  if (Boolean(config.SMTP_USERNAME) !== Boolean(config.SMTP_PASSWORD)) {
+    throw new Error(
+      'SMTP_USERNAME and SMTP_PASSWORD must be provided together',
+    );
+  }
+  if (config.SMTP_PORT === 465 && !config.SMTP_SECURE) {
+    throw new Error('SMTP_SECURE should be true when SMTP_PORT=465');
+  }
+  if (
+    config.MAIL_DKIM_ENABLED &&
+    (!config.MAIL_DKIM_DOMAIN ||
+      !config.MAIL_DKIM_SELECTOR ||
+      !config.MAIL_DKIM_PRIVATE_KEY_BASE64)
+  ) {
+    throw new Error(
+      'DKIM domain, selector and private key are required when MAIL_DKIM_ENABLED=true',
+    );
   }
 }
 

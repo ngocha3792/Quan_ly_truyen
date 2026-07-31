@@ -5,3 +5,12 @@ export interface DispatchOutboxBatchJobV1 {
   batchSize?: number;
   correlationId?: string;
 }
+
+export interface OutboxQueueEnvelope<TPayload> {
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: TPayload;
+  outboxEventId: string;
+  createdAt: string;
+}

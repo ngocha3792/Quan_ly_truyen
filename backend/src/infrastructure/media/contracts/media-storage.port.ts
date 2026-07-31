@@ -1,5 +1,8 @@
 import type { SignedUploadParameters } from './signed-upload.interface';
-import type { StoredMedia } from './stored-media.interface';
+import type {
+  MediaStorageResourceType,
+  StoredMedia,
+} from './stored-media.interface';
 
 export const MEDIA_STORAGE = Symbol.for(
   'quan-ly-truyen.infrastructure.media-storage',
@@ -8,26 +11,23 @@ export const MEDIA_STORAGE = Symbol.for(
 export interface CreateSignedUploadInput {
   mediaAssetId: string;
   purpose:
-    | 'AVATAR'
-    | 'AUTHOR_BANNER'
-    | 'STORY_COVER'
-    | 'CHAPTER_IMAGE'
-    | 'ATTACHMENT'
-    | string;
-  ownerId: string;
-  expiresAt: Date;
+    'AVATAR' | 'AUTHOR_BANNER' | 'STORY_COVER' | 'CHAPTER_IMAGE' | 'ATTACHMENT';
+  publicId: string;
+  assetFolder: string;
+  resourceType: MediaStorageResourceType;
+  confirmExpiresAt: Date;
 }
 
 export interface ConfirmUploadInput {
   publicId: string;
   version: number;
   responseSignature: string;
-  resourceType: 'image' | 'video' | 'raw';
+  resourceType: MediaStorageResourceType;
 }
 
 export interface DeleteStoredMediaInput {
   publicId: string;
-  resourceType: 'image' | 'video' | 'raw';
+  resourceType: MediaStorageResourceType;
   invalidate?: boolean;
 }
 
@@ -35,17 +35,15 @@ export interface BuildMediaUrlInput {
   publicId: string;
   resourceType: 'image' | 'video';
   preset:
-  | 'avatar'
-  | 'authorBanner'
-  | 'storyCover'
-  | 'storyThumbnail'
-  | 'chapterImage';
+    | 'avatar'
+    | 'authorBanner'
+    | 'storyCover'
+    | 'storyThumbnail'
+    | 'chapterImage';
 }
 
 export interface MediaStoragePort {
-  createSignedUpload(
-    input: CreateSignedUploadInput,
-  ): SignedUploadParameters;
+  createSignedUpload(input: CreateSignedUploadInput): SignedUploadParameters;
 
   confirmUpload(input: ConfirmUploadInput): Promise<StoredMedia>;
 
@@ -53,7 +51,7 @@ export interface MediaStoragePort {
     buffer: Buffer;
     publicId: string;
     assetFolder: string;
-    resourceType: 'image' | 'video' | 'raw';
+    resourceType: MediaStorageResourceType;
     uploadPreset?: string;
   }): Promise<StoredMedia>;
 

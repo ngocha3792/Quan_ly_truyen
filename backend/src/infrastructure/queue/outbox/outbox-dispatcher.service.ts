@@ -35,8 +35,11 @@ export class OutboxDispatcherService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-    @InjectQueue(QUEUE_NAMES.OUTBOX)
-    private readonly outboxQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.MAIL) private readonly mailQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.MEDIA) private readonly mediaQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
+    private readonly notificationQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.ANALYTICS) private readonly analyticsQueue: Queue,
   ) {
     const queueConfig = this.configService.get<QueueConfig>('queue');
     this.maxAttempts = queueConfig?.defaultAttempts ?? 3;
@@ -110,14 +113,18 @@ export class OutboxDispatcherService {
     const targetQueue = this.resolveTargetQueue(event.aggregateType);
 
     if (targetQueue) {
-      await targetQueue.add(event.eventType, {
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-        eventType: event.eventType,
-        payload: event.payload,
-        outboxEventId: event.id,
-        createdAt: event.createdAt.toISOString(),
-      });
+      await targetQueue.add(
+        event.eventType,
+        {
+          aggregateType: event.aggregateType,
+          aggregateId: event.aggregateId,
+          eventType: event.eventType,
+          payload: event.payload,
+          outboxEventId: event.id,
+          createdAt: event.createdAt.toISOString(),
+        },
+        { jobId: `outbox-${event.id}` },
+      );
     } else {
       this.logger.warn(
         `No target queue for aggregate type "${event.aggregateType}", marking as published (noop)`,
@@ -128,11 +135,11 @@ export class OutboxDispatcherService {
   private resolveTargetQueue(aggregateType: string): Queue | null {
     // Map aggregate types to their respective queues
     const queueMap: Record<string, Queue> = {
-      media: this.outboxQueue,
-      mail: this.outboxQueue,
-      notification: this.outboxQueue,
-      story: this.outboxQueue,
-      analytics: this.outboxQueue,
+      media: this.mediaQueue,
+      mail: this.mailQueue,
+      notification: this.notificationQueue,
+      notifications: this.notificationQueue,
+      analytics: this.analyticsQueue,
     };
 
     return queueMap[aggregateType.toLowerCase()] ?? null;

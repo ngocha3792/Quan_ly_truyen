@@ -1,24 +1,30 @@
 import { MediaPurpose } from '@/generated/prisma/client';
+import type { MediaStorageResourceType } from '../contracts/stored-media.interface';
 
 export interface MediaUploadPolicy {
-  resourceType: 'image' | 'video' | 'raw';
+  resourceType: MediaStorageResourceType;
   uploadPresetConfigKey: string;
   folderSegment: string;
   allowedFormats: readonly string[];
+  allowedMimeTypes: readonly string[];
+  mimeFormatPairs: Readonly<Record<string, readonly string[]>>;
   maxBytes: number;
 }
 
 const MB = 1024 * 1024;
 
-export const MEDIA_UPLOAD_POLICIES: Record<
-  MediaPurpose,
-  MediaUploadPolicy
-> = {
+export const MEDIA_UPLOAD_POLICIES: Record<MediaPurpose, MediaUploadPolicy> = {
   [MediaPurpose.AVATAR]: {
     resourceType: 'image',
     uploadPresetConfigKey: 'cloudinary.uploadPresets.avatar',
     folderSegment: 'users/avatars',
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeFormatPairs: {
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/webp': ['webp'],
+    },
     maxBytes: 5 * MB,
   },
 
@@ -27,6 +33,12 @@ export const MEDIA_UPLOAD_POLICIES: Record<
     uploadPresetConfigKey: 'cloudinary.uploadPresets.authorBanner',
     folderSegment: 'authors/banners',
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeFormatPairs: {
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/webp': ['webp'],
+    },
     maxBytes: 10 * MB,
   },
 
@@ -35,6 +47,12 @@ export const MEDIA_UPLOAD_POLICIES: Record<
     uploadPresetConfigKey: 'cloudinary.uploadPresets.storyCover',
     folderSegment: 'stories/covers',
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeFormatPairs: {
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/webp': ['webp'],
+    },
     maxBytes: 10 * MB,
   },
 
@@ -43,6 +61,12 @@ export const MEDIA_UPLOAD_POLICIES: Record<
     uploadPresetConfigKey: 'cloudinary.uploadPresets.chapterImage',
     folderSegment: 'stories/chapters',
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeFormatPairs: {
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/webp': ['webp'],
+    },
     maxBytes: 15 * MB,
   },
 
@@ -50,7 +74,22 @@ export const MEDIA_UPLOAD_POLICIES: Record<
     resourceType: 'raw',
     uploadPresetConfigKey: 'cloudinary.uploadPresets.attachment',
     folderSegment: 'attachments',
-    allowedFormats: [],
+    allowedFormats: ['pdf', 'txt', 'doc', 'docx', 'zip'],
+    allowedMimeTypes: [
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/zip',
+    ],
+    mimeFormatPairs: {
+      'application/pdf': ['pdf'],
+      'text/plain': ['txt'],
+      'application/msword': ['doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        ['docx'],
+      'application/zip': ['zip'],
+    },
     maxBytes: 10 * MB,
   },
 };

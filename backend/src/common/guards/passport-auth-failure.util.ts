@@ -19,15 +19,6 @@ function getFailureName(value: unknown): string | undefined {
   return typeof name === 'string' ? name : undefined;
 }
 
-function getFailureMessage(value: unknown): string | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-
-  const message = (value as PassportFailureInfo).message;
-  return typeof message === 'string' ? message : undefined;
-}
-
 export function throwPassportAuthenticationFailure(
   error: unknown,
   info: unknown,
@@ -38,8 +29,6 @@ export function throwPassportAuthenticationFailure(
 
   const failure = error ?? info;
   const name = getFailureName(failure);
-  const message = getFailureMessage(failure);
-
   if (name === 'TokenExpiredError') {
     throw new TokenExpiredException({
       cause: failure,

@@ -8,7 +8,7 @@ export interface SignedUploadParameters {
   timestamp: number;
 
   resourceType: 'image' | 'video' | 'raw';
-  expiresAt: string;
+  confirmExpiresAt: string;
 
   parameters: {
     upload_preset: string;

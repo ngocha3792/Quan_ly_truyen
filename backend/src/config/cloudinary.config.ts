@@ -43,5 +43,6 @@ export default registerAs('cloudinary', () => ({
     authorBanner: process.env.CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET,
     storyCover: process.env.CLOUDINARY_STORY_COVER_UPLOAD_PRESET,
     chapterImage: process.env.CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET,
+    attachment: process.env.CLOUDINARY_ATTACHMENT_UPLOAD_PRESET,
   },
 }));

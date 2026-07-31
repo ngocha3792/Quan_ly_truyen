@@ -26,6 +26,7 @@ export class CommonMiddlewaresModule {
         JsonContentTypeMiddleware,
       ],
       exports: [
+        COMMON_MIDDLEWARE_OPTIONS,
         RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,
@@ -55,6 +56,7 @@ export class CommonMiddlewaresModule {
         JsonContentTypeMiddleware,
       ],
       exports: [
+        COMMON_MIDDLEWARE_OPTIONS,
         RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,

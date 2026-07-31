@@ -7,6 +7,7 @@ import corsConfig from './cors.config';
 import databaseConfig from './database.config';
 import { validateEnvironment } from './environment.validation';
 import maintenanceConfig from './maintenance.config';
+import mailConfig from './mail.config';
 import queueConfig from './queue.config';
 import redisConfig from './redis.config';
 
@@ -35,6 +36,7 @@ function resolveEnvFilePaths(): string[] {
         databaseConfig,
         corsConfig,
         maintenanceConfig,
+        mailConfig,
         redisConfig,
         queueConfig,
       ],

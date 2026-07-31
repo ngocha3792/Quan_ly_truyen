@@ -1,3 +1,5 @@
+Cloudinary setup and media lifecycle operations are documented in [docs/infrastructure/CLOUDINARY_SETUP.md](docs/infrastructure/CLOUDINARY_SETUP.md).
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

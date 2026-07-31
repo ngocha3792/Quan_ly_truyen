@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { MediaStorageDisabledException } from '../media.exceptions';
 
 import type { BuildMediaUrlInput } from '../contracts/media-storage.port';
 import { CLOUDINARY_CLIENT } from './cloudinary.constants';
@@ -8,10 +9,13 @@ import type { CloudinaryClient } from './cloudinary.provider';
 export class CloudinaryUrlService {
   constructor(
     @Inject(CLOUDINARY_CLIENT)
-    private readonly cloudinary: CloudinaryClient,
+    private readonly cloudinary: CloudinaryClient | null,
   ) {}
 
   build(input: BuildMediaUrlInput): string {
+    if (!this.cloudinary) {
+      throw new MediaStorageDisabledException();
+    }
     const transformation = this.resolveTransformation(input.preset);
 
     if (input.resourceType === 'video') {

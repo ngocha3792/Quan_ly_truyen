@@ -43,4 +43,25 @@ describe('validateEnvironment', () => {
       }),
     ).toThrow('DEFAULT_LOCALE');
   });
+
+  it('requires SMTP username and password together', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MAIL_ENABLED: 'true',
+        SMTP_USERNAME: 'mailer',
+      }),
+    ).toThrow('SMTP_USERNAME and SMTP_PASSWORD');
+  });
+
+  it('requires secure SMTP on port 465', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MAIL_ENABLED: 'true',
+        SMTP_PORT: '465',
+        SMTP_SECURE: 'false',
+      }),
+    ).toThrow('SMTP_SECURE');
+  });
 });

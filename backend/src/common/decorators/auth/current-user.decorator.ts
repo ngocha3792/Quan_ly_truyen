@@ -14,10 +14,7 @@ interface RequestWithUser {
  * currentId(@CurrentUser('userId') userId: string)
  */
 export const CurrentUser = createParamDecorator(
-  (
-    property: string | undefined,
-    context: ExecutionContext,
-  ): UserRecord | unknown | undefined => {
+  (property: string | undefined, context: ExecutionContext): unknown => {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
 
     const user = request.user;

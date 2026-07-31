@@ -1,11 +1,4 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
 
 export enum ConfirmResourceType {
   IMAGE = 'image',
@@ -14,9 +7,6 @@ export enum ConfirmResourceType {
 }
 
 export class ConfirmMediaUploadDto {
-  @IsUUID()
-  mediaAssetId!: string;
-
   @IsString()
   @IsNotEmpty()
   publicId!: string;

@@ -43,6 +43,8 @@ export class OptionalJwtAuthGuard extends AuthGuard(
     _context: ExecutionContext,
     _status?: unknown,
   ): TUser | null {
+    void _context;
+    void _status;
     if (error || info) {
       throwPassportAuthenticationFailure(error, info);
     }

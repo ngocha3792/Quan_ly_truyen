@@ -1,0 +1,2 @@
+# Root .gitignore ignores migration SQL. This scoped override keeps real Prisma migrations versioned.
+!prisma/migrations/**/*.sql

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
-import { Observable, of, throwError } from 'rxjs';
+import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 
 import { IDEMPOTENT_KEY, IDEMPOTENCY_STORE } from '@/common/constants';
@@ -105,7 +105,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      mergeMap(async (body) => {
+      mergeMap(async (body: unknown) => {
         const statusCode = response.statusCode || 200;
         await this.idempotencyStore.saveResult(
           trimmedKey,
@@ -118,17 +118,20 @@ export class IdempotencyInterceptor implements NestInterceptor {
         return body;
       }),
       catchError((err: unknown) => {
-        return this.idempotencyStore
-          .markFailed(trimmedKey)
-          .then(() => throwError(() => err));
+        return from(this.idempotencyStore.markFailed(trimmedKey)).pipe(
+          mergeMap(() => throwError(() => err)),
+        );
       }),
     );
   }
 
   private computeRequestHash(request: Request): string {
+    // Express deliberately types parsed body as any; it is serialized as opaque input here.
+
     const payload = {
       path: request.path,
       method: request.method,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       body: request.body ?? {},
       query: request.query ?? {},
     };

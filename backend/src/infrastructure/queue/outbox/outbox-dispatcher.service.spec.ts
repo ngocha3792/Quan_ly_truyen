@@ -57,6 +57,9 @@ describe('OutboxDispatcherService', () => {
       mockPrisma as any,
       mockConfigService as unknown as ConfigService,
       mockQueue as any,
+      mockQueue as any,
+      mockQueue as any,
+      mockQueue as any,
     );
   });
 
@@ -98,6 +101,11 @@ describe('OutboxDispatcherService', () => {
             status: OutboxStatus.PUBLISHED,
           }),
         }),
+      );
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        event.eventType,
+        expect.objectContaining({ outboxEventId: 'evt-1' }),
+        { jobId: 'outbox-evt-1' },
       );
     });
 
@@ -235,7 +243,7 @@ function createMockEvent(
 ) {
   return {
     id: overrides.id ?? 'evt-default',
-    aggregateType: overrides.aggregateType ?? 'story',
+    aggregateType: overrides.aggregateType ?? 'mail',
     aggregateId: overrides.aggregateId ?? 'story-123',
     eventType: overrides.eventType ?? 'story.published',
     payload: overrides.payload ?? { storyId: 'story-123' },

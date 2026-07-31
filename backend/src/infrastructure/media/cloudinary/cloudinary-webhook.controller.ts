@@ -7,16 +7,17 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { Public } from '@/common/decorators/auth';
+import { InvalidInputException } from '@/common/exceptions';
 
 import { CloudinaryWebhookService } from './cloudinary-webhook.service';
 
 @Controller('webhooks/cloudinary')
 export class CloudinaryWebhookController {
-  constructor(
-    private readonly webhookService: CloudinaryWebhookService,
-  ) {}
+  constructor(private readonly webhookService: CloudinaryWebhookService) {}
 
   @Post()
+  @Public()
   @HttpCode(200)
   async handle(
     @Req() request: RawBodyRequest<Request>,
@@ -24,7 +25,9 @@ export class CloudinaryWebhookController {
     @Headers('x-cld-signature') signature: string | undefined,
   ): Promise<{ received: true }> {
     if (!request.rawBody || !timestamp || !signature) {
-      throw new Error('Missing Cloudinary webhook signature data');
+      throw new InvalidInputException({
+        message: 'Thiếu raw body hoặc header chữ ký Cloudinary webhook',
+      });
     }
 
     await this.webhookService.handle({

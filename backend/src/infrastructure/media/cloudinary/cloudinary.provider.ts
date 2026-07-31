@@ -10,14 +10,11 @@ export const cloudinaryProvider: Provider = {
   provide: CLOUDINARY_CLIENT,
   inject: [ConfigService],
 
-  useFactory: (configService: ConfigService): CloudinaryClient => {
+  useFactory: (configService: ConfigService): CloudinaryClient | null => {
     const enabled = configService.get<boolean>('cloudinary.enabled', false);
 
     if (!enabled) {
-      // Direct access will throw error when Cloudinary is not enabled
-      throw new Error(
-        'Cloudinary is disabled but CloudinaryMediaModule was accessed',
-      );
+      return null;
     }
 
     const cloudName = configService.getOrThrow<string>('cloudinary.cloudName');

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- Nest HttpStatus is a numeric enum while exception statuses are intentionally transport numbers. */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 import {

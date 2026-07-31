@@ -982,6 +982,24 @@ model OutboxEvent {
   @@map("outbox_events")
 }
 
+model InboundWebhookEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String    @db.VarChar(50)
+  eventKey    String    @map("event_key") @db.VarChar(255)
+  payloadHash String    @map("payload_hash") @db.VarChar(64)
+  eventType   String?   @map("event_type") @db.VarChar(120)
+  status      String    @default("pending") @db.VarChar(30)
+  payload     Json
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error") @db.Text
+
+  @@unique([provider, eventKey])
+  @@index([provider, status, receivedAt])
+  @@map("inbound_webhook_events")
+}
+
 // ============================================================
 // AGGREGATED ANALYTICS
 // ============================================================
