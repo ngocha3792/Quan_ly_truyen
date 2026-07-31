@@ -6,3 +6,5 @@ export { APP_CONFIG_KEY } from './app.config';
 export { CORS_CONFIG_KEY } from './cors.config';
 export { DATABASE_CONFIG_KEY } from './database.config';
 export { MAINTENANCE_CONFIG_KEY } from './maintenance.config';
+export { QUEUE_CONFIG_KEY } from './queue.config';
+export { REDIS_CONFIG_KEY } from './redis.config';

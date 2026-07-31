@@ -6,6 +6,8 @@ import corsConfig from './cors.config';
 import databaseConfig from './database.config';
 import { validateEnvironment } from './environment.validation';
 import maintenanceConfig from './maintenance.config';
+import queueConfig from './queue.config';
+import redisConfig from './redis.config';
 
 function resolveEnvFilePaths(): string[] {
   const environment = process.env.NODE_ENV ?? 'development';
@@ -26,7 +28,14 @@ function resolveEnvFilePaths(): string[] {
       expandVariables: false,
       envFilePath: resolveEnvFilePaths(),
       ignoreEnvFile: process.env.NODE_ENV === 'production',
-      load: [appConfig, databaseConfig, corsConfig, maintenanceConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        corsConfig,
+        maintenanceConfig,
+        redisConfig,
+        queueConfig,
+      ],
       validate: validateEnvironment,
     }),
   ],

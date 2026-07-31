@@ -11,5 +11,9 @@ export default registerAs(MAINTENANCE_CONFIG_KEY, (): MaintenanceConfig => ({
   bypassHeaderName:
     process.env.MAINTENANCE_BYPASS_HEADER ?? 'x-maintenance-key',
   bypassToken: process.env.MAINTENANCE_BYPASS_TOKEN?.trim() || undefined,
-  allowedPaths: ['/api/v1/health'],
+  allowedPaths: [
+    '/api/v1/health',
+    '/api/v1/health/live',
+    '/api/v1/health/ready',
+  ],
 }));

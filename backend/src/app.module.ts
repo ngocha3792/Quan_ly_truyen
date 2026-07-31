@@ -19,10 +19,14 @@ import {
 } from './common/middlewares';
 import { AppConfigModule } from './config';
 import type { AppConfig, MaintenanceConfig } from './config';
+import { HealthModule } from './health';
+import { InfrastructureModule } from './infrastructure';
 
 @Module({
   imports: [
     AppConfigModule,
+    InfrastructureModule,
+    HealthModule,
     CommonMiddlewaresModule.registerAsync({
       imports: [AppConfigModule],
       inject: [ConfigService],

@@ -32,3 +32,20 @@ export interface MaintenanceConfig {
   bypassToken?: string;
   allowedPaths: readonly string[];
 }
+
+export interface RedisConfig {
+  enabled: boolean;
+  url: string;
+  keyPrefix: string;
+  connectTimeoutMs: number;
+  commandTimeoutMs: number;
+  cacheDefaultTtlSeconds: number;
+}
+
+export interface QueueConfig {
+  enabled: boolean;
+  prefix: string;
+  defaultAttempts: number;
+  defaultBackoffMs: number;
+  workerConcurrency: number;
+}

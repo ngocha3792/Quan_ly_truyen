@@ -134,6 +134,58 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   MAINTENANCE_BYPASS_TOKEN?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  REDIS_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  REDIS_URL = 'redis://localhost:6379';
+
+  @IsString()
+  @IsNotEmpty()
+  REDIS_KEY_PREFIX = 'qlt';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5000))
+  @IsInt()
+  @Min(100)
+  REDIS_CONNECT_TIMEOUT_MS = 5000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3000))
+  @IsInt()
+  @Min(100)
+  REDIS_COMMAND_TIMEOUT_MS = 3000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(1)
+  CACHE_DEFAULT_TTL_SECONDS = 300;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  QUEUE_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  QUEUE_PREFIX = 'qlt';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  QUEUE_DEFAULT_ATTEMPTS = 3;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5000))
+  @IsInt()
+  @Min(100)
+  QUEUE_DEFAULT_BACKOFF_MS = 5000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  WORKER_CONCURRENCY = 5;
 }
 
 export function validateEnvironment(
