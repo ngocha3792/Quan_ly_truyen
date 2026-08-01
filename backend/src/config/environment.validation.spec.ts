@@ -89,4 +89,49 @@ describe('validateEnvironment', () => {
       }),
     ).toThrow('SMTP_SECURE');
   });
+
+  it('accepts redis and rediss URLs but rejects other protocols', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        REDIS_URL: 'rediss://user:pass@example.com:6380/2',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateEnvironment({ ...validBase, REDIS_URL: 'http://example.com' }),
+    ).toThrow('REDIS_URL protocol');
+  });
+
+  it('validates outbox and worker bounds', () => {
+    expect(() =>
+      validateEnvironment({ ...validBase, OUTBOX_BATCH_SIZE: '501' }),
+    ).toThrow('OUTBOX_BATCH_SIZE');
+    expect(() =>
+      validateEnvironment({ ...validBase, WORKER_CONCURRENCY: '0' }),
+    ).toThrow('WORKER_CONCURRENCY');
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        OUTBOX_PROCESSING_TIMEOUT_MS: '9999',
+      }),
+    ).toThrow('OUTBOX_PROCESSING_TIMEOUT_MS');
+  });
+
+  it('forbids disabled Redis and in-memory fallback in production', () => {
+    const productionBase = {
+      ...validBase,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+    };
+    expect(() =>
+      validateEnvironment({ ...productionBase, REDIS_ENABLED: 'false' }),
+    ).toThrow('REDIS_ENABLED must be true');
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        REDIS_ENABLED: 'true',
+        ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'true',
+      }),
+    ).toThrow('ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK');
+  });
 });

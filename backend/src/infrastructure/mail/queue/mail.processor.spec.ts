@@ -30,10 +30,36 @@ describe('MailProcessor', () => {
   beforeEach(() => dispatch.mockReset());
 
   it('dispatches a valid v1 mail job', async () => {
-    dispatch.mockResolvedValue(undefined);
-    await processor.process(job);
+    dispatch.mockResolvedValue({
+      status: 'sent',
+      messageId: 'message-1',
+      accepted: ['user@test.dev'],
+    });
+    await expect(processor.process(job)).resolves.toEqual(
+      expect.objectContaining({ status: 'sent', messageId: 'message-1' }),
+    );
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ outboxEventId: 'evt-1' }),
+    );
+  });
+
+  it('returns skipped when mail is disabled without reporting SMTP acceptance', async () => {
+    dispatch.mockResolvedValue({
+      status: 'skipped',
+      reason: 'mail-disabled',
+    });
+    const logger = (processor as unknown as { logger: { log: jest.Mock } })
+      .logger;
+    const logSpy = jest.spyOn(logger, 'log');
+    await expect(processor.process(job)).resolves.toEqual({
+      status: 'skipped',
+      reason: 'mail-disabled',
+    });
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('skipped because mail is disabled'),
+    );
+    expect(logSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('accepted by SMTP'),
     );
   });
 
@@ -47,6 +73,13 @@ describe('MailProcessor', () => {
     dispatch.mockRejectedValue(new MailDeliveryException('temporary', true));
     await expect(processor.process(job)).rejects.toEqual(
       expect.objectContaining({ retryable: true }),
+    );
+  });
+
+  it('makes non-retryable delivery errors unrecoverable', async () => {
+    dispatch.mockRejectedValue(new MailDeliveryException('rejected', false));
+    await expect(processor.process(job)).rejects.toBeInstanceOf(
+      UnrecoverableError,
     );
   });
 });

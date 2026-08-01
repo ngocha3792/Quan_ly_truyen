@@ -9,8 +9,6 @@ import type { DispatchOutboxBatchJobV1 } from '../contracts';
 import { DISPATCH_OUTBOX_BATCH_JOB } from '../contracts';
 import { QUEUE_NAMES } from '../queue.constants';
 
-const OUTBOX_POLL_INTERVAL_MS = 10_000;
-
 @Injectable()
 export class OutboxSchedulerService implements OnModuleInit {
   private readonly logger = new Logger(OutboxSchedulerService.name);
@@ -43,21 +41,22 @@ export class OutboxSchedulerService implements OnModuleInit {
         }
       }
 
+      const queueConfig = this.configService.getOrThrow<QueueConfig>('queue');
       const jobData: DispatchOutboxBatchJobV1 = {
         version: 1,
-        batchSize: 50,
+        batchSize: queueConfig.outboxBatchSize,
       };
 
       await this.outboxQueue.add(DISPATCH_OUTBOX_BATCH_JOB, jobData, {
         repeat: {
-          every: OUTBOX_POLL_INTERVAL_MS,
+          every: queueConfig.outboxPollIntervalMs,
         },
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 50 },
       });
 
       this.logger.log(
-        `Outbox repeatable job registered (every ${OUTBOX_POLL_INTERVAL_MS}ms)`,
+        `Outbox repeatable job registered (every ${queueConfig.outboxPollIntervalMs}ms)`,
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';

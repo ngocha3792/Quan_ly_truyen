@@ -23,6 +23,17 @@ export class CloudinaryWebhookInboxWorker
   ) {}
 
   onApplicationBootstrap(): void {
+    const enabled = this.configService.get<boolean>(
+      'cloudinary.enabled',
+      false,
+    );
+    const role = this.configService.get<string>('queue.workerRole', 'all');
+    if (!enabled || !['all', 'cloudinary-webhook'].includes(role)) {
+      this.logger.log(
+        'Cloudinary webhook polling disabled for the current worker role',
+      );
+      return;
+    }
     this.schedule(0);
   }
 

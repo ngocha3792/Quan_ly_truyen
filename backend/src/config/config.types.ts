@@ -54,6 +54,21 @@ export interface QueueConfig {
   defaultAttempts: number;
   defaultBackoffMs: number;
   workerConcurrency: number;
+  outboxProcessingTimeoutMs: number;
+  outboxBatchSize: number;
+  outboxPollIntervalMs: number;
+  workerRole: 'all' | 'queue' | 'cloudinary-webhook';
+}
+
+export interface IdempotencyConfig {
+  failureMode: 'closed' | 'open';
+  maxResponseBytes: number;
+}
+
+export interface InfrastructureFallbackConfig {
+  allowInMemory: boolean;
+  inMemoryStoreMaxEntries: number;
+  inMemoryStoreSweepIntervalMs: number;
 }
 
 export interface MailConfig {

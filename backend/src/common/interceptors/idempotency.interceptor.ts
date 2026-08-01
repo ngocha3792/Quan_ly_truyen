@@ -12,6 +12,7 @@ import { from, Observable, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 
 import { IDEMPOTENT_KEY, IDEMPOTENCY_STORE } from '@/common/constants';
+import { MAX_IDEMPOTENCY_KEY_LENGTH } from '@/common/constants/http.constants';
 import type { IdempotencyMetadata } from '@/common/decorators';
 import {
   IdempotencyConflictException,
@@ -60,11 +61,17 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const trimmedKey = key.trim();
+    if (trimmedKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+      throw new InvalidInputException({
+        message: `Idempotency key cannot exceed ${MAX_IDEMPOTENCY_KEY_LENGTH} characters`,
+      });
+    }
     const ttlSeconds = metadata.ttlSeconds ?? 86_400;
     const requestHash = this.computeRequestHash(request);
+    const storageKey = this.computeStorageKey(request, trimmedKey);
 
     const acquireResult = await this.idempotencyStore.acquire(
-      trimmedKey,
+      storageKey,
       requestHash,
       ttlSeconds,
     );
@@ -74,14 +81,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
       if (!existing || existing.state === 'PROCESSING') {
         throw new IdempotencyConflictException({
-          key: trimmedKey,
+          key: storageKey,
           message: 'Yêu cầu trùng lặp đang được xử lý',
         });
       }
 
       if (existing.requestHash && existing.requestHash !== requestHash) {
         throw new IdempotencyConflictException({
-          key: trimmedKey,
+          key: storageKey,
           existingRequestHash: existing.requestHash,
           currentRequestHash: requestHash,
           message: 'Idempotency key đã được sử dụng cho một request khác',
@@ -108,7 +115,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
       mergeMap(async (body: unknown) => {
         const statusCode = response.statusCode || 200;
         await this.idempotencyStore.saveResult(
-          trimmedKey,
+          storageKey,
+          acquireResult.ownerToken,
           {
             statusCode,
             responseBody: body,
@@ -118,9 +126,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
         return body;
       }),
       catchError((err: unknown) => {
-        return from(this.idempotencyStore.markFailed(trimmedKey)).pipe(
-          mergeMap(() => throwError(() => err)),
-        );
+        return from(
+          this.idempotencyStore.markFailed(
+            storageKey,
+            acquireResult.ownerToken,
+          ),
+        ).pipe(mergeMap(() => throwError(() => err)));
       }),
     );
   }
@@ -129,13 +140,64 @@ export class IdempotencyInterceptor implements NestInterceptor {
     // Express deliberately types parsed body as any; it is serialized as opaque input here.
 
     const payload = {
-      path: request.path,
+      path: this.routeScope(request),
       method: request.method,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       body: request.body ?? {},
       query: request.query ?? {},
     };
 
-    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    return createHash('sha256')
+      .update(this.stableSerialize(payload))
+      .digest('hex');
+  }
+
+  private computeStorageKey(request: Request, rawKey: string): string {
+    const principalScope = this.resolvePrincipalScope(request.user);
+    const rawKeyHash = createHash('sha256').update(rawKey).digest('hex');
+    return [
+      'idempotency:v1',
+      principalScope,
+      request.method.toUpperCase(),
+      encodeURIComponent(this.routeScope(request)),
+      rawKeyHash,
+    ].join(':');
+  }
+
+  private routeScope(request: Request): string {
+    const route = request.route as { path?: unknown } | undefined;
+    if (typeof route?.path === 'string') {
+      return `${request.baseUrl ?? ''}${route.path}`;
+    }
+    return `${request.baseUrl ?? ''}${request.path}`;
+  }
+
+  private resolvePrincipalScope(value: unknown): string {
+    if (!value || typeof value !== 'object') return 'anonymous';
+    const principal = value as Record<string, unknown>;
+    if (typeof principal.userId === 'string' && principal.userId) {
+      return principal.userId;
+    }
+    if (typeof principal.sub === 'string' && principal.sub) {
+      return principal.sub;
+    }
+    return 'anonymous';
+  }
+
+  private stableSerialize(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableSerialize(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      return `{${Object.keys(record)
+        .sort()
+        .map(
+          (key) =>
+            `${JSON.stringify(key)}:${this.stableSerialize(record[key])}`,
+        )
+        .join(',')}}`;
+    }
+    return JSON.stringify(value) ?? 'null';
   }
 }

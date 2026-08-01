@@ -4,6 +4,45 @@
 > Phạm vi: `backend/src/infrastructure`  
 > Mục tiêu: giải thích vai trò, cách sử dụng và các quy tắc kiến trúc của tầng hạ tầng.
 
+## Production reliability contract (2026-08)
+
+- Outbox delivery is **at-least-once**. Claims use PostgreSQL
+  `FOR UPDATE SKIP LOCKED`; `PROCESSING` rows older than
+  `OUTBOX_PROCESSING_TIMEOUT_MS` are recovered before the next batch. BullMQ
+  job IDs remain `outbox-<outboxEventId>`, so consumers must still be
+  idempotent across the crash window between enqueue and the `PUBLISHED`
+  database update.
+- `OUTBOX_BATCH_SIZE` and `OUTBOX_POLL_INTERVAL_MS` control the repeatable
+  dispatcher job. Unsupported aggregate types are non-retryable and become
+  `FAILED`; they are never marked published as a no-op.
+- HTTP idempotency storage keys contain the authenticated principal, HTTP
+  method, normalized route and a SHA-256 digest of the caller key. Processing
+  leases have an owner token. Redis result/failure updates use Lua CAS, so an
+  expired request cannot overwrite or delete its successor.
+- `IDEMPOTENCY_FAILURE_MODE=closed` is the production default. In-memory
+  cache, lock and idempotency adapters are allowed only when
+  `ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK=true` outside production. Their
+  capacity and sweep lifecycle are bounded by `IN_MEMORY_STORE_MAX_ENTRIES`
+  and `IN_MEMORY_STORE_SWEEP_INTERVAL_MS`.
+- Both `redis://` and `rediss://` are parsed by one connection-options factory.
+  `REDIS_KEY_PREFIX` belongs to app cache/idempotency/locks; `QUEUE_PREFIX`
+  belongs to BullMQ and the two must not be combined.
+- `WORKER_CONCURRENCY` is applied to the outbox and mail processors.
+  `WORKER_ROLE=all|queue|cloudinary-webhook` limits long-running worker
+  responsibilities. Cloudinary inbox polling additionally requires
+  `CLOUDINARY_ENABLED=true`.
+- Redis lock leases are owner-checked on release and heartbeat extension. A
+  generic lease cannot undo a side effect after ownership loss; critical
+  writers that need stronger guarantees must use fencing tokens checked by
+  the destination datastore.
+- Mail disabled mode returns `skipped` without rendering or calling SMTP.
+  SMTP/outbox delivery must not be described as exactly-once because a crash
+  can occur after SMTP acceptance and before job completion is recorded.
+
+Operational diagnostics are available at `GET /health/diagnostics` and require
+the `audit-log.read` permission. Responses contain only normalized status and
+outbox counts; provider URLs, credentials and raw provider errors are omitted.
+
 ---
 
 ## 1. Infrastructure là gì?
@@ -185,18 +224,8 @@ Ví dụ:
 
 ```ts
 @Module({
-  imports: [
-    PrismaModule,
-    StorageModule,
-    RedisModule,
-    QueueModule,
-  ],
-  exports: [
-    PrismaModule,
-    StorageModule,
-    RedisModule,
-    QueueModule,
-  ],
+  imports: [PrismaModule, StorageModule, RedisModule, QueueModule],
+  exports: [PrismaModule, StorageModule, RedisModule, QueueModule],
 })
 export class InfrastructureModule {}
 ```
@@ -654,14 +683,14 @@ Health endpoint nên bỏ qua:
 
 Infrastructure adapter nên map lỗi kỹ thuật sang các exception đã có:
 
-| Thành phần | Exception |
-|---|---|
-| PostgreSQL/Prisma | `DatabaseException` |
-| Redis cache | `CacheException` |
-| Queue | `QueueException` |
-| S3/local storage | `StorageException` |
+| Thành phần          | Exception                  |
+| ------------------- | -------------------------- |
+| PostgreSQL/Prisma   | `DatabaseException`        |
+| Redis cache         | `CacheException`           |
+| Queue               | `QueueException`           |
+| S3/local storage    | `StorageException`         |
 | SMTP/API bên thứ ba | `ExternalServiceException` |
-| Sai cấu hình | `ConfigurationException` |
+| Sai cấu hình        | `ConfigurationException`   |
 
 Không đưa connection string, bucket secret, SQL raw hoặc stack trace vào response public.
 

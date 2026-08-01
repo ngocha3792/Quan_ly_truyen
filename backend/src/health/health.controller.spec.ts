@@ -8,6 +8,7 @@ import {
 } from '@/infrastructure/health';
 
 import { HealthController } from './health.controller';
+import { InfrastructureDiagnosticsService } from './infrastructure-diagnostics.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -35,6 +36,22 @@ describe('HealthController', () => {
     }),
   };
 
+  const mockDiagnosticsService = {
+    inspect: jest.fn().mockResolvedValue({
+      database: { status: 'up' },
+      redis: { status: 'disabled' },
+      queue: { status: 'disabled' },
+      mail: { status: 'disabled' },
+      cloudinary: { status: 'disabled' },
+      outbox: {
+        status: 'up',
+        pendingTooOld: 0,
+        staleProcessing: 0,
+        failedRecently: 0,
+      },
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
@@ -51,6 +68,10 @@ describe('HealthController', () => {
           provide: RedisHealthIndicator,
           useValue: mockRedisHealthIndicator,
         },
+        {
+          provide: InfrastructureDiagnosticsService,
+          useValue: mockDiagnosticsService,
+        },
       ],
     }).compile();
 
@@ -66,5 +87,11 @@ describe('HealthController', () => {
     expect(result.status).toBe('ok');
     expect(mockDatabaseHealthIndicator.isHealthy).toHaveBeenCalled();
     expect(mockRedisHealthIndicator.isHealthy).toHaveBeenCalled();
+  });
+
+  it('returns sanitized infrastructure diagnostics', async () => {
+    const result = await controller.diagnostics();
+    expect(result.redis.status).toBe('disabled');
+    expect(JSON.stringify(result)).not.toMatch(/password|secret|redis:\/\//i);
   });
 });

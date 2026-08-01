@@ -429,40 +429,40 @@ model AuthorProfile {
 }
 
 model MediaAsset {
-  id              String             @id @default(uuid()) @db.Uuid
-  uploaderId      String?            @map("uploader_id") @db.Uuid
-  purpose         MediaPurpose
-  status          MediaStatus        @default(PENDING)
-  storageProvider String             @map("storage_provider") @db.VarChar(50)
-  bucket          String?            @db.VarChar(120)
-  storageKey      String?            @unique @map("storage_key") @db.VarChar(1024)
-  publicUrl       String?            @map("public_url") @db.VarChar(2048)
-  providerAssetId String?            @unique @map("provider_asset_id") @db.VarChar(255)
-  publicId        String?            @unique @map("public_id") @db.VarChar(512)
-  version         Int?
-  resourceType    MediaResourceType? @map("resource_type")
-  deliveryType    String?            @map("delivery_type") @db.VarChar(50)
-  format          String?            @db.VarChar(30)
-  assetFolder     String?            @map("asset_folder") @db.VarChar(1024)
-  secureUrl       String?            @map("secure_url") @db.VarChar(2048)
-  originalName    String?            @map("original_name") @db.VarChar(255)
-  mimeType        String?            @map("mime_type") @db.VarChar(120)
-  sizeBytes       BigInt?            @map("size_bytes")
-  checksumSha256  String?            @map("checksum_sha256") @db.VarChar(64)
-  width           Int?
-  height          Int?
-  duration        Decimal?           @db.Decimal(12, 3)
-  uploadExpiresAt DateTime?          @map("upload_expires_at") @db.Timestamptz(3)
-  uploadedAt      DateTime?          @map("uploaded_at") @db.Timestamptz(3)
-  readyAt         DateTime?          @map("ready_at") @db.Timestamptz(3)
-  processingStartedAt  DateTime? @map("processing_started_at") @db.Timestamptz(3)
-  deleteAttempts       Int       @default(0) @map("delete_attempts")
-  nextDeleteAttemptAt  DateTime? @map("next_delete_attempt_at") @db.Timestamptz(3)
-  lastProviderErrorCode String?  @map("last_provider_error_code") @db.VarChar(120)
-  metadata        Json?
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  id                    String             @id @default(uuid()) @db.Uuid
+  uploaderId            String?            @map("uploader_id") @db.Uuid
+  purpose               MediaPurpose
+  status                MediaStatus        @default(PENDING)
+  storageProvider       String             @map("storage_provider") @db.VarChar(50)
+  bucket                String?            @db.VarChar(120)
+  storageKey            String?            @unique @map("storage_key") @db.VarChar(1024)
+  publicUrl             String?            @map("public_url") @db.VarChar(2048)
+  providerAssetId       String?            @unique @map("provider_asset_id") @db.VarChar(255)
+  publicId              String?            @unique @map("public_id") @db.VarChar(512)
+  version               Int?
+  resourceType          MediaResourceType? @map("resource_type")
+  deliveryType          String?            @map("delivery_type") @db.VarChar(50)
+  format                String?            @db.VarChar(30)
+  assetFolder           String?            @map("asset_folder") @db.VarChar(1024)
+  secureUrl             String?            @map("secure_url") @db.VarChar(2048)
+  originalName          String?            @map("original_name") @db.VarChar(255)
+  mimeType              String?            @map("mime_type") @db.VarChar(120)
+  sizeBytes             BigInt?            @map("size_bytes")
+  checksumSha256        String?            @map("checksum_sha256") @db.VarChar(64)
+  width                 Int?
+  height                Int?
+  duration              Decimal?           @db.Decimal(12, 3)
+  uploadExpiresAt       DateTime?          @map("upload_expires_at") @db.Timestamptz(3)
+  uploadedAt            DateTime?          @map("uploaded_at") @db.Timestamptz(3)
+  readyAt               DateTime?          @map("ready_at") @db.Timestamptz(3)
+  processingStartedAt   DateTime?          @map("processing_started_at") @db.Timestamptz(3)
+  deleteAttempts        Int                @default(0) @map("delete_attempts")
+  nextDeleteAttemptAt   DateTime?          @map("next_delete_attempt_at") @db.Timestamptz(3)
+  lastProviderErrorCode String?            @map("last_provider_error_code") @db.VarChar(120)
+  metadata              Json?
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)
 
   uploader        User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   avatarOfUsers   User[]          @relation("UserAvatar")
@@ -981,37 +981,39 @@ model AuditLog {
 }
 
 model OutboxEvent {
-  id            String       @id @default(uuid()) @db.Uuid
-  aggregateType String       @map("aggregate_type") @db.VarChar(100)
-  aggregateId   String       @map("aggregate_id") @db.VarChar(100)
-  eventType     String       @map("event_type") @db.VarChar(150)
-  payload       Json
-  status        OutboxStatus @default(PENDING)
-  attempts      Int          @default(0)
-  availableAt   DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)
-  processedAt   DateTime?    @map("processed_at") @db.Timestamptz(3)
-  lastError     String?      @map("last_error") @db.Text
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  id                  String       @id @default(uuid()) @db.Uuid
+  aggregateType       String       @map("aggregate_type") @db.VarChar(100)
+  aggregateId         String       @map("aggregate_id") @db.VarChar(100)
+  eventType           String       @map("event_type") @db.VarChar(150)
+  payload             Json
+  status              OutboxStatus @default(PENDING)
+  attempts            Int          @default(0)
+  availableAt         DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)
+  processedAt         DateTime?    @map("processed_at") @db.Timestamptz(3)
+  processingStartedAt DateTime?    @map("processing_started_at") @db.Timestamptz(3)
+  lastError           String?      @map("last_error") @db.Text
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([status, availableAt])
+  @@index([status, processingStartedAt])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
 }
 
 model InboundWebhookEvent {
-  id          String    @id @default(uuid()) @db.Uuid
-  provider    String    @db.VarChar(50)
-  eventKey    String    @map("event_key") @db.VarChar(255)
-  payloadHash String    @map("payload_hash") @db.VarChar(64)
-  eventType   String?   @map("event_type") @db.VarChar(120)
-  status      InboundWebhookStatus @default(PENDING)
-  payload     Json
-  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
-  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
-  attempts    Int       @default(0)
-  lastError   String?   @map("last_error") @db.Text
-  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
-  processingStartedAt DateTime? @map("processing_started_at") @db.Timestamptz(3)
+  id                  String               @id @default(uuid()) @db.Uuid
+  provider            String               @db.VarChar(50)
+  eventKey            String               @map("event_key") @db.VarChar(255)
+  payloadHash         String               @map("payload_hash") @db.VarChar(64)
+  eventType           String?              @map("event_type") @db.VarChar(120)
+  status              InboundWebhookStatus @default(PENDING)
+  payload             Json
+  receivedAt          DateTime             @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt         DateTime?            @map("processed_at") @db.Timestamptz(3)
+  attempts            Int                  @default(0)
+  lastError           String?              @map("last_error") @db.Text
+  nextAttemptAt       DateTime             @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  processingStartedAt DateTime?            @map("processing_started_at") @db.Timestamptz(3)
 
   @@unique([provider, eventKey])
   @@index([provider, status, receivedAt])

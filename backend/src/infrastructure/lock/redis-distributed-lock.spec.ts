@@ -44,6 +44,7 @@ describe('RedisDistributedLock', () => {
     mockRedisClient.set.mockResolvedValue('OK');
     mockRedisClient.eval.mockResolvedValue(1);
 
+    const clearSpy = jest.spyOn(global, 'clearTimeout');
     const workFn = jest.fn().mockRejectedValue(new Error('Work error'));
 
     await expect(
@@ -51,6 +52,8 @@ describe('RedisDistributedLock', () => {
     ).rejects.toThrow('Work error');
 
     expect(mockRedisClient.eval).toHaveBeenCalled();
+    expect(clearSpy).toHaveBeenCalled();
+    clearSpy.mockRestore();
   });
 
   it('throws ConcurrencyConflictException if lock cannot be acquired after waitMs', async () => {
@@ -63,5 +66,62 @@ describe('RedisDistributedLock', () => {
     ).rejects.toThrow(ConcurrencyConflictException);
 
     expect(workFn).not.toHaveBeenCalled();
+  });
+
+  it('extends the lease while work exceeds the original heartbeat interval', async () => {
+    jest.useFakeTimers();
+    mockRedisClient.set.mockResolvedValue('OK');
+    mockRedisClient.eval.mockResolvedValue(1);
+    let finishWork!: () => void;
+    const work = new Promise<void>((resolve) => {
+      finishWork = resolve;
+    });
+
+    const resultPromise = lock.withLock(
+      'story:slow',
+      { ttlMs: 300, extensionIntervalMs: 100 },
+      () => work.then(() => 'done'),
+    );
+    await jest.advanceTimersByTimeAsync(101);
+    expect(mockRedisClient.eval).toHaveBeenCalledWith(
+      expect.stringContaining('pexpire'),
+      1,
+      'lock:story:slow',
+      expect.any(String),
+      '300',
+    );
+    finishWork();
+    await expect(resultPromise).resolves.toBe('done');
+    jest.useRealTimers();
+  });
+
+  it('does not report success after ownership is lost', async () => {
+    jest.useFakeTimers();
+    mockRedisClient.set.mockResolvedValue('OK');
+    mockRedisClient.eval.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    let finishWork!: () => void;
+    const work = new Promise<void>((resolve) => {
+      finishWork = resolve;
+    });
+    const resultPromise = lock.withLock(
+      'story:lost',
+      { ttlMs: 300, extensionIntervalMs: 100 },
+      () => work,
+    );
+    await jest.advanceTimersByTimeAsync(101);
+    finishWork();
+    await expect(resultPromise).rejects.toBeInstanceOf(
+      ConcurrencyConflictException,
+    );
+    jest.useRealTimers();
+  });
+
+  it('fails closed when Redis is unavailable', async () => {
+    const noRedisLock = new RedisDistributedLock(null);
+    const work = jest.fn();
+    await expect(
+      noRedisLock.withLock('story:closed', { ttlMs: 5000 }, work),
+    ).rejects.toThrow('Distributed lock protection is unavailable');
+    expect(work).not.toHaveBeenCalled();
   });
 });

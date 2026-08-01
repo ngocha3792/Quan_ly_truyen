@@ -9,6 +9,8 @@ import databaseConfig from './database.config';
 import { validateEnvironment } from './environment.validation';
 import maintenanceConfig from './maintenance.config';
 import mailConfig from './mail.config';
+import idempotencyConfig from './idempotency.config';
+import infrastructureFallbackConfig from './infrastructure-fallback.config';
 import queueConfig from './queue.config';
 import redisConfig from './redis.config';
 
@@ -39,6 +41,8 @@ function resolveEnvFilePaths(): string[] {
         corsConfig,
         maintenanceConfig,
         mailConfig,
+        idempotencyConfig,
+        infrastructureFallbackConfig,
         redisConfig,
         queueConfig,
       ],

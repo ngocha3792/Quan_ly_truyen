@@ -201,6 +201,47 @@ export class EnvironmentVariables {
   @Max(50)
   WORKER_CONCURRENCY = 5;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 60_000))
+  @IsInt()
+  @Min(10_000)
+  OUTBOX_PROCESSING_TIMEOUT_MS = 60_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 50))
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  OUTBOX_BATCH_SIZE = 50;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(1000)
+  OUTBOX_POLL_INTERVAL_MS = 10_000;
+
+  @IsEnum(['all', 'queue', 'cloudinary-webhook'])
+  WORKER_ROLE: 'all' | 'queue' | 'cloudinary-webhook' = 'all';
+
+  @IsEnum(['closed', 'open'])
+  IDEMPOTENCY_FAILURE_MODE: 'closed' | 'open' = 'closed';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(1)
+  IN_MEMORY_STORE_MAX_ENTRIES = 10_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 60_000))
+  @IsInt()
+  @Min(1000)
+  IN_MEMORY_STORE_SWEEP_INTERVAL_MS = 60_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1_048_576))
+  @IsInt()
+  @Min(1024)
+  IDEMPOTENCY_MAX_RESPONSE_BYTES = 1_048_576;
+
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
   CLOUDINARY_ENABLED = false;
@@ -436,6 +477,31 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   if (config.NODE_ENV === AppEnvironment.PRODUCTION && config.SWAGGER_ENABLED) {
     throw new Error(
       'SWAGGER_ENABLED must be false in production unless explicitly reviewed',
+    );
+  }
+
+  let redisUrl: URL;
+  try {
+    redisUrl = new URL(config.REDIS_URL);
+  } catch {
+    throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL');
+  }
+  if (!['redis:', 'rediss:'].includes(redisUrl.protocol)) {
+    throw new Error('REDIS_URL protocol must be redis:// or rediss://');
+  }
+
+  if (config.NODE_ENV === AppEnvironment.PRODUCTION && !config.REDIS_ENABLED) {
+    throw new Error(
+      'REDIS_ENABLED must be true in production because idempotency and distributed locks fail closed',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    config.ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK
+  ) {
+    throw new Error(
+      'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK must be false in production',
     );
   }
 

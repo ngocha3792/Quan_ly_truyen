@@ -4,6 +4,7 @@ export interface IdempotencyRecord {
   key: string;
   requestHash: string;
   state: IdempotencyState;
+  ownerToken: string;
   statusCode?: number;
   responseBody?: unknown;
   headers?: Record<string, string>;
@@ -11,9 +12,23 @@ export interface IdempotencyRecord {
   expiresAt: string;
 }
 
-export interface AcquireIdempotencyResult {
-  acquired: boolean;
+export interface AcquiredIdempotencyLease {
+  acquired: true;
+  ownerToken: string;
+}
+
+export interface ExistingIdempotencyLease {
+  acquired: false;
   existingRecord?: IdempotencyRecord;
+}
+
+export type AcquireIdempotencyResult =
+  AcquiredIdempotencyLease | ExistingIdempotencyLease;
+
+export interface IdempotencyResult {
+  statusCode: number;
+  responseBody: unknown;
+  headers?: Record<string, string>;
 }
 
 export interface IdempotencyStore {
@@ -25,13 +40,10 @@ export interface IdempotencyStore {
 
   saveResult(
     key: string,
-    result: {
-      statusCode: number;
-      responseBody: unknown;
-      headers?: Record<string, string>;
-    },
+    ownerToken: string,
+    result: IdempotencyResult,
     ttlSeconds: number,
   ): Promise<void>;
 
-  markFailed(key: string): Promise<void>;
+  markFailed(key: string, ownerToken: string): Promise<void>;
 }

@@ -3,6 +3,23 @@
 > Dự án: **Quản lý truyện — NestJS + Prisma + PostgreSQL**  
 > Phạm vi: `backend/scripts`, các lệnh tương ứng trong `backend/package.json`, và cách các script tương tác với `prisma/`, `src/` và môi trường triển khai.
 
+## Isolated media maintenance contexts
+
+The commands below use dedicated Nest application-context modules and do not
+bootstrap `WorkerModule`:
+
+```bash
+npm run maintenance:media-cleanup
+npm run maintenance:cloudinary-webhooks
+```
+
+`maintenance:media-cleanup` resolves only the media cleanup workflow and its
+database/config/storage dependencies. `maintenance:cloudinary-webhooks` runs a
+single inbox batch. Neither command registers the outbox repeatable job,
+instantiates the mail processor, verifies SMTP, or starts a webhook polling
+timer. Long-running polling remains the responsibility of `start:worker:*`
+with `WORKER_ROLE=all` or `WORKER_ROLE=cloudinary-webhook`.
+
 ---
 
 ## 1. Mục đích của tài liệu
@@ -197,16 +214,16 @@ Mọi script được commit phải có:
 
 ## 5. Phân biệt các khái niệm liên quan
 
-| Thành phần | Mục đích | Ví dụ |
-|---|---|---|
-| `package.json` scripts | Alias ngắn để gọi command | `npm run db:verify` |
-| `backend/scripts` | CLI task có logic và kiểm soát | `verify-manual-constraints.ts` |
-| `prisma/migrations` | Lịch sử thay đổi schema | Tạo bảng, index, constraint |
-| `prisma/seed.ts` | Dữ liệu nền tảng idempotent | Roles và permissions |
-| `src/modules` | Nghiệp vụ runtime | Publish chapter, moderate comment |
-| Queue worker | Công việc nền có retry | Xử lý outbox, gửi email |
-| Scheduler/cron | Kích hoạt use case theo lịch | Publish chapter đến hạn |
-| CI workflow | Điều phối build/test/deploy | Migrate rồi smoke test |
+| Thành phần             | Mục đích                       | Ví dụ                             |
+| ---------------------- | ------------------------------ | --------------------------------- |
+| `package.json` scripts | Alias ngắn để gọi command      | `npm run db:verify`               |
+| `backend/scripts`      | CLI task có logic và kiểm soát | `verify-manual-constraints.ts`    |
+| `prisma/migrations`    | Lịch sử thay đổi schema        | Tạo bảng, index, constraint       |
+| `prisma/seed.ts`       | Dữ liệu nền tảng idempotent    | Roles và permissions              |
+| `src/modules`          | Nghiệp vụ runtime              | Publish chapter, moderate comment |
+| Queue worker           | Công việc nền có retry         | Xử lý outbox, gửi email           |
+| Scheduler/cron         | Kích hoạt use case theo lịch   | Publish chapter đến hạn           |
+| CI workflow            | Điều phối build/test/deploy    | Migrate rồi smoke test            |
 
 ---
 
@@ -649,17 +666,17 @@ Không dùng `NestFactory.create()` vì script không cần mở HTTP server.
 
 Mọi script nên hỗ trợ các quy ước chung khi phù hợp:
 
-| Argument | Ý nghĩa |
-|---|---|
-| `--dry-run` | Chỉ phân tích, không thay đổi dữ liệu |
-| `--apply` | Cho phép thực hiện thay đổi |
-| `--batch-size=500` | Số bản ghi mỗi batch |
-| `--limit=1000` | Giới hạn tổng số bản ghi |
-| `--story-id=<uuid>` | Giới hạn phạm vi một truyện |
-| `--before=<ISO date>` | Chỉ xử lý dữ liệu trước thời điểm |
-| `--confirm-reset` | Xác nhận thao tác phá dữ liệu local |
-| `--json` | Xuất kết quả dạng JSON cho CI |
-| `--help` | Hiển thị hướng dẫn |
+| Argument              | Ý nghĩa                               |
+| --------------------- | ------------------------------------- |
+| `--dry-run`           | Chỉ phân tích, không thay đổi dữ liệu |
+| `--apply`             | Cho phép thực hiện thay đổi           |
+| `--batch-size=500`    | Số bản ghi mỗi batch                  |
+| `--limit=1000`        | Giới hạn tổng số bản ghi              |
+| `--story-id=<uuid>`   | Giới hạn phạm vi một truyện           |
+| `--before=<ISO date>` | Chỉ xử lý dữ liệu trước thời điểm     |
+| `--confirm-reset`     | Xác nhận thao tác phá dữ liệu local   |
+| `--json`              | Xuất kết quả dạng JSON cho CI         |
+| `--help`              | Hiển thị hướng dẫn                    |
 
 Không tự phát minh cách viết khác nhau giữa các script như:
 
@@ -709,14 +726,14 @@ Không log:
 
 Quy ước:
 
-| Exit code | Ý nghĩa |
-|---|---|
-| `0` | Thành công |
-| `1` | Lỗi thực thi hoặc validation |
-| `2` | Dùng command sai / thiếu argument |
-| `3` | Từ chối vì safety guard |
-| `4` | Integrity check thất bại |
-| `5` | Có chênh lệch được phát hiện trong verify mode |
+| Exit code | Ý nghĩa                                        |
+| --------- | ---------------------------------------------- |
+| `0`       | Thành công                                     |
+| `1`       | Lỗi thực thi hoặc validation                   |
+| `2`       | Dùng command sai / thiếu argument              |
+| `3`       | Từ chối vì safety guard                        |
+| `4`       | Integrity check thất bại                       |
+| `5`       | Có chênh lệch được phát hiện trong verify mode |
 
 Trong thực tế Node chỉ cần đặt:
 

@@ -4,10 +4,11 @@ import { Job } from 'bullmq';
 
 import type { DispatchOutboxBatchJobV1 } from '../contracts';
 import { QUEUE_NAMES } from '../queue.constants';
+import { getWorkerConcurrency } from '../worker-options';
 
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
 
-@Processor(QUEUE_NAMES.OUTBOX)
+@Processor(QUEUE_NAMES.OUTBOX, { concurrency: getWorkerConcurrency() })
 export class OutboxDispatcherProcessor extends WorkerHost {
   private readonly logger = new Logger(OutboxDispatcherProcessor.name);
 

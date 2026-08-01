@@ -1,133 +1,173 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Reflector } from '@nestjs/core';
-import { of } from 'rxjs';
+import { lastValueFrom, of } from 'rxjs';
 
 import {
   IdempotencyConflictException,
   InvalidInputException,
+  ServiceUnavailableException,
 } from '@/common/exceptions';
+
 import { IdempotencyInterceptor } from './idempotency.interceptor';
 
 describe('IdempotencyInterceptor', () => {
-  let interceptor: IdempotencyInterceptor;
-  let mockReflector: jest.Mocked<Reflector>;
-  let mockIdempotencyStore: any;
-  let mockExecutionContext: any;
-  let mockRequest: any;
-  let mockResponse: any;
+  let store: {
+    acquire: jest.Mock;
+    saveResult: jest.Mock;
+    markFailed: jest.Mock;
+  };
+  let reflector: jest.Mocked<Reflector>;
+  let request: any;
+  let response: any;
+  let context: any;
 
   beforeEach(() => {
-    mockReflector = {
-      getAllAndOverride: jest.fn(),
-    } as any;
-
-    mockIdempotencyStore = {
-      acquire: jest.fn(),
-      saveResult: jest.fn(),
-      markFailed: jest.fn(),
+    reflector = { getAllAndOverride: jest.fn() } as any;
+    store = {
+      acquire: jest.fn().mockResolvedValue({
+        acquired: true,
+        ownerToken: 'owner-a',
+      }),
+      saveResult: jest.fn().mockResolvedValue(undefined),
+      markFailed: jest.fn().mockResolvedValue(undefined),
     };
-
-    interceptor = new IdempotencyInterceptor(
-      mockReflector,
-      mockIdempotencyStore,
-    );
-
-    mockRequest = {
-      headers: {},
-      path: '/api/v1/orders',
+    request = {
+      headers: { 'x-idempotency-key': 'raw-key' },
+      path: '/stories',
+      baseUrl: '/api/v1',
+      route: { path: '/stories' },
       method: 'POST',
-      body: { amount: 100 },
+      body: { title: 'Story' },
+      query: {},
+      user: { userId: 'user-1' },
     };
-
-    mockResponse = {
+    response = {
       statusCode: 201,
       status: jest.fn(),
       setHeader: jest.fn(),
     };
-
-    mockExecutionContext = {
+    context = {
       getHandler: jest.fn(),
       getClass: jest.fn(),
       switchToHttp: () => ({
-        getRequest: () => mockRequest,
-        getResponse: () => mockResponse,
+        getRequest: () => request,
+        getResponse: () => response,
       }),
     };
-  });
-
-  it('passes through if no @Idempotent() metadata', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(undefined);
-
-    const next = { handle: jest.fn().mockReturnValue(of('result')) };
-    const observable = await interceptor.intercept(mockExecutionContext, next);
-
-    observable.subscribe((res) => {
-      expect(res).toBe('result');
-    });
-    expect(next.handle).toHaveBeenCalled();
-  });
-
-  it('throws InvalidInputException if required header is missing', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue({ required: true });
-
-    const next = { handle: jest.fn() };
-
-    await expect(
-      interceptor.intercept(mockExecutionContext, next),
-    ).rejects.toThrow(InvalidInputException);
-  });
-
-  it('replays cached response when request is completed and hash matches', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue({
+    reflector.getAllAndOverride.mockReturnValue({
       required: true,
       ttlSeconds: 300,
     });
-    mockRequest.headers['x-idempotency-key'] = 'key-123';
+  });
 
-    const next = { handle: jest.fn() };
-    mockIdempotencyStore.acquire.mockImplementation(
-      (_k: string, hash: string) => {
-        return Promise.resolve({
-          acquired: false,
-          existingRecord: {
-            key: 'key-123',
-            requestHash: hash,
-            state: 'COMPLETED',
-            statusCode: 201,
-            responseBody: { success: true },
-          },
-        });
-      },
-    );
+  function interceptor(): IdempotencyInterceptor {
+    return new IdempotencyInterceptor(reflector, store);
+  }
 
-    const observable = await interceptor.intercept(mockExecutionContext, next);
-
-    observable.subscribe((res) => {
-      expect(res).toEqual({ success: true });
+  async function execute(body: unknown = { ok: true }): Promise<unknown> {
+    const observable = await interceptor().intercept(context, {
+      handle: jest.fn().mockReturnValue(of(body)),
     });
+    return lastValueFrom(observable);
+  }
 
-    expect(mockResponse.status).toHaveBeenCalledWith(201);
-    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+  it('passes through when no idempotency metadata is present', async () => {
+    reflector.getAllAndOverride.mockReturnValue(undefined);
+    await expect(execute('result')).resolves.toBe('result');
+    expect(store.acquire).not.toHaveBeenCalled();
+  });
+
+  it('requires the header and rejects keys over the configured limit', async () => {
+    delete request.headers['x-idempotency-key'];
+    await expect(execute()).rejects.toBeInstanceOf(InvalidInputException);
+    request.headers['x-idempotency-key'] = 'x'.repeat(129);
+    await expect(execute()).rejects.toBeInstanceOf(InvalidInputException);
+    expect(store.acquire).not.toHaveBeenCalled();
+  });
+
+  it('namespaces the same raw key by user', async () => {
+    await execute();
+    const firstKey = store.acquire.mock.calls[0][0] as string;
+    request.user = { userId: 'user-2' };
+    await execute();
+    const secondKey = store.acquire.mock.calls[1][0] as string;
+    expect(firstKey).not.toBe(secondKey);
+    expect(firstKey).toContain(':user-1:POST:');
+    expect(secondKey).toContain(':user-2:POST:');
+  });
+
+  it('namespaces the same user and raw key by endpoint', async () => {
+    await execute();
+    const firstKey = store.acquire.mock.calls[0][0] as string;
+    request.route.path = '/chapters';
+    request.path = '/chapters';
+    await execute();
+    expect(store.acquire.mock.calls[1][0]).not.toBe(firstKey);
+  });
+
+  it('hashes the raw key and saves with the acquired owner token', async () => {
+    await execute({ created: true });
+    const storageKey = store.acquire.mock.calls[0][0] as string;
+    expect(storageKey).not.toContain('raw-key');
+    expect(store.saveResult).toHaveBeenCalledWith(
+      storageKey,
+      'owner-a',
+      { statusCode: 201, responseBody: { created: true } },
+      300,
+    );
+  });
+
+  it('replays a completed response with status and headers', async () => {
+    store.acquire.mockImplementation((_key: string, requestHash: string) =>
+      Promise.resolve({
+        acquired: false,
+        existingRecord: {
+          requestHash,
+          state: 'COMPLETED',
+          statusCode: 202,
+          responseBody: { replayed: true },
+          headers: { location: '/stories/1' },
+        },
+      }),
+    );
+    await expect(execute()).resolves.toEqual({ replayed: true });
+    expect(response.status).toHaveBeenCalledWith(202);
+    expect(response.setHeader).toHaveBeenCalledWith('location', '/stories/1');
+    expect(response.setHeader).toHaveBeenCalledWith(
       'x-idempotent-replayed',
       'true',
     );
   });
 
-  it('throws IdempotencyConflictException when request is in PROCESSING state', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue({ required: true });
-    mockRequest.headers['x-idempotency-key'] = 'key-456';
-
-    mockIdempotencyStore.acquire.mockResolvedValue({
+  it('rejects processing records and request-hash conflicts', async () => {
+    store.acquire.mockResolvedValueOnce({
+      acquired: false,
+      existingRecord: { state: 'PROCESSING' },
+    });
+    await expect(execute()).rejects.toBeInstanceOf(
+      IdempotencyConflictException,
+    );
+    store.acquire.mockResolvedValueOnce({
       acquired: false,
       existingRecord: {
-        state: 'PROCESSING',
+        state: 'COMPLETED',
+        requestHash: 'different',
+        responseBody: {},
       },
     });
+    await expect(execute()).rejects.toBeInstanceOf(
+      IdempotencyConflictException,
+    );
+  });
 
-    const next = { handle: jest.fn() };
-
-    await expect(
-      interceptor.intercept(mockExecutionContext, next),
-    ).rejects.toThrow(IdempotencyConflictException);
+  it('does not execute the handler when a closed store is unavailable', async () => {
+    store.acquire.mockRejectedValue(
+      new ServiceUnavailableException({ service: 'idempotency' }),
+    );
+    const next = { handle: jest.fn().mockReturnValue(of({ ok: true })) };
+    await expect(interceptor().intercept(context, next)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(next.handle).not.toHaveBeenCalled();
   });
 });

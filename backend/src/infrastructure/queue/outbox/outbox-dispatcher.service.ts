@@ -3,14 +3,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 
+import { isAppException, QueueException } from '@/common/exceptions';
 import type { QueueConfig } from '@/config';
+import { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
 import { OutboxStatus } from '@/generated/prisma/enums';
 
 import { QUEUE_NAMES } from '../queue.constants';
 
-const DEFAULT_BATCH_SIZE = 50;
 const MAX_ERROR_LENGTH = 500;
+const STALE_RECOVERY_ERROR = 'Recovered stale PROCESSING outbox event';
 
 interface OutboxEventRow {
   id: string;
@@ -22,6 +24,7 @@ interface OutboxEventRow {
   attempts: number;
   availableAt: Date;
   processedAt: Date | null;
+  processingStartedAt: Date | null;
   lastError: string | null;
   createdAt: Date;
 }
@@ -31,6 +34,8 @@ export class OutboxDispatcherService {
   private readonly logger = new Logger(OutboxDispatcherService.name);
   private readonly maxAttempts: number;
   private readonly backoffMs: number;
+  private readonly batchSize: number;
+  private readonly processingTimeoutMs: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -44,9 +49,12 @@ export class OutboxDispatcherService {
     const queueConfig = this.configService.get<QueueConfig>('queue');
     this.maxAttempts = queueConfig?.defaultAttempts ?? 3;
     this.backoffMs = queueConfig?.defaultBackoffMs ?? 5000;
+    this.batchSize = queueConfig?.outboxBatchSize ?? 50;
+    this.processingTimeoutMs = queueConfig?.outboxProcessingTimeoutMs ?? 60_000;
   }
 
-  async dispatchBatch(batchSize: number = DEFAULT_BATCH_SIZE): Promise<number> {
+  async dispatchBatch(batchSize: number = this.batchSize): Promise<number> {
+    await this.recoverStaleEvents();
     const pendingEvents = await this.claimPendingEvents(batchSize);
 
     if (pendingEvents.length === 0) {
@@ -77,59 +85,93 @@ export class OutboxDispatcherService {
   private async claimPendingEvents(
     batchSize: number,
   ): Promise<OutboxEventRow[]> {
-    const now = new Date();
-
-    // Atomic claim: only transition PENDING → PROCESSING rows
-    // Using a transaction with findMany + updateMany to avoid race conditions
     return this.prisma.$transaction(async (tx) => {
-      const events = await tx.outboxEvent.findMany({
-        where: {
-          status: OutboxStatus.PENDING,
-          availableAt: { lte: now },
-        },
-        orderBy: { availableAt: 'asc' },
-        take: batchSize,
-      });
+      const claimed = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        WITH candidates AS (
+          SELECT id
+          FROM outbox_events
+          WHERE status = 'pending'
+            AND available_at <= NOW()
+          ORDER BY available_at ASC
+          FOR UPDATE SKIP LOCKED
+          LIMIT ${Math.min(Math.max(batchSize, 1), 500)}
+        )
+        UPDATE outbox_events AS event
+        SET
+          status = 'processing',
+          processing_started_at = NOW(),
+          processed_at = NULL
+        FROM candidates
+        WHERE event.id = candidates.id
+        RETURNING event.id
+      `);
 
-      if (events.length === 0) {
+      if (claimed.length === 0) {
         return [];
       }
 
-      const eventIds = events.map((e) => e.id);
-
-      await tx.outboxEvent.updateMany({
-        where: {
-          id: { in: eventIds },
-          status: OutboxStatus.PENDING, // Optimistic check
-        },
-        data: { status: OutboxStatus.PROCESSING },
+      const claimedIds = claimed.map(({ id }) => id);
+      const events = await tx.outboxEvent.findMany({
+        where: { id: { in: claimedIds } },
       });
-
-      return events.map((e) => ({ ...e, status: OutboxStatus.PROCESSING }));
+      const byId = new Map(events.map((event) => [event.id, event]));
+      return claimedIds.flatMap((id) => {
+        const event = byId.get(id);
+        return event ? [event] : [];
+      });
     });
+  }
+
+  private async recoverStaleEvents(): Promise<void> {
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - this.processingTimeoutMs);
+    const recovered = await this.prisma.outboxEvent.updateMany({
+      where: {
+        status: OutboxStatus.PROCESSING,
+        processingStartedAt: { lte: staleBefore },
+      },
+      data: {
+        status: OutboxStatus.PENDING,
+        processingStartedAt: null,
+        availableAt: now,
+        lastError: STALE_RECOVERY_ERROR,
+      },
+    });
+    if (recovered.count > 0) {
+      this.logger.warn(`Recovered ${recovered.count} stale outbox events`);
+    }
   }
 
   private async publishEvent(event: OutboxEventRow): Promise<void> {
     const targetQueue = this.resolveTargetQueue(event.aggregateType);
 
-    if (targetQueue) {
-      await targetQueue.add(
-        event.eventType,
-        {
+    if (!targetQueue) {
+      throw new QueueException({
+        code: 'OUTBOX_UNSUPPORTED_AGGREGATE_TYPE',
+        message: `Unsupported outbox aggregate type: ${event.aggregateType}`,
+        queue: QUEUE_NAMES.OUTBOX,
+        operation: 'resolve-target-queue',
+        jobId: event.id,
+        retryable: false,
+        details: {
           aggregateType: event.aggregateType,
-          aggregateId: event.aggregateId,
           eventType: event.eventType,
-          payload: event.payload,
-          outboxEventId: event.id,
-          createdAt: event.createdAt.toISOString(),
         },
-        { jobId: `outbox-${event.id}` },
-      );
-    } else {
-      this.logger.warn(
-        `No target queue for aggregate type "${event.aggregateType}", marking as published (noop)`,
-      );
+      });
     }
+
+    await targetQueue.add(
+      event.eventType,
+      {
+        aggregateType: event.aggregateType,
+        aggregateId: event.aggregateId,
+        eventType: event.eventType,
+        payload: event.payload,
+        outboxEventId: event.id,
+        createdAt: event.createdAt.toISOString(),
+      },
+      { jobId: `outbox-${event.id}` },
+    );
   }
 
   private resolveTargetQueue(aggregateType: string): Queue | null {
@@ -146,11 +188,13 @@ export class OutboxDispatcherService {
   }
 
   private async markPublished(eventId: string): Promise<void> {
-    await this.prisma.outboxEvent.update({
-      where: { id: eventId },
+    await this.prisma.outboxEvent.updateMany({
+      where: { id: eventId, status: OutboxStatus.PROCESSING },
       data: {
         status: OutboxStatus.PUBLISHED,
         processedAt: new Date(),
+        processingStartedAt: null,
+        lastError: null,
       },
     });
   }
@@ -161,19 +205,21 @@ export class OutboxDispatcherService {
   ): Promise<void> {
     const nextAttempts = event.attempts + 1;
     const errorMessage = this.sanitizeError(error);
+    const retryable = !isAppException(error) || error.retryable;
 
     this.logger.warn(
       `Outbox event ${event.id} failed (attempt ${nextAttempts}/${this.maxAttempts}): ${errorMessage}`,
     );
 
-    if (nextAttempts >= this.maxAttempts) {
-      await this.prisma.outboxEvent.update({
-        where: { id: event.id },
+    if (!retryable || nextAttempts >= this.maxAttempts) {
+      await this.prisma.outboxEvent.updateMany({
+        where: { id: event.id, status: OutboxStatus.PROCESSING },
         data: {
           status: OutboxStatus.FAILED,
           attempts: nextAttempts,
           lastError: errorMessage,
           processedAt: new Date(),
+          processingStartedAt: null,
         },
       });
 
@@ -183,13 +229,15 @@ export class OutboxDispatcherService {
     } else {
       const nextAvailableAt = this.calculateBackoff(nextAttempts);
 
-      await this.prisma.outboxEvent.update({
-        where: { id: event.id },
+      await this.prisma.outboxEvent.updateMany({
+        where: { id: event.id, status: OutboxStatus.PROCESSING },
         data: {
           status: OutboxStatus.PENDING,
           attempts: nextAttempts,
           lastError: errorMessage,
           availableAt: nextAvailableAt,
+          processedAt: null,
+          processingStartedAt: null,
         },
       });
     }

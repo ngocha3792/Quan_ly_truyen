@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type Redis from 'ioredis';
 
-import { ConcurrencyConflictException } from '@/common/exceptions';
+import {
+  ConcurrencyConflictException,
+  InvalidInputException,
+  ServiceUnavailableException,
+} from '@/common/exceptions';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import type {
   DistributedLock,
@@ -12,6 +16,14 @@ import type {
 const RELEASE_LUA_SCRIPT = `
 if redis.call("get", KEYS[1]) == ARGV[1] then
   return redis.call("del", KEYS[1])
+else
+  return 0
+end
+`;
+
+const EXTEND_LUA_SCRIPT = `
+if redis.call("get", KEYS[1]) == ARGV[1] then
+  return redis.call("pexpire", KEYS[1], ARGV[2])
 else
   return 0
 end
@@ -30,11 +42,13 @@ export class RedisDistributedLock implements DistributedLock {
     options: LockOptions,
     work: () => Promise<T>,
   ): Promise<T> {
+    this.validateOptions(options);
     if (!this.redisClient) {
-      this.logger.warn(
-        'Redis is unavailable for DistributedLock, executing work without distributed lock protection',
-      );
-      return work();
+      throw new ServiceUnavailableException({
+        code: 'DISTRIBUTED_LOCK_UNAVAILABLE',
+        service: 'redis-lock',
+        message: 'Distributed lock protection is unavailable',
+      });
     }
 
     const lockKey = `lock:${key}`;
@@ -75,11 +89,93 @@ export class RedisDistributedLock implements DistributedLock {
       });
     }
 
+    let stopped = false;
+    let leaseLost = false;
+    let heartbeatTimer: NodeJS.Timeout | undefined;
+    let heartbeatPromise: Promise<void> | undefined;
+    const extensionIntervalMs =
+      options.extensionIntervalMs ?? Math.floor(options.ttlMs / 3);
+
+    const scheduleHeartbeat = (): void => {
+      if (stopped || options.autoExtend === false) return;
+      heartbeatTimer = setTimeout(() => {
+        heartbeatPromise = this.extendLock(lockKey, ownerToken, options.ttlMs)
+          .then((extended) => {
+            if (!extended) {
+              leaseLost = true;
+              this.logger.warn(`Distributed lock lease lost [${lockKey}]`);
+            }
+          })
+          .catch((error: unknown) => {
+            leaseLost = true;
+            this.logger.warn(
+              `Distributed lock extension failed [${lockKey}]: ${
+                error instanceof Error ? error.message : 'unknown error'
+              }`,
+            );
+          })
+          .finally(() => {
+            heartbeatPromise = undefined;
+            if (!leaseLost) scheduleHeartbeat();
+          });
+      }, extensionIntervalMs);
+      heartbeatTimer.unref();
+    };
+
+    scheduleHeartbeat();
+    let outcome:
+      { success: true; value: T } | { success: false; error: unknown };
     try {
-      return await work();
+      outcome = { success: true, value: await work() };
+    } catch (error: unknown) {
+      outcome = { success: false, error };
     } finally {
+      stopped = true;
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
+      if (heartbeatPromise) await heartbeatPromise;
       await this.releaseLock(lockKey, ownerToken);
     }
+    if (leaseLost) {
+      throw new ConcurrencyConflictException({
+        resource: key,
+        message: `Distributed lock lease was lost for [${key}]`,
+      });
+    }
+    if (!outcome.success) throw outcome.error;
+    return outcome.value;
+  }
+
+  private validateOptions(options: LockOptions): void {
+    const extensionIntervalMs =
+      options.extensionIntervalMs ?? Math.floor(options.ttlMs / 3);
+    if (
+      !Number.isInteger(options.ttlMs) ||
+      options.ttlMs < 100 ||
+      !Number.isInteger(extensionIntervalMs) ||
+      extensionIntervalMs < 25 ||
+      extensionIntervalMs >= options.ttlMs
+    ) {
+      throw new InvalidInputException({
+        message:
+          'Lock ttlMs must be at least 100ms and extensionIntervalMs must be between 25ms and ttlMs',
+      });
+    }
+  }
+
+  private async extendLock(
+    lockKey: string,
+    ownerToken: string,
+    ttlMs: number,
+  ): Promise<boolean> {
+    if (!this.redisClient) return false;
+    const result = await this.redisClient.eval(
+      EXTEND_LUA_SCRIPT,
+      1,
+      lockKey,
+      ownerToken,
+      String(ttlMs),
+    );
+    return Number(result) === 1;
   }
 
   private async releaseLock(

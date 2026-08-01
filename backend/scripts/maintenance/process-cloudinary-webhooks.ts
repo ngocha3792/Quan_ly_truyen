@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { WorkerModule } from '@/worker.module';
 import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
+import { CloudinaryWebhookCommandModule } from '@/maintenance/cloudinary-webhook-command.module';
 
 async function main(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(WorkerModule, {
-    logger: ['error', 'warn', 'log'],
-  });
+  const app = await NestFactory.createApplicationContext(
+    CloudinaryWebhookCommandModule,
+    { logger: ['error', 'warn', 'log'] },
+  );
   try {
     const summary = await app
       .get(CloudinaryWebhookInboxProcessor)

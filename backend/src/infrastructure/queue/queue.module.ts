@@ -3,10 +3,32 @@ import { DynamicModule, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { QueueConfig, RedisConfig } from '@/config';
+import { createRedisConnectionOptions } from '@/infrastructure/cache/redis';
 
 import { QUEUE_NAMES } from './queue.constants';
 
 const logger = new Logger('QueueModule');
+
+export function createBullQueueOptions(
+  queueConfig: QueueConfig,
+  redisConfig: RedisConfig,
+) {
+  return {
+    prefix: queueConfig.prefix,
+    connection: createRedisConnectionOptions(redisConfig.url, {
+      maxRetriesPerRequest: null,
+    }),
+    defaultJobOptions: {
+      attempts: queueConfig.defaultAttempts,
+      backoff: {
+        type: 'exponential' as const,
+        delay: queueConfig.defaultBackoffMs,
+      },
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
+    },
+  };
+}
 
 @Module({})
 export class QueueModule {
@@ -35,34 +57,8 @@ export class QueueModule {
             const queueConfig = configService.getOrThrow<QueueConfig>('queue');
             const redisConfig = configService.getOrThrow<RedisConfig>('redis');
 
-            const redisUrl = new URL(redisConfig.url);
-
-            logger.log(
-              `Configuring BullMQ with Redis at ${redisUrl.hostname}:${redisUrl.port || '6379'}`,
-            );
-
-            return {
-              prefix: queueConfig.prefix,
-              connection: {
-                host: redisUrl.hostname,
-                port: Number(redisUrl.port) || 6379,
-                password: redisUrl.password || undefined,
-                username: redisUrl.username || undefined,
-                db: redisUrl.pathname
-                  ? Number(redisUrl.pathname.slice(1)) || 0
-                  : 0,
-                maxRetriesPerRequest: null,
-              },
-              defaultJobOptions: {
-                attempts: queueConfig.defaultAttempts,
-                backoff: {
-                  type: 'exponential',
-                  delay: queueConfig.defaultBackoffMs,
-                },
-                removeOnComplete: { count: 1000 },
-                removeOnFail: { count: 5000 },
-              },
-            };
+            logger.log('Configuring BullMQ Redis connection');
+            return createBullQueueOptions(queueConfig, redisConfig);
           },
         }),
         ...Object.values(QUEUE_NAMES).map((name) =>

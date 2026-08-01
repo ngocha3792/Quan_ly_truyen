@@ -5,6 +5,7 @@ import Redis from 'ioredis';
 import type { RedisConfig } from '@/config';
 
 import { REDIS_CLIENT } from './redis.constants';
+import { createRedisConnectionOptions } from './redis-connection-options.factory';
 
 export const redisClientProvider: Provider = {
   provide: REDIS_CLIENT,
@@ -19,7 +20,7 @@ export const redisClientProvider: Provider = {
     }
 
     try {
-      const client = new Redis(redisConfig.url, {
+      const options = createRedisConnectionOptions(redisConfig.url, {
         keyPrefix: `${redisConfig.keyPrefix}:`,
         connectTimeout: redisConfig.connectTimeoutMs,
         commandTimeout: redisConfig.commandTimeoutMs,
@@ -30,6 +31,7 @@ export const redisClientProvider: Provider = {
           return delay;
         },
       });
+      const client = new Redis(options);
 
       client.on('connect', () => {
         logger.log('Redis client connected successfully');

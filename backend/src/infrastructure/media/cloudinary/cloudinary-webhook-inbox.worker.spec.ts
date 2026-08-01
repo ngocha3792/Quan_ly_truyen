@@ -17,7 +17,12 @@ describe('CloudinaryWebhookInboxWorker', () => {
     const worker = new CloudinaryWebhookInboxWorker(
       processor as never,
       new ConfigService({
-        cloudinary: { webhookPollIntervalMs: 1000, webhookBatchSize: 25 },
+        cloudinary: {
+          enabled: true,
+          webhookPollIntervalMs: 1000,
+          webhookBatchSize: 25,
+        },
+        queue: { workerRole: 'all' },
       }),
     );
     worker.onApplicationBootstrap();
@@ -26,5 +31,35 @@ describe('CloudinaryWebhookInboxWorker', () => {
     worker.onApplicationShutdown();
     await jest.advanceTimersByTimeAsync(2000);
     expect(processor.processBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start polling when Cloudinary is disabled', async () => {
+    const processor = { processBatch: jest.fn() };
+    const worker = new CloudinaryWebhookInboxWorker(
+      processor as never,
+      new ConfigService({
+        cloudinary: { enabled: false },
+        queue: { workerRole: 'all' },
+      }),
+    );
+    worker.onApplicationBootstrap();
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(processor.processBatch).not.toHaveBeenCalled();
+    worker.onApplicationShutdown();
+  });
+
+  it('does not start polling for the queue-only worker role', async () => {
+    const processor = { processBatch: jest.fn() };
+    const worker = new CloudinaryWebhookInboxWorker(
+      processor as never,
+      new ConfigService({
+        cloudinary: { enabled: true },
+        queue: { workerRole: 'queue' },
+      }),
+    );
+    worker.onApplicationBootstrap();
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(processor.processBatch).not.toHaveBeenCalled();
+    worker.onApplicationShutdown();
   });
 });

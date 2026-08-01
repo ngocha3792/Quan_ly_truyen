@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { MediaCleanupService } from '@/infrastructure/media';
-import { WorkerModule } from '@/worker.module';
+import { MediaCleanupCommandModule } from '@/maintenance/media-cleanup-command.module';
 
 async function main(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(WorkerModule, {
-    logger: ['error', 'warn', 'log'],
-  });
+  const app = await NestFactory.createApplicationContext(
+    MediaCleanupCommandModule,
+    {
+      logger: ['error', 'warn', 'log'],
+    },
+  );
   try {
     const summary = await app
       .get(MediaCleanupService)
