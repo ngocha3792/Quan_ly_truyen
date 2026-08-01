@@ -8,13 +8,18 @@
 
 - Outbox delivery is **at-least-once**. Claims use PostgreSQL
   `FOR UPDATE SKIP LOCKED`; `PROCESSING` rows older than
-  `OUTBOX_PROCESSING_TIMEOUT_MS` are recovered before the next batch. BullMQ
-  job IDs remain `outbox-<outboxEventId>`, so consumers must still be
-  idempotent across the crash window between enqueue and the `PUBLISHED`
-  database update.
+  `OUTBOX_PROCESSING_TIMEOUT_MS` are recovered before the next batch. Every
+  claim has a UUID `processingToken`; publish, retry and permanent-failure
+  finalization use CAS on `id + PROCESSING + processingToken`, preventing a
+  stale worker from finalizing a newer claim. BullMQ job IDs remain
+  `outbox-<outboxEventId>`, so consumers must still be idempotent across the
+  crash window between enqueue and the `PUBLISHED` database update.
 - `OUTBOX_BATCH_SIZE` and `OUTBOX_POLL_INTERVAL_MS` control the repeatable
-  dispatcher job. Unsupported aggregate types are non-retryable and become
-  `FAILED`; they are never marked published as a no-op.
+  dispatcher job. It uses the stable scheduler ID
+  `outbox-dispatch-scheduler-v1`; registration failure aborts worker startup
+  and instances never remove each other's scheduler. Only `mail` is routed
+  because it is the only currently registered business consumer. Unsupported
+  aggregate types are non-retryable and become `FAILED`.
 - HTTP idempotency storage keys contain the authenticated principal, HTTP
   method, normalized route and a SHA-256 digest of the caller key. Processing
   leases have an owner token. Redis result/failure updates use Lua CAS, so an
@@ -26,11 +31,15 @@
   and `IN_MEMORY_STORE_SWEEP_INTERVAL_MS`.
 - Both `redis://` and `rediss://` are parsed by one connection-options factory.
   `REDIS_KEY_PREFIX` belongs to app cache/idempotency/locks; `QUEUE_PREFIX`
-  belongs to BullMQ and the two must not be combined.
+  belongs to BullMQ and the two must not be combined. `QUEUE_ENABLED=true`
+  requires `REDIS_ENABLED=true`; BullMQ uses `REDIS_CONNECT_TIMEOUT_MS` but
+  does not apply command timeout to blocking connections.
 - `WORKER_CONCURRENCY` is applied to the outbox and mail processors.
   `WORKER_ROLE=all|queue|cloudinary-webhook` limits long-running worker
   responsibilities. Cloudinary inbox polling additionally requires
-  `CLOUDINARY_ENABLED=true`.
+  `CLOUDINARY_ENABLED=true`. Worker preflight rejects any role with no active
+  capability. Cloudinary shutdown awaits the active inbox batch, and inbox
+  finalization uses the claimed attempt as its CAS ownership version.
 - Redis lock leases are owner-checked on release and heartbeat extension. A
   generic lease cannot undo a side effect after ownership loss; critical
   writers that need stronger guarantees must use fencing tokens checked by
@@ -42,6 +51,8 @@
 Operational diagnostics are available at `GET /health/diagnostics` and require
 the `audit-log.read` permission. Responses contain only normalized status and
 outbox counts; provider URLs, credentials and raw provider errors are omitted.
+Public readiness indicators also replace database and Redis exceptions with
+fixed messages while retaining internal error logs.
 
 ---
 

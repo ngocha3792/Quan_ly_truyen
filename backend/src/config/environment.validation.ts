@@ -490,6 +490,10 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     throw new Error('REDIS_URL protocol must be redis:// or rediss://');
   }
 
+  if (config.QUEUE_ENABLED && !config.REDIS_ENABLED) {
+    throw new Error('REDIS_ENABLED must be true when QUEUE_ENABLED=true');
+  }
+
   if (config.NODE_ENV === AppEnvironment.PRODUCTION && !config.REDIS_ENABLED) {
     throw new Error(
       'REDIS_ENABLED must be true in production because idempotency and distributed locks fail closed',

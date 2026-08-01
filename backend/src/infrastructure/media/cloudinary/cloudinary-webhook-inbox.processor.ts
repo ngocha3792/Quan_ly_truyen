@@ -68,16 +68,18 @@ export class CloudinaryWebhookInboxProcessor {
         summary.skipped++;
         continue;
       }
+      const claimedAttempt = event.attempts + 1;
 
       try {
         const disposition = await this.processEvent(
           event.eventType,
           event.payload,
         );
-        await this.prisma.inboundWebhookEvent.updateMany({
+        const finalized = await this.prisma.inboundWebhookEvent.updateMany({
           where: {
             id: event.id,
             status: InboundWebhookStatus.PROCESSING,
+            attempts: claimedAttempt,
           },
           data: {
             status:
@@ -89,9 +91,14 @@ export class CloudinaryWebhookInboxProcessor {
             lastError: null,
           },
         });
-        summary.processed++;
+        if (finalized.count === 1) {
+          summary.processed++;
+        } else {
+          summary.skipped++;
+          this.logOwnershipLost(event.eventKey, claimedAttempt);
+        }
       } catch (error: unknown) {
-        const attempts = event.attempts + 1;
+        const attempts = claimedAttempt;
         const deadLetter = attempts >= maxAttempts;
         const retryBaseMs = this.configService.get<number>(
           'cloudinary.webhookRetryBaseMs',
@@ -101,10 +108,11 @@ export class CloudinaryWebhookInboxProcessor {
           error instanceof Error
             ? error.message.slice(0, 1000)
             : 'Unknown webhook processing error';
-        await this.prisma.inboundWebhookEvent.updateMany({
+        const finalized = await this.prisma.inboundWebhookEvent.updateMany({
           where: {
             id: event.id,
             status: InboundWebhookStatus.PROCESSING,
+            attempts: claimedAttempt,
           },
           data: {
             status: deadLetter
@@ -117,6 +125,12 @@ export class CloudinaryWebhookInboxProcessor {
             ),
           },
         });
+        if (finalized.count !== 1) {
+          summary.skipped++;
+          this.logOwnershipLost(event.eventKey, claimedAttempt);
+          continue;
+        }
+
         summary.failed++;
         this.logger.warn({
           message: 'cloudinary webhook processing failed',
@@ -126,6 +140,14 @@ export class CloudinaryWebhookInboxProcessor {
       }
     }
     return summary;
+  }
+
+  private logOwnershipLost(eventKey: string, claimedAttempt: number): void {
+    this.logger.warn({
+      message: 'cloudinary webhook ownership lost before finalization',
+      eventKey,
+      claimedAttempt,
+    });
   }
 
   private async recoverStaleClaims(

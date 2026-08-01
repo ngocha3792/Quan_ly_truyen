@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +27,7 @@ interface OutboxEventRow {
   availableAt: Date;
   processedAt: Date | null;
   processingStartedAt: Date | null;
+  processingToken: string | null;
   lastError: string | null;
   createdAt: Date;
 }
@@ -41,10 +44,6 @@ export class OutboxDispatcherService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     @InjectQueue(QUEUE_NAMES.MAIL) private readonly mailQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.MEDIA) private readonly mediaQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
-    private readonly notificationQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.ANALYTICS) private readonly analyticsQueue: Queue,
   ) {
     const queueConfig = this.configService.get<QueueConfig>('queue');
     this.maxAttempts = queueConfig?.defaultAttempts ?? 3;
@@ -68,8 +67,13 @@ export class OutboxDispatcherService {
     for (const event of pendingEvents) {
       try {
         await this.publishEvent(event);
-        await this.markPublished(event.id);
-        processedCount++;
+        if (await this.markPublished(event)) {
+          processedCount++;
+        } else {
+          this.logger.warn(
+            `Outbox ownership lost before publish finalization for event ${event.id}`,
+          );
+        }
       } catch (error: unknown) {
         await this.handleFailure(event, error);
       }
@@ -85,8 +89,12 @@ export class OutboxDispatcherService {
   private async claimPendingEvents(
     batchSize: number,
   ): Promise<OutboxEventRow[]> {
+    const processingToken = randomUUID();
+
     return this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      const claimed = await tx.$queryRaw<
+        Array<{ id: string; processingToken: string }>
+      >(Prisma.sql`
         WITH candidates AS (
           SELECT id
           FROM outbox_events
@@ -100,10 +108,11 @@ export class OutboxDispatcherService {
         SET
           status = 'processing',
           processing_started_at = NOW(),
+          processing_token = ${processingToken}::uuid,
           processed_at = NULL
         FROM candidates
         WHERE event.id = candidates.id
-        RETURNING event.id
+        RETURNING event.id, event.processing_token AS "processingToken"
       `);
 
       if (claimed.length === 0) {
@@ -115,9 +124,13 @@ export class OutboxDispatcherService {
         where: { id: { in: claimedIds } },
       });
       const byId = new Map(events.map((event) => [event.id, event]));
+      const tokenById = new Map(
+        claimed.map(({ id, processingToken: token }) => [id, token]),
+      );
       return claimedIds.flatMap((id) => {
         const event = byId.get(id);
-        return event ? [event] : [];
+        const token = tokenById.get(id);
+        return event && token ? [{ ...event, processingToken: token }] : [];
       });
     });
   }
@@ -133,6 +146,7 @@ export class OutboxDispatcherService {
       data: {
         status: OutboxStatus.PENDING,
         processingStartedAt: null,
+        processingToken: null,
         availableAt: now,
         lastError: STALE_RECOVERY_ERROR,
       },
@@ -175,34 +189,43 @@ export class OutboxDispatcherService {
   }
 
   private resolveTargetQueue(aggregateType: string): Queue | null {
-    // Map aggregate types to their respective queues
     const queueMap: Record<string, Queue> = {
-      media: this.mediaQueue,
       mail: this.mailQueue,
-      notification: this.notificationQueue,
-      notifications: this.notificationQueue,
-      analytics: this.analyticsQueue,
     };
 
     return queueMap[aggregateType.toLowerCase()] ?? null;
   }
 
-  private async markPublished(eventId: string): Promise<void> {
-    await this.prisma.outboxEvent.updateMany({
-      where: { id: eventId, status: OutboxStatus.PROCESSING },
+  private async markPublished(event: OutboxEventRow): Promise<boolean> {
+    if (!event.processingToken) return false;
+
+    const result = await this.prisma.outboxEvent.updateMany({
+      where: {
+        id: event.id,
+        status: OutboxStatus.PROCESSING,
+        processingToken: event.processingToken,
+      },
       data: {
         status: OutboxStatus.PUBLISHED,
         processedAt: new Date(),
         processingStartedAt: null,
+        processingToken: null,
         lastError: null,
       },
     });
+
+    return result.count === 1;
   }
 
   private async handleFailure(
     event: OutboxEventRow,
     error: unknown,
-  ): Promise<void> {
+  ): Promise<'retried' | 'failed' | 'ownership-lost'> {
+    if (!event.processingToken) {
+      this.logOwnershipLost(event.id, 'failure');
+      return 'ownership-lost';
+    }
+
     const nextAttempts = event.attempts + 1;
     const errorMessage = this.sanitizeError(error);
     const retryable = !isAppException(error) || error.retryable;
@@ -212,25 +235,40 @@ export class OutboxDispatcherService {
     );
 
     if (!retryable || nextAttempts >= this.maxAttempts) {
-      await this.prisma.outboxEvent.updateMany({
-        where: { id: event.id, status: OutboxStatus.PROCESSING },
+      const result = await this.prisma.outboxEvent.updateMany({
+        where: {
+          id: event.id,
+          status: OutboxStatus.PROCESSING,
+          processingToken: event.processingToken,
+        },
         data: {
           status: OutboxStatus.FAILED,
           attempts: nextAttempts,
           lastError: errorMessage,
           processedAt: new Date(),
           processingStartedAt: null,
+          processingToken: null,
         },
       });
+
+      if (result.count !== 1) {
+        this.logOwnershipLost(event.id, 'failure');
+        return 'ownership-lost';
+      }
 
       this.logger.error(
         `Outbox event ${event.id} permanently failed after ${nextAttempts} attempts`,
       );
+      return 'failed';
     } else {
       const nextAvailableAt = this.calculateBackoff(nextAttempts);
 
-      await this.prisma.outboxEvent.updateMany({
-        where: { id: event.id, status: OutboxStatus.PROCESSING },
+      const result = await this.prisma.outboxEvent.updateMany({
+        where: {
+          id: event.id,
+          status: OutboxStatus.PROCESSING,
+          processingToken: event.processingToken,
+        },
         data: {
           status: OutboxStatus.PENDING,
           attempts: nextAttempts,
@@ -238,9 +276,23 @@ export class OutboxDispatcherService {
           availableAt: nextAvailableAt,
           processedAt: null,
           processingStartedAt: null,
+          processingToken: null,
         },
       });
+
+      if (result.count !== 1) {
+        this.logOwnershipLost(event.id, 'failure');
+        return 'ownership-lost';
+      }
+
+      return 'retried';
     }
+  }
+
+  private logOwnershipLost(eventId: string, operation: string): void {
+    this.logger.warn(
+      `Outbox ownership lost before ${operation} finalization for event ${eventId}`,
+    );
   }
 
   private calculateBackoff(attempts: number): Date {

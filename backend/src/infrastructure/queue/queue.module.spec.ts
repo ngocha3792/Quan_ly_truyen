@@ -12,6 +12,7 @@ describe('createBullQueueOptions', () => {
     const redis = {
       url: 'rediss://user:pass@example.com:6380/2',
       keyPrefix: 'app-data',
+      connectTimeoutMs: 4321,
     } as RedisConfig;
     const options = createBullQueueOptions(queue, redis);
     expect(options.prefix).toBe('jobs');
@@ -21,6 +22,7 @@ describe('createBullQueueOptions', () => {
         port: 6380,
         db: 2,
         tls: { servername: 'example.com' },
+        connectTimeout: 4321,
         maxRetriesPerRequest: null,
       }),
     );

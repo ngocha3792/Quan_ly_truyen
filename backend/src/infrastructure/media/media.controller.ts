@@ -9,6 +9,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { CurrentUser, Permissions } from '@/common/decorators/auth';
+import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { MediaCleanupService } from './application/media-cleanup.service';
@@ -30,6 +31,7 @@ export class MediaController {
   ) {}
 
   @Post('upload-intents')
+  @Idempotent()
   @Permissions(PermissionCode.MEDIA_UPLOAD)
   createIntent(
     @CurrentUser() principal: AuthPrincipal,

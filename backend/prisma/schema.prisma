@@ -991,6 +991,7 @@ model OutboxEvent {
   availableAt         DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)
   processedAt         DateTime?    @map("processed_at") @db.Timestamptz(3)
   processingStartedAt DateTime?    @map("processing_started_at") @db.Timestamptz(3)
+  processingToken     String?      @map("processing_token") @db.Uuid
   lastError           String?      @map("last_error") @db.Text
   createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 

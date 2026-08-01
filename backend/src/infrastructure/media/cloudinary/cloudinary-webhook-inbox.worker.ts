@@ -14,6 +14,7 @@ export class CloudinaryWebhookInboxWorker
 {
   private readonly logger = new Logger(CloudinaryWebhookInboxWorker.name);
   private timer?: NodeJS.Timeout;
+  private activeTick?: Promise<void>;
   private running = false;
   private stopped = false;
 
@@ -37,14 +38,28 @@ export class CloudinaryWebhookInboxWorker
     this.schedule(0);
   }
 
-  onApplicationShutdown(): void {
+  async onApplicationShutdown(): Promise<void> {
     this.stopped = true;
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+
+    await this.activeTick;
   }
 
   private schedule(delayMs: number): void {
     if (this.stopped) return;
-    this.timer = setTimeout(() => void this.tick(), delayMs);
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      const tick = this.tick();
+      this.activeTick = tick;
+      void tick.finally(() => {
+        if (this.activeTick === tick) {
+          this.activeTick = undefined;
+        }
+      });
+    }, delayMs);
     this.timer.unref();
   }
 
@@ -78,7 +93,9 @@ export class CloudinaryWebhookInboxWorker
       });
     } finally {
       this.running = false;
-      this.schedule(intervalMs);
+      if (!this.stopped) {
+        this.schedule(intervalMs);
+      }
     }
   }
 }

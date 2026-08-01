@@ -102,6 +102,26 @@ describe('validateEnvironment', () => {
     ).toThrow('REDIS_URL protocol');
   });
 
+  it('requires Redis when queues are enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        QUEUE_ENABLED: 'true',
+        REDIS_ENABLED: 'false',
+      }),
+    ).toThrow('REDIS_ENABLED must be true when QUEUE_ENABLED=true');
+  });
+
+  it('allows both queues and Redis to be disabled outside production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        QUEUE_ENABLED: 'false',
+        REDIS_ENABLED: 'false',
+      }),
+    ).not.toThrow();
+  });
+
   it('validates outbox and worker bounds', () => {
     expect(() =>
       validateEnvironment({ ...validBase, OUTBOX_BATCH_SIZE: '501' }),

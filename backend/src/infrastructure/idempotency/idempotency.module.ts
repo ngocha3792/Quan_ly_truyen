@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import type Redis from 'ioredis';
 
 import { IDEMPOTENCY_STORE } from '@/common/constants';
 import { AppEnvironment } from '@/common/enums';
+import { IdempotencyInterceptor } from '@/common/interceptors';
 import type { AppConfig, InfrastructureFallbackConfig } from '@/config';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import { RedisModule } from '@/infrastructure/cache/redis/redis.module';
@@ -39,6 +41,10 @@ import { RedisIdempotencyStore } from './redis-idempotency.store';
           ? memoryStore
           : redisStore;
       },
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
     },
   ],
   exports: [IDEMPOTENCY_STORE],

@@ -9,6 +9,8 @@ import type { DispatchOutboxBatchJobV1 } from '../contracts';
 import { DISPATCH_OUTBOX_BATCH_JOB } from '../contracts';
 import { QUEUE_NAMES } from '../queue.constants';
 
+export const OUTBOX_SCHEDULER_ID = 'outbox-dispatch-scheduler-v1';
+
 @Injectable()
 export class OutboxSchedulerService implements OnModuleInit {
   private readonly logger = new Logger(OutboxSchedulerService.name);
@@ -27,40 +29,39 @@ export class OutboxSchedulerService implements OnModuleInit {
       return;
     }
 
-    await this.registerRepeatableJob();
+    try {
+      await this.registerScheduler();
+    } catch (error: unknown) {
+      this.logger.error(
+        'Failed to register required outbox scheduler',
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
   }
 
-  private async registerRepeatableJob(): Promise<void> {
-    try {
-      // Remove existing repeatable jobs to prevent duplicates on restart
-      const existingJobs = await this.outboxQueue.getRepeatableJobs();
+  private async registerScheduler(): Promise<void> {
+    const queueConfig = this.configService.getOrThrow<QueueConfig>('queue');
+    const jobData: DispatchOutboxBatchJobV1 = {
+      version: 1,
+      batchSize: queueConfig.outboxBatchSize,
+    };
 
-      for (const job of existingJobs) {
-        if (job.name === DISPATCH_OUTBOX_BATCH_JOB) {
-          await this.outboxQueue.removeRepeatableByKey(job.key);
-        }
-      }
-
-      const queueConfig = this.configService.getOrThrow<QueueConfig>('queue');
-      const jobData: DispatchOutboxBatchJobV1 = {
-        version: 1,
-        batchSize: queueConfig.outboxBatchSize,
-      };
-
-      await this.outboxQueue.add(DISPATCH_OUTBOX_BATCH_JOB, jobData, {
-        repeat: {
-          every: queueConfig.outboxPollIntervalMs,
+    await this.outboxQueue.upsertJobScheduler(
+      OUTBOX_SCHEDULER_ID,
+      { every: queueConfig.outboxPollIntervalMs },
+      {
+        name: DISPATCH_OUTBOX_BATCH_JOB,
+        data: jobData,
+        opts: {
+          removeOnComplete: { count: 10 },
+          removeOnFail: { count: 50 },
         },
-        removeOnComplete: { count: 10 },
-        removeOnFail: { count: 50 },
-      });
+      },
+    );
 
-      this.logger.log(
-        `Outbox repeatable job registered (every ${queueConfig.outboxPollIntervalMs}ms)`,
-      );
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to register outbox repeatable job: ${message}`);
-    }
+    this.logger.log(
+      `Outbox scheduler registered (every ${queueConfig.outboxPollIntervalMs}ms)`,
+    );
   }
 }

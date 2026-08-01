@@ -6,10 +6,12 @@ import * as jwt from 'jsonwebtoken';
 import request from 'supertest';
 
 import { AppModule } from '../src/app.module';
+import { IDEMPOTENCY_STORE } from '../src/common/constants';
 import { JwtTokenType, PermissionCode, RoleCode } from '../src/common/enums';
 import { configureApplication } from '../src/bootstrap/application-configurator';
 import type { AppConfig } from '../src/config';
 import { PrismaService } from '../src/infrastructure/database/prisma';
+import { InMemoryIdempotencyStore } from '../src/infrastructure/idempotency/in-memory-idempotency.store';
 import { CloudinaryWebhookInboxProcessor } from '../src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
 import { CLOUDINARY_CLIENT } from '../src/infrastructure/media/cloudinary/cloudinary.constants';
 import { CloudinaryUrlService } from '../src/infrastructure/media/cloudinary/cloudinary-url.service';
@@ -82,6 +84,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let processor: CloudinaryWebhookInboxProcessor;
+  let idempotencyStore: InMemoryIdempotencyStore;
   const storage = new FakeMediaStorage();
   const runId = randomUUID();
   const userId = randomUUID();
@@ -93,6 +96,15 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
   const storyId = randomUUID();
 
   beforeAll(async () => {
+    idempotencyStore = new InMemoryIdempotencyStore(
+      new ConfigService({
+        infrastructureFallback: {
+          inMemoryStoreMaxEntries: 1000,
+          inMemoryStoreSweepIntervalMs: 60_000,
+        },
+        idempotency: { maxResponseBytes: 1_048_576 },
+      }),
+    );
     const cloudinary = {
       utils: {
         verifyNotificationSignature: jest.fn().mockReturnValue(true),
@@ -108,6 +120,8 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       .useValue({
         build: (input: { publicId: string }) => storage.buildUrl(input),
       })
+      .overrideProvider(IDEMPOTENCY_STORE)
+      .useValue(idempotencyStore)
       .compile();
     app = moduleRef.createNestApplication({ rawBody: true });
     const config = app.get(ConfigService).getOrThrow<AppConfig>('app');
@@ -131,6 +145,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       where: { id: { in: [userId, otherUserId, adminId] } },
     });
     await app?.close();
+    idempotencyStore?.onModuleDestroy();
   });
 
   const token = (sub: string, sid: string) =>
@@ -159,6 +174,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
     const response = await request(httpServer())
       .post('/api/v1/media/upload-intents')
       .set('Authorization', `Bearer ${token(userId, sessionId)}`)
+      .set('x-idempotency-key', randomUUID())
       .send({ ...input, declaredSizeBytes: 100 })
       .expect(201);
     return unwrap<{
@@ -227,6 +243,57 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
     await expect(
       prisma.mediaAsset.findUnique({ where: { id: intent.mediaAssetId } }),
     ).resolves.toMatchObject({ status: 'DELETED' });
+  });
+
+  it('enforces replay, payload conflict, principal isolation and in-flight exclusion', async () => {
+    const key = `media-intent-${runId}`;
+    const payload = {
+      purpose: 'AVATAR',
+      ownerId: userId,
+      originalName: 'idempotent.webp',
+      declaredMimeType: 'image/webp',
+      declaredSizeBytes: 100,
+    };
+    const send = (
+      actorToken: string,
+      body: typeof payload,
+      idempotencyKey: string,
+    ) =>
+      request(httpServer())
+        .post('/api/v1/media/upload-intents')
+        .set('Authorization', `Bearer ${actorToken}`)
+        .set('x-idempotency-key', idempotencyKey)
+        .send(body);
+
+    const first = await send(token(userId, sessionId), payload, key).expect(
+      201,
+    );
+    const replay = await send(token(userId, sessionId), payload, key).expect(
+      201,
+    );
+    expect(replay.headers['x-idempotent-replayed']).toBe('true');
+    expect(replay.body).toEqual(first.body);
+
+    await send(
+      token(userId, sessionId),
+      { ...payload, originalName: 'different.webp' },
+      key,
+    ).expect(409);
+
+    const other = await send(
+      token(otherUserId, otherSessionId),
+      { ...payload, ownerId: otherUserId },
+      key,
+    ).expect(201);
+    expect(other.headers['x-idempotent-replayed']).toBeUndefined();
+    expect(other.body).not.toEqual(first.body);
+
+    const concurrentKey = `${key}-concurrent`;
+    const concurrent = await Promise.all([
+      send(token(userId, sessionId), payload, concurrentKey),
+      send(token(userId, sessionId), payload, concurrentKey),
+    ]);
+    expect(concurrent.map(({ status }) => status).sort()).toEqual([201, 409]);
   });
 
   it('keeps a raw extension through intent, confirm and delete', async () => {

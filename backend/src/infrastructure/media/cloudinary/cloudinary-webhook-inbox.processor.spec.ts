@@ -48,6 +48,15 @@ describe('CloudinaryWebhookInboxProcessor', () => {
       },
       data: { status: MediaStatus.UPLOADED, uploadedAt: expect.any(Date) },
     });
+    expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'event-1',
+          status: InboundWebhookStatus.PROCESSING,
+          attempts: 1,
+        },
+      }),
+    );
   });
 
   it('skips an event already claimed by another worker', async () => {
@@ -94,6 +103,11 @@ describe('CloudinaryWebhookInboxProcessor', () => {
     });
     expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        where: {
+          id: 'event-1',
+          status: InboundWebhookStatus.PROCESSING,
+          attempts: 1,
+        },
         data: expect.objectContaining({
           status: InboundWebhookStatus.FAILED,
           lastError: 'temporary database failure',
@@ -147,4 +161,72 @@ describe('CloudinaryWebhookInboxProcessor', () => {
       }),
     );
   });
+
+  it('does not count success when a stale attempt loses finalization ownership', async () => {
+    prisma.inboundWebhookEvent.findMany.mockResolvedValue([
+      webhookEvent({ attempts: 0 }),
+    ]);
+    prisma.inboundWebhookEvent.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    prisma.mediaAsset.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(processor.processBatch()).resolves.toEqual({
+      scanned: 1,
+      processed: 0,
+      failed: 0,
+      skipped: 1,
+    });
+    expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'event-1',
+          status: InboundWebhookStatus.PROCESSING,
+          attempts: 1,
+        },
+      }),
+    );
+  });
+
+  it('does not count failure when a stale attempt loses finalization ownership', async () => {
+    prisma.inboundWebhookEvent.findMany.mockResolvedValue([
+      webhookEvent({ eventType: 'delete', attempts: 1 }),
+    ]);
+    prisma.inboundWebhookEvent.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    prisma.mediaAsset.updateMany.mockRejectedValue(new Error('temporary'));
+
+    await expect(processor.processBatch()).resolves.toEqual({
+      scanned: 1,
+      processed: 0,
+      failed: 0,
+      skipped: 1,
+    });
+    expect(prisma.inboundWebhookEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'event-1',
+          status: InboundWebhookStatus.PROCESSING,
+          attempts: 2,
+        },
+      }),
+    );
+  });
 });
+
+function webhookEvent(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'event-1',
+    eventKey: 'key-1',
+    eventType: 'upload',
+    status: InboundWebhookStatus.PENDING,
+    attempts: 0,
+    payload: { public_id: 'asset-1', resource_type: 'image' },
+    ...overrides,
+  };
+}

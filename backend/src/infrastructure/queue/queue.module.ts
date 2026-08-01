@@ -16,6 +16,7 @@ export function createBullQueueOptions(
   return {
     prefix: queueConfig.prefix,
     connection: createRedisConnectionOptions(redisConfig.url, {
+      connectTimeout: redisConfig.connectTimeoutMs,
       maxRetriesPerRequest: null,
     }),
     defaultJobOptions: {

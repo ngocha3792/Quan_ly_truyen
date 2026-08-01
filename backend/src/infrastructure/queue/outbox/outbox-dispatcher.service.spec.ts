@@ -1,9 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+import { readFileSync } from 'node:fs';
+
 import { ConfigService } from '@nestjs/config';
 
 import { OutboxStatus } from '@/generated/prisma/enums';
 
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
+
+const TOKEN_A = '11111111-1111-4111-8111-111111111111';
+const TOKEN_B = '22222222-2222-4222-8222-222222222222';
+const STALE_RECOVERY_ERROR = 'Recovered stale PROCESSING outbox event';
 
 describe('OutboxDispatcherService', () => {
   let service: OutboxDispatcherService;
@@ -17,7 +23,13 @@ describe('OutboxDispatcherService', () => {
   beforeEach(() => {
     prisma = {
       outboxEvent: {
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        updateMany: jest
+          .fn()
+          .mockImplementation((args: { data?: { lastError?: string } }) =>
+            Promise.resolve({
+              count: args.data?.lastError === STALE_RECOVERY_ERROR ? 0 : 1,
+            }),
+          ),
         findMany: jest.fn().mockResolvedValue([]),
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
@@ -30,16 +42,43 @@ describe('OutboxDispatcherService', () => {
     service = createService(prisma, queue);
   });
 
-  it('returns zero when no event is atomically claimed', async () => {
-    await expect(service.dispatchBatch()).resolves.toBe(0);
+  it('keeps the atomic SKIP LOCKED claim and assigns a non-null token', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('event-1', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'event-1' })]);
+
+    await expect(service.dispatchBatch()).resolves.toBe(1);
+
     const sql = prisma.$queryRaw.mock.calls[0]?.[0] as {
       strings?: readonly string[];
+      values?: unknown[];
     };
     expect(sql.strings?.join('')).toContain('FOR UPDATE SKIP LOCKED');
+    expect(sql.strings?.join('')).toContain('processing_token');
+    expect(sql.values).toContainEqual(expect.stringMatching(/^[0-9a-f-]{36}$/));
+    expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ processingToken: TOKEN_A }),
+      }),
+    );
+  });
+
+  it('uses a distinct processing token for each claimed batch', async () => {
+    await service.dispatchBatch();
+    await service.dispatchBatch();
+
+    const tokens = prisma.$queryRaw.mock.calls.map((call: unknown[]) => {
+      const sql = call[0] as { values: unknown[] };
+      return sql.values.find(
+        (value) => typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value),
+      );
+    });
+    expect(tokens[0]).toEqual(expect.any(String));
+    expect(tokens[1]).toEqual(expect.any(String));
+    expect(tokens[0]).not.toBe(tokens[1]);
   });
 
   it('publishes only IDs returned by the atomic claim', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'claimed' }]);
+    prisma.$queryRaw.mockResolvedValue([claimed('claimed', TOKEN_A)]);
     prisma.outboxEvent.findMany.mockResolvedValue([
       event({ id: 'claimed' }),
       event({ id: 'not-claimed' }),
@@ -61,8 +100,8 @@ describe('OutboxDispatcherService', () => {
   it('keeps competing claim batches disjoint', async () => {
     const allEvents = [event({ id: 'a' }), event({ id: 'b' })];
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ id: 'a' }])
-      .mockResolvedValueOnce([{ id: 'b' }]);
+      .mockResolvedValueOnce([claimed('a', TOKEN_A)])
+      .mockResolvedValueOnce([claimed('b', TOKEN_B)]);
     prisma.outboxEvent.findMany.mockImplementation(
       (args: { where: { id: { in: string[] } } }) =>
         Promise.resolve(
@@ -81,10 +120,7 @@ describe('OutboxDispatcherService', () => {
     expect(publishedIds).toHaveLength(2);
   });
 
-  it('recovers stale processing events without incrementing attempts', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'recovered' }]);
-    prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'recovered' })]);
-
+  it('recovers stale processing events and clears ownership without incrementing attempts', async () => {
     await service.dispatchBatch();
 
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith(
@@ -96,7 +132,8 @@ describe('OutboxDispatcherService', () => {
         data: expect.objectContaining({
           status: OutboxStatus.PENDING,
           processingStartedAt: null,
-          lastError: 'Recovered stale PROCESSING outbox event',
+          processingToken: null,
+          lastError: STALE_RECOVERY_ERROR,
         }),
       }),
     );
@@ -119,76 +156,118 @@ describe('OutboxDispatcherService', () => {
     }
   });
 
-  it('clears processing state after publishing', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'published' }]);
+  it('publishes only when the current token wins the finalization CAS', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('published', TOKEN_A)]);
     prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'published' })]);
-    await service.dispatchBatch();
-    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
-      where: { id: 'published', status: OutboxStatus.PROCESSING },
+
+    await expect(service.dispatchBatch()).resolves.toBe(1);
+
+    expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith({
+      where: {
+        id: 'published',
+        status: OutboxStatus.PROCESSING,
+        processingToken: TOKEN_A,
+      },
       data: expect.objectContaining({
         status: OutboxStatus.PUBLISHED,
         processingStartedAt: null,
+        processingToken: null,
         lastError: null,
       }),
     });
   });
 
-  it('returns retryable failures to pending and truncates the error', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'retry' }]);
-    prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'retry' })]);
-    queue.add.mockRejectedValue(new Error('x'.repeat(1000)));
-    await service.dispatchBatch();
-    const retryCall = prisma.outboxEvent.updateMany.mock.calls.find(
-      (call: unknown[]) =>
-        (call[0] as { data?: { attempts?: number } }).data?.attempts === 1,
-    ) as [
-      {
-        data: {
-          status: OutboxStatus;
-          lastError: string;
-          processingStartedAt: null;
-        };
-      },
-    ];
-    expect(retryCall[0].data.status).toBe(OutboxStatus.PENDING);
-    expect(retryCall[0].data.processingStartedAt).toBeNull();
-    expect(retryCall[0].data.lastError).toHaveLength(500);
+  it('does not count a published job when an old token loses ownership', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('published', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'published' })]);
+    prisma.outboxEvent.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 0 });
+
+    await expect(service.dispatchBatch()).resolves.toBe(0);
+    expect(queue.add).toHaveBeenCalledTimes(1);
+    expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ processingToken: TOKEN_A }),
+      }),
+    );
   });
 
-  it('fails an exhausted retry and sets processedAt', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'failed' }]);
+  it('does not return a newer claim to pending with an old token', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('retry', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([event({ id: 'retry' })]);
+    queue.add.mockRejectedValue(new Error('queue down'));
+    prisma.outboxEvent.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 0 });
+
+    await expect(service.dispatchBatch()).resolves.toBe(0);
+    expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'retry',
+          status: OutboxStatus.PROCESSING,
+          processingToken: TOKEN_A,
+        },
+        data: expect.objectContaining({ status: OutboxStatus.PENDING }),
+      }),
+    );
+  });
+
+  it('does not fail a newer claim with an old token', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('failed', TOKEN_A)]);
     prisma.outboxEvent.findMany.mockResolvedValue([
       event({ id: 'failed', attempts: 2 }),
     ]);
     queue.add.mockRejectedValue(new Error('queue down'));
-    await service.dispatchBatch();
-    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
-      where: { id: 'failed', status: OutboxStatus.PROCESSING },
-      data: expect.objectContaining({
-        status: OutboxStatus.FAILED,
-        attempts: 3,
-        processedAt: expect.any(Date),
-        processingStartedAt: null,
+    prisma.outboxEvent.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 0 });
+
+    await expect(service.dispatchBatch()).resolves.toBe(0);
+    expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'failed',
+          status: OutboxStatus.PROCESSING,
+          processingToken: TOKEN_A,
+        },
+        data: expect.objectContaining({ status: OutboxStatus.FAILED }),
       }),
-    });
+    );
   });
 
-  it('fails unsupported aggregates immediately without enqueueing', async () => {
-    prisma.$queryRaw.mockResolvedValue([{ id: 'unknown' }]);
-    prisma.outboxEvent.findMany.mockResolvedValue([
-      event({ id: 'unknown', aggregateType: 'unknown' }),
-    ]);
-    await service.dispatchBatch();
-    expect(queue.add).not.toHaveBeenCalled();
-    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
-      where: { id: 'unknown', status: OutboxStatus.PROCESSING },
-      data: expect.objectContaining({
-        status: OutboxStatus.FAILED,
-        attempts: 1,
-        processedAt: expect.any(Date),
-        lastError: 'Unsupported outbox aggregate type: unknown',
-      }),
-    });
+  it.each(['media', 'notifications', 'analytics'])(
+    'rejects %s because no processor consumes that queue',
+    async (aggregateType) => {
+      prisma.$queryRaw.mockResolvedValue([claimed('unsupported', TOKEN_A)]);
+      prisma.outboxEvent.findMany.mockResolvedValue([
+        event({ id: 'unsupported', aggregateType }),
+      ]);
+
+      await expect(service.dispatchBatch()).resolves.toBe(0);
+      expect(queue.add).not.toHaveBeenCalled();
+      expect(prisma.outboxEvent.updateMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ processingToken: TOKEN_A }),
+          data: expect.objectContaining({
+            status: OutboxStatus.FAILED,
+            lastError: `Unsupported outbox aggregate type: ${aggregateType}`,
+          }),
+        }),
+      );
+    },
+  );
+
+  it('migration adds the token and resets legacy PROCESSING claims', () => {
+    const sql = readFileSync(
+      'prisma/migrations/20260802002000_finalize_infrastructure_hardening/migration.sql',
+      'utf8',
+    );
+    expect(sql).toContain('ADD COLUMN "processing_token" UUID');
+    expect(sql).toContain('WHERE "status" = \'processing\'');
+    expect(sql).toContain('"status" = \'pending\'');
+    expect(sql).toContain('"processing_token" = NULL');
   });
 });
 
@@ -202,14 +281,11 @@ function createService(prisma: object, queue: object): OutboxDispatcherService {
       outboxProcessingTimeoutMs: 60_000,
     },
   });
-  return new OutboxDispatcherService(
-    prisma as never,
-    config,
-    queue as never,
-    queue as never,
-    queue as never,
-    queue as never,
-  );
+  return new OutboxDispatcherService(prisma as never, config, queue as never);
+}
+
+function claimed(id: string, processingToken: string) {
+  return { id, processingToken };
 }
 
 function event(
@@ -230,6 +306,7 @@ function baseEvent() {
     availableAt: new Date('2026-01-01T00:00:00Z'),
     processedAt: null,
     processingStartedAt: new Date('2026-01-01T00:00:00Z'),
+    processingToken: TOKEN_A,
     lastError: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
   };

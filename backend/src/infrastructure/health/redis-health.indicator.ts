@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   HealthIndicatorResult,
   HealthIndicatorService,
@@ -9,6 +9,8 @@ import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 
 @Injectable()
 export class RedisHealthIndicator {
+  private readonly logger = new Logger(RedisHealthIndicator.name);
+
   constructor(
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
     private readonly healthIndicator: HealthIndicatorService,
@@ -27,11 +29,15 @@ export class RedisHealthIndicator {
         return indicator.up();
       }
       return indicator.down({
-        message: `Unexpected PING response: ${String(pingResult)}`,
+        message: 'Redis health check failed',
       });
     } catch (error: unknown) {
+      this.logger.error(
+        'Redis health check failed',
+        error instanceof Error ? error.stack : String(error),
+      );
       return indicator.down({
-        message: error instanceof Error ? error.message : 'Redis unavailable',
+        message: 'Redis unavailable',
       });
     }
   }

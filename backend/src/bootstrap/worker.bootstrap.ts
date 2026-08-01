@@ -1,7 +1,10 @@
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 
 import { WorkerModule } from '@/worker.module';
+
+import { assertWorkerCanStart } from './worker-preflight';
 
 const workerLogger = new Logger('WorkerBootstrap');
 
@@ -10,9 +13,15 @@ export async function bootstrapWorker(): Promise<void> {
     bufferLogs: true,
   });
 
-  context.enableShutdownHooks();
+  try {
+    assertWorkerCanStart(context.get(ConfigService));
+    context.enableShutdownHooks();
 
-  workerLogger.log('Worker process started successfully');
+    workerLogger.log('Worker process started successfully');
+  } catch (error: unknown) {
+    await context.close();
+    throw error;
+  }
 }
 
 export async function runWorker(): Promise<void> {
