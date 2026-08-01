@@ -1,6 +1,20 @@
 import type { QueueConfig, RedisConfig } from '@/config';
 
-import { createBullQueueOptions } from './queue.module';
+import {
+  createBullQueueOptions,
+  isQueueEnvironmentEnabled,
+} from './queue.module';
+
+describe('isQueueEnvironmentEnabled', () => {
+  it.each([
+    [{ QUEUE_ENABLED: 'true', REDIS_ENABLED: 'true' }, true],
+    [{ QUEUE_ENABLED: 'false', REDIS_ENABLED: 'true' }, false],
+    [{ QUEUE_ENABLED: 'true', REDIS_ENABLED: 'false' }, false],
+    [{}, false],
+  ] as const)('returns the loaded queue decision for %j', (env, expected) => {
+    expect(isQueueEnvironmentEnabled(env)).toBe(expected);
+  });
+});
 
 describe('createBullQueueOptions', () => {
   it('keeps the BullMQ prefix separate and supports rediss database/TLS', () => {

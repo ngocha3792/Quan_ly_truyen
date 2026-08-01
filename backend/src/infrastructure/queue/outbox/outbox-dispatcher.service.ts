@@ -6,10 +6,18 @@ import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 
 import { isAppException, QueueException } from '@/common/exceptions';
+import { sanitizeCredentialUrls } from '@/common/utils';
 import type { QueueConfig } from '@/config';
 import { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
 import { OutboxStatus } from '@/generated/prisma/enums';
+import type { QueueTelemetryMetadata } from '@/common/interfaces/observability';
+import {
+  MANUAL_SPANS,
+  MetricsService,
+  TracePropagationService,
+  TracingService,
+} from '@/infrastructure/observability';
 
 import { QUEUE_NAMES } from '../queue.constants';
 
@@ -22,6 +30,7 @@ interface OutboxEventRow {
   aggregateId: string;
   eventType: string;
   payload: unknown;
+  metadata: unknown;
   status: OutboxStatus;
   attempts: number;
   availableAt: Date;
@@ -44,6 +53,9 @@ export class OutboxDispatcherService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     @InjectQueue(QUEUE_NAMES.MAIL) private readonly mailQueue: Queue,
+    private readonly metrics: MetricsService,
+    private readonly tracing: TracingService,
+    private readonly propagation: TracePropagationService,
   ) {
     const queueConfig = this.configService.get<QueueConfig>('queue');
     this.maxAttempts = queueConfig?.defaultAttempts ?? 3;
@@ -53,6 +65,14 @@ export class OutboxDispatcherService {
   }
 
   async dispatchBatch(batchSize: number = this.batchSize): Promise<number> {
+    return this.tracing.inSpan(
+      MANUAL_SPANS.OUTBOX_DISPATCH_BATCH,
+      { 'outbox.batch_size': Math.min(Math.max(batchSize, 1), 500) },
+      () => this.dispatchBatchInternal(batchSize),
+    );
+  }
+
+  private async dispatchBatchInternal(batchSize: number): Promise<number> {
     await this.recoverStaleEvents();
     const pendingEvents = await this.claimPendingEvents(batchSize);
 
@@ -60,28 +80,56 @@ export class OutboxDispatcherService {
       return 0;
     }
 
-    this.logger.debug(`Processing ${pendingEvents.length} outbox events`);
+    this.logger.debug({
+      event: 'outbox.batch.started',
+      'outbox.batch_size': pendingEvents.length,
+    });
 
     let processedCount = 0;
 
     for (const event of pendingEvents) {
+      const startedAt = performance.now();
       try {
         await this.publishEvent(event);
         if (await this.markPublished(event)) {
           processedCount++;
-        } else {
-          this.logger.warn(
-            `Outbox ownership lost before publish finalization for event ${event.id}`,
+          this.metrics.recordOutbox(
+            event.eventType,
+            'success',
+            (performance.now() - startedAt) / 1000,
           );
+        } else {
+          this.metrics.recordOutbox(
+            event.eventType,
+            'ownership_lost',
+            (performance.now() - startedAt) / 1000,
+          );
+          this.logger.warn({
+            event: 'outbox.finalize.ownership_lost',
+            'outbox.event_id': event.id,
+            'outbox.event_type': event.eventType,
+          });
         }
       } catch (error: unknown) {
-        await this.handleFailure(event, error);
+        const result = await this.handleFailure(event, error);
+        this.metrics.recordOutbox(
+          event.eventType,
+          result === 'retried'
+            ? 'retry'
+            : result === 'ownership-lost'
+              ? 'ownership_lost'
+              : 'failed',
+          (performance.now() - startedAt) / 1000,
+        );
       }
     }
 
-    this.logger.log(
-      `Outbox batch completed: ${processedCount}/${pendingEvents.length} published`,
-    );
+    this.logger.log({
+      event: 'outbox.batch.completed',
+      'outbox.result': 'success',
+      published: processedCount,
+      scanned: pendingEvents.length,
+    });
 
     return processedCount;
   }
@@ -152,7 +200,11 @@ export class OutboxDispatcherService {
       },
     });
     if (recovered.count > 0) {
-      this.logger.warn(`Recovered ${recovered.count} stale outbox events`);
+      this.metrics.recordOutboxStaleRecovered(recovered.count);
+      this.logger.warn({
+        event: 'outbox.stale.recovered',
+        recovered: recovered.count,
+      });
     }
   }
 
@@ -174,17 +226,45 @@ export class OutboxDispatcherService {
       });
     }
 
-    await targetQueue.add(
-      event.eventType,
-      {
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-        eventType: event.eventType,
-        payload: event.payload,
-        outboxEventId: event.id,
-        createdAt: event.createdAt.toISOString(),
-      },
-      { jobId: `outbox-${event.id}` },
+    const persistedMetadata = this.propagation.parse(event.metadata);
+    const envelopeMetadata: QueueTelemetryMetadata = {
+      schemaVersion: 1,
+      source: 'worker',
+      ...(persistedMetadata?.correlationId
+        ? { correlationId: persistedMetadata.correlationId }
+        : {}),
+      causationId: event.id,
+      ...(persistedMetadata?.traceId
+        ? { traceId: persistedMetadata.traceId }
+        : {}),
+      ...(persistedMetadata?.traceContext
+        ? { traceContext: persistedMetadata.traceContext }
+        : {}),
+    };
+
+    await this.propagation.runWithExtractedContext(persistedMetadata, () =>
+      this.tracing.inSpan(
+        MANUAL_SPANS.OUTBOX_PUBLISH_EVENT,
+        {
+          'outbox.event_type': event.eventType,
+          'outbox.aggregate_type': event.aggregateType,
+        },
+        async () => {
+          await targetQueue.add(
+            event.eventType,
+            {
+              aggregateType: event.aggregateType,
+              aggregateId: event.aggregateId,
+              eventType: event.eventType,
+              payload: event.payload,
+              outboxEventId: event.id,
+              createdAt: event.createdAt.toISOString(),
+              telemetry: envelopeMetadata,
+            },
+            { jobId: `outbox-${event.id}` },
+          );
+        },
+      ),
     );
   }
 
@@ -230,9 +310,14 @@ export class OutboxDispatcherService {
     const errorMessage = this.sanitizeError(error);
     const retryable = !isAppException(error) || error.retryable;
 
-    this.logger.warn(
-      `Outbox event ${event.id} failed (attempt ${nextAttempts}/${this.maxAttempts}): ${errorMessage}`,
-    );
+    this.logger.warn({
+      event: 'outbox.event.failed',
+      'outbox.event_id': event.id,
+      'outbox.event_type': event.eventType,
+      'outbox.attempt': nextAttempts,
+      'outbox.result': retryable ? 'retry' : 'failed',
+      error: errorMessage,
+    });
 
     if (!retryable || nextAttempts >= this.maxAttempts) {
       const result = await this.prisma.outboxEvent.updateMany({
@@ -256,9 +341,12 @@ export class OutboxDispatcherService {
         return 'ownership-lost';
       }
 
-      this.logger.error(
-        `Outbox event ${event.id} permanently failed after ${nextAttempts} attempts`,
-      );
+      this.logger.error({
+        event: 'outbox.event.dead_lettered',
+        'outbox.event_id': event.id,
+        'outbox.event_type': event.eventType,
+        'outbox.attempt': nextAttempts,
+      });
       return 'failed';
     } else {
       const nextAvailableAt = this.calculateBackoff(nextAttempts);
@@ -290,9 +378,11 @@ export class OutboxDispatcherService {
   }
 
   private logOwnershipLost(eventId: string, operation: string): void {
-    this.logger.warn(
-      `Outbox ownership lost before ${operation} finalization for event ${eventId}`,
-    );
+    this.logger.warn({
+      event: 'outbox.finalize.ownership_lost',
+      'outbox.event_id': eventId,
+      operation,
+    });
   }
 
   private calculateBackoff(attempts: number): Date {
@@ -302,9 +392,9 @@ export class OutboxDispatcherService {
 
   private sanitizeError(error: unknown): string {
     if (error instanceof Error) {
-      return error.message.slice(0, MAX_ERROR_LENGTH);
+      return sanitizeCredentialUrls(error.message).slice(0, MAX_ERROR_LENGTH);
     }
 
-    return String(error).slice(0, MAX_ERROR_LENGTH);
+    return sanitizeCredentialUrls(String(error)).slice(0, MAX_ERROR_LENGTH);
   }
 }

@@ -1,7 +1,10 @@
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 
 import type { ApiErrorResponse } from '@/common/interfaces/http';
+import { sanitizeErrorForLog } from '@/common/utils';
+import { resolveHttpRouteTemplate } from '@/infrastructure/observability/metrics';
 import { ExceptionNormalizer } from './exception-normalizer';
 import { NormalizedException } from './normalized-exception.interface';
 import {
@@ -38,7 +41,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const normalized = this.normalizer.normalize(exception);
     const responseBody = this.buildResponse(normalized, requestMetadata);
 
-    this.writeLog(exception, normalized, requestMetadata);
+    this.recordOnActiveSpan(exception, normalized);
+    this.writeLog(exception, normalized, {
+      ...requestMetadata,
+      path: resolveHttpRouteTemplate(request),
+    });
 
     httpAdapter.setHeader(response, 'x-request-id', requestMetadata.requestId);
 
@@ -68,23 +75,41 @@ export class AllExceptionsFilter implements ExceptionFilter {
     normalized: NormalizedException,
     request: RequestMetadata,
   ): void {
-    const logMessage = [
-      `${request.method} ${request.path}`,
-      `status=${normalized.status}`,
-      `code=${normalized.code}`,
-      `requestId=${request.requestId}`,
-      request.userId ? `userId=${request.userId}` : undefined,
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const fields = {
+      event: 'http.request.failed',
+      'http.method': request.method,
+      'http.route': request.path,
+      'http.status_code': normalized.status,
+      'error.code': normalized.code,
+      requestId: request.requestId,
+      ...(request.correlationId
+        ? { correlationId: request.correlationId }
+        : {}),
+      ...(request.userId ? { userId: request.userId } : {}),
+    };
 
     if (normalized.logLevel === 'error') {
-      const stack = exception instanceof Error ? exception.stack : undefined;
-
-      this.logger.error(logMessage, stack);
+      this.logger.error(fields, exception, sanitizeErrorForLog(exception));
       return;
     }
 
-    this.logger.warn(logMessage);
+    this.logger.warn(fields);
+  }
+
+  private recordOnActiveSpan(
+    exception: unknown,
+    normalized: NormalizedException,
+  ): void {
+    const span = trace.getSpan(context.active());
+    if (!span) return;
+    if (exception instanceof Error) span.recordException(exception);
+    span.setAttributes({
+      'error.type': normalized.code,
+      'http.response.status_code': normalized.status,
+    });
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: normalized.code,
+    });
   }
 }

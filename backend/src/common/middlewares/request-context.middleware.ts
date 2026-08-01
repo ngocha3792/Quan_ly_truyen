@@ -1,4 +1,5 @@
 import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
+import { context as otelContext, trace } from '@opentelemetry/api';
 
 import { COMMON_MIDDLEWARE_OPTIONS } from './common-middlewares.constants';
 import type { CommonMiddlewaresOptions } from './common-middlewares-options.interface';
@@ -31,6 +32,8 @@ export class RequestContextMiddleware implements NestMiddleware {
 
     response.setHeader('x-request-id', context.requestId);
     response.setHeader('x-correlation-id', context.correlationId);
+    const traceId = trace.getSpan(otelContext.active())?.spanContext().traceId;
+    if (traceId) response.setHeader('x-trace-id', traceId);
 
     this.store.run(context, () => next());
   }

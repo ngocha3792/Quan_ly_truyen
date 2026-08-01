@@ -19,6 +19,12 @@ describe('MediaCleanupService', () => {
     new ConfigService({
       cloudinary: { deleteMaxAttempts: 5, deleteRetryBaseMs: 100 },
     }),
+    { recordMediaCleanup: jest.fn() } as never,
+    {
+      inSpan: jest.fn(
+        (_name: string, _attributes: object, work: () => unknown) => work(),
+      ),
+    } as never,
   );
 
   beforeEach(() => jest.clearAllMocks());

@@ -3,17 +3,22 @@ import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
 
 import { CLOUDINARY_CLIENT } from './cloudinary.constants';
+import { MetricsService } from '@/infrastructure/observability';
 
 export type CloudinaryClient = typeof cloudinary;
 
 export const cloudinaryProvider: Provider = {
   provide: CLOUDINARY_CLIENT,
-  inject: [ConfigService],
+  inject: [ConfigService, MetricsService],
 
-  useFactory: (configService: ConfigService): CloudinaryClient | null => {
+  useFactory: (
+    configService: ConfigService,
+    metrics: MetricsService,
+  ): CloudinaryClient | null => {
     const enabled = configService.get<boolean>('cloudinary.enabled', false);
 
     if (!enabled) {
+      metrics.setDependencyHealth('cloudinary', 'disabled');
       return null;
     }
 
@@ -32,6 +37,7 @@ export const cloudinaryProvider: Provider = {
       secure: true,
       signature_algorithm: signatureAlgorithm,
     });
+    metrics.setDependencyHealth('cloudinary', 'configured');
 
     return cloudinary;
   },

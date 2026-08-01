@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type Redis from 'ioredis';
 
 import type { RedisConfig } from '@/config';
+import { MetricsService } from '@/infrastructure/observability';
 import type { CacheStore } from './cache-store.interface';
 import { REDIS_CLIENT } from './redis/redis.constants';
 
@@ -14,6 +15,7 @@ export class RedisCacheAdapter implements CacheStore {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
     configService: ConfigService,
+    private readonly metrics: MetricsService,
   ) {
     const redisConfig = configService.get<RedisConfig>('redis');
     this.defaultTtlSeconds = redisConfig?.cacheDefaultTtlSeconds ?? 300;
@@ -21,25 +23,29 @@ export class RedisCacheAdapter implements CacheStore {
 
   async get<T>(key: string): Promise<T | null> {
     if (!this.redisClient) {
+      this.metrics.recordCache('get', 'disabled');
       return null;
     }
 
     try {
       const raw = await this.redisClient.get(key);
       if (!raw) {
+        this.metrics.recordCache('get', 'miss');
         return null;
       }
+      this.metrics.recordCache('get', 'hit');
       return this.deserialize<T>(raw);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown cache error';
-      this.logger.warn(`Cache GET error for key [${key}]: ${message}`);
+      this.metrics.recordCache('get', 'failed');
+      this.metrics.recordRedisError('cache');
+      this.logFailure('get', error);
       return null;
     }
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (!this.redisClient) {
+      this.metrics.recordCache('set', 'disabled');
       return;
     }
 
@@ -52,40 +58,44 @@ export class RedisCacheAdapter implements CacheStore {
       } else {
         await this.redisClient.set(key, serialized);
       }
+      this.metrics.recordCache('set', 'success');
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown cache error';
-      this.logger.warn(`Cache SET error for key [${key}]: ${message}`);
+      this.metrics.recordCache('set', 'failed');
+      this.metrics.recordRedisError('cache');
+      this.logFailure('set', error);
     }
   }
 
   async delete(key: string): Promise<void> {
     if (!this.redisClient) {
+      this.metrics.recordCache('delete', 'disabled');
       return;
     }
 
     try {
       await this.redisClient.del(key);
+      this.metrics.recordCache('delete', 'success');
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown cache error';
-      this.logger.warn(`Cache DELETE error for key [${key}]: ${message}`);
+      this.metrics.recordCache('delete', 'failed');
+      this.metrics.recordRedisError('cache');
+      this.logFailure('delete', error);
     }
   }
 
   async deleteMany(keys: readonly string[]): Promise<void> {
     if (!this.redisClient || keys.length === 0) {
+      if (!this.redisClient)
+        this.metrics.recordCache('delete_many', 'disabled');
       return;
     }
 
     try {
       await this.redisClient.del(...keys);
+      this.metrics.recordCache('delete_many', 'success');
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown cache error';
-      this.logger.warn(
-        `Cache DELETE_MANY error for keys [${keys.join(', ')}]: ${message}`,
-      );
+      this.metrics.recordCache('delete_many', 'failed');
+      this.metrics.recordRedisError('cache');
+      this.logFailure('delete_many', error);
     }
   }
 
@@ -147,5 +157,13 @@ export class RedisCacheAdapter implements CacheStore {
     } catch {
       return null;
     }
+  }
+
+  private logFailure(operation: string, error: unknown): void {
+    this.logger.warn({
+      event: 'cache.operation.failed',
+      operation,
+      'error.type': error instanceof Error ? error.name : 'UnknownError',
+    });
   }
 }

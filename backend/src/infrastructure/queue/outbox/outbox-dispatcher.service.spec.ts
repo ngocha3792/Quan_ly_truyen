@@ -281,7 +281,30 @@ function createService(prisma: object, queue: object): OutboxDispatcherService {
       outboxProcessingTimeoutMs: 60_000,
     },
   });
-  return new OutboxDispatcherService(prisma as never, config, queue as never);
+  const metrics = {
+    recordOutbox: jest.fn(),
+    recordOutboxStaleRecovered: jest.fn(),
+  };
+  const tracing = {
+    inSpan: jest.fn(
+      (_name: string, _attributes: object, work: () => Promise<unknown>) =>
+        work(),
+    ),
+  };
+  const propagation = {
+    parse: jest.fn((metadata: unknown) => metadata),
+    runWithExtractedContext: jest.fn(
+      (_metadata: unknown, work: () => Promise<unknown>) => work(),
+    ),
+  };
+  return new OutboxDispatcherService(
+    prisma as never,
+    config,
+    queue as never,
+    metrics as never,
+    tracing as never,
+    propagation as never,
+  );
 }
 
 function claimed(id: string, processingToken: string) {
@@ -301,6 +324,14 @@ function baseEvent() {
     aggregateId: 'aggregate',
     eventType: 'mail.send.v1',
     payload: {},
+    metadata: {
+      schemaVersion: 1,
+      source: 'api',
+      correlationId: 'correlation-1',
+      traceContext: {
+        traceparent: '00-11111111111111111111111111111111-2222222222222222-01',
+      },
+    },
     status: OutboxStatus.PROCESSING,
     attempts: 0,
     availableAt: new Date('2026-01-01T00:00:00Z'),

@@ -6,6 +6,7 @@ describe('validateEnvironment', () => {
     DATABASE_URL:
       'postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test',
     JWT_ACCESS_SECRET: 'test-access-secret-at-least-32-characters',
+    MAIL_MESSAGE_ID_DOMAIN: 'mail.example.test',
   };
 
   it('parses boolean and integer values correctly', () => {
@@ -17,6 +18,36 @@ describe('validateEnvironment', () => {
 
     expect(result.PORT).toBe(3100);
     expect(result.MAINTENANCE_MODE).toBe(false);
+  });
+
+  it('validates observability defaults and bounded metrics path', () => {
+    const result = validateEnvironment(validBase);
+
+    expect(result.OBSERVABILITY_ENABLED).toBe(true);
+    expect(result.METRICS_ENABLED).toBe(true);
+    expect(result.METRICS_PATH).toBe('/internal/metrics');
+    expect(() =>
+      validateEnvironment({ ...validBase, METRICS_PATH: '/metrics' }),
+    ).toThrow('METRICS_PATH');
+  });
+
+  it('requires a long metrics token in production when metrics are enabled', () => {
+    const productionBase = {
+      ...validBase,
+      NODE_ENV: 'production',
+      REDIS_ENABLED: 'true',
+      SWAGGER_ENABLED: 'false',
+    };
+
+    expect(() => validateEnvironment(productionBase)).toThrow(
+      'METRICS_BEARER_TOKEN',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        METRICS_BEARER_TOKEN: 'local-token-with-at-least-32-characters',
+      }),
+    ).not.toThrow();
   });
 
   it('rejects missing DATABASE_URL', () => {
@@ -88,6 +119,24 @@ describe('validateEnvironment', () => {
         SMTP_SECURE: 'false',
       }),
     ).toThrow('SMTP_SECURE');
+  });
+
+  it('requires a valid Message-ID domain when mail is enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MAIL_ENABLED: 'true',
+        MAIL_MESSAGE_ID_DOMAIN: 'not a domain',
+      }),
+    ).toThrow('MAIL_MESSAGE_ID_DOMAIN');
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MAIL_ENABLED: 'true',
+        MAIL_MESSAGE_ID_DOMAIN: 'mail.example.com',
+      }),
+    ).not.toThrow();
   });
 
   it('accepts redis and rediss URLs but rejects other protocols', () => {

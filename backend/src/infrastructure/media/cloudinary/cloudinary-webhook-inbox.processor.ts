@@ -7,6 +7,11 @@ import {
   Prisma,
 } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma';
+import {
+  MANUAL_SPANS,
+  MetricsService,
+  TracingService,
+} from '@/infrastructure/observability';
 
 export interface WebhookProcessingSummary {
   scanned: number;
@@ -22,16 +27,28 @@ export class CloudinaryWebhookInboxProcessor {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly metrics: MetricsService,
+    private readonly tracing: TracingService,
   ) {}
 
   async processBatch(batchSize = 100): Promise<WebhookProcessingSummary> {
+    return this.tracing.inSpan(
+      MANUAL_SPANS.CLOUDINARY_WEBHOOK_PROCESS,
+      { 'messaging.system': 'cloudinary' },
+      () => this.processBatchInternal(batchSize),
+    );
+  }
+
+  private async processBatchInternal(
+    batchSize: number,
+  ): Promise<WebhookProcessingSummary> {
     const take = Math.min(Math.max(batchSize, 1), 500);
     const maxAttempts = this.configService.get<number>(
       'cloudinary.webhookMaxAttempts',
       5,
     );
-    const now = new Date();
-    await this.recoverStaleClaims(now, maxAttempts);
+    const batchNow = new Date();
+    await this.recoverStaleClaims(batchNow, maxAttempts);
     const events = await this.prisma.inboundWebhookEvent.findMany({
       where: {
         provider: 'cloudinary',
@@ -39,7 +56,7 @@ export class CloudinaryWebhookInboxProcessor {
           in: [InboundWebhookStatus.PENDING, InboundWebhookStatus.FAILED],
         },
         attempts: { lt: maxAttempts },
-        nextAttemptAt: { lte: now },
+        nextAttemptAt: { lte: batchNow },
       },
       orderBy: { nextAttemptAt: 'asc' },
       take,
@@ -52,6 +69,7 @@ export class CloudinaryWebhookInboxProcessor {
     };
 
     for (const event of events) {
+      const claimedAt = new Date();
       const claim = await this.prisma.inboundWebhookEvent.updateMany({
         where: {
           id: event.id,
@@ -61,11 +79,12 @@ export class CloudinaryWebhookInboxProcessor {
         data: {
           status: InboundWebhookStatus.PROCESSING,
           attempts: { increment: 1 },
-          processingStartedAt: now,
+          processingStartedAt: claimedAt,
         },
       });
       if (claim.count !== 1) {
         summary.skipped++;
+        this.metrics.recordWebhook(event.eventType, 'conflict');
         continue;
       }
       const claimedAttempt = event.attempts + 1;
@@ -93,8 +112,13 @@ export class CloudinaryWebhookInboxProcessor {
         });
         if (finalized.count === 1) {
           summary.processed++;
+          this.metrics.recordWebhook(
+            event.eventType,
+            disposition === 'ignored' ? 'skipped' : 'success',
+          );
         } else {
           summary.skipped++;
+          this.metrics.recordWebhook(event.eventType, 'ownership_lost');
           this.logOwnershipLost(event.eventKey, claimedAttempt);
         }
       } catch (error: unknown) {
@@ -127,11 +151,13 @@ export class CloudinaryWebhookInboxProcessor {
         });
         if (finalized.count !== 1) {
           summary.skipped++;
+          this.metrics.recordWebhook(event.eventType, 'ownership_lost');
           this.logOwnershipLost(event.eventKey, claimedAttempt);
           continue;
         }
 
         summary.failed++;
+        this.metrics.recordWebhook(event.eventType, 'failed');
         this.logger.warn({
           message: 'cloudinary webhook processing failed',
           eventKey: event.eventKey,

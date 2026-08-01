@@ -9,6 +9,7 @@ import {
 } from '@/common/exceptions';
 import type { IdempotencyConfig } from '@/config';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
+import { MetricsService } from '@/infrastructure/observability';
 import type {
   AcquireIdempotencyResult,
   IdempotencyRecord,
@@ -45,6 +46,7 @@ export class RedisIdempotencyStore implements IdempotencyStore {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
     private readonly configService: ConfigService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async acquire(
@@ -191,6 +193,7 @@ export class RedisIdempotencyStore implements IdempotencyStore {
     error: unknown,
     ownerToken: string,
   ): AcquireIdempotencyResult {
+    this.metrics.recordRedisError('idempotency');
     if (this.failureMode() === 'open') {
       this.logger.warn({
         message: 'Idempotency store unavailable; request allowed by open mode',
@@ -207,6 +210,7 @@ export class RedisIdempotencyStore implements IdempotencyStore {
     operation: string,
     error: unknown,
   ): void {
+    this.metrics.recordRedisError('idempotency');
     if (this.failureMode() === 'open') {
       this.logger.warn({
         message: 'Idempotency store mutation failed in open mode',

@@ -1,5 +1,18 @@
-import 'dotenv/config';
+import { loadEnvironmentFiles } from './bootstrap/environment-loader';
+import { writeEntrypointFailure } from './bootstrap/entrypoint-logger';
 
-import { runWorker } from './bootstrap/worker.bootstrap';
+loadEnvironmentFiles();
+process.env.OTEL_SERVICE_NAME ??= 'quan-ly-truyen-worker';
 
-void runWorker();
+async function main(): Promise<void> {
+  const { startTelemetry } =
+    await import('./infrastructure/observability/instrumentation');
+  await startTelemetry();
+  const { runWorker } = await import('./bootstrap/worker.bootstrap');
+  await runWorker();
+}
+
+void main().catch((error: unknown) => {
+  writeEntrypointFailure('worker.entrypoint.failed', error);
+  process.exitCode = 1;
+});

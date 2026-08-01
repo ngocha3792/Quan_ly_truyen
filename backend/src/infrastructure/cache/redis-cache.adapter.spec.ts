@@ -1,11 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { ConfigService } from '@nestjs/config';
 
 import { RedisCacheAdapter } from './redis-cache.adapter';
 
 describe('RedisCacheAdapter', () => {
   let adapter: RedisCacheAdapter;
-  let mockRedisClient: any;
+  let mockRedisClient: {
+    get: jest.Mock;
+    set: jest.Mock;
+    del: jest.Mock;
+  };
+  const metrics = {
+    recordCache: jest.fn(),
+    recordRedisError: jest.fn(),
+  };
 
   beforeEach(() => {
     mockRedisClient = {
@@ -18,13 +25,21 @@ describe('RedisCacheAdapter', () => {
       get: jest.fn().mockReturnValue({ cacheDefaultTtlSeconds: 300 }),
     } as unknown as ConfigService;
 
-    adapter = new RedisCacheAdapter(mockRedisClient, mockConfigService);
+    adapter = new RedisCacheAdapter(
+      mockRedisClient as never,
+      mockConfigService,
+      metrics as never,
+    );
   });
 
   it('returns null if redisClient is null', async () => {
-    const noRedisAdapter = new RedisCacheAdapter(null, {
-      get: () => ({ cacheDefaultTtlSeconds: 300 }),
-    } as any);
+    const noRedisAdapter = new RedisCacheAdapter(
+      null,
+      {
+        get: () => ({ cacheDefaultTtlSeconds: 300 }),
+      } as unknown as ConfigService,
+      metrics as never,
+    );
 
     expect(await noRedisAdapter.get('key')).toBeNull();
   });

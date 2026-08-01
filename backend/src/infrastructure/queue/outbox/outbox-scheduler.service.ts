@@ -3,6 +3,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 
+import { sanitizeErrorForLog } from '@/common/utils';
 import type { QueueConfig } from '@/config';
 
 import type { DispatchOutboxBatchJobV1 } from '../contracts';
@@ -34,7 +35,7 @@ export class OutboxSchedulerService implements OnModuleInit {
     } catch (error: unknown) {
       this.logger.error(
         'Failed to register required outbox scheduler',
-        error instanceof Error ? error.stack : String(error),
+        sanitizeErrorForLog(error),
       );
       throw error;
     }

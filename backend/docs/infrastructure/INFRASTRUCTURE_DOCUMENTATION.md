@@ -6,6 +6,12 @@
 
 ## Production reliability contract (2026-08)
 
+- API and worker entrypoints load `.env.<NODE_ENV>.local`,
+  `.env.<NODE_ENV>`, `.env.local`, then `.env` before dynamically importing
+  their Nest module graph. Existing runtime variables are never overridden.
+  Production does not read env files; the deployment platform must inject all
+  configuration and secrets.
+
 - Outbox delivery is **at-least-once**. Claims use PostgreSQL
   `FOR UPDATE SKIP LOCKED`; `PROCESSING` rows older than
   `OUTBOX_PROCESSING_TIMEOUT_MS` are recovered before the next batch. Every
@@ -45,14 +51,37 @@
   writers that need stronger guarantees must use fencing tokens checked by
   the destination datastore.
 - Mail disabled mode returns `skipped` without rendering or calling SMTP.
-  SMTP/outbox delivery must not be described as exactly-once because a crash
-  can occur after SMTP acceptance and before job completion is recorded.
+  SMTP/outbox delivery is **at-least-once** because a crash can occur after
+  SMTP acceptance and before job completion is recorded. Retries for the same
+  outbox event use the deterministic Message-ID
+  `<outbox-<outboxEventId>@MAIL_MESSAGE_ID_DOMAIN>` to help mail clients group
+  duplicates, but SMTP servers are not required to deduplicate it. Templates
+  and recipient actions must therefore tolerate repeated delivery.
+- `POST /api/v1/auth/register` is the first transactional producer: user,
+  email-verification record and `mail.send.v1` outbox row commit or roll back
+  together. The HTTP process writes only the outbox row; SMTP and BullMQ are
+  never called inside the request transaction. A unique business
+  `idempotency_key` prevents duplicate outbox rows during transaction retry.
 
 Operational diagnostics are available at `GET /health/diagnostics` and require
 the `audit-log.read` permission. Responses contain only normalized status and
 outbox counts; provider URLs, credentials and raw provider errors are omitted.
 Public readiness indicators also replace database and Redis exceptions with
-fixed messages while retaining internal error logs.
+fixed messages. Internal connection errors are sanitized before logging.
+
+## Operations quick reference
+
+- Run API and worker as separate processes. Supported worker roles are
+  `all`, `queue`, and `cloudinary-webhook`; the queue role requires both Redis
+  and queue features, while the Cloudinary role can run independently.
+- Inspect `outbox_events` rows in `pending`, `failed`, or stale `processing`
+  states and BullMQ failed jobs when investigating backlog/dead letters. Never
+  replay a row by clearing ownership fields while an active worker may own it.
+- Run maintenance scripts through the dedicated command modules documented in
+  `package.json`; they do not bootstrap all worker responsibilities.
+- Deploy Prisma migrations with `npm run db:migrate:deploy` before rolling out
+  API or worker code, then run `npm run db:verify:constraints` against the
+  target environment.
 
 ---
 

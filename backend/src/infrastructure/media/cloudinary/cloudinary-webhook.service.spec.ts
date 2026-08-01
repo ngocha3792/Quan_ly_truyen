@@ -13,6 +13,7 @@ describe('CloudinaryWebhookService', () => {
       cloudinary: { enabled: true, webhookSignatureTtlSeconds: 300 },
     }),
     prisma as never,
+    { recordWebhook: jest.fn() } as never,
   );
 
   beforeEach(() => {

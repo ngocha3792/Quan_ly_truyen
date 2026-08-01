@@ -13,17 +13,8 @@ import idempotencyConfig from './idempotency.config';
 import infrastructureFallbackConfig from './infrastructure-fallback.config';
 import queueConfig from './queue.config';
 import redisConfig from './redis.config';
-
-function resolveEnvFilePaths(): string[] {
-  const environment = process.env.NODE_ENV ?? 'development';
-
-  return [
-    `.env.${environment}.local`,
-    `.env.${environment}`,
-    '.env.local',
-    '.env',
-  ];
-}
+import { resolveEnvFilePaths } from './environment-files';
+import observabilityConfig from './observability.config';
 
 @Module({
   imports: [
@@ -45,6 +36,7 @@ function resolveEnvFilePaths(): string[] {
         infrastructureFallbackConfig,
         redisConfig,
         queueConfig,
+        observabilityConfig,
       ],
       validate: validateEnvironment,
     }),

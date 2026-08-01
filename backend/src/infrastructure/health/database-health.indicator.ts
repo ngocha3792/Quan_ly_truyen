@@ -4,7 +4,9 @@ import {
   HealthIndicatorService,
 } from '@nestjs/terminus';
 
+import { sanitizeErrorForLog } from '@/common/utils';
 import { PrismaService } from '@/infrastructure/database';
+import { MetricsService } from '@/infrastructure/observability';
 
 @Injectable()
 export class DatabaseHealthIndicator {
@@ -13,6 +15,7 @@ export class DatabaseHealthIndicator {
   constructor(
     private readonly prisma: PrismaService,
     private readonly healthIndicator: HealthIndicatorService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async isHealthy(key = 'database'): Promise<HealthIndicatorResult> {
@@ -20,12 +23,14 @@ export class DatabaseHealthIndicator {
 
     try {
       await this.prisma.$queryRaw`SELECT 1`;
+      this.metrics.setDependencyHealth('database', 'up');
       return indicator.up();
     } catch (error: unknown) {
       this.logger.error(
         'Database health check failed',
-        error instanceof Error ? error.stack : String(error),
+        sanitizeErrorForLog(error),
       );
+      this.metrics.setDependencyHealth('database', 'down');
       return indicator.down({
         message: 'Database unavailable',
       });

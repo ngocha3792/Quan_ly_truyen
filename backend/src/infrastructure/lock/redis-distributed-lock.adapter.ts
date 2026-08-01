@@ -8,6 +8,11 @@ import {
   ServiceUnavailableException,
 } from '@/common/exceptions';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
+import {
+  MANUAL_SPANS,
+  MetricsService,
+  TracingService,
+} from '@/infrastructure/observability';
 import type {
   DistributedLock,
   LockOptions,
@@ -35,6 +40,8 @@ export class RedisDistributedLock implements DistributedLock {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
+    private readonly metrics: MetricsService,
+    private readonly tracing: TracingService,
   ) {}
 
   async withLock<T>(
@@ -42,8 +49,22 @@ export class RedisDistributedLock implements DistributedLock {
     options: LockOptions,
     work: () => Promise<T>,
   ): Promise<T> {
+    return this.tracing.inSpan(
+      MANUAL_SPANS.LOCK_ACQUIRE,
+      { 'lock.system': 'redis' },
+      () => this.withLockInternal(key, options, work),
+    );
+  }
+
+  private async withLockInternal<T>(
+    key: string,
+    options: LockOptions,
+    work: () => Promise<T>,
+  ): Promise<T> {
     this.validateOptions(options);
     if (!this.redisClient) {
+      this.metrics.recordLock('acquire', 'failed', 0);
+      this.metrics.recordRedisError('lock');
       throw new ServiceUnavailableException({
         code: 'DISTRIBUTED_LOCK_UNAVAILABLE',
         service: 'redis-lock',
@@ -69,6 +90,11 @@ export class RedisDistributedLock implements DistributedLock {
 
       if (result === 'OK') {
         acquired = true;
+        this.metrics.recordLock(
+          'acquire',
+          'success',
+          (Date.now() - startTime) / 1000,
+        );
         break;
       }
 
@@ -83,6 +109,11 @@ export class RedisDistributedLock implements DistributedLock {
     }
 
     if (!acquired) {
+      this.metrics.recordLock(
+        'acquire',
+        'conflict',
+        (Date.now() - startTime) / 1000,
+      );
       throw new ConcurrencyConflictException({
         resource: key,
         message: `Không thể khóa tài nguyên [${key}] do xung đột tiến trình`,
@@ -103,16 +134,21 @@ export class RedisDistributedLock implements DistributedLock {
           .then((extended) => {
             if (!extended) {
               leaseLost = true;
-              this.logger.warn(`Distributed lock lease lost [${lockKey}]`);
+              this.metrics.recordLock('extend', 'ownership_lost');
+              this.logger.warn({ event: 'distributed_lock.lease_lost' });
+            } else {
+              this.metrics.recordLock('extend', 'success');
             }
           })
           .catch((error: unknown) => {
             leaseLost = true;
-            this.logger.warn(
-              `Distributed lock extension failed [${lockKey}]: ${
-                error instanceof Error ? error.message : 'unknown error'
-              }`,
-            );
+            this.metrics.recordLock('extend', 'failed');
+            this.metrics.recordRedisError('lock');
+            this.logger.warn({
+              event: 'distributed_lock.extend.failed',
+              'error.type':
+                error instanceof Error ? error.name : 'UnknownError',
+            });
           })
           .finally(() => {
             heartbeatPromise = undefined;
@@ -187,11 +223,23 @@ export class RedisDistributedLock implements DistributedLock {
     }
 
     try {
-      await this.redisClient.eval(RELEASE_LUA_SCRIPT, 1, lockKey, ownerToken);
+      const released = await this.redisClient.eval(
+        RELEASE_LUA_SCRIPT,
+        1,
+        lockKey,
+        ownerToken,
+      );
+      this.metrics.recordLock(
+        'release',
+        Number(released) === 1 ? 'success' : 'ownership_lost',
+      );
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown lock release error';
-      this.logger.warn(`Failed to release lock [${lockKey}]: ${message}`);
+      this.metrics.recordLock('release', 'failed');
+      this.metrics.recordRedisError('lock');
+      this.logger.warn({
+        event: 'distributed_lock.release.failed',
+        'error.type': error instanceof Error ? error.name : 'UnknownError',
+      });
     }
   }
 }

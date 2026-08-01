@@ -13,7 +13,11 @@ describe('RedisDistributedLock', () => {
       eval: jest.fn(),
     };
 
-    lock = new RedisDistributedLock(mockRedisClient);
+    lock = new RedisDistributedLock(
+      mockRedisClient,
+      metrics() as never,
+      tracing() as never,
+    );
   });
 
   it('acquires lock, executes work and releases lock via lua script', async () => {
@@ -117,7 +121,11 @@ describe('RedisDistributedLock', () => {
   });
 
   it('fails closed when Redis is unavailable', async () => {
-    const noRedisLock = new RedisDistributedLock(null);
+    const noRedisLock = new RedisDistributedLock(
+      null,
+      metrics() as never,
+      tracing() as never,
+    );
     const work = jest.fn();
     await expect(
       noRedisLock.withLock('story:closed', { ttlMs: 5000 }, work),
@@ -125,3 +133,15 @@ describe('RedisDistributedLock', () => {
     expect(work).not.toHaveBeenCalled();
   });
 });
+
+function metrics() {
+  return { recordLock: jest.fn(), recordRedisError: jest.fn() };
+}
+
+function tracing() {
+  return {
+    inSpan: jest.fn((_name: string, _attributes: object, work: () => unknown) =>
+      work(),
+    ),
+  };
+}

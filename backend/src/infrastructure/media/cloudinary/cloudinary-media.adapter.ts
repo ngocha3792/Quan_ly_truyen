@@ -5,6 +5,7 @@ import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
 import { timingSafeStringEqual } from '@/common/utils/timing-safe-string-equal.util';
 import { InvalidInputException, StorageException } from '@/common/exceptions';
 import { MEDIA_ERROR_CODES } from '../media-error-codes';
+import { MetricsService } from '@/infrastructure/observability';
 
 import type {
   BuildMediaUrlInput,
@@ -31,6 +32,7 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     private readonly configService: ConfigService,
     private readonly signatureService: CloudinarySignatureService,
     private readonly urlService: CloudinaryUrlService,
+    private readonly metrics: MetricsService,
   ) {}
 
   createSignedUpload(input: CreateSignedUploadInput): SignedUploadParameters {
@@ -78,42 +80,48 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
       overwrite: false,
     };
 
-    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = client.uploader.upload_stream(
-        options,
-        (error, uploadResult) => {
-          if (error) {
-            reject(
-              new StorageException({
-                provider: 'cloudinary',
-                operation: 'upload',
-                cause: error,
-                retryable: true,
-              }),
-            );
-            return;
-          }
+    try {
+      const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+        const stream = client.uploader.upload_stream(
+          options,
+          (error, uploadResult) => {
+            if (error) {
+              reject(
+                new StorageException({
+                  provider: 'cloudinary',
+                  operation: 'upload',
+                  cause: error,
+                  retryable: true,
+                }),
+              );
+              return;
+            }
 
-          if (!uploadResult) {
-            reject(
-              new StorageException({
-                provider: 'cloudinary',
-                operation: 'upload',
-                message: 'Cloudinary không trả kết quả upload',
-                retryable: true,
-              }),
-            );
-            return;
-          }
+            if (!uploadResult) {
+              reject(
+                new StorageException({
+                  provider: 'cloudinary',
+                  operation: 'upload',
+                  message: 'Cloudinary không trả kết quả upload',
+                  retryable: true,
+                }),
+              );
+              return;
+            }
 
-          resolve(uploadResult);
-        },
-      );
+            resolve(uploadResult);
+          },
+        );
 
-      stream.end(input.buffer);
-    });
+        stream.end(input.buffer);
+      });
 
-    return mapCloudinaryAsset(result);
+      this.metrics.recordMediaUpload(input.resourceType, 'success');
+      return mapCloudinaryAsset(result);
+    } catch (error: unknown) {
+      this.metrics.recordMediaUpload(input.resourceType, 'failed');
+      throw error;
+    }
   }
 
   async delete(

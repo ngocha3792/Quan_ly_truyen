@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+import { Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { lastValueFrom, of } from 'rxjs';
+import { lastValueFrom, of, throwError } from 'rxjs';
 
 import {
   IdempotencyConflictException,
@@ -61,7 +62,18 @@ describe('IdempotencyInterceptor', () => {
   });
 
   function interceptor(): IdempotencyInterceptor {
-    return new IdempotencyInterceptor(reflector, store);
+    return new IdempotencyInterceptor(
+      reflector,
+      store,
+      {
+        recordIdempotency: jest.fn(),
+      } as never,
+      {
+        inSpan: jest.fn(
+          (_name: string, _attributes: object, work: () => unknown) => work(),
+        ),
+      } as never,
+    );
   }
 
   async function execute(body: unknown = { ok: true }): Promise<unknown> {
@@ -169,5 +181,62 @@ describe('IdempotencyInterceptor', () => {
       ServiceUnavailableException,
     );
     expect(next.handle).not.toHaveBeenCalled();
+  });
+
+  it('saves a successful business result without releasing the lease', async () => {
+    await expect(execute({ created: true })).resolves.toEqual({
+      created: true,
+    });
+    expect(store.saveResult).toHaveBeenCalledTimes(1);
+    expect(store.markFailed).not.toHaveBeenCalled();
+  });
+
+  it('releases the owned lease only when the business handler fails', async () => {
+    const businessError = new Error('business failed');
+    const observable = await interceptor().intercept(context, {
+      handle: jest.fn().mockReturnValue(throwError(() => businessError)),
+    });
+
+    await expect(lastValueFrom(observable)).rejects.toBe(businessError);
+    const storageKey = store.acquire.mock.calls[0][0] as string;
+    expect(store.markFailed).toHaveBeenCalledWith(storageKey, 'owner-a');
+    expect(store.saveResult).not.toHaveBeenCalled();
+  });
+
+  it('keeps the lease when result persistence fails after business success', async () => {
+    const persistenceError = new Error('redis unavailable');
+    store.saveResult.mockRejectedValue(persistenceError);
+
+    await expect(execute({ committed: true })).rejects.toBe(persistenceError);
+    expect(store.markFailed).not.toHaveBeenCalled();
+  });
+
+  it('preserves the business error when failed-lease cleanup also fails', async () => {
+    const businessError = new Error('business failed');
+    store.markFailed.mockRejectedValue(new Error('redis unavailable'));
+    const warning = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const observable = await interceptor().intercept(context, {
+      handle: jest.fn().mockReturnValue(throwError(() => businessError)),
+    });
+
+    await expect(lastValueFrom(observable)).rejects.toBe(businessError);
+    expect(store.saveResult).not.toHaveBeenCalled();
+    expect(warning).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'idempotency-business-failure-cleanup-failed',
+      }),
+    );
+    warning.mockRestore();
+  });
+
+  it('does not release a newer owner when saveResult reports lost ownership', async () => {
+    const ownershipError = new IdempotencyConflictException({
+      key: 'hashed-storage-key',
+      message: 'Idempotency processing lease is no longer owned',
+    });
+    store.saveResult.mockRejectedValue(ownershipError);
+
+    await expect(execute({ committed: true })).rejects.toBe(ownershipError);
+    expect(store.markFailed).not.toHaveBeenCalled();
   });
 });

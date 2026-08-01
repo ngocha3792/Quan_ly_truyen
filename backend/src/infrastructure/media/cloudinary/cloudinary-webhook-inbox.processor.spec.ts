@@ -17,6 +17,12 @@ describe('CloudinaryWebhookInboxProcessor', () => {
     new ConfigService({
       cloudinary: { webhookMaxAttempts: 3, webhookRetryBaseMs: 100 },
     }),
+    { recordWebhook: jest.fn() } as never,
+    {
+      inSpan: jest.fn(
+        (_name: string, _attributes: object, work: () => unknown) => work(),
+      ),
+    } as never,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -216,6 +222,56 @@ describe('CloudinaryWebhookInboxProcessor', () => {
         },
       }),
     );
+  });
+
+  it('uses the claim time of each event while preserving attempts CAS', async () => {
+    const firstClaimedAt = new Date('2026-08-02T01:00:00.000Z');
+    const secondClaimedAt = new Date('2026-08-02T01:00:30.000Z');
+    jest.useFakeTimers().setSystemTime(firstClaimedAt);
+    try {
+      prisma.inboundWebhookEvent.findMany.mockResolvedValue([
+        webhookEvent({ id: 'event-1', eventKey: 'key-1', attempts: 0 }),
+        webhookEvent({ id: 'event-2', eventKey: 'key-2', attempts: 2 }),
+      ]);
+      prisma.inboundWebhookEvent.updateMany.mockImplementation(
+        (args: {
+          where: { id?: string };
+          data: { processingStartedAt?: Date };
+        }) => {
+          if (
+            args.where.id === 'event-1' &&
+            args.data.processingStartedAt instanceof Date
+          ) {
+            jest.setSystemTime(secondClaimedAt);
+          }
+          return Promise.resolve({ count: 1 });
+        },
+      );
+      prisma.mediaAsset.updateMany.mockResolvedValue({ count: 1 });
+
+      await processor.processBatch();
+
+      const claimCalls = prisma.inboundWebhookEvent.updateMany.mock.calls
+        .map(
+          ([args]) =>
+            args as {
+              where: { id?: string; attempts?: number };
+              data: { processingStartedAt?: Date };
+            },
+        )
+        .filter(({ data }) => data.processingStartedAt instanceof Date);
+      expect(claimCalls).toHaveLength(2);
+      expect(claimCalls[0]).toMatchObject({
+        where: { id: 'event-1', attempts: 0 },
+        data: { processingStartedAt: firstClaimedAt },
+      });
+      expect(claimCalls[1]).toMatchObject({
+        where: { id: 'event-2', attempts: 2 },
+        data: { processingStartedAt: secondClaimedAt },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

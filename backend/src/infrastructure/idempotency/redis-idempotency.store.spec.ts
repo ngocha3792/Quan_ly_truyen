@@ -20,6 +20,7 @@ describe('RedisIdempotencyStore', () => {
     return new RedisIdempotencyStore(
       client as never,
       new ConfigService({ idempotency: { failureMode: mode } }),
+      { recordRedisError: jest.fn() } as never,
     );
   }
 

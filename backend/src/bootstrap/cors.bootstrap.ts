@@ -14,6 +14,7 @@ export function configureCors(app: INestApplication, config: CorsConfig): void {
       'accept-language',
       'x-request-id',
       'x-correlation-id',
+      'x-trace-id',
       'idempotency-key',
     ],
     exposedHeaders: [

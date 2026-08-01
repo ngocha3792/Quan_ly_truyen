@@ -13,4 +13,6 @@ export interface OutboxQueueEnvelope<TPayload> {
   payload: TPayload;
   outboxEventId: string;
   createdAt: string;
+  telemetry: QueueTelemetryMetadata;
 }
+import type { QueueTelemetryMetadata } from '@/common/interfaces/observability';

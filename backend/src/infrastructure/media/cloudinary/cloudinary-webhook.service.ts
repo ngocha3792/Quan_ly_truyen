@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@/generated/prisma/client';
 import { InvalidInputException, StorageException } from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database/prisma';
+import { MetricsService } from '@/infrastructure/observability';
 import { MEDIA_ERROR_CODES } from '../media-error-codes';
 import {
   CloudinaryWebhookSignatureException,
@@ -20,6 +21,7 @@ export class CloudinaryWebhookService {
     private readonly cloudinary: CloudinaryClient | null,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async handle(input: {
@@ -103,6 +105,7 @@ export class CloudinaryWebhookService {
           payload: payload as Prisma.InputJsonObject,
         },
       });
+      this.metrics.recordWebhook(eventType, 'success');
       this.logger.log({
         message: 'cloudinary webhook accepted',
         eventKey,
@@ -114,6 +117,7 @@ export class CloudinaryWebhookService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        this.metrics.recordWebhook(eventType, 'replay');
         this.logger.log({
           message: 'cloudinary webhook duplicate',
           eventKey,
@@ -121,6 +125,7 @@ export class CloudinaryWebhookService {
         });
         return { duplicate: true, eventKey };
       }
+      this.metrics.recordWebhook(eventType, 'failed');
       throw new StorageException({
         provider: 'postgresql',
         operation: 'persist-webhook-inbox',

@@ -10,6 +10,10 @@ import type { Observable } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';
 
 import { SKIP_REQUEST_LOGGING_KEY } from '@/common/constants';
+import {
+  resolveHttpRouteTemplate,
+  shouldSkipHttpObservability,
+} from '@/infrastructure/observability/metrics';
 import type { HttpRequestWithContext } from './request-context.interface';
 
 interface HttpResponseLike {
@@ -43,17 +47,15 @@ export class LoggingInterceptor implements NestInterceptor {
     const request = httpContext.getRequest<HttpRequestWithContext>();
     const response = httpContext.getResponse<HttpResponseLike>();
 
+    if (shouldSkipHttpObservability(request)) {
+      return next.handle();
+    }
+
     const ctx = request.requestContext;
     const method =
       ctx?.method ??
       (typeof request.method === 'string' ? request.method : 'UNKNOWN');
-    const path =
-      ctx?.path ??
-      (typeof request.originalUrl === 'string'
-        ? request.originalUrl
-        : typeof request.url === 'string'
-          ? request.url
-          : '/');
+    const route = resolveHttpRouteTemplate(request);
     const requestId =
       ctx?.requestId ??
       (typeof request.requestId === 'string' ? request.requestId : 'N/A');
@@ -80,18 +82,18 @@ export class LoggingInterceptor implements NestInterceptor {
         const controller = executionContext.getClass().name;
         const handler = executionContext.getHandler().name;
 
-        const message = [
-          `${method} ${path}`,
-          `status=${statusCode}`,
-          `durationMs=${durationMs.toFixed(2)}`,
-          `requestId=${requestId}`,
-          `handler=${controller}.${handler}`,
-          userId ? `userId=${userId}` : undefined,
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        this.logger.log(message);
+        this.logger.log({
+          event: 'http.request.completed',
+          'http.method': method,
+          'http.route': route,
+          'http.status_code': statusCode,
+          duration_ms: Number(durationMs.toFixed(2)),
+          requestId,
+          ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
+          controller,
+          handler,
+          ...(userId ? { userId } : {}),
+        });
       }),
     );
   }

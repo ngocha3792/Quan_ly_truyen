@@ -14,6 +14,7 @@ import { CloudinaryUrlService } from './cloudinary/cloudinary-url.service';
 import { CloudinaryWebhookController } from './cloudinary/cloudinary-webhook.controller';
 import { CloudinaryWebhookService } from './cloudinary/cloudinary-webhook.service';
 import { CloudinaryWebhookInboxProcessor } from './cloudinary/cloudinary-webhook-inbox.processor';
+import { CloudinaryWebhookMetricsObserver } from './cloudinary/cloudinary-webhook-metrics.observer';
 import { MEDIA_STORAGE } from './contracts/media-storage.port';
 import { ConfigService } from '@nestjs/config';
 import { MediaPublicIdService } from './policies/media-public-id.service';
@@ -28,6 +29,7 @@ import { MediaController } from './media.controller';
     CloudinaryUrlService,
     CloudinaryWebhookService,
     CloudinaryWebhookInboxProcessor,
+    CloudinaryWebhookMetricsObserver,
     CloudinaryMediaAdapter,
     DisabledMediaStorageAdapter,
     MediaPublicIdService,

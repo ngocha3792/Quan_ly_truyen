@@ -10,6 +10,7 @@ export * from './object.util';
 export * from './pagination.util';
 export * from './promise.util';
 export * from './redact.util';
+export * from './sanitize-error.util';
 export * from './slug.util';
 export * from './string.util';
 export * from './uuid.util';

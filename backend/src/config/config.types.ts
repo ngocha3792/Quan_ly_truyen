@@ -14,6 +14,28 @@ export interface AppConfig {
   supportedLocales: readonly string[];
 }
 
+export type AppLogLevel =
+  'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+
+export interface ObservabilityConfig {
+  enabled: boolean;
+  serviceName: string;
+  serviceVersion: string;
+  serviceInstanceId: string;
+  log: {
+    level: AppLogLevel;
+    pretty: boolean;
+    includeSource: boolean;
+  };
+  metrics: {
+    enabled: boolean;
+    path: '/internal/metrics';
+    bearerToken?: string;
+    collectDefaultMetrics: boolean;
+    snapshotIntervalMs: number;
+  };
+}
+
 export interface AuthConfig {
   accessTokenSecret: string;
   issuer: string;
@@ -77,6 +99,7 @@ export interface MailConfig {
   fromAddress: string;
   replyTo?: string;
   frontendPublicUrl: string;
+  messageIdDomain: string;
   smtp: {
     host: string;
     port: number;

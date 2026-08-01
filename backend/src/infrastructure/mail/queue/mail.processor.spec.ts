@@ -1,14 +1,26 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
 import { UnrecoverableError } from 'bullmq';
+import type { Job } from 'bullmq';
 
-import { SEND_MAIL_JOB } from '@/infrastructure/queue/contracts';
+import {
+  SEND_MAIL_JOB,
+  type OutboxQueueEnvelope,
+  type SendMailJobV1,
+} from '@/infrastructure/queue/contracts';
 
 import { MailDeliveryException } from '../exceptions';
 import { MailProcessor } from './mail.processor';
 
 describe('MailProcessor', () => {
   const dispatch = jest.fn();
-  const processor = new MailProcessor({ dispatch } as any);
+  const propagation = {
+    runWithQueueContext: jest.fn(
+      (_metadata: unknown, _fallback: unknown, work: () => unknown) => work(),
+    ),
+  };
+  const processor = new MailProcessor(
+    { dispatch } as never,
+    propagation as never,
+  );
   const job = {
     id: 'job-1',
     name: SEND_MAIL_JOB,
@@ -25,7 +37,7 @@ describe('MailProcessor', () => {
       outboxEventId: 'evt-1',
       createdAt: new Date().toISOString(),
     },
-  } as any;
+  } as unknown as Job<OutboxQueueEnvelope<SendMailJobV1>>;
 
   beforeEach(() => dispatch.mockReset());
 
@@ -56,16 +68,18 @@ describe('MailProcessor', () => {
       reason: 'mail-disabled',
     });
     expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('skipped because mail is disabled'),
+      expect.objectContaining({ result: 'skipped' }),
     );
     expect(logSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('accepted by SMTP'),
+      expect.objectContaining({ result: 'success' }),
     );
   });
 
   it('makes invalid jobs unrecoverable', async () => {
     await expect(
-      processor.process({ ...job, name: 'unknown' }),
+      processor.process({ ...job, name: 'unknown' } as unknown as Job<
+        OutboxQueueEnvelope<SendMailJobV1>
+      >),
     ).rejects.toBeInstanceOf(UnrecoverableError);
   });
 

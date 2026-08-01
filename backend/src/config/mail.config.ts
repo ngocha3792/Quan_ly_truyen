@@ -20,6 +20,7 @@ export default registerAs(MAIL_CONFIG_KEY, (): MailConfig => ({
   fromAddress: process.env.MAIL_FROM_ADDRESS ?? 'no-reply@example.com',
   replyTo: optional(process.env.MAIL_REPLY_TO),
   frontendPublicUrl: process.env.FRONTEND_PUBLIC_URL ?? 'http://localhost:4200',
+  messageIdDomain: process.env.MAIL_MESSAGE_ID_DOMAIN ?? 'localhost',
   smtp: {
     host: process.env.SMTP_HOST ?? 'localhost',
     port: Number(process.env.SMTP_PORT ?? 1025),

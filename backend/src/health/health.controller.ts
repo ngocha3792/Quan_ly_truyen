@@ -9,6 +9,7 @@ import {
   Public,
   RequirePermissions,
   SkipResponseEnvelope,
+  SkipRequestLogging,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import {
@@ -22,6 +23,7 @@ import {
 
 @Controller('health')
 @SkipResponseEnvelope()
+@SkipRequestLogging()
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

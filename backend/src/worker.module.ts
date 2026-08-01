@@ -6,6 +6,7 @@ import { MediaModule } from './infrastructure/media';
 import { QueueModule } from './infrastructure/queue';
 import { OutboxModule } from './infrastructure/queue/outbox';
 import { CloudinaryWebhookInboxWorker } from './infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker';
+import { ObservabilityModule } from './infrastructure/observability';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -15,6 +16,7 @@ const queueWorkersEnabled =
 @Module({
   imports: [
     AppConfigModule,
+    ObservabilityModule,
     MediaModule,
     ...(queueWorkersEnabled
       ? [QueueModule.register(), OutboxModule, MailModule]

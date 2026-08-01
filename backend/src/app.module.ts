@@ -23,10 +23,12 @@ import type { AppConfig, MaintenanceConfig } from './config';
 import { HealthModule } from './health';
 import { InfrastructureModule } from './infrastructure';
 import { AuthModule } from './modules/auth/auth.module';
+import { ObservabilityModule } from './infrastructure/observability';
 
 @Module({
   imports: [
     AppConfigModule,
+    ObservabilityModule,
     AuthModule,
     CommonGuardsModule,
     InfrastructureModule,

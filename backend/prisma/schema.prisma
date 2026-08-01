@@ -982,10 +982,12 @@ model AuditLog {
 
 model OutboxEvent {
   id                  String       @id @default(uuid()) @db.Uuid
+  idempotencyKey      String?      @unique @map("idempotency_key") @db.VarChar(200)
   aggregateType       String       @map("aggregate_type") @db.VarChar(100)
   aggregateId         String       @map("aggregate_id") @db.VarChar(100)
   eventType           String       @map("event_type") @db.VarChar(150)
   payload             Json
+  metadata            Json?
   status              OutboxStatus @default(PENDING)
   attempts            Int          @default(0)
   availableAt         DateTime     @default(now()) @map("available_at") @db.Timestamptz(3)

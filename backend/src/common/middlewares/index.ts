@@ -8,4 +8,5 @@ export * from './maintenance-mode.middleware';
 export * from './middleware-request.util';
 export * from './request-context.interface';
 export * from './request-context.middleware';
+export * from './request-context.module';
 export * from './request-context.store';

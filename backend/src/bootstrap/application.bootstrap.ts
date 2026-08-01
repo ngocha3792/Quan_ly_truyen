@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '@/app.module';
 import type { AppConfig, CorsConfig } from '@/config';
+import { AppLoggerService } from '@/infrastructure/observability';
 
 import { configureApplication } from './application-configurator';
 import { configureCors } from './cors.bootstrap';
@@ -18,6 +19,9 @@ export async function bootstrapApplication(): Promise<void> {
     rawBody: true,
   });
 
+  app.useLogger(app.get(AppLoggerService));
+  app.flushLogs();
+
   const configService = app.get(ConfigService);
   const appConfig = configService.getOrThrow<AppConfig>('app');
   const corsConfig = configService.getOrThrow<CorsConfig>('cors');
@@ -31,19 +35,13 @@ export async function bootstrapApplication(): Promise<void> {
 
   const applicationUrl = await app.getUrl();
 
-  bootstrapLogger.log(`Application started at ${applicationUrl}`);
-  bootstrapLogger.log(`Environment: ${appConfig.environment}`);
+  bootstrapLogger.log({
+    event: 'application.started',
+    address: applicationUrl,
+    environment: appConfig.environment,
+  });
 }
 
 export async function runApplication(): Promise<void> {
-  try {
-    await bootstrapApplication();
-  } catch (error: unknown) {
-    bootstrapLogger.error(
-      'Application bootstrap failed',
-      error instanceof Error ? error.stack : String(error),
-    );
-
-    process.exitCode = 1;
-  }
+  await bootstrapApplication();
 }

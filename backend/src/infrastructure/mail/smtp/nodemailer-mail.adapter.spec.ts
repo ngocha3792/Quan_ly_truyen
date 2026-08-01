@@ -32,11 +32,15 @@ describe('NodemailerMailAdapter', () => {
         subject: 'Subject',
         text: 'Text',
         html: '<p>Text</p>',
+        messageId: '<outbox-event-1@mail.example.com>',
         correlationId: 'c1',
       }),
     ).resolves.toEqual(expect.objectContaining({ messageId: 'm1' }));
     expect(transporter.sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({ headers: { 'X-Correlation-Id': 'c1' } }),
+      expect.objectContaining({
+        messageId: '<outbox-event-1@mail.example.com>',
+        headers: { 'X-Correlation-Id': 'c1' },
+      }),
     );
   });
 

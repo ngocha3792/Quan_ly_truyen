@@ -7,19 +7,19 @@ import { JsonContentTypeMiddleware } from './json-content-type.middleware';
 import { LocaleMiddleware } from './locale.middleware';
 import { MaintenanceModeMiddleware } from './maintenance-mode.middleware';
 import { RequestContextMiddleware } from './request-context.middleware';
-import { RequestContextStore } from './request-context.store';
+import { RequestContextModule } from './request-context.module';
 
 @Module({})
 export class CommonMiddlewaresModule {
   static register(options: CommonMiddlewaresOptions = {}): DynamicModule {
     return {
       module: CommonMiddlewaresModule,
+      imports: [RequestContextModule],
       providers: [
         {
           provide: COMMON_MIDDLEWARE_OPTIONS,
           useValue: options,
         },
-        RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,
         MaintenanceModeMiddleware,
@@ -27,7 +27,6 @@ export class CommonMiddlewaresModule {
       ],
       exports: [
         COMMON_MIDDLEWARE_OPTIONS,
-        RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,
         MaintenanceModeMiddleware,
@@ -45,11 +44,10 @@ export class CommonMiddlewaresModule {
 
     return {
       module: CommonMiddlewaresModule,
-      imports: options.imports ?? [],
+      imports: [RequestContextModule, ...(options.imports ?? [])],
       providers: [
         optionsProvider,
         ...(options.extraProviders ?? []),
-        RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,
         MaintenanceModeMiddleware,
@@ -57,7 +55,6 @@ export class CommonMiddlewaresModule {
       ],
       exports: [
         COMMON_MIDDLEWARE_OPTIONS,
-        RequestContextStore,
         RequestContextMiddleware,
         LocaleMiddleware,
         MaintenanceModeMiddleware,

@@ -98,6 +98,44 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   SUPPORTED_LOCALES = 'vi-VN,en-US';
 
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  OBSERVABILITY_ENABLED = true;
+
+  @IsEnum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+  LOG_LEVEL:
+    'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent' = 'info';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  LOG_PRETTY = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  LOG_INCLUDE_SOURCE = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  METRICS_ENABLED = true;
+
+  @IsString()
+  @IsNotEmpty()
+  METRICS_PATH = '/internal/metrics';
+
+  @IsOptional()
+  @IsString()
+  METRICS_BEARER_TOKEN?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  METRICS_DEFAULT_ENABLED = true;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(5000)
+  @Max(60_000)
+  METRICS_SNAPSHOT_INTERVAL_MS = 10_000;
+
   @IsString()
   @IsNotEmpty()
   CORS_ALLOWED_ORIGINS = 'http://localhost:4200';
@@ -348,6 +386,10 @@ export class EnvironmentVariables {
   @IsUrl({ require_tld: false })
   FRONTEND_PUBLIC_URL = 'http://localhost:4200';
 
+  @IsOptional()
+  @IsString()
+  MAIL_MESSAGE_ID_DOMAIN?: string;
+
   @IsString()
   SMTP_HOST = 'localhost';
 
@@ -480,6 +522,10 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     );
   }
 
+  if (config.METRICS_PATH !== '/internal/metrics') {
+    throw new Error('METRICS_PATH must be exactly /internal/metrics');
+  }
+
   let redisUrl: URL;
   try {
     redisUrl = new URL(config.REDIS_URL);
@@ -506,6 +552,17 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   ) {
     throw new Error(
       'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK must be false in production',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    config.METRICS_ENABLED &&
+    (!config.METRICS_BEARER_TOKEN ||
+      config.METRICS_BEARER_TOKEN.trim().length < 32)
+  ) {
+    throw new Error(
+      'METRICS_BEARER_TOKEN must contain at least 32 characters when metrics are enabled in production',
     );
   }
 
@@ -544,6 +601,15 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
 function validateMailRules(config: EnvironmentVariables): void {
   if (!config.MAIL_ENABLED) return;
 
+  if (
+    !config.MAIL_MESSAGE_ID_DOMAIN ||
+    !isValidMessageIdDomain(config.MAIL_MESSAGE_ID_DOMAIN)
+  ) {
+    throw new Error(
+      'MAIL_MESSAGE_ID_DOMAIN must be a valid DNS domain when MAIL_ENABLED=true',
+    );
+  }
+
   if (!config.SMTP_HOST.trim()) {
     throw new Error('SMTP_HOST is required when MAIL_ENABLED=true');
   }
@@ -565,6 +631,12 @@ function validateMailRules(config: EnvironmentVariables): void {
       'DKIM domain, selector and private key are required when MAIL_DKIM_ENABLED=true',
     );
   }
+}
+
+function isValidMessageIdDomain(value: string): boolean {
+  return /^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(
+    value,
+  );
 }
 
 export function parseCsv(value: string): string[] {

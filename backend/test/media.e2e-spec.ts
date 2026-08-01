@@ -395,7 +395,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       declaredMimeType: 'image/webp',
     });
     const eventKey = `e2e-${runId}-upload`;
-    await request(httpServer())
+    const webhookResponse = await request(httpServer())
       .post('/api/v1/webhooks/cloudinary')
       .set('x-cld-timestamp', String(Math.floor(Date.now() / 1000)))
       .set('x-cld-signature', 'valid')
@@ -404,8 +404,12 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
         notification_type: 'upload',
         public_id: intent.parameters.public_id,
         resource_type: 'image',
-      })
-      .expect(200);
+      });
+    if (webhookResponse.status !== 200) {
+      throw new Error(
+        `Webhook request failed: ${webhookResponse.status} ${JSON.stringify(webhookResponse.body)}`,
+      );
+    }
     await expect(
       prisma.inboundWebhookEvent.findUnique({
         where: { provider_eventKey: { provider: 'cloudinary', eventKey } },

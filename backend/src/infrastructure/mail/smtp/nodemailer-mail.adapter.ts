@@ -25,6 +25,7 @@ export class NodemailerMailAdapter implements MailSenderPort {
   async send(message: MailMessage): Promise<MailSendResult> {
     try {
       const result = await this.transporter.sendMail({
+        messageId: message.messageId,
         to: message.to,
         subject: message.subject,
         text: message.text,

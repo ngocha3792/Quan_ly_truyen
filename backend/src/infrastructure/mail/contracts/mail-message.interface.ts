@@ -8,6 +8,7 @@ export interface MailMessage {
   subject: string;
   text: string;
   html: string;
+  messageId?: string;
   replyTo?: MailAddress;
   headers?: Record<string, string>;
   tags?: readonly string[];

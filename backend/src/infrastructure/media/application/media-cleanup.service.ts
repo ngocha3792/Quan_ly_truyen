@@ -14,6 +14,11 @@ import {
 import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import {
+  MANUAL_SPANS,
+  MetricsService,
+  TracingService,
+} from '@/infrastructure/observability';
+import {
   MEDIA_STORAGE,
   MediaStoragePort,
 } from '../contracts/media-storage.port';
@@ -36,6 +41,8 @@ export class MediaCleanupService {
     @Inject(MEDIA_STORAGE) private readonly mediaStorage: MediaStoragePort,
     private readonly ownership: MediaOwnershipAuthorizationService,
     private readonly configService: ConfigService,
+    private readonly metrics: MetricsService,
+    private readonly tracing: TracingService,
   ) {}
 
   async deleteById(mediaId: string, principal?: AuthPrincipal): Promise<void> {
@@ -73,6 +80,17 @@ export class MediaCleanupService {
   async cleanupExpiredUploadIntents(
     options: { batchSize?: number; olderThan?: Date } = {},
   ): Promise<CleanupSummary> {
+    return this.tracing.inSpan(
+      MANUAL_SPANS.MEDIA_CLEANUP,
+      { 'media.provider': 'cloudinary' },
+      () => this.cleanupExpiredUploadIntentsInternal(options),
+    );
+  }
+
+  private async cleanupExpiredUploadIntentsInternal(options: {
+    batchSize?: number;
+    olderThan?: Date;
+  }): Promise<CleanupSummary> {
     const batchSize = Math.min(Math.max(options.batchSize ?? 100, 1), 500);
     const olderThan = options.olderThan ?? new Date();
     const staleProcessingBefore = new Date(olderThan.getTime() - 5 * 60_000);
@@ -142,6 +160,12 @@ export class MediaCleanupService {
         summary.failed++;
       }
     }
+    for (let index = 0; index < summary.deleted; index++)
+      this.metrics.recordMediaCleanup('success');
+    for (let index = 0; index < summary.failed; index++)
+      this.metrics.recordMediaCleanup('failed');
+    for (let index = 0; index < summary.skipped; index++)
+      this.metrics.recordMediaCleanup('skipped');
     return summary;
   }
 

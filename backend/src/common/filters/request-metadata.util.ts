@@ -8,10 +8,17 @@ export interface HttpRequestLike {
   originalUrl?: unknown;
   headers?: unknown;
   user?: unknown;
+  correlationId?: unknown;
+  requestContext?: {
+    correlationId?: unknown;
+  };
+  baseUrl?: unknown;
+  route?: { path?: unknown };
 }
 
 export interface RequestMetadata {
   requestId: string;
+  correlationId?: string;
   method: string;
   path: string;
   userId?: string;
@@ -70,12 +77,22 @@ export function extractRequestMetadata(
     randomUUID();
 
   const userId = resolveUserId(request.user);
+  const correlationId =
+    nonEmptyString(request.requestContext?.correlationId) ??
+    nonEmptyString(request.correlationId) ??
+    readHeader(request.headers, 'x-correlation-id');
 
   return {
     requestId,
     method: nonEmptyString(request.method) ?? 'UNKNOWN',
-    path:
+    path: stripQuery(
       nonEmptyString(request.originalUrl) ?? nonEmptyString(request.url) ?? '/',
+    ),
+    ...(correlationId ? { correlationId } : {}),
     ...(userId ? { userId } : {}),
   };
+}
+
+function stripQuery(path: string): string {
+  return path.split('?', 1)[0] ?? '/';
 }
