@@ -1,7 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/bootstrap/application-configurator';
@@ -9,7 +8,7 @@ import type { AppConfig } from '../src/config';
 import { ConfigService } from '@nestjs/config';
 
 describe('Observability endpoint (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
   const token = 'e2e-metrics-bearer-token-at-least-32-characters';
 
   beforeAll(async () => {
@@ -20,7 +19,7 @@ describe('Observability endpoint (e2e)', () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    app = moduleFixture.createNestApplication<App>({ bufferLogs: true });
+    app = moduleFixture.createNestApplication({ bufferLogs: true });
     configureApplication(
       app,
       app.get(ConfigService).getOrThrow<AppConfig>('app'),

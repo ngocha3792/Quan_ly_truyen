@@ -4,6 +4,8 @@ process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL ??=
   'postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test';
 process.env.JWT_ACCESS_SECRET = 'e2e-access-secret-at-least-32-characters';
+process.env.JWT_REFRESH_SECRET =
+  'different-refresh-secret-at-least-32-characters';
 process.env.JWT_ISSUER = 'quan-ly-truyen-e2e';
 process.env.JWT_AUDIENCE = 'quan-ly-truyen-e2e-client';
 process.env.REDIS_ENABLED = 'false';

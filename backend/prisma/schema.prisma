@@ -306,21 +306,30 @@ model OAuthAccount {
 }
 
 model Session {
-  id               String    @id @default(uuid()) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(255)
-  deviceId         String?   @map("device_id") @db.VarChar(120)
-  deviceName       String?   @map("device_name") @db.VarChar(200)
-  ipAddress        String?   @map("ip_address") @db.VarChar(45)
-  userAgent        String?   @map("user_agent") @db.Text
-  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
-  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  refreshTokenHash     String    @unique @map("refresh_token_hash") @db.VarChar(255)
+  refreshTokenFamilyId String    @default(uuid()) @map("refresh_token_family_id") @db.Uuid
+  refreshTokenVersion  Int       @default(0) @map("refresh_token_version")
+  accessTokenVersion   Int       @default(0) @map("access_token_version")
+
+  deviceId             String?   @map("device_id") @db.VarChar(120)
+  deviceName           String?   @map("device_name") @db.VarChar(200)
+  ipAddress             String?   @map("ip_address") @db.VarChar(45)
+  userAgent             String?   @map("user_agent") @db.Text
+
+  lastUsedAt            DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt             DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt             DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason         String?   @map("revoked_reason") @db.VarChar(120)
+
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
+  @@index([refreshTokenFamilyId])
   @@index([expiresAt])
   @@map("sessions")
 }

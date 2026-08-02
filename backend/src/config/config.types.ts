@@ -36,10 +36,45 @@ export interface ObservabilityConfig {
   };
 }
 
+export type AuthCookieSameSite = 'strict' | 'lax' | 'none';
+
+export type JwtBlacklistFailureMode = 'closed' | 'open';
+
 export interface AuthConfig {
   accessTokenSecret: string;
+  refreshTokenSecret: string;
+
+  accessTokenTtlSeconds: number;
+  refreshTokenTtlSeconds: number;
+
   issuer: string;
   audience: string;
+
+  refreshCookie: {
+    name: string;
+    secure: boolean;
+    sameSite: AuthCookieSameSite;
+    domain?: string;
+    path: string;
+  };
+
+  loginRateLimit: {
+    enabled: boolean;
+    windowSeconds: number;
+    ipLimit: number;
+    identifierLimit: number;
+  };
+
+  jwtBlacklist: {
+    enabled: boolean;
+    failureMode: JwtBlacklistFailureMode;
+  };
+  emailVerification: {
+    resendCooldownSeconds: number;
+  };
+  passwordReset: {
+    requestCooldownSeconds: number;
+  };
 }
 
 export interface DatabaseConfig {

@@ -27,6 +27,8 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       'postgresql://postgres:postgres@localhost:5432/bootstrap_test';
     process.env.JWT_ACCESS_SECRET =
       'bootstrap-access-secret-at-least-32-characters';
+    process.env.JWT_REFRESH_SECRET =
+      'different-refresh-secret-at-least-32-characters';
     process.env.CLOUDINARY_ENABLED = 'false';
     process.env.REDIS_ENABLED = 'false';
     process.env.QUEUE_ENABLED = 'false';

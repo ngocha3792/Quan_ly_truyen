@@ -5,24 +5,24 @@ import helmet from 'helmet';
 import type { AppConfig } from '@/config';
 
 export function configureSecurityHeaders(
-    app: INestApplication,
-    config: AppConfig,
+  app: INestApplication,
+  config: AppConfig,
 ): void {
-    const expressApp = app as NestExpressApplication;
+  const expressApp = app as NestExpressApplication;
 
-    expressApp.disable('x-powered-by');
+  expressApp.disable('x-powered-by');
 
-    expressApp.use(
-        config.swaggerEnabled
-            ? helmet({
-                // Swagger UI sử dụng inline script/style.
-                contentSecurityPolicy: false,
+  expressApp.use(
+    config.swaggerEnabled
+      ? helmet({
+          // Swagger UI sử dụng inline script/style.
+          contentSecurityPolicy: false,
 
-                // API trả JSON/media URL, không cần bật COEP toàn cục.
-                crossOriginEmbedderPolicy: false,
-            })
-            : helmet({
-                crossOriginEmbedderPolicy: false,
-            }),
-    );
+          // API trả JSON/media URL, không cần bật COEP toàn cục.
+          crossOriginEmbedderPolicy: false,
+        })
+      : helmet({
+          crossOriginEmbedderPolicy: false,
+        }),
+  );
 }

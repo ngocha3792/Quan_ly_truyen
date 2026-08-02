@@ -7,6 +7,8 @@ describe('maintenance worker isolation', () => {
       'postgresql://postgres:postgres@localhost:5432/worker_isolation_test';
     process.env.JWT_ACCESS_SECRET =
       'worker-isolation-test-secret-at-least-32-characters';
+    process.env.JWT_REFRESH_SECRET =
+      'different-refresh-secret-at-least-32-characters';
     process.env.CLOUDINARY_ENABLED = 'false';
     process.env.MAIL_ENABLED = 'false';
     process.env.REDIS_ENABLED = 'false';

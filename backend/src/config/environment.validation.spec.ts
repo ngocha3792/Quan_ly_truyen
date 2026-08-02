@@ -5,7 +5,11 @@ describe('validateEnvironment', () => {
     NODE_ENV: 'test',
     DATABASE_URL:
       'postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test',
+
     JWT_ACCESS_SECRET: 'test-access-secret-at-least-32-characters',
+
+    JWT_REFRESH_SECRET: 'test-refresh-secret-that-is-different-and-long-enough',
+
     MAIL_MESSAGE_ID_DOMAIN: 'mail.example.test',
   };
 
@@ -36,6 +40,7 @@ describe('validateEnvironment', () => {
       ...validBase,
       NODE_ENV: 'production',
       REDIS_ENABLED: 'true',
+      QUEUE_ENABLED: 'true',
       SWAGGER_ENABLED: 'false',
     };
 
@@ -186,10 +191,23 @@ describe('validateEnvironment', () => {
     ).toThrow('OUTBOX_PROCESSING_TIMEOUT_MS');
   });
 
+  it('requires queues in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        NODE_ENV: 'production',
+        REDIS_ENABLED: 'true',
+        QUEUE_ENABLED: 'false',
+        SWAGGER_ENABLED: 'false',
+        METRICS_ENABLED: 'false',
+      }),
+    ).toThrow('QUEUE_ENABLED must be true in production');
+  });
   it('forbids disabled Redis and in-memory fallback in production', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+      QUEUE_ENABLED: 'true',
       SWAGGER_ENABLED: 'false',
     };
     expect(() =>

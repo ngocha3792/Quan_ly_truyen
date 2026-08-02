@@ -20,9 +20,9 @@ import {
 } from './common/middlewares';
 import { AppConfigModule } from './config';
 import type { AppConfig, MaintenanceConfig } from './config';
-import { HealthModule } from './health';
+import { HealthModule } from '@/infrastructure/health';
 import { InfrastructureModule } from './infrastructure';
-import { AuthModule } from './modules/auth/auth.module';
+import { AuthModule } from './modules/auth';
 import { ObservabilityModule } from './infrastructure/observability';
 
 @Module({

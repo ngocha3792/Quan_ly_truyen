@@ -16,9 +16,7 @@ export default registerAs(QUEUE_CONFIG_KEY, (): QueueConfig => ({
     process.env.OUTBOX_PROCESSING_TIMEOUT_MS ?? 60_000,
   ),
   outboxBatchSize: Number(process.env.OUTBOX_BATCH_SIZE ?? 50),
-  outboxPollIntervalMs: Number(
-    process.env.OUTBOX_POLL_INTERVAL_MS ?? 10_000,
-  ),
+  outboxPollIntervalMs: Number(process.env.OUTBOX_POLL_INTERVAL_MS ?? 10_000),
   outboxFailedAlertThreshold: Number(
     process.env.OUTBOX_FAILED_ALERT_THRESHOLD ?? 5,
   ),

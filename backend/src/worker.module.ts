@@ -31,4 +31,4 @@ const queueWorkersEnabled =
     ...(queueWorkersEnabled ? [QueueWorkerHeartbeatService] : []),
   ],
 })
-export class WorkerModule { }
+export class WorkerModule {}

@@ -1,0 +1,34 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+import { ConfigurationException } from '@/common/exceptions';
+import type { MailConfig } from '@/config';
+
+@Injectable()
+export class PasswordResetUrlBuilder {
+  private readonly mailConfig: MailConfig;
+
+  constructor(configService: ConfigService) {
+    this.mailConfig = configService.getOrThrow<MailConfig>('mail');
+  }
+
+  build(rawToken: string): string {
+    try {
+      const url = new URL('/reset-password', this.mailConfig.frontendPublicUrl);
+
+      url.searchParams.set('token', rawToken);
+
+      return url.toString();
+    } catch (error: unknown) {
+      throw new ConfigurationException({
+        code: 'AUTH_INVALID_PASSWORD_RESET_FRONTEND_URL',
+
+        message: 'FRONTEND_PUBLIC_URL không hợp lệ cho luồng đặt lại mật khẩu',
+
+        key: 'FRONTEND_PUBLIC_URL',
+
+        cause: error,
+      });
+    }
+  }
+}

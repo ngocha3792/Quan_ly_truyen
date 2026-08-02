@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -157,6 +158,22 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   @MinLength(32)
   JWT_ACCESS_SECRET!: string;
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(32)
+  JWT_REFRESH_SECRET!: string;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 900))
+  @IsInt()
+  @Min(60)
+  @Max(3600)
+  JWT_ACCESS_TTL_SECONDS = 900;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 2_592_000))
+  @IsInt()
+  @Min(3600)
+  @Max(7_776_000)
+  JWT_REFRESH_TTL_SECONDS = 2_592_000;
 
   @IsString()
   @IsNotEmpty()
@@ -165,6 +182,52 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   JWT_AUDIENCE = 'quan-ly-truyen-web';
+  @IsString()
+  @IsNotEmpty()
+  AUTH_REFRESH_COOKIE_NAME = 'refresh_token';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_COOKIE_SECURE = false;
+
+  @IsIn(['strict', 'lax', 'none'])
+  AUTH_COOKIE_SAME_SITE: 'strict' | 'lax' | 'none' = 'lax';
+
+  @IsOptional()
+  @IsString()
+  AUTH_COOKIE_DOMAIN?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  AUTH_COOKIE_PATH = '/api/v1/auth';
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_LOGIN_RATE_LIMIT_ENABLED = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 900))
+  @IsInt()
+  @Min(60)
+  @Max(86_400)
+  AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS = 900;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 20))
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  AUTH_LOGIN_RATE_LIMIT_IP_LIMIT = 20;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  AUTH_LOGIN_RATE_LIMIT_IDENTIFIER_LIMIT = 5;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_JWT_BLACKLIST_ENABLED = false;
+
+  @IsIn(['closed', 'open'])
+  AUTH_JWT_BLACKLIST_FAILURE_MODE: 'closed' | 'open' = 'closed';
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
@@ -456,6 +519,11 @@ export class EnvironmentVariables {
   @Min(1)
   SMTP_RATE_LIMIT_PER_SECOND = 5;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 60))
+  @IsInt()
+  @Min(10)
+  @Max(3600)
+  AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60;
   @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
   @IsInt()
   @Min(100)
@@ -479,6 +547,11 @@ export class EnvironmentVariables {
   @IsBoolean()
   MAIL_DKIM_ENABLED = false;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 60))
+  @IsInt()
+  @Min(10)
+  @Max(3600)
+  AUTH_PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS = 60;
   @IsOptional()
   @IsString()
   MAIL_DKIM_DOMAIN?: string;
@@ -526,15 +599,34 @@ export function validateEnvironment(
 function validateCrossFieldRules(config: EnvironmentVariables): void {
   const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
 
+  if (config.JWT_ACCESS_SECRET === config.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different',
+    );
+  }
+
+  if (config.AUTH_COOKIE_SAME_SITE === 'none' && !config.AUTH_COOKIE_SECURE) {
+    throw new Error(
+      'AUTH_COOKIE_SECURE must be true when AUTH_COOKIE_SAME_SITE=none',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.AUTH_COOKIE_SECURE
+  ) {
+    throw new Error('AUTH_COOKIE_SECURE must be true in production');
+  }
   if (config.CORS_CREDENTIALS && origins.includes('*')) {
     throw new Error(
       'CORS_ALLOWED_ORIGINS cannot contain "*" when CORS_CREDENTIALS=true',
     );
   }
   if (
+    config.QUEUE_ENABLED &&
     config.QUEUE_WORKER_HEARTBEAT_ENABLED &&
     config.QUEUE_WORKER_HEARTBEAT_TTL_SECONDS * 1000 <
-    config.QUEUE_WORKER_HEARTBEAT_INTERVAL_MS * 2
+      config.QUEUE_WORKER_HEARTBEAT_INTERVAL_MS * 2
   ) {
     throw new Error(
       'QUEUE_WORKER_HEARTBEAT_TTL_SECONDS must be at least twice QUEUE_WORKER_HEARTBEAT_INTERVAL_MS',
@@ -545,6 +637,22 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
 
   if (!supportedLocales.includes(config.DEFAULT_LOCALE)) {
     throw new Error('DEFAULT_LOCALE must be included in SUPPORTED_LOCALES');
+  }
+  if (
+    (config.AUTH_LOGIN_RATE_LIMIT_ENABLED ||
+      config.AUTH_JWT_BLACKLIST_ENABLED) &&
+    !config.REDIS_ENABLED
+  ) {
+    throw new Error(
+      'REDIS_ENABLED must be true when login rate limit or JWT blacklist is enabled',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.AUTH_LOGIN_RATE_LIMIT_ENABLED
+  ) {
+    throw new Error('AUTH_LOGIN_RATE_LIMIT_ENABLED must be true in production');
   }
 
   if (config.NODE_ENV === AppEnvironment.PRODUCTION && config.SWAGGER_ENABLED) {
@@ -566,21 +674,9 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   if (!['redis:', 'rediss:'].includes(redisUrl.protocol)) {
     throw new Error('REDIS_URL protocol must be redis:// or rediss://');
   }
-  if (
-    config.NODE_ENV === AppEnvironment.PRODUCTION &&
-    !config.QUEUE_ENABLED
-  ) {
+  if (config.NODE_ENV === AppEnvironment.PRODUCTION && !config.QUEUE_ENABLED) {
     throw new Error(
       'QUEUE_ENABLED must be true in production because transactional outbox delivery is required',
-    );
-  }
-
-  if (
-    config.NODE_ENV === AppEnvironment.PRODUCTION &&
-    !config.MAIL_ENABLED
-  ) {
-    throw new Error(
-      'MAIL_ENABLED must be true in production because account verification requires email delivery',
     );
   }
 
@@ -641,6 +737,11 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
         'CLOUDINARY_SIGNATURE_ALGORITHM must be either "sha256" or "sha1"',
       );
     }
+  }
+  if (config.NODE_ENV === AppEnvironment.PRODUCTION && !config.REDIS_ENABLED) {
+    throw new Error(
+      'REDIS_ENABLED must be true in production for email verification resend cooldown',
+    );
   }
 
   validateMailRules(config);
