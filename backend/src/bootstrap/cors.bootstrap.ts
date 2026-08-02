@@ -15,7 +15,12 @@ export function configureCors(app: INestApplication, config: CorsConfig): void {
       'x-request-id',
       'x-correlation-id',
       'x-trace-id',
+
+      // Giữ lại để tương thích với client cũ.
       'idempotency-key',
+
+      // Header hiện được IdempotencyInterceptor sử dụng.
+      'x-idempotency-key',
     ],
     exposedHeaders: [
       'x-request-id',

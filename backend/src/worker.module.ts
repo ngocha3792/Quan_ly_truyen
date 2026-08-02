@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 
 import { AppConfigModule } from './config';
+import { RedisModule } from './infrastructure/cache/redis/redis.module';
+import { QueueWorkerHeartbeatService } from './infrastructure/health';
 import { MailModule } from './infrastructure/mail';
+import { CloudinaryWebhookInboxWorker } from './infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker';
 import { MediaModule } from './infrastructure/media';
+import { ObservabilityModule } from './infrastructure/observability';
 import { QueueModule } from './infrastructure/queue';
 import { OutboxModule } from './infrastructure/queue/outbox';
-import { CloudinaryWebhookInboxWorker } from './infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker';
-import { ObservabilityModule } from './infrastructure/observability';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -18,10 +20,15 @@ const queueWorkersEnabled =
     AppConfigModule,
     ObservabilityModule,
     MediaModule,
+
     ...(queueWorkersEnabled
-      ? [QueueModule.register(), OutboxModule, MailModule]
+      ? [RedisModule, QueueModule.register(), OutboxModule, MailModule]
       : []),
   ],
-  providers: [CloudinaryWebhookInboxWorker],
+  providers: [
+    CloudinaryWebhookInboxWorker,
+
+    ...(queueWorkersEnabled ? [QueueWorkerHeartbeatService] : []),
+  ],
 })
-export class WorkerModule {}
+export class WorkerModule { }

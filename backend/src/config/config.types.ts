@@ -76,9 +76,16 @@ export interface QueueConfig {
   defaultAttempts: number;
   defaultBackoffMs: number;
   workerConcurrency: number;
+
   outboxProcessingTimeoutMs: number;
   outboxBatchSize: number;
   outboxPollIntervalMs: number;
+  outboxFailedAlertThreshold: number;
+
+  workerHeartbeatEnabled: boolean;
+  workerHeartbeatIntervalMs: number;
+  workerHeartbeatTtlSeconds: number;
+
   workerRole: 'all' | 'queue' | 'cloudinary-webhook';
 }
 

@@ -8,6 +8,7 @@ import { AppLoggerService } from '@/infrastructure/observability';
 
 import { configureApplication } from './application-configurator';
 import { configureCors } from './cors.bootstrap';
+import { configureSecurityHeaders } from './security.bootstrap';
 import { configureShutdown } from './shutdown.bootstrap';
 import { configureSwagger } from './swagger.bootstrap';
 
@@ -27,6 +28,7 @@ export async function bootstrapApplication(): Promise<void> {
   const corsConfig = configService.getOrThrow<CorsConfig>('cors');
 
   configureApplication(app, appConfig);
+  configureSecurityHeaders(app, appConfig);
   configureCors(app, corsConfig);
   configureShutdown(app);
   configureSwagger(app, appConfig);

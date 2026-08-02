@@ -255,6 +255,28 @@ export class EnvironmentVariables {
   @Min(1000)
   OUTBOX_POLL_INTERVAL_MS = 10_000;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  OUTBOX_FAILED_ALERT_THRESHOLD = 5;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  QUEUE_WORKER_HEARTBEAT_ENABLED = true;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(1000)
+  @Max(60_000)
+  QUEUE_WORKER_HEARTBEAT_INTERVAL_MS = 10_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30))
+  @IsInt()
+  @Min(5)
+  @Max(300)
+  QUEUE_WORKER_HEARTBEAT_TTL_SECONDS = 30;
+
   @IsEnum(['all', 'queue', 'cloudinary-webhook'])
   WORKER_ROLE: 'all' | 'queue' | 'cloudinary-webhook' = 'all';
 
@@ -509,6 +531,15 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'CORS_ALLOWED_ORIGINS cannot contain "*" when CORS_CREDENTIALS=true',
     );
   }
+  if (
+    config.QUEUE_WORKER_HEARTBEAT_ENABLED &&
+    config.QUEUE_WORKER_HEARTBEAT_TTL_SECONDS * 1000 <
+    config.QUEUE_WORKER_HEARTBEAT_INTERVAL_MS * 2
+  ) {
+    throw new Error(
+      'QUEUE_WORKER_HEARTBEAT_TTL_SECONDS must be at least twice QUEUE_WORKER_HEARTBEAT_INTERVAL_MS',
+    );
+  }
 
   const supportedLocales = parseCsv(config.SUPPORTED_LOCALES);
 
@@ -534,6 +565,23 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   }
   if (!['redis:', 'rediss:'].includes(redisUrl.protocol)) {
     throw new Error('REDIS_URL protocol must be redis:// or rediss://');
+  }
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.QUEUE_ENABLED
+  ) {
+    throw new Error(
+      'QUEUE_ENABLED must be true in production because transactional outbox delivery is required',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.MAIL_ENABLED
+  ) {
+    throw new Error(
+      'MAIL_ENABLED must be true in production because account verification requires email delivery',
+    );
   }
 
   if (config.QUEUE_ENABLED && !config.REDIS_ENABLED) {

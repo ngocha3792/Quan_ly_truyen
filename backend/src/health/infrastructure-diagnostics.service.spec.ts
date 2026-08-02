@@ -34,6 +34,10 @@ describe('InfrastructureDiagnosticsService', () => {
         queue: {
           enabled: enabled.queue,
           outboxProcessingTimeoutMs: 60_000,
+          outboxFailedAlertThreshold: 5,
+          workerHeartbeatEnabled: false,
+          workerHeartbeatIntervalMs: 10_000,
+          workerHeartbeatTtlSeconds: 30,
         },
         mail: { enabled: enabled.mail },
         cloudinary: { enabled: enabled.cloudinary },

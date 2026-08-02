@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import {
   DatabaseHealthIndicator,
+  QueueWorkerHealthIndicator,
   RedisHealthIndicator,
 } from '@/infrastructure/health';
 
@@ -29,6 +30,14 @@ describe('HealthController', () => {
       database: { status: 'up' },
     }),
   };
+  const mockQueueWorkerHealthIndicator = {
+    isHealthy: jest.fn().mockResolvedValue({
+      'queue-worker': {
+        status: 'up',
+      },
+    }),
+  };
+
 
   const mockRedisHealthIndicator = {
     isHealthy: jest.fn().mockResolvedValue({
@@ -49,7 +58,11 @@ describe('HealthController', () => {
         staleProcessing: 0,
         failedRecently: 0,
       },
+      worker: {
+        status: 'disabled',
+      },
     }),
+
   };
 
   beforeEach(async () => {
@@ -59,6 +72,10 @@ describe('HealthController', () => {
         {
           provide: HealthCheckService,
           useValue: mockHealthCheckService,
+        },
+        {
+          provide: QueueWorkerHealthIndicator,
+          useValue: mockQueueWorkerHealthIndicator,
         },
         {
           provide: DatabaseHealthIndicator,
@@ -87,6 +104,7 @@ describe('HealthController', () => {
     expect(result.status).toBe('ok');
     expect(mockDatabaseHealthIndicator.isHealthy).toHaveBeenCalled();
     expect(mockRedisHealthIndicator.isHealthy).toHaveBeenCalled();
+    expect(mockQueueWorkerHealthIndicator.isHealthy).toHaveBeenCalled();
   });
 
   it('returns sanitized infrastructure diagnostics', async () => {

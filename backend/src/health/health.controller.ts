@@ -8,14 +8,16 @@ import {
 import {
   Public,
   RequirePermissions,
-  SkipResponseEnvelope,
   SkipRequestLogging,
+  SkipResponseEnvelope,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import {
   DatabaseHealthIndicator,
+  QueueWorkerHealthIndicator,
   RedisHealthIndicator,
 } from '@/infrastructure/health';
+
 import {
   InfrastructureDiagnostics,
   InfrastructureDiagnosticsService,
@@ -29,8 +31,9 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly database: DatabaseHealthIndicator,
     private readonly redis: RedisHealthIndicator,
+    private readonly queueWorker: QueueWorkerHealthIndicator,
     private readonly diagnosticsService: InfrastructureDiagnosticsService,
-  ) {}
+  ) { }
 
   @Get('live')
   @Public()
@@ -45,6 +48,7 @@ export class HealthController {
     return this.health.check([
       () => this.database.isHealthy(),
       () => this.redis.isHealthy(),
+      () => this.queueWorker.isHealthy(),
     ]);
   }
 

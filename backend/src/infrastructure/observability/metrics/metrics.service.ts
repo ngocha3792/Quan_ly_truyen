@@ -364,10 +364,17 @@ export class MetricsService implements OnModuleDestroy {
   }
 
   setDependencyHealth(
-    dependency: 'database' | 'redis' | 'mail' | 'cloudinary' | 'queue',
+    dependency:
+      | 'database'
+      | 'redis'
+      | 'mail'
+      | 'cloudinary'
+      | 'queue'
+      | 'queue-worker',
     status: 'up' | 'down' | 'disabled' | 'configured',
   ): void {
     if (!this.enabled) return;
+
     this.dependencyHealth.set(
       { dependency },
       status === 'disabled' ? -1 : status === 'down' ? 0 : 1,
