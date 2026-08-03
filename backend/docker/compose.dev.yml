@@ -1,0 +1,284 @@
+name: quan-ly-truyen-dev
+
+x-backend-common: &backend-common
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.dev
+
+  working_dir: /app
+
+  env_file:
+    - ../.env
+    - .env.docker
+
+  volumes:
+    - ../:/app
+    - backend-node-modules:/app/node_modules
+    - backend-npm-cache:/root/.npm
+
+  networks:
+    - backend
+
+  init: true
+
+services:
+  postgres:
+    image: postgres:17-alpine
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: quan_ly_truyen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init/01-create-test-database.sql:/docker-entrypoint-initdb.d/01-create-test-database.sql:ro
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d quan_ly_truyen"
+        ]
+
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis-data:/data
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ]
+
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  mailpit:
+    image: axllent/mailpit:latest
+
+    restart: unless-stopped
+
+    environment:
+      MP_MAX_MESSAGES: "5000"
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+    volumes:
+      - mailpit-data:/data
+
+    networks:
+      - backend
+
+  migrate:
+    <<: *backend-common
+
+    restart: "no"
+
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+
+        echo "[docker-dev] Generating Prisma Client"
+        npx prisma generate --config prisma.config.ts
+
+        echo "[docker-dev] Applying migrations"
+        npm run db:migrate:deploy
+
+        echo "[docker-dev] Seeding database"
+        npm run db:seed
+
+        echo "[docker-dev] Migration and seed completed"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+  api:
+    <<: *backend-common
+
+    restart: unless-stopped
+
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+
+        echo "[docker-dev] Starting NestJS API"
+        npm run start:dev
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+      redis:
+        condition: service_healthy
+
+      mailpit:
+        condition: service_started
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health/live').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));"
+        ]
+
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+    stop_grace_period: 20s
+
+  worker:
+    <<: *backend-common
+
+    restart: unless-stopped
+
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+
+        echo "[docker-dev] Starting queue worker"
+        npx tsx watch --clear-screen=false src/worker.ts
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+      redis:
+        condition: service_healthy
+
+      mailpit:
+        condition: service_started
+
+    stop_grace_period: 30s
+
+  migrate-test:
+    <<: *backend-common
+
+    profiles:
+      - test
+
+    restart: "no"
+
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+
+        echo "[docker-test] Generating Prisma Client"
+        npx prisma generate --config prisma.config.ts
+
+        echo "[docker-test] Applying migrations to test database"
+        DATABASE_URL="$$TEST_DATABASE_URL" npm run db:migrate:deploy
+
+        echo "[docker-test] Test database is ready"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+  auth-tests:
+    <<: *backend-common
+
+    profiles:
+      - test
+
+    restart: "no"
+
+    environment:
+      NODE_ENV: test
+
+      AUTH_MAX_ACTIVE_SESSIONS: "2"
+
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
+      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: "5"
+
+      LOG_LEVEL: warn
+      LOG_PRETTY: "false"
+
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+
+        echo "[docker-test] Running all Auth tests"
+        npm run test:auth:all
+
+    depends_on:
+      migrate-test:
+        condition: service_completed_successfully
+
+      redis:
+        condition: service_healthy
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  mailpit-data:
+
+  backend-node-modules:
+  backend-npm-cache:

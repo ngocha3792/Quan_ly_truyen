@@ -6,9 +6,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5433}:5432'
     volumes:
       - quan_ly_truyen_postgres:/var/lib/postgresql/data
+      - ./postgres/init/01-create-test-database.sql:/docker-entrypoint-initdb.d/01-create-test-database.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d quan_ly_truyen']
       interval: 5s

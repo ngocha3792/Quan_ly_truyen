@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-bookworm-slim
+
+WORKDIR /app
+
+ENV NODE_ENV=development
+ENV CI=false
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NPM_CONFIG_FUND=false
+ENV NPM_CONFIG_AUDIT=false
+
+# Prisma config đọc DATABASE_URL trong lúc chạy postinstall.
+# Đây chỉ là URL build-time; prisma generate không kết nối database.
+# .env.docker sẽ ghi đè biến này khi container thực sự chạy.
+ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/quan_ly_truyen?schema=public&sslmode=disable"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        dumb-init \
+        openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+
+# npm ci chạy postinstall -> prisma generate.
+RUN npm ci
+
+COPY . .
+
+EXPOSE 3000
+
+ENTRYPOINT ["dumb-init", "--"]
+
+CMD ["npm", "run", "start:dev"]
