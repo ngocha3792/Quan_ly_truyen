@@ -547,6 +547,14 @@ export class EnvironmentVariables {
   @IsBoolean()
   MAIL_DKIM_ENABLED = false;
 
+  @IsOptional()
+  @IsString()
+  MAIL_PAYLOAD_ENCRYPTION_KEY?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? true))
+  @IsBoolean()
+  MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ = true;
+
   @Transform(({ value }) => parseIntegerValue(value ?? 60))
   @IsInt()
   @Min(10)
@@ -745,6 +753,7 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   }
 
   validateMailRules(config);
+  validateMailPayloadEncryptionRules(config);
 }
 
 function validateMailRules(config: EnvironmentVariables): void {
@@ -780,6 +789,48 @@ function validateMailRules(config: EnvironmentVariables): void {
       'DKIM domain, selector and private key are required when MAIL_DKIM_ENABLED=true',
     );
   }
+}
+
+function validateMailPayloadEncryptionRules(
+  config: EnvironmentVariables,
+): void {
+  const key = config.MAIL_PAYLOAD_ENCRYPTION_KEY?.trim();
+
+  const requiredInProduction =
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    (config.MAIL_ENABLED || config.QUEUE_ENABLED);
+
+  if (requiredInProduction && !key) {
+    throw new Error(
+      'MAIL_PAYLOAD_ENCRYPTION_KEY is required in production when mail or queue is enabled',
+    );
+  }
+
+  if (key && !isValidBase64Key(key, 32)) {
+    throw new Error(
+      'MAIL_PAYLOAD_ENCRYPTION_KEY must be Base64 encoding of exactly 32 bytes',
+    );
+  }
+}
+
+function isValidBase64Key(value: string, expectedBytes: number): boolean {
+  const normalized = value.trim();
+
+  if (
+    !normalized ||
+    normalized.length % 4 === 1 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)
+  ) {
+    return false;
+  }
+
+  const decoded = Buffer.from(normalized, 'base64');
+
+  const canonical = decoded.toString('base64').replace(/=+$/u, '');
+
+  const input = normalized.replace(/=+$/u, '');
+
+  return decoded.length === expectedBytes && canonical === input;
 }
 
 function isValidMessageIdDomain(value: string): boolean {

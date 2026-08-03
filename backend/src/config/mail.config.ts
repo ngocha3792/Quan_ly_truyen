@@ -45,4 +45,10 @@ export default registerAs(MAIL_CONFIG_KEY, (): MailConfig => ({
     selector: optional(process.env.MAIL_DKIM_SELECTOR),
     privateKey: decodeBase64(process.env.MAIL_DKIM_PRIVATE_KEY_BASE64),
   },
+  payloadEncryption: {
+    keyBase64: optional(process.env.MAIL_PAYLOAD_ENCRYPTION_KEY),
+
+    allowLegacyPlaintextRead:
+      process.env.MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ !== 'false',
+  },
 }));

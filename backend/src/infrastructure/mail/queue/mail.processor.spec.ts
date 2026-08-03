@@ -17,9 +17,14 @@ describe('MailProcessor', () => {
       (_metadata: unknown, _fallback: unknown, work: () => unknown) => work(),
     ),
   };
+  const mailPayloadCipher = {
+    canReadLegacyPlaintext: jest.fn().mockReturnValue(true),
+    decrypt: jest.fn(),
+  };
   const processor = new MailProcessor(
     { dispatch } as never,
     propagation as never,
+    mailPayloadCipher as never,
   );
   const job = {
     id: 'job-1',

@@ -118,7 +118,7 @@ export class PrismaResendEmailVerificationPersistence implements ResendEmailVeri
     } satisfies SendMailJobV1;
 
     await this.outboxWriter.create(tx, {
-      aggregateType: 'user',
+      aggregateType: 'mail',
       aggregateId: user.id,
       eventType: SEND_MAIL_JOB,
 

@@ -139,7 +139,7 @@ export class PrismaPasswordResetPersistence implements PasswordResetPersistenceP
     } satisfies SendMailJobV1;
 
     await this.outboxWriter.create(tx, {
-      aggregateType: 'user',
+      aggregateType: 'mail',
 
       aggregateId: user.id,
 

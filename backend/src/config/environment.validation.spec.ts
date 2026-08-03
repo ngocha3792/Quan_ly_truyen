@@ -11,7 +11,19 @@ describe('validateEnvironment', () => {
     JWT_REFRESH_SECRET: 'test-refresh-secret-that-is-different-and-long-enough',
 
     MAIL_MESSAGE_ID_DOMAIN: 'mail.example.test',
+    MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   };
+  it('rejects mail payload encryption keys that are not 32 bytes', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+
+        MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(16, 1).toString('base64'),
+      }),
+    ).toThrow(
+      'MAIL_PAYLOAD_ENCRYPTION_KEY must be Base64 encoding of exactly 32 bytes',
+    );
+  });
 
   it('parses boolean and integer values correctly', () => {
     const result = validateEnvironment({
@@ -39,6 +51,8 @@ describe('validateEnvironment', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+      AUTH_COOKIE_SECURE: 'true',
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
       REDIS_ENABLED: 'true',
       QUEUE_ENABLED: 'true',
       SWAGGER_ENABLED: 'false',
@@ -196,6 +210,8 @@ describe('validateEnvironment', () => {
       validateEnvironment({
         ...validBase,
         NODE_ENV: 'production',
+        AUTH_COOKIE_SECURE: 'true',
+        AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
         REDIS_ENABLED: 'true',
         QUEUE_ENABLED: 'false',
         SWAGGER_ENABLED: 'false',
@@ -207,6 +223,8 @@ describe('validateEnvironment', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+      AUTH_COOKIE_SECURE: 'true',
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
       QUEUE_ENABLED: 'true',
       SWAGGER_ENABLED: 'false',
     };

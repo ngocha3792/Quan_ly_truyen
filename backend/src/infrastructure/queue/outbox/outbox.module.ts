@@ -1,17 +1,18 @@
 import { Module } from '@nestjs/common';
 
-import { OutboxCoreModule } from './outbox-core.module';
-import { OutboxDispatcherProcessor } from './outbox-dispatcher.processor';
-import { OutboxDispatcherService } from './outbox-dispatcher.service';
-import { OutboxSchedulerService } from './outbox-scheduler.service';
+import { PrismaModule } from '@/infrastructure/database';
+
+import { MailPayloadSecurityModule } from '@/infrastructure/mail/security';
+
+import { OutboxMetricsObserver } from './outbox-metrics.observer';
+
+import { OutboxWriterService } from './outbox-writer.service';
 
 @Module({
-  imports: [OutboxCoreModule],
-  providers: [
-    OutboxDispatcherService,
-    OutboxDispatcherProcessor,
-    OutboxSchedulerService,
-  ],
-  exports: [OutboxCoreModule, OutboxDispatcherService],
+  imports: [PrismaModule, MailPayloadSecurityModule],
+
+  providers: [OutboxWriterService, OutboxMetricsObserver],
+
+  exports: [OutboxWriterService],
 })
-export class OutboxModule {}
+export class OutboxCoreModule {}

@@ -4,3 +4,4 @@ export * from './exceptions';
 export * from './mail.module';
 export * from './templates';
 export * from './mail-transport.module';
+export * from './security';

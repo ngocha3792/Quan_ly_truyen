@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EmailVerificationUrlBuilder } from '../../../mail';
 import { RoleCode } from '@/common/enums';
-import { ConfigurationException, isAppException } from '@/common/exceptions';
+import { isAppException } from '@/common/exceptions';
 import { TokenType } from '@/generated/prisma/client';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { MailTemplateId } from '@/infrastructure/mail/templates';
@@ -131,7 +131,7 @@ export class PrismaRegistrationUnitOfWork implements RegistrationUnitOfWorkPort 
         } satisfies SendMailJobV1;
 
         await this.outboxWriter.create(tx, {
-          aggregateType: 'user',
+          aggregateType: 'mail',
           aggregateId: user.id,
           eventType: SEND_MAIL_JOB,
           idempotencyKey: `email-verification:${verificationToken.id}`,

@@ -137,11 +137,17 @@ export interface InfrastructureFallbackConfig {
 
 export interface MailConfig {
   enabled: boolean;
+
   fromName: string;
+
   fromAddress: string;
+
   replyTo?: string;
+
   frontendPublicUrl: string;
+
   messageIdDomain: string;
+
   smtp: {
     host: string;
     port: number;
@@ -158,10 +164,23 @@ export interface MailConfig {
     socketTimeoutMs: number;
     verifyOnStartup: boolean;
   };
+
   dkim: {
     enabled: boolean;
     domain?: string;
     selector?: string;
     privateKey?: string;
+  };
+
+  payloadEncryption: {
+    /**
+     * Base64 encoding của key 32 bytes.
+     */
+    keyBase64?: string;
+
+    /**
+     * Chỉ dùng trong giai đoạn chuyển đổi.
+     */
+    allowLegacyPlaintextRead: boolean;
   };
 }

@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 
 import { OutboxStatus } from '@/generated/prisma/client';
-
 import { OutboxWriterService } from './outbox-writer.service';
 
 describe('OutboxWriterService', () => {
@@ -12,8 +11,31 @@ describe('OutboxWriterService', () => {
       correlationId: 'correlation-1',
     }),
   };
-  const writer = new OutboxWriterService(propagation as never);
+  const encryptedPayload = {
+    version: 1 as const,
 
+    algorithm: 'aes-256-gcm' as const,
+
+    iv: 'encrypted-iv',
+
+    ciphertext: 'encrypted-ciphertext',
+
+    authTag: 'encrypted-auth-tag',
+  };
+
+  const encrypt = jest.fn().mockReturnValue(encryptedPayload);
+
+  const writer = new OutboxWriterService(
+    propagation as never,
+
+    {
+      encrypt,
+    } as never,
+  );
+
+  beforeEach(() => {
+    encrypt.mockClear();
+  });
   it('creates a pending event through the supplied transaction client', async () => {
     const availableAt = new Date('2026-08-02T01:00:00Z');
     const tx = transactionClient();
@@ -24,7 +46,7 @@ describe('OutboxWriterService', () => {
         aggregateId: 'user-1',
         eventType: 'mail.send.v1',
         idempotencyKey: 'email-verification:token-1',
-        payload: { version: 1, recipient: 'reader@example.test' },
+        payload: encryptedPayload,
         metadata: {
           schemaVersion: 1,
           source: 'api',
@@ -40,7 +62,7 @@ describe('OutboxWriterService', () => {
         aggregateId: 'user-1',
         eventType: 'mail.send.v1',
         idempotencyKey: 'email-verification:token-1',
-        payload: { version: 1, recipient: 'reader@example.test' },
+        payload: encryptedPayload,
         metadata: {
           schemaVersion: 1,
           source: 'api',

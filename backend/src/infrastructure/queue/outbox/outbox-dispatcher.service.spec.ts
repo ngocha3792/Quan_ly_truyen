@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { ConfigService } from '@nestjs/config';
 
 import { OutboxStatus } from '@/generated/prisma/enums';
-
+import { SEND_MAIL_JOB } from '@/infrastructure/queue/contracts';
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
 
 const TOKEN_A = '11111111-1111-4111-8111-111111111111';
@@ -40,6 +40,49 @@ describe('OutboxDispatcherService', () => {
     );
     queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }) };
     service = createService(prisma, queue);
+  });
+
+  it('routes mail outbox events to the mail queue', async () => {
+    prisma.$queryRaw.mockResolvedValue([claimed('mail-event-1', TOKEN_A)]);
+
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      event({
+        id: 'mail-event-1',
+        aggregateType: 'mail',
+        aggregateId: 'user-1',
+        eventType: SEND_MAIL_JOB,
+        payload: {
+          version: 1,
+          templateId: 'email-verification',
+          recipientEmail: 'reader@example.test',
+          variables: {
+            displayName: 'Reader',
+          },
+        },
+      }),
+    ]);
+
+    await expect(service.dispatchBatch()).resolves.toBe(1);
+
+    expect(queue.add).toHaveBeenCalledTimes(1);
+
+    expect(queue.add).toHaveBeenCalledWith(
+      SEND_MAIL_JOB,
+      expect.objectContaining({
+        aggregateType: 'mail',
+        aggregateId: 'user-1',
+        eventType: SEND_MAIL_JOB,
+        outboxEventId: 'mail-event-1',
+
+        payload: expect.objectContaining({
+          version: 1,
+          recipientEmail: 'reader@example.test',
+        }),
+      }),
+      {
+        jobId: 'outbox-mail-event-1',
+      },
+    );
   });
 
   it('keeps the atomic SKIP LOCKED claim and assigns a non-null token', async () => {
