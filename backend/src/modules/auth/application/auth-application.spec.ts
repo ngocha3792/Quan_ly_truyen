@@ -632,6 +632,10 @@ describe('Auth application handlers', () => {
       ).rejects.toBeInstanceOf(RefreshTokenReuseDetectedException);
 
       expect(persistence.revokeFamily).toHaveBeenCalledWith({
+        userId: USER_ID,
+
+        sessionId: SESSION_ID,
+
         familyId: FAMILY_ID,
 
         revokedAt: NOW,
@@ -658,6 +662,10 @@ describe('Auth application handlers', () => {
       ).rejects.toBeInstanceOf(RefreshTokenReuseDetectedException);
 
       expect(persistence.revokeFamily).toHaveBeenCalledWith({
+        userId: USER_ID,
+
+        sessionId: SESSION_ID,
+
         familyId: FAMILY_ID,
 
         revokedAt: NOW,

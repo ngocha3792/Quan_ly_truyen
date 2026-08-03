@@ -792,8 +792,9 @@ describe('Auth PostgreSQL persistence', () => {
   });
 
   it('allows only one concurrent verification claim', async () => {
-    const user = await createUser('verification');
-
+    const user = await createUser('verification', {
+      emailVerified: false,
+    });
     const rawToken = token('verification');
 
     await prisma.userToken.create({
@@ -868,29 +869,62 @@ describe('Auth PostgreSQL persistence', () => {
       },
     });
 
-    const results = await Promise.all([
-      passwordReset.reset({
-        tokenHash: sha256(rawToken),
-
+    /*
+     * Hai request sử dụng cùng một reset token.
+     *
+     * Không được giả định request nào sẽ thắng vì PostgreSQL
+     * có quyền lên lịch hai transaction theo thứ tự bất kỳ.
+     */
+    const attempts = [
+      {
         passwordHash: 'new-password-hash',
 
         resetAt: new Date(),
-      }),
+      },
 
-      passwordReset.reset({
-        tokenHash: sha256(rawToken),
-
+      {
         passwordHash: 'another-password-hash',
 
         resetAt: new Date(),
-      }),
-    ]);
+      },
+    ] as const;
 
-    expect(results.filter(({ status }) => status === 'reset')).toHaveLength(1);
+    const results = await Promise.all(
+      attempts.map(async (attempt) => ({
+        passwordHash: attempt.passwordHash,
 
-    expect(results.filter(({ status }) => status === 'invalid')).toHaveLength(
-      1,
+        result: await passwordReset.reset({
+          tokenHash: sha256(rawToken),
+
+          passwordHash: attempt.passwordHash,
+
+          resetAt: attempt.resetAt,
+        }),
+      })),
     );
+
+    const successfulAttempts = results.filter(
+      ({ result }) => result.status === 'reset',
+    );
+
+    const invalidAttempts = results.filter(
+      ({ result }) => result.status === 'invalid',
+    );
+
+    /*
+     * Compare-and-swap phải bảo đảm chỉ một request thắng.
+     */
+    expect(successfulAttempts).toHaveLength(1);
+
+    expect(invalidAttempts).toHaveLength(1);
+
+    const successfulAttempt = successfulAttempts[0];
+
+    if (!successfulAttempt) {
+      throw new Error(
+        'Expected exactly one successful password reset attempt.',
+      );
+    }
 
     const freshUser = await prisma.user.findUniqueOrThrow({
       where: {
@@ -898,13 +932,31 @@ describe('Auth PostgreSQL persistence', () => {
       },
     });
 
-    expect(freshUser.passwordHash).toBe('new-password-hash');
+    /*
+     * Password cuối cùng phải khớp với request thực sự thắng,
+     * không phụ thuộc vào vị trí request trong Promise.all.
+     */
+    expect(freshUser.passwordHash).toBe(successfulAttempt.passwordHash);
+
+    const tokens = await prisma.userToken.findMany({
+      where: {
+        userId: user.id,
+
+        type: TokenType.PASSWORD_RESET,
+      },
+    });
+
+    expect(tokens).toHaveLength(1);
+
+    expect(tokens.every(({ consumedAt }) => consumedAt !== null)).toBe(true);
 
     const sessions = await prisma.session.findMany({
       where: {
         userId: user.id,
       },
     });
+
+    expect(sessions).toHaveLength(2);
 
     expect(sessions.every(({ revokedAt }) => revokedAt !== null)).toBe(true);
 
@@ -913,6 +965,14 @@ describe('Auth PostgreSQL persistence', () => {
         ({ revokedReason }) =>
           revokedReason === SessionRevocationReason.PASSWORD_RESET,
       ),
+    ).toBe(true);
+
+    expect(
+      sessions.every(({ accessTokenVersion }) => accessTokenVersion === 1),
+    ).toBe(true);
+
+    expect(
+      sessions.every(({ refreshTokenVersion }) => refreshTokenVersion === 1),
     ).toBe(true);
   });
 
@@ -1088,7 +1148,15 @@ describe('Auth PostgreSQL persistence', () => {
     expect(untouched.revokedAt).toBeNull();
   });
 
-  async function createUser(name: string) {
+  async function createUser(
+    name: string,
+
+    options: {
+      emailVerified?: boolean;
+    } = {},
+  ) {
+    const emailVerified = options.emailVerified ?? true;
+
     return prisma.user.create({
       data: {
         email: email(name),
@@ -1099,7 +1167,7 @@ describe('Auth PostgreSQL persistence', () => {
 
         displayName: `User ${name}`,
 
-        emailVerifiedAt: new Date(),
+        emailVerifiedAt: emailVerified ? new Date() : null,
       },
     });
   }

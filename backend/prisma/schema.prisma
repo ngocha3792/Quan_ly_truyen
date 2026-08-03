@@ -292,8 +292,6 @@ model OAuthAccount {
   userId            String        @map("user_id") @db.Uuid
   provider          OAuthProvider
   providerAccountId String        @map("provider_account_id") @db.VarChar(255)
-  accessToken       String?       @map("access_token") @db.Text
-  refreshToken      String?       @map("refresh_token") @db.Text
   expiresAt         DateTime?     @map("expires_at") @db.Timestamptz(3)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)

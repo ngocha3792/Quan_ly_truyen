@@ -91,6 +91,9 @@ process.env.OBSERVABILITY_ENABLED = 'false';
 process.env.METRICS_ENABLED = 'false';
 
 process.env.SWAGGER_ENABLED = 'false';
+process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED = 'true';
+
+process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS = '5';
 
 function assertTestDatabase(value: string): void {
   if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {

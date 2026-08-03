@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-
+import { CacheModule } from '@/infrastructure/cache';
 import {
   generateSecureToken,
   generateUuid,
@@ -82,9 +82,15 @@ import {
   RedisEmailVerificationCooldown,
   RedisLoginRateLimiter,
   PrismaChangePasswordPersistence,
+  AccessAuthorizationCacheService,
 } from './infrastructure';
-import { AuthController, RefreshCookieCsrfGuard } from './presentation/http';
-
+import {
+  AuthAccountController,
+  AuthCookieService,
+  AuthCredentialsController,
+  AuthTokenController,
+  RefreshCookieCsrfGuard,
+} from './presentation/http';
 const passwordHasherProvider = {
   provide: PASSWORD_HASHER_PORT,
 
@@ -124,15 +130,25 @@ const idGeneratorProvider = {
       session: false,
     }),
 
+    CacheModule,
     RedisModule,
     PrismaModule,
     OutboxCoreModule,
   ],
 
-  controllers: [AuthController],
+  controllers: [
+    AuthCredentialsController,
+
+    AuthTokenController,
+
+    AuthAccountController,
+  ],
 
   providers: [
     CsrfTokenService,
+    AuthCookieService,
+
+    AccessAuthorizationCacheService,
     AuthAuditWriterService,
 
     PrismaAuthAuditReader,
@@ -292,6 +308,16 @@ const idGeneratorProvider = {
     idGeneratorProvider,
   ],
 
-  exports: [PassportModule, ValidateAccessTokenQueryHandler],
+  exports: [
+    PassportModule,
+
+    ValidateAccessTokenQueryHandler,
+
+    /*
+     * Module quản lý role/author profile sau này
+     * phải gọi invalidateUser() sau khi transaction thành công.
+     */
+    AccessAuthorizationCacheService,
+  ],
 })
 export class AuthModule {}

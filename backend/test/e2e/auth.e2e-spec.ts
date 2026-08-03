@@ -365,19 +365,21 @@ describe('Auth HTTP lifecycle', () => {
       })
       .expect(200);
 
-    expect(
-      unwrap<{
-        passwordChanged: boolean;
+    const changePasswordResult = unwrap<{
+      passwordChanged: boolean;
 
-        otherSessionsRevoked: number;
+      otherSessionsRevoked: number;
 
-        currentSessionKept: boolean;
+      currentSessionKept: boolean;
 
-        accessTokenInvalidated: boolean;
+      accessTokenInvalidated: boolean;
 
-        refreshRequired: boolean;
-      }>(response.body),
-    ).toEqual({
+      refreshRequired: boolean;
+
+      changedAt: string;
+    }>(response.body);
+
+    expect(changePasswordResult).toMatchObject({
       passwordChanged: true,
 
       otherSessionsRevoked: 1,
@@ -388,6 +390,26 @@ describe('Auth HTTP lifecycle', () => {
 
       refreshRequired: true,
     });
+
+    /*
+     * changedAt nằm trong payload đã unwrap,
+     * không nằm trực tiếp ở response.body.
+     */
+    expect(changePasswordResult.changedAt).toEqual(expect.any(String));
+
+    /*
+     * Kiểm tra đây là ISO-8601 timestamp hợp lệ.
+     */
+    expect(new Date(changePasswordResult.changedAt).toISOString()).toBe(
+      changePasswordResult.changedAt,
+    );
+
+    /*
+     * Controller trả changedAt bằng Date.toISOString().
+     *
+     * Không so sánh một timestamp cố định vì thời gian được tạo
+     * trong lúc request thực thi.
+     */
 
     /*
      * Access token hiện tại đã mất hiệu lực.
@@ -853,7 +875,7 @@ describe('Auth HTTP lifecycle', () => {
     expectErrorCode(
       secondReset.body,
 
-      ['AUTH_INVALID_PASSWORD_RESET_TOKEN'],
+      ['AUTH_PASSWORD_RESET_TOKEN_INVALID'],
     );
   });
 
@@ -956,6 +978,128 @@ describe('Auth HTTP lifecycle', () => {
     expect(serialized).not.toContain(authenticated.accessToken);
 
     expect(serialized).not.toContain(authenticated.refreshCookie);
+  });
+
+  it('rejects duplicate and malformed authentication cookies', async () => {
+    const user = await registerAndVerify('cookie-ambiguity');
+
+    const authenticated = await login(
+      user.email,
+
+      defaultPassword,
+
+      'cookie-ambiguity-device',
+    );
+
+    /*
+     * Duplicate refresh cookie không được lấy token đầu tiên
+     * hoặc token cuối cùng.
+     */
+    const duplicateRefreshResponse = await request(httpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set(
+        'Cookie',
+
+        [
+          authenticated.refreshCookie,
+          'refresh_token=attacker-controlled-value',
+          authenticated.csrfCookie,
+        ].join('; '),
+      )
+      .set('X-CSRF-Token', authenticated.csrfToken);
+
+    expect(duplicateRefreshResponse.status).toBe(401);
+
+    expectErrorCode(
+      duplicateRefreshResponse.body,
+
+      ['AUTH_INVALID_REFRESH_TOKEN'],
+    );
+
+    /*
+     * Percent encoding không hợp lệ phải bị reject,
+     * không được xem như cookie bị thiếu.
+     */
+    const malformedRefreshResponse = await request(httpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set(
+        'Cookie',
+
+        ['refresh_token=%E0%A4%A', authenticated.csrfCookie].join('; '),
+      )
+      .set('X-CSRF-Token', authenticated.csrfToken);
+
+    expect(malformedRefreshResponse.status).toBe(401);
+
+    expectErrorCode(
+      malformedRefreshResponse.body,
+
+      ['AUTH_INVALID_REFRESH_TOKEN'],
+    );
+
+    /*
+     * Logout không có cookie vẫn idempotent, nhưng logout
+     * có duplicate credential cookie phải bị từ chối.
+     */
+    const duplicateLogoutResponse = await request(httpServer())
+      .post('/api/v1/auth/logout')
+      .set('Origin', origin)
+      .set(
+        'Cookie',
+
+        [
+          authenticated.refreshCookie,
+          'refresh_token=attacker-controlled-value',
+          authenticated.csrfCookie,
+        ].join('; '),
+      )
+      .set('X-CSRF-Token', authenticated.csrfToken);
+
+    expect(duplicateLogoutResponse.status).toBe(401);
+
+    expectErrorCode(
+      duplicateLogoutResponse.body,
+
+      ['AUTH_INVALID_REFRESH_TOKEN'],
+    );
+
+    /*
+     * CSRF cookie duplicate cũng không được tự chọn.
+     */
+    const duplicateCsrfResponse = await request(httpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set(
+        'Cookie',
+
+        [
+          authenticated.refreshCookie,
+          authenticated.csrfCookie,
+          'csrf_token=attacker-controlled-value',
+        ].join('; '),
+      )
+      .set('X-CSRF-Token', authenticated.csrfToken);
+
+    expect(duplicateCsrfResponse.status).toBe(403);
+
+    expectErrorCode(
+      duplicateCsrfResponse.body,
+
+      ['AUTH_CSRF_TOKEN_MALFORMED'],
+    );
+
+    /*
+     * Các request lỗi phía trên không được revoke session
+     * hoặc tiêu thụ refresh token hợp lệ.
+     */
+    await request(httpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set('Cookie', authenticated.cookieHeader)
+      .set('X-CSRF-Token', authenticated.csrfToken)
+      .expect(200);
   });
 
   it('allows one concurrent refresh, detects reuse and revokes the family', async () => {

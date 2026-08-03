@@ -451,14 +451,47 @@ describe('validateEnvironment', () => {
     ).toThrow('REDIS_ENABLED must be true when QUEUE_ENABLED=true');
   });
 
-  it('allows both queues and Redis to be disabled outside production', () => {
+  it('allows queues, Redis and Redis-dependent auth features to be disabled outside production', () => {
     expect(() =>
       validateEnvironment({
         ...validBase,
+
         QUEUE_ENABLED: 'false',
+
         REDIS_ENABLED: 'false',
+
+        AUTH_LOGIN_RATE_LIMIT_ENABLED:
+          'false',
+
+        AUTH_JWT_BLACKLIST_ENABLED:
+          'false',
+
+        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
+          'false',
       }),
     ).not.toThrow();
+  });
+  it('requires Redis when the auth authorization cache is enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+
+        REDIS_ENABLED: 'false',
+
+        QUEUE_ENABLED: 'false',
+
+        AUTH_LOGIN_RATE_LIMIT_ENABLED:
+          'false',
+
+        AUTH_JWT_BLACKLIST_ENABLED:
+          'false',
+
+        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
+          'true',
+      }),
+    ).toThrow(
+      'auth authorization cache is enabled',
+    );
   });
 
   it('validates outbox and worker bounds', () => {

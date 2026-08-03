@@ -190,6 +190,16 @@ export class EnvironmentVariables {
   @IsBoolean()
   AUTH_COOKIE_SECURE = false;
 
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 15))
+  @IsInt()
+  @Min(1)
+  @Max(60)
+  AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS = 15;
+
   @IsIn(['strict', 'lax', 'none'])
   AUTH_COOKIE_SAME_SITE: 'strict' | 'lax' | 'none' = 'lax';
 
@@ -685,9 +695,17 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different',
     );
   }
-  if (config.AUTH_SESSION_LIST_LIMIT < config.AUTH_MAX_ACTIVE_SESSIONS) {
+  if (
+    (config.AUTH_LOGIN_RATE_LIMIT_ENABLED ||
+      config.AUTH_JWT_BLACKLIST_ENABLED ||
+      config.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED) &&
+    !config.REDIS_ENABLED
+  ) {
     throw new Error(
-      'AUTH_SESSION_LIST_LIMIT must be greater than or equal to AUTH_MAX_ACTIVE_SESSIONS',
+      [
+        'REDIS_ENABLED must be true when login rate limit,',
+        'JWT blacklist, or auth authorization cache is enabled',
+      ].join(' '),
     );
   }
 

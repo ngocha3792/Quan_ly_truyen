@@ -90,6 +90,19 @@ export interface AuthConfig {
      */
     cookiePath: string;
   };
+  accessAuthorizationCache?: {
+    /**
+     * Chỉ cache role, permission và authorProfileId.
+     *
+     * Trạng thái session/version vẫn đọc trực tiếp từ DB.
+     */
+    enabled: boolean;
+
+    /**
+     * TTL ngắn để hạn chế stale authorization.
+     */
+    ttlSeconds: number;
+  };
   sessions: {
     /**
      * Số session còn hoạt động tối đa trên mỗi user.

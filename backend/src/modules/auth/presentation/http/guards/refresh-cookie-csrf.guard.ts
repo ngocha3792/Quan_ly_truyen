@@ -12,7 +12,11 @@ import { AccessDeniedException } from '@/common/exceptions';
 
 import type { AuthConfig, CorsConfig } from '@/config';
 
+import { InvalidRefreshTokenException } from '../../../domain/exceptions';
+
 import { CsrfTokenService } from '../../../infrastructure/security';
+
+import { readCookieFromHeader } from '../cookies';
 
 @Injectable()
 export class RefreshCookieCsrfGuard implements CanActivate {
@@ -33,6 +37,10 @@ export class RefreshCookieCsrfGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
+    /*
+     * Khi CSRF bị tắt, controller vẫn tự parse refresh cookie
+     * bằng parser dùng chung và vẫn reject duplicate/malformed.
+     */
     if (!this.csrfTokenService.isEnabled()) {
       return true;
     }
@@ -41,7 +49,7 @@ export class RefreshCookieCsrfGuard implements CanActivate {
 
     const cookieHeader = request.headers.cookie;
 
-    const refreshToken = readCookie(
+    const refreshCookie = readCookieFromHeader(
       cookieHeader,
 
       this.authConfig.refreshCookie.name,
@@ -50,32 +58,55 @@ export class RefreshCookieCsrfGuard implements CanActivate {
     /*
      * Không có refresh cookie:
      *
-     * - refresh controller sẽ trả
-     *   InvalidRefreshTokenException;
-     *
+     * - refresh controller sẽ trả InvalidRefreshTokenException;
      * - logout vẫn giữ tính idempotent.
      *
-     * CSRF chỉ có ý nghĩa khi browser
-     * tự động gửi credential cookie.
+     * CSRF chỉ cần kiểm tra khi browser thực sự gửi
+     * refresh credential cookie.
      */
-    if (!refreshToken) {
+    if (refreshCookie.status === 'missing') {
       return true;
+    }
+
+    /*
+     * Không tự chọn một giá trị khi có duplicate cookie.
+     *
+     * malformed và duplicate đều được trả về cùng một lỗi
+     * public để không tiết lộ chi tiết parser/security.
+     */
+    if (refreshCookie.status !== 'valid') {
+      throw new InvalidRefreshTokenException();
     }
 
     this.assertAllowedOrigin(readSingleHeader(request.headers.origin));
 
-    const csrfCookie = readCookie(
+    const csrfCookie = readCookieFromHeader(
       cookieHeader,
 
       this.authConfig.csrf.cookieName,
     );
 
+    /*
+     * Missing CSRF cookie được chuyển tiếp dưới dạng undefined
+     * để CsrfTokenService trả AUTH_CSRF_TOKEN_REQUIRED.
+     */
+    if (
+      csrfCookie.status === 'malformed' ||
+      csrfCookie.status === 'duplicate'
+    ) {
+      throw new AccessDeniedException({
+        code: 'AUTH_CSRF_TOKEN_MALFORMED',
+
+        message: 'CSRF token không hợp lệ',
+      });
+    }
+
     const csrfHeader = readSingleHeader(request.headers[CSRF_HEADER_NAME]);
 
     this.csrfTokenService.assertValid({
-      refreshToken,
+      refreshToken: refreshCookie.value,
 
-      cookieToken: csrfCookie,
+      cookieToken: csrfCookie.status === 'valid' ? csrfCookie.value : undefined,
 
       headerToken: csrfHeader,
     });
@@ -85,11 +116,10 @@ export class RefreshCookieCsrfGuard implements CanActivate {
 
   private assertAllowedOrigin(origin: string | undefined): void {
     /*
-     * Mobile app, server-to-server và curl
-     * có thể không gửi Origin.
+     * Mobile app, server-to-server và curl có thể không gửi Origin.
      *
-     * Khi browser gửi Origin thì bắt buộc
-     * Origin nằm trong CORS allowlist.
+     * Khi browser gửi Origin thì bắt buộc Origin nằm trong
+     * CORS allowlist.
      */
     if (!origin) {
       return;
@@ -125,58 +155,4 @@ function readSingleHeader(
   }
 
   return undefined;
-}
-
-function readCookie(
-  cookieHeader: string | undefined,
-
-  cookieName: string,
-): string | undefined {
-  if (!cookieHeader) {
-    return undefined;
-  }
-
-  let found: string | undefined;
-
-  for (const part of cookieHeader.split(';')) {
-    const separatorIndex = part.indexOf('=');
-
-    if (separatorIndex < 0) {
-      continue;
-    }
-
-    const name = part.slice(0, separatorIndex).trim();
-
-    if (name !== cookieName) {
-      continue;
-    }
-
-    /*
-     * Duplicate cookie name bị từ chối
-     * để tránh parser ambiguity.
-     */
-    if (found !== undefined) {
-      return undefined;
-    }
-
-    const encodedValue = part.slice(separatorIndex + 1).trim();
-
-    if (!encodedValue) {
-      return undefined;
-    }
-
-    try {
-      const decodedValue = decodeURIComponent(encodedValue);
-
-      if (!decodedValue) {
-        return undefined;
-      }
-
-      found = decodedValue;
-    } catch {
-      return undefined;
-    }
-  }
-
-  return found;
 }

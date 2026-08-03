@@ -94,6 +94,17 @@ export default registerAs(AUTH_CONFIG_KEY, (): AuthConfig => ({
 
     cookiePath: process.env.AUTH_CSRF_COOKIE_PATH ?? '/',
   },
+  accessAuthorizationCache: {
+    enabled: parseBoolean(
+      process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED,
+
+      false,
+    ),
+
+    ttlSeconds: Number(
+      process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS ?? 15,
+    ),
+  },
   sessions: {
     maxActiveSessions: Number(process.env.AUTH_MAX_ACTIVE_SESSIONS ?? 10),
 

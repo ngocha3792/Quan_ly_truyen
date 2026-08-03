@@ -56,6 +56,14 @@ process.env.AUTH_JWT_BLACKLIST_ENABLED = 'true';
 
 process.env.AUTH_JWT_BLACKLIST_FAILURE_MODE = 'closed';
 
+/*
+ * Giới hạn nhỏ để integration test kiểm tra được
+ * việc tự động revoke session cũ.
+ */
+process.env.AUTH_MAX_ACTIVE_SESSIONS = '2';
+
+process.env.AUTH_SESSION_LIST_LIMIT = '20';
+
 process.env.AUTH_CSRF_ENABLED = 'true';
 
 process.env.AUTH_CSRF_SECRET = 'integration-csrf-secret-at-least-32-characters';

@@ -4,6 +4,8 @@ import { AccessDeniedException } from '@/common/exceptions';
 
 import type { AuthConfig, CorsConfig } from '@/config';
 
+import { InvalidRefreshTokenException } from '../../../domain/exceptions';
+
 import { RefreshCookieCsrfGuard } from './refresh-cookie-csrf.guard';
 
 describe('RefreshCookieCsrfGuard', () => {
@@ -117,7 +119,7 @@ describe('RefreshCookieCsrfGuard', () => {
     );
   });
 
-  it('validates cookie and header', () => {
+  it('validates refresh cookie, CSRF cookie and header', () => {
     const context = createContext({
       cookie: 'refresh_token=refresh-value; csrf_token=csrf-value',
 
@@ -160,8 +162,8 @@ describe('RefreshCookieCsrfGuard', () => {
 
     try {
       guard.canActivate(context);
-    } catch (e) {
-      error = e as AccessDeniedException;
+    } catch (caught: unknown) {
+      error = caught as AccessDeniedException;
     }
 
     expect(error).toBeInstanceOf(AccessDeniedException);
@@ -173,8 +175,71 @@ describe('RefreshCookieCsrfGuard', () => {
 
   it('rejects duplicate refresh cookies', () => {
     const context = createContext({
-      cookie:
-        'refresh_token=first; refresh_token=second; csrf_token=csrf-value',
+      cookie: [
+        'refresh_token=first',
+        'refresh_token=second',
+        'csrf_token=csrf-value',
+      ].join('; '),
+
+      origin: 'http://localhost:4200',
+
+      [CSRF_HEADER_NAME]: 'csrf-value',
+    });
+
+    expect(() => guard.canActivate(context)).toThrow(
+      InvalidRefreshTokenException,
+    );
+
+    expect(csrfTokenService.assertValid).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed refresh cookie', () => {
+    const context = createContext({
+      cookie: 'refresh_token=%E0%A4%A; csrf_token=csrf-value',
+
+      origin: 'http://localhost:4200',
+
+      [CSRF_HEADER_NAME]: 'csrf-value',
+    });
+
+    expect(() => guard.canActivate(context)).toThrow(
+      InvalidRefreshTokenException,
+    );
+
+    expect(csrfTokenService.assertValid).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate CSRF cookies', () => {
+    const context = createContext({
+      cookie: [
+        'refresh_token=refresh-value',
+        'csrf_token=first',
+        'csrf_token=second',
+      ].join('; '),
+
+      origin: 'http://localhost:4200',
+
+      [CSRF_HEADER_NAME]: 'first',
+    });
+
+    let error: AccessDeniedException | undefined;
+
+    try {
+      guard.canActivate(context);
+    } catch (caught: unknown) {
+      error = caught as AccessDeniedException;
+    }
+
+    expect(error).toBeInstanceOf(AccessDeniedException);
+
+    expect(error?.code).toBe('AUTH_CSRF_TOKEN_MALFORMED');
+
+    expect(csrfTokenService.assertValid).not.toHaveBeenCalled();
+  });
+
+  it('lets CsrfTokenService report a missing CSRF cookie', () => {
+    const context = createContext({
+      cookie: 'refresh_token=refresh-value',
 
       origin: 'http://localhost:4200',
 
@@ -183,11 +248,24 @@ describe('RefreshCookieCsrfGuard', () => {
 
     expect(guard.canActivate(context)).toBe(true);
 
-    /*
-     * Duplicate refresh cookie được xem
-     * như không có credential.
-     * Controller sẽ reject refresh token.
-     */
+    expect(csrfTokenService.assertValid).toHaveBeenCalledWith({
+      refreshToken: 'refresh-value',
+
+      cookieToken: undefined,
+
+      headerToken: 'csrf-value',
+    });
+  });
+
+  it('skips CSRF validation when the feature is disabled', () => {
+    csrfTokenService.isEnabled.mockReturnValue(false);
+
+    const context = createContext({
+      cookie: 'refresh_token=first; refresh_token=second',
+    });
+
+    expect(guard.canActivate(context)).toBe(true);
+
     expect(csrfTokenService.assertValid).not.toHaveBeenCalled();
   });
 });

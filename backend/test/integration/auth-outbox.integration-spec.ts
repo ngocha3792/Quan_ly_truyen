@@ -19,8 +19,6 @@ describe('Auth outbox to BullMQ integration', () => {
 
   let queue: Queue;
 
-  const eventIds: string[] = [];
-
   const queueName = `mail-integration-${randomUUID()}`;
 
   beforeAll(async () => {
@@ -29,7 +27,9 @@ describe('Auth outbox to BullMQ integration', () => {
     const redisUrl = process.env.TEST_REDIS_URL;
 
     if (!databaseUrl || !redisUrl) {
-      throw new Error('TEST_DATABASE_URL and TEST_REDIS_URL are required');
+      throw new Error(
+        'TEST_DATABASE_URL and TEST_REDIS_URL are required',
+      );
     }
 
     prisma = new PrismaService(
@@ -67,27 +67,26 @@ describe('Auth outbox to BullMQ integration', () => {
     await queue.waitUntilReady();
   });
 
+  beforeEach(async () => {
+    /*
+     * Dọn fixture cũ trước test.
+     *
+     * Nếu một lần chạy trước bị dừng giữa chừng, pending outbox
+     * event không được phép làm dispatchBatch() trả về 2.
+     */
+    await cleanupOutboxTestArtifacts();
+  });
+
   afterEach(async () => {
-    if (eventIds.length > 0) {
-      await prisma.outboxEvent.deleteMany({
-        where: {
-          id: {
-            in: [...eventIds],
-          },
-        },
-      });
-
-      eventIds.splice(0);
-    }
-
-    await queue.drain(true);
-
-    await queue.clean(0, 10_000, 'completed');
-
-    await queue.clean(0, 10_000, 'failed');
+    await cleanupOutboxTestArtifacts();
   });
 
   afterAll(async () => {
+    /*
+     * Cố gắng dọn lần cuối trước khi đóng connection.
+     */
+    await cleanupOutboxTestArtifacts();
+
     await queue.close();
 
     await prisma.$disconnect();
@@ -109,11 +108,21 @@ describe('Auth outbox to BullMQ integration', () => {
 
           algorithm: 'aes-256-gcm',
 
-          iv: Buffer.alloc(12, 1).toString('base64'),
+          iv: Buffer.alloc(
+            12,
 
-          ciphertext: Buffer.from('encrypted-test-payload').toString('base64'),
+            1,
+          ).toString('base64'),
 
-          authTag: Buffer.alloc(16, 2).toString('base64'),
+          ciphertext: Buffer.from(
+            'encrypted-test-payload',
+          ).toString('base64'),
+
+          authTag: Buffer.alloc(
+            16,
+
+            2,
+          ).toString('base64'),
         },
 
         status: OutboxStatus.PENDING,
@@ -121,8 +130,6 @@ describe('Auth outbox to BullMQ integration', () => {
         availableAt: new Date(),
       },
     });
-
-    eventIds.push(event.id);
 
     const configService = new ConfigService({
       queue: {
@@ -165,7 +172,9 @@ describe('Auth outbox to BullMQ integration', () => {
     };
 
     const propagation = {
-      parse: jest.fn().mockReturnValue(undefined),
+      parse: jest.fn().mockReturnValue(
+        undefined,
+      ),
 
       runWithExtractedContext: jest.fn(
         (
@@ -176,27 +185,38 @@ describe('Auth outbox to BullMQ integration', () => {
       ),
     };
 
-    const dispatcher = new OutboxDispatcherService(
-      prisma,
+    const dispatcher =
+      new OutboxDispatcherService(
+        prisma,
 
-      configService,
+        configService,
 
-      queue,
+        queue,
 
-      metrics as never,
+        metrics as never,
 
-      tracing as never,
+        tracing as never,
 
-      propagation as never,
+        propagation as never,
+      );
+
+    /*
+     * Database đã được làm sạch trước test nên chỉ event vừa tạo
+     * được claim và publish.
+     */
+    await expect(
+      dispatcher.dispatchBatch(10),
+    ).resolves.toBe(1);
+
+    const job = await queue.getJob(
+      `outbox-${event.id}`,
     );
-
-    await expect(dispatcher.dispatchBatch(10)).resolves.toBe(1);
-
-    const job = await queue.getJob(`outbox-${event.id}`);
 
     expect(job).not.toBeNull();
 
-    expect(job?.name).toBe(SEND_MAIL_JOB);
+    expect(job?.name).toBe(
+      SEND_MAIL_JOB,
+    );
 
     expect(job?.data).toMatchObject({
       aggregateType: 'mail',
@@ -212,14 +232,57 @@ describe('Auth outbox to BullMQ integration', () => {
       },
     });
 
-    const persisted = await prisma.outboxEvent.findUniqueOrThrow({
+    const persisted =
+      await prisma.outboxEvent.findUniqueOrThrow(
+        {
+          where: {
+            id: event.id,
+          },
+        },
+      );
+
+    expect(persisted.status).toBe(
+      OutboxStatus.PUBLISHED,
+    );
+
+    expect(
+      persisted.processedAt,
+    ).not.toBeNull();
+  });
+
+  async function cleanupOutboxTestArtifacts(): Promise<void> {
+    /*
+     * Chỉ dọn mail outbox fixture, không xóa các loại outbox
+     * event khác nếu integration suite được mở rộng sau này.
+     */
+    await prisma.outboxEvent.deleteMany({
       where: {
-        id: event.id,
+        aggregateType: 'mail',
+
+        eventType: SEND_MAIL_JOB,
       },
     });
 
-    expect(persisted.status).toBe(OutboxStatus.PUBLISHED);
+    /*
+     * Queue có name/prefix riêng nhưng vẫn dọn để watch mode
+     * và các lần rerun trong cùng process luôn cô lập.
+     */
+    await queue.drain(true);
 
-    expect(persisted.processedAt).not.toBeNull();
-  });
+    await queue.clean(
+      0,
+
+      10_000,
+
+      'completed',
+    );
+
+    await queue.clean(
+      0,
+
+      10_000,
+
+      'failed',
+    );
+  }
 });
