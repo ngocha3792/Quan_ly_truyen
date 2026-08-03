@@ -154,6 +154,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       issuer: process.env.JWT_ISSUER,
       audience: process.env.JWT_AUDIENCE,
       expiresIn: '5m',
+      jwtid: randomUUID(),
     });
 
   const httpServer = () => app.getHttpServer() as Parameters<typeof request>[0];
@@ -288,12 +289,102 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
     expect(other.headers['x-idempotent-replayed']).toBeUndefined();
     expect(other.body).not.toEqual(first.body);
 
+    /*
+     * Promise.all không đảm bảo request thứ hai vào đúng lúc request đầu
+     * vẫn đang PROCESSING. Request đầu có thể hoàn tất quá nhanh và request
+     * thứ hai sẽ replay kết quả 201 hợp lệ.
+     *
+     * Giữ acquire đầu tiên sau khi lease PROCESSING đã được tạo để kiểm tra
+     * deterministic rằng request đồng thời thứ hai nhận 409.
+     */
     const concurrentKey = `${key}-concurrent`;
-    const concurrent = await Promise.all([
-      send(token(userId, sessionId), payload, concurrentKey),
-      send(token(userId, sessionId), payload, concurrentKey),
-    ]);
-    expect(concurrent.map(({ status }) => status).sort()).toEqual([201, 409]);
+
+    const originalAcquire = idempotencyStore.acquire.bind(idempotencyStore);
+
+    let releaseFirstAcquire!: () => void;
+    let notifyFirstLeaseStored!: () => void;
+
+    const firstLeaseStored = new Promise<void>((resolve) => {
+      notifyFirstLeaseStored = resolve;
+    });
+
+    const continueFirstAcquire = new Promise<void>((resolve) => {
+      releaseFirstAcquire = resolve;
+    });
+
+    let holdNextAcquire = true;
+
+    const acquireSpy = jest
+      .spyOn(idempotencyStore, 'acquire')
+      .mockImplementation(async (storageKey, requestHash, ttlSeconds) => {
+        const result = await originalAcquire(
+          storageKey,
+          requestHash,
+          ttlSeconds,
+        );
+
+        if (holdNextAcquire) {
+          holdNextAcquire = false;
+
+          /*
+           * originalAcquire đã lưu lease PROCESSING.
+           * Báo cho test gửi request thứ hai.
+           */
+          notifyFirstLeaseStored();
+
+          /*
+           * Chưa trả lease cho interceptor đầu tiên nên business handler
+           * chưa được thực thi và lease vẫn ở trạng thái PROCESSING.
+           */
+          await continueFirstAcquire;
+        }
+
+        return result;
+      });
+
+    try {
+      /*
+       * Gọi then() để Supertest bắt đầu request ngay lập tức.
+       */
+      const firstConcurrentPromise = send(
+        token(userId, sessionId),
+        payload,
+        concurrentKey,
+      ).then((response) => response);
+
+      /*
+       * Đợi request đầu tạo xong lease PROCESSING.
+       */
+      await firstLeaseStored;
+
+      /*
+       * Request thứ hai dùng cùng principal, endpoint, payload và key.
+       * Vì request đầu còn PROCESSING nên phải nhận 409.
+       */
+      const secondConcurrent = await send(
+        token(userId, sessionId),
+        payload,
+        concurrentKey,
+      );
+
+      expect(secondConcurrent.status).toBe(409);
+
+      /*
+       * Cho phép request đầu tiếp tục xử lý nghiệp vụ.
+       */
+      releaseFirstAcquire();
+
+      const firstConcurrent = await firstConcurrentPromise;
+
+      expect(firstConcurrent.status).toBe(201);
+      expect(firstConcurrent.headers['x-idempotent-replayed']).toBeUndefined();
+    } finally {
+      /*
+       * Luôn mở gate và restore spy, kể cả khi assertion thất bại.
+       */
+      releaseFirstAcquire();
+      acquireSpy.mockRestore();
+    }
   });
 
   it('keeps a raw extension through intent, confirm and delete', async () => {

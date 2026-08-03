@@ -1,0 +1,251 @@
+name: quan-ly-truyen-production
+
+x-default-logging: &default-logging
+  driver: json-file
+
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-runtime-common: &runtime-common
+  image: ${BACKEND_IMAGE_NAME:-quan-ly-truyen-backend}:${BACKEND_IMAGE_TAG:-local}
+
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: runtime
+
+  env_file:
+    - .env.production
+
+  restart: unless-stopped
+
+  networks:
+    - backend
+
+  read_only: true
+
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
+  cap_drop:
+    - ALL
+
+  security_opt:
+    - no-new-privileges:true
+
+  logging: *default-logging
+
+services:
+  postgres:
+    image: postgres:17-alpine
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+
+    volumes:
+      - postgres-production-data:/var/lib/postgresql/data
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""
+        ]
+
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+    stop_grace_period: 60s
+
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+
+    restart: unless-stopped
+
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+
+    volumes:
+      - redis-production-data:/data
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep PONG"
+        ]
+
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+    stop_grace_period: 30s
+
+    logging: *default-logging
+
+  migrate:
+    image: ${BACKEND_IMAGE_NAME:-quan-ly-truyen-backend}-migrate:${BACKEND_IMAGE_TAG:-local}
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+
+    env_file:
+      - .env.production
+
+    command:
+      - npm
+      - run
+      - db:migrate:deploy
+
+    restart: "no"
+
+    networks:
+      - backend
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    logging: *default-logging
+
+  seed:
+    image: ${BACKEND_IMAGE_NAME:-quan-ly-truyen-backend}-migrate:${BACKEND_IMAGE_TAG:-local}
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+
+    profiles:
+      - tools
+
+    env_file:
+      - .env.production
+
+    command:
+      - npm
+      - run
+      - db:seed
+
+    restart: "no"
+
+    networks:
+      - backend
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+    logging: *default-logging
+
+  api:
+    <<: *runtime-common
+
+    command:
+      - node
+      - dist/main.js
+
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health/live').then(response => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+        ]
+
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+    stop_grace_period: 30s
+
+  worker:
+    <<: *runtime-common
+
+    command:
+      - node
+      - dist/worker.js
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    stop_grace_period: 60s
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres-production-data:
+  redis-production-data:

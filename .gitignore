@@ -26,6 +26,7 @@ out/
 .env.*
 !.env.example
 !.env.sample
+!backend/docker/.env.docker
 *.pem
 *.key
 *.p12

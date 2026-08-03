@@ -24,10 +24,7 @@ describe('maintenance worker isolation', () => {
     'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK',
   ] as const;
 
-  const originalEnvironment = new Map<
-    string,
-    string | undefined
-  >();
+  const originalEnvironment = new Map<string, string | undefined>();
 
   beforeAll(() => {
     for (const key of controlledEnvironmentKeys) {
@@ -44,11 +41,9 @@ describe('maintenance worker isolation', () => {
       DATABASE_URL:
         'postgresql://postgres:postgres@localhost:5432/worker_isolation_test',
 
-      JWT_ACCESS_SECRET:
-        'worker-isolation-test-secret-at-least-32-characters',
+      JWT_ACCESS_SECRET: 'worker-isolation-test-secret-at-least-32-characters',
 
-      JWT_REFRESH_SECRET:
-        'different-refresh-secret-at-least-32-characters',
+      JWT_REFRESH_SECRET: 'different-refresh-secret-at-least-32-characters',
 
       CLOUDINARY_ENABLED: 'false',
 
@@ -62,27 +57,21 @@ describe('maintenance worker isolation', () => {
        * REDIS_ENABLED=false chỉ hợp lệ khi tất cả chức năng
        * bắt buộc Redis cũng được tắt.
        */
-      AUTH_LOGIN_RATE_LIMIT_ENABLED:
-        'false',
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: 'false',
 
-      AUTH_JWT_BLACKLIST_ENABLED:
-        'false',
+      AUTH_JWT_BLACKLIST_ENABLED: 'false',
 
-      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
-        'false',
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: 'false',
 
-      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS:
-        '15',
+      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: '15',
 
-      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK:
-        'true',
+      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'true',
     });
   });
 
   afterAll(() => {
     for (const key of controlledEnvironmentKeys) {
-      const originalValue =
-        originalEnvironment.get(key);
+      const originalValue = originalEnvironment.get(key);
 
       if (originalValue === undefined) {
         delete process.env[key];
@@ -95,23 +84,14 @@ describe('maintenance worker isolation', () => {
   });
 
   it('keeps one-shot command modules isolated from long-running workers', async () => {
-    const {
-      MediaCleanupCommandModule,
-    } = await import(
-      './media-cleanup-command.module'
-    );
+    const { MediaCleanupCommandModule } =
+      await import('./media-cleanup-command.module');
 
-    const {
-      CloudinaryWebhookCommandModule,
-    } = await import(
-      './cloudinary-webhook-command.module'
-    );
+    const { CloudinaryWebhookCommandModule } =
+      await import('./cloudinary-webhook-command.module');
 
-    const {
-      OutboxRetentionCommandModule,
-    } = await import(
-      './outbox-retention-command.module'
-    );
+    const { OutboxRetentionCommandModule } =
+      await import('./outbox-retention-command.module');
 
     for (const commandModule of [
       MediaCleanupCommandModule,
@@ -121,29 +101,18 @@ describe('maintenance worker isolation', () => {
       OutboxRetentionCommandModule,
     ]) {
       const imports =
-        (
-          Reflect.getMetadata(
-            MODULE_METADATA.IMPORTS,
+        (Reflect.getMetadata(
+          MODULE_METADATA.IMPORTS,
 
-            commandModule,
-          ) as unknown[] | undefined
-        ) ?? [];
+          commandModule,
+        ) as unknown[] | undefined) ?? [];
 
-      const importNames = imports.map(
-        (value) =>
-          typeof value === 'function'
-            ? value.name
-            : String(value),
+      const importNames = imports.map((value) =>
+        typeof value === 'function' ? value.name : String(value),
       );
 
       expect(importNames).not.toEqual(
-        expect.arrayContaining([
-          'WorkerModule',
-
-          'MailModule',
-
-          'OutboxModule',
-        ]),
+        expect.arrayContaining(['WorkerModule', 'MailModule', 'OutboxModule']),
       );
     }
   });

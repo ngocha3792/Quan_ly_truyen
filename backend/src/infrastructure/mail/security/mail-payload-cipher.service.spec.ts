@@ -53,19 +53,27 @@ describe('MailPayloadCipherService', () => {
       authTag: Buffer.alloc(16, 9).toString('base64'),
     };
 
-    expect(() => cipher.decrypt(tampered)).toThrow(
-      expect.objectContaining({
-        code: 'MAIL_PAYLOAD_DECRYPTION_FAILED',
-      }),
-    );
+    try {
+      cipher.decrypt(tampered);
+      throw new Error('Expected decryption to fail');
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(MailPayloadCipherException);
+      expect((error as MailPayloadCipherException).code).toBe(
+        'MAIL_PAYLOAD_DECRYPTION_FAILED',
+      );
+    }
   });
 
   it('rejects a key that is not exactly 32 bytes', () => {
-    expect(() => createCipher(Buffer.alloc(16, 1).toString('base64'))).toThrow(
-      expect.objectContaining({
-        code: 'MAIL_PAYLOAD_ENCRYPTION_KEY_INVALID',
-      }),
-    );
+    try {
+      createCipher(Buffer.alloc(16, 1).toString('base64'));
+      throw new Error('Expected cipher creation to fail');
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(MailPayloadCipherException);
+      expect((error as MailPayloadCipherException).code).toBe(
+        'MAIL_PAYLOAD_ENCRYPTION_KEY_INVALID',
+      );
+    }
   });
 
   it('does not expose plaintext in cipher errors', () => {

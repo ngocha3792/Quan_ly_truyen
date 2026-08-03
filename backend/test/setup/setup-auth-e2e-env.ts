@@ -66,6 +66,12 @@ process.env.AUTH_JWT_BLACKLIST_ENABLED = 'true';
 
 process.env.AUTH_JWT_BLACKLIST_FAILURE_MODE = 'closed';
 
+process.env.AUTH_MAX_ACTIVE_SESSIONS = '2';
+
+process.env.AUTH_SESSION_LIST_LIMIT = '20';
+
+process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT = '50';
+
 process.env.AUTH_CSRF_ENABLED = 'true';
 
 process.env.AUTH_CSRF_SECRET = 'e2e-csrf-secret-at-least-32-characters';
@@ -96,7 +102,7 @@ process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED = 'true';
 process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS = '5';
 
 function assertTestDatabase(value: string): void {
-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
+  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
     const url = new URL(value);
 
     const name = url.pathname.replace(/^\//u, '').toLowerCase();
@@ -108,7 +114,7 @@ function assertTestDatabase(value: string): void {
 }
 
 function assertTestRedis(value: string): void {
-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
+  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
     const url = new URL(value);
 
     const databaseNumber = Number(url.pathname.replace(/^\//u, '') || '0');

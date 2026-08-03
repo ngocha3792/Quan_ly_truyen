@@ -28,8 +28,9 @@ describe('Observability endpoint (e2e)', () => {
   });
 
   it('protects metrics, returns Prometheus text without an envelope, and does not self-observe', async () => {
-    await request(app.getHttpServer()).get('/internal/metrics').expect(401);
-    const response = await request(app.getHttpServer())
+    const server = app.getHttpServer() as Parameters<typeof request>[0];
+    await request(server).get('/internal/metrics').expect(401);
+    const response = await request(server)
       .get('/internal/metrics')
       .set('authorization', `Bearer ${token}`)
       .expect(200)

@@ -4,7 +4,6 @@ import { PermissionCode, RoleCode } from '@/common/enums';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
-  AuthAuthorVerificationStatus,
   CurrentUserReaderPort,
   CurrentUserRecord,
 } from '../../../../application/ports';

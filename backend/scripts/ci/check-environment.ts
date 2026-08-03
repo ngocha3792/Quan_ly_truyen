@@ -12,14 +12,14 @@ import { runScript } from '../shared/script-runner';
 void runScript({
   name: 'check-environment',
 
-  async execute({ logger }) {
+  execute({ logger }) {
     /*
      * Dùng chính validator mà Nest bootstrap dùng.
      *
      * Không duy trì một danh sách env riêng trong
      * script vì rất dễ bị lệch.
      */
-    validateEnvironment(process.env as Record<string, unknown>);
+    validateEnvironment(process.env);
 
     const target = parseDatabaseTarget(
       requireEnvironmentVariable('DATABASE_URL'),
@@ -48,5 +48,7 @@ void runScript({
         mailEnabled: process.env.MAIL_ENABLED === 'true',
       },
     );
+
+    return Promise.resolve();
   },
 });

@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+dist
+**/dist
+coverage
+**/coverage
+.nyc_output
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test output
+test-results
+reports
+junit.xml
+
+# Cache and temporary files
+.cache
+.tmp
+tmp
+temp
+*.tmp
+
+# IDE
+.vscode
+.idea
+
+# Runtime data
+ops/**/data
+ops/**/logs
+uploads
+storage
+
+# Archives and backups
+*.zip
+*.tar
+*.gz
+*.7z
+*.bak
+*.backup
+
+# Documentation not needed in image
+docs
+
+# Docker development files not needed by COPY
+docker/.dockerignore
+
+# Production secrets
+.env.production

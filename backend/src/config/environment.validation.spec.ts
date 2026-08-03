@@ -460,14 +460,11 @@ describe('validateEnvironment', () => {
 
         REDIS_ENABLED: 'false',
 
-        AUTH_LOGIN_RATE_LIMIT_ENABLED:
-          'false',
+        AUTH_LOGIN_RATE_LIMIT_ENABLED: 'false',
 
-        AUTH_JWT_BLACKLIST_ENABLED:
-          'false',
+        AUTH_JWT_BLACKLIST_ENABLED: 'false',
 
-        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
-          'false',
+        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: 'false',
       }),
     ).not.toThrow();
   });
@@ -480,18 +477,13 @@ describe('validateEnvironment', () => {
 
         QUEUE_ENABLED: 'false',
 
-        AUTH_LOGIN_RATE_LIMIT_ENABLED:
-          'false',
+        AUTH_LOGIN_RATE_LIMIT_ENABLED: 'false',
 
-        AUTH_JWT_BLACKLIST_ENABLED:
-          'false',
+        AUTH_JWT_BLACKLIST_ENABLED: 'false',
 
-        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
-          'true',
+        AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: 'true',
       }),
-    ).toThrow(
-      'auth authorization cache is enabled',
-    );
+    ).toThrow('auth authorization cache is enabled');
   });
 
   it('validates outbox and worker bounds', () => {

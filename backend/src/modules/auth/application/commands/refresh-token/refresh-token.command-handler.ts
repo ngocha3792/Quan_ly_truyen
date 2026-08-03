@@ -22,8 +22,6 @@ import {
 
 import { RefreshTokenCommand } from './refresh-token.command';
 
-const REFRESH_TOKEN_REUSE_REASON = 'refresh_token_reuse_detected';
-
 @Injectable()
 export class RefreshTokenCommandHandler {
   constructor(

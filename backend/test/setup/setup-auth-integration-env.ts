@@ -64,6 +64,8 @@ process.env.AUTH_MAX_ACTIVE_SESSIONS = '2';
 
 process.env.AUTH_SESSION_LIST_LIMIT = '20';
 
+process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT = '50';
+
 process.env.AUTH_CSRF_ENABLED = 'true';
 
 process.env.AUTH_CSRF_SECRET = 'integration-csrf-secret-at-least-32-characters';
@@ -85,7 +87,7 @@ process.env.OBSERVABILITY_ENABLED = 'false';
 process.env.METRICS_ENABLED = 'false';
 
 function assertSafeTestDatabase(value: string): void {
-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
+  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
     const url = new URL(value);
 
     const databaseName = url.pathname.replace(/^\//u, '').toLowerCase();
@@ -99,7 +101,7 @@ function assertSafeTestDatabase(value: string): void {
 }
 
 function assertSafeTestRedis(value: string): void {
-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
+  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
     const url = new URL(value);
 
     const databaseNumber = Number(url.pathname.replace(/^\//u, '') || '0');

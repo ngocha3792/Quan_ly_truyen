@@ -36,11 +36,15 @@ describe('Auth domain', () => {
     });
 
     it('rejects malformed email', () => {
-      expect(() => EmailValueObject.create('not-an-email')).toThrow(
-        expect.objectContaining({
-          code: 'AUTH_INVALID_EMAIL',
-        }),
-      );
+      try {
+        EmailValueObject.create('not-an-email');
+        throw new Error('Expected EmailValueObject.create to throw');
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(InvalidInputException);
+        expect((error as InvalidInputException).code).toBe(
+          'AUTH_INVALID_EMAIL',
+        );
+      }
     });
 
     it('compares normalized emails', () => {
@@ -62,11 +66,15 @@ describe('Auth domain', () => {
     it.each(['ab', 'reader-name', 'reader name', 'reader@name'])(
       'rejects invalid username %s',
       (username) => {
-        expect(() => UsernameValueObject.create(username)).toThrow(
-          expect.objectContaining({
-            code: 'AUTH_INVALID_USERNAME',
-          }),
-        );
+        try {
+          UsernameValueObject.create(username);
+          throw new Error('Expected UsernameValueObject.create to throw');
+        } catch (error: unknown) {
+          expect(error).toBeInstanceOf(InvalidInputException);
+          expect((error as InvalidInputException).code).toBe(
+            'AUTH_INVALID_USERNAME',
+          );
+        }
       },
     );
   });
@@ -99,19 +107,27 @@ describe('Auth domain', () => {
       'NoNumber!',
       'NoSymbol123',
     ])('rejects weak password %s', (password) => {
-      expect(() => PasswordValueObject.create(password)).toThrow(
-        expect.objectContaining({
-          code: 'AUTH_INVALID_PASSWORD',
-        }),
-      );
+      try {
+        PasswordValueObject.create(password);
+        throw new Error('Expected PasswordValueObject.create to throw');
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(InvalidInputException);
+        expect((error as InvalidInputException).code).toBe(
+          'AUTH_INVALID_PASSWORD',
+        );
+      }
     });
 
     it('rejects password exceeding bcrypt byte limit', () => {
-      expect(() => PasswordValueObject.create(`Aa1!${'á'.repeat(70)}`)).toThrow(
-        expect.objectContaining({
-          code: 'AUTH_INVALID_PASSWORD',
-        }),
-      );
+      try {
+        PasswordValueObject.create(`Aa1!${'á'.repeat(70)}`);
+        throw new Error('Expected PasswordValueObject.create to throw');
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(InvalidInputException);
+        expect((error as InvalidInputException).code).toBe(
+          'AUTH_INVALID_PASSWORD',
+        );
+      }
     });
   });
 

@@ -8,7 +8,6 @@ x-backend-common: &backend-common
   working_dir: /app
 
   env_file:
-    - ../.env
     - .env.docker
 
   volumes:

@@ -103,7 +103,7 @@ describe('Auth application handlers', () => {
 
         secureToken as never,
 
-        registration as never,
+        registration,
       );
 
       const result = await handler.execute(
@@ -232,17 +232,17 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LoginCommandHandler(
-        persistence as never,
+        persistence,
 
-        rateLimiter as never,
+        rateLimiter,
 
         passwordHasher as never,
 
-        tokenIssuer as never,
+        tokenIssuer,
 
         secureToken as never,
 
-        idGenerator as never,
+        idGenerator,
       );
 
       const result = await handler.execute(
@@ -344,15 +344,15 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LoginCommandHandler(
-        persistence as never,
+        persistence,
 
-        rateLimiter as never,
+        rateLimiter,
 
         passwordHasher as never,
 
         {
           issue: jest.fn(),
-        } as never,
+        },
 
         {
           hash: jest.fn(),
@@ -360,7 +360,7 @@ describe('Auth application handlers', () => {
 
         {
           generate: jest.fn(),
-        } as never,
+        },
       );
 
       await expect(
@@ -408,9 +408,9 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LoginCommandHandler(
-        persistence as never,
+        persistence,
 
-        rateLimiter as never,
+        rateLimiter,
 
         {
           verify: jest.fn().mockResolvedValue(true),
@@ -418,7 +418,7 @@ describe('Auth application handlers', () => {
 
         {
           issue: jest.fn(),
-        } as never,
+        },
 
         {
           hash: jest.fn(),
@@ -426,7 +426,7 @@ describe('Auth application handlers', () => {
 
         {
           generate: jest.fn(),
-        } as never,
+        },
       );
 
       await expect(
@@ -533,11 +533,11 @@ describe('Auth application handlers', () => {
 
       return {
         handler: new RefreshTokenCommandHandler(
-          tokenVerifier as never,
+          tokenVerifier,
 
           persistence as never,
 
-          tokenIssuer as never,
+          tokenIssuer,
 
           secureToken as never,
         ),
@@ -706,7 +706,7 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LogoutCommandHandler(
-        tokenVerifier as never,
+        tokenVerifier,
 
         persistence as never,
       );
@@ -738,7 +738,7 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LogoutCommandHandler(
-        tokenVerifier as never,
+        tokenVerifier,
 
         persistence as never,
       );
@@ -766,7 +766,7 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new LogoutCommandHandler(
-        tokenVerifier as never,
+        tokenVerifier,
 
         {
           revokeCurrentSession: jest.fn(),
@@ -792,7 +792,7 @@ describe('Auth application handlers', () => {
 
             version: 0,
           }),
-        } as never,
+        },
 
         {
           revokeCurrentSession: jest
@@ -856,7 +856,7 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new VerifyEmailCommandHandler(
-        persistence as never,
+        persistence,
 
         {
           hash: jest.fn().mockReturnValue('verification-hash'),
@@ -890,7 +890,7 @@ describe('Auth application handlers', () => {
 
             expiresAt,
           }),
-        } as never,
+        },
 
         {
           hash: jest.fn().mockReturnValue('verification-hash'),
@@ -908,7 +908,7 @@ describe('Auth application handlers', () => {
           consume: jest.fn().mockResolvedValue({
             status: 'invalid',
           }),
-        } as never,
+        },
 
         {
           hash: jest.fn().mockReturnValue('verification-hash'),
@@ -932,9 +932,9 @@ describe('Auth application handlers', () => {
           tryAcquire: jest.fn().mockResolvedValue(false),
 
           release: jest.fn(),
-        } as never,
+        },
 
-        persistence as never,
+        persistence,
 
         {
           generate: jest.fn(),
@@ -962,11 +962,11 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new ResendEmailVerificationCommandHandler(
-        cooldown as never,
+        cooldown,
 
         {
           execute: jest.fn().mockRejectedValue(originalError),
-        } as never,
+        },
 
         {
           generate: jest.fn().mockReturnValue(RAW_TOKEN),
@@ -996,7 +996,7 @@ describe('Auth application handlers', () => {
           tryAcquire: jest.fn().mockResolvedValue(true),
 
           release: jest.fn(),
-        } as never,
+        },
 
         persistence as never,
 
@@ -1038,7 +1038,7 @@ describe('Auth application handlers', () => {
       };
 
       const handler = new ForgotPasswordCommandHandler(
-        cooldown as never,
+        cooldown,
 
         {
           request: jest.fn().mockRejectedValue(originalError),
@@ -1211,7 +1211,7 @@ describe('Auth application handlers', () => {
         }),
       };
 
-      const handler = new GetCurrentUserQueryHandler(reader as never);
+      const handler = new GetCurrentUserQueryHandler(reader);
 
       const result = await handler.execute(
         new GetCurrentUserQuery(
@@ -1243,7 +1243,7 @@ describe('Auth application handlers', () => {
         findById: jest.fn(),
       };
 
-      const handler = new GetCurrentUserQueryHandler(reader as never);
+      const handler = new GetCurrentUserQueryHandler(reader);
 
       await expect(
         handler.execute(

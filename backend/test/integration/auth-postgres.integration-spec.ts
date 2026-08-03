@@ -146,6 +146,11 @@ describe('Auth PostgreSQL persistence', () => {
     await moduleRef.close();
   });
   it('revokes the oldest session and writes audit when session limit is exceeded', async () => {
+    const now = new Date();
+    const oldestCreatedAt = new Date(now.getTime() - 120_000);
+    const newerCreatedAt = new Date(now.getTime() - 60_000);
+    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1_000);
+
     const user = await prisma.user.create({
       data: {
         email: `session-limit.${runId}@example.test`,
@@ -168,9 +173,11 @@ describe('Auth PostgreSQL persistence', () => {
 
         refreshTokenFamilyId: randomUUID(),
 
-        lastUsedAt: new Date('2026-08-01T00:00:00.000Z'),
+        lastUsedAt: oldestCreatedAt,
 
-        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
+        expiresAt,
+
+        createdAt: oldestCreatedAt,
       },
     });
 
@@ -186,9 +193,11 @@ describe('Auth PostgreSQL persistence', () => {
 
         refreshTokenFamilyId: randomUUID(),
 
-        lastUsedAt: new Date('2026-08-02T00:00:00.000Z'),
+        lastUsedAt: newerCreatedAt,
 
-        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
+        expiresAt,
+
+        createdAt: newerCreatedAt,
       },
     });
 
@@ -215,9 +224,9 @@ describe('Auth PostgreSQL persistence', () => {
 
       userAgent: 'Jest',
 
-      loggedInAt: new Date('2026-08-03T00:00:00.000Z'),
+      loggedInAt: now,
 
-      expiresAt: new Date('2026-09-03T00:00:00.000Z'),
+      expiresAt,
     });
 
     const freshOldest = await prisma.session.findUniqueOrThrow({

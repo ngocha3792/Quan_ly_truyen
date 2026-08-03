@@ -16,9 +16,16 @@ import { configureApplication } from '@/bootstrap';
 
 import { RoleCode } from '@/common/enums';
 
+import { hashPassword, verifyPassword } from '@/common/utils';
+
 import type { AppConfig } from '@/config';
 
 import { PrismaService } from '@/infrastructure/database';
+
+import {
+  PASSWORD_HASHER_PORT,
+  type PasswordHasherPort,
+} from '@/modules/auth/application/ports';
 
 import { MailPayloadCipherService } from '@/infrastructure/mail/security';
 
@@ -56,9 +63,29 @@ describe('Auth HTTP lifecycle', () => {
 
     await redis.flushdb();
 
+    /*
+     * Production giữ bcrypt 12 rounds.
+     *
+     * E2E chỉ cần kiểm tra hành vi xác thực, không benchmark bcrypt.
+     * Dùng mức tối thiểu an toàn 10 rounds để tránh request
+     * change-password vượt HTTP timeout trên máy chạy test chậm.
+     */
+    const e2ePasswordHasher = {
+      hash: (plainPassword: string): Promise<string> =>
+        hashPassword(plainPassword, {
+          rounds: 10,
+        }),
+
+      verify: (plainPassword: string, passwordHash: string): Promise<boolean> =>
+        verifyPassword(plainPassword, passwordHash),
+    } satisfies PasswordHasherPort;
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PASSWORD_HASHER_PORT)
+      .useValue(e2ePasswordHasher)
+      .compile();
 
     app = moduleRef.createNestApplication({
       rawBody: true,
@@ -260,7 +287,7 @@ describe('Auth HTTP lifecycle', () => {
     expect(response.headers['x-csrf-token']).toBe(rotated.csrfToken);
 
     /*
-     * CSRF token cũ bị bind với refresh token cũ.
+     * CSRF token cÅ© bá»‹ bind vá»›i refresh token cÅ©.
      */
     const oldCsrfResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -392,27 +419,27 @@ describe('Auth HTTP lifecycle', () => {
     });
 
     /*
-     * changedAt nằm trong payload đã unwrap,
-     * không nằm trực tiếp ở response.body.
+     * changedAt náº±m trong payload Ä‘Ã£ unwrap,
+     * khÃ´ng náº±m trá»±c tiáº¿p á»Ÿ response.body.
      */
     expect(changePasswordResult.changedAt).toEqual(expect.any(String));
 
     /*
-     * Kiểm tra đây là ISO-8601 timestamp hợp lệ.
+     * Kiá»ƒm tra Ä‘Ã¢y lÃ  ISO-8601 timestamp há»£p lá»‡.
      */
     expect(new Date(changePasswordResult.changedAt).toISOString()).toBe(
       changePasswordResult.changedAt,
     );
 
     /*
-     * Controller trả changedAt bằng Date.toISOString().
+     * Controller tráº£ changedAt báº±ng Date.toISOString().
      *
-     * Không so sánh một timestamp cố định vì thời gian được tạo
-     * trong lúc request thực thi.
+     * KhÃ´ng so sÃ¡nh má»™t timestamp cá»‘ Ä‘á»‹nh vÃ¬ thá»i gian Ä‘Æ°á»£c táº¡o
+     * trong lÃºc request thá»±c thi.
      */
 
     /*
-     * Access token hiện tại đã mất hiệu lực.
+     * Access token hiá»‡n táº¡i Ä‘Ã£ máº¥t hiá»‡u lá»±c.
      */
     await request(httpServer())
       .get('/api/v1/auth/me')
@@ -424,7 +451,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Access token của session khác cũng mất hiệu lực.
+     * Access token cá»§a session khÃ¡c cÅ©ng máº¥t hiá»‡u lá»±c.
      */
     await request(httpServer())
       .get('/api/v1/auth/me')
@@ -436,8 +463,8 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Current refresh token và CSRF token vẫn dùng
-     * được để lấy access token mới.
+     * Current refresh token vÃ  CSRF token váº«n dÃ¹ng
+     * Ä‘Æ°á»£c Ä‘á»ƒ láº¥y access token má»›i.
      */
     const refreshResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -462,7 +489,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(200);
 
     /*
-     * Session khác đã revoke nên không refresh được.
+     * Session khÃ¡c Ä‘Ã£ revoke nÃªn khÃ´ng refresh Ä‘Æ°á»£c.
      */
     await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -472,7 +499,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Mật khẩu cũ không còn đăng nhập được.
+     * Máº­t kháº©u cÅ© khÃ´ng cÃ²n Ä‘Äƒng nháº­p Ä‘Æ°á»£c.
      */
     await request(httpServer())
       .post('/api/v1/auth/login')
@@ -484,7 +511,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Mật khẩu mới đăng nhập được.
+     * Máº­t kháº©u má»›i Ä‘Äƒng nháº­p Ä‘Æ°á»£c.
      */
     await request(httpServer())
       .post('/api/v1/auth/login')
@@ -496,7 +523,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(200);
 
     /*
-     * Cookie rotated vẫn hợp lệ.
+     * Cookie rotated váº«n há»£p lá»‡.
      */
     await request(httpServer())
       .post('/api/v1/auth/logout')
@@ -612,7 +639,7 @@ describe('Auth HTTP lifecycle', () => {
     });
 
     /*
-     * Email chưa được đổi trước confirmation.
+     * Email chÆ°a Ä‘Æ°á»£c Ä‘á»•i trÆ°á»›c confirmation.
      */
     const beforeConfirm = await request(httpServer())
       .get('/api/v1/auth/me')
@@ -659,7 +686,7 @@ describe('Auth HTTP lifecycle', () => {
     });
 
     /*
-     * Access tokens của mọi session mất hiệu lực.
+     * Access tokens cá»§a má»i session máº¥t hiá»‡u lá»±c.
      */
     await request(httpServer())
       .get('/api/v1/auth/me')
@@ -680,7 +707,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Refresh tokens cũng mất hiệu lực.
+     * Refresh tokens cÅ©ng máº¥t hiá»‡u lá»±c.
      */
     await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -697,7 +724,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Email cũ không đăng nhập được.
+     * Email cÅ© khÃ´ng Ä‘Äƒng nháº­p Ä‘Æ°á»£c.
      */
     await request(httpServer())
       .post('/api/v1/auth/login')
@@ -709,7 +736,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Email mới đăng nhập được bằng cùng password.
+     * Email má»›i Ä‘Äƒng nháº­p Ä‘Æ°á»£c báº±ng cÃ¹ng password.
      */
     const newLogin = await request(httpServer())
       .post('/api/v1/auth/login')
@@ -748,7 +775,7 @@ describe('Auth HTTP lifecycle', () => {
     });
 
     /*
-     * Token confirmation có tính idempotent.
+     * Token confirmation cÃ³ tÃ­nh idempotent.
      */
     const secondConfirmation = await request(httpServer())
       .post('/api/v1/auth/change-email/confirm')
@@ -992,8 +1019,8 @@ describe('Auth HTTP lifecycle', () => {
     );
 
     /*
-     * Duplicate refresh cookie không được lấy token đầu tiên
-     * hoặc token cuối cùng.
+     * Duplicate refresh cookie khÃ´ng Ä‘Æ°á»£c láº¥y token Ä‘áº§u tiÃªn
+     * hoáº·c token cuá»‘i cÃ¹ng.
      */
     const duplicateRefreshResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -1018,8 +1045,8 @@ describe('Auth HTTP lifecycle', () => {
     );
 
     /*
-     * Percent encoding không hợp lệ phải bị reject,
-     * không được xem như cookie bị thiếu.
+     * Percent encoding khÃ´ng há»£p lá»‡ pháº£i bá»‹ reject,
+     * khÃ´ng Ä‘Æ°á»£c xem nhÆ° cookie bá»‹ thiáº¿u.
      */
     const malformedRefreshResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -1040,8 +1067,8 @@ describe('Auth HTTP lifecycle', () => {
     );
 
     /*
-     * Logout không có cookie vẫn idempotent, nhưng logout
-     * có duplicate credential cookie phải bị từ chối.
+     * Logout khÃ´ng cÃ³ cookie váº«n idempotent, nhÆ°ng logout
+     * cÃ³ duplicate credential cookie pháº£i bá»‹ tá»« chá»‘i.
      */
     const duplicateLogoutResponse = await request(httpServer())
       .post('/api/v1/auth/logout')
@@ -1066,7 +1093,7 @@ describe('Auth HTTP lifecycle', () => {
     );
 
     /*
-     * CSRF cookie duplicate cũng không được tự chọn.
+     * CSRF cookie duplicate cÅ©ng khÃ´ng Ä‘Æ°á»£c tá»± chá»n.
      */
     const duplicateCsrfResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -1091,8 +1118,8 @@ describe('Auth HTTP lifecycle', () => {
     );
 
     /*
-     * Các request lỗi phía trên không được revoke session
-     * hoặc tiêu thụ refresh token hợp lệ.
+     * CÃ¡c request lá»—i phÃ­a trÃªn khÃ´ng Ä‘Æ°á»£c revoke session
+     * hoáº·c tiÃªu thá»¥ refresh token há»£p lá»‡.
      */
     await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -1143,8 +1170,8 @@ describe('Auth HTTP lifecycle', () => {
     const rotated = readAuthCookies(successful);
 
     /*
-     * Loser request đã revoke cả family.
-     * Refresh token vừa được winner trả về cũng mất hiệu lực.
+     * Loser request Ä‘Ã£ revoke cáº£ family.
+     * Refresh token vá»«a Ä‘Æ°á»£c winner tráº£ vá» cÅ©ng máº¥t hiá»‡u lá»±c.
      */
     await request(httpServer())
       .post('/api/v1/auth/refresh')
@@ -1302,7 +1329,7 @@ describe('Auth HTTP lifecycle', () => {
 
       const payload = decrypted as SendMailJobV1;
 
-      if (payload.templateId !== templateId) {
+      if (payload.templateId !== (templateId as string)) {
         continue;
       }
 

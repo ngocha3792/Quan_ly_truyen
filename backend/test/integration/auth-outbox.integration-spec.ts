@@ -27,9 +27,7 @@ describe('Auth outbox to BullMQ integration', () => {
     const redisUrl = process.env.TEST_REDIS_URL;
 
     if (!databaseUrl || !redisUrl) {
-      throw new Error(
-        'TEST_DATABASE_URL and TEST_REDIS_URL are required',
-      );
+      throw new Error('TEST_DATABASE_URL and TEST_REDIS_URL are required');
     }
 
     prisma = new PrismaService(
@@ -114,9 +112,7 @@ describe('Auth outbox to BullMQ integration', () => {
             1,
           ).toString('base64'),
 
-          ciphertext: Buffer.from(
-            'encrypted-test-payload',
-          ).toString('base64'),
+          ciphertext: Buffer.from('encrypted-test-payload').toString('base64'),
 
           authTag: Buffer.alloc(
             16,
@@ -172,9 +168,7 @@ describe('Auth outbox to BullMQ integration', () => {
     };
 
     const propagation = {
-      parse: jest.fn().mockReturnValue(
-        undefined,
-      ),
+      parse: jest.fn().mockReturnValue(undefined),
 
       runWithExtractedContext: jest.fn(
         (
@@ -185,38 +179,31 @@ describe('Auth outbox to BullMQ integration', () => {
       ),
     };
 
-    const dispatcher =
-      new OutboxDispatcherService(
-        prisma,
+    const dispatcher = new OutboxDispatcherService(
+      prisma,
 
-        configService,
+      configService,
 
-        queue,
+      queue,
 
-        metrics as never,
+      metrics as never,
 
-        tracing as never,
+      tracing as never,
 
-        propagation as never,
-      );
+      propagation as never,
+    );
 
     /*
      * Database đã được làm sạch trước test nên chỉ event vừa tạo
      * được claim và publish.
      */
-    await expect(
-      dispatcher.dispatchBatch(10),
-    ).resolves.toBe(1);
+    await expect(dispatcher.dispatchBatch(10)).resolves.toBe(1);
 
-    const job = await queue.getJob(
-      `outbox-${event.id}`,
-    );
+    const job = await queue.getJob(`outbox-${event.id}`);
 
     expect(job).not.toBeNull();
 
-    expect(job?.name).toBe(
-      SEND_MAIL_JOB,
-    );
+    expect(job?.name).toBe(SEND_MAIL_JOB);
 
     expect(job?.data).toMatchObject({
       aggregateType: 'mail',
@@ -232,22 +219,15 @@ describe('Auth outbox to BullMQ integration', () => {
       },
     });
 
-    const persisted =
-      await prisma.outboxEvent.findUniqueOrThrow(
-        {
-          where: {
-            id: event.id,
-          },
-        },
-      );
+    const persisted = await prisma.outboxEvent.findUniqueOrThrow({
+      where: {
+        id: event.id,
+      },
+    });
 
-    expect(persisted.status).toBe(
-      OutboxStatus.PUBLISHED,
-    );
+    expect(persisted.status).toBe(OutboxStatus.PUBLISHED);
 
-    expect(
-      persisted.processedAt,
-    ).not.toBeNull();
+    expect(persisted.processedAt).not.toBeNull();
   });
 
   async function cleanupOutboxTestArtifacts(): Promise<void> {

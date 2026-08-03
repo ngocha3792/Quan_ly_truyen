@@ -207,17 +207,11 @@ describe('ProductionGateService', () => {
 
     expect(report.ready).toBe(false);
 
-    expect(report.checks).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'database-migrations',
-
-          status: 'failed',
-
-          message: expect.stringContaining('missing migrations'),
-        }),
-      ]),
+    const migrationCheck = report.checks.find(
+      (c) => c.name === 'database-migrations',
     );
+    expect(migrationCheck?.status).toBe('failed');
+    expect(migrationCheck?.message).toContain('missing migrations');
   });
 
   it('fails postdeploy when maintenance cleanup has not run', async () => {

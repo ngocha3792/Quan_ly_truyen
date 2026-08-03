@@ -1,0 +1,631 @@
+diff --git a/.gitignore b/.gitignore
+index 3b85b34..d8806db 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -26,6 +26,7 @@ out/
+ .env.*
+ !.env.example
+ !.env.sample
++!backend/docker/.env.docker
+ *.pem
+ *.key
+ *.p12
+diff --git a/backend/.env.example b/backend/.env.example
+index 9d54786..4309f2e 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -57,14 +57,38 @@ CORS_MAX_AGE_SECONDS=86400
+ # ============================================================
+ # DATABASE
+ # ============================================================
+-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/quan_ly_truyen?schema=public
++DATABASE_URL=postgresql://postgres:postgres@localhost:5433/quan_ly_truyen?schema=public
+ 
+ # ============================================================
+ # AUTHENTICATION
+ # ============================================================
+-JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
++JWT_ACCESS_SECRET=local-access-secret-change-me-at-least-32-characters
++JWT_REFRESH_SECRET=local-refresh-secret-change-me-at-least-32-characters
++JWT_ACCESS_TTL_SECONDS=900
++JWT_REFRESH_TTL_SECONDS=2592000
+ JWT_ISSUER=quan-ly-truyen-api
+ JWT_AUDIENCE=quan-ly-truyen-web
++
++AUTH_REFRESH_COOKIE_NAME=refresh_token
++AUTH_COOKIE_SECURE=false
++AUTH_COOKIE_SAME_SITE=lax
++AUTH_COOKIE_DOMAIN=
++AUTH_COOKIE_PATH=/api/v1/auth
++
++AUTH_LOGIN_RATE_LIMIT_ENABLED=true
++AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS=900
++AUTH_LOGIN_RATE_LIMIT_IP_LIMIT=20
++AUTH_LOGIN_RATE_LIMIT_IDENTIFIER_LIMIT=5
++
++AUTH_JWT_BLACKLIST_ENABLED=true
++AUTH_JWT_BLACKLIST_FAILURE_MODE=closed
++
++AUTH_CSRF_ENABLED=true
++AUTH_CSRF_SECRET=local-csrf-secret-change-me-and-keep-different-from-jwt-secrets
++AUTH_CSRF_COOKIE_NAME=csrf_token
++AUTH_CSRF_COOKIE_DOMAIN=
++AUTH_CSRF_COOKIE_PATH=/
++
+ AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60
+ AUTH_PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS=60
+ # ============================================================
+@@ -98,7 +122,7 @@ IN_MEMORY_STORE_SWEEP_INTERVAL_MS=60000
+ # ============================================================
+ # Generate bằng:
+ # openssl rand -base64 32
+-MAIL_PAYLOAD_ENCRYPTION_KEY=389043irdslk
++MAIL_PAYLOAD_ENCRYPTION_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
+ 
+ # Tạm thời true để đọc các plaintext job cũ.
+ # Sau khi queue/outbox cũ đã drain hết thì đổi false.
+@@ -179,73 +203,11 @@ MAIL_QUEUE_COMPLETED_RETENTION_COUNT=100
+ MAIL_QUEUE_FAILED_RETENTION_SECONDS=604800
+ MAIL_QUEUE_FAILED_RETENTION_COUNT=1000
+ 
+-JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
+-JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
+-
+-JWT_ACCESS_TTL_SECONDS=900
+-JWT_REFRESH_TTL_SECONDS=2592000
+-
+-JWT_ISSUER=quan-ly-truyen-api
+-JWT_AUDIENCE=quan-ly-truyen-web
+-
+-AUTH_REFRESH_COOKIE_NAME=refresh_token
+-AUTH_COOKIE_SECURE=true
+-AUTH_COOKIE_SAME_SITE=lax
+-AUTH_COOKIE_DOMAIN=
+-AUTH_COOKIE_PATH=/api/v1/auth
+-AUTH_LOGIN_RATE_LIMIT_ENABLED=true
+-AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS=900
+-AUTH_LOGIN_RATE_LIMIT_IP_LIMIT=20
+-AUTH_LOGIN_RATE_LIMIT_IDENTIFIER_LIMIT=5
+-
+-# JWT access-token blacklist
+-#
+-# Production bắt buộc phải là true.
+-AUTH_JWT_BLACKLIST_ENABLED=true
+-
+-# closed:
+-# Redis lỗi thì protected endpoint trả 503.
+-#
+-# open:
+-# Chỉ dùng local/test. Redis lỗi thì access token
+-# tiếp tục được kiểm tra bằng session database.
+-#
+-# Production bắt buộc phải là closed.
+-AUTH_JWT_BLACKLIST_FAILURE_MODE=closed
+-
+-# CSRF protection
+-#
+-# Production bắt buộc true.
+-AUTH_CSRF_ENABLED=true
+-
+-# Secret riêng với JWT secrets.
+-#
+-# Generate:
+-# openssl rand -base64 48
+-AUTH_CSRF_SECRET=dsaadudaoiuaweuoiewuiosauoikgjhghghghghghghghhgj8889089890988989ghjg
+-
+-# Cookie chứa signed CSRF token.
+-AUTH_CSRF_COOKIE_NAME=csrf_token
+-
+-# Localhost có thể để trống.
+-#
+-# Nếu frontend và backend là:
+-# app.example.com / api.example.com
+-# có thể đặt:
+-# AUTH_CSRF_COOKIE_DOMAIN=.example.com
+-#
+-# Refresh cookie vẫn có thể giữ host-only bằng cách
+-# để AUTH_COOKIE_DOMAIN trống.
+-AUTH_CSRF_COOKIE_DOMAIN=
+-
+-# Phải là "/" để frontend đọc được token
+-# tại mọi route.
+-AUTH_CSRF_COOKIE_PATH=/
+ 
+ # ============================================================
+ # TESTING (Integration & E2E)
+ # ============================================================
+-TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test?schema=public
++TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/quan_ly_truyen_test?schema=public
+ TEST_REDIS_URL=redis://localhost:6379/1
+ 
+ # Đặt true nếu bạn chấp nhận dùng database tên không chứa "test"
+diff --git a/quanly-review/Quan_ly_truyen-main/backend/docker/.env.docker b/backend/docker/.env.docker
+new file mode 100644
+index 0000000..6dd53a0
+--- /dev/null
++++ b/backend/docker/.env.docker
+@@ -0,0 +1,62 @@
++# Docker-only development defaults. Do not reuse these secrets in production.
++NODE_ENV=development
++HOST=0.0.0.0
++PORT=3000
++APP_PUBLIC_URL=http://localhost:3000
++FRONTEND_PUBLIC_URL=http://localhost:4200
++
++DATABASE_URL=postgresql://postgres:postgres@postgres:5432/quan_ly_truyen?schema=public
++TEST_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/quan_ly_truyen_test?schema=public
++
++REDIS_ENABLED=true
++REDIS_URL=redis://redis:6379/0
++TEST_REDIS_URL=redis://redis:6379/1
++REDIS_KEY_PREFIX=qlt
++QUEUE_ENABLED=true
++QUEUE_PREFIX=qlt
++
++MAIL_ENABLED=true
++MAIL_PAYLOAD_ENCRYPTION_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
++MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ=false
++MAIL_FROM_NAME=Quan Ly Truyen
++MAIL_FROM_ADDRESS=no-reply@example.test
++MAIL_REPLY_TO=support@example.test
++MAIL_MESSAGE_ID_DOMAIN=mail.example.test
++SMTP_HOST=mailpit
++SMTP_PORT=1025
++SMTP_SECURE=false
++SMTP_REQUIRE_TLS=false
++SMTP_VERIFY_ON_STARTUP=true
++
++JWT_ACCESS_SECRET=docker-access-secret-change-me-at-least-32-characters
++JWT_REFRESH_SECRET=docker-refresh-secret-change-me-at-least-32-characters
++JWT_ISSUER=quan-ly-truyen-api
++JWT_AUDIENCE=quan-ly-truyen-web
++
++AUTH_REFRESH_COOKIE_NAME=refresh_token
++AUTH_COOKIE_SECURE=false
++AUTH_COOKIE_SAME_SITE=lax
++AUTH_COOKIE_PATH=/api/v1/auth
++AUTH_LOGIN_RATE_LIMIT_ENABLED=true
++AUTH_JWT_BLACKLIST_ENABLED=true
++AUTH_JWT_BLACKLIST_FAILURE_MODE=closed
++AUTH_CSRF_ENABLED=true
++AUTH_CSRF_SECRET=docker-csrf-secret-change-me-and-keep-different-from-jwt
++AUTH_CSRF_COOKIE_NAME=csrf_token
++AUTH_CSRF_COOKIE_PATH=/
++AUTH_MAX_ACTIVE_SESSIONS=10
++AUTH_SESSION_LIST_LIMIT=20
++AUTH_SECURITY_EVENT_HISTORY_LIMIT=50
++AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED=true
++AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS=15
++
++CORS_ALLOWED_ORIGINS=http://localhost:4200
++CORS_CREDENTIALS=true
++CLOUDINARY_ENABLED=false
++OBSERVABILITY_ENABLED=false
++METRICS_ENABLED=false
++OTEL_SDK_DISABLED=true
++SWAGGER_ENABLED=true
++LOG_LEVEL=debug
++LOG_PRETTY=true
++ALLOW_UNSAFE_TEST_DB=false
+diff --git a/backend/docker/compose.dev.yml b/backend/docker/compose.dev.yml
+index ba32b51..ba21eb1 100644
+--- a/backend/docker/compose.dev.yml
++++ b/backend/docker/compose.dev.yml
+@@ -8,7 +8,6 @@ x-backend-common: &backend-common
+   working_dir: /app
+ 
+   env_file:
+-    - ../.env
+     - .env.docker
+ 
+   volumes:
+diff --git a/backend/docker/postgres/init/01-create-test-database.sql b/backend/docker/postgres/init/01-create-test-database.sql
+index d95c2f6..3011d05 100644
+--- a/backend/docker/postgres/init/01-create-test-database.sql
++++ b/backend/docker/postgres/init/01-create-test-database.sql
+@@ -1,4 +1,4 @@
+-﻿SELECT 'CREATE DATABASE quan_ly_truyen_test'
++SELECT 'CREATE DATABASE quan_ly_truyen_test'
+ WHERE NOT EXISTS (
+   SELECT
+   FROM pg_database
+diff --git a/quanly-review/Quan_ly_truyen-main/backend/docs/testing/AUTH_TEST_FIX_REPORT.md b/backend/docs/testing/AUTH_TEST_FIX_REPORT.md
+new file mode 100644
+index 0000000..43fb648
+--- /dev/null
++++ b/backend/docs/testing/AUTH_TEST_FIX_REPORT.md
+@@ -0,0 +1,41 @@
++# Auth test review and fixes
++
++## Scope
++
++This review covered the Auth unit tests, PostgreSQL and Redis integration tests, Auth outbox integration, HTTP E2E tests, test environment setup, Docker development configuration, and environment examples.
++
++## Problems found
++
++1. `test:auth:integration` and `test:auth:e2e` assumed that the test database already existed and had already been migrated.
++2. The test safety guards were disabled when `ALLOW_UNSAFE_TEST_DB` was missing. Safe behavior should be the default.
++3. `.env.example` pointed PostgreSQL URLs at host port `5432`, while `docker/compose.dev.yml` exposed PostgreSQL on host port `5433` by default.
++4. Docker Compose referenced environment files that were not present in the submitted project.
++5. The PostgreSQL init SQL contained a UTF-8 BOM.
++6. The Auth PostgreSQL session-limit test used fixed expiration dates and did not explicitly control `createdAt`, although production logic selects the oldest session by `createdAt`.
++7. `test:auth:unit` ran only two aggregate spec files and silently omitted eleven other Auth spec files.
++8. `.env.example` contained duplicated or conflicting Auth values and an invalid mail payload encryption key.
++
++## Changes applied
++
++- Added `scripts/testing/prepare-auth-test-environment.ts`.
++- Added `test:auth:prepare` and made integration/E2E scripts invoke it automatically.
++- Added `test/jest-auth-unit.json`, so `test:auth:unit` includes every `src/modules/auth/**/*.spec.ts` file.
++- Made database and Redis safety guards fail closed unless `ALLOW_UNSAFE_TEST_DB=true` is explicitly set.
++- Added deterministic session limits to both integration and E2E setup.
++- Reworked the session-limit integration fixture to use relative future expiration dates and explicit ordered `createdAt` values.
++- Added tracked Docker-only defaults in `docker/.env.docker` and simplified Compose to load that file.
++- Aligned host PostgreSQL example URLs with port `5433`.
++- Removed the BOM from the PostgreSQL initialization SQL.
++- Consolidated Auth example variables and supplied a valid 32-byte Base64 mail encryption key.
++- Added local and Docker test instructions to the backend README.
++
++## Verification performed in the review environment
++
++- Parsed 697 TypeScript files with the TypeScript parser: no syntax diagnostics.
++- Parsed `package.json` and `package-lock.json`: valid JSON.
++- Confirmed dependency declarations match the root metadata in `package-lock.json`.
++- Parsed both Docker Compose files as YAML.
++- Confirmed `.env.example` and `docker/.env.docker` have no duplicate keys.
++- Confirmed the PostgreSQL init SQL no longer begins with a UTF-8 BOM.
++
++Full Jest execution could not be completed in the review container because its internal npm registry returned HTTP 404 for the locked `zeptomatch@2.1.0` tarball during `npm ci`. Docker, PostgreSQL, and Redis were also unavailable in that container. This limitation is external to the submitted source, so no passing test claim is made here.
+diff --git a/backend/package.json b/backend/package.json
+index 6085f6a..0f92be4 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -21,9 +21,10 @@
+                     "test:cov":  "jest --coverage",
+                     "test:debug":  "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+                     "test:e2e":  "jest --config ./test/jest-e2e.json",
+-                    "test:auth:unit":  "jest --runInBand --runTestsByPath src/modules/auth/domain/auth-domain.spec.ts src/modules/auth/application/auth-application.spec.ts",
+-                    "test:auth:integration":  "jest --config ./test/jest-auth-integration.json --runInBand",
+-                    "test:auth:e2e":  "jest --config ./test/jest-auth-e2e.json --runInBand",
++                    "test:auth:unit":  "jest --config ./test/jest-auth-unit.json --runInBand",
++                    "test:auth:prepare":  "tsx scripts/testing/prepare-auth-test-environment.ts",
++                    "test:auth:integration":  "npm run test:auth:prepare \u0026\u0026 jest --config ./test/jest-auth-integration.json --runInBand",
++                    "test:auth:e2e":  "npm run test:auth:prepare \u0026\u0026 jest --config ./test/jest-auth-e2e.json --runInBand",
+                     "test:auth:all":  "npm run test:auth:unit \u0026\u0026 npm run test:auth:integration \u0026\u0026 npm run test:auth:e2e",
+                     "postinstall":  "prisma generate --config prisma.config.ts",
+                     "db:seed":  "tsx prisma/seed.ts",
+@@ -56,7 +57,7 @@
+                     "docker:dev:reset":  "docker compose -f docker/compose.dev.yml down -v --remove-orphans",
+                     "docker:dev:logs":  "docker compose -f docker/compose.dev.yml logs -f api worker",
+                     "docker:dev:ps":  "docker compose -f docker/compose.dev.yml ps",
+-                    "docker:test:auth":  "docker compose -f docker/compose.dev.yml --profile test run --rm auth-tests"
++                    "docker:test:auth":  "docker compose -f docker/compose.dev.yml --profile test run --build --rm auth-tests"
+                 },
+     "dependencies":  {
+                          "@nestjs/bullmq":  "^11.0.4",
+diff --git a/quanly-review/Quan_ly_truyen-main/backend/scripts/testing/prepare-auth-test-environment.ts b/backend/scripts/testing/prepare-auth-test-environment.ts
+new file mode 100644
+index 0000000..067c7aa
+--- /dev/null
++++ b/backend/scripts/testing/prepare-auth-test-environment.ts
+@@ -0,0 +1,173 @@
++import Redis from 'ioredis';
++import { Client } from 'pg';
++
++import {
++  assertNotProduction,
++  requireEnvironmentVariable,
++} from '../shared/environment';
++import { runCommand } from '../shared/process-command';
++import { ScriptError, ScriptExitCode } from '../shared/script-error';
++import { runScript } from '../shared/script-runner';
++
++let adminClient: Client | undefined;
++let redis: Redis | undefined;
++
++void runScript({
++  name: 'prepare-auth-test-environment',
++
++  async execute({ logger }) {
++    assertNotProduction('Preparing the Auth test environment');
++
++    const testDatabaseUrl = requireEnvironmentVariable('TEST_DATABASE_URL');
++    const testRedisUrl = requireEnvironmentVariable('TEST_REDIS_URL');
++    const allowUnsafe = process.env.ALLOW_UNSAFE_TEST_DB === 'true';
++
++    const database = parseDatabaseUrl(testDatabaseUrl);
++    const redisDatabase = parseRedisDatabase(testRedisUrl);
++
++    if (!allowUnsafe && !/(^|[_-])test($|[_-])/u.test(database.name)) {
++      throw new ScriptError(
++        `Refusing non-test PostgreSQL database: ${database.name}`,
++        ScriptExitCode.SAFETY_GUARD,
++      );
++    }
++
++    if (!allowUnsafe && redisDatabase <= 0) {
++      throw new ScriptError(
++        'TEST_REDIS_URL must select a dedicated Redis database greater than 0',
++        ScriptExitCode.SAFETY_GUARD,
++      );
++    }
++
++    adminClient = new Client({
++      connectionString: database.adminUrl,
++    });
++
++    await adminClient.connect();
++
++    const existing = await adminClient.query<{ exists: boolean }>(
++      'SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1) AS exists',
++      [database.name],
++    );
++
++    if (!existing.rows[0]?.exists) {
++      await adminClient.query(
++        `CREATE DATABASE ${quoteIdentifier(database.name)}`,
++      );
++
++      logger.info('created PostgreSQL test database', {
++        database: database.name,
++      });
++    } else {
++      logger.info('PostgreSQL test database already exists', {
++        database: database.name,
++      });
++    }
++
++    await adminClient.end();
++    adminClient = undefined;
++
++    redis = new Redis(testRedisUrl, {
++      lazyConnect: true,
++      enableReadyCheck: true,
++      maxRetriesPerRequest: 1,
++    });
++
++    await redis.connect();
++    await redis.ping();
++
++    logger.info('Redis test database is reachable', {
++      database: redisDatabase,
++    });
++
++    await redis.quit();
++    redis = undefined;
++
++    logger.info('applying Prisma migrations to the test database');
++
++    await runCommand({
++      command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
++      args: ['run', 'db:migrate:deploy'],
++      cwd: process.cwd(),
++      env: {
++        ...process.env,
++        NODE_ENV: 'test',
++        DATABASE_URL: testDatabaseUrl,
++      },
++    });
++  },
++
++  async cleanup() {
++    if (adminClient) {
++      await adminClient.end();
++      adminClient = undefined;
++    }
++
++    if (redis) {
++      redis.disconnect(false);
++      redis = undefined;
++    }
++  },
++});
++
++function parseDatabaseUrl(value: string): {
++  adminUrl: string;
++  name: string;
++} {
++  let url: URL;
++
++  try {
++    url = new URL(value);
++  } catch {
++    throw new ScriptError(
++      'TEST_DATABASE_URL is not a valid URL',
++      ScriptExitCode.INVALID_ARGUMENT,
++    );
++  }
++
++  const name = decodeURIComponent(url.pathname.replace(/^\//u, ''));
++
++  if (!name) {
++    throw new ScriptError(
++      'TEST_DATABASE_URL must contain a database name',
++      ScriptExitCode.INVALID_ARGUMENT,
++    );
++  }
++
++  const adminUrl = new URL(url);
++  adminUrl.pathname = '/postgres';
++  adminUrl.searchParams.delete('schema');
++
++  return {
++    adminUrl: adminUrl.toString(),
++    name,
++  };
++}
++
++function parseRedisDatabase(value: string): number {
++  let url: URL;
++
++  try {
++    url = new URL(value);
++  } catch {
++    throw new ScriptError(
++      'TEST_REDIS_URL is not a valid URL',
++      ScriptExitCode.INVALID_ARGUMENT,
++    );
++  }
++
++  const database = Number(url.pathname.replace(/^\//u, '') || '0');
++
++  if (!Number.isSafeInteger(database) || database < 0) {
++    throw new ScriptError(
++      'TEST_REDIS_URL contains an invalid database number',
++      ScriptExitCode.INVALID_ARGUMENT,
++    );
++  }
++
++  return database;
++}
++
++function quoteIdentifier(value: string): string {
++  return `"${value.replaceAll('"', '""')}"`;
++}
+diff --git a/backend/test/integration/auth-postgres.integration-spec.ts b/backend/test/integration/auth-postgres.integration-spec.ts
+index b19b5da..5fa2c16 100644
+--- a/backend/test/integration/auth-postgres.integration-spec.ts
++++ b/backend/test/integration/auth-postgres.integration-spec.ts
+@@ -146,6 +146,11 @@ describe('Auth PostgreSQL persistence', () => {
+     await moduleRef.close();
+   });
+   it('revokes the oldest session and writes audit when session limit is exceeded', async () => {
++    const now = new Date();
++    const oldestCreatedAt = new Date(now.getTime() - 120_000);
++    const newerCreatedAt = new Date(now.getTime() - 60_000);
++    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1_000);
++
+     const user = await prisma.user.create({
+       data: {
+         email: `session-limit.${runId}@example.test`,
+@@ -168,9 +173,11 @@ describe('Auth PostgreSQL persistence', () => {
+ 
+         refreshTokenFamilyId: randomUUID(),
+ 
+-        lastUsedAt: new Date('2026-08-01T00:00:00.000Z'),
++        lastUsedAt: oldestCreatedAt,
++
++        expiresAt,
+ 
+-        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
++        createdAt: oldestCreatedAt,
+       },
+     });
+ 
+@@ -186,9 +193,11 @@ describe('Auth PostgreSQL persistence', () => {
+ 
+         refreshTokenFamilyId: randomUUID(),
+ 
+-        lastUsedAt: new Date('2026-08-02T00:00:00.000Z'),
++        lastUsedAt: newerCreatedAt,
+ 
+-        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
++        expiresAt,
++
++        createdAt: newerCreatedAt,
+       },
+     });
+ 
+@@ -215,9 +224,9 @@ describe('Auth PostgreSQL persistence', () => {
+ 
+       userAgent: 'Jest',
+ 
+-      loggedInAt: new Date('2026-08-03T00:00:00.000Z'),
++      loggedInAt: now,
+ 
+-      expiresAt: new Date('2026-09-03T00:00:00.000Z'),
++      expiresAt,
+     });
+ 
+     const freshOldest = await prisma.session.findUniqueOrThrow({
+diff --git a/quanly-review/Quan_ly_truyen-main/backend/test/jest-auth-unit.json b/backend/test/jest-auth-unit.json
+new file mode 100644
+index 0000000..9cbfc15
+--- /dev/null
++++ b/backend/test/jest-auth-unit.json
+@@ -0,0 +1,19 @@
++{
++  "moduleFileExtensions": [
++    "js",
++    "json",
++    "ts"
++  ],
++  "rootDir": "..",
++  "testEnvironment": "node",
++  "testMatch": [
++    "<rootDir>/src/modules/auth/**/*.spec.ts"
++  ],
++  "transform": {
++    "^.+\\.(t|j)s$": "ts-jest"
++  },
++  "moduleNameMapper": {
++    "^@/(.*)$": "<rootDir>/src/$1",
++    "^(\\.\\.?/.*)\\.js$": "$1"
++  }
++}
+diff --git a/backend/test/setup/setup-auth-e2e-env.ts b/backend/test/setup/setup-auth-e2e-env.ts
+index fd4ebe4..153b8ea 100644
+--- a/backend/test/setup/setup-auth-e2e-env.ts
++++ b/backend/test/setup/setup-auth-e2e-env.ts
+@@ -66,6 +66,12 @@ process.env.AUTH_JWT_BLACKLIST_ENABLED = 'true';
+ 
+ process.env.AUTH_JWT_BLACKLIST_FAILURE_MODE = 'closed';
+ 
++process.env.AUTH_MAX_ACTIVE_SESSIONS = '2';
++
++process.env.AUTH_SESSION_LIST_LIMIT = '20';
++
++process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT = '50';
++
+ process.env.AUTH_CSRF_ENABLED = 'true';
+ 
+ process.env.AUTH_CSRF_SECRET = 'e2e-csrf-secret-at-least-32-characters';
+@@ -96,7 +102,7 @@ process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED = 'true';
+ process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS = '5';
+ 
+ function assertTestDatabase(value: string): void {
+-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
++  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
+     const url = new URL(value);
+ 
+     const name = url.pathname.replace(/^\//u, '').toLowerCase();
+@@ -108,7 +114,7 @@ function assertTestDatabase(value: string): void {
+ }
+ 
+ function assertTestRedis(value: string): void {
+-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
++  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
+     const url = new URL(value);
+ 
+     const databaseNumber = Number(url.pathname.replace(/^\//u, '') || '0');
+diff --git a/backend/test/setup/setup-auth-integration-env.ts b/backend/test/setup/setup-auth-integration-env.ts
+index b703db0..1a484c1 100644
+--- a/backend/test/setup/setup-auth-integration-env.ts
++++ b/backend/test/setup/setup-auth-integration-env.ts
+@@ -64,6 +64,8 @@ process.env.AUTH_MAX_ACTIVE_SESSIONS = '2';
+ 
+ process.env.AUTH_SESSION_LIST_LIMIT = '20';
+ 
++process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT = '50';
++
+ process.env.AUTH_CSRF_ENABLED = 'true';
+ 
+ process.env.AUTH_CSRF_SECRET = 'integration-csrf-secret-at-least-32-characters';
+@@ -85,7 +87,7 @@ process.env.OBSERVABILITY_ENABLED = 'false';
+ process.env.METRICS_ENABLED = 'false';
+ 
+ function assertSafeTestDatabase(value: string): void {
+-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
++  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
+     const url = new URL(value);
+ 
+     const databaseName = url.pathname.replace(/^\//u, '').toLowerCase();
+@@ -99,7 +101,7 @@ function assertSafeTestDatabase(value: string): void {
+ }
+ 
+ function assertSafeTestRedis(value: string): void {
+-  if (process.env.ALLOW_UNSAFE_TEST_DB === 'false') {
++  if (process.env.ALLOW_UNSAFE_TEST_DB !== 'true') {
+     const url = new URL(value);
+ 
+     const databaseNumber = Number(url.pathname.replace(/^\//u, '') || '0');

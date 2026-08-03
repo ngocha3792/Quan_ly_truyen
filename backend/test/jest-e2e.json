@@ -3,12 +3,18 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testTimeout": 30000,
+  "maxWorkers": 1,
+  "detectOpenHandles": true,
   "setupFiles": ["<rootDir>/setup/setup-e2e-env.ts"],
   "testRegex": ".e2e-spec.ts$",
+  "testPathIgnorePatterns": [
+    "<rootDir>/e2e/auth\\.e2e-spec\\.ts$"
+  ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "^@/(.*)$": "<rootDir>/../src/$1"
+    "^@/(.*)$": "<rootDir>/../src/$1",
+    "^(\\.\\.?/.*)\\.js$": "$1"
   }
 }

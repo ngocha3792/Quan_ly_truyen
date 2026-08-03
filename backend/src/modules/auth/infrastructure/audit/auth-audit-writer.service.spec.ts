@@ -2,9 +2,18 @@ import { AuthAuditWriterService } from './auth-audit-writer.service';
 
 describe('AuthAuditWriterService', () => {
   it('redacts sensitive fields before persistence', async () => {
-    const create = jest.fn().mockResolvedValue({
-      id: 'audit-1',
-    });
+    interface AuditLogCreatePayload {
+      data: {
+        metadata: Record<string, unknown>;
+        [key: string]: unknown;
+      };
+    }
+
+    const create = jest
+      .fn<Promise<{ id: string }>, [AuditLogCreatePayload]>()
+      .mockResolvedValue({
+        id: 'audit-1',
+      });
 
     const writer = new AuthAuditWriterService(
       {

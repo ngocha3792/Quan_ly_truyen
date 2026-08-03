@@ -37,34 +37,23 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
     'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK',
   ] as const;
 
-  const originalEnvironment = new Map<
-    string,
-    string | undefined
-  >();
+  const originalEnvironment = new Map<string, string | undefined>();
 
   const prisma = {
     inboundWebhookEvent: {
-      updateMany: jest
-        .fn()
-        .mockResolvedValue({
-          count: 0,
-        }),
+      updateMany: jest.fn().mockResolvedValue({
+        count: 0,
+      }),
 
-      findMany: jest
-        .fn()
-        .mockResolvedValue([]),
+      findMany: jest.fn().mockResolvedValue([]),
     },
 
     outboxEvent: {
-      updateMany: jest
-        .fn()
-        .mockResolvedValue({
-          count: 0,
-        }),
+      updateMany: jest.fn().mockResolvedValue({
+        count: 0,
+      }),
 
-      findMany: jest
-        .fn()
-        .mockResolvedValue([]),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 
@@ -87,11 +76,9 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       DATABASE_URL:
         'postgresql://postgres:postgres@localhost:5432/bootstrap_test',
 
-      JWT_ACCESS_SECRET:
-        'bootstrap-access-secret-at-least-32-characters',
+      JWT_ACCESS_SECRET: 'bootstrap-access-secret-at-least-32-characters',
 
-      JWT_REFRESH_SECRET:
-        'different-refresh-secret-at-least-32-characters',
+      JWT_REFRESH_SECRET: 'different-refresh-secret-at-least-32-characters',
 
       CLOUDINARY_ENABLED: 'false',
 
@@ -107,31 +94,25 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
        * Vì vậy tất cả tính năng bắt buộc Redis cũng phải được
        * tắt rõ ràng, không được kế thừa giá trị true từ .env.
        */
-      AUTH_LOGIN_RATE_LIMIT_ENABLED:
-        'false',
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: 'false',
 
-      AUTH_JWT_BLACKLIST_ENABLED:
-        'false',
+      AUTH_JWT_BLACKLIST_ENABLED: 'false',
 
-      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED:
-        'false',
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: 'false',
 
-      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS:
-        '15',
+      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: '15',
 
       /*
        * Test environment được phép dùng adapter fallback
        * để xác nhận AppModule vẫn boot khi Redis bị tắt.
        */
-      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK:
-        'true',
+      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'true',
     });
   });
 
   afterAll(() => {
     for (const key of controlledEnvironmentKeys) {
-      const originalValue =
-        originalEnvironment.get(key);
+      const originalValue = originalEnvironment.get(key);
 
       if (originalValue === undefined) {
         delete process.env[key];
@@ -149,37 +130,28 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
      *
      * Không chuyển import AppModule lên đầu file.
      */
-    const { AppModule } =
-      await import('@/app.module');
+    const { AppModule } = await import('@/app.module');
 
-    const moduleRef =
-      await Test.createTestingModule({
-        imports: [AppModule],
-      })
-        .overrideProvider(PrismaService)
-        .useValue(prisma)
-        .compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .compile();
 
-    const app: INestApplication =
-      moduleRef.createNestApplication({
-        rawBody: true,
-      });
+    const app: INestApplication = moduleRef.createNestApplication({
+      rawBody: true,
+    });
 
     configureApplication(
       app,
 
-      app
-        .get(ConfigService)
-        .getOrThrow<AppConfig>('app'),
+      app.get(ConfigService).getOrThrow<AppConfig>('app'),
     );
 
     await app.init();
 
-    await request(
-      app.getHttpServer() as Parameters<
-        typeof request
-      >[0],
-    )
+    await request(app.getHttpServer() as Parameters<typeof request>[0])
       .get('/api/v1/health/live')
       .expect(200)
       .expect({
@@ -194,16 +166,14 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
      * Import động để ConfigModule đọc đúng biến test
      * đã được override trong beforeAll.
      */
-    const { WorkerModule } =
-      await import('@/worker.module');
+    const { WorkerModule } = await import('@/worker.module');
 
-    const moduleRef =
-      await Test.createTestingModule({
-        imports: [WorkerModule],
-      })
-        .overrideProvider(PrismaService)
-        .useValue(prisma)
-        .compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [WorkerModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .compile();
 
     await moduleRef.init();
 
