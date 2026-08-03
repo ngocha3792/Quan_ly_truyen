@@ -58,6 +58,57 @@ export interface AuthConfig {
     path: string;
   };
 
+  csrf: {
+    enabled: boolean;
+
+    /**
+     * HMAC secret riêng, không dùng chung JWT secret.
+     */
+    secret: string;
+
+    /**
+     * Cookie này không HttpOnly vì frontend cần đọc
+     * để gửi lại qua X-CSRF-Token.
+     */
+    cookieName: string;
+
+    /**
+     * Có thể khác AUTH_COOKIE_DOMAIN.
+     *
+     * Ví dụ:
+     * frontend: app.example.com
+     * backend: api.example.com
+     *
+     * Có thể đặt .example.com cho CSRF cookie,
+     * trong khi refresh cookie vẫn là host-only.
+     */
+    cookieDomain?: string;
+
+    /**
+     * Phải là "/" để frontend đọc được cookie
+     * tại mọi route.
+     */
+    cookiePath: string;
+  };
+  sessions: {
+    /**
+     * Số session còn hoạt động tối đa trên mỗi user.
+     */
+    maxActiveSessions: number;
+
+    /**
+     * Số session tối đa trả về từ /auth/sessions.
+     */
+    listLimit: number;
+  };
+
+  audit: {
+    /**
+     * Số security event tối đa trả về mỗi request.
+     */
+    historyLimit: number;
+  };
+
   loginRateLimit: {
     enabled: boolean;
     windowSeconds: number;
@@ -69,9 +120,11 @@ export interface AuthConfig {
     enabled: boolean;
     failureMode: JwtBlacklistFailureMode;
   };
+
   emailVerification: {
     resendCooldownSeconds: number;
   };
+
   passwordReset: {
     requestCooldownSeconds: number;
   };
@@ -116,6 +169,14 @@ export interface QueueConfig {
   outboxBatchSize: number;
   outboxPollIntervalMs: number;
   outboxFailedAlertThreshold: number;
+
+  mailJobRetention: {
+    completedAgeSeconds: number;
+    completedCount: number;
+
+    failedAgeSeconds: number;
+    failedCount: number;
+  };
 
   workerHeartbeatEnabled: boolean;
   workerHeartbeatIntervalMs: number;
@@ -183,4 +244,18 @@ export interface MailConfig {
      */
     allowLegacyPlaintextRead: boolean;
   };
+}
+export interface ProductionGateConfig {
+  /**
+   * Folder chứa Prisma migration trong image production.
+   *
+   * Docker image bắt buộc phải copy folder này.
+   */
+  migrationsPath: string;
+
+  /**
+   * Cleanup phải có một lần chạy thành công
+   * không cũ hơn số giờ này.
+   */
+  cleanupMaxAgeHours: number;
 }

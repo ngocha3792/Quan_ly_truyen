@@ -1,6 +1,18 @@
-import 'dotenv/config';
+import { loadEnvironmentFiles } from '../../src/bootstrap/environment-loader';
 
 import { ScriptError, ScriptExitCode } from './script-error';
+
+/*
+ * Maintenance script phải nạp environment giống API và worker:
+ *
+ * .env.<NODE_ENV>.local
+ * .env.<NODE_ENV>
+ * .env.local
+ * .env
+ *
+ * File đứng trước có độ ưu tiên cao hơn.
+ */
+loadEnvironmentFiles();
 
 export function requireEnvironmentVariable(name: string): string {
   const value = process.env[name]?.trim();
@@ -46,7 +58,9 @@ export function parseDatabaseTarget(databaseUrl: string): {
 
   return {
     host: url.hostname,
+
     port: url.port || '5432',
+
     database: url.pathname.replace(/^\//, '') || 'unknown',
   };
 }

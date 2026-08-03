@@ -14,6 +14,8 @@ import { PrismaModule } from '@/infrastructure/database';
 import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
 
 import {
+  AUTH_AUDIT_READER_PORT,
+  GetSecurityEventsQueryHandler,
   CURRENT_USER_READER_PORT,
   GetCurrentUserQueryHandler,
   GetSessionsQueryHandler,
@@ -39,6 +41,9 @@ import {
   LogoutAllCommandHandler,
   LogoutCommandHandler,
   PASSWORD_HASHER_PORT,
+  EMAIL_CHANGE_PERSISTENCE_PORT,
+  RequestEmailChangeCommandHandler,
+  ConfirmEmailChangeCommandHandler,
   type PasswordHasherPort,
   REFRESH_SESSION_PERSISTENCE_PORT,
   REFRESH_TOKEN_VERIFIER_PORT,
@@ -46,11 +51,14 @@ import {
   RegisterCommandHandler,
   REGISTRATION_UNIT_OF_WORK_PORT,
   RevokeAccessTokenCommandHandler,
+  CHANGE_PASSWORD_PERSISTENCE_PORT,
+  ChangePasswordCommandHandler,
   SECURE_TOKEN_PORT,
   type SecureTokenPort,
   ValidateAccessTokenQueryHandler,
 } from './application';
 import {
+  CsrfTokenService,
   PrismaCurrentUserReader,
   PrismaSessionManagementPersistence,
   JwtAccessStrategy,
@@ -61,6 +69,10 @@ import {
   PrismaLoginPersistence,
   PrismaRefreshSessionPersistence,
   PrismaRegistrationUnitOfWork,
+  ChangeEmailUrlBuilder,
+  AuthAuditWriterService,
+  PrismaAuthAuditReader,
+  PrismaEmailChangePersistence,
   RedisJwtBlacklist,
   PasswordResetUrlBuilder,
   PrismaPasswordResetPersistence,
@@ -69,8 +81,9 @@ import {
   PrismaResendEmailVerificationPersistence,
   RedisEmailVerificationCooldown,
   RedisLoginRateLimiter,
+  PrismaChangePasswordPersistence,
 } from './infrastructure';
-import { AuthController } from './presentation/http';
+import { AuthController, RefreshCookieCsrfGuard } from './presentation/http';
 
 const passwordHasherProvider = {
   provide: PASSWORD_HASHER_PORT,
@@ -119,12 +132,28 @@ const idGeneratorProvider = {
   controllers: [AuthController],
 
   providers: [
+    CsrfTokenService,
+    AuthAuditWriterService,
+
+    PrismaAuthAuditReader,
+
+    GetSecurityEventsQueryHandler,
+
+    RefreshCookieCsrfGuard,
     RevokeSessionCommandHandler,
     GetCurrentUserQueryHandler,
     GetSessionsQueryHandler,
     RegisterCommandHandler,
     LoginCommandHandler,
     LogoutCommandHandler,
+    RequestEmailChangeCommandHandler,
+
+    ConfirmEmailChangeCommandHandler,
+
+    PrismaEmailChangePersistence,
+
+    ChangeEmailUrlBuilder,
+    ChangePasswordCommandHandler,
     LogoutAllCommandHandler,
     RefreshTokenCommandHandler,
     ResendEmailVerificationCommandHandler,
@@ -144,6 +173,7 @@ const idGeneratorProvider = {
     PrismaSessionManagementPersistence,
     PrismaCurrentUserReader,
 
+    PrismaChangePasswordPersistence,
     RedisEmailVerificationCooldown,
     RedisPasswordResetCooldown,
     RedisLoginRateLimiter,
@@ -156,9 +186,24 @@ const idGeneratorProvider = {
     JwtRefreshTokenVerifier,
     JwtAccessStrategy,
     {
+      provide: CHANGE_PASSWORD_PERSISTENCE_PORT,
+
+      useExisting: PrismaChangePasswordPersistence,
+    },
+    {
       provide: EMAIL_VERIFICATION_PERSISTENCE_PORT,
 
       useExisting: PrismaEmailVerificationPersistence,
+    },
+    {
+      provide: AUTH_AUDIT_READER_PORT,
+
+      useExisting: PrismaAuthAuditReader,
+    },
+    {
+      provide: EMAIL_CHANGE_PERSISTENCE_PORT,
+
+      useExisting: PrismaEmailChangePersistence,
     },
     {
       provide: EMAIL_VERIFICATION_COOLDOWN_PORT,

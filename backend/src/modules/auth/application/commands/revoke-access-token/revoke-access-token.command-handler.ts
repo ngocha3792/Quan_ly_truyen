@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { InvalidTokenException } from '@/common/exceptions';
+
 import { isUuidV4 } from '@/common/utils';
 
 import { JWT_BLACKLIST_PORT, type JwtBlacklistPort } from '../../ports';
+
 import { JwtBlacklistReason } from '../../../domain/enums';
 
 import { RevokeAccessTokenCommand } from './revoke-access-token.command';
@@ -28,8 +30,19 @@ export class RevokeAccessTokenCommandHandler {
       });
     }
 
+    /*
+     * RedisJwtBlacklist phải ném exception nếu:
+     *
+     * - blacklist bị disable;
+     * - Redis client không tồn tại;
+     * - Redis SET thất bại;
+     * - Redis không trả OK.
+     *
+     * Vì vậy handler không được bắt và bỏ qua lỗi.
+     */
     await this.jwtBlacklist.blacklist({
       tokenId: command.tokenId,
+
       expiresAt: command.expiresAt,
 
       reason: JwtBlacklistReason.USER_REVOKED_CURRENT_ACCESS_TOKEN,

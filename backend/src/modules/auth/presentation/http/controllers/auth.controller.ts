@@ -10,6 +10,10 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  UseGuards,
+  DefaultValuePipe,
+  ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CookieOptions, Response } from 'express';
@@ -27,10 +31,18 @@ import { Idempotent } from '@/common/decorators/interceptor';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
 import type { AuthConfig } from '@/config';
 import {
+  GetSecurityEventsQuery,
+  GetSecurityEventsQueryHandler,
   GetCurrentUserQuery,
   GetCurrentUserQueryHandler,
   GetSessionsQuery,
   GetSessionsQueryHandler,
+  RequestEmailChangeCommand,
+  RequestEmailChangeCommandHandler,
+  ConfirmEmailChangeCommand,
+  ConfirmEmailChangeCommandHandler,
+  ChangePasswordCommand,
+  ChangePasswordCommandHandler,
   RevokeSessionCommand,
   RevokeSessionCommandHandler,
   ResendEmailVerificationCommand,
@@ -58,16 +70,23 @@ import { InvalidRefreshTokenException } from '../../../domain/exceptions';
 import {
   LoginRequest,
   RegisterRequest,
+  ChangePasswordRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   VerifyEmailRequest,
+  RequestEmailChangeRequest,
+  ConfirmEmailChangeRequest,
   ResendEmailVerificationRequest,
 } from '../requests';
 
 import type {
+  ChangePasswordResponse,
   CurrentUserResponse,
   SessionsResponse,
   LoginResponse,
+  SecurityEventsResponse,
+  RequestEmailChangeResponse,
+  ConfirmEmailChangeResponse,
   ResendEmailVerificationResponse,
   RefreshTokenResponse,
   RegisterResponse,
@@ -75,6 +94,11 @@ import type {
   ResetPasswordResponse,
   VerifyEmailResponse,
 } from '../responses';
+import { CSRF_HEADER_NAME } from '@/common/constants';
+
+import { CsrfTokenService } from '../../../infrastructure/security';
+
+import { RefreshCookieCsrfGuard } from '../guards';
 
 @Controller('auth')
 export class AuthController {
@@ -102,6 +126,15 @@ export class AuthController {
     private readonly getSessionsQueryHandler: GetSessionsQueryHandler,
 
     private readonly revokeSessionCommandHandler: RevokeSessionCommandHandler,
+
+    private readonly csrfTokenService: CsrfTokenService,
+
+    private readonly changePasswordCommandHandler: ChangePasswordCommandHandler,
+
+    private readonly requestEmailChangeCommandHandler: RequestEmailChangeCommandHandler,
+
+    private readonly confirmEmailChangeCommandHandler: ConfirmEmailChangeCommandHandler,
+    private readonly getSecurityEventsQueryHandler: GetSecurityEventsQueryHandler,
 
     configService: ConfigService,
   ) {
@@ -154,9 +187,11 @@ export class AuthController {
       }),
     );
 
-    this.setRefreshTokenCookie(
+    this.setAuthCookies(
       response,
+
       result.refreshToken,
+
       result.refreshTokenExpiresAt,
     );
 
@@ -176,6 +211,7 @@ export class AuthController {
 
   @Post('refresh')
   @Public()
+  @UseGuards(RefreshCookieCsrfGuard)
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Headers('cookie')
@@ -205,9 +241,11 @@ export class AuthController {
       /*
        * Cookie cũ được ghi đè bằng refresh token mới.
        */
-      this.setRefreshTokenCookie(
+      this.setAuthCookies(
         response,
+
         result.refreshToken,
+
         result.refreshTokenExpiresAt,
       );
 
@@ -226,14 +264,14 @@ export class AuthController {
        * Xóa cookie cũ khi refresh thất bại,
        * tránh frontend tiếp tục gửi token không hợp lệ.
        */
-      this.clearRefreshTokenCookie(response);
-
+      this.clearAuthCookies(response);
       throw error;
     }
   }
 
   @Post('logout')
   @Public()
+  @UseGuards(RefreshCookieCsrfGuard)
   @SkipResponseEnvelope()
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
@@ -255,7 +293,7 @@ export class AuthController {
      */
     await this.logoutCommandHandler.execute(new LogoutCommand(refreshToken));
 
-    this.clearRefreshTokenCookie(response);
+    this.clearAuthCookies(response);
   }
   @Post('logout-all')
   @SkipResponseEnvelope()
@@ -263,6 +301,9 @@ export class AuthController {
   async logoutAll(
     @CurrentUserId()
     userId: string | undefined,
+
+    @CurrentSessionId()
+    currentSessionId: string | undefined,
 
     @Res({ passthrough: true })
     response: Response,
@@ -273,13 +314,19 @@ export class AuthController {
      * Endpoint này không có @Public().
      * Global JwtAuthGuard sẽ yêu cầu access token hợp lệ.
      */
-    await this.logoutAllCommandHandler.execute(new LogoutAllCommand(userId));
+    await this.logoutAllCommandHandler.execute(
+      new LogoutAllCommand(
+        userId,
+
+        currentSessionId,
+      ),
+    );
 
     /*
      * Chỉ xóa cookie sau khi database revoke thành công.
      * Nếu database lỗi, cookie được giữ để client có thể retry.
      */
-    this.clearRefreshTokenCookie(response);
+    this.clearAuthCookies(response);
   }
 
   @Post('revoke-access-token')
@@ -355,14 +402,153 @@ export class AuthController {
      * Password reset đã revoke toàn bộ session,
      * cookie hiện tại không còn giá trị.
      */
-    this.clearRefreshTokenCookie(response);
-
+    this.clearAuthCookies(response);
     return {
       passwordReset: result.passwordReset,
 
       sessionsRevoked: result.sessionsRevoked,
 
       resetAt: result.resetAt.toISOString(),
+    };
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @CurrentSessionId()
+    currentSessionId: string | undefined,
+
+    @Body()
+    request: ChangePasswordRequest,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<ChangePasswordResponse> {
+    this.setNoStoreHeaders(response);
+
+    const result = await this.changePasswordCommandHandler.execute(
+      new ChangePasswordCommand(
+        userId,
+
+        currentSessionId,
+
+        request.currentPassword,
+
+        request.newPassword,
+      ),
+    );
+
+    /*
+     * Không xóa refresh cookie.
+     *
+     * Current refresh token vẫn hợp lệ.
+     * Chỉ access token hiện tại đã mất hiệu lực.
+     *
+     * Frontend phải gọi /auth/refresh ngay sau
+     * response thành công.
+     */
+    return {
+      passwordChanged: result.passwordChanged,
+
+      otherSessionsRevoked: result.otherSessionsRevoked,
+
+      currentSessionKept: result.currentSessionKept,
+
+      accessTokenInvalidated: result.accessTokenInvalidated,
+
+      refreshRequired: result.refreshRequired,
+
+      changedAt: result.changedAt.toISOString(),
+    };
+  }
+
+  @Post('change-email')
+  @Idempotent({
+    required: true,
+
+    ttlSeconds: 300,
+  })
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requestEmailChange(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @Body()
+    request: RequestEmailChangeRequest,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<RequestEmailChangeResponse> {
+    this.setNoStoreHeaders(response);
+
+    const result = await this.requestEmailChangeCommandHandler.execute(
+      new RequestEmailChangeCommand(
+        userId,
+
+        request.currentPassword,
+
+        request.newEmail,
+      ),
+    );
+
+    return {
+      emailChangeRequested: result.emailChangeRequested,
+
+      pendingEmail: result.pendingEmail,
+
+      verificationRequired: result.verificationRequired,
+
+      expiresAt: result.expiresAt.toISOString(),
+    };
+  }
+
+  @Post('change-email/confirm')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async confirmEmailChange(
+    @Body()
+    request: ConfirmEmailChangeRequest,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<ConfirmEmailChangeResponse> {
+    this.setNoStoreHeaders(response);
+
+    const result = await this.confirmEmailChangeCommandHandler.execute(
+      new ConfirmEmailChangeCommand(request.token),
+    );
+
+    /*
+     * Confirmation đã revoke toàn bộ session.
+     *
+     * Xóa refresh + CSRF cookie của browser
+     * hiện tại nếu chúng tồn tại.
+     */
+    this.clearAuthCookies(response);
+
+    return {
+      emailChanged: result.emailChanged,
+
+      alreadyChanged: result.alreadyChanged,
+
+      previousEmail: result.previousEmail,
+
+      email: result.email,
+
+      sessionsRevoked: result.sessionsRevoked,
+
+      reauthenticationRequired: result.reauthenticationRequired,
+
+      changedAt: result.changedAt.toISOString(),
     };
   }
 
@@ -455,6 +641,61 @@ export class AuthController {
       })),
     };
   }
+  @Get('security-events')
+  async getSecurityEvents(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @Query(
+      'limit',
+
+      new DefaultValuePipe(20),
+
+      new ParseIntPipe({
+        errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      }),
+    )
+    limit: number,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<SecurityEventsResponse> {
+    this.setNoStoreHeaders(response);
+
+    const result = await this.getSecurityEventsQueryHandler.execute(
+      new GetSecurityEventsQuery(
+        userId,
+
+        limit,
+      ),
+    );
+
+    return {
+      total: result.total,
+
+      events: result.events.map((event) => ({
+        id: event.id,
+
+        action: event.action,
+
+        entityType: event.entityType,
+
+        entityId: event.entityId,
+
+        metadata: event.metadata,
+
+        ipAddress: event.ipAddress,
+
+        userAgent: event.userAgent,
+
+        requestId: event.requestId,
+
+        createdAt: event.createdAt.toISOString(),
+      })),
+    };
+  }
 
   @Delete('sessions/:sessionId')
   @SkipResponseEnvelope()
@@ -480,7 +721,13 @@ export class AuthController {
     this.setNoStoreHeaders(response);
 
     await this.revokeSessionCommandHandler.execute(
-      new RevokeSessionCommand(userId, sessionId),
+      new RevokeSessionCommand(
+        userId,
+
+        currentSessionId,
+
+        sessionId,
+      ),
     );
 
     /*
@@ -488,7 +735,7 @@ export class AuthController {
      * refresh cookie của browser này cũng phải bị xóa.
      */
     if (sessionId === currentSessionId) {
-      this.clearRefreshTokenCookie(response);
+      this.clearAuthCookies(response);
     }
   }
 
@@ -578,6 +825,46 @@ export class AuthController {
     throw new InvalidRefreshTokenException();
   }
 
+  private setAuthCookies(
+    response: Response,
+
+    refreshToken: string,
+
+    expiresAt: Date,
+  ): void {
+    this.setRefreshTokenCookie(
+      response,
+
+      refreshToken,
+
+      expiresAt,
+    );
+
+    const csrfToken = this.csrfTokenService.issue(
+      refreshToken,
+
+      expiresAt,
+    );
+
+    if (!csrfToken) {
+      /*
+       * Xóa cookie cũ nếu CSRF bị disable
+       * ngoài production.
+       */
+      this.clearCsrfTokenCookie(response);
+
+      return;
+    }
+
+    this.setCsrfTokenCookie(
+      response,
+
+      csrfToken,
+
+      expiresAt,
+    );
+  }
+
   private setRefreshTokenCookie(
     response: Response,
     refreshToken: string,
@@ -605,6 +892,88 @@ export class AuthController {
     }
 
     response.clearCookie(cookie.name, options);
+  }
+
+  private clearAuthCookies(response: Response): void {
+    this.clearRefreshTokenCookie(response);
+
+    this.clearCsrfTokenCookie(response);
+  }
+
+  private setCsrfTokenCookie(
+    response: Response,
+
+    csrfToken: string,
+
+    expiresAt: Date,
+  ): void {
+    const csrf = this.authConfig.csrf;
+
+    const refreshCookie = this.authConfig.refreshCookie;
+
+    const options: CookieOptions = {
+      /*
+       * Double-submit cookie phải được
+       * frontend đọc để gửi lại qua header.
+       */
+      httpOnly: false,
+
+      secure: refreshCookie.secure,
+
+      sameSite: refreshCookie.sameSite,
+
+      path: csrf.cookiePath,
+
+      expires: expiresAt,
+    };
+
+    if (csrf.cookieDomain) {
+      options.domain = csrf.cookieDomain;
+    }
+
+    response.cookie(
+      csrf.cookieName,
+
+      csrfToken,
+
+      options,
+    );
+
+    /*
+     * Frontend cũng có thể lấy token từ
+     * response header sau login/refresh.
+     */
+    response.setHeader(
+      CSRF_HEADER_NAME,
+
+      csrfToken,
+    );
+  }
+
+  private clearCsrfTokenCookie(response: Response): void {
+    const csrf = this.authConfig.csrf;
+
+    const refreshCookie = this.authConfig.refreshCookie;
+
+    const options: CookieOptions = {
+      httpOnly: false,
+
+      secure: refreshCookie.secure,
+
+      sameSite: refreshCookie.sameSite,
+
+      path: csrf.cookiePath,
+    };
+
+    if (csrf.cookieDomain) {
+      options.domain = csrf.cookieDomain;
+    }
+
+    response.clearCookie(
+      csrf.cookieName,
+
+      options,
+    );
   }
 
   private createRefreshCookieOptions(expiresAt: Date): CookieOptions {

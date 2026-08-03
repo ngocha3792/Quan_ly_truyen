@@ -16,3 +16,6 @@ export * from './resend-email-verification.persistence.port';
 export * from './secure-token.port';
 export * from './current-user.reader.port';
 export * from './session-management.persistence.port';
+export * from './change-password.persistence.port';
+export * from './email-change.persistence.port';
+export * from './auth-audit-reader.port';

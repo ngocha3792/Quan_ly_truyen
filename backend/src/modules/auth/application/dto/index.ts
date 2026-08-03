@@ -7,3 +7,8 @@ export * from './reset-password-result.dto';
 export * from './verify-email-result.dto';
 export * from './current-user-result.dto';
 export * from './session-result.dto';
+export * from './change-password-result.dto';
+export * from './request-email-change-result.dto';
+
+export * from './confirm-email-change-result.dto';
+export * from './security-event-result.dto';

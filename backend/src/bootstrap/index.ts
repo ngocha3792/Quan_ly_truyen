@@ -4,3 +4,4 @@ export * from './cors.bootstrap';
 export * from './shutdown.bootstrap';
 export * from './swagger.bootstrap';
 export * from './worker.bootstrap';
+export * from './production-gate.bootstrap';

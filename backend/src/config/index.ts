@@ -13,3 +13,4 @@ export { INFRASTRUCTURE_FALLBACK_CONFIG_KEY } from './infrastructure-fallback.co
 export { QUEUE_CONFIG_KEY } from './queue.config';
 export { REDIS_CONFIG_KEY } from './redis.config';
 export { OBSERVABILITY_CONFIG_KEY } from './observability.config';
+export { PRODUCTION_GATE_CONFIG_KEY } from './production-gate.config';

@@ -2,9 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
-import { configureApplication } from '../src/bootstrap/application-configurator';
-import type { AppConfig } from '../src/config';
+import { AppModule } from '@/app.module';
+import { configureApplication } from '@/bootstrap/application-configurator';
+import type { AppConfig } from '@/config';
 import { ConfigService } from '@nestjs/config';
 
 describe('Observability endpoint (e2e)', () => {

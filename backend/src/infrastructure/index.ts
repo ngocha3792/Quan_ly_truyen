@@ -7,3 +7,4 @@ export * from './lock';
 export * from './mail';
 export * from './observability';
 export * from './queue';
+export * from './production-gate';

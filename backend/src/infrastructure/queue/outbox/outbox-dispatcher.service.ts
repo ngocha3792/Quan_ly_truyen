@@ -3,8 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
-
+import { type JobsOptions, Queue } from 'bullmq';
 import { isAppException, QueueException } from '@/common/exceptions';
 import { sanitizeCredentialUrls } from '@/common/utils';
 import type { QueueConfig } from '@/config';
@@ -23,6 +22,13 @@ import { QUEUE_NAMES } from '../queue.constants';
 
 const MAX_ERROR_LENGTH = 500;
 const STALE_RECOVERY_ERROR = 'Recovered stale PROCESSING outbox event';
+const DEFAULT_MAIL_JOB_RETENTION: QueueConfig['mailJobRetention'] = {
+  completedAgeSeconds: 3600,
+  completedCount: 100,
+
+  failedAgeSeconds: 604_800,
+  failedCount: 1000,
+};
 
 interface OutboxEventRow {
   id: string;
@@ -48,6 +54,7 @@ export class OutboxDispatcherService {
   private readonly backoffMs: number;
   private readonly batchSize: number;
   private readonly processingTimeoutMs: number;
+  private readonly mailJobRetention: QueueConfig['mailJobRetention'];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -62,6 +69,8 @@ export class OutboxDispatcherService {
     this.backoffMs = queueConfig?.defaultBackoffMs ?? 5000;
     this.batchSize = queueConfig?.outboxBatchSize ?? 50;
     this.processingTimeoutMs = queueConfig?.outboxProcessingTimeoutMs ?? 60_000;
+    this.mailJobRetention =
+      queueConfig?.mailJobRetention ?? DEFAULT_MAIL_JOB_RETENTION;
   }
 
   async dispatchBatch(batchSize: number = this.batchSize): Promise<number> {
@@ -252,20 +261,54 @@ export class OutboxDispatcherService {
         async () => {
           await targetQueue.add(
             event.eventType,
+
             {
               aggregateType: event.aggregateType,
+
               aggregateId: event.aggregateId,
+
               eventType: event.eventType,
+
               payload: event.payload,
+
               outboxEventId: event.id,
+
               createdAt: event.createdAt.toISOString(),
+
               telemetry: envelopeMetadata,
             },
-            { jobId: `outbox-${event.id}` },
+
+            {
+              jobId: `outbox-${event.id}`,
+
+              ...this.resolveJobRetention(event.aggregateType),
+            },
           );
         },
       ),
     );
+  }
+
+  private resolveJobRetention(
+    aggregateType: string,
+  ): Pick<JobsOptions, 'removeOnComplete' | 'removeOnFail'> {
+    if (aggregateType.toLowerCase() !== 'mail') {
+      return {};
+    }
+
+    return {
+      removeOnComplete: {
+        age: this.mailJobRetention.completedAgeSeconds,
+
+        count: this.mailJobRetention.completedCount,
+      },
+
+      removeOnFail: {
+        age: this.mailJobRetention.failedAgeSeconds,
+
+        count: this.mailJobRetention.failedCount,
+      },
+    };
   }
 
   private resolveTargetQueue(aggregateType: string): Queue | null {

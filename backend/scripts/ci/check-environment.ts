@@ -1,31 +1,52 @@
 import 'dotenv/config';
 
+import { validateEnvironment } from '../../src/config';
+
 import {
   parseDatabaseTarget,
   requireEnvironmentVariable,
 } from '../shared/environment';
+
 import { runScript } from '../shared/script-runner';
 
 void runScript({
   name: 'check-environment',
 
   async execute({ logger }) {
-    await Promise.resolve();
-    const requiredVariables = ['DATABASE_URL', 'NODE_ENV'] as const;
-
-    for (const name of requiredVariables) {
-      requireEnvironmentVariable(name);
-    }
+    /*
+     * Dùng chính validator mà Nest bootstrap dùng.
+     *
+     * Không duy trì một danh sách env riêng trong
+     * script vì rất dễ bị lệch.
+     */
+    validateEnvironment(process.env as Record<string, unknown>);
 
     const target = parseDatabaseTarget(
       requireEnvironmentVariable('DATABASE_URL'),
     );
 
-    logger.info('environment is valid', {
-      nodeEnv: process.env.NODE_ENV,
-      databaseHost: target.host,
-      databasePort: target.port,
-      databaseName: target.database,
-    });
+    const appUrl = new URL(requireEnvironmentVariable('APP_PUBLIC_URL'));
+
+    logger.info(
+      'environment is valid',
+
+      {
+        nodeEnv: process.env.NODE_ENV,
+
+        applicationHost: appUrl.hostname,
+
+        databaseHost: target.host,
+
+        databasePort: target.port,
+
+        databaseName: target.database,
+
+        redisEnabled: process.env.REDIS_ENABLED === 'true',
+
+        queueEnabled: process.env.QUEUE_ENABLED === 'true',
+
+        mailEnabled: process.env.MAIL_ENABLED === 'true',
+      },
+    );
   },
 });

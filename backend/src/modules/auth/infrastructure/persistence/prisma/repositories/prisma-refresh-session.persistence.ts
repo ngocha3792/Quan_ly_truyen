@@ -11,12 +11,16 @@ import type {
   RevokeRefreshTokenFamilyInput,
   RotateRefreshSessionInput,
 } from '../../../../application/ports';
-import { AuthAccountStatus } from '../../../../domain/enums';
+import { AuthAccountStatus, AuthAuditAction } from '../../../../domain/enums';
+import { AuthAuditWriterService } from '../../../audit';
 
 @Injectable()
 export class PrismaRefreshSessionPersistence implements RefreshSessionPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
 
+    private readonly auditWriter: AuthAuditWriterService,
+  ) {}
   async findBySessionId(
     sessionId: string,
   ): Promise<RefreshSessionSnapshot | null> {
@@ -119,36 +123,76 @@ export class PrismaRefreshSessionPersistence implements RefreshSessionPersistenc
 
   async revokeFamily(input: RevokeRefreshTokenFamilyInput): Promise<void> {
     try {
-      await this.prisma.session.updateMany({
-        where: {
-          refreshTokenFamilyId: input.familyId,
+      await this.prisma.$transaction(async (tx) => {
+        const result = await tx.session.updateMany({
+          where: {
+            refreshTokenFamilyId: input.familyId,
 
-          revokedAt: null,
-        },
+            userId: input.userId,
 
-        data: {
-          revokedAt: input.revokedAt,
-          revokedReason: input.reason,
-          lastUsedAt: input.revokedAt,
-
-          /*
-           * Vô hiệu hóa ngay access token đã phát.
-           */
-          accessTokenVersion: {
-            increment: 1,
+            revokedAt: null,
           },
 
-          /*
-           * Làm refresh token version hiện tại mất hiệu lực.
-           */
-          refreshTokenVersion: {
-            increment: 1,
+          data: {
+            revokedAt: input.revokedAt,
+
+            revokedReason: input.reason,
+
+            lastUsedAt: input.revokedAt,
+
+            accessTokenVersion: {
+              increment: 1,
+            },
+
+            refreshTokenVersion: {
+              increment: 1,
+            },
           },
-        },
+        });
+
+        if (result.count === 0) {
+          return;
+        }
+
+        await this.auditWriter.write(
+          tx,
+
+          {
+            actorId: input.userId,
+
+            actorSessionId: input.sessionId,
+
+            action: AuthAuditAction.REFRESH_TOKEN_REUSE_DETECTED,
+
+            entityType: 'session',
+
+            entityId: input.sessionId,
+
+            newValues: {
+              status: 'revoked',
+
+              revokedAt: input.revokedAt,
+
+              revokedReason: input.reason,
+            },
+
+            metadata: {
+              revokedFamilySessionCount: result.count,
+
+              /*
+               * Không ghi familyId vì đây là
+               * security identifier không cần
+               * expose trong audit history.
+               */
+              familyCompromised: true,
+            },
+          },
+        );
       });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'auth-revoke-refresh-token-family',
+
         resource: 'Phiên đăng nhập',
       });
     }
@@ -156,45 +200,71 @@ export class PrismaRefreshSessionPersistence implements RefreshSessionPersistenc
 
   async revokeCurrentSession(input: RevokeCurrentSessionInput): Promise<void> {
     try {
-      /*
-       * updateMany giúp logout idempotent:
-       * - session không tồn tại => count = 0
-       * - session đã revoke => count = 0
-       * - không phát sinh exception
-       */
-      await this.prisma.session.updateMany({
-        where: {
-          id: input.sessionId,
-          userId: input.userId,
+      await this.prisma.$transaction(async (tx) => {
+        const result = await tx.session.updateMany({
+          where: {
+            id: input.sessionId,
 
-          refreshTokenFamilyId: input.familyId,
+            userId: input.userId,
 
-          revokedAt: null,
-        },
+            refreshTokenFamilyId: input.familyId,
 
-        data: {
-          revokedAt: input.revokedAt,
-          revokedReason: input.reason,
-          lastUsedAt: input.revokedAt,
-
-          /*
-           * Access token hiện tại mất hiệu lực ngay.
-           */
-          accessTokenVersion: {
-            increment: 1,
+            revokedAt: null,
           },
 
-          /*
-           * Refresh token hiện tại cũng mất hiệu lực.
-           */
-          refreshTokenVersion: {
-            increment: 1,
+          data: {
+            revokedAt: input.revokedAt,
+
+            revokedReason: input.reason,
+
+            lastUsedAt: input.revokedAt,
+
+            accessTokenVersion: {
+              increment: 1,
+            },
+
+            refreshTokenVersion: {
+              increment: 1,
+            },
           },
-        },
+        });
+
+        if (result.count !== 1) {
+          return;
+        }
+
+        await this.auditWriter.write(
+          tx,
+
+          {
+            actorId: input.userId,
+
+            actorSessionId: input.sessionId,
+
+            action: AuthAuditAction.LOGOUT,
+
+            entityType: 'session',
+
+            entityId: input.sessionId,
+
+            oldValues: {
+              status: 'active',
+            },
+
+            newValues: {
+              status: 'revoked',
+
+              revokedAt: input.revokedAt,
+
+              revokedReason: input.reason,
+            },
+          },
+        );
       });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'auth-logout-current-session',
+
         resource: 'Phiên đăng nhập',
       });
     }
@@ -203,38 +273,61 @@ export class PrismaRefreshSessionPersistence implements RefreshSessionPersistenc
     input: RevokeAllUserSessionsInput,
   ): Promise<number> {
     try {
-      const result = await this.prisma.session.updateMany({
-        where: {
-          userId: input.userId,
-          revokedAt: null,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const result = await tx.session.updateMany({
+          where: {
+            userId: input.userId,
 
-        data: {
-          revokedAt: input.revokedAt,
-          revokedReason: input.reason,
-          lastUsedAt: input.revokedAt,
-
-          /*
-           * Vô hiệu hóa ngay mọi access token đã phát
-           * từ tất cả session của user.
-           */
-          accessTokenVersion: {
-            increment: 1,
+            revokedAt: null,
           },
 
-          /*
-           * Vô hiệu hóa mọi refresh token hiện tại.
-           */
-          refreshTokenVersion: {
-            increment: 1,
+          data: {
+            revokedAt: input.revokedAt,
+
+            revokedReason: input.reason,
+
+            lastUsedAt: input.revokedAt,
+
+            accessTokenVersion: {
+              increment: 1,
+            },
+
+            refreshTokenVersion: {
+              increment: 1,
+            },
           },
-        },
+        });
+
+        await this.auditWriter.write(
+          tx,
+
+          {
+            actorId: input.userId,
+
+            actorSessionId: input.actorSessionId,
+
+            action: AuthAuditAction.LOGOUT_ALL,
+
+            entityType: 'user',
+
+            entityId: input.userId,
+
+            newValues: {
+              sessionsRevoked: result.count,
+
+              revokedAt: input.revokedAt,
+
+              revokedReason: input.reason,
+            },
+          },
+        );
+
+        return result.count;
       });
-
-      return result.count;
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'auth-logout-all-sessions',
+
         resource: 'Phiên đăng nhập',
       });
     }

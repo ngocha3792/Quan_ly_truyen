@@ -5,23 +5,23 @@ import { Test } from '@nestjs/testing';
 import * as jwt from 'jsonwebtoken';
 import request from 'supertest';
 
-import { AppModule } from '../src/app.module';
-import { IDEMPOTENCY_STORE } from '../src/common/constants';
-import { JwtTokenType, PermissionCode, RoleCode } from '../src/common/enums';
-import { configureApplication } from '../src/bootstrap/application-configurator';
-import type { AppConfig } from '../src/config';
-import { PrismaService } from '../src/infrastructure/database/prisma';
-import { InMemoryIdempotencyStore } from '../src/infrastructure/idempotency/in-memory-idempotency.store';
-import { CloudinaryWebhookInboxProcessor } from '../src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
-import { CLOUDINARY_CLIENT } from '../src/infrastructure/media/cloudinary/cloudinary.constants';
-import { CloudinaryUrlService } from '../src/infrastructure/media/cloudinary/cloudinary-url.service';
+import { AppModule } from '@/app.module';
+import { IDEMPOTENCY_STORE } from '@/common/constants';
+import { JwtTokenType, PermissionCode, RoleCode } from '@/common/enums';
+import { configureApplication } from '@/bootstrap/application-configurator';
+import type { AppConfig } from '@/config';
+import { PrismaService } from '@/infrastructure/database/prisma';
+import { InMemoryIdempotencyStore } from '@/infrastructure/idempotency/in-memory-idempotency.store';
+import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
+import { CLOUDINARY_CLIENT } from '@/infrastructure/media/cloudinary/cloudinary.constants';
+import { CloudinaryUrlService } from '@/infrastructure/media/cloudinary/cloudinary-url.service';
 import {
   MEDIA_STORAGE,
   type ConfirmUploadInput,
   type CreateSignedUploadInput,
   type DeleteStoredMediaInput,
   type DeleteStoredMediaResult,
-} from '../src/infrastructure/media/contracts/media-storage.port';
+} from '@/infrastructure/media/contracts/media-storage.port';
 
 const accessSecret = 'e2e-access-secret-at-least-32-characters';
 

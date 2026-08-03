@@ -1,7 +1,7 @@
 import { hasFlag, readPositiveInteger } from '../shared/script-arguments';
 import { createScriptPrismaClient } from '../shared/prisma-client';
 import { runScript } from '../shared/script-runner';
-
+import { recordMaintenanceSuccess } from '../shared/maintenance-heartbeat'
 const prisma = createScriptPrismaClient();
 
 void runScript({
@@ -82,6 +82,7 @@ void runScript({
           },
         },
       }),
+
       prisma.userToken.deleteMany({
         where: {
           id: {
@@ -90,6 +91,8 @@ void runScript({
         },
       }),
     ]);
+
+    await recordMaintenanceSuccess('auth-cleanup');
   },
 
   cleanup: () => prisma.$disconnect(),

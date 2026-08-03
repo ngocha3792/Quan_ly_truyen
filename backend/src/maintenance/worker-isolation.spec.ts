@@ -20,10 +20,13 @@ describe('maintenance worker isolation', () => {
       await import('./media-cleanup-command.module');
     const { CloudinaryWebhookCommandModule } =
       await import('./cloudinary-webhook-command.module');
+    const { OutboxRetentionCommandModule } =
+      await import('./outbox-retention-command.module');
 
     for (const commandModule of [
       MediaCleanupCommandModule,
       CloudinaryWebhookCommandModule,
+      OutboxRetentionCommandModule,
     ]) {
       const imports =
         (Reflect.getMetadata(MODULE_METADATA.IMPORTS, commandModule) as

@@ -1,0 +1,23 @@
+{
+    "moduleFileExtensions": [
+        "js",
+        "json",
+        "ts"
+    ],
+    "rootDir": ".",
+    "testEnvironment": "node",
+    "testTimeout": 90000,
+    "maxWorkers": 1,
+    "detectOpenHandles": true,
+    "setupFiles": [
+        "<rootDir>/setup/setup-auth-e2e-env.ts"
+    ],
+    "testRegex": "auth\\.e2e-spec\\.ts$",
+    "transform": {
+        "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+        "^@/(.*)$": "<rootDir>/../src/$1",
+        "^(\\.\\.?/.*)\\.js$": "$1"
+    }
+}

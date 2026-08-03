@@ -18,6 +18,9 @@ import type {
 } from '../../../../application/ports';
 import { SessionRevocationReason } from '../../../../domain/enums';
 import { PasswordResetUrlBuilder } from '../../../mail';
+import { AuthAuditAction } from '../../../../domain/enums';
+
+import { AuthAuditWriterService } from '../../../audit';
 
 @Injectable()
 export class PrismaPasswordResetPersistence implements PasswordResetPersistencePort {
@@ -27,6 +30,7 @@ export class PrismaPasswordResetPersistence implements PasswordResetPersistenceP
     private readonly outboxWriter: OutboxWriterService,
 
     private readonly resetUrlBuilder: PasswordResetUrlBuilder,
+    private readonly auditWriter: AuthAuditWriterService,
   ) {}
 
   async request(
@@ -284,6 +288,31 @@ export class PrismaPasswordResetPersistence implements PasswordResetPersistenceP
         },
       },
     });
+    await this.auditWriter.write(
+      tx,
+
+      {
+        actorId: token.userId,
+
+        action: AuthAuditAction.PASSWORD_RESET,
+
+        entityType: 'user',
+
+        entityId: token.userId,
+
+        newValues: {
+          passwordChanged: true,
+
+          sessionsRevoked: revokedSessions.count,
+
+          resetAt: input.resetAt,
+        },
+
+        metadata: {
+          reauthenticationRequired: true,
+        },
+      },
+    );
 
     return {
       status: 'reset',

@@ -4,12 +4,14 @@ import {
   AuthenticationRequiredException,
   InvalidInputException,
 } from '@/common/exceptions';
+
 import { isUuidV4 } from '@/common/utils';
 
 import {
   SESSION_MANAGEMENT_PERSISTENCE_PORT,
   type SessionManagementPersistencePort,
 } from '../../ports';
+
 import { SessionRevocationReason } from '../../../domain/enums';
 
 import { RevokeSessionCommand } from './revoke-session.command';
@@ -22,11 +24,11 @@ export class RevokeSessionCommandHandler {
   ) {}
 
   async execute(command: RevokeSessionCommand): Promise<void> {
-    if (!isUuidV4(command.userId)) {
+    if (!isUuidV4(command.userId) || !isUuidV4(command.actorSessionId)) {
       throw new AuthenticationRequiredException({
-        code: 'AUTH_PRINCIPAL_REQUIRED',
+        code: 'AUTH_SESSION_PRINCIPAL_REQUIRED',
 
-        message: 'Không tìm thấy người dùng đã xác thực',
+        message: 'Không tìm thấy phiên đăng nhập hiện tại',
       });
     }
 
@@ -42,13 +44,11 @@ export class RevokeSessionCommandHandler {
       });
     }
 
-    /*
-     * Cố ý không trả 404 khi session không thuộc user.
-     * Endpoint revoke có tính idempotent và không làm
-     * lộ session của tài khoản khác.
-     */
     await this.sessionPersistence.revokeUserSession({
       userId: command.userId,
+
+      actorSessionId: command.actorSessionId,
+
       sessionId: command.sessionId,
 
       revokedAt: new Date(),

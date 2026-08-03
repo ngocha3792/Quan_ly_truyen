@@ -24,12 +24,23 @@ export class LogoutAllCommandHandler {
      * Trong Prisma, một giá trị undefined có thể bị bỏ khỏi
      * điều kiện where và gây cập nhật sai phạm vi.
      */
-    if (!isUuidV4(command.userId)) {
+    if (!isUuidV4(command.userId) || !isUuidV4(command.currentSessionId)) {
       throw new AuthenticationRequiredException({
         code: 'AUTH_PRINCIPAL_REQUIRED',
+
         message: 'Không tìm thấy thông tin người dùng đã xác thực',
       });
     }
+
+    await this.sessionPersistence.revokeAllUserSessions({
+      userId: command.userId,
+
+      actorSessionId: command.currentSessionId,
+
+      revokedAt: new Date(),
+
+      reason: SessionRevocationReason.USER_LOGOUT_ALL,
+    });
 
     await this.sessionPersistence.revokeAllUserSessions({
       userId: command.userId,

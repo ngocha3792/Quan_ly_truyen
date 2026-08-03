@@ -7,3 +7,8 @@ export * from './forgot-password.response';
 export * from './reset-password.response';
 export * from './current-user.response';
 export * from './session.response';
+export * from './change-password.response';
+export * from './request-email-change.response';
+
+export * from './confirm-email-change.response';
+export * from './security-event.response';

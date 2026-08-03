@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
-
+import productionGateConfig from './production-gate.config';
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import cloudinaryConfig from './cloudinary.config';
@@ -16,6 +16,7 @@ import redisConfig from './redis.config';
 import { resolveEnvFilePaths } from './environment-files';
 import observabilityConfig from './observability.config';
 
+@Global()
 @Module({
   imports: [
     NestConfigModule.forRoot({
@@ -37,9 +38,11 @@ import observabilityConfig from './observability.config';
         redisConfig,
         queueConfig,
         observabilityConfig,
+        productionGateConfig,
       ],
       validate: validateEnvironment,
     }),
   ],
+  exports: [NestConfigModule],
 })
 export class AppConfigModule {}

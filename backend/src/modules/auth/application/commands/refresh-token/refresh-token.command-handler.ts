@@ -68,8 +68,7 @@ export class RefreshTokenCommandHandler {
       verifiedToken.version !== session.refreshTokenVersion ||
       !tokenHashMatches
     ) {
-      await this.revokeCompromisedFamily(session.refreshTokenFamilyId);
-
+      await this.revokeCompromisedFamily(session);
       throw new RefreshTokenReuseDetectedException();
     }
 
@@ -119,8 +118,7 @@ export class RefreshTokenCommandHandler {
      * Request hiện tại được xem là reuse và phải revoke family.
      */
     if (!rotated) {
-      await this.revokeCompromisedFamily(session.refreshTokenFamilyId);
-
+      await this.revokeCompromisedFamily(session);
       throw new RefreshTokenReuseDetectedException();
     }
 
@@ -149,10 +147,20 @@ export class RefreshTokenCommandHandler {
     }
   }
 
-  private async revokeCompromisedFamily(familyId: string): Promise<void> {
+  private async revokeCompromisedFamily(
+    session: NonNullable<
+      Awaited<ReturnType<RefreshSessionPersistencePort['findBySessionId']>>
+    >,
+  ): Promise<void> {
     await this.sessionPersistence.revokeFamily({
-      familyId,
+      userId: session.userId,
+
+      sessionId: session.sessionId,
+
+      familyId: session.refreshTokenFamilyId,
+
       revokedAt: new Date(),
+
       reason: SessionRevocationReason.REFRESH_TOKEN_REUSE_DETECTED,
     });
   }

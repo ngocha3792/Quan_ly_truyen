@@ -7,3 +7,6 @@ export * from './prisma-resend-email-verification.persistence';
 export * from './prisma-password-reset.persistence';
 export * from './prisma-current-user.reader';
 export * from './prisma-session-management.persistence';
+export * from './prisma-change-password.persistence';
+export * from './prisma-email-change.persistence';
+export * from './prisma-auth-audit.reader';

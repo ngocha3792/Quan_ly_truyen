@@ -5,7 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import type { AppConfig, CorsConfig } from '@/config';
 import { AppLoggerService } from '@/infrastructure/observability';
-
+import { runProductionBootstrapGate } from './production-gate.bootstrap';
 import { configureApplication } from './application-configurator';
 import { configureCors } from './cors.bootstrap';
 import { configureSecurityHeaders } from './security.bootstrap';
@@ -15,6 +15,7 @@ import { configureSwagger } from './swagger.bootstrap';
 const bootstrapLogger = new Logger('Bootstrap');
 
 export async function bootstrapApplication(): Promise<void> {
+  await runProductionBootstrapGate('api');
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
     rawBody: true,

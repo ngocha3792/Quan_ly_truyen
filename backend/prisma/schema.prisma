@@ -1010,6 +1010,7 @@ model OutboxEvent {
   @@index([status, processingStartedAt])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
+  @@index([aggregateType, eventType, status, processedAt],map: "outbox_events_retention_idx")
 }
 
 model InboundWebhookEvent {

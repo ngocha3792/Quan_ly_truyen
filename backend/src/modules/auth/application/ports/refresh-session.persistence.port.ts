@@ -38,22 +38,31 @@ export interface RotateRefreshSessionInput {
 }
 
 export interface RevokeRefreshTokenFamilyInput {
-  familyId: string;
-  revokedAt: Date;
-  reason: string;
-}
-
-export interface RevokeCurrentSessionInput {
-  sessionId: string;
   userId: string;
+
+  sessionId: string;
+
   familyId: string;
 
   revokedAt: Date;
+
   reason: string;
 }
 
 export interface RevokeAllUserSessionsInput {
   userId: string;
+
+  actorSessionId?: string;
+
+  revokedAt: Date;
+
+  reason: string;
+}
+export interface RevokeCurrentSessionInput {
+  sessionId: string;
+  userId: string;
+  familyId: string;
+
   revokedAt: Date;
   reason: string;
 }

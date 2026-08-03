@@ -202,6 +202,27 @@ export class EnvironmentVariables {
   AUTH_COOKIE_PATH = '/api/v1/auth';
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  AUTH_CSRF_ENABLED = false;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  AUTH_CSRF_SECRET?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  AUTH_CSRF_COOKIE_NAME = 'csrf_token';
+
+  @IsOptional()
+  @IsString()
+  AUTH_CSRF_COOKIE_DOMAIN?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  AUTH_CSRF_COOKIE_PATH = '/';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   AUTH_LOGIN_RATE_LIMIT_ENABLED = false;
 
   @Transform(({ value }) => parseIntegerValue(value ?? 900))
@@ -323,6 +344,48 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(1000)
   OUTBOX_FAILED_ALERT_THRESHOLD = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  AUTH_MAX_ACTIVE_SESSIONS = 10;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 20))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  AUTH_SESSION_LIST_LIMIT = 20;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 50))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  AUTH_SECURITY_EVENT_HISTORY_LIMIT = 50;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3600))
+  @IsInt()
+  @Min(60)
+  @Max(604_800)
+  MAIL_QUEUE_COMPLETED_RETENTION_SECONDS = 3600;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 100))
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  MAIL_QUEUE_COMPLETED_RETENTION_COUNT = 100;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 604_800))
+  @IsInt()
+  @Min(3600)
+  @Max(2_592_000)
+  MAIL_QUEUE_FAILED_RETENTION_SECONDS = 604_800;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1000))
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  MAIL_QUEUE_FAILED_RETENTION_COUNT = 1000;
 
   @Transform(({ value }) => parseBooleanValue(value ?? true))
   @IsBoolean()
@@ -539,6 +602,16 @@ export class EnvironmentVariables {
   @Min(100)
   SMTP_SOCKET_TIMEOUT_MS = 30_000;
 
+  @IsString()
+  @IsNotEmpty()
+  PRODUCTION_GATE_MIGRATIONS_PATH = 'prisma/migrations';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30))
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  PRODUCTION_GATE_CLEANUP_MAX_AGE_HOURS = 30;
+
   @Transform(({ value }) => parseBooleanValue(value ?? true))
   @IsBoolean()
   SMTP_VERIFY_ON_STARTUP = true;
@@ -612,6 +685,11 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different',
     );
   }
+  if (config.AUTH_SESSION_LIST_LIMIT < config.AUTH_MAX_ACTIVE_SESSIONS) {
+    throw new Error(
+      'AUTH_SESSION_LIST_LIMIT must be greater than or equal to AUTH_MAX_ACTIVE_SESSIONS',
+    );
+  }
 
   if (config.AUTH_COOKIE_SAME_SITE === 'none' && !config.AUTH_COOKIE_SECURE) {
     throw new Error(
@@ -624,6 +702,36 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     !config.AUTH_COOKIE_SECURE
   ) {
     throw new Error('AUTH_COOKIE_SECURE must be true in production');
+  }
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.AUTH_CSRF_ENABLED
+  ) {
+    throw new Error('AUTH_CSRF_ENABLED must be true in production');
+  }
+
+  if (config.AUTH_CSRF_ENABLED && !config.AUTH_CSRF_SECRET?.trim()) {
+    throw new Error('AUTH_CSRF_SECRET is required when AUTH_CSRF_ENABLED=true');
+  }
+
+  if (
+    config.AUTH_CSRF_SECRET &&
+    (config.AUTH_CSRF_SECRET === config.JWT_ACCESS_SECRET ||
+      config.AUTH_CSRF_SECRET === config.JWT_REFRESH_SECRET)
+  ) {
+    throw new Error(
+      'AUTH_CSRF_SECRET must be different from JWT_ACCESS_SECRET and JWT_REFRESH_SECRET',
+    );
+  }
+
+  if (config.AUTH_CSRF_COOKIE_NAME === config.AUTH_REFRESH_COOKIE_NAME) {
+    throw new Error(
+      'AUTH_CSRF_COOKIE_NAME must be different from AUTH_REFRESH_COOKIE_NAME',
+    );
+  }
+
+  if (config.AUTH_CSRF_COOKIE_PATH !== '/') {
+    throw new Error('AUTH_CSRF_COOKIE_PATH must be exactly "/"');
   }
   if (config.CORS_CREDENTIALS && origins.includes('*')) {
     throw new Error(
@@ -658,9 +766,26 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
 
   if (
     config.NODE_ENV === AppEnvironment.PRODUCTION &&
-    !config.AUTH_LOGIN_RATE_LIMIT_ENABLED
+    !config.AUTH_JWT_BLACKLIST_ENABLED
   ) {
-    throw new Error('AUTH_LOGIN_RATE_LIMIT_ENABLED must be true in production');
+    throw new Error('AUTH_JWT_BLACKLIST_ENABLED must be true in production');
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    config.AUTH_JWT_BLACKLIST_FAILURE_MODE !== 'closed'
+  ) {
+    throw new Error(
+      'AUTH_JWT_BLACKLIST_FAILURE_MODE must be closed in production',
+    );
+  }
+  if (
+    config.MAIL_QUEUE_FAILED_RETENTION_SECONDS <
+    config.MAIL_QUEUE_COMPLETED_RETENTION_SECONDS
+  ) {
+    throw new Error(
+      'MAIL_QUEUE_FAILED_RETENTION_SECONDS must be greater than or equal to MAIL_QUEUE_COMPLETED_RETENTION_SECONDS',
+    );
   }
 
   if (config.NODE_ENV === AppEnvironment.PRODUCTION && config.SWAGGER_ENABLED) {
@@ -751,9 +876,210 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'REDIS_ENABLED must be true in production for email verification resend cooldown',
     );
   }
+  validateProductionGateRules(config);
 
   validateMailRules(config);
   validateMailPayloadEncryptionRules(config);
+}
+
+function validateProductionGateRules(config: EnvironmentVariables): void {
+  if (config.NODE_ENV !== AppEnvironment.PRODUCTION) {
+    return;
+  }
+
+  if (!config.OBSERVABILITY_ENABLED) {
+    throw new Error('OBSERVABILITY_ENABLED must be true in production');
+  }
+
+  if (!config.METRICS_ENABLED) {
+    throw new Error('METRICS_ENABLED must be true in production');
+  }
+
+  if (!config.REDIS_ENABLED) {
+    throw new Error('REDIS_ENABLED must be true in production');
+  }
+
+  if (!config.QUEUE_ENABLED) {
+    throw new Error('QUEUE_ENABLED must be true in production');
+  }
+
+  if (!config.QUEUE_WORKER_HEARTBEAT_ENABLED) {
+    throw new Error(
+      'QUEUE_WORKER_HEARTBEAT_ENABLED must be true in production',
+    );
+  }
+
+  if (config.IDEMPOTENCY_FAILURE_MODE !== 'closed') {
+    throw new Error('IDEMPOTENCY_FAILURE_MODE must be closed in production');
+  }
+
+  if (config.ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK) {
+    throw new Error(
+      'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK must be false in production',
+    );
+  }
+
+  if (!config.MAIL_ENABLED) {
+    throw new Error(
+      'MAIL_ENABLED must be true in production because Auth requires verification and password-reset email',
+    );
+  }
+
+  if (!config.SMTP_VERIFY_ON_STARTUP) {
+    throw new Error('SMTP_VERIFY_ON_STARTUP must be true in production');
+  }
+
+  /*
+   * Sau khi legacy queue đã drain xong,
+   * production không được đọc plaintext mail job.
+   */
+  if (config.MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ) {
+    throw new Error(
+      'MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ must be false in production',
+    );
+  }
+
+  if (config.AUTH_JWT_BLACKLIST_ENABLED !== true) {
+    throw new Error('AUTH_JWT_BLACKLIST_ENABLED must be true in production');
+  }
+
+  if (config.AUTH_JWT_BLACKLIST_FAILURE_MODE !== 'closed') {
+    throw new Error(
+      'AUTH_JWT_BLACKLIST_FAILURE_MODE must be closed in production',
+    );
+  }
+
+  if (config.AUTH_LOGIN_RATE_LIMIT_ENABLED !== true) {
+    throw new Error('AUTH_LOGIN_RATE_LIMIT_ENABLED must be true in production');
+  }
+
+  if (config.AUTH_CSRF_ENABLED !== true) {
+    throw new Error('AUTH_CSRF_ENABLED must be true in production');
+  }
+
+  if (!config.AUTH_COOKIE_SECURE) {
+    throw new Error('AUTH_COOKIE_SECURE must be true in production');
+  }
+
+  if (config.AUTH_COOKIE_PATH !== '/api/v1/auth') {
+    throw new Error(
+      'AUTH_COOKIE_PATH must be exactly /api/v1/auth in production',
+    );
+  }
+
+  if (config.AUTH_CSRF_COOKIE_PATH !== '/') {
+    throw new Error('AUTH_CSRF_COOKIE_PATH must be exactly / in production');
+  }
+
+  if (config.SWAGGER_ENABLED) {
+    throw new Error('SWAGGER_ENABLED must be false in production');
+  }
+
+  assertHttpsUrl(
+    'APP_PUBLIC_URL',
+
+    config.APP_PUBLIC_URL,
+  );
+
+  assertHttpsUrl(
+    'FRONTEND_PUBLIC_URL',
+
+    config.FRONTEND_PUBLIC_URL,
+  );
+
+  const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
+
+  for (const origin of origins) {
+    assertHttpsUrl(
+      'CORS_ALLOWED_ORIGINS',
+
+      origin,
+    );
+
+    const url = new URL(origin);
+
+    if (isLoopbackHostname(url.hostname)) {
+      throw new Error(
+        'CORS_ALLOWED_ORIGINS cannot contain localhost or loopback addresses in production',
+      );
+    }
+  }
+
+  assertProductionSecret(
+    'JWT_ACCESS_SECRET',
+
+    config.JWT_ACCESS_SECRET,
+  );
+
+  assertProductionSecret(
+    'JWT_REFRESH_SECRET',
+
+    config.JWT_REFRESH_SECRET,
+  );
+
+  assertProductionSecret(
+    'AUTH_CSRF_SECRET',
+
+    config.AUTH_CSRF_SECRET,
+  );
+
+  if (
+    config.JWT_ACCESS_SECRET === config.AUTH_CSRF_SECRET ||
+    config.JWT_REFRESH_SECRET === config.AUTH_CSRF_SECRET
+  ) {
+    throw new Error('AUTH_CSRF_SECRET must be different from both JWT secrets');
+  }
+
+  if (!config.PRODUCTION_GATE_MIGRATIONS_PATH.trim()) {
+    throw new Error('PRODUCTION_GATE_MIGRATIONS_PATH cannot be empty');
+  }
+}
+
+function assertHttpsUrl(
+  name: string,
+
+  value: string,
+): void {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+
+  if (url.protocol !== 'https:') {
+    throw new Error(`${name} must use https:// in production`);
+  }
+}
+
+function assertProductionSecret(
+  name: string,
+
+  value: string | undefined,
+): void {
+  const normalized = value?.trim();
+
+  if (!normalized || normalized.length < 32) {
+    throw new Error(
+      `${name} must contain at least 32 characters in production`,
+    );
+  }
+
+  const knownPlaceholder =
+    /^(?:change-?me|replace-?me|your[_-]|example|development|local|test[_-]?secret)/iu;
+
+  if (knownPlaceholder.test(normalized)) {
+    throw new Error(
+      `${name} cannot use a known placeholder value in production`,
+    );
+  }
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+
+  return ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(normalized);
 }
 
 function validateMailRules(config: EnvironmentVariables): void {

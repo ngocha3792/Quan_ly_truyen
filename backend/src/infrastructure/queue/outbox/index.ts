@@ -6,3 +6,4 @@ export * from './outbox.types';
 export * from './outbox-core.module';
 export * from './outbox.module';
 export * from './outbox-metrics.observer';
+export * from './outbox-retention.service';

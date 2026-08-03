@@ -47,5 +47,7 @@ export async function runScript(options: RunScriptOptions): Promise<void> {
         process.exitCode = ScriptExitCode.EXECUTION_ERROR;
       }
     }
+
+    process.exit(process.exitCode ?? 0);
   }
 }

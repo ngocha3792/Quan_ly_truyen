@@ -1,16 +1,35 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+
 import { ConfigService } from '@nestjs/config';
+
 import type Redis from 'ioredis';
 
 import { ServiceUnavailableException } from '@/common/exceptions';
+
 import { sha256 } from '@/common/utils';
+
 import type { AuthConfig } from '@/config';
+
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 
 import type {
   BlacklistAccessTokenInput,
   JwtBlacklistPort,
 } from '../../application/ports';
+
+const BLACKLIST_KEY_NAMESPACE = ['auth', 'jwt', 'blacklist'] as const;
+
+const BLACKLIST_VALUE_VERSION = 1;
+
+interface StoredBlacklistEntryV1 {
+  version: typeof BLACKLIST_VALUE_VERSION;
+
+  reason: string;
+
+  blacklistedAt: string;
+
+  expiresAt: string;
+}
 
 @Injectable()
 export class RedisJwtBlacklist implements JwtBlacklistPort {
@@ -28,6 +47,13 @@ export class RedisJwtBlacklist implements JwtBlacklistPort {
   }
 
   async isBlacklisted(tokenId: string): Promise<boolean> {
+    /*
+     * Ngoài production có thể disable blacklist
+     * để phát triển local không cần Redis.
+     *
+     * Production sẽ bị environment validation
+     * chặn nếu blacklist bị disable.
+     */
     if (!this.config.jwtBlacklist.enabled) {
       return false;
     }
@@ -35,51 +61,96 @@ export class RedisJwtBlacklist implements JwtBlacklistPort {
     try {
       const client = this.requireRedisClient();
 
-      const value = await client.get(this.createKey(tokenId));
+      /*
+       * Chỉ cần EXISTS, không cần đọc JSON value.
+       */
+      const exists = await client.exists(this.createKey(tokenId));
 
-      return value !== null;
+      return exists === 1;
     } catch (error: unknown) {
       return this.handleReadFailure(error);
     }
   }
 
   async blacklist(input: BlacklistAccessTokenInput): Promise<void> {
+    /*
+     * Không được silently return tại đây.
+     *
+     * Nếu endpoint revoke trả 204 trong khi
+     * blacklist đang disable thì client sẽ hiểu
+     * nhầm rằng token đã bị thu hồi.
+     */
     if (!this.config.jwtBlacklist.enabled) {
-      return;
+      throw this.createDisabledException();
     }
 
-    const ttlSeconds = Math.ceil(
-      (input.expiresAt.getTime() - Date.now()) / 1000,
-    );
+    const now = Date.now();
+
+    const ttlSeconds = Math.ceil((input.expiresAt.getTime() - now) / 1000);
 
     /*
-     * Token đã hết hạn thì không cần blacklist.
+     * Access token đã hết hạn thì không cần
+     * tạo Redis entry nữa.
      */
     if (ttlSeconds <= 0) {
       return;
     }
 
+    const entry: StoredBlacklistEntryV1 = {
+      version: BLACKLIST_VALUE_VERSION,
+
+      reason: input.reason,
+
+      blacklistedAt: new Date(now).toISOString(),
+
+      expiresAt: input.expiresAt.toISOString(),
+    };
+
     try {
       const client = this.requireRedisClient();
 
-      await client.set(
+      const result = await client.set(
         this.createKey(input.tokenId),
 
-        JSON.stringify({
-          reason: input.reason,
-          blacklistedAt: new Date().toISOString(),
-        }),
+        JSON.stringify(entry),
 
         'EX',
+
         ttlSeconds,
       );
+
+      /*
+       * Redis SET bình thường phải trả "OK".
+       * Không được coi null/undefined là thành công.
+       */
+      if (result !== 'OK') {
+        throw new Error('Redis SET did not return OK');
+      }
     } catch (error: unknown) {
-      this.handleWriteFailure(error);
+      /*
+       * Blacklist write luôn fail-closed.
+       *
+       * AUTH_JWT_BLACKLIST_FAILURE_MODE=open
+       * chỉ được áp dụng cho thao tác đọc.
+       *
+       * Nếu ghi thất bại, endpoint revoke phải
+       * trả lỗi thay vì trả 204 giả.
+       */
+      this.logger.error(
+        'JWT blacklist write failed; access token revoke was aborted',
+      );
+
+      throw this.createUnavailableException(error);
     }
   }
 
   private createKey(tokenId: string): string {
-    return ['auth', 'jwt', 'blacklist', sha256(tokenId)].join(':');
+    /*
+     * Không đưa JTI plaintext vào Redis key.
+     *
+     * RedisModule đã tự thêm REDIS_KEY_PREFIX.
+     */
+    return [...BLACKLIST_KEY_NAMESPACE, sha256(tokenId)].join(':');
   }
 
   private requireRedisClient(): Redis {
@@ -92,6 +163,12 @@ export class RedisJwtBlacklist implements JwtBlacklistPort {
 
   private handleReadFailure(error: unknown): boolean {
     if (this.config.jwtBlacklist.failureMode === 'open') {
+      /*
+       * Chỉ nên dùng open ở local/test.
+       *
+       * Không log tokenId, Redis key hoặc
+       * raw Redis error.
+       */
       this.logger.warn(
         'JWT blacklist read failed; continuing because failure mode is open',
       );
@@ -102,16 +179,14 @@ export class RedisJwtBlacklist implements JwtBlacklistPort {
     throw this.createUnavailableException(error);
   }
 
-  private handleWriteFailure(error: unknown): void {
-    if (this.config.jwtBlacklist.failureMode === 'open') {
-      this.logger.warn(
-        'JWT blacklist write failed; continuing because failure mode is open',
-      );
+  private createDisabledException(): ServiceUnavailableException {
+    return new ServiceUnavailableException({
+      code: 'AUTH_JWT_BLACKLIST_DISABLED',
 
-      return;
-    }
+      message: 'Chức năng thu hồi access token hiện không khả dụng',
 
-    throw this.createUnavailableException(error);
+      service: 'jwt-blacklist',
+    });
   }
 
   private createUnavailableException(

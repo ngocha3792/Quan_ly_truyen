@@ -83,4 +83,24 @@ export default registerAs(AUTH_CONFIG_KEY, (): AuthConfig => ({
       process.env.AUTH_PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS ?? 60,
     ),
   },
+  csrf: {
+    enabled: parseBoolean(process.env.AUTH_CSRF_ENABLED, false),
+
+    secret: process.env.AUTH_CSRF_SECRET ?? '',
+
+    cookieName: process.env.AUTH_CSRF_COOKIE_NAME ?? 'csrf_token',
+
+    cookieDomain: optionalString(process.env.AUTH_CSRF_COOKIE_DOMAIN),
+
+    cookiePath: process.env.AUTH_CSRF_COOKIE_PATH ?? '/',
+  },
+  sessions: {
+    maxActiveSessions: Number(process.env.AUTH_MAX_ACTIVE_SESSIONS ?? 10),
+
+    listLimit: Number(process.env.AUTH_SESSION_LIST_LIMIT ?? 20),
+  },
+
+  audit: {
+    historyLimit: Number(process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT ?? 50),
+  },
 }));

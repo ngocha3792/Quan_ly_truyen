@@ -68,6 +68,7 @@ describe('OutboxDispatcherService', () => {
 
     expect(queue.add).toHaveBeenCalledWith(
       SEND_MAIL_JOB,
+
       expect.objectContaining({
         aggregateType: 'mail',
         aggregateId: 'user-1',
@@ -79,8 +80,59 @@ describe('OutboxDispatcherService', () => {
           recipientEmail: 'reader@example.test',
         }),
       }),
+
       {
         jobId: 'outbox-mail-event-1',
+
+        removeOnComplete: {
+          age: 3600,
+          count: 100,
+        },
+
+        removeOnFail: {
+          age: 604_800,
+          count: 1000,
+        },
+      },
+    );
+  });
+
+  it('uses short retention only for mail jobs', async () => {
+    prisma.$queryRaw.mockResolvedValue([
+      claimed('mail-retention-event', TOKEN_A),
+    ]);
+
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      event({
+        id: 'mail-retention-event',
+
+        aggregateType: 'mail',
+
+        eventType: 'mail.send.v1',
+      }),
+    ]);
+
+    await service.dispatchBatch();
+
+    expect(queue.add).toHaveBeenCalledWith(
+      SEND_MAIL_JOB,
+
+      expect.objectContaining({
+        outboxEventId: 'mail-retention-event',
+      }),
+
+      {
+        jobId: 'outbox-mail-retention-event',
+
+        removeOnComplete: {
+          age: 3600,
+          count: 100,
+        },
+
+        removeOnFail: {
+          age: 604_800,
+          count: 1000,
+        },
       },
     );
   });
@@ -136,7 +188,7 @@ describe('OutboxDispatcherService', () => {
     expect(queue.add).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ outboxEventId: 'claimed' }),
-      { jobId: 'outbox-claimed' },
+      expect.objectContaining({ jobId: 'outbox-claimed' }),
     );
   });
 
@@ -318,10 +370,24 @@ function createService(prisma: object, queue: object): OutboxDispatcherService {
   const config = new ConfigService({
     queue: {
       enabled: true,
+
       defaultAttempts: 3,
+
       defaultBackoffMs: 5000,
+
       outboxBatchSize: 50,
+
       outboxProcessingTimeoutMs: 60_000,
+
+      mailJobRetention: {
+        completedAgeSeconds: 3600,
+
+        completedCount: 100,
+
+        failedAgeSeconds: 604_800,
+
+        failedCount: 1000,
+      },
     },
   });
   const metrics = {

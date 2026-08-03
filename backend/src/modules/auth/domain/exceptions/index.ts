@@ -10,3 +10,16 @@ export * from './invalid-refresh-token.exception';
 export * from './password-reset-token-expired.exception';
 export * from './refresh-token-reuse-detected.exception';
 export * from './username-already-in-use.exception';
+export * from './invalid-current-password.exception';
+
+export * from './new-password-must-differ.exception';
+
+export * from './password-change-unavailable.exception';
+
+export * from './invalid-email-change-token.exception';
+
+export * from './email-change-token-expired.exception';
+
+export * from './new-email-must-differ.exception';
+
+export * from './email-change-unavailable.exception';

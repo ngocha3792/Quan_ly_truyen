@@ -139,8 +139,7 @@ export class PrismaCurrentUserReader implements CurrentUserReaderPort {
 
               penName: user.authorProfile.penName,
 
-              verificationStatus: user.authorProfile
-                .verificationStatus as AuthAuthorVerificationStatus,
+              verificationStatus: user.authorProfile.verificationStatus,
             }
           : null,
 

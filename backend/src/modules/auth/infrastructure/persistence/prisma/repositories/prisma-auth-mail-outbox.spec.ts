@@ -187,6 +187,7 @@ describe('Auth mail outbox routing', () => {
       prisma as never,
       outboxWriter as never,
       resetUrlBuilder as never,
+      { write: jest.fn() } as never,
     );
 
     await expect(
