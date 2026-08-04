@@ -1,55 +1,121 @@
+name: quan-ly-truyen-observability
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   prometheus:
     image: prom/prometheus:v3.10.0
-    command: ['--config.file=/etc/prometheus/prometheus.yml']
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../production/secrets/metrics_bearer_token:/run/secrets/metrics_bearer_token:ro
       - prometheus-data:/prometheus
-    ports: ['9090:9090']
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - observability
+      - backend
     restart: unless-stopped
+    mem_limit: ${PROMETHEUS_MEMORY_LIMIT:-768m}
+    cpus: ${PROMETHEUS_CPU_LIMIT:-0.75}
+    pids_limit: 256
+    logging: *default-logging
 
   loki:
     image: grafana/loki:3.7.2
-    command: ['-config.file=/etc/loki/config.yml']
+    command:
+      - -config.file=/etc/loki/config.yml
     volumes:
       - ./loki/config.yml:/etc/loki/config.yml:ro
       - loki-data:/loki
-    ports: ['3100:3100']
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks:
+      - observability
     restart: unless-stopped
+    mem_limit: ${LOKI_MEMORY_LIMIT:-768m}
+    cpus: ${LOKI_CPU_LIMIT:-0.75}
+    pids_limit: 256
+    logging: *default-logging
 
   tempo:
     image: grafana/tempo:2.10.5
-    command: ['-config.file=/etc/tempo/config.yml']
+    command:
+      - -config.file=/etc/tempo/config.yml
     volumes:
       - ./tempo/config.yml:/etc/tempo/config.yml:ro
       - tempo-data:/var/tempo
-    ports: ['3200:3200']
+    ports:
+      - "127.0.0.1:3200:3200"
+    networks:
+      - observability
     restart: unless-stopped
+    mem_limit: ${TEMPO_MEMORY_LIMIT:-768m}
+    cpus: ${TEMPO_CPU_LIMIT:-0.75}
+    pids_limit: 256
+    logging: *default-logging
 
   alloy:
     image: grafana/alloy:v1.18.0
-    command: ['run', '--server.http.listen-addr=0.0.0.0:12345', '/etc/alloy/config.alloy']
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    ports: ['12345:12345', '4317:4317', '4318:4318']
-    depends_on: [loki, tempo]
+    ports:
+      - "127.0.0.1:12345:12345"
+    networks:
+      - observability
+      - backend
+    depends_on:
+      - loki
+      - tempo
     restart: unless-stopped
+    mem_limit: ${ALLOY_MEMORY_LIMIT:-512m}
+    cpus: ${ALLOY_CPU_LIMIT:-0.75}
+    pids_limit: 256
+    logging: *default-logging
 
   grafana:
     image: grafana/grafana:13.1.0
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
-    ports: ['3001:3000']
-    depends_on: [prometheus, loki, tempo]
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
     restart: unless-stopped
+    mem_limit: ${GRAFANA_MEMORY_LIMIT:-512m}
+    cpus: ${GRAFANA_CPU_LIMIT:-0.75}
+    pids_limit: 256
+    logging: *default-logging
+
+networks:
+  observability:
+    driver: bridge
+  backend:
+    external: true
+    name: quan-ly-truyen-production-backend
 
 volumes:
   prometheus-data:

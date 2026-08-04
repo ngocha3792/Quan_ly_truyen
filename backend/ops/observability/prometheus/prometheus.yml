@@ -1,13 +1,16 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+
 rule_files:
   - /etc/prometheus/alerts.yml
+
 scrape_configs:
   - job_name: quan-ly-truyen-api
     metrics_path: /internal/metrics
     authorization:
       type: Bearer
-      credentials: local-observability-token-change-me-32chars
+      credentials_file: /run/secrets/metrics_bearer_token
     static_configs:
-      - targets: ['host.docker.internal:3000']
+      - targets:
+          - api:3000

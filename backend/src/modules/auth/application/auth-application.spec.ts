@@ -815,6 +815,8 @@ describe('Auth application handlers', () => {
 
       await handler.execute(new LogoutAllCommand(USER_ID, SESSION_ID));
 
+      expect(persistence.revokeAllUserSessions).toHaveBeenCalledTimes(1);
+
       expect(persistence.revokeAllUserSessions).toHaveBeenCalledWith({
         userId: USER_ID,
 

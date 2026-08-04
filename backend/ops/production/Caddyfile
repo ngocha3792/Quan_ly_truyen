@@ -1,0 +1,38 @@
+{
+  email {$ACME_EMAIL:local@example.invalid}
+  admin off
+  servers {
+    protocols h1 h2 h3
+  }
+}
+
+{$APP_DOMAIN:http://localhost} {
+  encode zstd gzip
+
+  request_body {
+    max_size 10MB
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    -Server
+  }
+
+  reverse_proxy api:3000 {
+    health_uri /api/v1/health/ready
+    health_interval 15s
+    health_timeout 5s
+
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+  }
+
+  log {
+    output stdout
+    format json
+  }
+}

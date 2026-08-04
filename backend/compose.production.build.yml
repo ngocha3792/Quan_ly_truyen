@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:24.18.0-bookworm-slim}
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:24.18.0-bookworm-slim}

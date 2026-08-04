@@ -20,15 +20,15 @@ export class LogoutAllCommandHandler {
 
   async execute(command: LogoutAllCommand): Promise<void> {
     /*
-     * Không được truyền undefined vào Prisma updateMany.
-     * Trong Prisma, một giá trị undefined có thể bị bỏ khỏi
-     * điều kiện where và gây cập nhật sai phạm vi.
+     * KhÃ´ng Ä‘Æ°á»£c truyá»n undefined vÃ o Prisma updateMany.
+     * Trong Prisma, má»™t giÃ¡ trá»‹ undefined cÃ³ thá»ƒ bá»‹ bá» khá»i
+     * Ä‘iá»u kiá»‡n where vÃ  gÃ¢y cáº­p nháº­t sai pháº¡m vi.
      */
     if (!isUuidV4(command.userId) || !isUuidV4(command.currentSessionId)) {
       throw new AuthenticationRequiredException({
         code: 'AUTH_PRINCIPAL_REQUIRED',
 
-        message: 'Không tìm thấy thông tin người dùng đã xác thực',
+        message: 'KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin ngÆ°á»i dÃ¹ng Ä‘Ã£ xÃ¡c thá»±c',
       });
     }
 
@@ -39,12 +39,6 @@ export class LogoutAllCommandHandler {
 
       revokedAt: new Date(),
 
-      reason: SessionRevocationReason.USER_LOGOUT_ALL,
-    });
-
-    await this.sessionPersistence.revokeAllUserSessions({
-      userId: command.userId,
-      revokedAt: new Date(),
       reason: SessionRevocationReason.USER_LOGOUT_ALL,
     });
   }

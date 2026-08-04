@@ -219,14 +219,18 @@ services:
     pids_limit: 128
     mem_limit: ${CADDY_MEMORY_LIMIT:-256m}
     cpus: ${CADDY_CPU_LIMIT:-0.50}
+    healthcheck:
+      test:
+      [
+        "CMD-SHELL",
+        "caddy version >/dev/null 2>&1 || exit 1"
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 15s
     logging: *default-logging
 
-    healthcheck:
-      test: ["CMD-SHELL", "caddy version >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
   gate-predeploy:
     <<: *tool-common
     profiles:

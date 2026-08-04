@@ -22,9 +22,9 @@ import { OutboxStatus } from '@/generated/prisma/enums';
 
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 
-import { PrismaService } from '@/infrastructure/database';
+import { PrismaService } from '@/infrastructure/database/prisma/prisma.service';
 
-import { MailHealthService } from '@/infrastructure/mail';
+import { MailHealthService } from '@/infrastructure/mail/application/mail-health.service';
 
 import { readQueueWorkerHeartbeat } from '@/infrastructure/health/queue-worker-heartbeat';
 
@@ -89,13 +89,16 @@ interface GateCheck {
 @Injectable()
 export class ProductionGateService {
   constructor(
+    @Inject(ConfigService)
     private readonly configService: ConfigService,
 
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
 
     @Inject(REDIS_CLIENT)
     private readonly redisClient: Redis | null,
 
+    @Inject(MailHealthService)
     private readonly mailHealth: MailHealthService,
   ) {}
 

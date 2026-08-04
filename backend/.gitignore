@@ -3,3 +3,6 @@
 
 # Production secrets
 .env.production
+backups/
+ops/production/secrets/
+.env.production

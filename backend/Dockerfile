@@ -1,4 +1,5 @@
-FROM node:24-bookworm-slim AS base
+ARG NODE_IMAGE=node:24.18.0-bookworm-slim
+FROM ${NODE_IMAGE} AS base
 
 WORKDIR /app
 
@@ -42,7 +43,8 @@ COPY . .
 RUN npm run build \
     && npm run typecheck:scripts \
     && test -f dist/main.js \
-    && test -f dist/worker.js
+    && test -f dist/worker.js \
+    && test -f dist/healthcheck/worker-heartbeat.healthcheck.js
 
 
 FROM dependencies AS production-dependencies
