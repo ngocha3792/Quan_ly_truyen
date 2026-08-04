@@ -1,0 +1,137 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17.10-alpine3.23
+        env:
+          POSTGRES_DB: quan_ly_truyen
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d quan_ly_truyen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      redis:
+        image: redis:7.4.10-alpine3.21
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/quan_ly_truyen?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test?schema=public
+      TEST_REDIS_URL: redis://localhost:6379/1
+      REDIS_URL: redis://localhost:6379/0
+      REDIS_ENABLED: "true"
+      QUEUE_ENABLED: "false"
+      MAIL_ENABLED: "false"
+      JWT_ACCESS_SECRET: ci-access-secret-unique-at-least-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-secret-unique-at-least-32-characters
+      AUTH_CSRF_ENABLED: "true"
+      AUTH_CSRF_SECRET: ci-csrf-secret-unique-at-least-32-characters
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: "true"
+      AUTH_JWT_BLACKLIST_ENABLED: "true"
+      AUTH_JWT_BLACKLIST_FAILURE_MODE: closed
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
+      MAIL_PAYLOAD_ENCRYPTION_KEY: CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk=
+      MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ: "false"
+      OBSERVABILITY_ENABLED: "false"
+      METRICS_ENABLED: "false"
+      SWAGGER_ENABLED: "false"
+      FRONTEND_PUBLIC_URL: http://localhost:4200
+      APP_PUBLIC_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate environment
+        run: npm run ci:check-env
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck scripts
+        run: npm run typecheck:scripts
+
+      - name: Unit tests with Auth coverage gate
+        run: npm run test:auth:unit:cov
+
+      - name: All source unit tests
+        run: npm test -- --runInBand
+
+      - name: Auth integration tests
+        run: npm run test:auth:integration
+
+      - name: Auth E2E tests
+        run: npm run test:auth:e2e
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build runtime image
+        run: >-
+          docker build
+          --build-arg NODE_IMAGE=node:24.18.0-bookworm-slim
+          --target runtime
+          --tag quan-ly-truyen-backend:${{ github.sha }}
+          .
+
+      - name: Build migrate image
+        run: >-
+          docker build
+          --build-arg NODE_IMAGE=node:24.18.0-bookworm-slim
+          --target migrate
+          --tag quan-ly-truyen-backend-migrate:${{ github.sha }}
+          .

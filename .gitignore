@@ -134,3 +134,4 @@ test-results/
 .stylelintcache
 *.tsbuildinfo
 .turbo/
+.hardening-backup/
