@@ -1,9 +1,7 @@
 import { validateEnvironment } from './environment.validation';
 
-type EnvironmentInput = Record<string, unknown>;
-
 describe('validateEnvironment', () => {
-  const validBase: EnvironmentInput = {
+  const validBase = {
     NODE_ENV: 'test',
     DATABASE_URL:
       'postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test',
@@ -15,7 +13,7 @@ describe('validateEnvironment', () => {
     MAIL_MESSAGE_ID_DOMAIN: 'mail.example.test',
     MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   };
-  const productionBase: EnvironmentInput = {
+  const productionBase = {
     ...validBase,
 
     NODE_ENV: 'production',
@@ -148,7 +146,7 @@ describe('validateEnvironment', () => {
   });
 
   it('validates OAuth provider configuration and Redis dependency', () => {
-    const googleOAuth: EnvironmentInput = {
+    const googleOAuth = {
       ...validBase,
       REDIS_ENABLED: 'true',
       AUTH_OAUTH_ENABLED: 'true',
@@ -211,7 +209,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires a long metrics token in production when metrics are enabled', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 
@@ -332,7 +330,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires JWT blacklist with closed failure mode in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
 
       NODE_ENV: 'production',
@@ -632,7 +630,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires CSRF protection in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 
@@ -659,7 +657,7 @@ describe('validateEnvironment', () => {
   });
 
   it('forbids disabled Redis and in-memory fallback in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 

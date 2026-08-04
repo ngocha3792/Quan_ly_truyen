@@ -5,7 +5,6 @@ import { RoleCode } from '@/common/enums';
 import type { AuthConfig } from '@/config';
 import { OAuthProvider } from '@/generated/prisma/client';
 
-import type { AdminMfaChallengePort } from '../../application/ports';
 import { OAuthFlowInvalidException } from '../../domain/exceptions';
 
 import { OAuthFlowService } from './oauth-flow.service';
@@ -39,18 +38,14 @@ describe('OAuthFlowService state protection', () => {
       idGenerator?: unknown;
     } = {},
   ) {
-    const set = jest.fn().mockResolvedValue('OK');
-    const getdel = jest.fn().mockResolvedValue(null);
     const redis = {
-      set,
-      getdel,
+      set: jest.fn().mockResolvedValue('OK'),
+      getdel: jest.fn().mockResolvedValue(null),
       ...redisOverrides,
     } as unknown as Redis;
 
     return {
       redis,
-      set,
-      getdel,
       service: new OAuthFlowService(
         new ConfigService({ auth: authConfig }),
         redis,
@@ -66,7 +61,7 @@ describe('OAuthFlowService state protection', () => {
   }
 
   it('stores one-time state and returns PKCE authorization metadata', async () => {
-    const { set, service } = createService();
+    const { redis, service } = createService();
 
     const result = await service.createAuthorizationUrl('google', {
       ipAddress: '203.0.113.10',
@@ -79,7 +74,7 @@ describe('OAuthFlowService state protection', () => {
     expect(url.searchParams.get('state')).toBe(result.state);
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('nonce')).toBeTruthy();
-    expect(set).toHaveBeenCalledWith(
+    expect(redis.set).toHaveBeenCalledWith(
       expect.stringMatching(/^auth:oauth:state:/u),
       expect.any(String),
       'EX',
@@ -89,7 +84,7 @@ describe('OAuthFlowService state protection', () => {
   });
 
   it('rejects a callback not bound to the initiating browser', async () => {
-    const { getdel, service } = createService();
+    const { redis, service } = createService();
 
     await expect(
       service.complete(
@@ -101,7 +96,7 @@ describe('OAuthFlowService state protection', () => {
         {},
       ),
     ).rejects.toBeInstanceOf(OAuthFlowInvalidException);
-    expect(getdel).not.toHaveBeenCalled();
+    expect(redis.getdel).not.toHaveBeenCalled();
   });
 
   it('consumes state even when the provider callback is cancelled', async () => {
@@ -136,17 +131,13 @@ describe('OAuthFlowService state protection', () => {
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       client: { deviceName: 'Browser' },
     });
-    const createAdminMfaChallenge: jest.MockedFunction<
-      AdminMfaChallengePort['create']
-    > = jest.fn().mockResolvedValue({
-      ticket: 'mfa-ticket',
-      mode: 'verify',
-      expiresAt: new Date(Date.now() + 300_000),
-    });
-
     const adminMfa = {
       isEnabled: jest.fn().mockReturnValue(true),
-      create: createAdminMfaChallenge,
+      create: jest.fn().mockResolvedValue({
+        ticket: 'mfa-ticket',
+        mode: 'verify',
+        expiresAt: new Date(Date.now() + 300_000),
+      }),
     };
     const loginPersistence = { createSession: jest.fn() };
     const tokenIssuer = { issue: jest.fn() };
@@ -188,19 +179,16 @@ describe('OAuthFlowService state protection', () => {
       ),
     ).rejects.toMatchObject({ code: 'AUTH_ADMIN_MFA_REQUIRED' });
 
-    expect(createAdminMfaChallenge).toHaveBeenCalledTimes(1);
-
-    const challengeInput = createAdminMfaChallenge.mock.calls[0]?.[0];
-
-    expect(challengeInput).toMatchObject({
-      mode: 'verify',
-      source: 'google',
-    });
-
-    expect(challengeInput?.client).toMatchObject({
-      ipAddress: '203.0.113.20',
-      deviceName: 'Browser',
-    });
+    expect(adminMfa.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'verify',
+        source: 'google',
+        client: expect.objectContaining({
+          ipAddress: '203.0.113.20',
+          deviceName: 'Browser',
+        }),
+      }),
+    );
     expect(tokenIssuer.issue).not.toHaveBeenCalled();
     expect(loginPersistence.createSession).not.toHaveBeenCalled();
   });

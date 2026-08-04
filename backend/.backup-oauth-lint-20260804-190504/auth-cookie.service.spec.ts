@@ -39,13 +39,14 @@ describe('AuthCookieService OAuth state cookie', () => {
   );
 
   it('sets a short-lived HttpOnly SameSite=Lax cookie for OAuth state', () => {
-    const cookie = jest.fn();
-    const response = { cookie } as unknown as Response;
+    const response = {
+      cookie: jest.fn(),
+    } as unknown as Response;
     const expiresAt = new Date('2026-08-04T10:20:00.000Z');
 
     service.setOAuthStateCookie(response, 'browser-state', expiresAt);
 
-    expect(cookie).toHaveBeenCalledWith(
+    expect(response.cookie).toHaveBeenCalledWith(
       'oauth_state',
       'browser-state',
       expect.objectContaining({

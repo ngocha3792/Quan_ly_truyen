@@ -1,9 +1,7 @@
 import { validateEnvironment } from './environment.validation';
 
-type EnvironmentInput = Record<string, unknown>;
-
 describe('validateEnvironment', () => {
-  const validBase: EnvironmentInput = {
+  const validBase = {
     NODE_ENV: 'test',
     DATABASE_URL:
       'postgresql://postgres:postgres@localhost:5432/quan_ly_truyen_test',
@@ -15,75 +13,75 @@ describe('validateEnvironment', () => {
     MAIL_MESSAGE_ID_DOMAIN: 'mail.example.test',
     MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   };
-  const productionBase: EnvironmentInput = {
-    ...validBase,
-
-    NODE_ENV: 'production',
-
-    AUTH_ADMIN_MFA_ENABLED: 'true',
-
-    AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
-
-    APP_PUBLIC_URL: 'https://api.example.com',
-
-    FRONTEND_PUBLIC_URL: 'https://app.example.com',
-
-    CORS_ALLOWED_ORIGINS: 'https://app.example.com',
-
-    JWT_ACCESS_SECRET: 'production-access-value-1234567890-abcdef',
-
-    JWT_REFRESH_SECRET: 'production-refresh-value-1234567890-abcdef',
-
-    AUTH_CSRF_SECRET: 'production-csrf-value-1234567890-abcdef',
-
-    AUTH_COOKIE_SECURE: 'true',
-
-    AUTH_COOKIE_PATH: '/api/v1/auth',
-
-    AUTH_CSRF_ENABLED: 'true',
-
-    AUTH_CSRF_COOKIE_PATH: '/',
-
-    AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
-
-    AUTH_JWT_BLACKLIST_ENABLED: 'true',
-
-    AUTH_JWT_BLACKLIST_FAILURE_MODE: 'closed',
-
-    REDIS_ENABLED: 'true',
-
-    QUEUE_ENABLED: 'true',
-
-    QUEUE_WORKER_HEARTBEAT_ENABLED: 'true',
-
-    IDEMPOTENCY_FAILURE_MODE: 'closed',
-
-    ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'false',
-
-    MAIL_ENABLED: 'true',
-
-    SMTP_VERIFY_ON_STARTUP: 'true',
-
-    MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ: 'false',
-
-    OBSERVABILITY_ENABLED: 'true',
-
-    METRICS_ENABLED: 'true',
-
-    METRICS_BEARER_TOKEN: 'production-metrics-value-1234567890-abcdef',
-
-    SWAGGER_ENABLED: 'false',
-
-    MAIL_MESSAGE_ID_DOMAIN: 'mail.example.com',
-
-    MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(
-      32,
-
-      7,
-    ).toString('base64'),
-  };
-
   it('enforces production readiness configuration', () => {
+    const productionBase = {
+      ...validBase,
+
+      NODE_ENV: 'production',
+
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
+
+      APP_PUBLIC_URL: 'https://api.example.com',
+
+      FRONTEND_PUBLIC_URL: 'https://app.example.com',
+
+      CORS_ALLOWED_ORIGINS: 'https://app.example.com',
+
+      JWT_ACCESS_SECRET: 'production-access-value-1234567890-abcdef',
+
+      JWT_REFRESH_SECRET: 'production-refresh-value-1234567890-abcdef',
+
+      AUTH_CSRF_SECRET: 'production-csrf-value-1234567890-abcdef',
+
+      AUTH_COOKIE_SECURE: 'true',
+
+      AUTH_COOKIE_PATH: '/api/v1/auth',
+
+      AUTH_CSRF_ENABLED: 'true',
+
+      AUTH_CSRF_COOKIE_PATH: '/',
+
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
+
+      AUTH_JWT_BLACKLIST_ENABLED: 'true',
+
+      AUTH_JWT_BLACKLIST_FAILURE_MODE: 'closed',
+
+      REDIS_ENABLED: 'true',
+
+      QUEUE_ENABLED: 'true',
+
+      QUEUE_WORKER_HEARTBEAT_ENABLED: 'true',
+
+      IDEMPOTENCY_FAILURE_MODE: 'closed',
+
+      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'false',
+
+      MAIL_ENABLED: 'true',
+
+      SMTP_VERIFY_ON_STARTUP: 'true',
+
+      MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ: 'false',
+
+      OBSERVABILITY_ENABLED: 'true',
+
+      METRICS_ENABLED: 'true',
+
+      METRICS_BEARER_TOKEN: 'production-metrics-value-1234567890-abcdef',
+
+      SWAGGER_ENABLED: 'false',
+
+      MAIL_MESSAGE_ID_DOMAIN: 'mail.example.com',
+
+      MAIL_PAYLOAD_ENCRYPTION_KEY: Buffer.alloc(
+        32,
+
+        7,
+      ).toString('base64'),
+    };
+
     expect(() => validateEnvironment(productionBase)).not.toThrow();
 
     expect(() =>
@@ -148,7 +146,7 @@ describe('validateEnvironment', () => {
   });
 
   it('validates OAuth provider configuration and Redis dependency', () => {
-    const googleOAuth: EnvironmentInput = {
+    const googleOAuth = {
       ...validBase,
       REDIS_ENABLED: 'true',
       AUTH_OAUTH_ENABLED: 'true',
@@ -211,7 +209,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires a long metrics token in production when metrics are enabled', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 
@@ -332,7 +330,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires JWT blacklist with closed failure mode in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
 
       NODE_ENV: 'production',
@@ -632,7 +630,7 @@ describe('validateEnvironment', () => {
   });
 
   it('requires CSRF protection in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 
@@ -659,7 +657,7 @@ describe('validateEnvironment', () => {
   });
 
   it('forbids disabled Redis and in-memory fallback in production', () => {
-    const productionBase: EnvironmentInput = {
+    const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
 

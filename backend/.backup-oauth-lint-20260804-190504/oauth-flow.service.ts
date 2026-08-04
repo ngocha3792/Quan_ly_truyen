@@ -3,7 +3,7 @@ import { createPublicKey, randomBytes, type JsonWebKey } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type Redis from 'ioredis';
-import { decode, verify, type JwtPayload } from 'jsonwebtoken';
+import { decode, verify, type JwtHeader, type JwtPayload } from 'jsonwebtoken';
 
 import { RoleCode } from '@/common/enums';
 import {
@@ -297,7 +297,7 @@ export class OAuthFlowService {
         fetchJson('https://api.github.com/user/emails', { headers }),
       ]);
       if (!isObject(user)) throw new Error('GitHub user profile missing');
-      if (!isUnknownArray(emails)) throw new Error('GitHub emails missing');
+      if (!Array.isArray(emails)) throw new Error('GitHub emails missing');
       const verified =
         emails.find(
           (item) =>
@@ -307,14 +307,13 @@ export class OAuthFlowService {
         throw new OAuthEmailUnavailableException();
       }
       const login = stringField(user, 'login');
-      const verifiedEmail = stringField(verified, 'email');
-      const displayName = optionalStringField(user, 'name') ?? login;
       return {
         provider: OAuthProvider.GITHUB,
         providerAccountId: String(numberOrStringField(user, 'id')),
-        email: verifiedEmail.toLowerCase(),
+        email: verified.email.toLowerCase(),
         emailVerified: true,
-        displayName,
+        displayName:
+          typeof user.name === 'string' && user.name.trim() ? user.name : login,
         usernameHint: login,
       };
     } catch (error) {
@@ -708,53 +707,25 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
 function stringField(value: unknown, field: string): string {
-  if (!isObject(value)) {
+  if (!isObject(value) || typeof value[field] !== 'string' || !value[field]) {
     throw new Error(`Missing ${field}`);
   }
-
-  const candidate: unknown = value[field];
-
-  if (typeof candidate !== 'string' || !candidate) {
-    throw new Error(`Missing ${field}`);
-  }
-
-  return candidate;
-}
-
-function optionalStringField(
-  value: unknown,
-  field: string,
-): string | undefined {
-  if (!isObject(value)) return undefined;
-
-  const candidate: unknown = value[field];
-
-  return typeof candidate === 'string' && candidate.trim()
-    ? candidate.trim()
-    : undefined;
+  return value[field];
 }
 
 function numberOrStringField(value: unknown, field: string): number | string {
-  if (!isObject(value)) {
+  if (
+    !isObject(value) ||
+    (typeof value[field] !== 'number' && typeof value[field] !== 'string')
+  ) {
     throw new Error(`Missing ${field}`);
   }
-
-  const candidate: unknown = value[field];
-
-  if (typeof candidate !== 'number' && typeof candidate !== 'string') {
-    throw new Error(`Missing ${field}`);
-  }
-
-  return candidate;
+  return value[field];
 }
 
 function requiredClaim(payload: JwtPayload, field: string): string {
-  const value: unknown = payload[field];
+  const value = payload[field];
   if (typeof value !== 'string' || !value) {
     throw new OAuthFlowInvalidException(`Thiáº¿u claim ${field}`);
   }
@@ -762,7 +733,7 @@ function requiredClaim(payload: JwtPayload, field: string): string {
 }
 
 function optionalClaim(payload: JwtPayload, field: string): string | undefined {
-  const value: unknown = payload[field];
+  const value = payload[field];
   return typeof value === 'string' && value ? value : undefined;
 }
 

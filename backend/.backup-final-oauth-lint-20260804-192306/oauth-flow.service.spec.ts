@@ -5,7 +5,6 @@ import { RoleCode } from '@/common/enums';
 import type { AuthConfig } from '@/config';
 import { OAuthProvider } from '@/generated/prisma/client';
 
-import type { AdminMfaChallengePort } from '../../application/ports';
 import { OAuthFlowInvalidException } from '../../domain/exceptions';
 
 import { OAuthFlowService } from './oauth-flow.service';
@@ -136,17 +135,13 @@ describe('OAuthFlowService state protection', () => {
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       client: { deviceName: 'Browser' },
     });
-    const createAdminMfaChallenge: jest.MockedFunction<
-      AdminMfaChallengePort['create']
-    > = jest.fn().mockResolvedValue({
-      ticket: 'mfa-ticket',
-      mode: 'verify',
-      expiresAt: new Date(Date.now() + 300_000),
-    });
-
     const adminMfa = {
       isEnabled: jest.fn().mockReturnValue(true),
-      create: createAdminMfaChallenge,
+      create: jest.fn().mockResolvedValue({
+        ticket: 'mfa-ticket',
+        mode: 'verify',
+        expiresAt: new Date(Date.now() + 300_000),
+      }),
     };
     const loginPersistence = { createSession: jest.fn() };
     const tokenIssuer = { issue: jest.fn() };
@@ -188,20 +183,32 @@ describe('OAuthFlowService state protection', () => {
       ),
     ).rejects.toMatchObject({ code: 'AUTH_ADMIN_MFA_REQUIRED' });
 
-    expect(createAdminMfaChallenge).toHaveBeenCalledTimes(1);
+    expect(adminMfa.create).toHaveBeenCalledTimes(1);
 
-    const challengeInput = createAdminMfaChallenge.mock.calls[0]?.[0];
+    const challengeInput: unknown = adminMfa.create.mock.calls[0]?.[0];
 
-    expect(challengeInput).toMatchObject({
-      mode: 'verify',
-      source: 'google',
-    });
+    expect(challengeInput).toEqual(
+      expect.objectContaining({
+        mode: 'verify',
+        source: 'google',
+      }),
+    );
 
-    expect(challengeInput?.client).toMatchObject({
-      ipAddress: '203.0.113.20',
-      deviceName: 'Browser',
-    });
+    if (!isRecord(challengeInput) || !isRecord(challengeInput.client)) {
+      throw new Error('MFA challenge input is invalid');
+    }
+
+    expect(challengeInput.client).toEqual(
+      expect.objectContaining({
+        ipAddress: '203.0.113.20',
+        deviceName: 'Browser',
+      }),
+    );
     expect(tokenIssuer.issue).not.toHaveBeenCalled();
     expect(loginPersistence.createSession).not.toHaveBeenCalled();
   });
 });
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}

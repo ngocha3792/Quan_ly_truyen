@@ -297,7 +297,7 @@ export class OAuthFlowService {
         fetchJson('https://api.github.com/user/emails', { headers }),
       ]);
       if (!isObject(user)) throw new Error('GitHub user profile missing');
-      if (!isUnknownArray(emails)) throw new Error('GitHub emails missing');
+      if (!Array.isArray(emails)) throw new Error('GitHub emails missing');
       const verified =
         emails.find(
           (item) =>
@@ -307,12 +307,11 @@ export class OAuthFlowService {
         throw new OAuthEmailUnavailableException();
       }
       const login = stringField(user, 'login');
-      const verifiedEmail = stringField(verified, 'email');
       const displayName = optionalStringField(user, 'name') ?? login;
       return {
         provider: OAuthProvider.GITHUB,
         providerAccountId: String(numberOrStringField(user, 'id')),
-        email: verifiedEmail.toLowerCase(),
+        email: verified.email.toLowerCase(),
         emailVerified: true,
         displayName,
         usernameHint: login,
@@ -708,22 +707,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
 function stringField(value: unknown, field: string): string {
-  if (!isObject(value)) {
+  if (!isObject(value) || typeof value[field] !== 'string' || !value[field]) {
     throw new Error(`Missing ${field}`);
   }
-
-  const candidate: unknown = value[field];
-
-  if (typeof candidate !== 'string' || !candidate) {
-    throw new Error(`Missing ${field}`);
-  }
-
-  return candidate;
+  return value[field];
 }
 
 function optionalStringField(
@@ -740,17 +728,13 @@ function optionalStringField(
 }
 
 function numberOrStringField(value: unknown, field: string): number | string {
-  if (!isObject(value)) {
+  if (
+    !isObject(value) ||
+    (typeof value[field] !== 'number' && typeof value[field] !== 'string')
+  ) {
     throw new Error(`Missing ${field}`);
   }
-
-  const candidate: unknown = value[field];
-
-  if (typeof candidate !== 'number' && typeof candidate !== 'string') {
-    throw new Error(`Missing ${field}`);
-  }
-
-  return candidate;
+  return value[field];
 }
 
 function requiredClaim(payload: JwtPayload, field: string): string {
