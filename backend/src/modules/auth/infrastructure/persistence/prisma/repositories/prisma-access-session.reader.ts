@@ -49,6 +49,7 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
         expiresAt: true,
 
         revokedAt: true,
+        mfaVerifiedAt: true,
 
         user: {
           select: {
@@ -80,6 +81,7 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
       expiresAt: session.expiresAt,
 
       revokedAt: session.revokedAt,
+      mfaVerifiedAt: session.mfaVerifiedAt,
 
       email: session.user.email,
 

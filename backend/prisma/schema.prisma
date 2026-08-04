@@ -255,6 +255,7 @@ model User {
   avatarMedia            MediaAsset?             @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
   authorProfile          AuthorProfile?
   oauthAccounts          OAuthAccount[]
+  adminMfaCredential     AdminMfaCredential?
   sessions               Session[]
   tokens                 UserToken[]
   userRoles              UserRole[]              @relation("UserRoles")
@@ -299,8 +300,24 @@ model OAuthAccount {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
   @@index([userId])
   @@map("oauth_accounts")
+}
+
+model AdminMfaCredential {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @map("user_id") @db.Uuid
+  encryptedSecret    String   @map("encrypted_secret") @db.Text
+  recoveryCodeHashes String[] @map("recovery_code_hashes")
+  lastUsedStep       BigInt?  @map("last_used_step")
+  enabledAt          DateTime @map("enabled_at") @db.Timestamptz(3)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_mfa_credentials")
 }
 
 model Session {
@@ -310,6 +327,7 @@ model Session {
   refreshTokenFamilyId String    @default(uuid()) @map("refresh_token_family_id") @db.Uuid
   refreshTokenVersion  Int       @default(0) @map("refresh_token_version")
   accessTokenVersion   Int       @default(0) @map("access_token_version")
+  mfaVerifiedAt        DateTime? @map("mfa_verified_at") @db.Timestamptz(3)
 
   deviceId             String?   @map("device_id") @db.VarChar(120)
   deviceName           String?   @map("device_name") @db.VarChar(200)

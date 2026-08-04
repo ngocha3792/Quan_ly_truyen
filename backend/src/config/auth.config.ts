@@ -83,6 +83,36 @@ export default registerAs(AUTH_CONFIG_KEY, (): AuthConfig => ({
       process.env.AUTH_PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS ?? 60,
     ),
   },
+  adminMfa: {
+    enabled: parseBoolean(process.env.AUTH_ADMIN_MFA_ENABLED, false),
+    issuer: process.env.AUTH_ADMIN_MFA_ISSUER ?? 'Quan Ly Truyen',
+    encryptionKeyBase64: optionalString(process.env.AUTH_MFA_ENCRYPTION_KEY),
+    preAuthTicketTtlSeconds: Number(
+      process.env.AUTH_MFA_PREAUTH_TTL_SECONDS ?? 300,
+    ),
+    maxVerificationAttempts: Number(
+      process.env.AUTH_MFA_MAX_VERIFICATION_ATTEMPTS ?? 5,
+    ),
+    totpWindow: Number(process.env.AUTH_MFA_TOTP_WINDOW ?? 1),
+    recoveryCodeCount: Number(process.env.AUTH_MFA_RECOVERY_CODE_COUNT ?? 10),
+  },
+  oauth: {
+    enabled: parseBoolean(process.env.AUTH_OAUTH_ENABLED, false),
+    stateTtlSeconds: Number(process.env.AUTH_OAUTH_STATE_TTL_SECONDS ?? 600),
+    stateCookieName: process.env.AUTH_OAUTH_STATE_COOKIE_NAME ?? 'oauth_state',
+    google: {
+      enabled: parseBoolean(process.env.AUTH_OAUTH_GOOGLE_ENABLED, false),
+      clientId: optionalString(process.env.AUTH_OAUTH_GOOGLE_CLIENT_ID),
+      clientSecret: optionalString(process.env.AUTH_OAUTH_GOOGLE_CLIENT_SECRET),
+      callbackUrl: optionalString(process.env.AUTH_OAUTH_GOOGLE_CALLBACK_URL),
+    },
+    github: {
+      enabled: parseBoolean(process.env.AUTH_OAUTH_GITHUB_ENABLED, false),
+      clientId: optionalString(process.env.AUTH_OAUTH_GITHUB_CLIENT_ID),
+      clientSecret: optionalString(process.env.AUTH_OAUTH_GITHUB_CLIENT_SECRET),
+      callbackUrl: optionalString(process.env.AUTH_OAUTH_GITHUB_CALLBACK_URL),
+    },
+  },
   csrf: {
     enabled: parseBoolean(process.env.AUTH_CSRF_ENABLED, false),
 

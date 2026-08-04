@@ -70,6 +70,11 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
         status: true,
         deletedAt: true,
         emailVerifiedAt: true,
+        adminMfaCredential: {
+          select: {
+            enabledAt: true,
+          },
+        },
 
         userRoles: {
           where: {
@@ -118,6 +123,7 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
       emailVerifiedAt: user.emailVerifiedAt,
 
       roles,
+      mfaEnabled: user.adminMfaCredential !== null,
     };
   }
 
@@ -158,6 +164,7 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
             refreshTokenFamilyId: input.refreshTokenFamilyId,
             refreshTokenVersion: input.refreshTokenVersion,
             accessTokenVersion: input.accessTokenVersion,
+            mfaVerifiedAt: input.mfaVerifiedAt,
 
             deviceId: input.deviceId,
             deviceName: input.deviceName,
@@ -361,6 +368,10 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
               deviceName: input.deviceName,
 
               sessionLimitEnforced: revokedSessionCount > 0,
+
+              authenticationMethod: input.authenticationMethod ?? 'password',
+
+              mfaVerified: input.mfaVerifiedAt !== undefined,
             },
 
             ipAddress: input.ipAddress,

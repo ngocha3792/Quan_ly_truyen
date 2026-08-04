@@ -11,6 +11,7 @@ export interface AuthPrincipal {
   permissions: readonly PermissionCode[];
 
   authorProfileId?: string;
+  mfaVerified?: boolean;
 
   /**
    * JTI của access token hiện tại.

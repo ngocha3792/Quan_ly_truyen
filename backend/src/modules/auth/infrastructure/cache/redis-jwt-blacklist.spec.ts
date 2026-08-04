@@ -316,6 +316,24 @@ function createBlacklist(
       requestCooldownSeconds: 60,
     },
 
+    adminMfa: {
+      enabled: false,
+      issuer: 'Quan Ly Truyen',
+      encryptionKeyBase64: Buffer.alloc(32, 8).toString('base64'),
+      preAuthTicketTtlSeconds: 300,
+      maxVerificationAttempts: 5,
+      totpWindow: 1,
+      recoveryCodeCount: 10,
+    },
+
+    oauth: {
+      enabled: false,
+      stateTtlSeconds: 600,
+      stateCookieName: 'oauth_state',
+      google: { enabled: false },
+      github: { enabled: false },
+    },
+
     csrf: {
       enabled: true,
 

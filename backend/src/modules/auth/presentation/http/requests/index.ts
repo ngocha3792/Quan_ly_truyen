@@ -8,3 +8,4 @@ export * from './change-password.request';
 export * from './request-email-change.request';
 
 export * from './confirm-email-change.request';
+export * from './admin-mfa.request';

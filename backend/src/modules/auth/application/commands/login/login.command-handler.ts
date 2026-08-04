@@ -1,8 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
 import type { LoginResultDto } from '../../dto';
 import { LoginResultMapper } from '../../mappers';
 import {
+  ADMIN_MFA_CHALLENGE_PORT,
+  type AdminMfaChallengePort,
   AUTH_TOKEN_ISSUER_PORT,
   type AuthTokenIssuerPort,
   ID_GENERATOR_PORT,
@@ -16,7 +18,11 @@ import {
   SECURE_TOKEN_PORT,
   type SecureTokenPort,
 } from '../../ports';
-import { InvalidLoginCredentialsException } from '../../../domain/exceptions';
+import {
+  AdminMfaRequiredException,
+  InvalidLoginCredentialsException,
+} from '../../../domain/exceptions';
+import { RoleCode } from '@/common/enums';
 import { AccountLoginPolicy } from '../../../domain/policies';
 import {
   LoginIdentifierValueObject,
@@ -48,6 +54,10 @@ export class LoginCommandHandler {
 
     @Inject(ID_GENERATOR_PORT)
     private readonly idGenerator: IdGeneratorPort,
+
+    @Optional()
+    @Inject(ADMIN_MFA_CHALLENGE_PORT)
+    private readonly adminMfaChallenge?: AdminMfaChallengePort,
   ) {}
 
   async execute(command: LoginCommand): Promise<LoginResultDto> {
@@ -107,6 +117,20 @@ export class LoginCommandHandler {
      */
     await this.rateLimiter.resetAfterSuccess(rateLimitInput);
 
+    if (
+      account.roles.includes(RoleCode.ADMIN) &&
+      this.adminMfaChallenge?.isEnabled()
+    ) {
+      const challenge = await this.adminMfaChallenge.create({
+        userId: account.id,
+        mode: account.mfaEnabled ? 'verify' : 'enroll',
+        source: 'password',
+        client: command.client,
+      });
+
+      throw new AdminMfaRequiredException(challenge);
+    }
+
     const sessionId = this.idGenerator.generate();
 
     const refreshTokenFamilyId = this.idGenerator.generate();
@@ -133,6 +157,7 @@ export class LoginCommandHandler {
       refreshTokenFamilyId,
       refreshTokenVersion,
       accessTokenVersion,
+      authenticationMethod: 'password',
 
       deviceId: command.client.deviceId,
       deviceName: command.client.deviceName,

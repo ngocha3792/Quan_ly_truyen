@@ -262,6 +262,88 @@ export class EnvironmentVariables {
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  AUTH_ADMIN_MFA_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  AUTH_ADMIN_MFA_ISSUER = 'Quan Ly Truyen';
+
+  @IsOptional()
+  @IsString()
+  AUTH_MFA_ENCRYPTION_KEY?: string;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(120)
+  @Max(900)
+  AUTH_MFA_PREAUTH_TTL_SECONDS = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(3)
+  @Max(10)
+  AUTH_MFA_MAX_VERIFICATION_ATTEMPTS = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1))
+  @IsInt()
+  @Min(0)
+  @Max(2)
+  AUTH_MFA_TOTP_WINDOW = 1;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10))
+  @IsInt()
+  @Min(5)
+  @Max(20)
+  AUTH_MFA_RECOVERY_CODE_COUNT = 10;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_OAUTH_ENABLED = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 600))
+  @IsInt()
+  @Min(120)
+  @Max(1800)
+  AUTH_OAUTH_STATE_TTL_SECONDS = 600;
+
+  @IsString()
+  @IsNotEmpty()
+  AUTH_OAUTH_STATE_COOKIE_NAME = 'oauth_state';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_OAUTH_GOOGLE_ENABLED = false;
+
+  @IsOptional()
+  @IsString()
+  AUTH_OAUTH_GOOGLE_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  AUTH_OAUTH_GOOGLE_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  AUTH_OAUTH_GOOGLE_CALLBACK_URL?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTH_OAUTH_GITHUB_ENABLED = false;
+
+  @IsOptional()
+  @IsString()
+  AUTH_OAUTH_GITHUB_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  AUTH_OAUTH_GITHUB_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  AUTH_OAUTH_GITHUB_CALLBACK_URL?: string;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   MAINTENANCE_MODE = false;
 
   @IsString()
@@ -698,14 +780,71 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   if (
     (config.AUTH_LOGIN_RATE_LIMIT_ENABLED ||
       config.AUTH_JWT_BLACKLIST_ENABLED ||
-      config.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED) &&
+      config.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED ||
+      config.AUTH_ADMIN_MFA_ENABLED ||
+      config.AUTH_OAUTH_ENABLED) &&
     !config.REDIS_ENABLED
   ) {
     throw new Error(
       [
-        'REDIS_ENABLED must be true when login rate limit,',
-        'JWT blacklist, or auth authorization cache is enabled',
+        'REDIS_ENABLED must be true when login rate limit, JWT blacklist,',
+        'auth authorization cache is enabled, admin MFA, or OAuth is enabled',
       ].join(' '),
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.AUTH_ADMIN_MFA_ENABLED
+  ) {
+    throw new Error('AUTH_ADMIN_MFA_ENABLED must be true in production');
+  }
+
+  if (config.AUTH_ADMIN_MFA_ENABLED) {
+    if (
+      !config.AUTH_MFA_ENCRYPTION_KEY ||
+      !isValidBase64Key(config.AUTH_MFA_ENCRYPTION_KEY, 32)
+    ) {
+      throw new Error(
+        'AUTH_MFA_ENCRYPTION_KEY must be a base64 encoded 32-byte key when admin MFA is enabled',
+      );
+    }
+  }
+
+  if (config.AUTH_OAUTH_ENABLED) {
+    if (
+      config.AUTH_OAUTH_STATE_COOKIE_NAME === config.AUTH_REFRESH_COOKIE_NAME ||
+      config.AUTH_OAUTH_STATE_COOKIE_NAME === config.AUTH_CSRF_COOKIE_NAME
+    ) {
+      throw new Error(
+        'AUTH_OAUTH_STATE_COOKIE_NAME must differ from auth credential cookie names',
+      );
+    }
+
+    if (
+      !config.AUTH_OAUTH_GOOGLE_ENABLED &&
+      !config.AUTH_OAUTH_GITHUB_ENABLED
+    ) {
+      throw new Error(
+        'At least one OAuth provider must be enabled when AUTH_OAUTH_ENABLED=true',
+      );
+    }
+
+    validateOAuthProvider(
+      'GOOGLE',
+      config.AUTH_OAUTH_GOOGLE_ENABLED,
+      config.AUTH_OAUTH_GOOGLE_CLIENT_ID,
+      config.AUTH_OAUTH_GOOGLE_CLIENT_SECRET,
+      config.AUTH_OAUTH_GOOGLE_CALLBACK_URL,
+      config.NODE_ENV === AppEnvironment.PRODUCTION,
+    );
+    validateOAuthProvider(
+      'GITHUB',
+      config.AUTH_OAUTH_GITHUB_ENABLED,
+      config.AUTH_OAUTH_GITHUB_CLIENT_ID,
+      config.AUTH_OAUTH_GITHUB_CLIENT_SECRET,
+      config.AUTH_OAUTH_GITHUB_CALLBACK_URL,
+      config.NODE_ENV === AppEnvironment.PRODUCTION,
     );
   }
 
@@ -772,16 +911,6 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   if (!supportedLocales.includes(config.DEFAULT_LOCALE)) {
     throw new Error('DEFAULT_LOCALE must be included in SUPPORTED_LOCALES');
   }
-  if (
-    (config.AUTH_LOGIN_RATE_LIMIT_ENABLED ||
-      config.AUTH_JWT_BLACKLIST_ENABLED) &&
-    !config.REDIS_ENABLED
-  ) {
-    throw new Error(
-      'REDIS_ENABLED must be true when login rate limit or JWT blacklist is enabled',
-    );
-  }
-
   if (
     config.NODE_ENV === AppEnvironment.PRODUCTION &&
     !config.AUTH_JWT_BLACKLIST_ENABLED
@@ -1181,6 +1310,31 @@ function isValidMessageIdDomain(value: string): boolean {
   return /^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(
     value,
   );
+}
+
+function validateOAuthProvider(
+  name: string,
+  enabled: boolean,
+  clientId?: string,
+  clientSecret?: string,
+  callbackUrl?: string,
+  requireHttps = false,
+): void {
+  if (!enabled) {
+    return;
+  }
+
+  if (!clientId?.trim() || !clientSecret?.trim() || !callbackUrl?.trim()) {
+    throw new Error(
+      `AUTH_OAUTH_${name}_CLIENT_ID, AUTH_OAUTH_${name}_CLIENT_SECRET and AUTH_OAUTH_${name}_CALLBACK_URL are required`,
+    );
+  }
+
+  if (requireHttps && new URL(callbackUrl).protocol !== 'https:') {
+    throw new Error(
+      `AUTH_OAUTH_${name}_CALLBACK_URL must use https:// in production`,
+    );
+  }
 }
 
 export function parseCsv(value: string): string[] {

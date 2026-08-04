@@ -290,6 +290,8 @@ describe('Auth application handlers', () => {
 
         accessTokenVersion: 0,
 
+        authenticationMethod: 'password',
+
         deviceId: 'browser-1',
 
         deviceName: 'Chrome Test',
@@ -322,6 +324,63 @@ describe('Auth application handlers', () => {
           emailVerified: true,
         },
       });
+    });
+
+    it('requires MFA for an admin before issuing tokens or creating a session', async () => {
+      const persistence = {
+        findAccountByIdentifier: jest.fn().mockResolvedValue({
+          ...account(),
+          roles: [RoleCode.ADMIN],
+          mfaEnabled: false,
+        }),
+        createSession: jest.fn(),
+      };
+      const rateLimiter = {
+        assertAllowed: jest.fn().mockResolvedValue(undefined),
+        recordFailure: jest.fn(),
+        resetAfterSuccess: jest.fn().mockResolvedValue(undefined),
+      };
+      const tokenIssuer = { issue: jest.fn() };
+      const mfaChallenge = {
+        isEnabled: jest.fn().mockReturnValue(true),
+        create: jest.fn().mockResolvedValue({
+          ticket: 'mfa-ticket',
+          mode: 'enroll',
+          expiresAt: new Date('2026-08-03T06:05:00.000Z'),
+        }),
+      };
+      const handler = new LoginCommandHandler(
+        persistence,
+        rateLimiter,
+        { verify: jest.fn().mockResolvedValue(true) } as never,
+        tokenIssuer,
+        { hash: jest.fn() } as never,
+        { generate: jest.fn() },
+        mfaChallenge,
+      );
+
+      await expect(
+        handler.execute(
+          new LoginCommand('admin@example.com', 'StrongPass123!', {
+            ipAddress: '127.0.0.1',
+          }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'AUTH_ADMIN_MFA_ENROLLMENT_REQUIRED',
+        details: {
+          mfaTicket: 'mfa-ticket',
+          mode: 'enroll',
+        },
+      });
+
+      expect(mfaChallenge.create).toHaveBeenCalledWith({
+        userId: USER_ID,
+        mode: 'enroll',
+        source: 'password',
+        client: { ipAddress: '127.0.0.1' },
+      });
+      expect(tokenIssuer.issue).not.toHaveBeenCalled();
+      expect(persistence.createSession).not.toHaveBeenCalled();
     });
 
     it('uses the dummy bcrypt path and records failure when user is absent', async () => {

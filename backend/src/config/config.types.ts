@@ -141,6 +141,34 @@ export interface AuthConfig {
   passwordReset: {
     requestCooldownSeconds: number;
   };
+
+  adminMfa: {
+    enabled: boolean;
+    issuer: string;
+    encryptionKeyBase64?: string;
+    preAuthTicketTtlSeconds: number;
+    maxVerificationAttempts: number;
+    totpWindow: number;
+    recoveryCodeCount: number;
+  };
+
+  oauth: {
+    enabled: boolean;
+    stateTtlSeconds: number;
+    stateCookieName: string;
+    google: {
+      enabled: boolean;
+      clientId?: string;
+      clientSecret?: string;
+      callbackUrl?: string;
+    };
+    github: {
+      enabled: boolean;
+      clientId?: string;
+      clientSecret?: string;
+      callbackUrl?: string;
+    };
+  };
 }
 
 export interface DatabaseConfig {

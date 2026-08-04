@@ -1,5 +1,4 @@
-import { JwtTokenType } from '@/common/enums';
-
+import { JwtTokenType, PermissionCode, RoleCode } from '@/common/enums';
 import { ServiceUnavailableException } from '@/common/exceptions';
 
 import { ValidateAccessTokenQuery } from './validate-access-token.query';
@@ -35,6 +34,24 @@ describe('ValidateAccessTokenQueryHandler blacklist', () => {
 
   let handler: ValidateAccessTokenQueryHandler;
 
+  function activeSession(overrides: Record<string, unknown> = {}) {
+    return {
+      sessionId: payload.sid,
+      userId: payload.sub,
+      accessTokenVersion: 0,
+      expiresAt: new Date('2026-12-01T00:00:00.000Z'),
+      revokedAt: null,
+      mfaVerifiedAt: null,
+      email: 'admin@example.com',
+      emailVerifiedAt: new Date('2026-08-01T00:00:00.000Z'),
+      accountStatus: 'ACTIVE',
+      userDeletedAt: null,
+      roles: [RoleCode.ADMIN],
+      permissions: [PermissionCode.ROLE_MANAGE],
+      ...overrides,
+    };
+  }
+
   beforeEach(() => {
     sessionReader = {
       findBySessionId: jest.fn(),
@@ -50,6 +67,8 @@ describe('ValidateAccessTokenQueryHandler blacklist', () => {
       sessionReader,
 
       jwtBlacklist,
+
+      { isEnabled: () => true, create: jest.fn() },
     );
   });
 
@@ -65,6 +84,46 @@ describe('ValidateAccessTokenQueryHandler blacklist', () => {
     expect(jwtBlacklist.isBlacklisted).toHaveBeenCalledWith(payload.jti);
 
     expect(sessionReader.findBySessionId).not.toHaveBeenCalled();
+  });
+
+  it('rejects an admin session that has not completed MFA', async () => {
+    jwtBlacklist.isBlacklisted.mockResolvedValue(false);
+    sessionReader.findBySessionId.mockResolvedValue(activeSession());
+
+    await expect(
+      handler.execute(new ValidateAccessTokenQuery(payload)),
+    ).rejects.toMatchObject({ code: 'AUTH_ADMIN_MFA_REQUIRED' });
+  });
+
+  it('allows a non-MFA admin session only when MFA is disabled outside production', async () => {
+    handler = new ValidateAccessTokenQueryHandler(sessionReader, jwtBlacklist, {
+      isEnabled: () => false,
+      create: jest.fn(),
+    });
+    jwtBlacklist.isBlacklisted.mockResolvedValue(false);
+    sessionReader.findBySessionId.mockResolvedValue(activeSession());
+
+    await expect(
+      handler.execute(new ValidateAccessTokenQuery(payload)),
+    ).resolves.toMatchObject({
+      userId: payload.sub,
+      mfaVerified: false,
+    });
+  });
+
+  it('accepts an admin session after MFA verification', async () => {
+    jwtBlacklist.isBlacklisted.mockResolvedValue(false);
+    sessionReader.findBySessionId.mockResolvedValue(
+      activeSession({ mfaVerifiedAt: new Date('2026-08-03T06:00:00.000Z') }),
+    );
+
+    await expect(
+      handler.execute(new ValidateAccessTokenQuery(payload)),
+    ).resolves.toMatchObject({
+      userId: payload.sub,
+      sessionId: payload.sid,
+      mfaVerified: true,
+    });
   });
 
   it('propagates blacklist failures in fail-closed mode', async () => {

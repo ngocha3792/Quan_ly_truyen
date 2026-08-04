@@ -23,3 +23,7 @@ export * from './email-change-token-expired.exception';
 export * from './new-email-must-differ.exception';
 
 export * from './email-change-unavailable.exception';
+export * from './admin-mfa-required.exception';
+export * from './invalid-mfa-code.exception';
+export * from './invalid-mfa-ticket.exception';
+export * from './oauth-login.exception';

@@ -19,6 +19,10 @@ describe('validateEnvironment', () => {
 
       NODE_ENV: 'production',
 
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
+
       APP_PUBLIC_URL: 'https://api.example.com',
 
       FRONTEND_PUBLIC_URL: 'https://app.example.com',
@@ -83,6 +87,20 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({
         ...productionBase,
+        AUTH_ADMIN_MFA_ENABLED: 'false',
+      }),
+    ).toThrow('AUTH_ADMIN_MFA_ENABLED must be true in production');
+
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(16, 8).toString('base64'),
+      }),
+    ).toThrow('AUTH_MFA_ENCRYPTION_KEY');
+
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
 
         MAIL_ENABLED: 'false',
       }),
@@ -127,6 +145,47 @@ describe('validateEnvironment', () => {
     );
   });
 
+  it('validates OAuth provider configuration and Redis dependency', () => {
+    const googleOAuth = {
+      ...validBase,
+      REDIS_ENABLED: 'true',
+      AUTH_OAUTH_ENABLED: 'true',
+      AUTH_OAUTH_GOOGLE_ENABLED: 'true',
+      AUTH_OAUTH_GOOGLE_CLIENT_ID: 'google-client-id',
+      AUTH_OAUTH_GOOGLE_CLIENT_SECRET: 'google-client-secret',
+      AUTH_OAUTH_GOOGLE_CALLBACK_URL:
+        'http://localhost:3000/api/v1/auth/oauth/google/callback',
+    };
+
+    expect(() => validateEnvironment(googleOAuth)).not.toThrow();
+    expect(() =>
+      validateEnvironment({ ...googleOAuth, REDIS_ENABLED: 'false' }),
+    ).toThrow('OAuth is enabled');
+    expect(() =>
+      validateEnvironment({
+        ...googleOAuth,
+        AUTH_OAUTH_GOOGLE_CLIENT_SECRET: undefined,
+      }),
+    ).toThrow('AUTH_OAUTH_GOOGLE_CLIENT_SECRET');
+    expect(() =>
+      validateEnvironment({
+        ...googleOAuth,
+        AUTH_OAUTH_STATE_COOKIE_NAME: 'refresh_token',
+      }),
+    ).toThrow('AUTH_OAUTH_STATE_COOKIE_NAME');
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        AUTH_OAUTH_ENABLED: 'true',
+        AUTH_OAUTH_GOOGLE_ENABLED: 'true',
+        AUTH_OAUTH_GOOGLE_CLIENT_ID: 'google-client-id',
+        AUTH_OAUTH_GOOGLE_CLIENT_SECRET: 'google-client-secret',
+        AUTH_OAUTH_GOOGLE_CALLBACK_URL:
+          'http://api.example.com/api/v1/auth/oauth/google/callback',
+      }),
+    ).toThrow('AUTH_OAUTH_GOOGLE_CALLBACK_URL must use https://');
+  });
+
   it('parses boolean and integer values correctly', () => {
     const result = validateEnvironment({
       ...validBase,
@@ -153,6 +212,10 @@ describe('validateEnvironment', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
 
       APP_PUBLIC_URL: 'https://api.example.com',
 
@@ -271,6 +334,10 @@ describe('validateEnvironment', () => {
       ...validBase,
 
       NODE_ENV: 'production',
+
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
 
       APP_PUBLIC_URL: 'https://api.example.com',
 
@@ -506,6 +573,10 @@ describe('validateEnvironment', () => {
       validateEnvironment({
         ...validBase,
         NODE_ENV: 'production',
+
+        AUTH_ADMIN_MFA_ENABLED: 'true',
+
+        AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
         AUTH_COOKIE_SECURE: 'true',
         AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
         REDIS_ENABLED: 'true',
@@ -562,6 +633,10 @@ describe('validateEnvironment', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
       AUTH_COOKIE_SECURE: 'true',
       AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
       REDIS_ENABLED: 'true',
@@ -585,6 +660,10 @@ describe('validateEnvironment', () => {
     const productionBase = {
       ...validBase,
       NODE_ENV: 'production',
+
+      AUTH_ADMIN_MFA_ENABLED: 'true',
+
+      AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
       AUTH_COOKIE_SECURE: 'true',
       AUTH_LOGIN_RATE_LIMIT_ENABLED: 'true',
       QUEUE_ENABLED: 'true',

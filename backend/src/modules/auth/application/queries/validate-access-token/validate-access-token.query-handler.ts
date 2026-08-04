@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
-import { JwtTokenType } from '@/common/enums';
+import { JwtTokenType, RoleCode } from '@/common/enums';
 import { InvalidTokenException } from '@/common/exceptions';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { isUuidV4 } from '@/common/utils';
@@ -8,6 +8,8 @@ import { isUuidV4 } from '@/common/utils';
 import {
   ACCESS_SESSION_READER_PORT,
   type AccessSessionReaderPort,
+  ADMIN_MFA_CHALLENGE_PORT,
+  type AdminMfaChallengePort,
   JWT_BLACKLIST_PORT,
   type JwtBlacklistPort,
 } from '../../ports';
@@ -23,6 +25,10 @@ export class ValidateAccessTokenQueryHandler {
 
     @Inject(JWT_BLACKLIST_PORT)
     private readonly jwtBlacklist: JwtBlacklistPort,
+
+    @Optional()
+    @Inject(ADMIN_MFA_CHALLENGE_PORT)
+    private readonly adminMfaChallenge?: AdminMfaChallengePort,
   ) {}
 
   async execute(query: ValidateAccessTokenQuery): Promise<AuthPrincipal> {
@@ -70,6 +76,17 @@ export class ValidateAccessTokenQueryHandler {
       });
     }
 
+    if (
+      this.adminMfaChallenge?.isEnabled() &&
+      session.roles.includes(RoleCode.ADMIN) &&
+      !session.mfaVerifiedAt
+    ) {
+      throw new InvalidTokenException({
+        code: 'AUTH_ADMIN_MFA_REQUIRED',
+        message: 'Session quản trị viên chưa được xác minh MFA',
+      });
+    }
+
     return {
       userId: session.userId,
       sessionId: session.sessionId,
@@ -82,6 +99,7 @@ export class ValidateAccessTokenQueryHandler {
       permissions: [...session.permissions],
 
       authorProfileId: session.authorProfileId,
+      mfaVerified: Boolean(session.mfaVerifiedAt),
 
       tokenId: payload.jti,
 

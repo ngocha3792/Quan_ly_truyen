@@ -13,6 +13,7 @@ export interface AccessSessionSnapshot {
   accessTokenVersion: number;
   expiresAt: Date;
   revokedAt: Date | null;
+  mfaVerifiedAt?: Date | null;
 
   email: string;
   emailVerifiedAt: Date | null;

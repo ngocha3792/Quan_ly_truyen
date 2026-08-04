@@ -16,6 +16,7 @@ export interface LoginAccountRecord {
   emailVerifiedAt: Date | null;
 
   roles: readonly RoleCode[];
+  mfaEnabled?: boolean;
 }
 
 export interface CreateLoginSessionInput {
@@ -26,6 +27,8 @@ export interface CreateLoginSessionInput {
   refreshTokenFamilyId: string;
   refreshTokenVersion: number;
   accessTokenVersion: number;
+  mfaVerifiedAt?: Date;
+  authenticationMethod?: 'password' | 'google' | 'github';
 
   deviceId?: string;
   deviceName?: string;

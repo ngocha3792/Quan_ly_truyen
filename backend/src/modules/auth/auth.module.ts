@@ -14,6 +14,7 @@ import { PrismaModule } from '@/infrastructure/database';
 import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
 
 import {
+  ADMIN_MFA_CHALLENGE_PORT,
   AUTH_AUDIT_READER_PORT,
   GetSecurityEventsQueryHandler,
   CURRENT_USER_READER_PORT,
@@ -83,8 +84,16 @@ import {
   RedisLoginRateLimiter,
   PrismaChangePasswordPersistence,
   AccessAuthorizationCacheService,
+  AdminMfaService,
+  MfaSecretCipherService,
+  PrismaAdminMfaPersistence,
+  RedisAdminMfaChallengeStore,
+  TotpService,
+  OAuthFlowService,
 } from './infrastructure';
 import {
+  AdminMfaController,
+  OAuthController,
   AuthAccountController,
   AuthCookieService,
   AuthCredentialsController,
@@ -142,6 +151,8 @@ const idGeneratorProvider = {
     AuthTokenController,
 
     AuthAccountController,
+    AdminMfaController,
+    OAuthController,
   ],
 
   providers: [
@@ -150,6 +161,12 @@ const idGeneratorProvider = {
 
     AccessAuthorizationCacheService,
     AuthAuditWriterService,
+    RedisAdminMfaChallengeStore,
+    PrismaAdminMfaPersistence,
+    MfaSecretCipherService,
+    TotpService,
+    AdminMfaService,
+    OAuthFlowService,
 
     PrismaAuthAuditReader,
 
@@ -201,6 +218,10 @@ const idGeneratorProvider = {
     JwtAuthTokenIssuer,
     JwtRefreshTokenVerifier,
     JwtAccessStrategy,
+    {
+      provide: ADMIN_MFA_CHALLENGE_PORT,
+      useExisting: RedisAdminMfaChallengeStore,
+    },
     {
       provide: CHANGE_PASSWORD_PERSISTENCE_PORT,
 
