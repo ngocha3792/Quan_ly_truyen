@@ -28,8 +28,7 @@ process.env.QUEUE_ENABLED = 'false';
 
 process.env.MAIL_ENABLED = 'false';
 
-process.env.JWT_ACCESS_SECRET =
-  'e2e-access-secret-at-least-32-characters';
+process.env.JWT_ACCESS_SECRET = 'e2e-access-secret-at-least-32-characters';
 
 process.env.JWT_REFRESH_SECRET =
   'different-refresh-secret-at-least-32-characters';
@@ -113,9 +112,7 @@ function assertSafeTestDatabase(value: string): void {
 
   if (!databaseName || !/(^|[_-])test($|[_-])/u.test(databaseName)) {
     throw new Error(
-      `Refusing to use non-test database for E2E: ${
-        databaseName || '<empty>'
-      }`,
+      `Refusing to use non-test database for E2E: ${databaseName || '<empty>'}`,
     );
   }
 }

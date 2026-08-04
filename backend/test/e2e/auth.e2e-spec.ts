@@ -419,27 +419,27 @@ describe('Auth HTTP lifecycle', () => {
     });
 
     /*
-     * changedAt náº±m trong payload Ä‘Ã£ unwrap,
-     * khÃ´ng náº±m trá»±c tiáº¿p á»Ÿ response.body.
+     * changedAt nằm trong payload đã unwrap,
+     * không nằm trực tiếp ở response.body.
      */
     expect(changePasswordResult.changedAt).toEqual(expect.any(String));
 
     /*
-     * Kiá»ƒm tra Ä‘Ã¢y lÃ  ISO-8601 timestamp há»£p lá»‡.
+     * Kiểm tra đây là ISO-8601 timestamp hợp lệ.
      */
     expect(new Date(changePasswordResult.changedAt).toISOString()).toBe(
       changePasswordResult.changedAt,
     );
 
     /*
-     * Controller tráº£ changedAt báº±ng Date.toISOString().
+     * Controller trả changedAt bằng Date.toISOString().
      *
-     * KhÃ´ng so sÃ¡nh má»™t timestamp cá»‘ Ä‘á»‹nh vÃ¬ thá»i gian Ä‘Æ°á»£c táº¡o
-     * trong lÃºc request thá»±c thi.
+     * Không so sánh một timestamp cố định vì thời gian được tạo
+     * trong lúc request thực thi.
      */
 
     /*
-     * Access token hiá»‡n táº¡i Ä‘Ã£ máº¥t hiá»‡u lá»±c.
+     * Access token hiện tại đã mất hiệu lực.
      */
     await request(httpServer())
       .get('/api/v1/auth/me')
@@ -451,7 +451,7 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Access token cá»§a session khÃ¡c cÅ©ng máº¥t hiá»‡u lá»±c.
+     * Access token của session khác cũng mất hiệu lực.
      */
     await request(httpServer())
       .get('/api/v1/auth/me')
@@ -463,8 +463,8 @@ describe('Auth HTTP lifecycle', () => {
       .expect(401);
 
     /*
-     * Current refresh token vÃ  CSRF token váº«n dÃ¹ng
-     * Ä‘Æ°á»£c Ä‘á»ƒ láº¥y access token má»›i.
+     * Current refresh token và CSRF token vẫn dùng
+     * được để lấy access token mới.
      */
     const refreshResponse = await request(httpServer())
       .post('/api/v1/auth/refresh')

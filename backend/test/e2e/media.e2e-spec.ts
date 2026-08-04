@@ -299,7 +299,11 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
      */
     const concurrentKey = `${key}-concurrent`;
 
-    const originalAcquire = idempotencyStore.acquire.bind(idempotencyStore);
+    const originalAcquire = (
+      storageKey: string,
+      requestHash: string,
+      ttlSeconds: number,
+    ) => idempotencyStore.acquire(storageKey, requestHash, ttlSeconds);
 
     let releaseFirstAcquire!: () => void;
     let notifyFirstLeaseStored!: () => void;

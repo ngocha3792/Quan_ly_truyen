@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 FROM node:24-bookworm-slim AS base
 
 WORKDIR /app
@@ -11,48 +9,61 @@ ENV NPM_CONFIG_AUDIT=false
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        dumb-init \
-        openssl \
+    ca-certificates \
+    dumb-init \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
+
 
 FROM base AS dependencies
 
 ENV NODE_ENV=development
 
-# Prisma config yêu cầu DATABASE_URL trong postinstall.
-# prisma generate không kết nối tới database này.
-ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
+# Prisma generate cần DATABASE_URL trong postinstall,
+# nhưng không kết nối đến database này.
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
 
 COPY package.json package-lock.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 
-RUN npm ci
+RUN npm config set registry https://registry.npmjs.org/ \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 300000 \
+    && npm ci --no-audit --no-fund
+
 
 FROM dependencies AS build
 
 COPY . .
 
-RUN npm run build
-RUN npm run typecheck:scripts
+RUN npm run build \
+    && npm run typecheck:scripts \
+    && test -f dist/main.js \
+    && test -f dist/worker.js
+
 
 FROM dependencies AS production-dependencies
 
 RUN set -eux; \
     if [ -d /app/node_modules/.prisma ]; then \
-      cp -R /app/node_modules/.prisma /tmp/prisma-generated; \
+    cp -R /app/node_modules/.prisma /tmp/prisma-generated; \
     fi; \
     npm prune --omit=dev --ignore-scripts; \
     if [ -d /tmp/prisma-generated ]; then \
-      rm -rf /app/node_modules/.prisma; \
-      mv /tmp/prisma-generated /app/node_modules/.prisma; \
+    rm -rf /app/node_modules/.prisma; \
+    mv /tmp/prisma-generated /app/node_modules/.prisma; \
     fi; \
     npm cache clean --force
+
 
 FROM base AS runtime
 
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
 ENV HOME=/tmp
 
 COPY --from=production-dependencies \
@@ -64,6 +75,11 @@ COPY --from=build \
     --chown=node:node \
     /app/dist \
     ./dist
+
+COPY --from=build \
+    --chown=node:node \
+    /app/prisma/migrations \
+    ./prisma/migrations
 
 COPY --chown=node:node \
     package.json \
@@ -77,6 +93,7 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 
 CMD ["node", "dist/main.js"]
+
 
 FROM build AS migrate
 

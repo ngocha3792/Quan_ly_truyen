@@ -17,11 +17,13 @@ ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/quan_ly_truyen?sc
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        dumb-init \
-        openssl \
+    ca-certificates \
+    curl \
+    dumb-init \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
+
+
 
 COPY package.json package-lock.json ./
 
@@ -31,6 +33,14 @@ COPY prisma ./prisma
 # npm ci chạy postinstall -> prisma generate.
 RUN npm ci
 
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node src ./src
+COPY --chown=node:node test ./test
+COPY --chown=node:node scripts ./scripts
+
+COPY --chown=node:node nest-cli.json ./
+COPY --chown=node:node tsconfig.json ./
+COPY --chown=node:node tsconfig.build.json ./
 COPY . .
 
 EXPOSE 3000
