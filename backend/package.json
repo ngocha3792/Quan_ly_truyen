@@ -17,6 +17,7 @@
     "lint": "eslint \"{src,scripts,test}/**/*.ts\" --fix",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "test": "jest",
+    "test:smoke:auth:production": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke-auth-production.ps1",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
