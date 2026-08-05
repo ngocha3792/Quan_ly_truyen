@@ -1,7 +1,0 @@
-:where(input, select, textarea) {
-  color: inherit;
-}
-:where(input, select, textarea, button):focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}

@@ -1,31 +1,13 @@
 <!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <title>Quản Lý Truyện</title>
-    <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta
-      name="description"
-      content="Dashboard quản lý truyện hiện đại được xây dựng bằng Angular."
-    />
-    <meta name="theme-color" content="#6255ed" />
-    <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
-      <script>
-      (() => {
-        try {
-          const theme = localStorage.getItem('qlt-theme');
-          const language = localStorage.getItem('qlt-language');
-          document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
-          document.documentElement.dataset.language = language === 'en' ? 'en' : 'vi';
-          document.documentElement.lang = language === 'en' ? 'en' : 'vi';
-        } catch {
-          document.documentElement.dataset.theme = 'dark';
-        }
-      })();
-    </script>
-  </head>
-  <body>
-    <app-root></app-root>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Frontend</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+  <app-root></app-root>
+</body>
 </html>
