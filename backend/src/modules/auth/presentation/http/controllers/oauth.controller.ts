@@ -52,7 +52,7 @@ export class OAuthController {
   async callback(
     @Param('provider') provider: string,
     @Query('code') code: string | undefined,
-    @Query('state') state: string | undefined,
+    @Query('state') state: string | string[] | undefined,
     @Query('error') providerError: string | undefined,
     @Headers('cookie') cookieHeader: string | undefined,
     @ClientIp() ipAddress: string | undefined,
@@ -62,10 +62,11 @@ export class OAuthController {
     this.authCookies.setNoStoreHeaders(response);
     this.authCookies.clearOAuthStateCookie(response);
     const browserState = this.authCookies.readRequiredOAuthState(cookieHeader);
+    const normalizedState = typeof state === 'string' ? state : undefined;
     const result = await this.oauth.complete(
       provider,
       code,
-      state,
+      normalizedState,
       browserState,
       providerError,
       {
