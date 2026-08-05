@@ -1,0 +1,11 @@
+<main class="account-page">
+    <div class="account-container">
+        <div class="account-grid">
+            <app-account-sidebar class="account-sidebar" [user]="auth.user()" (logoutRequested)="logout()" />
+
+            <section class="account-content">
+                <router-outlet />
+            </section>
+        </div>
+    </div>
+</main>

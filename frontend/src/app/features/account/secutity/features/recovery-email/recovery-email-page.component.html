@@ -1,0 +1,138 @@
+<app-security-feature-shell title="Email khôi phục"
+    description="Thêm một địa chỉ email độc lập để khôi phục tài khoản khi cần thiết.">
+    <div security-main>
+        @if (store.error()) {
+        <div class="alert error">
+            {{ store.error() }}
+        </div>
+        }
+
+        @if (store.success()) {
+        <div class="alert success">
+            {{ store.success() }}
+        </div>
+        }
+
+        @if (
+        store.status()?.pendingEmail;
+        as pendingEmail
+        ) {
+        <app-security-panel title="Xác minh email đang chờ" description="Nhập mã sáu chữ số được gửi tới email mới."
+            icon="mail">
+            <div class="pending-email">
+                {{ pendingEmail }}
+            </div>
+
+            <app-otp-code-input [disabled]="store.submitting()" (valueChange)="
+            verificationCode.set($event)
+          " />
+
+            <div class="form-actions">
+                <button class="secondary-button" type="button" [disabled]="store.submitting()" (click)="resend()">
+                    Gửi lại mã
+                </button>
+
+                <button class="primary-button" type="button" [disabled]="
+              verificationCode().length !==
+                6 ||
+              store.submitting()
+            " (click)="verifyEmail()">
+                    Xác minh email
+                </button>
+            </div>
+        </app-security-panel>
+        }
+
+        <app-security-panel title="Địa chỉ email khôi phục" description="Email này phải khác email đăng nhập chính."
+            icon="mail">
+            @if (
+            store.status()?.email;
+            as email
+            ) {
+            <div class="current-email">
+                <div>
+                    <strong>{{ email }}</strong>
+
+                    <span [class.verified]="
+                store.status()?.verified
+              ">
+                        {{
+                        store.status()?.verified
+                        ? 'Đã xác minh'
+                        : 'Chưa xác minh'
+                        }}
+                    </span>
+                </div>
+            </div>
+            } @else {
+            <p class="empty-description">
+                Bạn chưa thiết lập email khôi phục.
+            </p>
+            }
+
+            <form class="security-form" [formGroup]="requestForm" (ngSubmit)="requestEmail()">
+                <label>
+                    <span>Email khôi phục mới</span>
+
+                    <input type="email" formControlName="email" autocomplete="email"
+                        placeholder="email-khoi-phuc@example.com" />
+                </label>
+
+                <label>
+                    <span>Xác nhận mật khẩu</span>
+
+                    <input type="password" formControlName="currentPassword" autocomplete="current-password"
+                        placeholder="Nhập mật khẩu hiện tại" />
+                </label>
+
+                <button class="primary-button" type="submit" [disabled]="
+            requestForm.invalid ||
+            store.submitting()
+          ">
+                    Gửi mã xác minh
+                </button>
+            </form>
+        </app-security-panel>
+
+        @if (store.status()?.email) {
+        <app-security-panel title="Xóa email khôi phục"
+            description="Bạn sẽ mất một phương thức hỗ trợ khôi phục tài khoản." icon="alert-triangle" tone="danger">
+            <form class="security-form" [formGroup]="removeForm" (ngSubmit)="remove()">
+                <label>
+                    <span>Xác nhận mật khẩu</span>
+
+                    <input type="password" formControlName="currentPassword" autocomplete="current-password" />
+                </label>
+
+                <button class="danger-button" type="submit" [disabled]="
+              removeForm.invalid ||
+              store.submitting()
+            ">
+                    Xóa email khôi phục
+                </button>
+            </form>
+        </app-security-panel>
+        }
+    </div>
+
+    <div security-aside>
+        <section class="aside-card">
+            <h3>Lưu ý quan trọng</h3>
+
+            <p>
+                Không nên dùng chính email đăng nhập
+                làm email khôi phục.
+            </p>
+
+            <p>
+                Mã xác minh chỉ có hiệu lực trong thời
+                gian ngắn.
+            </p>
+
+            <p>
+                Hệ thống không bao giờ gửi mật khẩu
+                qua email.
+            </p>
+        </section>
+    </div>
+</app-security-feature-shell>

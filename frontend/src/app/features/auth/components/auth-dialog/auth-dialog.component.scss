@@ -1,0 +1,31 @@
+.backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1rem; background: rgba(2, 5, 15, .78); backdrop-filter: blur(14px); animation: fade .18s ease; }
+.dialog { position: relative; width: min(460px, 100%); max-height: calc(100dvh - 2rem); overflow: auto; padding: 2rem; border: 1px solid rgba(170, 137, 255, .18); border-radius: 22px; background: linear-gradient(155deg, rgba(19, 24, 43, .98), rgba(7, 11, 25, .98)); box-shadow: 0 30px 100px rgba(0, 0, 0, .6), 0 0 70px rgba(119, 71, 230, .12); animation: rise .22s ease; }
+.close { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; color: var(--text-muted); background: rgba(255,255,255,.035); cursor: pointer; }
+.close:hover { color: white; background: rgba(255,255,255,.08); }
+.brand { display: flex; justify-content: center; margin-bottom: 1.4rem; }
+.intro { text-align: center; }
+.eyebrow { color: var(--primary-soft); font-size: .68rem; font-weight: 800; letter-spacing: .13em; }
+h2 { margin: .55rem 0 .45rem; color: var(--text-strong); font-size: 1.65rem; letter-spacing: -.04em; }
+.intro p { margin: 0 auto; max-width: 360px; color: var(--text-muted); font-size: .87rem; line-height: 1.6; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 1.45rem 0 1.25rem; padding: 4px; border: 1px solid var(--border); border-radius: 11px; background: rgba(255,255,255,.025); }
+.tabs button { padding: .68rem; border: 0; border-radius: 8px; color: var(--text-muted); background: transparent; font: inherit; font-size: .84rem; font-weight: 650; cursor: pointer; }
+.tabs button.active { color: white; background: linear-gradient(135deg, rgba(136, 73, 239, .9), rgba(100, 65, 217, .9)); box-shadow: 0 7px 20px rgba(99, 58, 202, .28); }
+form { display: grid; gap: .95rem; }
+label { display: grid; gap: .42rem; color: var(--text-secondary); font-size: .78rem; font-weight: 600; }
+.field { display: flex; align-items: center; gap: .65rem; padding: 0 .82rem; border: 1px solid var(--border); border-radius: 10px; color: var(--text-muted); background: rgba(4, 8, 19, .65); transition: border-color .2s, box-shadow .2s; }
+.field:focus-within { color: var(--primary-soft); border-color: rgba(144, 88, 255, .65); box-shadow: 0 0 0 3px rgba(126, 73, 231, .12); }
+input { width: 100%; min-width: 0; padding: .83rem 0; border: 0; outline: 0; color: var(--text-strong); background: transparent; font: inherit; font-size: .86rem; }
+input::placeholder { color: #596176; }
+.hint { margin-top: -.35rem; color: var(--text-muted); font-size: .7rem; line-height: 1.45; }
+.alert { display: flex; align-items: flex-start; gap: .45rem; padding: .7rem .8rem; border-radius: 9px; font-size: .76rem; line-height: 1.45; }
+.alert.error { color: #ffb1be; background: rgba(231, 62, 91, .1); border: 1px solid rgba(231, 62, 91, .2); }
+.alert.success { color: #9ce6c0; background: rgba(48, 192, 121, .1); border: 1px solid rgba(48, 192, 121, .2); }
+.submit { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .55rem; margin-top: .15rem; border: 0; border-radius: 10px; color: white; background: linear-gradient(135deg, #a150f2, #6a43df); box-shadow: 0 12px 30px rgba(111, 64, 224, .27); font: inherit; font-size: .88rem; font-weight: 750; cursor: pointer; }
+.submit:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.submit:disabled { opacity: .6; cursor: wait; }
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.35); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+.legal { display: flex; align-items: center; justify-content: center; gap: .35rem; margin: 1rem 0 0; color: #6f7890; font-size: .68rem; text-align: center; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 520px) { .dialog { padding: 1.5rem 1.15rem; border-radius: 18px; } }

@@ -1,0 +1,153 @@
+<app-security-feature-shell title="Câu hỏi bảo mật"
+    description="Thiết lập ba câu hỏi hỗ trợ xác minh danh tính khi cần khôi phục tài khoản.">
+    <div security-main>
+        @if (store.error()) {
+        <div class="alert error">
+            {{ store.error() }}
+        </div>
+        }
+
+        @if (store.success()) {
+        <div class="alert success">
+            {{ store.success() }}
+        </div>
+        }
+
+        <app-security-panel title="Thiết lập câu hỏi bảo mật"
+            description="Chọn ba câu hỏi khác nhau và sử dụng câu trả lời khó đoán." icon="key">
+            <form class="questions-form" [formGroup]="form" (ngSubmit)="save()">
+                <div formArrayName="answers">
+                    @for (
+                    answerGroup of answers.controls;
+                    track $index
+                    ) {
+                    <section class="question-group" [formGroupName]="$index">
+                        <div class="question-number">
+                            {{ $index + 1 }}
+                        </div>
+
+                        <div class="question-fields">
+                            <label>
+                                <span>
+                                    Câu hỏi {{ $index + 1 }}
+                                </span>
+
+                                <select formControlName="questionId">
+                                    <option value="">
+                                        Chọn một câu hỏi
+                                    </option>
+
+                                    @for (
+                                    option of store.options();
+                                    track option.id
+                                    ) {
+                                    <option [value]="option.id">
+                                        {{ option.label }}
+                                    </option>
+                                    }
+                                </select>
+                            </label>
+
+                            <label>
+                                <span>Câu trả lời</span>
+
+                                <input type="password" formControlName="answer" autocomplete="off" maxlength="128"
+                                    placeholder="Nhập câu trả lời" />
+
+                                <small>
+                                    Không sử dụng thông tin dễ tìm
+                                    trên mạng xã hội.
+                                </small>
+                            </label>
+                        </div>
+                    </section>
+                    }
+                </div>
+
+                @if (
+                form.hasError(
+                'duplicateQuestions'
+                ) &&
+                form.touched
+                ) {
+                <div class="form-error">
+                    Ba câu hỏi phải khác nhau.
+                </div>
+                }
+
+                <label class="password-field">
+                    <span>
+                        Xác nhận mật khẩu hiện tại
+                    </span>
+
+                    <input type="password" formControlName="currentPassword" autocomplete="current-password" />
+                </label>
+
+                <div class="form-actions">
+                    <button class="primary-button" type="submit" [disabled]="
+              form.invalid ||
+              store.submitting()
+            ">
+                        {{
+                        store.questions()?.configured
+                        ? 'Cập nhật câu hỏi'
+                        : 'Lưu câu hỏi bảo mật'
+                        }}
+                    </button>
+                </div>
+            </form>
+        </app-security-panel>
+
+        @if (
+        store.questions()?.configured
+        ) {
+        <app-security-panel title="Xóa câu hỏi bảo mật" description="Bạn sẽ mất phương thức xác minh bổ sung này."
+            icon="alert-triangle" tone="danger">
+            <form class="remove-form" [formGroup]="removeForm" (ngSubmit)="remove()">
+                <label>
+                    <span>
+                        Xác nhận mật khẩu hiện tại
+                    </span>
+
+                    <input type="password" formControlName="currentPassword" autocomplete="current-password" />
+                </label>
+
+                <button class="danger-button" type="submit" [disabled]="
+              removeForm.invalid ||
+              store.submitting()
+            ">
+                    Xóa toàn bộ câu hỏi
+                </button>
+            </form>
+        </app-security-panel>
+        }
+    </div>
+
+    <div security-aside>
+        <section class="aside-card">
+            <h3>Nguyên tắc an toàn</h3>
+
+            <ul>
+                <li>
+                    Câu trả lời không cần hoàn toàn đúng
+                    sự thật.
+                </li>
+
+                <li>
+                    Có thể dùng một chuỗi bí mật như mật
+                    khẩu.
+                </li>
+
+                <li>
+                    Không dùng cùng câu trả lời cho nhiều
+                    câu hỏi.
+                </li>
+
+                <li>
+                    Hệ thống không bao giờ hiển thị lại
+                    câu trả lời đã lưu.
+                </li>
+            </ul>
+        </section>
+    </div>
+</app-security-feature-shell>

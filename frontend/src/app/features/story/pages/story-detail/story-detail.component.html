@@ -1,0 +1,34 @@
+<main class="page-container detail-page">
+  @if (story() === undefined) {
+    <div class="loading"></div>
+  } @else if (story(); as item) {
+    <nav class="breadcrumb"><a routerLink="/">Trang chủ</a><span>/</span><a routerLink="/danh-sach">Truyện</a><span>/</span><b>{{ item.title }}</b></nav>
+    <section class="story-hero">
+      <div class="backdrop-image" [style.background-image]="'url(' + item.coverUrl + ')'" aria-hidden="true"></div>
+      <img class="cover" [src]="item.coverUrl" [alt]="item.title" />
+      <div class="story-copy">
+        <span class="status">{{ item.status === 'COMPLETED' ? 'ĐÃ HOÀN THÀNH' : 'ĐANG CẬP NHẬT' }}</span>
+        <h1>{{ item.title }}</h1>
+        <p class="author">Tác giả: <strong>{{ item.author }}</strong></p>
+        <div class="tags">@for (category of item.categories; track category) { <span>{{ category }}</span> }</div>
+        <p class="description">{{ item.description }}</p>
+        <div class="stats"><span><app-icon name="star" [size]="17" />{{ item.rating }}</span><span><app-icon name="eye" [size]="17" />{{ item.views | compactNumber }} lượt xem</span><span><app-icon name="book" [size]="17" />{{ item.latestChapter.number }} chương</span></div>
+        <div class="buttons">
+          <button class="read" type="button"><app-icon name="play" [size]="16" />Đọc Chương {{ item.latestChapter.number }}</button>
+          <button class="save" type="button" [class.saved]="library.has(item.id)" (click)="toggleLibrary()"><app-icon name="bookmark" [size]="17" />{{ library.has(item.id) ? 'Đã lưu' : 'Thêm thư viện' }}</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapters-panel">
+      <div class="panel-heading"><div><span></span><h2>Danh sách chương</h2></div><small>{{ item.latestChapter.number }} chương</small></div>
+      <div class="chapter-list">
+        @for (offset of chapters; track offset) {
+          <a href="#" (click)="$event.preventDefault()"><span>Chương {{ item.latestChapter.number - offset }}</span><small>{{ offset === 0 ? 'Mới nhất' : (offset + 1) + ' ngày trước' }}</small><app-icon name="chevron-right" [size]="16" /></a>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="not-found"><span>404</span><h1>Không tìm thấy truyện</h1><p>Truyện bạn tìm có thể đã bị xóa hoặc đổi đường dẫn.</p><a routerLink="/">Về trang chủ</a></section>
+  }
+</main>

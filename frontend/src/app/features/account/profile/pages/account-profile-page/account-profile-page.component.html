@@ -1,0 +1,34 @@
+<header class="page-header">
+    <h1>Thông tin cá nhân</h1>
+
+    <p>
+        Quản lý tên hiển thị, ảnh đại diện,
+        email và thông tin cá nhân.
+    </p>
+</header>
+
+@if (store.error()) {
+<div class="alert error-alert">
+    {{ store.error() }}
+</div>
+}
+
+@if (store.success()) {
+<div class="alert success-alert">
+    {{ store.success() }}
+</div>
+}
+
+@if (store.user(); as currentUser) {
+<div class="profile-layout">
+    <app-account-profile-form [user]="currentUser" [membershipLabel]="
+        store.membershipLabel()
+      " [saving]="store.saving()" [preferences]="
+        preferencesStore.preferences()
+      " (saveRequested)="save($event)" (avatarSelected)="setAvatar($event)" (preferencesChanged)="
+        preferencesStore.update($event)
+      " (cancelRequested)="cancel()" />
+
+    <app-profile-completion-card [completion]="store.completion()" />
+</div>
+}

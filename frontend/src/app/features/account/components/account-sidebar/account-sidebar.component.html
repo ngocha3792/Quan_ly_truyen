@@ -1,0 +1,76 @@
+<aside class="sidebar">
+    <nav class="sidebar-card navigation-card" aria-label="Điều hướng tài khoản">
+        <p class="sidebar-title">
+            TÀI KHOẢN
+        </p>
+
+        <div class="navigation-list">
+            @for (
+            item of navigation;
+            track item.route
+            ) {
+            <a class="navigation-item" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{
+            exact: item.exact
+          }">
+                <app-icon [name]="item.icon" [size]="18" />
+
+                <span>{{ item.label }}</span>
+            </a>
+            }
+        </div>
+    </nav>
+
+    @if (user(); as currentUser) {
+    <section class="sidebar-card user-card">
+        <div class="user-heading">
+            <app-user-avatar [name]="currentUser.displayName" [url]="
+            currentUser.avatar?.url ?? null
+          " [size]="72" />
+
+            <div class="user-heading-content">
+                <strong>
+                    {{ currentUser.displayName }}
+                </strong>
+
+                <span class="member-badge">
+                    <app-icon name="sparkles" [size]="13" />
+
+                    {{
+                    getRoleLabel(
+                    currentUser.roles
+                    )
+                    }}
+                </span>
+            </div>
+        </div>
+
+        <div class="user-detail">
+            <span class="user-email">
+                {{ currentUser.email }}
+            </span>
+
+            <span class="verification-badge" [class.unverified]="
+            !currentUser.emailVerified
+          ">
+                <app-icon [name]="
+              currentUser.emailVerified
+                ? 'check'
+                : 'mail'
+            " [size]="14" />
+
+                {{
+                currentUser.emailVerified
+                ? 'Email đã xác minh'
+                : 'Chưa xác minh email'
+                }}
+            </span>
+        </div>
+
+        <button class="logout-button" type="button" (click)="logoutRequested.emit()">
+            <app-icon name="logout" [size]="17" />
+
+            Đăng xuất
+        </button>
+    </section>
+    }
+</aside>

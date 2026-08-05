@@ -1,0 +1,95 @@
+<header class="header">
+  <div class="header-inner page-container">
+    <button class="icon-button mobile-menu" type="button" (click)="toggleMobile()" aria-label="Mở menu">
+      <app-icon [name]="mobileOpen() ? 'close' : 'menu'" />
+    </button>
+
+    <app-brand-logo />
+
+    <nav class="desktop-nav" aria-label="Điều hướng chính">
+      @for (item of navItems; track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.route === '/' }">{{ item.label }}</a>
+      }
+    </nav>
+
+    <div class="actions">
+      <button class="search-trigger" type="button" (click)="showSearch()">
+        <app-icon name="search" [size]="17" />
+        <span>Tìm truyện, tác giả...</span>
+        <kbd>⌘ K</kbd>
+      </button>
+      <button class="icon-button desktop-only" type="button" (click)="showSearch()" aria-label="Tìm kiếm"><app-icon name="search" /></button>
+      <div class="popover-wrap">
+        <button class="icon-button" type="button" (click)="toggleNotifications()" aria-label="Thông báo">
+          <app-icon name="bell" /> <span class="dot"></span>
+        </button>
+        @if (notificationsOpen()) {
+          <div class="popover notifications">
+            <div class="popover-title"><strong>Thông báo</strong><span>2 mới</span></div>
+            <a routerLink="/truyen/van-co-than-de" (click)="notificationsOpen.set(false)"><span class="notice-icon">233</span><div><b>Vạn Cổ Thần Đế</b><small>Đã cập nhật Chương 233</small></div></a>
+            <a routerLink="/truyen/so-huu-nguyen-thuy-chi-luc" (click)="notificationsOpen.set(false)"><span class="notice-icon blue">89</span><div><b>Sở Hữu Nguyên Thủy Chi Lực</b><small>Đã cập nhật Chương 89</small></div></a>
+          </div>
+        }
+      </div>
+      <a class="icon-button" routerLink="/lich-su" aria-label="Lịch sử"><app-icon name="history" /></a>
+
+      <div class="popover-wrap">
+        @if (auth.isAuthenticated()) {
+          <button class="profile-button" type="button" (click)="toggleProfile()">
+            <span class="avatar">{{ auth.user()?.displayName?.charAt(0) || 'U' }}</span>
+            <span class="profile-name">{{ auth.user()?.displayName }}</span>
+            <app-icon name="chevron-down" [size]="15" />
+          </button>
+          @if (profileOpen()) {
+            <div class="popover profile-menu">
+              <div class="user-summary"><span class="avatar large">{{ auth.user()?.displayName?.charAt(0) }}</span><div><strong>{{ auth.user()?.displayName }}</strong><small>{{ auth.user()?.email }}</small></div></div>
+              <a routerLink="/thu-vien" (click)="profileOpen.set(false)"><app-icon name="bookmark" [size]="18" /> Thư viện của tôi</a>
+              <a routerLink="/tai-khoan" (click)="profileOpen.set(false)"><app-icon name="user" [size]="18" /> Tài khoản</a>
+              <button type="button" (click)="logout()"><app-icon name="logout" [size]="18" /> Đăng xuất</button>
+            </div>
+          }
+        } @else {
+          <button class="login-button" type="button" (click)="openAuth()"><app-icon name="user" [size]="17" /><span>Đăng nhập</span></button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (mobileOpen()) {
+    <nav class="mobile-nav page-container" aria-label="Điều hướng di động">
+      @for (item of navItems; track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.route === '/' }" (click)="mobileOpen.set(false)">{{ item.label }}</a>
+      }
+    </nav>
+  }
+</header>
+
+@if (searchOpen()) {
+  <div class="search-layer" (click)="hideSearch()">
+    <section class="search-panel" (click)="$event.stopPropagation()">
+      <div class="search-input">
+        <app-icon name="search" />
+        <input autofocus [ngModel]="query()" (ngModelChange)="query.set($event)" (keyup.enter)="submitSearch()" placeholder="Nhập tên truyện, tác giả hoặc thể loại..." />
+        <button type="button" (click)="hideSearch()"><app-icon name="close" /></button>
+      </div>
+      @if (query().trim()) {
+        <div class="suggestions">
+          <div class="result-label">Kết quả tìm kiếm</div>
+          @for (story of suggestions(); track story.id) {
+            <a [routerLink]="['/truyen', story.slug]" (click)="hideSearch(); query.set('')">
+              <img [src]="story.coverUrl" [alt]="story.title" />
+              <div><strong>{{ story.title }}</strong><small>{{ story.author }} · {{ story.categories.join(', ') }}</small></div>
+              <span>Ch.{{ story.latestChapter.number }}</span>
+            </a>
+          } @empty {
+            <div class="no-result">Không tìm thấy truyện phù hợp.</div>
+          }
+        </div>
+      } @else {
+        <div class="search-hints"><span>Tìm nhanh:</span><button type="button" (click)="query.set('Solo Leveling')">Solo Leveling</button><button type="button" (click)="query.set('Huyền huyễn')">Huyền huyễn</button><button type="button" (click)="query.set('Hệ thống')">Hệ thống</button></div>
+      }
+    </section>
+  </div>
+}
+
+<app-auth-dialog [open]="authOpen()" (closed)="authOpen.set(false)" />

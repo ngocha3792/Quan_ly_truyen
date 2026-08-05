@@ -1,0 +1,22 @@
+<article class="story-card">
+  <a class="cover" [routerLink]="['/truyen', story().slug]" [attr.aria-label]="story().title">
+    <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
+    <span class="shade"></span>
+    @if (story().badge) { <span class="badge">{{ story().badge }}</span> }
+    <button
+      type="button"
+      class="save"
+      [class.saved]="library.has(story().id)"
+      (click)="toggleLibrary($event)"
+      [attr.aria-label]="library.has(story().id) ? 'Xóa khỏi thư viện' : 'Thêm vào thư viện'"
+    >
+      <app-icon name="bookmark" [size]="17" />
+    </button>
+    <div class="chapter-row">
+      <span>Ch.{{ story().latestChapter.number }}</span>
+      <small>{{ story().latestChapter.updatedAt | relativeTime }}</small>
+    </div>
+  </a>
+  <a class="title" [routerLink]="['/truyen', story().slug]">{{ story().title }}</a>
+  <div class="category">{{ story().categories[0] }}</div>
+</article>

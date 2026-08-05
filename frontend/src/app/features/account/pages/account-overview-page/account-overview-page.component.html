@@ -1,0 +1,57 @@
+<header class="page-header">
+    <h1>Tổng quan tài khoản</h1>
+
+    <p>
+        Quản lý thông tin tài khoản,
+        bảo mật và hoạt động của bạn
+    </p>
+</header>
+
+@if (store.error()) {
+<div class="error-alert">
+    <div>
+        <strong>
+            Không thể tải đầy đủ dữ liệu
+        </strong>
+
+        <span>{{ store.error() }}</span>
+    </div>
+
+    <button type="button" (click)="store.reload()">
+        Thử lại
+    </button>
+</div>
+}
+
+@if (store.user(); as currentUser) {
+<app-account-overview-card [user]="currentUser" [membershipLabel]="
+      store.membershipLabel()
+    " [joinedDays]="store.joinedDays()" [walletBalance]="0" [security]="
+      store.securitySummary()
+    " />
+
+<section class="quick-actions">
+    <h2>Tiện ích nhanh</h2>
+
+    <div class="action-grid">
+        @for (
+        action of quickActions;
+        track action.route
+        ) {
+        <app-account-action-card [title]="action.title" [description]="
+            action.description
+          " [linkLabel]="
+            action.linkLabel
+          " [route]="action.route" [icon]="action.icon" [tone]="action.tone" />
+        }
+    </div>
+</section>
+} @else {
+<section class="loading-card">
+    <span class="spinner"></span>
+
+    <p>
+        Đang tải thông tin tài khoản...
+    </p>
+</section>
+}

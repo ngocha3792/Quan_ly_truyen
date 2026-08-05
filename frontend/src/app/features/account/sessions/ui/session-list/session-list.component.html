@@ -1,0 +1,134 @@
+@if (sessions().length === 0) {
+<div class="empty-state">
+    <app-icon name="monitor" [size]="30" />
+
+    <strong>
+        Không tìm thấy phiên đăng nhập
+    </strong>
+
+    <p>
+        Thử thay đổi từ khóa hoặc bộ lọc trạng thái.
+    </p>
+</div>
+} @else {
+<div class="session-table">
+    <div class="table-header">
+        <span>Thiết bị</span>
+        <span>Vị trí / IP</span>
+        <span>Đăng nhập lần cuối</span>
+        <span>Trạng thái</span>
+        <span>Thao tác</span>
+    </div>
+
+    @for (
+    session of sessions();
+    track session.id
+    ) {
+    <article class="session-row">
+        <div class="session-cell device-cell" data-label="Thiết bị">
+            <app-session-device-icon [browser]="session.browser" [label]="session.browserName" />
+
+            <div>
+                <strong>
+                    {{ session.title }}
+                </strong>
+
+                <small>
+                    {{ session.subtitle }}
+                </small>
+
+                @if (session.trusted) {
+                <span class="trusted-label">
+                    Thiết bị tin cậy
+                </span>
+                }
+            </div>
+        </div>
+
+        <div class="session-cell location-cell" data-label="Vị trí / IP">
+            <strong>
+                {{ session.location }}
+            </strong>
+
+            <small>
+                {{
+                session.ipAddress ||
+                'Không có địa chỉ IP'
+                }}
+            </small>
+        </div>
+
+        <div class="session-cell date-cell" data-label="Đăng nhập lần cuối">
+            <strong>
+                {{
+                session.lastUsedAt
+                | relativeTime
+                }}
+            </strong>
+
+            <small>
+                {{
+                session.lastUsedAt
+                | date:
+                'dd/MM/yyyy, HH:mm'
+                }}
+            </small>
+        </div>
+
+        <div class="session-cell status-cell" data-label="Trạng thái">
+            <span class="status-label" [attr.data-status]="
+              session.status
+            ">
+                <app-icon [name]="
+                session.status ===
+                  'active'
+                  ? 'shield'
+                  : 'clock'
+              " [size]="13" />
+
+                {{ session.statusLabel }}
+            </span>
+
+            <small>
+                {{
+                session.status ===
+                'active'
+                ? 'Đang đăng nhập'
+                : 'Không còn hoạt động'
+                }}
+            </small>
+        </div>
+
+        <div class="session-cell action-cell" data-label="Thao tác">
+            @if (session.canRevoke) {
+            <button class="revoke-button" type="button" [disabled]="
+                revokingIds().has(
+                  session.id
+                )
+              " (click)="
+                revokeRequested.emit(
+                  session
+                )
+              ">
+                @if (
+                revokingIds().has(
+                session.id
+                )
+                ) {
+                <span class="spinner"></span>
+                } @else {
+                <app-icon name="logout" [size]="14" />
+                }
+
+                Thu hồi
+            </button>
+            } @else {
+            <span class="unavailable">
+                Không khả dụng
+            </span>
+            }
+        </div>
+    </article>
+    }
+</div>
+}

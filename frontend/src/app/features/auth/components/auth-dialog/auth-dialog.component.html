@@ -1,0 +1,148 @@
+@if (open()) {
+<div class="backdrop" role="presentation" (click)="close()">
+  <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title"
+    (click)="$event.stopPropagation()">
+    <button class="close" type="button" aria-label="Đóng" (click)="close()">
+      <app-icon name="close" />
+    </button>
+
+    <div class="brand">
+      <app-brand-logo />
+    </div>
+
+    <div class="intro">
+      <span class="eyebrow">
+        TÀI KHOẢN TRUYENHUB
+      </span>
+
+      <h2 id="auth-title">
+        {{
+        mode() === 'login'
+        ? 'Chào mừng trở lại'
+        : 'Tạo tài khoản mới'
+        }}
+      </h2>
+
+      <p>
+        {{
+        mode() === 'login'
+        ? 'Đồng bộ thư viện, lịch sử đọc và tiến độ của bạn.'
+        : 'Tham gia cộng đồng đọc truyện và lưu mọi hành trình.'
+        }}
+      </p>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">
+        Đăng nhập
+      </button>
+
+      <button type="button" [class.active]="mode() === 'register'" (click)="switchMode('register')">
+        Đăng ký
+      </button>
+    </div>
+
+    <form (ngSubmit)="submit()">
+      @if (mode() === 'register') {
+      <label>
+        <span>Tên hiển thị</span>
+
+        <div class="field">
+          <app-icon name="user" [size]="18" />
+
+          <input name="displayName" [(ngModel)]="displayName" autocomplete="name" placeholder="Nguyễn Minh Anh"
+            maxlength="120" required />
+        </div>
+      </label>
+
+      <label>
+        <span>Email</span>
+
+        <div class="field">
+          <app-icon name="mail" [size]="18" />
+
+          <input name="email" [(ngModel)]="email" type="email" autocomplete="email" placeholder="ban@email.com"
+            maxlength="320" required />
+        </div>
+      </label>
+
+      <label>
+        <span>Tên đăng nhập</span>
+
+        <div class="field">
+          <app-icon name="user" [size]="18" />
+
+          <input name="username" [(ngModel)]="username" autocomplete="username" placeholder="minhanh_99" minlength="3"
+            maxlength="50" pattern="[A-Za-z0-9_]+" required />
+        </div>
+      </label>
+      } @else {
+      <label>
+        <span>Email hoặc tên đăng nhập</span>
+
+        <div class="field">
+          <app-icon name="user" [size]="18" />
+
+          <input name="identifier" [(ngModel)]="identifier" autocomplete="username" placeholder="Email hoặc username"
+            required />
+        </div>
+      </label>
+      }
+
+      <label>
+        <span>Mật khẩu</span>
+
+        <div class="field">
+          <app-icon name="lock" [size]="18" />
+
+          <input name="password" [(ngModel)]="password" type="password" [autocomplete]="
+                mode() === 'login'
+                  ? 'current-password'
+                  : 'new-password'
+              " placeholder="••••••••" minlength="8" maxlength="72" required />
+        </div>
+      </label>
+
+      @if (mode() === 'register') {
+      <small class="hint">
+        Từ 8 đến 72 ký tự, có chữ hoa, chữ thường,
+        số và ký tự đặc biệt.
+      </small>
+      }
+
+      @if (localError() || auth.error()) {
+      <div class="alert error">
+        {{ localError() || auth.error() }}
+      </div>
+      }
+
+      @if (message()) {
+      <div class="alert success">
+        <app-icon name="check" [size]="18" />
+
+        {{ message() }}
+      </div>
+      }
+
+      <button class="submit" type="submit" [disabled]="submitting()">
+        @if (submitting()) {
+        <span class="spinner"></span>
+        }
+
+        {{
+        mode() === 'login'
+        ? 'Đăng nhập'
+        : 'Tạo tài khoản'
+        }}
+      </button>
+    </form>
+
+    <p class="legal">
+      <app-icon name="shield" [size]="15" />
+
+      Kết nối an toàn qua refresh cookie HttpOnly
+      và CSRF token của backend.
+    </p>
+  </section>
+</div>
+}

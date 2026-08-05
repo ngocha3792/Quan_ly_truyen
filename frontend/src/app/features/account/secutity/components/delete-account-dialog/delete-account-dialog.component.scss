@@ -1,0 +1,130 @@
+.delete-form {
+    display: grid;
+    gap: 17px;
+}
+
+.warning-box {
+    padding: 14px;
+    display: grid;
+    grid-template-columns:
+        auto minmax(0, 1fr);
+    gap: 12px;
+    border: 1px solid rgba(244, 63, 94, 0.24);
+    border-radius: 9px;
+    color: #fb7185;
+    background:
+        rgba(190, 24, 93, 0.08);
+
+    strong {
+        color: #fda4b5;
+        font-size: 11px;
+    }
+
+    p {
+        margin: 6px 0 0;
+        color: #a87984;
+        font-size: 9px;
+        line-height: 1.6;
+    }
+}
+
+label {
+    display: grid;
+    gap: 7px;
+
+    >span {
+        color: #b0b6c5;
+        font-size: 10px;
+
+        strong {
+            color: #fb7185;
+        }
+    }
+}
+
+.input-field {
+    min-height: 42px;
+    padding: 0 11px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(139, 151, 181, 0.25);
+    border-radius: 8px;
+    color: #838da2;
+    background:
+        rgba(5, 10, 21, 0.52);
+
+    &:focus-within {
+        border-color:
+            rgba(244, 63, 94, 0.62);
+        box-shadow:
+            0 0 0 3px rgba(190, 24, 93, 0.09);
+    }
+
+    input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        color: #eeecf2;
+        font-size: 11px;
+        background: transparent;
+    }
+}
+
+.dialog-actions {
+    padding-top: 17px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    border-top:
+        1px solid rgba(139, 151, 181, 0.13);
+}
+
+.cancel-button,
+.delete-button {
+    min-height: 39px;
+    padding: 0 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 750;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.cancel-button {
+    border: 1px solid rgba(139, 151, 181, 0.25);
+    color: #babfcb;
+    background: transparent;
+}
+
+.delete-button {
+    border: 1px solid rgba(244, 63, 94, 0.75);
+    color: #fb7185;
+    background:
+        rgba(190, 24, 93, 0.07);
+}
+
+.spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(251, 113, 133, 0.3);
+    border-top-color: #fb7185;
+    border-radius: 50%;
+    animation:
+        delete-spinner 700ms linear infinite;
+}
+
+@keyframes delete-spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}

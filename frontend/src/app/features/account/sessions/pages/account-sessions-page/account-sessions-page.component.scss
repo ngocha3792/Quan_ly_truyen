@@ -1,0 +1,153 @@
+:host {
+    display: block;
+    min-width: 0;
+}
+
+.page-header {
+    margin: 4px 0 20px;
+
+    h1 {
+        margin: 0;
+        color: #f7f5fb;
+        font-size: clamp(24px,
+                2.4vw,
+                30px);
+        line-height: 1.2;
+    }
+
+    p {
+        margin: 9px 0 0;
+        color: #818ba0;
+        font-size: 12px;
+    }
+}
+
+.session-layout {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr) 260px;
+    gap: 18px;
+    align-items: start;
+}
+
+.session-main,
+.session-aside {
+    min-width: 0;
+    display: grid;
+    gap: 14px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.sessions-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background:
+        linear-gradient(145deg,
+            rgba(17, 25, 44, 0.98),
+            rgba(10, 16, 31, 0.98));
+}
+
+.alert {
+    margin-bottom: 14px;
+    padding: 11px 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    border-radius: 8px;
+    font-size: 10px;
+
+    button {
+        min-height: 29px;
+        padding: 0 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        background: transparent;
+    }
+}
+
+.error-alert {
+    border: 1px solid rgba(251, 113, 133, 0.24);
+    color: #fda4b5;
+    background:
+        rgba(190, 24, 93, 0.08);
+
+    button {
+        border: 1px solid rgba(251, 113, 133, 0.3);
+        color: #fda4b5;
+    }
+}
+
+.success-alert {
+    border: 1px solid rgba(74, 222, 128, 0.22);
+    color: #75e58c;
+    background:
+        rgba(34, 197, 94, 0.08);
+
+    button {
+        border: 1px solid rgba(74, 222, 128, 0.28);
+        color: #75e58c;
+    }
+}
+
+.loading-card {
+    min-height: 360px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background:
+        rgba(14, 21, 38, 0.85);
+
+    p {
+        margin: 0;
+        color: #788297;
+        font-size: 11px;
+    }
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(167, 139, 250, 0.2);
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation:
+        page-spinner 700ms linear infinite;
+}
+
+@keyframes page-spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 1200px) {
+    .session-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .session-aside {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .session-aside {
+        grid-template-columns: 1fr;
+    }
+}

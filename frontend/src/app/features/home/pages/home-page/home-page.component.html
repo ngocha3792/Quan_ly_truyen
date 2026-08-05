@@ -1,0 +1,106 @@
+<main class="home page-container">
+  @if (loading()) {
+    <section class="hero skeleton"></section>
+    <div class="quick-grid skeleton-row">
+      @for (item of [1,2,3,4,5,6]; track item) { <div class="quick-skeleton skeleton"></div> }
+    </div>
+    <section class="content-grid">
+      <div class="main-column"><div class="heading-skeleton skeleton"></div><div class="story-grid">@for (item of [1,2,3,4,5,6]; track item) { <div class="card-skeleton skeleton"></div> }</div></div>
+      <aside><div class="aside-skeleton skeleton"></div></aside>
+    </section>
+  } @else if (data(); as vm) {
+    @if (activeHero(); as hero) {
+      <section class="hero" [class]="'hero accent-' + hero.accent" [style.background-image]="'url(' + hero.imageUrl + ')'">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+          <span class="hero-eyebrow">{{ hero.eyebrow }}</span>
+          <h1>{{ hero.title }}</h1>
+          <p>{{ hero.description }}</p>
+          <div class="hero-actions">
+            <a class="primary-button" [routerLink]="['/truyen', hero.storySlug]"><app-icon name="play" [size]="16" />Đọc ngay</a>
+            <a class="secondary-button" [routerLink]="['/truyen', hero.storySlug]"><app-icon name="plus" [size]="18" />Thêm vào thư viện</a>
+          </div>
+          <div class="hero-dots" aria-label="Chọn slide">
+            @for (slide of vm.heroSlides; track slide.id; let index = $index) {
+              <button type="button" [class.active]="index === activeHeroIndex()" (click)="activeHeroIndex.set(index)" [attr.aria-label]="'Slide ' + (index + 1)"></button>
+            }
+          </div>
+        </div>
+        <button class="hero-arrow previous" type="button" (click)="previousHero()" aria-label="Slide trước"><app-icon name="chevron-left" /></button>
+        <button class="hero-arrow next" type="button" (click)="nextHero()" aria-label="Slide tiếp theo"><app-icon name="chevron-right" /></button>
+        <div class="hero-meta"><span>Chương mới nhất</span><strong>{{ hero.latestChapter }}</strong></div>
+      </section>
+    }
+
+    <section class="quick-grid" aria-label="Truy cập nhanh">
+      @for (action of vm.quickActions; track action.id; let index = $index) {
+        <a [routerLink]="action.route" class="quick-card" [style.--action-index]="index">
+          <span class="quick-icon"><app-icon [name]="$any(action.icon)" [size]="24" /></span>
+          <span><strong>{{ action.label }}</strong><small>{{ action.description }}</small></span>
+        </a>
+      }
+    </section>
+
+    <section class="content-grid">
+      <div class="main-column">
+        <section class="section-block">
+          <app-section-heading title="Truyện mới cập nhật" link="/cap-nhat" />
+          <div class="story-grid">
+            @for (story of vm.latestStories; track story.id) { <app-story-card [story]="story" /> }
+          </div>
+        </section>
+
+        <section class="section-block recommendations">
+          <app-section-heading title="Truyện đề cử" link="/danh-sach" />
+          <div class="recommendation-grid">
+            @for (story of vm.recommendedStories; track story.id) {
+              <a class="recommendation-card" [routerLink]="['/truyen', story.slug]">
+                <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+                <span class="recommendation-shade"></span>
+                <div class="recommendation-copy">
+                  <span>{{ story.categories[0] }}</span>
+                  <h3>{{ story.title }}</h3>
+                  <p>{{ story.description }}</p>
+                  <div><small><app-icon name="star" [size]="14" />{{ story.rating }}</small><small><app-icon name="eye" [size]="14" />{{ story.views | compactNumber }}</small><b>Ch.{{ story.latestChapter.number }}</b></div>
+                </div>
+              </a>
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="sidebar">
+        <section class="side-card ranking-card">
+          <div class="side-heading"><h2>Top truyện xem nhiều</h2><a routerLink="/xep-hang">Xem tất cả <app-icon name="chevron-right" [size]="15" /></a></div>
+          <div class="ranking-list">
+            @for (story of vm.topStories; track story.id; let rank = $index) {
+              <a [routerLink]="['/truyen', story.slug]" class="ranking-item">
+                <span class="rank" [class.top]="rank < 3">{{ rank + 1 }}</span>
+                <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+                <span class="rank-copy"><strong>{{ story.title }}</strong><small>{{ story.categories.slice(0, 2).join(', ') }}</small><em><app-icon name="fire" [size]="13" />{{ story.views | compactNumber }}</em></span>
+              </a>
+            }
+          </div>
+        </section>
+
+        <section class="side-card updates-card">
+          <div class="side-heading"><h2>Cập nhật mới nhất</h2><a routerLink="/cap-nhat">Xem tất cả <app-icon name="chevron-right" [size]="15" /></a></div>
+          <div class="update-list">
+            @for (story of vm.recentUpdates; track story.id) {
+              <a [routerLink]="['/truyen', story.slug]">
+                <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+                <span><strong>{{ story.title }}</strong><small>Chương {{ story.latestChapter.number }}: {{ story.latestChapter.title || 'Chương mới' }}</small><em>{{ story.latestChapter.updatedAt | relativeTime }}</em></span>
+              </a>
+            }
+          </div>
+        </section>
+
+        <section class="side-card community-card">
+          <span class="community-icon"><app-icon name="sparkles" [size]="25" /></span>
+          <div><h3>Tham gia cộng đồng</h3><p>Đánh giá, bình luận và theo dõi tác giả yêu thích.</p></div>
+          <a routerLink="/cong-dong">Khám phá <app-icon name="arrow-right" [size]="15" /></a>
+        </section>
+      </aside>
+    </section>
+  }
+</main>
