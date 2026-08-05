@@ -1,0 +1,39 @@
+<section class="settings">
+  <article class="panel side-tabs">
+    @for (tab of ['Tài khoản', 'Thông báo', 'Bảo mật', 'Thanh toán']; track tab) {
+      <button [class.active]="settingsTab() === tab" (click)="settingsTab.set(tab)">
+        {{ tab }}
+      </button>
+    }
+  </article>
+  <article class="panel settings-body">
+    <h2>Cài đặt tài khoản</h2>
+    @for (
+      s of [
+        ['Nhận thông báo chương mới', 'Thông báo khi chương được duyệt'],
+        ['Nhận email thống kê hàng tuần', 'Tổng hợp hiệu suất sáng tác'],
+        ['Hiển thị email công khai', 'Cho phép độc giả thấy email'],
+      ];
+      track s[0];
+      let i = $index
+    ) {
+      <div class="setting">
+        <span
+          ><b>{{ s[0] }}</b
+          ><small>{{ s[1] }}</small></span
+        ><button [class.on]="i < 2"><i></i></button>
+      </div>
+    }
+    <h3>Bảo mật 2 lớp</h3>
+    <div class="security">
+      ▣<span
+        ><b>Bảo vệ tài khoản của bạn</b
+        ><small>Xác thực 2 lớp giúp tài khoản an toàn hơn.</small></span
+      ><button>Kích hoạt 2FA</button>
+    </div>
+    <h3>Giao diện</h3>
+    <div class="themes">
+      <button>Tối</button><button>Sáng</button><button class="active">Tự động</button>
+    </div>
+  </article>
+</section>

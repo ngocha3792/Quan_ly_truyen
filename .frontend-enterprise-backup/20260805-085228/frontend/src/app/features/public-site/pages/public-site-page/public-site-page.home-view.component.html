@@ -1,0 +1,53 @@
+<section class="hero">
+  <div class="hero-background"></div>
+  <div class="hero-content">
+    <span class="hero-badge">Truyện đề cử hôm nay</span>
+    <h1>Đại Đạo Chí Tôn</h1>
+    <p>
+      Trong cõi giới thần bí, một thiếu niên bước lên con đường nghịch thiên, chinh phục đại đạo và
+      trở thành chí tôn.
+    </p>
+    <div class="hero-meta"><span>Tiên hiệp</span><span>★ 4.9</span><span>12.5M lượt đọc</span></div>
+    <div class="hero-buttons">
+      <a routerLink="/read/dai-dao-chi-ton/1278">Đọc ngay</a
+      ><a class="secondary" routerLink="/story/dai-dao-chi-ton">Xem chi tiết</a>
+    </div>
+  </div>
+</section>
+<section class="content-section">
+  <header>
+    <h2>Truyện mới cập nhật</h2>
+    <a routerLink="/search">Xem tất cả</a>
+  </header>
+  <div class="story-grid">
+    @for (story of stories.slice(0, 5); track story.id) {
+      <a
+        class="story-card"
+        [routerLink]="['/story', story.id === 1 ? 'dai-dao-chi-ton' : 'truyen-' + story.id]"
+        ><div>
+          <img [src]="story.image" [alt]="story.title" /><span>{{ story.status }}</span>
+        </div>
+        <strong>{{ story.title }}</strong
+        ><small>{{ story.chapter }}</small></a
+      >
+    }
+  </div>
+</section>
+<section class="content-section">
+  <header>
+    <h2>Truyện đề cử</h2>
+    <a routerLink="/rankings">Xem tất cả</a>
+  </header>
+  <div class="wide-story-grid">
+    @for (story of stories.slice(2, 8); track story.id) {
+      <a class="wide-story-card" [routerLink]="['/story', 'truyen-' + story.id]"
+        ><img [src]="story.image" [alt]="story.title" />
+        <div>
+          <strong>{{ story.title }}</strong
+          ><small>{{ story.author }}</small>
+          <p>{{ story.genre }} · ★ {{ story.rating }}</p>
+        </div></a
+      >
+    }
+  </div>
+</section>

@@ -1,0 +1,225 @@
+<div class="auth-page" [class.auth-page--light]="!darkMode()">
+  <header class="auth-header">
+    <a class="auth-brand" href="/">
+      <span><app-auth-icon name="book" /></span>
+      QuanLyTruyen
+    </a>
+
+    <button class="theme-button" type="button" (click)="toggleTheme()">
+      <app-auth-icon name="moon" />
+      {{ darkMode() ? 'Chế độ tối' : 'Chế độ sáng' }}
+    </button>
+  </header>
+
+  @if (isLogin()) {
+    <main class="login-layout">
+      <div class="login-hero">
+        <div class="hero-copy">
+          <h1>Chào mừng trở lại <span>👋</span></h1>
+          <p>Đăng nhập để tiếp tục hành trình đọc truyện</p>
+        </div>
+
+        <section class="auth-card login-card">
+          <div class="auth-tabs">
+            <a class="active" href="/auth/login">
+              <app-auth-icon name="lock" />
+              Đăng nhập
+            </a>
+            <a href="/auth/register">
+              <app-auth-icon name="user" />
+              Đăng ký
+            </a>
+          </div>
+
+          <form (submit)="$event.preventDefault()">
+            <label>
+              <span>Email hoặc tên đăng nhập</span>
+              <div class="field">
+                <app-auth-icon name="user" />
+                <input type="text" placeholder="Nhập email hoặc tên đăng nhập" />
+              </div>
+            </label>
+
+            <label>
+              <span>Mật khẩu</span>
+              <div class="field">
+                <app-auth-icon name="lock" />
+                <input [type]="showPassword() ? 'text' : 'password'" placeholder="Nhập mật khẩu" />
+                <button type="button" aria-label="Hiện hoặc ẩn mật khẩu" (click)="togglePassword()">
+                  <app-auth-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
+                </button>
+              </div>
+            </label>
+
+            <div class="form-options">
+              <label class="checkbox-row">
+                <input
+                  type="checkbox"
+                  [checked]="rememberMe()"
+                  (change)="rememberMe.set($any($event.target).checked)"
+                />
+                <span><app-auth-icon name="check" /></span>
+                Ghi nhớ đăng nhập
+              </label>
+
+              <a href="#" (click)="$event.preventDefault()">Quên mật khẩu?</a>
+            </div>
+
+            <button class="submit-button" type="submit">
+              Đăng nhập
+              <app-auth-icon name="arrow-right" />
+            </button>
+          </form>
+
+          <div class="social-divider"><span>hoặc đăng nhập với</span></div>
+
+          <div class="social-grid">
+            <button type="button"><b class="google">G</b>Google</button>
+            <button type="button"><b class="facebook">f</b>Facebook</button>
+            <button type="button"><b class="apple">●</b>Apple</button>
+          </div>
+        </section>
+
+        <p class="switch-copy">
+          Chưa có tài khoản?
+          <a href="/auth/register">Đăng ký ngay</a>
+        </p>
+      </div>
+
+      <footer class="login-benefits">
+        @for (benefit of footerBenefits; track benefit.title) {
+          <article>
+            <span [class]="'benefit-icon benefit-icon--' + benefit.tone">
+              <app-auth-icon [name]="benefit.icon" />
+            </span>
+            <div>
+              <strong>{{ benefit.title }}</strong>
+              <p>{{ benefit.description }}</p>
+            </div>
+          </article>
+        }
+      </footer>
+    </main>
+  } @else {
+    <main class="register-layout">
+      <section class="register-main">
+        <a class="back-link" href="/auth/login">
+          <app-auth-icon name="arrow-left" />
+          Quay lại đăng nhập
+        </a>
+
+        <div class="register-heading">
+          <h1>Tạo tài khoản mới <span>🚀</span></h1>
+          <p>Tham gia cộng đồng độc giả của chúng tôi</p>
+        </div>
+
+        <section class="auth-card register-card">
+          <form (submit)="$event.preventDefault()">
+            <label>
+              <span>Tên hiển thị</span>
+              <div class="field">
+                <app-auth-icon name="user" />
+                <input type="text" placeholder="Nhập tên hiển thị của bạn" />
+              </div>
+            </label>
+
+            <label>
+              <span>Email</span>
+              <div class="field">
+                <app-auth-icon name="mail" />
+                <input type="email" placeholder="Nhập email của bạn" />
+              </div>
+            </label>
+
+            <label>
+              <span>Tên đăng nhập</span>
+              <div class="field">
+                <app-auth-icon name="user" />
+                <input type="text" placeholder="Nhập tên đăng nhập" />
+              </div>
+            </label>
+
+            <label>
+              <span>Mật khẩu</span>
+              <div class="field">
+                <app-auth-icon name="lock" />
+                <input
+                  [type]="showPassword() ? 'text' : 'password'"
+                  placeholder="Tạo mật khẩu (ít nhất 6 ký tự)"
+                />
+                <button type="button" aria-label="Hiện hoặc ẩn mật khẩu" (click)="togglePassword()">
+                  <app-auth-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
+                </button>
+              </div>
+            </label>
+
+            <label>
+              <span>Xác nhận mật khẩu</span>
+              <div class="field">
+                <app-auth-icon name="lock" />
+                <input
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  placeholder="Nhập lại mật khẩu"
+                />
+                <button
+                  type="button"
+                  aria-label="Hiện hoặc ẩn xác nhận mật khẩu"
+                  (click)="toggleConfirmPassword()"
+                >
+                  <app-auth-icon [name]="showConfirmPassword() ? 'eye-off' : 'eye'" />
+                </button>
+              </div>
+            </label>
+
+            <label class="checkbox-row terms-row">
+              <input
+                type="checkbox"
+                [checked]="acceptedTerms()"
+                (change)="acceptedTerms.set($any($event.target).checked)"
+              />
+              <span><app-auth-icon name="check" /></span>
+              <span>
+                Tôi đồng ý với
+                <a href="#" (click)="$event.preventDefault()">Điều khoản sử dụng</a>
+                và
+                <a href="#" (click)="$event.preventDefault()">Chính sách bảo mật</a>
+              </span>
+            </label>
+
+            <button class="submit-button" type="submit">
+              Đăng ký
+              <app-auth-icon name="arrow-right" />
+            </button>
+          </form>
+
+          <div class="social-divider"><span>hoặc đăng ký với</span></div>
+
+          <div class="social-grid">
+            <button type="button"><b class="google">G</b>Google</button>
+            <button type="button"><b class="facebook">f</b>Facebook</button>
+            <button type="button"><b class="apple">●</b>Apple</button>
+          </div>
+
+          <p class="register-switch-copy">
+            Đã có tài khoản?
+            <a href="/auth/login">Đăng nhập ngay</a>
+          </p>
+        </section>
+      </section>
+
+      <aside class="register-benefits">
+        @for (benefit of registerBenefits; track benefit.title) {
+          <article>
+            <span [class]="'register-benefit-icon register-benefit-icon--' + benefit.tone">
+              <app-auth-icon [name]="benefit.icon" />
+            </span>
+            <div>
+              <strong>{{ benefit.title }}</strong>
+              <p>{{ benefit.description }}</p>
+            </div>
+          </article>
+        }
+      </aside>
+    </main>
+  }
+</div>

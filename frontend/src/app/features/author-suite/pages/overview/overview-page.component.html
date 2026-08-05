@@ -1,0 +1,61 @@
+<article class="panel welcome" appCard>
+  <div>
+    <h2>Chào mừng trở lại, Lâm Phạm! 👋</h2>
+    <p>Tiếp tục sáng tác, lan tỏa thế giới của bạn đến hàng triệu độc giả.</p>
+  </div>
+  <span><b>★ Tác giả Pro</b><small>Còn 18 ngày</small></span>
+</article>
+<section class="metrics">
+  @for (
+    m of [
+      ['Tổng truyện', '5', '+1 tháng này'],
+      ['Tổng chương', '1,248', '+32 chương'],
+      ['Tổng lượt đọc', '8.4M', '+12.5%'],
+      ['Người theo dõi', '52.6K', '+8.3%'],
+    ];
+    track m[0]
+  ) {
+    <article class="panel metric" appCard>
+      <small>{{ m[0] }}</small
+      ><strong>{{ m[1] }}</strong
+      ><span>{{ m[2] }}</span>
+    </article>
+  }
+</section>
+<section class="overview-grid">
+  <article class="panel chart" appCard>
+    <header>
+      <h2>Biểu đồ lượt đọc</h2>
+      <select>
+        <option>30 ngày</option>
+      </select>
+    </header>
+    <svg viewBox="0 0 600 180"><polyline [attr.points]="chartPoints" /></svg>
+  </article>
+  <article class="panel popular" appCard>
+    <header>
+      <h2>Truyện nổi bật</h2>
+      <a routerLink="/author/stories">Xem tất cả</a>
+    </header>
+    @for (s of stories.slice(0, 3); track s.id) {
+      <div>
+        <img [src]="s.image" [alt]="s.title" /><span
+          ><b>{{ s.title }}</b
+          ><small>{{ s.reads }} lượt đọc · {{ s.followers }} theo dõi</small></span
+        ><button appButton>Quản lý</button>
+      </div>
+    }
+  </article>
+  <article class="panel recent" appCard>
+    <header><h2>Hoạt động gần đây</h2></header>
+    @for (n of notices.slice(0, 4); track n[0]) {
+      <div>
+        <i [class]="n[3]">●</i
+        ><span
+          ><b>{{ n[0] }}</b
+          ><small>{{ n[1] }}</small></span
+        ><time>{{ n[2] }}</time>
+      </div>
+    }
+  </article>
+</section>

@@ -1,0 +1,45 @@
+<article class="admin-panel page-panel">
+  <div class="filter-row">
+    <div></div>
+    <button class="primary-action"><app-admin-center-icon name="plus" />Thêm quảng cáo</button>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên quảng cáo</th>
+          <th>Vị trí hiển thị</th>
+          <th>Ngày bắt đầu</th>
+          <th>Ngày kết thúc</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of ads; track item.id) {
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <div class="ad-cell">
+                <img [src]="item.image" [alt]="item.name" /><strong>{{ item.name }}</strong>
+              </div>
+            </td>
+            <td>{{ item.position }}</td>
+            <td>{{ item.start }}</td>
+            <td>{{ item.end }}</td>
+            <td>
+              <span [class]="'status status--' + item.tone">{{ item.status }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button><app-admin-center-icon name="edit" /></button
+                ><button class="danger"><app-admin-center-icon name="trash" /></button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</article>

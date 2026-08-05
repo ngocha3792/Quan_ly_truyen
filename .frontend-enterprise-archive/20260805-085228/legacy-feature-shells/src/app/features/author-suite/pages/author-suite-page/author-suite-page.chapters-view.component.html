@@ -1,0 +1,47 @@
+<article class="panel page">
+  <div class="story-head">
+    <img src="/assets/author-suite/story-1.svg" alt="" /><span
+      ><small>Quản lý chương</small>
+      <h2>Ma Đạo Chí Tôn</h2>
+      <p>456 chương · 2.4M lượt đọc · ★ 4.9</p></span
+    ><button class="primary">＋ Thêm chương</button>
+  </div>
+  <div class="toolbar">
+    <div class="tabs">
+      @for (tab of ['Tất cả (456)', 'Đã đăng (450)', 'Nháp (6)']; track tab) {
+        <button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button>
+      }
+    </div>
+    <label class="search">⌕<input placeholder="Tìm chương..." /></label>
+  </div>
+  <div class="table">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên chương</th>
+          <th>Lượt đọc</th>
+          <th>Ngày đăng</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of chapters; track c[0]) {
+          <tr>
+            <td>{{ c[0] }}</td>
+            <td>
+              <b>{{ c[1] }}</b>
+            </td>
+            <td>{{ c[2] }}</td>
+            <td>{{ c[3] }}</td>
+            <td>
+              <span [class]="'status ' + c[5]">{{ c[4] }}</span>
+            </td>
+            <td>◉　✎　×</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</article>

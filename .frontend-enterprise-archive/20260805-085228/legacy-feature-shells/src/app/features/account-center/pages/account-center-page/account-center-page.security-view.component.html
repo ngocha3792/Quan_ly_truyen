@@ -1,0 +1,37 @@
+<div class="settings-stack">
+  <article class="panel settings-page-panel">
+    <h2>Đổi mật khẩu</h2>
+    <form class="security-form" (submit)="$event.preventDefault()">
+      <label
+        ><span>Mật khẩu hiện tại</span><input type="password" placeholder="••••••••••"
+      /></label>
+      <label><span>Mật khẩu mới</span><input type="password" placeholder="••••••••••" /></label>
+      <label
+        ><span>Xác nhận mật khẩu mới</span><input type="password" placeholder="••••••••••"
+      /></label>
+      <button class="primary-button" type="submit">Đổi mật khẩu</button>
+    </form>
+  </article>
+
+  <article class="panel security-option-card">
+    <div>
+      <span><app-account-center-icon name="shield" /></span>
+      <div>
+        <strong>Xác thực 2 lớp (2FA)</strong>
+        <p>Tăng cường bảo mật cho tài khoản của bạn.</p>
+      </div>
+    </div>
+    <button type="button">Bật 2FA</button>
+  </article>
+
+  <article class="panel security-option-card">
+    <div>
+      <span><app-account-center-icon name="phone" /></span>
+      <div>
+        <strong>Thiết bị đăng nhập</strong>
+        <p>Quản lý các thiết bị đã đăng nhập.</p>
+      </div>
+    </div>
+    <button type="button">Quản lý</button>
+  </article>
+</div>

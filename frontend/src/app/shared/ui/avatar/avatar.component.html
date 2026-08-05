@@ -1,2 +1,5 @@
-﻿<!-- TODO: implement avatar view -->
-
+@if (src) {
+  <img [class]="'avatar avatar--' + size" [src]="src" [alt]="alt || name" />
+} @else {
+  <span [class]="'avatar avatar--' + size" aria-hidden="true">{{ initials || '?' }}</span>
+}

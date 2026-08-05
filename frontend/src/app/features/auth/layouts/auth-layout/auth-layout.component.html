@@ -1,0 +1,9 @@
+<div class="auth-page" [class.auth-page--light]="!darkMode()">
+  <header class="auth-header">
+    <a class="auth-brand" routerLink="/"><app-logo [compact]="true" /></a>
+    <button appButton class="theme-button" type="button" (click)="toggleTheme()">
+      <app-auth-icon name="moon" />{{ darkMode() ? 'Chế độ tối' : 'Chế độ sáng' }}
+    </button>
+  </header>
+  <router-outlet />
+</div>

@@ -1,0 +1,53 @@
+<article class="admin-panel page-panel">
+  <div class="table-toolbar">
+    <div class="tabs">
+      @for (tab of ['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Đã ẩn']; track tab) {
+        <button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button>
+      }
+    </div>
+  </div>
+  <div class="filter-row">
+    <label
+      ><app-admin-center-icon name="search" /><input
+        type="search"
+        placeholder="Tìm kiếm bình luận..." /></label
+    ><button><app-admin-center-icon name="filter" />Bộ lọc</button>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nội dung bình luận</th>
+          <th>Người bình luận</th>
+          <th>Truyện</th>
+          <th>Ngày bình luận</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of comments; track item.id) {
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <strong>{{ item.content }}</strong>
+            </td>
+            <td>{{ item.user }}</td>
+            <td>{{ item.object }}</td>
+            <td>{{ item.date }}</td>
+            <td>
+              <span [class]="'status status--' + item.tone">{{ item.status }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button><app-admin-center-icon name="edit" /></button
+                ><button class="danger"><app-admin-center-icon name="trash" /></button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</article>

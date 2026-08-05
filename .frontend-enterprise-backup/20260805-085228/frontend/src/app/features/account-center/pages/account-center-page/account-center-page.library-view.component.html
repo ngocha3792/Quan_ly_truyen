@@ -1,0 +1,38 @@
+<article class="panel full-page-panel">
+  <div class="toolbar">
+    <div class="tabs">
+      @for (tab of ['Tất cả', 'Đã hoàn thành', 'Đang cập nhật', 'Tạm ngưng']; track tab) {
+        <button
+          type="button"
+          [class.active]="activeLibraryTab() === tab"
+          (click)="activeLibraryTab.set(tab)"
+        >
+          {{ tab }}
+        </button>
+      }
+    </div>
+
+    <div class="library-tools">
+      <label>
+        <app-account-center-icon name="search" />
+        <input type="search" placeholder="Tìm trong thư viện..." />
+      </label>
+      <button type="button" aria-label="Hiển thị lưới">
+        <app-account-center-icon name="dashboard" />
+      </button>
+    </div>
+  </div>
+
+  <div class="library-grid">
+    @for (story of stories; track story.id) {
+      <article>
+        <div class="library-cover">
+          <img [src]="story.image" [alt]="story.title" />
+          <button type="button"><app-account-center-icon name="more" /></button>
+        </div>
+        <strong>{{ story.title }}</strong>
+        <small>{{ story.chapter }}</small>
+      </article>
+    }
+  </div>
+</article>

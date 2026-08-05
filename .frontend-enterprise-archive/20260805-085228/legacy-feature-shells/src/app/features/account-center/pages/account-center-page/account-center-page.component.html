@@ -1,0 +1,145 @@
+<div class="account-center">
+  <header class="top-header">
+    <div class="top-header-inner">
+      <a class="brand" routerLink="/">
+        <span><app-account-center-icon name="book" /></span>
+        QuanLyTruyen
+      </a>
+
+      <nav class="top-navigation" aria-label="Điều hướng">
+        <a routerLink="/">Trang chủ</a>
+        <a href="#" (click)="$event.preventDefault()">Thể loại</a>
+        <a href="#" (click)="$event.preventDefault()">Xếp hạng</a>
+        <a href="#" (click)="$event.preventDefault()">Tác giả</a>
+      </nav>
+
+      <label class="global-search">
+        <app-account-center-icon name="search" />
+        <input type="search" placeholder="Tìm kiếm truyện, tác giả..." />
+        <kbd>Ctrl K</kbd>
+      </label>
+
+      <div class="header-actions">
+        <button type="button" aria-label="Chế độ tối">
+          <app-account-center-icon name="moon" />
+        </button>
+        <button type="button" class="notification" aria-label="Thông báo">
+          <app-account-center-icon name="bell" />
+          <span>3</span>
+        </button>
+        <button type="button" class="header-user">
+          <img src="/assets/account-center/avatar-small.svg" alt="" />
+          <span>Nguyễn Văn A</span>
+          <app-account-center-icon name="chevron-down" />
+        </button>
+        <button
+          type="button"
+          class="mobile-menu"
+          aria-label="Mở menu tài khoản"
+          (click)="toggleSidebar()"
+        >
+          <app-account-center-icon name="menu" />
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <button
+    class="sidebar-overlay"
+    type="button"
+    aria-label="Đóng menu"
+    [class.visible]="sidebarOpen()"
+    (click)="closeSidebar()"
+  ></button>
+
+  <main class="account-layout">
+    <aside class="account-sidebar" [class.open]="sidebarOpen()">
+      <nav class="sidebar-main-nav">
+        @for (item of primaryNavigation; track item.key) {
+          <a
+            [routerLink]="item.route"
+            [class.active]="page() === item.key"
+            (click)="closeSidebar()"
+          >
+            <app-account-center-icon [name]="item.icon" />
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+
+      <section class="sidebar-section">
+        <span>Cài đặt</span>
+        @for (item of accountNavigation; track item.key) {
+          <a
+            [routerLink]="item.route"
+            [class.active]="page() === item.key"
+            (click)="closeSidebar()"
+          >
+            <app-account-center-icon [name]="item.icon" />
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </section>
+
+      <section class="sidebar-section">
+        <span>Khác</span>
+        <a href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="palette" />
+          <span>Tùy chỉnh giao diện</span>
+        </a>
+        <a href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="globe" />
+          <span>Ngôn ngữ</span>
+        </a>
+        <a class="danger" href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="logout" />
+          <span>Đăng xuất</span>
+        </a>
+      </section>
+    </aside>
+
+    <section class="account-content">
+      <header class="page-header">
+        <div>
+          <h1>{{ title() }}</h1>
+          @if (page() === 'overview') {
+            <p>Quản lý hồ sơ, hoạt động đọc và quyền lợi thành viên của bạn.</p>
+          }
+        </div>
+      </header>
+
+      @switch (page()) {
+        @case ('overview') {
+          <app-account-center-overview-view></app-account-center-overview-view>
+        }
+        @case ('history') {
+          <app-account-center-history-view></app-account-center-history-view>
+        }
+        @case ('library') {
+          <app-account-center-library-view></app-account-center-library-view>
+        }
+        @case ('following') {
+          <app-account-center-following-view></app-account-center-following-view>
+        }
+        @case ('reviews') {
+          <app-account-center-reviews-view></app-account-center-reviews-view>
+        }
+        @case ('comments') {
+          <app-account-center-comments-view></app-account-center-comments-view>
+        }
+        @case ('profile') {
+          <app-account-center-profile-view></app-account-center-profile-view>
+        }
+        @case ('security') {
+          <app-account-center-security-view></app-account-center-security-view>
+        }
+        @case ('notifications') {
+          <app-account-center-notifications-view></app-account-center-notifications-view>
+        }
+        @case ('transactions') {
+          <app-account-center-transactions-view></app-account-center-transactions-view>
+        }
+      }
+    </section>
+  </main>
+</div>

@@ -1,2 +1,5 @@
-﻿<!-- TODO: implement loading-overlay view -->
-
+@if (visible) {
+  <div class="loading-overlay" role="status">
+    <span class="loading-overlay__spinner"></span><span>{{ label }}</span>
+  </div>
+}

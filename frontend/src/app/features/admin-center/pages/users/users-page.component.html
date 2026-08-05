@@ -1,0 +1,53 @@
+<article class="admin-panel page-panel" appCard>
+  <div class="filter-row">
+    <label
+      ><app-admin-center-icon name="search" /><input
+        type="search"
+        placeholder="Tìm kiếm người dùng..." /></label
+    ><button appButton><app-admin-center-icon name="filter" />Bộ lọc</button>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table" appDataTable>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Avatar</th>
+          <th>Tên người dùng</th>
+          <th>Email</th>
+          <th>Vai trò</th>
+          <th>Trạng thái</th>
+          <th>Ngày đăng ký</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users; track user.id) {
+          <tr>
+            <td>{{ user.id }}</td>
+            <td><img class="table-avatar" [src]="user.avatar" [alt]="user.name" /></td>
+            <td>
+              <strong>{{ user.name }}</strong>
+            </td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+              <span [class]="'status status--' + user.tone">{{ user.status }}</span>
+            </td>
+            <td>{{ user.date }}</td>
+            <td>
+              <div class="row-actions">
+                <button appButton><app-admin-center-icon name="edit" /></button
+                ><button class="danger" appButton><app-admin-center-icon name="lock" /></button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button class="active" appButton>1</button><button appButton>2</button
+    ><button appButton>3</button><button appButton>4</button><button appButton>5</button
+    ><button appButton>›</button>
+  </div>
+</article>

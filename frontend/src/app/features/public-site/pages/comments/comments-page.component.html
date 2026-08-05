@@ -1,0 +1,38 @@
+<section class="page-shell comments-page">
+  <div class="breadcrumb">
+    <a routerLink="/story/dai-dao-chi-ton">Đại Đạo Chí Tôn</a><span>›</span
+    ><a routerLink="/read/dai-dao-chi-ton/1278">Chương 1278</a><span>›</span><b>Bình luận</b>
+  </div>
+  <article class="panel comments-card" appCard>
+    <h1>Bình luận <small>(152)</small></h1>
+    <div class="guest-comment">
+      <textarea placeholder="Viết bình luận của bạn..."></textarea>
+      <div>
+        <span>Khách có thể đọc bình luận. Đăng nhập để tham gia.</span
+        ><a routerLink="/auth/login">Đăng nhập</a>
+      </div>
+    </div>
+    <div class="comment-tabs">
+      <button class="active" appButton>Mới nhất</button><button appButton>Hot nhất</button>
+    </div>
+    <div class="comment-list">
+      @for (comment of comments; track comment.name) {
+        <article>
+          <img [src]="comment.avatar" [alt]="comment.name" />
+          <div>
+            <header>
+              <strong>{{ comment.name }}</strong
+              ><time>{{ comment.time }}</time>
+            </header>
+            <p>{{ comment.content }}</p>
+            <footer>
+              <span>♡ {{ comment.likes }}</span
+              ><button appButton>Trả lời</button>
+            </footer>
+          </div>
+        </article>
+      }
+    </div>
+    <button class="load-more" appButton>Xem thêm bình luận</button>
+  </article>
+</section>
