@@ -669,10 +669,11 @@ function parseProvider(value: string): 'google' | 'github' {
 }
 
 function validateStateBinding(
-  state: string | undefined,
+  state: unknown,
   browserState: string,
 ): string {
   if (
+    typeof state !== 'string' ||
     !state ||
     state.length > 256 ||
     browserState.length > 256 ||
