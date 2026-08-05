@@ -666,7 +666,10 @@ function parseProvider(value: string): 'google' | 'github' {
   return normalized;
 }
 
-function validateStateBinding(state: unknown, browserState: string): string {
+function validateStateBinding(
+  state: unknown,
+  browserState: string,
+): string {
   if (
     typeof state !== 'string' ||
     !state ||
