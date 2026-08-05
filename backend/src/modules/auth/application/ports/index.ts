@@ -20,3 +20,4 @@ export * from './change-password.persistence.port';
 export * from './email-change.persistence.port';
 export * from './auth-audit-reader.port';
 export * from './admin-mfa-challenge.port';
+export * from './account-settings.persistence.port';

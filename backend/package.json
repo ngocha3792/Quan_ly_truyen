@@ -29,6 +29,7 @@
     "test:auth:all": "npm run test:auth:unit && npm run test:auth:integration && npm run test:auth:e2e",
     "postinstall": "prisma generate --config prisma.config.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:e2e": "tsx prisma/seed-e2e.ts",
     "db:reset:local": "tsx scripts/database/reset-local-database.ts",
     "db:check": "tsx scripts/database/check-connection.ts",
     "db:verify:constraints": "tsx scripts/database/verify-manual-constraints.ts",

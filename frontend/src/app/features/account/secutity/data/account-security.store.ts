@@ -9,7 +9,9 @@ import {
     catchError,
     finalize,
     Observable,
+    map,
     of,
+    switchMap,
     tap,
     throwError,
 } from 'rxjs';
@@ -268,6 +270,12 @@ export class AccountSecurityStore {
         return this.api
             .changePassword(request)
             .pipe(
+                switchMap((result) =>
+                    result.refreshRequired
+                        ? this.auth.refreshSession()
+                        : of(this.auth.user()),
+                ),
+
                 tap(() => {
                     this.successState.set(
                         'Mật khẩu đã được thay đổi thành công.',
@@ -282,6 +290,8 @@ export class AccountSecurityStore {
                         }),
                     );
                 }),
+
+                map(() => undefined),
 
                 catchError((error: unknown) => {
                     this.errorState.set(

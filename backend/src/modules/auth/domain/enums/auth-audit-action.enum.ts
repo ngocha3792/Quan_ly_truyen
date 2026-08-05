@@ -1,4 +1,8 @@
 export enum AuthAuditAction {
+  PROFILE_UPDATED = 'auth.profile.updated',
+
+  ACCOUNT_DELETED = 'auth.account.deleted',
+
   LOGIN_SUCCEEDED = 'auth.login.succeeded',
 
   MFA_ENROLLED = 'auth.mfa.enrolled',

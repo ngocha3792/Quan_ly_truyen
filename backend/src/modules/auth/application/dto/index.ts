@@ -12,3 +12,4 @@ export * from './request-email-change-result.dto';
 
 export * from './confirm-email-change-result.dto';
 export * from './security-event-result.dto';
+export * from './security-overview-result.dto';

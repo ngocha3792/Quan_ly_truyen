@@ -1,4 +1,6 @@
 export enum SessionRevocationReason {
+  ACCOUNT_DELETED = 'account_deleted',
+
   USER_LOGOUT = 'user_logout',
 
   USER_LOGOUT_ALL = 'user_logout_all',

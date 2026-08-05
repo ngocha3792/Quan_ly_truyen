@@ -124,7 +124,7 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       max-width: 330px;
       margin: 1rem 0 0;
       color: var(--text-muted);
-      font-size: .78rem;
+      font-size: .95rem;
       line-height: 1.65;
     }
 
@@ -135,31 +135,31 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
     }
 
     .socials span {
-      width: 28px;
-      height: 28px;
+      width: 36px;
+      height: 36px;
       display: grid;
       place-items: center;
       border-radius: 50%;
       color: #a7afc0;
-      font-size: .7rem;
+      font-size: .95rem;
       background: #171d2d;
     }
 
     .footer-column {
       display: grid;
       align-content: start;
-      gap: .7rem;
+      gap: 1rem;
     }
 
     strong {
       margin-bottom: .25rem;
       color: var(--text-strong);
-      font-size: .79rem;
+      font-size: 1.05rem;
     }
 
     a {
       color: var(--text-muted);
-      font-size: .72rem;
+      font-size: .95rem;
       text-decoration: none;
     }
 
@@ -173,7 +173,7 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       border-top:
         1px solid var(--border);
       color: #5e6678;
-      font-size: .68rem;
+      font-size: .85rem;
     }
 
     @media (max-width: 760px) {

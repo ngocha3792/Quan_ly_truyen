@@ -1,0 +1,73 @@
+.genre-card {
+    position: relative;
+    min-height: 78px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns:
+        auto minmax(0, 1fr);
+    align-items: center;
+    gap: 11px;
+    border: 1px solid rgba(139, 151, 179, 0.16);
+    border-radius: 10px;
+    color: inherit;
+    text-decoration: none;
+    background:
+        linear-gradient(145deg,
+            rgba(15, 23, 40, 0.88),
+            rgba(8, 14, 27, 0.88));
+    transition:
+        transform 170ms ease,
+        border-color 170ms ease,
+        background 170ms ease;
+}
+
+.genre-card:hover {
+    transform: translateY(-2px);
+    border-color:
+        rgba(159, 93, 239, 0.38);
+    background:
+        linear-gradient(145deg,
+            rgba(22, 29, 51, 0.95),
+            rgba(12, 18, 34, 0.95));
+}
+
+.genre-copy {
+    min-width: 0;
+}
+
+strong {
+    color: #e8e5ed;
+    font-size: .8125rem;
+}
+
+p {
+    margin: 5px 0;
+    display: -webkit-box;
+    overflow: hidden;
+    color: #747e92;
+    font-size: .6875rem;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.genre-copy>span {
+    color: #aab1c0;
+    font-size: .6875rem;
+    font-weight: 700;
+}
+
+.rank-badge {
+    position: absolute;
+    right: 9px;
+    bottom: 8px;
+    padding: 4px 7px;
+    border: 1px solid rgba(150, 92, 232, 0.34);
+    border-radius: 5px;
+    color: #b87af4;
+    font-size: .75rem;
+    font-weight: 700;
+    background:
+        rgba(94, 45, 155, 0.12);
+}

@@ -75,3 +75,60 @@ export interface VerifyEmailResponse {
   readonly alreadyVerified: boolean;
   readonly verifiedAt: string;
 }
+
+export interface ForgotPasswordResponse {
+  readonly accepted: true;
+  readonly message: string;
+}
+
+export interface ResetPasswordResponse {
+  readonly passwordReset: true;
+  readonly sessionsRevoked: number;
+  readonly resetAt: string;
+}
+
+export interface ConfirmEmailChangeResponse {
+  readonly emailChanged: true;
+  readonly alreadyChanged: boolean;
+  readonly previousEmail: string;
+  readonly email: string;
+  readonly sessionsRevoked: number;
+  readonly reauthenticationRequired: true;
+  readonly changedAt: string;
+}
+
+export interface AdminMfaChallengeDetails {
+  readonly mfaTicket: string;
+  readonly mode: 'enroll' | 'verify';
+  readonly expiresAt: string;
+}
+
+export interface AdminMfaEnrollmentResponse {
+  readonly secret: string;
+  readonly otpAuthUri: string;
+  readonly expiresAt: string;
+}
+
+export interface AdminMfaAuthenticationResponse extends LoginResponse {
+  readonly recoveryCodes?: readonly string[];
+}
+
+export interface ConfirmAdminMfaEnrollmentRequest {
+  readonly mfaTicket: string;
+  readonly totpCode: string;
+  readonly deviceId?: string;
+  readonly deviceName?: string;
+}
+
+export interface VerifyAdminMfaRequest {
+  readonly mfaTicket: string;
+  readonly totpCode?: string;
+  readonly recoveryCode?: string;
+  readonly deviceId?: string;
+  readonly deviceName?: string;
+}
+
+export interface AdminMfaAuthenticationResult {
+  readonly user: CurrentUser;
+  readonly recoveryCodes: readonly string[];
+}

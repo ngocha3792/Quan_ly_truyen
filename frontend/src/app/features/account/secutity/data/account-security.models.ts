@@ -17,6 +17,16 @@ export interface ChangePasswordRequest {
     readonly newPassword: string;
 }
 
+
+export interface ChangePasswordResponse {
+    readonly passwordChanged: true;
+    readonly otherSessionsRevoked: number;
+    readonly currentSessionKept: true;
+    readonly accessTokenInvalidated: true;
+    readonly refreshRequired: true;
+    readonly changedAt: string;
+}
+
 export interface DeleteAccountRequest {
     readonly password: string;
     readonly confirmation: string;

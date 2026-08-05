@@ -1,0 +1,81 @@
+<a class="story-card" [class.list-mode]="
+    viewMode() === 'list'
+  " [routerLink]="[
+    '/truyen',
+    story().slug
+  ]">
+    <div class="cover-wrapper">
+        <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
+
+        @if (story().badge) {
+        <span class="story-badge" [attr.data-badge]="
+          story().badge
+        ">
+            {{ story().badge }}
+        </span>
+        }
+
+        <div class="cover-bottom">
+            <span>
+                Ch. {{ story().latestChapter }}
+            </span>
+
+            <span>
+                <app-icon name="eye" [size]="13" />
+
+                {{
+                story().views
+                | compactNumber
+                }}
+            </span>
+        </div>
+    </div>
+
+    <div class="story-content">
+        <h3>{{ story().title }}</h3>
+
+        @if (story().authorName) {
+        <p class="author">
+            {{ story().authorName }}
+        </p>
+        }
+
+        <div class="genre-tags">
+            @for (
+            genre of story().genres.slice(0, 2);
+            track genre.slug
+            ) {
+            <span>{{ genre.name }}</span>
+            }
+        </div>
+
+        @if (
+        viewMode() === 'list' &&
+        story().description
+        ) {
+        <p class="description">
+            {{ story().description }}
+        </p>
+        }
+
+        <div class="story-meta">
+            <span>
+                <app-icon name="book" [size]="14" />
+
+                Ch. {{ story().chapterCount }}
+            </span>
+
+            <span class="rating">
+                <app-icon name="star" [size]="14" />
+
+                {{ story().rating }}
+            </span>
+
+            @if (viewMode() === 'list') {
+            <span class="status">
+                {{ statusLabel() }}
+            </span>
+            }
+        </div>
+    </div>
+</a>

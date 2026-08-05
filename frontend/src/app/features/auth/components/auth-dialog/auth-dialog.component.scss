@@ -29,3 +29,103 @@ input::placeholder { color: #596176; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 520px) { .dialog { padding: 1.5rem 1.15rem; border-radius: 18px; } }
+
+.forgot-link {
+  justify-self: end;
+  margin-top: -.35rem;
+  color: var(--primary-soft);
+  font-size: .75rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mfa-form,
+.recovery-panel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.35rem;
+}
+
+.secret-box {
+  display: grid;
+  gap: .45rem;
+  padding: .8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(4, 8, 19, .65);
+}
+
+.secret-box span {
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.secret-box code {
+  overflow-wrap: anywhere;
+  color: #d8ccff;
+  font-size: .78rem;
+}
+
+.code-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.code-tabs button,
+.secondary {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.code-tabs button.active {
+  color: white;
+  background: rgba(126, 73, 231, .72);
+}
+
+.challenge-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .7rem;
+}
+
+.secondary {
+  padding: 0 1rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, .035);
+}
+
+.recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.recovery-grid code {
+  padding: .7rem;
+  border: 1px solid rgba(167, 139, 250, .2);
+  border-radius: 8px;
+  color: #ddd6fe;
+  background: rgba(124, 58, 237, .08);
+  font-size: .75rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .challenge-actions,
+  .recovery-grid {
+    grid-template-columns: 1fr;
+  }
+}

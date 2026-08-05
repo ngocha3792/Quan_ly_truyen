@@ -1,0 +1,109 @@
+:host {
+    display: block;
+    min-width: 0;
+}
+
+.featured-card {
+    position: relative;
+    min-height: 170px;
+    display: block;
+    overflow: hidden;
+    border: 1px solid rgba(144, 156, 184, 0.16);
+    border-radius: 11px;
+    color: inherit;
+    text-decoration: none;
+    background: #111827;
+    box-shadow:
+        0 17px 35px rgba(0, 0, 0, 0.16);
+    transition:
+        transform 180ms ease,
+        border-color 180ms ease;
+}
+
+.featured-card:hover {
+    transform: translateY(-3px);
+    border-color:
+        rgba(164, 96, 240, 0.42);
+
+    img {
+        transform: scale(1.06);
+    }
+}
+
+img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition:
+        transform 300ms ease;
+}
+
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg,
+            rgba(19, 7, 15, 0.96),
+            rgba(19, 7, 15, 0.7),
+            rgba(19, 7, 15, 0.4));
+}
+
+.featured-card[data-tone='violet'] .card-overlay {
+    background:
+        linear-gradient(90deg,
+            rgba(18, 12, 43, 0.97),
+            rgba(28, 17, 62, 0.72),
+            rgba(24, 17, 55, 0.43));
+}
+
+.featured-card[data-tone='pink'] .card-overlay {
+    background:
+        linear-gradient(90deg,
+            rgba(54, 13, 41, 0.96),
+            rgba(68, 20, 53, 0.7),
+            rgba(48, 16, 38, 0.42));
+}
+
+.featured-card[data-tone='yellow'] .card-overlay {
+    background:
+        linear-gradient(90deg,
+            rgba(45, 28, 12, 0.96),
+            rgba(58, 38, 17, 0.7),
+            rgba(43, 29, 13, 0.4));
+}
+
+.card-content {
+    position: relative;
+    z-index: 2;
+    min-height: 170px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+}
+
+h3 {
+    margin: 12px 0 0;
+    color: #f4f1f7;
+    font-size: .9375rem;
+}
+
+p {
+    max-width: 185px;
+    margin: 7px 0 0;
+    color: #a199aa;
+    font-size: .75rem;
+    line-height: 1.55;
+}
+
+.story-count {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #c3a56e;
+    font-size: .75rem;
+    font-weight: 700;
+}

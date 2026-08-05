@@ -1,0 +1,113 @@
+<main class="catalog-page">
+    <div class="page-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a routerLink="/">
+                Trang chủ
+            </a>
+
+            <span>›</span>
+
+            <span>Danh sách</span>
+        </nav>
+
+        <header class="page-header">
+            <h1>Danh sách truyện</h1>
+
+            <p>
+                Khám phá kho truyện đa dạng theo thể loại,
+                trạng thái và mức độ phổ biến.
+            </p>
+        </header>
+
+        @if (store.error()) {
+        <div class="error-alert">
+            <div>
+                <strong>
+                    Không thể tải danh sách truyện
+                </strong>
+
+                <span>{{ store.error() }}</span>
+            </div>
+
+            <button type="button" (click)="store.reload()">
+                Thử lại
+            </button>
+        </div>
+        }
+
+        <div class="catalog-layout">
+            <section class="catalog-main-card">
+                <app-catalog-toolbar [query]="store.filter().query" [sort]="store.filter().sort" [viewMode]="
+            store.filter().viewMode
+          " (queryChange)="
+            store.setQuery($event)
+          " (sortChange)="
+            store.setSort($event)
+          " (viewModeChange)="
+            store.setViewMode($event)
+          " />
+
+                <app-catalog-quick-filters [genres]="store.genres()" [selectedGenre]="
+            store.filter().genre
+          " [status]="
+            store.filter().status
+          " (genreChange)="
+            store.setGenre($event)
+          " (statusChange)="
+            store.setStatus($event)
+          " />
+
+                <div class="result-summary">
+                    <span>
+                        Tìm thấy
+                        <strong>
+                            {{
+                            store.pagination()
+                            .totalItems
+                            | compactNumber
+                            }}
+                        </strong>
+                        truyện
+                    </span>
+
+                    @if (
+                    store.hasActiveFilters()
+                    ) {
+                    <button type="button" (click)="
+                store.resetFilters()
+              ">
+                        Xóa bộ lọc
+                    </button>
+                    }
+                </div>
+
+                <app-story-catalog-grid [stories]="store.stories()" [viewMode]="
+            store.filter().viewMode
+          " [loading]="store.loading()" />
+
+                <div class="pagination-wrapper">
+                    <app-pagination [page]="
+              store.pagination().page
+            " [totalPages]="
+              store.pagination()
+                .totalPages
+            " (pageChange)="
+              store.setPage($event)
+            " />
+                </div>
+            </section>
+
+            <aside class="catalog-aside">
+                <app-catalog-filter-panel [filter]="store.filter()" [genres]="store.genres()" (applied)="
+            store.applyAdvancedFilter(
+              $event
+            )
+          " (resetRequested)="
+            store.resetFilters()
+          " />
+
+                <app-catalog-ranking [stories]="store.ranking()" />
+            </aside>
+        </div>
+    </div>
+</main>

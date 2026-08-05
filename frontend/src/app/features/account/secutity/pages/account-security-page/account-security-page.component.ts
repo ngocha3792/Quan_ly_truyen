@@ -90,7 +90,7 @@ export class AccountSecurityPageComponent
                         false,
                     );
 
-                    this.auth.logout();
+                    this.auth.clearLocalSession();
 
                     void this.router.navigateByUrl(
                         '/',

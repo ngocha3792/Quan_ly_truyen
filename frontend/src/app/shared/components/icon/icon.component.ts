@@ -28,24 +28,38 @@ export type IconName =
   | 'menu'
   | 'monitor'
   | 'plus'
+  | 'swords'
+  | 'wand'
+  | 'heart'
+  | 'smile'
+  | 'languages'
+  | 'skull'
+  | 'masks'
+  | 'compass'
+  | 'graduation-cap'
+  | 'rocket'
+  | 'door-open'
+  | 'shuffle'
+  | 'book'
+  | 'chevron-left'
+  | 'chevron-right'
+  | 'fire'
   | 'play'
   | 'rotate-ccw'
   | 'save'
-  | 'search'
   | 'shield'
   | 'sparkles'
   | 'star'
   | 'trash'
   | 'activity'
+  | 'filter'
   | 'calendar'
   | 'log-in'
   | 'smartphone'
   | 'trophy'
-  // giữ lại toàn bộ icon cũ
   | 'alert-triangle'
   | 'history'
   | 'monitor'
-  | 'shield'
   | 'user'
   | 'mail'
   | 'lock'
@@ -71,6 +85,115 @@ export type IconName =
       aria-hidden="true"
     >
       @switch (name()) {
+        @case ('swords') {
+  <path d="m14.5 17.5 3 3" />
+  <path d="m3 3 8.5 8.5" />
+  <path d="m13 19 6-6" />
+  <path d="m16 16 4 4" />
+  <path d="m19 3-8.5 8.5" />
+  <path d="m5 17-2 4 4-2" />
+  <path d="m19 3 2 2-9 9-2-2Z" />
+}
+
+@case ('wand') {
+  <path d="m15 4 5 5" />
+  <path d="m13 6 5 5" />
+  <path d="M4 20 16 8" />
+  <path d="M6 4v4" />
+  <path d="M4 6h4" />
+  <path d="M18 15v4" />
+  <path d="M16 17h4" />
+}
+
+@case ('heart') {
+  <path
+    d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"
+  />
+}
+
+@case ('smile') {
+  <circle
+    cx="12"
+    cy="12"
+    r="9"
+  />
+  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+  <path d="M9 9h.01" />
+  <path d="M15 9h.01" />
+}
+
+@case ('languages') {
+  <path d="m5 8 6 6" />
+  <path d="m4 14 6-6 2-3" />
+  <path d="M2 5h12" />
+  <path d="M7 2h1" />
+  <path d="m22 22-5-10-5 10" />
+  <path d="M14 18h6" />
+}
+
+@case ('skull') {
+  <path
+    d="M12 2a8 8 0 0 0-5 14.2V20h3v2h4v-2h3v-3.8A8 8 0 0 0 12 2Z"
+  />
+  <circle cx="9" cy="11" r="1" />
+  <circle cx="15" cy="11" r="1" />
+  <path d="M10 16h4" />
+}
+
+@case ('masks') {
+  <path
+    d="M4 4c4 0 6 1 8 3v8c-2 3-5 5-8 5V4Z"
+  />
+  <path
+    d="M20 4c-4 0-6 1-8 3v8c2 3 5 5 8 5V4Z"
+  />
+  <path d="M7 10h.01" />
+  <path d="M17 10h.01" />
+  <path d="M7 15c1 1 2 1 3 0" />
+  <path d="M14 15c1-1 2-1 3 0" />
+}
+
+@case ('compass') {
+  <circle
+    cx="12"
+    cy="12"
+    r="9"
+  />
+  <path d="m16 8-3 7-5 2 3-7 5-2Z" />
+}
+
+@case ('graduation-cap') {
+  <path d="m2 10 10-5 10 5-10 5L2 10Z" />
+  <path d="M6 12v5c3 2 9 2 12 0v-5" />
+  <path d="M22 10v6" />
+}
+
+@case ('rocket') {
+  <path
+    d="M4 13c-1.5 1.3-2 3.3-2 5 1.7 0 3.7-.5 5-2"
+  />
+  <path
+    d="M15 3c3-1 5-1 6-1 0 1 0 3-1 6l-7 7-4-4 6-8Z"
+  />
+  <circle cx="16" cy="7" r="1.5" />
+  <path d="M9 11 5 9l-3 3 5 2" />
+  <path d="m13 15 2 5-3 2-2-5" />
+}
+
+@case ('door-open') {
+  <path d="M5 3h12v18H5Z" />
+  <path d="M9 3v18" />
+  <path d="M13 12h.01" />
+  <path d="M17 7h3v14h-3" />
+}
+
+@case ('shuffle') {
+  <path d="M16 3h5v5" />
+  <path d="m4 20 17-17" />
+  <path d="M21 16v5h-5" />
+  <path d="m15 15 6 6" />
+  <path d="m4 4 5 5" />
+}
         @case ('search') { <circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/> }
         @case ('bell') { <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/> }
         @case ('history') { <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/> }
@@ -108,6 +231,19 @@ export type IconName =
         @case ('info') { <circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/> }
         @case ('monitor') { <rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/> }
         @case ('edit') { <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/> }
+        @case ('filter') {
+  <path
+    d="M4 5h16"
+  />
+
+  <path
+    d="M7 12h10"
+  />
+
+  <path
+    d="M10 19h4"
+  />
+}
         @case ('activity') {
   <path
     d="M3 12h4l2-7 4 14 2-7h6"

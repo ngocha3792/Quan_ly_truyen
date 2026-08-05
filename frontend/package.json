@@ -2,11 +2,16 @@
   "name": "frontend",
   "version": "0.0.0",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "start": "ng serve --proxy-config proxy.conf.json",
+    "lint": "ng lint",
+    "test:ci": "ng test --watch=false --code-coverage",
+    "build:ci": "ng build --configuration production",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit",
+    "e2e": "playwright test",
+    "e2e:smoke": "playwright test --grep @smoke",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -26,7 +31,9 @@
     "@angular/build": "^22.1.2",
     "@angular/cli": "^22.1.2",
     "@angular/compiler-cli": "^22.1.0",
+    "@playwright/test": "^1.62.1",
     "prettier": "^3.8.1",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "wait-on": "^9.1.0"
   }
 }

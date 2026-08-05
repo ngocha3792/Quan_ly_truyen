@@ -1,0 +1,114 @@
+<section class="filter-panel">
+    <header>
+        <div>
+            <app-icon name="filter" [size]="18" />
+
+            <h2>Bộ lọc nâng cao</h2>
+        </div>
+
+        <button type="button" (click)="reset()">
+            <app-icon name="rotate-ccw" [size]="14" />
+
+            Đặt lại
+        </button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+        <label>
+            <span>Thể loại</span>
+
+            <div class="select-wrapper">
+                <select formControlName="genre">
+                    <option value="">
+                        Tất cả thể loại
+                    </option>
+
+                    @for (
+                    genre of genres();
+                    track genre.id
+                    ) {
+                    <option [value]="genre.slug">
+                        {{ genre.name }}
+                    </option>
+                    }
+                </select>
+
+                <app-icon name="chevron-down" [size]="14" />
+            </div>
+        </label>
+
+        <label>
+            <span>Trạng thái</span>
+
+            <div class="select-wrapper">
+                <select formControlName="status">
+                    <option value="all">
+                        Tất cả trạng thái
+                    </option>
+
+                    <option value="ongoing">
+                        Đang tiến hành
+                    </option>
+
+                    <option value="completed">
+                        Hoàn thành
+                    </option>
+
+                    <option value="hiatus">
+                        Tạm ngưng
+                    </option>
+                </select>
+
+                <app-icon name="chevron-down" [size]="14" />
+            </div>
+        </label>
+
+        <label>
+            <span>Sắp xếp</span>
+
+            <div class="select-wrapper">
+                <select formControlName="sort">
+                    <option value="latest">
+                        Mới cập nhật
+                    </option>
+
+                    <option value="popular">
+                        Xem nhiều nhất
+                    </option>
+
+                    <option value="rating">
+                        Đánh giá cao
+                    </option>
+
+                    <option value="chapter-count">
+                        Nhiều chương nhất
+                    </option>
+
+                    <option value="oldest">
+                        Cập nhật cũ nhất
+                    </option>
+                </select>
+
+                <app-icon name="chevron-down" [size]="14" />
+            </div>
+        </label>
+
+        <fieldset>
+            <legend>Năm phát hành</legend>
+
+            <div class="year-fields">
+                <input type="number" formControlName="yearFrom" min="1900" max="2100" placeholder="Từ năm" />
+
+                <span>–</span>
+
+                <input type="number" formControlName="yearTo" min="1900" max="2100" placeholder="Đến năm" />
+            </div>
+        </fieldset>
+
+        <button class="apply-button" type="submit">
+            <app-icon name="filter" [size]="15" />
+
+            Áp dụng
+        </button>
+    </form>
+</section>
