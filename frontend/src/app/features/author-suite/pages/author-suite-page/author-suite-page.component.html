@@ -1,0 +1,101 @@
+<div class="suite">
+  <button class="overlay" [class.visible]="sidebarOpen()" (click)="closeSidebar()"></button>
+
+  <aside class="sidebar" [class.open]="sidebarOpen()">
+    <a class="brand" routerLink="/author"><b>◫</b><span><strong>QuanLyTruyen</strong><small>Tác giả</small></span></a>
+    <nav>
+      @for (item of nav; track item.key) {
+        <a [routerLink]="item.route" [class.active]="page() === item.key" (click)="closeSidebar()">
+          <i>{{ item.icon }}</i><span>{{ item.label }}</span><em>›</em>
+        </a>
+      }
+    </nav>
+    <a class="write" routerLink="/author/stories/new">＋ Viết truyện mới</a>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button class="menu" (click)="toggleSidebar()">☰</button>
+      <div><h1>{{ title() }}</h1><p>Nền tảng quản lý nội dung dành cho tác giả.</p></div>
+      <div class="top-actions"><label>⌕<input placeholder="Tìm kiếm..." /></label><button class="notify">♢<span>4</span></button><button class="account"><img src="/assets/author-suite/author-avatar.svg" alt="" />Lâm Phạm⌄</button></div>
+    </header>
+
+    <div class="content">
+      @switch (page()) {
+        @case ('overview') {
+          <article class="panel welcome"><div><h2>Chào mừng trở lại, Lâm Phạm! 👋</h2><p>Tiếp tục sáng tác, lan tỏa thế giới của bạn đến hàng triệu độc giả.</p></div><span><b>★ Tác giả Pro</b><small>Còn 18 ngày</small></span></article>
+          <section class="metrics">@for (m of [['Tổng truyện','5','+1 tháng này'],['Tổng chương','1,248','+32 chương'],['Tổng lượt đọc','8.4M','+12.5%'],['Người theo dõi','52.6K','+8.3%']]; track m[0]) {<article class="panel metric"><small>{{ m[0] }}</small><strong>{{ m[1] }}</strong><span>{{ m[2] }}</span></article>}</section>
+          <section class="overview-grid">
+            <article class="panel chart"><header><h2>Biểu đồ lượt đọc</h2><select><option>30 ngày</option></select></header><svg viewBox="0 0 600 180"><polyline [attr.points]="chartPoints" /></svg></article>
+            <article class="panel popular"><header><h2>Truyện nổi bật</h2><a routerLink="/author/stories">Xem tất cả</a></header>@for (s of stories.slice(0,3); track s.id) {<div><img [src]="s.image" [alt]="s.title" /><span><b>{{ s.title }}</b><small>{{ s.reads }} lượt đọc · {{ s.followers }} theo dõi</small></span><button>Quản lý</button></div>}</article>
+            <article class="panel recent"><header><h2>Hoạt động gần đây</h2></header>@for (n of notices.slice(0,4); track n[0]) {<div><i [class]="n[3]">●</i><span><b>{{ n[0] }}</b><small>{{ n[1] }}</small></span><time>{{ n[2] }}</time></div>}</article>
+          </section>
+        }
+
+        @case ('stories') {
+          <article class="panel page">
+            <div class="toolbar"><div class="tabs">@for (tab of ['Tất cả','Đang ra','Hoàn thành','Tạm ngưng']; track tab) {<button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button>}</div><a class="primary" routerLink="/author/stories/new">＋ Tạo truyện mới</a></div>
+            <div class="filters"><label>⌕<input placeholder="Tìm kiếm truyện..." /></label><button>⚑ Bộ lọc</button></div>
+            <div class="table"><table><thead><tr><th>#</th><th>Bìa</th><th>Tên truyện</th><th>Thể loại</th><th>Trạng thái</th><th>Chương</th><th>Lượt đọc</th><th>Theo dõi</th><th>Đánh giá</th><th>Thao tác</th></tr></thead><tbody>@for (s of stories; track s.id) {<tr><td>{{ s.id }}</td><td><img [src]="s.image" [alt]="s.title" /></td><td><b>{{ s.title }}</b></td><td>{{ s.genre }}</td><td><span [class]="'status '+s.tone">{{ s.status }}</span></td><td>{{ s.chapters }}</td><td>{{ s.reads }}</td><td>{{ s.followers }}</td><td>★ {{ s.rating }}</td><td><a [routerLink]="['/author/stories',s.id,'chapters']">◉</a> <a [routerLink]="['/author/stories',s.id,'edit']">✎</a> <button>×</button></td></tr>}</tbody></table></div>
+          </article>
+        }
+
+        @case ('chapters') {
+          <article class="panel page">
+            <div class="story-head"><img src="/assets/author-suite/story-1.svg" alt="" /><span><small>Quản lý chương</small><h2>Ma Đạo Chí Tôn</h2><p>456 chương · 2.4M lượt đọc · ★ 4.9</p></span><button class="primary">＋ Thêm chương</button></div>
+            <div class="toolbar"><div class="tabs">@for (tab of ['Tất cả (456)','Đã đăng (450)','Nháp (6)']; track tab) {<button [class.active]="activeTab()===tab" (click)="activeTab.set(tab)">{{ tab }}</button>}</div><label class="search">⌕<input placeholder="Tìm chương..." /></label></div>
+            <div class="table"><table><thead><tr><th>#</th><th>Tên chương</th><th>Lượt đọc</th><th>Ngày đăng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>@for (c of chapters; track c[0]) {<tr><td>{{ c[0] }}</td><td><b>{{ c[1] }}</b></td><td>{{ c[2] }}</td><td>{{ c[3] }}</td><td><span [class]="'status '+c[5]">{{ c[4] }}</span></td><td>◉　✎　×</td></tr>}</tbody></table></div>
+          </article>
+        }
+
+        @case ('editor') {
+          <section class="editor">
+            <article class="panel steps">@for (s of ['Thông tin cơ bản','Thể loại & Tag','Giới thiệu','Ảnh bìa','Xem lại & Đăng']; track s; let i=$index) {<span [class.active]="i===0"><b>{{ i+1 }}</b>{{ s }}</span>}</article>
+            <article class="panel form"><h2>Thông tin cơ bản</h2><label><span>Tên truyện *</span><input placeholder="Nhập tên truyện của bạn..." /></label><label><span>Tên khác (nếu có)</span><input placeholder="Tên tiếng Anh, tên Hán Việt..." /></label><div><label><span>Thể loại chính *</span><select><option>Chọn thể loại</option></select></label><label><span>Trạng thái</span><select><option>Đang ra</option></select></label></div><footer><button>Hủy</button><button class="primary">Tiếp theo →</button></footer></article>
+            <article class="panel preview"><h2>Xem trước</h2><div>▧<small>Ảnh bìa xem trước</small></div><b>Tên truyện</b><small>Thể loại · Đang ra</small></article>
+          </section>
+        }
+
+        @case ('analytics') {
+          <section class="metrics">@for (m of [['Lượt đọc','2.4M','+12.5%'],['Lượt theo dõi','12.5K','+8.2%'],['Doanh thu','18.750.000 ₫','+15.7%'],['Số chương mới','32','+34.2%']]; track m[0]) {<article class="panel metric"><small>{{m[0]}}</small><strong>{{m[1]}}</strong><span>{{m[2]}}</span></article>}</section>
+          <section class="analytics">
+            <article class="panel chart"><header><h2>Biểu đồ lượt đọc</h2></header><svg viewBox="0 0 600 180"><polyline [attr.points]="chartPoints" /></svg></article>
+            <article class="panel ranking"><header><h2>Top truyện theo lượt đọc</h2></header>@for (s of stories; track s.id; let i=$index) {<div><i>{{i+1}}</i><b>{{s.title}}</b><span>{{s.reads}}</span></div>}</article>
+            <article class="panel donut-card"><header><h2>Lượt đọc theo thiết bị</h2></header><div class="donut"></div><p>Mobile 72%　Desktop 23%　Tablet 5%</p></article>
+            <article class="panel bars-card"><header><h2>Doanh thu theo tháng</h2></header><div class="bars">@for (h of [35,48,62,52,70,64,82,76,90,84,96,92]; track $index) {<i [style.height.%]="h"></i>}</div></article>
+          </section>
+        }
+
+        @case ('revenue') {
+          <section class="metrics revenue">@for (m of [['Doanh thu tháng này','12,450,000 ₫','+18.6%'],['Tổng doanh thu','186,720,000 ₫','+12.4%'],['Số dư hiện tại','3,250,000 ₫','Rút tiền']]; track m[0]) {<article class="panel metric"><small>{{m[0]}}</small><strong>{{m[1]}}</strong><span>{{m[2]}}</span></article>}</section>
+          <section class="analytics"><article class="panel bars-card wide"><header><h2>Biểu đồ doanh thu</h2></header><div class="bars">@for (h of [28,41,58,68,49,91,62]; track $index) {<i [style.height.%]="h"></i>}</div></article><article class="panel donut-card"><header><h2>Nguồn doanh thu</h2></header><div class="donut revenue-donut"></div><p>Đọc trả phí 45%　Quà tặng 30%　Quảng cáo 15%</p></article></section>
+          <article class="panel page compact"><div class="table"><table><thead><tr><th>#</th><th>Loại giao dịch</th><th>Số tiền</th><th>Phương thức</th><th>Thời gian</th><th>Trạng thái</th></tr></thead><tbody>@for (t of transactions; track t[0]) {<tr><td>{{t[0]}}</td><td>{{t[1]}}</td><td class="money">{{t[2]}}</td><td>{{t[3]}}</td><td>{{t[4]}}</td><td><span class="status green">Thành công</span></td></tr>}</tbody></table></div></article>
+        }
+
+        @case ('messages') {
+          <section class="messages"><article class="panel inbox"><label>⌕<input placeholder="Tìm kiếm tin nhắn..." /></label>@for (m of messages; track m[0]) {<button><img [src]="m[3]" [alt]="m[0]" /><span><b>{{m[0]}}</b><small>{{m[1]}}</small></span><time>{{m[2]}}</time></button>}</article><article class="panel chat"><header><img src="/assets/author-suite/avatar-1.svg" alt="" /><span><b>Bình Minh</b><small>Độc giả trung thành</small></span></header><div><p>Chào tác giả! Truyện Ma Đạo Chí Tôn viết rất hay, mong tác giả ra chương mới sớm nhé!</p><p>Cảm ơn bạn đã ủng hộ! Mình sẽ cố gắng ra chương mới đều đặn.</p></div><footer><input placeholder="Nhập tin nhắn..." /><button>➤</button></footer></article></section>
+        }
+
+        @case ('notifications') {
+          <article class="panel page compact"><div class="toolbar"><div class="tabs">@for (tab of ['Tất cả','Hệ thống','Tương tác','Thanh toán']; track tab) {<button [class.active]="activeTab()===tab" (click)="activeTab.set(tab)">{{tab}}</button>}</div><button>Đánh dấu tất cả đã đọc</button></div><div class="notices">@for (n of notices; track n[0]) {<div><i [class]="n[3]">●</i><span><b>{{n[0]}}</b><small>{{n[1]}}</small></span><time>{{n[2]}}</time></div>}</div></article>
+        }
+
+        @case ('profile') {
+          <section class="profile"><article class="panel profile-card"><img src="/assets/author-suite/author-avatar.svg" alt="" /><h2>Lâm Phạm</h2><span>Tác giả Pro</span><p>Một tác giả đam mê thể loại tiên hiệp, huyền huyễn. Cảm ơn độc giả luôn đồng hành!</p><div><b>52.6K<small>Người theo dõi</small></b><b>8.4M<small>Lượt đọc</small></b><b>1,248<small>Chương</small></b></div></article><article class="panel form profile-form"><div><label><span>Tên hiển thị *</span><input value="Lâm Phạm" /></label><label><span>Số điện thoại</span><input value="0123 456 789" /></label></div><label><span>Email *</span><input value="lampham.writer@gmail.com" /></label><label><span>Giới thiệu về tác giả</span><textarea>Một tác giả đam mê thể loại tiên hiệp, huyền huyễn.</textarea></label><button class="primary">Lưu thay đổi</button></article></section>
+        }
+
+        @case ('settings') {
+          <section class="settings"><article class="panel side-tabs">@for (tab of ['Tài khoản','Thông báo','Bảo mật','Thanh toán']; track tab) {<button [class.active]="settingsTab()===tab" (click)="settingsTab.set(tab)">{{tab}}</button>}</article><article class="panel settings-body"><h2>Cài đặt tài khoản</h2>@for (s of [['Nhận thông báo chương mới','Thông báo khi chương được duyệt'],['Nhận email thống kê hàng tuần','Tổng hợp hiệu suất sáng tác'],['Hiển thị email công khai','Cho phép độc giả thấy email']]; track s[0]; let i=$index) {<div class="setting"><span><b>{{s[0]}}</b><small>{{s[1]}}</small></span><button [class.on]="i<2"><i></i></button></div>}<h3>Bảo mật 2 lớp</h3><div class="security">▣<span><b>Bảo vệ tài khoản của bạn</b><small>Xác thực 2 lớp giúp tài khoản an toàn hơn.</small></span><button>Kích hoạt 2FA</button></div><h3>Giao diện</h3><div class="themes"><button>Tối</button><button>Sáng</button><button class="active">Tự động</button></div></article></section>
+        }
+
+        @case ('support') {
+          <section class="support"><article class="panel help-nav"><label>⌕<input placeholder="Tìm kiếm câu hỏi..." /></label>@for (x of ['Câu hỏi thường gặp','Hướng dẫn viết truyện','Chính sách','Liên hệ']; track x) {<button>{{x}}</button>}</article><article class="panel faq"><header><h2>Câu hỏi thường gặp</h2><button>Gửi yêu cầu hỗ trợ</button></header>@for (q of ['Làm thế nào để tạo truyện mới?','Chính sách phí và hoa hồng như thế nào?','Thời gian xét duyệt truyện là bao lâu?','Làm sao để truyện được đề xuất?','Quy định về nội dung như thế nào?']; track q) {<details><summary>{{q}}⌄</summary><p>Nội dung hướng dẫn chi tiết sẽ được cập nhật tại trung tâm trợ giúp.</p></details>}</article></section>
+        }
+
+        @case ('community') {
+          <article class="panel community"><div class="tabs">@for (tab of ['Bảng xếp hạng','Tác giả nổi bật','Diễn đàn']; track tab) {<button [class.active]="activeTab()===tab" (click)="activeTab.set(tab)">{{tab}}</button>}</div><h2>Top tác giả nổi bật tháng này</h2><section class="podium"><article><img src="/assets/author-suite/avatar-2.svg" alt="" /><b>Thiên Đạo</b><small>48.2K theo dõi</small></article><article class="winner"><em>♛</em><img src="/assets/author-suite/author-avatar.svg" alt="" /><b>Lâm Phạm</b><small>52.6K theo dõi</small></article><article><img src="/assets/author-suite/avatar-3.svg" alt="" /><b>Mặc Hương</b><small>45.8K theo dõi</small></article></section>@for (name of ['Vân Thiên','Cửu Long','Băng Tâm','Hạo Thiên']; track name; let i=$index) {<div class="rank"><span>{{i+4}}</span><img [src]="'/assets/author-suite/avatar-'+((i%5)+1)+'.svg'" alt="" /><b>{{name}}</b><strong>{{42-i*4}}.1K</strong></div>}</article>
+        }
+      }
+    </div>
+  </main>
+</div>

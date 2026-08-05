@@ -1,0 +1,46 @@
+import { Routes } from '@angular/router';
+
+export const APP_ROUTES: Routes = [
+
+  // QLT_AUTHOR_ROUTE
+  {
+    path: 'author',
+    title: 'Tác giả | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/author/pages/author-dashboard-page/author-dashboard-page.component'
+      ).then((module) => module.AuthorDashboardPageComponent),
+  },
+  // QLT_STORY_DETAIL_ROUTE
+  {
+    path: 'story/:slug',
+    title: 'Đại Đạo Chí Tôn | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/stories/pages/story-detail-page/story-detail-page.component'
+      ).then((module) => module.StoryDetailPageComponent),
+  },
+
+  {
+    path: '',
+    title: 'QuanLyTruyen | Trang chủ',
+    loadComponent: () =>
+      import(
+        './features/home/pages/home-page/home-page.component'
+      ).then((module) => module.HomePageComponent),
+  },
+  {
+    path: 'dashboard',
+    title: 'Bảng điều khiển | Quản Lý Truyện',
+    loadComponent: () =>
+      import(
+        './features/dashboard/pages/dashboard-page/dashboard-page.component'
+      ).then((module) => module.DashboardPageComponent),
+  },
+  {
+    path: '**',
+    redirectTo: '',
+  },
+];
+
+export const routes = APP_ROUTES;

@@ -1,0 +1,289 @@
+<div class="admin-center">
+  <button class="admin-overlay" type="button" aria-label="Đóng menu" [class.visible]="sidebarOpen()" (click)="closeSidebar()"></button>
+
+  <aside class="admin-sidebar" [class.open]="sidebarOpen()">
+    <a class="admin-brand" routerLink="/dashboard">
+      <span><app-admin-center-icon name="book" /></span>
+      <div><strong>QuanLyTruyen</strong><small>Admin</small></div>
+    </a>
+
+    <nav class="admin-navigation">
+      @for (item of nav; track item.key) {
+        <a [routerLink]="item.route" [class.active]="page() === item.key" (click)="closeSidebar()">
+          <app-admin-center-icon [name]="item.icon" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <button class="admin-user-card" type="button">
+      <img src="/assets/admin-center/admin-avatar.svg" alt="" />
+      <span><strong>Admin</strong><small>Quản trị viên</small></span>
+      <app-admin-center-icon name="chevron-down" />
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <button class="mobile-menu-button" type="button" aria-label="Mở menu" (click)="toggleSidebar()"><app-admin-center-icon name="menu" /></button>
+      <div><h1>{{ title() }}</h1>@if (page() === 'overview') { <p>Chào mừng trở lại, đây là tình hình hệ thống hôm nay.</p> }</div>
+      <div class="topbar-actions">
+        <label class="topbar-search"><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm nhanh..." /></label>
+        <button class="notification-button" type="button"><app-admin-center-icon name="bell" /><span>5</span></button>
+        <button class="topbar-user" type="button"><img src="/assets/admin-center/admin-avatar.svg" alt="" /><span>Admin</span></button>
+      </div>
+    </header>
+
+    <div class="admin-content">
+      @switch (page()) {
+        @case ('overview') {
+          <section class="metric-grid">
+            <article class="admin-panel metric-card"><span class="metric-icon violet"><app-admin-center-icon name="users" /></span><div><small>Tổng người dùng</small><strong>12,458</strong><p>↑ 8.5% so với tháng trước</p></div></article>
+            <article class="admin-panel metric-card"><span class="metric-icon blue"><app-admin-center-icon name="book" /></span><div><small>Tổng truyện</small><strong>2,345</strong><p>↑ 4.4% so với tháng trước</p></div></article>
+            <article class="admin-panel metric-card"><span class="metric-icon green"><app-admin-center-icon name="calendar" /></span><div><small>Tổng chương</small><strong>45,678</strong><p>↑ 15.8% so với tháng trước</p></div></article>
+            <article class="admin-panel metric-card"><span class="metric-icon orange"><app-admin-center-icon name="coin" /></span><div><small>Lượt đọc tháng</small><strong>2.4M</strong><p>↑ 21.7% so với tháng trước</p></div></article>
+          </section>
+
+          <section class="dashboard-chart-grid">
+            <article class="admin-panel traffic-panel">
+              <header class="panel-header"><div><h2>Thống kê lượt đọc</h2><p>Hiệu suất 30 ngày gần nhất</p></div><select><option>30 ngày</option><option>7 ngày</option></select></header>
+              <div class="traffic-chart">
+                <div class="chart-y"><span>3M</span><span>2M</span><span>1M</span><span>0</span></div>
+                <svg viewBox="0 0 608 190" role="img" aria-label="Biểu đồ lượt đọc">
+                  @for (y of [20, 70, 120, 170]; track y) { <line x1="0" x2="608" [attr.y1]="y" [attr.y2]="y" class="chart-grid-line" /> }
+                  <polygon [attr.points]="chartArea" class="chart-area" />
+                  <polyline [attr.points]="chartPoints" class="chart-line" />
+                  <circle cx="418" cy="42" r="5" class="chart-point" />
+                </svg>
+                <div class="chart-x"><span>01/05</span><span>06/05</span><span>11/05</span><span>16/05</span><span>21/05</span><span>26/05</span><span>31/05</span></div>
+              </div>
+            </article>
+
+            <article class="admin-panel status-chart-panel">
+              <header class="panel-header"><h2>Thống kê truyện</h2></header>
+              <div class="status-chart">
+                <div class="donut-chart"></div>
+                <div>
+                  <span><i class="violet-dot"></i><b>Đang ra</b><small>1,234 (52.6%)</small></span>
+                  <span><i class="green-dot"></i><b>Hoàn thành</b><small>879 (37.5%)</small></span>
+                  <span><i class="blue-dot"></i><b>Tạm ngưng</b><small>232 (9.9%)</small></span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="dashboard-bottom-grid">
+            <article class="admin-panel compact-list-panel">
+              <header class="panel-header"><h2>Truyện mới cập nhật</h2><a routerLink="/admin/stories">Xem tất cả</a></header>
+              <div class="compact-story-list">
+                @for (story of stories.slice(0, 4); track story.id) {
+                  <article><img [src]="story.image" [alt]="story.title" /><div><strong>{{ story.title }}</strong><small>{{ story.author }}</small></div><time>{{ story.date }}</time></article>
+                }
+              </div>
+            </article>
+
+            <article class="admin-panel compact-list-panel">
+              <header class="panel-header"><h2>Hoạt động mới nhất</h2><a routerLink="/admin/activity-logs">Xem tất cả</a></header>
+              <div class="compact-activity-list">
+                @for (item of activities; track item.id) {
+                  <article><span><app-admin-center-icon name="activity" /></span><p><b>{{ item.actor }}</b> {{ item.action.toLowerCase() }} <strong>{{ item.object }}</strong></p><time>{{ item.time.slice(11,16) }}</time></article>
+                }
+              </div>
+            </article>
+          </section>
+        }
+
+        @case ('stories') {
+          <article class="admin-panel page-panel">
+            <div class="table-toolbar">
+              <div class="tabs">@for (tab of ['Tất cả','Đang ra','Hoàn thành','Tạm ngưng']; track tab) { <button type="button" [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button> }</div>
+              <button class="primary-action" type="button"><app-admin-center-icon name="plus" />Thêm truyện</button>
+            </div>
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm truyện..." /></label><button type="button"><app-admin-center-icon name="filter" />Bộ lọc</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Ảnh bìa</th><th>Tên truyện</th><th>Tác giả</th><th>Danh mục</th><th>Trạng thái</th><th>Lượt đọc</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (story of stories; track story.id) {
+                    <tr>
+                      <td>{{ story.id }}</td><td><img class="table-cover" [src]="story.image" [alt]="story.title" /></td><td><strong>{{ story.title }}</strong></td><td>{{ story.author }}</td><td>{{ story.category }}</td>
+                      <td><span [class]="'status status--' + story.tone">{{ story.status }}</span></td><td>{{ story.views }}</td><td>{{ story.date }}</td>
+                      <td><div class="row-actions"><a [routerLink]="['/admin/stories', story.id, 'chapters']"><app-admin-center-icon name="eye" /></a><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination"><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button></div>
+          </article>
+        }
+
+        @case ('chapters') {
+          <article class="admin-panel page-panel">
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm chương..." /></label><div><button><app-admin-center-icon name="filter" />Bộ lọc</button><button class="primary-action"><app-admin-center-icon name="plus" />Thêm chương</button></div></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Tên chương</th><th>Số từ</th><th>Lượt đọc</th><th>Ngày đăng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (chapter of chapters; track chapter.id) {
+                    <tr><td>{{ chapter.id }}</td><td><strong>Chương {{ chapter.id }}: {{ chapter.title }}</strong></td><td>{{ chapter.words }}</td><td>{{ chapter.views }}</td><td>{{ chapter.date }}</td><td><span class="status status--green">Đã duyệt</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button><app-admin-center-icon name="eye" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination"><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button></div>
+          </article>
+        }
+
+        @case ('users') {
+          <article class="admin-panel page-panel">
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm người dùng..." /></label><button><app-admin-center-icon name="filter" />Bộ lọc</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Avatar</th><th>Tên người dùng</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày đăng ký</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (user of users; track user.id) {
+                    <tr><td>{{ user.id }}</td><td><img class="table-avatar" [src]="user.avatar" [alt]="user.name" /></td><td><strong>{{ user.name }}</strong></td><td>{{ user.email }}</td><td>{{ user.role }}</td><td><span [class]="'status status--' + user.tone">{{ user.status }}</span></td><td>{{ user.date }}</td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="lock" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination"><button class="active">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button></div>
+          </article>
+        }
+
+        @case ('authors') {
+          <article class="admin-panel page-panel">
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm tác giả..." /></label><button class="primary-action"><app-admin-center-icon name="plus" />Thêm tác giả</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Avatar</th><th>Tên tác giả</th><th>Email</th><th>Truyện</th><th>Người theo dõi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (author of authors; track author.id) {
+                    <tr><td>{{ author.id }}</td><td><img class="table-avatar" [src]="author.avatar" [alt]="author.name" /></td><td><strong>{{ author.name }}</strong></td><td>{{ author.email }}</td><td>{{ author.role }}</td><td>{{ author.count }}</td><td><span [class]="'status status--' + author.tone">{{ author.status }}</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button><app-admin-center-icon name="eye" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('comments') {
+          <article class="admin-panel page-panel">
+            <div class="table-toolbar"><div class="tabs">@for (tab of ['Tất cả','Chờ duyệt','Đã duyệt','Đã ẩn']; track tab) { <button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button> }</div></div>
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm bình luận..." /></label><button><app-admin-center-icon name="filter" />Bộ lọc</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Nội dung bình luận</th><th>Người bình luận</th><th>Truyện</th><th>Ngày bình luận</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (item of comments; track item.id) {
+                    <tr><td>{{ item.id }}</td><td><strong>{{ item.content }}</strong></td><td>{{ item.user }}</td><td>{{ item.object }}</td><td>{{ item.date }}</td><td><span [class]="'status status--' + item.tone">{{ item.status }}</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('reports') {
+          <article class="admin-panel page-panel">
+            <div class="table-toolbar"><div class="tabs">@for (tab of ['Tất cả','Chờ xử lý','Đang xử lý','Đã xử lý']; track tab) { <button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button> }</div></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Loại báo cáo</th><th>Nội dung</th><th>Người báo cáo</th><th>Ngày báo cáo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (item of reports; track item.id) {
+                    <tr><td>{{ item.id }}</td><td>{{ item.object }}</td><td><strong>{{ item.content }}</strong></td><td>{{ item.user }}</td><td>{{ item.date }}</td><td><span [class]="'status status--' + item.tone">{{ item.status }}</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('categories') {
+          <article class="admin-panel page-panel narrow-page">
+            <div class="filter-row"><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm danh mục..." /></label><button class="primary-action"><app-admin-center-icon name="plus" />Thêm danh mục</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Tên danh mục</th><th>Số truyện</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (item of categories; track item.id) {
+                    <tr><td>{{ item.id }}</td><td><strong>{{ item.name }}</strong></td><td>{{ item.count }}</td><td><span [class]="'status status--' + item.tone">{{ item.status }}</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('transactions') {
+          <article class="admin-panel page-panel">
+            <div class="table-toolbar"><div class="tabs">@for (tab of ['Tất cả','Nạp tiền','Mua VIP','Mua vật phẩm']; track tab) { <button [class.active]="activeTab() === tab" (click)="activeTab.set(tab)">{{ tab }}</button> }</div><button><app-admin-center-icon name="filter" />Bộ lọc</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Người dùng</th><th>Loại giao dịch</th><th>Số tiền</th><th>Phương thức</th><th>Ngày giao dịch</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                  @for (item of transactions; track item.id) {
+                    <tr><td>{{ item.id }}</td><td><strong>{{ item.user }}</strong></td><td>{{ item.type }}</td><td>{{ item.amount }}</td><td>{{ item.method }}</td><td>{{ item.date }}</td><td><span [class]="'status status--' + item.tone">{{ item.status }}</span></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('ads') {
+          <article class="admin-panel page-panel">
+            <div class="filter-row"><div></div><button class="primary-action"><app-admin-center-icon name="plus" />Thêm quảng cáo</button></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Tên quảng cáo</th><th>Vị trí hiển thị</th><th>Ngày bắt đầu</th><th>Ngày kết thúc</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <tbody>
+                  @for (item of ads; track item.id) {
+                    <tr><td>{{ item.id }}</td><td><div class="ad-cell"><img [src]="item.image" [alt]="item.name" /><strong>{{ item.name }}</strong></div></td><td>{{ item.position }}</td><td>{{ item.start }}</td><td>{{ item.end }}</td><td><span [class]="'status status--' + item.tone">{{ item.status }}</span></td><td><div class="row-actions"><button><app-admin-center-icon name="edit" /></button><button class="danger"><app-admin-center-icon name="trash" /></button></div></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+
+        @case ('settings') {
+          <article class="admin-panel settings-panel">
+            <div class="settings-tabs">@for (tab of ['Thông tin chung','Email','Thanh toán','Bảo mật','SEO','Khác']; track tab) { <button [class.active]="settingsTab() === tab" (click)="settingsTab.set(tab)">{{ tab }}</button> }</div>
+            <form (submit)="$event.preventDefault()">
+              <div class="settings-form-grid">
+                <label><span>Tên website</span><input type="text" value="QuanLyTruyen" /></label>
+                <label><span>Email liên hệ</span><input type="email" value="admin@quanlytruyen.com" /></label>
+                <label class="wide"><span>Mô tả website</span><textarea>Đọc truyện chữ online hay nhất, cập nhật nhanh chóng</textarea></label>
+                <label><span>Số điện thoại</span><input type="text" value="0123 456 789" /></label>
+                <label><span>Logo</span><button type="button" class="upload-button">Chọn file</button><img class="logo-preview" src="/assets/admin-center/logo-preview.svg" alt="Logo" /></label>
+                <label><span>Địa chỉ</span><input type="text" value="Hà Nội, Việt Nam" /></label>
+                <label><span>Favicon</span><button type="button" class="upload-button">Chọn file</button><img class="favicon-preview" src="/assets/admin-center/favicon-preview.svg" alt="Favicon" /></label>
+                <label><span>Copyright</span><input type="text" value="© 2024 QuanLyTruyen. All rights reserved." /></label>
+              </div>
+              <button class="primary-action save-button" type="submit">Lưu thay đổi</button>
+            </form>
+          </article>
+        }
+
+        @case ('activity') {
+          <article class="admin-panel page-panel">
+            <div class="filter-row"><div></div><div><label><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm hoạt động..." /></label><button><app-admin-center-icon name="filter" />Bộ lọc</button></div></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>#</th><th>Người thực hiện</th><th>Hành động</th><th>Đối tượng</th><th>Thời gian</th><th>IP</th></tr></thead>
+                <tbody>
+                  @for (item of activities; track item.id) {
+                    <tr><td>{{ item.id }}</td><td><strong>{{ item.actor }}</strong></td><td>{{ item.action }}</td><td>{{ item.object }}</td><td>{{ item.time }}</td><td>{{ item.ip }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+      }
+    </div>
+  </main>
+</div>

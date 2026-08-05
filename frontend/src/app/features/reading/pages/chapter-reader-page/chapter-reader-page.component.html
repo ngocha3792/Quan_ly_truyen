@@ -1,0 +1,336 @@
+<div class="chapter-reader">
+  <header class="reader-header">
+    <div class="reader-header-inner">
+      <a class="reader-brand" href="/">
+        <span><app-reader-account-icon name="book" /></span>
+        QuanLyTruyen
+      </a>
+
+      <nav class="reader-nav" aria-label="Điều hướng">
+        <a href="/">Trang chủ</a>
+        <a href="#" (click)="$event.preventDefault()">Thể loại</a>
+        <a href="#" (click)="$event.preventDefault()">Xếp hạng</a>
+        <a href="#" (click)="$event.preventDefault()">Tác giả</a>
+      </nav>
+
+      <label class="reader-search">
+        <app-reader-account-icon name="search" />
+        <input type="search" placeholder="Tìm kiếm truyện, tác giả..." />
+        <kbd>Ctrl K</kbd>
+      </label>
+
+      <div class="reader-header-actions">
+        <button type="button" class="round-button" aria-label="Chế độ tối">
+          <app-reader-account-icon name="moon" />
+        </button>
+        <button type="button" class="round-button notification" aria-label="Thông báo">
+          <app-reader-account-icon name="bell" />
+          <span>3</span>
+        </button>
+        <button class="reader-account-button" type="button">
+          <img src="/assets/chapter-reader/user-avatar.svg" alt="" />
+          <span>
+            <strong>Nguyễn Văn A</strong>
+            <small>Độc giả</small>
+          </span>
+          <app-reader-account-icon name="chevron-down" />
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <button
+    class="reader-mobile-overlay"
+    type="button"
+    aria-label="Đóng bảng điều khiển"
+    [class.visible]="leftPanelOpen() || rightPanelOpen()"
+    (click)="closePanels()"
+  ></button>
+
+  <main class="reader-layout">
+    <aside class="chapter-sidebar" [class.open]="leftPanelOpen()">
+      <section class="story-mini-card">
+        <img src="/assets/chapter-reader/story-cover.svg" alt="Đại Đạo Chí Tôn" />
+        <div>
+          <h2>Đại Đạo Chí Tôn</h2>
+          <p><app-reader-account-icon name="user" /> Mặc Hương Đồng Khứu</p>
+          <div class="mini-tags">
+            <span>Tiên hiệp</span>
+            <span>Đang ra</span>
+          </div>
+          <strong>★ 4.9 <small>(12.5K đánh giá)</small></strong>
+          <button type="button">
+            <app-reader-account-icon name="bookmark" />
+            Thêm vào thư viện
+          </button>
+        </div>
+      </section>
+
+      <section class="chapter-browser">
+        <header>
+          <h2>Danh sách chương</h2>
+          <div>
+            <button type="button" aria-label="Sắp xếp">
+              <app-reader-account-icon name="sort" />
+            </button>
+            <button type="button" aria-label="Lọc">
+              <app-reader-account-icon name="filter" />
+            </button>
+          </div>
+        </header>
+
+        <a class="latest-chapter" href="#" (click)="$event.preventDefault()">
+          <span>Chương mới nhất</span>
+          <i></i>
+          <small>Chương 1278: Đột phá đại thừa</small>
+        </a>
+
+        @for (volume of volumes; track volume.name) {
+          <section class="volume-block" [class.expanded]="volume.expanded">
+            <button class="volume-heading" type="button">
+              <strong>{{ volume.name }}</strong>
+              <app-reader-account-icon name="chevron-down" />
+            </button>
+
+            @if (volume.expanded) {
+              <div class="volume-chapters">
+                @for (chapter of volume.chapters; track chapter.number) {
+                  <a href="#" (click)="$event.preventDefault()">
+                    <span>Chương {{ chapter.number }}: {{ chapter.title }}</span>
+                    @if (chapter.completed) {
+                      <i><app-reader-account-icon name="check" /></i>
+                    }
+                  </a>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        <button class="expand-list-button" type="button">
+          Mở rộng danh sách chương
+        </button>
+      </section>
+    </aside>
+
+    <section class="reading-column">
+      <article class="reading-panel">
+        <header class="chapter-heading">
+          <div class="breadcrumb">
+            <a href="#" (click)="$event.preventDefault()">Đại Đạo Chí Tôn</a>
+            <span>›</span>
+            <a href="#" (click)="$event.preventDefault()">Quyển 1: Thần Ma Loạn Thế</a>
+            <span>›</span>
+          </div>
+
+          <div class="chapter-title-row">
+            <div>
+              <h1>Chương 1278: Đột phá đại thừa</h1>
+              <p>
+                <span><app-reader-account-icon name="clock" />20 phút đọc</span>
+                <span><app-reader-account-icon name="eye" />532.1K lượt đọc</span>
+                <span><app-reader-account-icon name="calendar" />Cập nhật: 2 ngày trước</span>
+              </p>
+            </div>
+
+            <div class="chapter-navigation">
+              <button type="button">
+                <app-reader-account-icon name="arrow-left" />
+                Chương trước
+              </button>
+              <button class="next-button" type="button">
+                Chương tiếp theo
+                <app-reader-account-icon name="arrow-right" />
+              </button>
+            </div>
+          </div>
+
+          <div class="chapter-tools">
+            <button type="button" [class.active]="bookmarked()" (click)="toggleBookmark()">
+              <app-reader-account-icon name="bookmark" />
+              {{ bookmarked() ? 'Đã đánh dấu' : 'Đánh dấu' }}
+            </button>
+            <button type="button">
+              <app-reader-account-icon name="bell" />
+              Báo lỗi
+            </button>
+          </div>
+        </header>
+
+        <div [class]="'chapter-content ' + readerClasses()">
+          <p>Trong hư không mênh mông, Lâm Phàm đứng giữa lôi kiếp cuồn cuộn, thân thể toát ra ánh sáng kim sắc rực rỡ.</p>
+          <p>Đây là thiên kiếp của cảnh giới Đại Thừa!</p>
+          <p>Ầm!</p>
+          <p>Tia lôi thứ chín giáng xuống, như muốn xé nát mọi thứ.</p>
+          <p>Lâm Phàm nhắm mắt lại, trong lòng không hề có chút sợ hãi. Hắn đã trải qua sinh tử vô số lần, đối mặt với thiên kiếp lần này, tâm cảnh đã đạt đến một tầng hoàn toàn mới.</p>
+          <p>“Đại đạo vô hình, ta là đạo!”</p>
+          <p>Hắn bật mắt mở ra, mắt thần sâu thẳm, ánh sáng kim sắc bùng nổ.</p>
+          <p>Ầm ầm ầm!</p>
+          <p>Tất cả tia lôi bị hắn hút vào cơ thể, hóa thành điểm điểm tinh quang, dung nhập vào đan điền.</p>
+          <p>Đan điền của hắn, huyền quang cuồn cuộn, như có một ngôi sao nhỏ đang sinh sôi.</p>
+          <p>Một lát sau...</p>
+          <p>Lôi kiếp tan biến.</p>
+          <p>Hư không trở lại yên tĩnh.</p>
+          <p>Lâm Phàm đứng thẳng người, khí thế bàng bạc, đã hoàn toàn khác trước.</p>
+          <p>Hắn... đột phá thành công!</p>
+          <p>Đại Thừa cảnh!</p>
+          <p>Một cỗ sức mạnh khủng khiếp lan tỏa, làm rung chuyển cả một vùng hư không.</p>
+        </div>
+      </article>
+
+      <footer class="reader-bottom-bar">
+        <div>
+          <button type="button" (click)="toggleLeftPanel()">
+            <app-reader-account-icon name="menu" />
+            Mục lục
+          </button>
+          <button type="button" (click)="toggleRightPanel()">
+            <app-reader-account-icon name="settings" />
+            Cài đặt
+          </button>
+        </div>
+
+        <div class="bottom-navigation">
+          <button type="button">
+            <app-reader-account-icon name="arrow-left" />
+            Chương trước
+          </button>
+
+          <select aria-label="Chọn chương">
+            <option>Chương 1278</option>
+            <option>Chương 1277</option>
+            <option>Chương 1276</option>
+          </select>
+
+          <button type="button">
+            Chương tiếp theo
+            <app-reader-account-icon name="arrow-right" />
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <aside class="reader-right-panel" [class.open]="rightPanelOpen()">
+      <section class="settings-card">
+        <h2>Cài đặt đọc truyện</h2>
+
+        <div class="setting-row">
+          <span>Kích thước chữ</span>
+          <div class="font-size-control">
+            <button type="button" (click)="decreaseFont()">A-</button>
+            <strong>{{ fontSize() }}</strong>
+            <button type="button" (click)="increaseFont()">A+</button>
+          </div>
+        </div>
+
+        <label class="setting-row">
+          <span>Phông chữ</span>
+          <select [value]="fontFamily()" (change)="fontFamily.set($any($event.target).value)">
+            <option>Be Vietnam Pro</option>
+            <option>Georgia</option>
+            <option>Arial</option>
+          </select>
+        </label>
+
+        <div class="setting-row">
+          <span>Màu nền</span>
+          <div class="background-options">
+            <button
+              type="button"
+              aria-label="Nền trắng"
+              class="background-white"
+              [class.active]="background() === 'white'"
+              (click)="setBackground('white')"
+            ></button>
+            <button
+              type="button"
+              aria-label="Nền kem"
+              class="background-cream"
+              [class.active]="background() === 'cream'"
+              (click)="setBackground('cream')"
+            ></button>
+            <button
+              type="button"
+              aria-label="Nền xanh nhạt"
+              class="background-green"
+              [class.active]="background() === 'green'"
+              (click)="setBackground('green')"
+            ></button>
+            <button
+              type="button"
+              aria-label="Nền tối"
+              class="background-dark"
+              [class.active]="background() === 'dark'"
+              (click)="setBackground('dark')"
+            >
+              ✓
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span>Khoảng cách dòng</span>
+          <div class="segmented-control">
+            <button type="button" [class.active]="lineSpacing() === 'tight'" (click)="setLineSpacing('tight')">☰</button>
+            <button type="button" [class.active]="lineSpacing() === 'normal'" (click)="setLineSpacing('normal')">☰</button>
+            <button type="button" [class.active]="lineSpacing() === 'loose'" (click)="setLineSpacing('loose')">☰</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span>Lề trang</span>
+          <div class="segmented-control text-control">
+            <button type="button" [class.active]="pageWidth() === 'wide'" (click)="setPageWidth('wide')">Nhỏ</button>
+            <button type="button" [class.active]="pageWidth() === 'medium'" (click)="setPageWidth('medium')">Vừa</button>
+            <button type="button" [class.active]="pageWidth() === 'narrow'" (click)="setPageWidth('narrow')">Rộng</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span>Tự động cuộn</span>
+          <button
+            type="button"
+            class="switch"
+            [class.enabled]="autoScroll()"
+            (click)="toggleAutoScroll()"
+          >
+            <i></i>
+          </button>
+        </div>
+      </section>
+
+      <section class="reader-comments-card">
+        <h2>Bình luận <span>(152)</span></h2>
+
+        <div class="comment-composer">
+          <textarea placeholder="Viết bình luận của bạn..."></textarea>
+          <div>
+            <span>☺</span>
+            <button type="button">Gửi</button>
+          </div>
+        </div>
+
+        <div class="reader-comments">
+          @for (comment of comments; track comment.name + comment.time) {
+            <article>
+              <img [src]="comment.avatar" [alt]="comment.name" />
+              <div>
+                <div>
+                  <strong>{{ comment.name }}</strong>
+                  <time>{{ comment.time }}</time>
+                </div>
+                <p>{{ comment.content }}</p>
+                <footer>
+                  <span>♡ {{ comment.likes }}</span>
+                  <button type="button">Trả lời</button>
+                </footer>
+              </div>
+            </article>
+          }
+        </div>
+
+        <button class="all-comments-button" type="button">Xem tất cả bình luận</button>
+      </section>
+    </aside>
+  </main>
+</div>

@@ -1,0 +1,86 @@
+import { Routes } from '@angular/router';
+
+export const APP_ROUTES: Routes = [
+
+  // QLT_AUTH_LOGIN_ROUTE
+  {
+    path: 'auth/login',
+    title: 'Đăng nhập | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/auth/pages/auth-page/auth-page.component'
+      ).then((module) => module.AuthPageComponent),
+  },
+  // QLT_AUTH_REGISTER_ROUTE
+  {
+    path: 'auth/register',
+    title: 'Đăng ký | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/auth/pages/auth-page/auth-page.component'
+      ).then((module) => module.AuthPageComponent),
+  },
+
+
+  // QLT_CHAPTER_READER_ROUTE
+  {
+    path: 'read/:slug/:chapter',
+    title: 'Đọc chương | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/reading/pages/chapter-reader-page/chapter-reader-page.component'
+      ).then((module) => module.ChapterReaderPageComponent),
+  },
+  // QLT_ACCOUNT_ROUTE
+  {
+    path: 'account',
+    title: 'Tài khoản | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/account/pages/account-overview-page/account-overview-page.component'
+      ).then((module) => module.AccountOverviewPageComponent),
+  },
+
+
+  // QLT_AUTHOR_ROUTE
+  {
+    path: 'author',
+    title: 'Tác giả | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/author/pages/author-dashboard-page/author-dashboard-page.component'
+      ).then((module) => module.AuthorDashboardPageComponent),
+  },
+  // QLT_STORY_DETAIL_ROUTE
+  {
+    path: 'story/:slug',
+    title: 'Đại Đạo Chí Tôn | QuanLyTruyen',
+    loadComponent: () =>
+      import(
+        './features/stories/pages/story-detail-page/story-detail-page.component'
+      ).then((module) => module.StoryDetailPageComponent),
+  },
+
+  {
+    path: '',
+    title: 'QuanLyTruyen | Trang chủ',
+    loadComponent: () =>
+      import(
+        './features/home/pages/home-page/home-page.component'
+      ).then((module) => module.HomePageComponent),
+  },
+  {
+    path: 'dashboard',
+    title: 'Bảng điều khiển | Quản Lý Truyện',
+    loadComponent: () =>
+      import(
+        './features/dashboard/pages/dashboard-page/dashboard-page.component'
+      ).then((module) => module.DashboardPageComponent),
+  },
+  {
+    path: '**',
+    redirectTo: '',
+  },
+];
+
+export const routes = APP_ROUTES;

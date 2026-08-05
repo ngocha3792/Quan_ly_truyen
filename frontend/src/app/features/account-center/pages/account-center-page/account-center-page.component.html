@@ -1,0 +1,515 @@
+<div class="account-center">
+  <header class="top-header">
+    <div class="top-header-inner">
+      <a class="brand" routerLink="/">
+        <span><app-account-center-icon name="book" /></span>
+        QuanLyTruyen
+      </a>
+
+      <nav class="top-navigation" aria-label="Điều hướng">
+        <a routerLink="/">Trang chủ</a>
+        <a href="#" (click)="$event.preventDefault()">Thể loại</a>
+        <a href="#" (click)="$event.preventDefault()">Xếp hạng</a>
+        <a href="#" (click)="$event.preventDefault()">Tác giả</a>
+      </nav>
+
+      <label class="global-search">
+        <app-account-center-icon name="search" />
+        <input type="search" placeholder="Tìm kiếm truyện, tác giả..." />
+        <kbd>Ctrl K</kbd>
+      </label>
+
+      <div class="header-actions">
+        <button type="button" aria-label="Chế độ tối">
+          <app-account-center-icon name="moon" />
+        </button>
+        <button type="button" class="notification" aria-label="Thông báo">
+          <app-account-center-icon name="bell" />
+          <span>3</span>
+        </button>
+        <button type="button" class="header-user">
+          <img src="/assets/account-center/avatar-small.svg" alt="" />
+          <span>Nguyễn Văn A</span>
+          <app-account-center-icon name="chevron-down" />
+        </button>
+        <button
+          type="button"
+          class="mobile-menu"
+          aria-label="Mở menu tài khoản"
+          (click)="toggleSidebar()"
+        >
+          <app-account-center-icon name="menu" />
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <button
+    class="sidebar-overlay"
+    type="button"
+    aria-label="Đóng menu"
+    [class.visible]="sidebarOpen()"
+    (click)="closeSidebar()"
+  ></button>
+
+  <main class="account-layout">
+    <aside class="account-sidebar" [class.open]="sidebarOpen()">
+      <nav class="sidebar-main-nav">
+        @for (item of primaryNavigation; track item.key) {
+          <a
+            [routerLink]="item.route"
+            [class.active]="page() === item.key"
+            (click)="closeSidebar()"
+          >
+            <app-account-center-icon [name]="item.icon" />
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+
+      <section class="sidebar-section">
+        <span>Cài đặt</span>
+        @for (item of accountNavigation; track item.key) {
+          <a
+            [routerLink]="item.route"
+            [class.active]="page() === item.key"
+            (click)="closeSidebar()"
+          >
+            <app-account-center-icon [name]="item.icon" />
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </section>
+
+      <section class="sidebar-section">
+        <span>Khác</span>
+        <a href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="palette" />
+          <span>Tùy chỉnh giao diện</span>
+        </a>
+        <a href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="globe" />
+          <span>Ngôn ngữ</span>
+        </a>
+        <a class="danger" href="#" (click)="$event.preventDefault()">
+          <app-account-center-icon name="logout" />
+          <span>Đăng xuất</span>
+        </a>
+      </section>
+    </aside>
+
+    <section class="account-content">
+      <header class="page-header">
+        <div>
+          <h1>{{ title() }}</h1>
+          @if (page() === 'overview') {
+            <p>Quản lý hồ sơ, hoạt động đọc và quyền lợi thành viên của bạn.</p>
+          }
+        </div>
+      </header>
+
+      @switch (page()) {
+        @case ('overview') {
+          <section class="overview-grid">
+            <article class="profile-hero">
+              <div class="profile-background"></div>
+              <div class="profile-inner">
+                <img src="/assets/account-center/avatar.svg" alt="Nguyễn Văn A" />
+                <div>
+                  <h2>Nguyễn Văn A <span>VIP</span></h2>
+                  <small>Thành viên từ 15/03/2023</small>
+                  <p>
+                    <span><app-account-center-icon name="mail" />nguyenvana&#64;gmail.com</span>
+                    <span><app-account-center-icon name="phone" />0123 456 789</span>
+                  </p>
+                </div>
+                <button type="button">
+                  <app-account-center-icon name="edit" />
+                  Chỉnh sửa hồ sơ
+                </button>
+              </div>
+            </article>
+
+            <article class="vip-banner">
+              <span class="vip-medal"><app-account-center-icon name="crown" /></span>
+              <div>
+                <h2>Thành viên VIP <small>Còn 158 ngày</small></h2>
+                <p>Trải nghiệm đặc quyền dành riêng cho độc giả cao cấp.</p>
+              </div>
+              <div class="vip-benefits">
+                <span><app-account-center-icon name="book" /><b>Đọc không giới hạn</b></span>
+                <span><app-account-center-icon name="calendar" /><b>Đọc trước chương mới</b></span>
+                <span><app-account-center-icon name="library" /><b>Tải truyện offline</b></span>
+                <span><app-account-center-icon name="x" /><b>Không quảng cáo</b></span>
+              </div>
+              <button type="button">Gia hạn ngay</button>
+            </article>
+
+            <article class="panel overview-stats">
+              <h2>Thống kê của bạn</h2>
+              <div>
+                <span><i class="violet"><app-account-center-icon name="book" /></i><strong>126</strong><small>Truyện đã đọc</small></span>
+                <span><i class="blue"><app-account-center-icon name="bookmark" /></i><strong>24</strong><small>Truyện theo dõi</small></span>
+                <span><i class="orange"><app-account-center-icon name="star" /></i><strong>342</strong><small>Đánh giá đã viết</small></span>
+                <span><i class="green"><app-account-center-icon name="comment" /></i><strong>567</strong><small>Bình luận đã viết</small></span>
+              </div>
+            </article>
+
+            <article class="panel overview-reading">
+              <header><h2>Tiến độ đọc gần đây</h2><a routerLink="/account/history">Xem tất cả</a></header>
+              <div class="overview-story-grid">
+                @for (story of stories.slice(0, 5); track story.id) {
+                  <article>
+                    <img [src]="story.image" [alt]="story.title" />
+                    <div>
+                      <strong>{{ story.title }}</strong>
+                      <small>{{ story.chapter }}</small>
+                      <div><i [style.width.%]="story.progress"></i></div>
+                      <span>Đã đọc {{ story.progress }}%</span>
+                    </div>
+                  </article>
+                }
+              </div>
+            </article>
+          </section>
+        }
+
+        @case ('history') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div class="tabs">
+                @for (tab of ['Tất cả', 'Đang đọc', 'Đã hoàn thành', 'Đã tạm dừng']; track tab) {
+                  <button
+                    type="button"
+                    [class.active]="activeHistoryTab() === tab"
+                    (click)="activeHistoryTab.set(tab)"
+                  >
+                    {{ tab }}
+                  </button>
+                }
+              </div>
+              <button type="button" class="danger-button">Xóa lịch sử đọc</button>
+            </div>
+
+            <div class="history-list">
+              @for (story of stories.slice(0, 6); track story.id) {
+                <article>
+                  <img [src]="story.image" [alt]="story.title" />
+                  <div class="history-copy">
+                    <strong>{{ story.title }}</strong>
+                    <a href="#" (click)="$event.preventDefault()">{{ story.chapter }}</a>
+                    <small>Đọc đến {{ story.progress }}%</small>
+                    <div><i [style.width.%]="story.progress"></i></div>
+                  </div>
+                  <time>{{ story.updated }}</time>
+                  <button type="button">Tiếp tục đọc</button>
+                </article>
+              }
+            </div>
+          </article>
+        }
+
+        @case ('library') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div class="tabs">
+                @for (tab of ['Tất cả', 'Đã hoàn thành', 'Đang cập nhật', 'Tạm ngưng']; track tab) {
+                  <button
+                    type="button"
+                    [class.active]="activeLibraryTab() === tab"
+                    (click)="activeLibraryTab.set(tab)"
+                  >
+                    {{ tab }}
+                  </button>
+                }
+              </div>
+
+              <div class="library-tools">
+                <label>
+                  <app-account-center-icon name="search" />
+                  <input type="search" placeholder="Tìm trong thư viện..." />
+                </label>
+                <button type="button" aria-label="Hiển thị lưới">
+                  <app-account-center-icon name="dashboard" />
+                </button>
+              </div>
+            </div>
+
+            <div class="library-grid">
+              @for (story of stories; track story.id) {
+                <article>
+                  <div class="library-cover">
+                    <img [src]="story.image" [alt]="story.title" />
+                    <button type="button"><app-account-center-icon name="more" /></button>
+                  </div>
+                  <strong>{{ story.title }}</strong>
+                  <small>{{ story.chapter }}</small>
+                </article>
+              }
+            </div>
+          </article>
+        }
+
+        @case ('following') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div>
+                <h2>Truyện theo dõi</h2>
+                <p>Cập nhật mới nhất từ những truyện bạn quan tâm.</p>
+              </div>
+              <select aria-label="Sắp xếp">
+                <option>Mới cập nhật</option>
+                <option>Theo tên</option>
+                <option>Lượt đọc</option>
+              </select>
+            </div>
+
+            <div class="following-list">
+              @for (story of stories.slice(0, 5); track story.id) {
+                <article>
+                  <img [src]="story.image" [alt]="story.title" />
+                  <div>
+                    <strong>{{ story.title }}</strong>
+                    <a href="#" (click)="$event.preventDefault()">{{ story.chapter }}</a>
+                    <small>{{ story.updated }}</small>
+                  </div>
+                  <button type="button">Đọc ngay</button>
+                  <button type="button" class="icon-button"><app-account-center-icon name="bell" /></button>
+                </article>
+              }
+            </div>
+          </article>
+        }
+
+        @case ('reviews') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div>
+                <h2>Đánh giá của tôi</h2>
+                <p>Quản lý các đánh giá bạn đã chia sẻ.</p>
+              </div>
+              <div class="tabs compact-tabs">
+                <button class="active" type="button">Tất cả</button>
+                <button type="button">5 sao</button>
+                <button type="button">4 sao</button>
+              </div>
+            </div>
+
+            <div class="review-list">
+              @for (review of reviews; track review.id) {
+                <article>
+                  <img [src]="review.image" [alt]="review.title" />
+                  <div>
+                    <strong>{{ review.title }} <small>· {{ review.chapter }}</small></strong>
+                    <span>
+                      @for (star of [1, 2, 3, 4, 5]; track star) {
+                        <i [class.muted]="star > review.rating">★</i>
+                      }
+                    </span>
+                    <p>{{ review.content }}</p>
+                    <time>{{ review.time }}</time>
+                  </div>
+                  <div class="row-actions">
+                    <button type="button"><app-account-center-icon name="edit" /></button>
+                    <button type="button" class="delete"><app-account-center-icon name="trash" /></button>
+                  </div>
+                </article>
+              }
+            </div>
+          </article>
+        }
+
+        @case ('comments') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div>
+                <h2>Bình luận của tôi</h2>
+                <p>Những cuộc trò chuyện và phản hồi gần đây.</p>
+              </div>
+              <div class="tabs compact-tabs">
+                <button class="active" type="button">Tất cả</button>
+                <button type="button">Truyện</button>
+                <button type="button">Chương</button>
+              </div>
+            </div>
+
+            <div class="comment-list">
+              @for (comment of comments; track comment.id) {
+                <article>
+                  <img src="/assets/account-center/avatar-small.svg" alt="" />
+                  <div>
+                    <strong>{{ comment.title }} <small>· {{ comment.chapter }}</small></strong>
+                    <p>{{ comment.content }}</p>
+                    <footer>
+                      <time>{{ comment.time }}</time>
+                      <button type="button">Chỉnh sửa</button>
+                      <button type="button">Trả lời</button>
+                    </footer>
+                  </div>
+                  <span>♡ {{ comment.likes }}</span>
+                </article>
+              }
+            </div>
+          </article>
+        }
+
+        @case ('profile') {
+          <article class="panel settings-page-panel">
+            <h2>Thông tin tài khoản</h2>
+
+            <form (submit)="$event.preventDefault()">
+              <div class="avatar-form-row">
+                <img src="/assets/account-center/avatar.svg" alt="Ảnh đại diện" />
+                <button type="button">
+                  <app-account-center-icon name="camera" />
+                  Thay đổi ảnh
+                </button>
+                <small>JPG, PNG, tối đa 2MB</small>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>Họ và tên</span>
+                  <input type="text" value="Nguyễn Văn A" />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input type="email" value="nguyenvana@gmail.com" />
+                </label>
+                <label>
+                  <span>Số điện thoại</span>
+                  <input type="tel" value="0123 456 789" />
+                </label>
+                <label>
+                  <span>Ngày sinh</span>
+                  <input type="date" value="1995-01-15" />
+                </label>
+                <label>
+                  <span>Giới tính</span>
+                  <select>
+                    <option>Nam</option>
+                    <option>Nữ</option>
+                    <option>Khác</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Địa chỉ</span>
+                  <input type="text" value="Hà Nội, Việt Nam" />
+                </label>
+              </div>
+
+              <button class="primary-button" type="submit">Lưu thay đổi</button>
+            </form>
+          </article>
+        }
+
+        @case ('security') {
+          <div class="settings-stack">
+            <article class="panel settings-page-panel">
+              <h2>Đổi mật khẩu</h2>
+              <form class="security-form" (submit)="$event.preventDefault()">
+                <label><span>Mật khẩu hiện tại</span><input type="password" placeholder="••••••••••" /></label>
+                <label><span>Mật khẩu mới</span><input type="password" placeholder="••••••••••" /></label>
+                <label><span>Xác nhận mật khẩu mới</span><input type="password" placeholder="••••••••••" /></label>
+                <button class="primary-button" type="submit">Đổi mật khẩu</button>
+              </form>
+            </article>
+
+            <article class="panel security-option-card">
+              <div>
+                <span><app-account-center-icon name="shield" /></span>
+                <div><strong>Xác thực 2 lớp (2FA)</strong><p>Tăng cường bảo mật cho tài khoản của bạn.</p></div>
+              </div>
+              <button type="button">Bật 2FA</button>
+            </article>
+
+            <article class="panel security-option-card">
+              <div>
+                <span><app-account-center-icon name="phone" /></span>
+                <div><strong>Thiết bị đăng nhập</strong><p>Quản lý các thiết bị đã đăng nhập.</p></div>
+              </div>
+              <button type="button">Quản lý</button>
+            </article>
+          </div>
+        }
+
+        @case ('notifications') {
+          <article class="panel notification-settings-panel">
+            <h2>Cài đặt thông báo</h2>
+
+            @for (setting of [
+              { key: 'system', title: 'Thông báo từ hệ thống', description: 'Nhận thông báo về các cập nhật, bảo trì' },
+              { key: 'following', title: 'Thông báo truyện theo dõi', description: 'Nhận thông báo khi truyện có chương mới' },
+              { key: 'comments', title: 'Thông báo bình luận', description: 'Nhận thông báo khi có người bình luận' },
+              { key: 'reviews', title: 'Thông báo đánh giá', description: 'Nhận thông báo khi có người thích đánh giá' },
+              { key: 'email', title: 'Thông báo email', description: 'Nhận thông báo qua email' },
+              { key: 'mobile', title: 'Thông báo đẩy', description: 'Nhận thông báo bên ngoài duyệt' }
+            ]; track setting.key) {
+              <article>
+                <div>
+                  <strong>{{ setting.title }}</strong>
+                  <p>{{ setting.description }}</p>
+                </div>
+                <button
+                  type="button"
+                  class="switch"
+                  [class.enabled]="notificationEnabled(setting.key)"
+                  (click)="toggleNotification(setting.key)"
+                >
+                  <i></i>
+                </button>
+              </article>
+            }
+          </article>
+        }
+
+        @case ('transactions') {
+          <article class="panel full-page-panel">
+            <div class="toolbar">
+              <div>
+                <h2>Lịch sử giao dịch</h2>
+                <p>Theo dõi các khoản nạp xu và gói thành viên.</p>
+              </div>
+              <div class="tabs compact-tabs">
+                <button class="active" type="button">Tất cả</button>
+                <button type="button">Nạp xu</button>
+                <button type="button">Mua VIP</button>
+              </div>
+            </div>
+
+            <div class="transaction-table-wrap">
+              <table class="transaction-table">
+                <thead>
+                  <tr>
+                    <th>Mã giao dịch</th>
+                    <th>Loại giao dịch</th>
+                    <th>Số tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (transaction of transactions; track transaction.id) {
+                    <tr>
+                      <td>{{ transaction.id }}</td>
+                      <td>{{ transaction.type }}</td>
+                      <td>{{ transaction.amount }}</td>
+                      <td><span>{{ transaction.status }}</span></td>
+                      <td>{{ transaction.date }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <button class="active" type="button">1</button>
+              <button type="button">2</button>
+              <button type="button">›</button>
+            </div>
+          </article>
+        }
+      }
+    </section>
+  </main>
+</div>
