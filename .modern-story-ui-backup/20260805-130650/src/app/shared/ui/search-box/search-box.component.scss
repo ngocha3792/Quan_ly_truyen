@@ -1,0 +1,27 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.search-box {
+  display: flex;
+  height: 2.4rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--ui-border, #2c394b);
+  border-radius: 0.65rem;
+  background: var(--ui-surface, #111b29);
+  color: var(--ui-muted, #8f9bad);
+}
+.search-box input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.search-box input::placeholder {
+  color: inherit;
+}

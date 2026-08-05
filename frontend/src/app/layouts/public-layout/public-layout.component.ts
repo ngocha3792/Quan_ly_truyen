@@ -17,7 +17,13 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppLogoComponent, ButtonDirective, SearchBoxComponent } from '../../shared/ui';
+import { AutoTranslateDirective } from '../../core/i18n';
+import { PreferencesControlComponent } from '../../core/preferences/preferences-control.component';
+import {
+  AppLogoComponent,
+  ButtonDirective,
+  SearchBoxComponent,
+} from '../../shared/ui';
 
 export interface PublicNavigationItem {
   readonly label: string;
@@ -37,6 +43,8 @@ interface PublicRouteMeta {
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    AutoTranslateDirective,
+    PreferencesControlComponent,
     AppLogoComponent,
     ButtonDirective,
     SearchBoxComponent,
@@ -60,6 +68,10 @@ export class PublicLayoutComponent implements OnInit {
     this.mobileNavOpen.update((open) => !open);
   }
 
+  closeMobileNav(): void {
+    this.mobileNavOpen.set(false);
+  }
+
   ngOnInit(): void {
     this.refreshRouteMeta();
     this.router.events
@@ -68,7 +80,7 @@ export class PublicLayoutComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => {
-        this.mobileNavOpen.set(false);
+        this.closeMobileNav();
         this.refreshRouteMeta();
       });
   }

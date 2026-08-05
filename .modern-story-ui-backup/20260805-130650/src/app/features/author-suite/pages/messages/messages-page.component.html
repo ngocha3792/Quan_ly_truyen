@@ -1,0 +1,25 @@
+<section class="messages">
+  <article class="panel inbox" appCard>
+    <label>⌕<input placeholder="Tìm kiếm tin nhắn..." /></label>
+    @for (m of messages; track m[0]) {
+      <button appButton>
+        <img [src]="m[3]" [alt]="m[0]" /><span
+          ><b>{{ m[0] }}</b
+          ><small>{{ m[1] }}</small></span
+        ><time>{{ m[2] }}</time>
+      </button>
+    }
+  </article>
+  <article class="panel chat" appCard>
+    <header>
+      <img src="/assets/author-suite/avatar-1.svg" alt="" /><span
+        ><b>Bình Minh</b><small>Độc giả trung thành</small></span
+      >
+    </header>
+    <div>
+      <p>Chào tác giả! Truyện Ma Đạo Chí Tôn viết rất hay, mong tác giả ra chương mới sớm nhé!</p>
+      <p>Cảm ơn bạn đã ủng hộ! Mình sẽ cố gắng ra chương mới đều đặn.</p>
+    </div>
+    <footer><input placeholder="Nhập tin nhắn..." /><button appButton>➤</button></footer>
+  </article>
+</section>

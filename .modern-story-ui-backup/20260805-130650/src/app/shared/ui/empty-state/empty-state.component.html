@@ -1,0 +1,8 @@
+<section class="empty-state" role="status">
+  <span aria-hidden="true">◇</span>
+  <h2>{{ title }}</h2>
+  @if (description) {
+    <p>{{ description }}</p>
+  }
+  <ng-content />
+</section>

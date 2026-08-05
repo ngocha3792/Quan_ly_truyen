@@ -1,0 +1,54 @@
+<article class="admin-panel page-panel" appCard>
+  <div class="filter-row">
+    <label
+      ><app-admin-center-icon name="search" /><input type="search" placeholder="Tìm kiếm chương..."
+    /></label>
+    <div>
+      <button appButton><app-admin-center-icon name="filter" />Bộ lọc</button
+      ><button class="primary-action" appButton>
+        <app-admin-center-icon name="plus" />Thêm chương
+      </button>
+    </div>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table" appDataTable>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên chương</th>
+          <th>Số từ</th>
+          <th>Lượt đọc</th>
+          <th>Ngày đăng</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (chapter of chapters; track chapter.id) {
+          <tr>
+            <td>{{ chapter.id }}</td>
+            <td>
+              <strong>Chương {{ chapter.id }}: {{ chapter.title }}</strong>
+            </td>
+            <td>{{ chapter.words }}</td>
+            <td>{{ chapter.views }}</td>
+            <td>{{ chapter.date }}</td>
+            <td><span class="status status--green" appStatusBadge>Đã duyệt</span></td>
+            <td>
+              <div class="row-actions">
+                <button appButton><app-admin-center-icon name="edit" /></button
+                ><button appButton><app-admin-center-icon name="eye" /></button
+                ><button class="danger" appButton><app-admin-center-icon name="trash" /></button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button class="active" appButton>1</button><button appButton>2</button
+    ><button appButton>3</button><button appButton>4</button><button appButton>5</button
+    ><button appButton>›</button>
+  </div>
+</article>

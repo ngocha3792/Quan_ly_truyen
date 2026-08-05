@@ -1,0 +1,40 @@
+<article class="admin-panel page-panel" appCard>
+  <div class="filter-row">
+    <div></div>
+    <div>
+      <label
+        ><app-admin-center-icon name="search" /><input
+          type="search"
+          placeholder="Tìm kiếm hoạt động..." /></label
+      ><button appButton><app-admin-center-icon name="filter" />Bộ lọc</button>
+    </div>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table" appDataTable>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Người thực hiện</th>
+          <th>Hành động</th>
+          <th>Đối tượng</th>
+          <th>Thời gian</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of activities; track item.id) {
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <strong>{{ item.actor }}</strong>
+            </td>
+            <td>{{ item.action }}</td>
+            <td>{{ item.object }}</td>
+            <td>{{ item.time }}</td>
+            <td>{{ item.ip }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</article>

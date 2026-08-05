@@ -1,0 +1,26 @@
+<div class="preferences-control" role="group" aria-label="Tùy chọn giao diện">
+  <button
+    appButton
+    variant="ghost"
+    size="sm"
+    class="preferences-control__button"
+    type="button"
+    [attr.aria-label]="preferences.isDark() ? 'Chế độ sáng' : 'Chế độ tối'"
+    [attr.title]="preferences.isDark() ? 'Chế độ sáng' : 'Chế độ tối'"
+    (click)="preferences.toggleTheme()"
+  >
+    <span aria-hidden="true">{{ preferences.isDark() ? '☀' : '☾' }}</span>
+  </button>
+  <button
+    appButton
+    variant="ghost"
+    size="sm"
+    class="preferences-control__button preferences-control__language"
+    type="button"
+    aria-label="Đổi ngôn ngữ"
+    title="Đổi ngôn ngữ"
+    (click)="preferences.toggleLanguage()"
+  >
+    {{ preferences.language() === 'vi' ? 'VI' : 'EN' }}
+  </button>
+</div>

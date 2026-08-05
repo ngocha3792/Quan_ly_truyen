@@ -1,21 +1,16 @@
-import { ChangeDetectionStrategy, Component, ViewEncapsulation, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { AppLogoComponent, ButtonDirective } from '../../../../shared/ui';
-import { AuthIconComponent } from '../../components/auth-icon/auth-icon.component';
+import { AutoTranslateDirective } from '../../../../core/i18n';
+import { PreferencesControlComponent } from '../../../../core/preferences/preferences-control.component';
+import { AppLogoComponent } from '../../../../shared/ui';
 
 @Component({
   selector: 'app-auth-layout',
   standalone: true,
-  imports: [RouterLink, RouterOutlet, AppLogoComponent, AuthIconComponent, ButtonDirective],
+  imports: [RouterLink, RouterOutlet, AutoTranslateDirective, AppLogoComponent, PreferencesControlComponent],
   templateUrl: './auth-layout.component.html',
   styleUrls: ['../../styles/auth.pages.scss'],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AuthLayoutComponent {
-  readonly darkMode = signal(true);
-
-  toggleTheme(): void {
-    this.darkMode.update((enabled) => !enabled);
-  }
-}
+export class AuthLayoutComponent {}

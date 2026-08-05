@@ -1,4 +1,5 @@
 <div
+  appAutoTranslate
   class="workspace-layout"
   [class.admin-center]="variant === 'admin'"
   [class.suite]="variant === 'author'"
@@ -15,10 +16,14 @@
   ></button>
 
   <aside class="workspace-sidebar" [class.open]="sidebarOpen()">
-    <a class="workspace-brand" [routerLink]="navigation[0]?.route || '/'" (click)="closeSidebar()">
-      <app-logo [caption]="brandCaption" />
-    </a>
+    <div class="workspace-sidebar__head">
+      <a class="workspace-brand" [routerLink]="navigation[0]?.route || '/'" (click)="closeSidebar()">
+        <app-logo [caption]="brandCaption" />
+      </a>
+      <button appButton variant="ghost" class="workspace-sidebar__close" type="button" aria-label="Đóng menu" (click)="closeSidebar()">×</button>
+    </div>
 
+    <div class="workspace-sidebar__label">Không gian làm việc</div>
     <nav class="workspace-navigation" aria-label="Điều hướng chức năng">
       @for (item of navigation; track item.route) {
         <a
@@ -29,6 +34,7 @@
         >
           <span class="workspace-navigation__icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
+          <span class="workspace-navigation__arrow" aria-hidden="true">›</span>
         </a>
       }
     </nav>
@@ -40,16 +46,24 @@
         class="workspace-primary-action"
         [routerLink]="primaryActionRoute"
         (click)="closeSidebar()"
-        >{{ primaryActionLabel }}</a
       >
+        <span aria-hidden="true">＋</span>{{ primaryActionLabel }}
+      </a>
     }
+
+    <div class="workspace-sidebar__spacer"></div>
+
+    <a class="workspace-back-home" routerLink="/">
+      <span aria-hidden="true">↗</span><span>Về trang đọc truyện</span>
+    </a>
 
     <div class="workspace-user-card">
       <app-avatar [src]="avatarSrc" [name]="userName" />
-      <span
-        ><strong>{{ userName }}</strong
-        ><small>{{ userRole }}</small></span
-      >
+      <span>
+        <strong>{{ userName }}</strong>
+        <small>{{ userRole }}</small>
+      </span>
+      <span aria-hidden="true">•••</span>
     </div>
   </aside>
 
@@ -57,24 +71,30 @@
     <header class="workspace-topbar">
       <button
         appButton
+        variant="ghost"
         class="workspace-menu"
         type="button"
         aria-label="Mở menu"
         (click)="toggleSidebar()"
       >
-        ☰
+        <span></span><span></span><span></span>
       </button>
+
       <app-page-header [title]="routeMeta().title" [description]="routeMeta().description" />
+
       <div class="workspace-topbar__actions">
         <app-search-box [placeholder]="searchPlaceholder" />
-        <button appButton class="workspace-notification" type="button" aria-label="Thông báo">
-          ♢
+        <app-preferences-control />
+        <button appButton variant="ghost" class="workspace-notification" type="button" aria-label="Thông báo">
+          <span aria-hidden="true">♢</span>
           @if (notificationCount > 0) {
-            <span>{{ notificationCount }}</span>
+            <span class="workspace-notification__badge">{{ notificationCount }}</span>
           }
         </button>
-        <button appButton class="workspace-account" type="button">
-          <app-avatar size="sm" [src]="avatarSrc" [name]="userName" /><span>{{ userName }}</span>
+        <button appButton variant="ghost" class="workspace-account" type="button">
+          <app-avatar size="sm" [src]="avatarSrc" [name]="userName" />
+          <span>{{ userName }}</span>
+          <span aria-hidden="true">⌄</span>
         </button>
       </div>
     </header>

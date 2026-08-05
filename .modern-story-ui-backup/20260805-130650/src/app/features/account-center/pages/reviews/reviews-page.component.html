@@ -1,0 +1,39 @@
+<article class="panel full-page-panel" appCard>
+  <div class="toolbar">
+    <div>
+      <h2>Đánh giá của tôi</h2>
+      <p>Quản lý các đánh giá bạn đã chia sẻ.</p>
+    </div>
+    <div class="tabs compact-tabs">
+      <button class="active" type="button" appButton>Tất cả</button>
+      <button type="button" appButton>5 sao</button>
+      <button type="button" appButton>4 sao</button>
+    </div>
+  </div>
+
+  <div class="review-list">
+    @for (review of reviews; track review.id) {
+      <article>
+        <img [src]="review.image" [alt]="review.title" />
+        <div>
+          <strong
+            >{{ review.title }} <small>· {{ review.chapter }}</small></strong
+          >
+          <span>
+            @for (star of [1, 2, 3, 4, 5]; track star) {
+              <i [class.muted]="star > review.rating">★</i>
+            }
+          </span>
+          <p>{{ review.content }}</p>
+          <time>{{ review.time }}</time>
+        </div>
+        <div class="row-actions">
+          <button type="button" appButton><app-account-center-icon name="edit" /></button>
+          <button type="button" class="delete" appButton>
+            <app-account-center-icon name="trash" />
+          </button>
+        </div>
+      </article>
+    }
+  </div>
+</article>

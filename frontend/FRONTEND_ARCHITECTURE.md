@@ -1,46 +1,72 @@
 # Frontend architecture
 
-## Quy Æ°á»›c
+Frontend dùng Angular standalone components và chia theo feature. Route chỉ làm nhiệm vụ lazy-load layout/page; trạng thái hiển thị nằm trong facade/view-model hiện có.
 
-- Má»—i khu vá»±c nghiá»‡p vá»¥ cÃ³ file route riÃªng táº¡i `src/app/features/<feature>/<feature>.routes.ts`.
-- Routed page chá»‰ giá»¯ shell (header/sidebar); tá»«ng tráº¡ng thÃ¡i route náº±m trong view component riÃªng.
-- Logic vÃ  mock data dÃ¹ng chung cá»§a cÃ¡c view náº±m trong `*.base.ts`. Khi ná»‘i API tháº­t, chuyá»ƒn data access sang facade/service theo feature.
-- CSS cá»§a page Ä‘Æ°á»£c scope báº±ng root class cá»§a feature Ä‘á»ƒ trÃ¡nh selector nhÆ° `.panel`, `.sidebar`, `.tabs` Ä‘Ã¨ nhau.
-- Global style chá»‰ chá»©a token, reset, typography, utility vÃ  theme.
-- CÃ¡c feature cÅ© khÃ´ng cÃ²n route Ä‘Æ°á»£c chuyá»ƒn ra khá»i `src/app/features` bá»Ÿi PowerShell wrapper vÃ  váº«n náº±m trong báº£n backup.
-
-## Káº¿t quáº£ refactor
-
-- admin-center: 12 view component
-- account-center: 10 view component
-- author-suite: 12 view component
-- public-site: 12 view component
-
-- Route objects trÆ°á»›c khi dá»n: 57
-- Route paths sau khi loáº¡i trÃ¹ng: 51
-- Route modules: 5
-
-## Cáº¥u trÃºc chuáº©n
+## Cấu trúc chính
 
 ```text
 src/app/
-â”œâ”€â”€ app.routes.ts
-â”œâ”€â”€ features/
-â”‚   â””â”€â”€ <feature>/
-â”‚       â”œâ”€â”€ <feature>.routes.ts
-â”‚       â””â”€â”€ pages/
-â”‚           â””â”€â”€ <page>/
-â”‚               â”œâ”€â”€ <page>.component.ts       # shell
-â”‚               â”œâ”€â”€ <page>.component.html     # shell
-â”‚               â”œâ”€â”€ <page>.component.scss    # style Ä‘Ã£ scope
-â”‚               â”œâ”€â”€ <page>.base.ts            # state/data dÃ¹ng chung
-â”‚               â””â”€â”€ <page>.*-view.component.* # view theo route
-â”œâ”€â”€ shared/
-â”‚   â””â”€â”€ ui/
-â””â”€â”€ styles/
-    â”œâ”€â”€ tokens/
-    â”œâ”€â”€ base/
-    â”œâ”€â”€ components/
-    â”œâ”€â”€ utilities/
-    â””â”€â”€ themes/
+├── core/
+│   ├── i18n/
+│   │   ├── auto-translate.directive.ts
+│   │   └── i18n.service.ts
+│   └── preferences/
+│       ├── app-preferences.service.ts
+│       └── preferences-control.component.*
+├── layouts/
+│   ├── public-layout/
+│   └── workspace-layout/
+├── shared/ui/
+│   ├── app-logo/
+│   ├── avatar/
+│   ├── button/
+│   └── ...
+└── features/
+    ├── public-site/
+    ├── auth/
+    ├── account-center/
+    ├── author-suite/
+    └── admin-center/
 ```
+
+## Layout
+
+- `PublicLayoutComponent`: header, search, navigation, mobile drawer, footer và preference controls cho web đọc truyện.
+- `WorkspaceLayoutComponent`: sidebar/topbar dùng chung cho account, author và admin; từng khu vực chỉ truyền navigation, user data và accent.
+- `AuthLayoutComponent`: chrome tối giản cho đăng nhập/đăng ký, dùng chung preference controls.
+
+Không copy header/sidebar vào page. Page chỉ chứa nội dung nghiệp vụ của route.
+
+## Shared UI
+
+Các primitive dùng lại đặt trong `shared/ui`: button, card, avatar, logo, search và page header. Preference control thuộc `core/preferences` vì nó điều phối state ứng dụng. Style card, form, table, metric, toolbar, chart shell và responsive workspace nằm trong `src/styles/components/_workspace-pages.scss`.
+
+Feature stylesheet chỉ giữ phần khác biệt thật sự, ví dụ accent của account/author/admin hoặc bố cục đặc thù của public/auth.
+
+## Dark mode
+
+`AppPreferencesService` quản lý `light | dark`, lưu `qlt-theme` vào `localStorage` và áp dụng `data-theme` lên `<html>`. Script nhỏ trong `index.html` đọc theme trước khi Angular bootstrap để tránh flash sai theme.
+
+Màu sắc phải dùng design tokens (`--color-*`) thay vì hard-code trong component mới.
+
+## Language switch
+
+`AppPreferencesService` quản lý `vi | en`, lưu `qlt-language`. `I18nService` chứa dictionary và `AutoTranslateDirective` dịch text node cùng các thuộc tính `placeholder`, `aria-label`, `title` tại ba layout gốc. Nội dung không có key dịch sẽ giữ nguyên, vì vậy tên truyện/tác giả và dữ liệu người dùng không bị sửa.
+
+Khi thêm label giao diện mới, bổ sung bản dịch tương ứng trong `core/i18n/i18n.service.ts`.
+
+## Responsive rules
+
+- Public: desktop navigation chuyển thành drawer dưới `1120px`; grid truyện giảm dần 5 → 4 → 3 → 2 cột.
+- Workspace: sidebar chuyển thành off-canvas dưới `1080px`; table giữ scroll ngang.
+- Form hai cột chuyển thành một cột dưới `760px`.
+
+## One-shot migration
+
+Chạy từ repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Modernize-Frontend-OneShot.ps1
+```
+
+Script tự tìm `frontend/angular.json`, backup `frontend/src`, áp dụng payload UI, chạy `npm install` và `npm run build`. Có thể dùng `-SkipInstall`, `-SkipBuild` hoặc `-NoBackup` khi cần.

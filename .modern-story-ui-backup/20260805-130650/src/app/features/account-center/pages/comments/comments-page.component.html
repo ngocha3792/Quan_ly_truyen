@@ -1,0 +1,33 @@
+<article class="panel full-page-panel" appCard>
+  <div class="toolbar">
+    <div>
+      <h2>Bình luận của tôi</h2>
+      <p>Những cuộc trò chuyện và phản hồi gần đây.</p>
+    </div>
+    <div class="tabs compact-tabs">
+      <button class="active" type="button" appButton>Tất cả</button>
+      <button type="button" appButton>Truyện</button>
+      <button type="button" appButton>Chương</button>
+    </div>
+  </div>
+
+  <div class="comment-list">
+    @for (comment of comments; track comment.id) {
+      <article>
+        <img src="/assets/account-center/avatar-small.svg" alt="" />
+        <div>
+          <strong
+            >{{ comment.title }} <small>· {{ comment.chapter }}</small></strong
+          >
+          <p>{{ comment.content }}</p>
+          <footer>
+            <time>{{ comment.time }}</time>
+            <button type="button" appButton>Chỉnh sửa</button>
+            <button type="button" appButton>Trả lời</button>
+          </footer>
+        </div>
+        <span>♡ {{ comment.likes }}</span>
+      </article>
+    }
+  </div>
+</article>

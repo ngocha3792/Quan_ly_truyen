@@ -1,0 +1,42 @@
+<section class="editor">
+  <article class="panel steps" appCard>
+    @for (
+      s of ['Thông tin cơ bản', 'Thể loại & Tag', 'Giới thiệu', 'Ảnh bìa', 'Xem lại & Đăng'];
+      track s;
+      let i = $index
+    ) {
+      <span [class.active]="i === 0"
+        ><b>{{ i + 1 }}</b
+        >{{ s }}</span
+      >
+    }
+  </article>
+  <article class="panel form" appCard>
+    <h2>Thông tin cơ bản</h2>
+    <label><span>Tên truyện *</span><input placeholder="Nhập tên truyện của bạn..." /></label
+    ><label
+      ><span>Tên khác (nếu có)</span><input placeholder="Tên tiếng Anh, tên Hán Việt..."
+    /></label>
+    <div>
+      <label
+        ><span>Thể loại chính *</span
+        ><select>
+          <option>Chọn thể loại</option>
+        </select></label
+      ><label
+        ><span>Trạng thái</span
+        ><select>
+          <option>Đang ra</option>
+        </select></label
+      >
+    </div>
+    <footer>
+      <button appButton>Hủy</button><button class="primary" appButton>Tiếp theo →</button>
+    </footer>
+  </article>
+  <article class="panel preview" appCard>
+    <h2>Xem trước</h2>
+    <div>▧<small>Ảnh bìa xem trước</small></div>
+    <b>Tên truyện</b><small>Thể loại · Đang ra</small>
+  </article>
+</section>

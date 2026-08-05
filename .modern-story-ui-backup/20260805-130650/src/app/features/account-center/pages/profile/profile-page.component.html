@@ -1,0 +1,47 @@
+<article class="panel settings-page-panel" appCard>
+  <h2>Thông tin tài khoản</h2>
+
+  <form (submit)="$event.preventDefault()">
+    <div class="avatar-form-row">
+      <img src="/assets/account-center/avatar.svg" alt="Ảnh đại diện" />
+      <button type="button" appButton>
+        <app-account-center-icon name="camera" />
+        Thay đổi ảnh
+      </button>
+      <small>JPG, PNG, tối đa 2MB</small>
+    </div>
+
+    <div class="form-grid">
+      <label>
+        <span>Họ và tên</span>
+        <input type="text" value="Nguyễn Văn A" />
+      </label>
+      <label>
+        <span>Email</span>
+        <input type="email" value="nguyenvana@gmail.com" />
+      </label>
+      <label>
+        <span>Số điện thoại</span>
+        <input type="tel" value="0123 456 789" />
+      </label>
+      <label>
+        <span>Ngày sinh</span>
+        <input type="date" value="1995-01-15" />
+      </label>
+      <label>
+        <span>Giới tính</span>
+        <select>
+          <option>Nam</option>
+          <option>Nữ</option>
+          <option>Khác</option>
+        </select>
+      </label>
+      <label>
+        <span>Địa chỉ</span>
+        <input type="text" value="Hà Nội, Việt Nam" />
+      </label>
+    </div>
+
+    <button class="primary-button" type="submit" appButton>Lưu thay đổi</button>
+  </form>
+</article>

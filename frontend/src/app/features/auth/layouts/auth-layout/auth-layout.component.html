@@ -1,9 +1,12 @@
-<div class="auth-page" [class.auth-page--light]="!darkMode()">
+<div appAutoTranslate class="auth-page">
   <header class="auth-header">
-    <a class="auth-brand" routerLink="/"><app-logo [compact]="true" /></a>
-    <button appButton class="theme-button" type="button" (click)="toggleTheme()">
-      <app-auth-icon name="moon" />{{ darkMode() ? 'Chế độ tối' : 'Chế độ sáng' }}
-    </button>
+    <a class="auth-brand" routerLink="/">
+      <app-logo caption="Đọc một chương, sống một thế giới" />
+    </a>
+    <div class="auth-header__actions">
+      <a routerLink="/" class="auth-home-link">← Trang chủ</a>
+      <app-preferences-control />
+    </div>
   </header>
   <router-outlet />
 </div>

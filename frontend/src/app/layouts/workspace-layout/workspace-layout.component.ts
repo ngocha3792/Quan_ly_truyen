@@ -18,6 +18,8 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AutoTranslateDirective } from '../../core/i18n';
+import { PreferencesControlComponent } from '../../core/preferences/preferences-control.component';
 import {
   AppLogoComponent,
   AvatarComponent,
@@ -45,6 +47,8 @@ interface WorkspaceRouteMeta {
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    AutoTranslateDirective,
+    PreferencesControlComponent,
     AppLogoComponent,
     AvatarComponent,
     ButtonDirective,

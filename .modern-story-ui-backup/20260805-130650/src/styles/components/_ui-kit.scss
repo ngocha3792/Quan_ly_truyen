@@ -1,0 +1,47 @@
+.ui-button {
+  font: inherit;
+  cursor: pointer;
+}
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ui-button--primary {
+  border-color: transparent !important;
+  background: #7752e8 !important;
+  color: #fff !important;
+}
+.ui-button--danger {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #fecaca !important;
+}
+.ui-button--ghost {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+.ui-button--sm {
+  min-height: 1.9rem;
+}
+.ui-button--lg {
+  min-height: 2.8rem;
+}
+.ui-card {
+  min-width: 0;
+  isolation: isolate;
+}
+.ui-card--raised {
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.16);
+}
+.ui-card--flat {
+  box-shadow: none !important;
+}
+.ui-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ui-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
