@@ -15,8 +15,19 @@ export function configureSecurityHeaders(
   expressApp.use(
     config.swaggerEnabled
       ? helmet({
-          // Swagger UI sử dụng inline script/style.
-          contentSecurityPolicy: false,
+          // Swagger UI sử dụng inline script/style nên cần CSP tùy chỉnh thay vì tắt hẳn.
+          contentSecurityPolicy: {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'blob:'],
+              fontSrc: ["'self'", 'data:'],
+              connectSrc: ["'self'"],
+              objectSrc: ["'none'"],
+              frameAncestors: ["'self'"],
+            },
+          },
 
           // API trả JSON/media URL, không cần bật COEP toàn cục.
           crossOriginEmbedderPolicy: false,

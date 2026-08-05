@@ -610,10 +610,8 @@ export class OAuthFlowService {
     };
   }
 
-  private async consumeState(
-    state: string | undefined,
-  ): Promise<OAuthStateRecord> {
-    if (!state || state.length > 256) {
+  private async consumeState(state: unknown): Promise<OAuthStateRecord> {
+    if (typeof state !== 'string' || !state || state.length > 256) {
       throw new OAuthFlowInvalidException();
     }
     const raw = await this.requireRedis().getdel(this.stateKey(state));
