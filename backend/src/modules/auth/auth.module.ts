@@ -14,9 +14,7 @@ import { PrismaModule } from '@/infrastructure/database';
 import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
 
 import {
-  ACCOUNT_SETTINGS_PERSISTENCE_PORT,
   ADMIN_MFA_CHALLENGE_PORT,
-  AuthAccountSettingsService,
   AUTH_AUDIT_READER_PORT,
   GetSecurityEventsQueryHandler,
   CURRENT_USER_READER_PORT,
@@ -69,7 +67,6 @@ import {
   JwtRefreshTokenVerifier,
   PrismaEmailVerificationPersistence,
   PrismaAccessSessionReader,
-  PrismaAccountSettingsPersistence,
   PrismaLoginPersistence,
   PrismaRefreshSessionPersistence,
   PrismaRegistrationUnitOfWork,
@@ -172,10 +169,8 @@ const idGeneratorProvider = {
     OAuthFlowService,
 
     PrismaAuthAuditReader,
-    PrismaAccountSettingsPersistence,
 
     GetSecurityEventsQueryHandler,
-    AuthAccountSettingsService,
 
     RefreshCookieCsrfGuard,
     RevokeSessionCommandHandler,
@@ -223,10 +218,6 @@ const idGeneratorProvider = {
     JwtAuthTokenIssuer,
     JwtRefreshTokenVerifier,
     JwtAccessStrategy,
-    {
-      provide: ACCOUNT_SETTINGS_PERSISTENCE_PORT,
-      useExisting: PrismaAccountSettingsPersistence,
-    },
     {
       provide: ADMIN_MFA_CHALLENGE_PORT,
       useExisting: RedisAdminMfaChallengeStore,
@@ -350,4 +341,4 @@ const idGeneratorProvider = {
     AccessAuthorizationCacheService,
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

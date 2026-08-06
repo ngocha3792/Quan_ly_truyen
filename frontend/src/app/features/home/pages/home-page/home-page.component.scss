@@ -75,7 +75,7 @@ h1 { margin: 1.05rem 0 .75rem; color: #fff; font-size: clamp(2rem, 3.1vw, 3rem);
 .recommendation-copy { position: relative; width: 67%; padding: 1.3rem; }
 .recommendation-copy > span { color: var(--primary-soft); font-size: .8rem; font-weight: 750; text-transform: uppercase; }
 .recommendation-copy h3 { margin: .45rem 0 .5rem; font-size: 1.25rem; letter-spacing: -.025em; }
-.recommendation-copy p { display: -webkit-box; margin: 0; overflow: hidden; color: #aeb4c5; font-size: .85rem; line-height: 1.55; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.recommendation-copy p { display: -webkit-box; margin: 0; overflow: hidden; color: #aeb4c5; font-size: .85rem; line-height: 1.55; line-clamp: 3; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .recommendation-copy > div { display: flex; align-items: center; gap: .65rem; margin-top: 1rem; }
 .recommendation-copy small { display: flex; align-items: center; gap: .25rem; color: #c5c8d5; font-size: .8rem; }
 .recommendation-copy small:first-child { color: #ffc36b; }

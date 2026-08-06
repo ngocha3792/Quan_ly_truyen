@@ -44,6 +44,24 @@ export type IconName =
   | 'chevron-left'
   | 'chevron-right'
   | 'fire'
+  | 'trophy'
+  | 'book'
+  | 'fire'
+  | 'users'
+  | 'star'
+  | 'book-open'
+  | 'calendar'
+  | 'calendar-days'
+  | 'heart'
+  | 'zap'
+  | 'eye'
+  | 'message-circle'
+  | 'clock'
+  | 'sparkles'
+  | 'chevron-down'
+  | 'eye'
+  | 'sparkles'
+  | 'chevron-right'
   | 'play'
   | 'rotate-ccw'
   | 'save'
@@ -94,6 +112,46 @@ export type IconName =
   <path d="m5 17-2 4 4-2" />
   <path d="m19 3 2 2-9 9-2-2Z" />
 }
+@case ('book-open') {
+  <path
+    d="M2 4h6a4 4 0 0 1 4 4v12a4 4 0 0 0-4-4H2Z"
+  />
+
+  <path
+    d="M22 4h-6a4 4 0 0 0-4 4v12a4 4 0 0 1 4-4h6Z"
+  />
+}
+
+@case ('calendar-days') {
+  <rect
+    x="3"
+    y="5"
+    width="18"
+    height="16"
+    rx="2"
+  />
+
+  <path d="M16 3v4" />
+  <path d="M8 3v4" />
+  <path d="M3 10h18" />
+  <path d="M8 14h.01" />
+  <path d="M12 14h.01" />
+  <path d="M16 14h.01" />
+  <path d="M8 18h.01" />
+  <path d="M12 18h.01" />
+}
+
+@case ('zap') {
+  <path
+    d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"
+  />
+}
+
+@case ('message-circle') {
+  <path
+    d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.7 9.7 0 0 1-4.4-1L3 21l1.7-4.4A8.4 8.4 0 1 1 21 11.5Z"
+  />
+}
 
 @case ('wand') {
   <path d="m15 4 5 5" />
@@ -103,6 +161,25 @@ export type IconName =
   <path d="M4 6h4" />
   <path d="M18 15v4" />
   <path d="M16 17h4" />
+}
+@case ('users') {
+  <path
+    d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+  />
+
+  <circle
+    cx="9"
+    cy="7"
+    r="4"
+  />
+
+  <path
+    d="M22 21v-2a4 4 0 0 0-3-3.87"
+  />
+
+  <path
+    d="M16 3.13a4 4 0 0 1 0 7.75"
+  />
 }
 
 @case ('heart') {

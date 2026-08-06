@@ -1,7 +1,7 @@
 <main class="page-container detail-page">
-  @if (story() === undefined) {
+  @if (store.loading()) {
     <div class="loading"></div>
-  } @else if (story(); as item) {
+  } @else if (store.story(); as item) {
     <nav class="breadcrumb"><a routerLink="/">Trang chủ</a><span>/</span><a routerLink="/danh-sach">Truyện</a><span>/</span><b>{{ item.title }}</b></nav>
     <section class="story-hero">
       <div class="backdrop-image" [style.background-image]="'url(' + item.coverUrl + ')'" aria-hidden="true"></div>
@@ -20,14 +20,23 @@
       </div>
     </section>
 
-    <section class="chapters-panel">
-      <div class="panel-heading"><div><span></span><h2>Danh sách chương</h2></div><small>{{ item.latestChapter.number }} chương</small></div>
-      <div class="chapter-list">
-        @for (offset of chapters; track offset) {
-          <a href="#" (click)="$event.preventDefault()"><span>Chương {{ item.latestChapter.number - offset }}</span><small>{{ offset === 0 ? 'Mới nhất' : (offset + 1) + ' ngày trước' }}</small><app-icon name="chevron-right" [size]="16" /></a>
-        }
+    <div class="detail-body-layout">
+      <div class="main-content">
+        <section class="chapters-panel">
+          <div class="panel-heading"><div><span></span><h2>Danh sách chương</h2></div><small>{{ item.latestChapter.number }} chương</small></div>
+          <div class="chapter-list">
+            @for (offset of chapters; track offset) {
+              <a href="#" (click)="$event.preventDefault()"><span>Chương {{ item.latestChapter.number - offset }}</span><small>{{ offset === 0 ? 'Mới nhất' : (offset + 1) + ' ngày trước' }}</small><app-icon name="chevron-right" [size]="16" /></a>
+            }
+          </div>
+        </section>
       </div>
-    </section>
+
+      <aside class="side-content">
+        <app-story-comments [comments]="store.comments()" />
+        <app-story-related [relatedStories]="store.relatedStories()" />
+      </aside>
+    </div>
   } @else {
     <section class="not-found"><span>404</span><h1>Không tìm thấy truyện</h1><p>Truyện bạn tìm có thể đã bị xóa hoặc đổi đường dẫn.</p><a routerLink="/">Về trang chủ</a></section>
   }

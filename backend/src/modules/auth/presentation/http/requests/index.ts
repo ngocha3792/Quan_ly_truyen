@@ -9,5 +9,3 @@ export * from './request-email-change.request';
 
 export * from './confirm-email-change.request';
 export * from './admin-mfa.request';
-export * from './update-profile.request';
-export * from './delete-account.request';

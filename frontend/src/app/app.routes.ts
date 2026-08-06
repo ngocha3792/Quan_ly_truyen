@@ -3,7 +3,11 @@ import { Routes } from '@angular/router';
 import { authenticatedGuard } from './core/auth/authenticated.guard';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
 import { provideGenreDiscovery } from './features/genre-discovery/data-access/genre-discovery.providers';
+import { provideHome } from './features/home/data-access/home.providers';
 import { provideStoryCatalog } from './features/story-catalog/data-access/story-catalog.providers';
+import { provideStoryDetail } from './features/story/data-access/story.providers';
+import { provideStoryRanking } from './features/story-ranking/data-access/story-ranking.providers';
+import { provideStoryUpdates } from './features/story-updates/data-access/story-updates.providers';
 import { environment } from '../environments/environment';
 
 export const routes: Routes = [
@@ -15,6 +19,9 @@ export const routes: Routes = [
         path: '',
         pathMatch: 'full',
         title: 'TruyenHub - Đọc truyện online',
+        providers: provideHome({
+          useMock: true,
+        }),
         loadComponent: () =>
           import('./features/home/pages/home-page/home-page.component').then(
             (module) => module.HomePageComponent,
@@ -23,6 +30,9 @@ export const routes: Routes = [
       {
         path: 'truyen/:slug',
         title: 'Chi tiết truyện - TruyenHub',
+        providers: provideStoryDetail({
+          useMock: true,
+        }),
         loadComponent: () =>
           import('./features/story/pages/story-detail/story-detail.component').then(
             (module) => module.StoryDetailComponent,
@@ -64,7 +74,43 @@ export const routes: Routes = [
                 .GenreDiscoveryPageComponent,
           ),
       },
+      {
+        path: 'xep-hang',
 
+        title:
+          'Xếp hạng truyện - TruyenHub',
+
+        providers:
+          provideStoryRanking({
+            useMock:
+              environment
+                .storyRankingUseMock,
+          }),
+
+        loadComponent: () =>
+          import(
+            './features/story-ranking/pages/story-ranking-page/story-ranking-page.component'
+          ).then(
+            (module) =>
+              module
+                .StoryRankingPageComponent,
+          ),
+      },
+      {
+        path: 'cap-nhat',
+        title: 'Cập nhật truyện mới - TruyenHub',
+        providers: provideStoryUpdates({
+          useMock: environment.storyUpdatesUseMock,
+        }),
+        loadComponent: () =>
+          import(
+            './features/story-updates/pages/story-updates-page/story-updates-page.component'
+          ).then(
+            (module) =>
+              module
+                .StoryUpdatesPageComponent,
+          ),
+      },
       /*
        * Toàn bộ trang tài khoản phải đi qua
        * ACCOUNT_ROUTES và AccountLayoutComponent.
@@ -122,8 +168,6 @@ export const routes: Routes = [
 
 function staticRoutes(): Routes {
   const definitions = [
-    ['xep-hang', 'Xếp hạng', 'Bảng xếp hạng truyện.'],
-    ['cap-nhat', 'Cập nhật mới', 'Các truyện vừa cập nhật.'],
     ['thu-vien', 'Thư viện', 'Quản lý thư viện truyện riêng.'],
     ['lich-su', 'Lịch sử đọc', 'Theo dõi lịch sử đọc truyện.'],
     ['gioi-thieu', 'Giới thiệu', 'Thông tin về TruyenHub.'],

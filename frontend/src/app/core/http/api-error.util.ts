@@ -6,7 +6,10 @@ interface ApiValidationIssue {
   readonly message?: unknown;
 }
 
-export function getApiErrorMessage(error: unknown): string {
+export function getApiErrorMessage(
+  error: unknown,
+  fallbackMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.',
+): string {
   if (error instanceof HttpErrorResponse) {
     const body = error.error as Partial<ApiErrorEnvelope> | undefined;
 
@@ -56,7 +59,7 @@ export function getApiErrorMessage(error: unknown): string {
     return error.message.trim();
   }
 
-  return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+  return fallbackMessage;
 }
 
 function getValidationIssueMessage(

@@ -1,0 +1,81 @@
+<section class="table-card">
+    <div class="table-header">
+        <span>#</span>
+        <span>Truyện</span>
+        <span>Thể loại</span>
+        <span>Chương mới nhất</span>
+        <span>Lượt đọc</span>
+        <span>Đánh giá</span>
+    </div>
+
+    @for (
+    story of stories();
+    track story.id
+    ) {
+    <a class="table-row" [routerLink]="[
+        '/truyen',
+        story.slug
+      ]">
+        <div class="rank-cell" data-label="Xếp hạng">
+            <strong>
+                {{ story.rank }}
+            </strong>
+
+            <app-rank-movement [delta]="
+            story.rankChange
+          " />
+        </div>
+
+        <div class="story-cell" data-label="Truyện">
+            <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+
+            <div>
+                <strong>
+                    {{ story.title }}
+                </strong>
+
+                @if (story.authorName) {
+                <small>
+                    {{ story.authorName }}
+                </small>
+                }
+            </div>
+        </div>
+
+        <div class="genre-cell" data-label="Thể loại">
+            @for (
+            genre of
+            story.genres.slice(0, 2);
+            track genre.slug
+            ) {
+            <span>
+                {{ genre.name }}
+            </span>
+            }
+        </div>
+
+        <div class="chapter-cell" data-label="Chương mới nhất">
+            Ch. {{ story.latestChapter }}
+        </div>
+
+        <div class="views-cell" data-label="Lượt đọc">
+            <app-icon name="eye" [size]="13" />
+
+            {{
+            story.viewCount
+            | compactNumber
+            }}
+        </div>
+
+        <div class="rating-cell" data-label="Đánh giá">
+            <app-icon name="star" [size]="14" />
+
+            {{ story.rating }}
+        </div>
+    </a>
+    } @empty {
+    <div class="empty-state">
+        Chưa có dữ liệu xếp hạng.
+    </div>
+    }
+</section>

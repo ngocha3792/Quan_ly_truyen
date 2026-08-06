@@ -84,9 +84,9 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
 
     styles: `
     .trending-card {
-      padding: 16px;
+      padding: 1.25rem;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       background:
         linear-gradient(
           145deg,
@@ -96,21 +96,21 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
     }
 
     h2 {
-      margin: 0 0 12px;
+      margin: 0 0 1rem;
       color: #f0edf4;
-      font-size: .875rem;
+      font-size: 1.15rem;
       line-height: 1.4;
     }
 
     .trending-list {
       display: grid;
-      gap: 9px;
+      gap: 12px;
     }
 
     .trending-item {
       display: grid;
       grid-template-columns:
-        34px minmax(0, 1fr) auto;
+        42px minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
       color: inherit;
@@ -118,10 +118,10 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
     }
 
     img {
-      width: 34px;
-      height: 34px;
+      width: 42px;
+      height: 42px;
       object-fit: cover;
-      border-radius: 5px;
+      border-radius: 6px;
     }
 
     .trending-item > div {
@@ -132,12 +132,12 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
 
     strong {
       color: #dcd9e1;
-      font-size: .75rem;
+      font-size: 1rem;
     }
 
     small {
       color: #a9b0be;
-      font-size: .6875rem;
+      font-size: .85rem;
     }
 
     .progress {
@@ -191,16 +191,16 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
     }
 
     .statistics-link {
-      min-height: 34px;
-      margin-top: 13px;
+      min-height: 40px;
+      margin-top: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid
         rgba(127, 68, 205, .37);
-      border-radius: 6px;
+      border-radius: 8px;
       color: #ba7af5;
-      font-size: .75rem;
+      font-size: .9rem;
       font-weight: 700;
       text-decoration: none;
       background:

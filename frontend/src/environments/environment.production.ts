@@ -4,4 +4,6 @@ export const environment = {
   appName: 'TruyenHub',
   storyCatalogUseMock: false,
   genreDiscoveryUseMock: false,
+  storyRankingUseMock: false,
+  storyUpdatesUseMock: false
 } as const;

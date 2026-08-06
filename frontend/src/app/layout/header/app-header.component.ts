@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { of, switchMap } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth.store';
-import { HomeRepository } from '../../features/home/data/home.repository';
-import { AuthDialogComponent } from '../../features/auth/components/auth-dialog/auth-dialog.component';
+import { HomeRepository } from '../../features/home/data-access/home.repository';
+import { Story } from '../../features/home/domain/home.models';
+import { AuthDialogComponent } from '../../features/auth/ui/auth-dialog/auth-dialog.component';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -36,7 +39,12 @@ export class AppHeaderComponent {
     { label: 'Cập nhật', route: '/cap-nhat' },
   ];
 
-  protected readonly suggestions = computed(() => this.repository.searchStories(this.query()));
+  protected readonly suggestions = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) => (q.trim() ? this.repository.searchStories(q) : of([]))),
+    ),
+    { initialValue: [] as readonly Story[] },
+  );
 
   protected toggleMobile(): void {
     this.mobileOpen.update((value) => !value);

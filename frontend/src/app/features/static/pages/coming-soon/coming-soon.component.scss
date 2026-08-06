@@ -1,0 +1,101 @@
+.coming-soon-container {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.coming-soon-card {
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 3rem 2rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 77, 232, 0.25) 0%, rgba(140, 77, 232, 0.05) 70%);
+  border: 1px solid rgba(140, 77, 232, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-soft);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0 30px rgba(140, 77, 232, 0.2);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.775rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-soft);
+  background: rgba(140, 77, 232, 0.12);
+  border: 1px solid rgba(140, 77, 232, 0.25);
+  border-radius: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 0.85rem 0;
+  line-height: 1.3;
+}
+
+.description {
+  font-size: 0.975rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+  max-width: 420px;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.925rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+
+  &.btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(140, 77, 232, 0.4);
+
+    &:hover {
+      background: #7b3cd6;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(140, 77, 232, 0.5);
+    }
+  }
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}

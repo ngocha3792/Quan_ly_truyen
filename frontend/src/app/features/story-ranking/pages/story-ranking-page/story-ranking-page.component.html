@@ -1,0 +1,92 @@
+<main class="ranking-page">
+    <div class="page-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a routerLink="/">Trang chủ</a>
+            <span>›</span>
+            <span>Xếp hạng truyện</span>
+        </nav>
+
+        <header class="page-heading">
+            <div>
+                <h1>
+                    Xếp hạng truyện
+                    <app-icon name="trophy" [size]="18" />
+                </h1>
+
+                <p>
+                    Theo dõi những bộ truyện nổi bật nhất
+                    theo lượt xem, đánh giá và xu hướng đọc.
+                </p>
+            </div>
+        </header>
+
+        @if (store.error()) {
+        <section class="error-alert">
+            <div>
+                <strong>
+                    Không thể tải bảng xếp hạng
+                </strong>
+
+                <span>
+                    {{ store.error() }}
+                </span>
+            </div>
+
+            <button type="button" (click)="store.reload()">
+                Thử lại
+            </button>
+        </section>
+        }
+
+        <div class="ranking-layout">
+            <section class="ranking-main">
+                <app-ranking-filter-bar [period]="
+            store.query().period
+          " [metric]="
+            store.query().metric
+          " (periodChange)="
+            changePeriod($event)
+          " (metricChange)="
+            changeMetric($event)
+          " />
+
+                @if (
+                store.loading() &&
+                !store.hasData()
+                ) {
+                <section class="loading-state">
+                    <span class="spinner"></span>
+
+                    <p>
+                        Đang tải bảng xếp hạng...
+                    </p>
+                </section>
+                } @else {
+                <app-ranking-podium [stories]="
+              store.topStories()
+            " />
+
+                <app-ranking-table [stories]="
+              store.remainingStories()
+            " />
+                }
+            </section>
+
+            <aside class="ranking-aside">
+                <app-ranking-summary-card [summary]="
+            store.summary()
+          " />
+
+                <app-genre-distribution-card [genres]="
+            store.genres()
+          " />
+
+                <app-ranking-trend-card [trends]="
+            store.trends()
+          " />
+
+                <app-ranking-discovery-card />
+            </aside>
+        </div>
+    </div>
+</main>

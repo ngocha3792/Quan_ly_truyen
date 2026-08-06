@@ -7,12 +7,12 @@ import {
 
 import { Router } from '@angular/router';
 
-import { AccountProfileFormComponent } from '../../components/account-profile-form/account-profile-form.component';
-import { ProfileCompletionCardComponent } from '../../components/profile-completion-card/profile-completion-card.component';
+import { AccountProfileFormComponent } from '../../ui/account-profile-form/account-profile-form.component';
+import { ProfileCompletionCardComponent } from '../../ui/profile-completion-card/profile-completion-card.component';
 
-import { AccountProfileFormValue } from '../../data/account-profile.models';
-import { AccountPreferencesStore } from '../../data/account-preferences.store';
-import { AccountProfileStore } from '../../data/account-profile.store';
+import { AccountProfileFormValue } from '../../domain/account-profile.models';
+import { AccountPreferencesStore } from '../../data-access/account-preferences.store';
+import { AccountProfileStore } from '../../data-access/account-profile.store';
 
 @Component({
     selector:

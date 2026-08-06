@@ -12,4 +12,3 @@ export * from './request-email-change.response';
 
 export * from './confirm-email-change.response';
 export * from './security-event.response';
-export * from './security-overview.response';

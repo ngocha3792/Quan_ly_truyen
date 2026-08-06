@@ -83,9 +83,9 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
 
     styles: `
     .ranking-card {
-      padding: 16px;
+      padding: 1.25rem;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       background:
         linear-gradient(
           145deg,
@@ -95,7 +95,7 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
     }
 
     header {
-      margin-bottom: 10px;
+      margin-bottom: 1rem;
     }
 
     header > div {
@@ -108,7 +108,7 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
     h2 {
       margin: 0;
       color: #f0edf4;
-      font-size: .875rem;
+      font-size: 1.15rem;
     }
 
     .ranking-list {
@@ -116,26 +116,26 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
     }
 
     .ranking-item {
-      min-height: 37px;
+      min-height: 44px;
       display: grid;
       grid-template-columns:
-        24px minmax(0, 1fr) auto;
+        28px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 7px;
+      gap: 10px;
       color: inherit;
       text-decoration: none;
     }
 
     .rank {
-      width: 22px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       display: grid;
       place-items: center;
       border: 1px solid
         rgba(122, 135, 165, .34);
       border-radius: 50%;
       color: #99a2b4;
-      font-size: .6875rem;
+      font-size: .85rem;
       font-weight: 800;
     }
 
@@ -156,25 +156,25 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
 
     strong {
       color: #dfdce4;
-      font-size: .75rem;
+      font-size: 1rem;
     }
 
     small {
       color: #778195;
-      font-size: .6875rem;
+      font-size: .85rem;
     }
 
     .ranking-link {
-      min-height: 34px;
-      margin-top: 10px;
+      min-height: 40px;
+      margin-top: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid
         rgba(127, 68, 205, .37);
-      border-radius: 6px;
+      border-radius: 8px;
       color: #ba7af5;
-      font-size: .75rem;
+      font-size: .9rem;
       font-weight: 700;
       text-decoration: none;
       background:

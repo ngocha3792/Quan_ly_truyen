@@ -24,7 +24,6 @@ import {
 import { Idempotent } from '@/common/decorators/interceptor';
 
 import {
-  AuthAccountSettingsService,
   GetCurrentUserQuery,
   GetCurrentUserQueryHandler,
   GetSecurityEventsQuery,
@@ -37,14 +36,10 @@ import {
 import type { CurrentUserResultDto } from '../../../application';
 
 import { AuthCookieService } from '../cookies';
-import {
-  DeleteAccountRequest,
-  UpdateProfileRequest,
-} from '../requests';
+
 import type {
   CurrentUserResponse,
   SecurityEventsResponse,
-  SecurityOverviewResponse,
   SessionsResponse,
 } from '../responses';
 
@@ -59,10 +54,8 @@ export class AuthAccountController {
 
     private readonly revokeSessionCommandHandler: RevokeSessionCommandHandler,
 
-    private readonly accountSettings: AuthAccountSettingsService,
-
     private readonly authCookies: AuthCookieService,
-  ) {}
+  ) { }
 
   @Get('me')
   async getCurrentUser(
@@ -82,62 +75,6 @@ export class AuthAccountController {
     );
 
     return toCurrentUserResponse(result);
-  }
-
-  @Patch('profile')
-  @Idempotent({
-    required: true,
-    ttlSeconds: 300,
-  })
-  async updateProfile(
-    @CurrentUserId()
-    userId: string | undefined,
-
-    @CurrentSessionId()
-    sessionId: string | undefined,
-
-    @Body()
-    request: UpdateProfileRequest,
-
-    @Res({ passthrough: true })
-    response: Response,
-  ): Promise<CurrentUserResponse> {
-    this.authCookies.setNoStoreHeaders(response);
-
-    const result = await this.accountSettings.updateProfile(
-      userId,
-      sessionId,
-      request,
-    );
-
-    return toCurrentUserResponse(result);
-  }
-
-  @Get('security-overview')
-  async getSecurityOverview(
-    @CurrentUserId()
-    userId: string | undefined,
-
-    @Res({ passthrough: true })
-    response: Response,
-  ): Promise<SecurityOverviewResponse> {
-    this.authCookies.setNoStoreHeaders(response);
-
-    const result = await this.accountSettings.getSecurityOverview(userId);
-
-    return {
-      passwordConfigured: result.passwordConfigured,
-      passwordUpdatedAt: result.passwordUpdatedAt?.toISOString() ?? null,
-
-      mfaEnabled: result.mfaEnabled,
-      mfaConfiguredAt: result.mfaConfiguredAt?.toISOString() ?? null,
-
-      recoveryEmail: result.recoveryEmail,
-      recoveryEmailVerified: result.recoveryEmailVerified,
-
-      securityQuestionsConfigured: result.securityQuestionsConfigured,
-      trustedDeviceCount: result.trustedDeviceCount,
-    };
   }
 
   @Get('sessions')
@@ -242,33 +179,6 @@ export class AuthAccountController {
     if (sessionId === currentSessionId) {
       this.authCookies.clearAuthCookies(response);
     }
-  }
-
-  @Delete('account')
-  @Idempotent({
-    required: true,
-    ttlSeconds: 86_400,
-  })
-  @SkipResponseEnvelope()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAccount(
-    @CurrentUserId()
-    userId: string | undefined,
-
-    @CurrentSessionId()
-    sessionId: string | undefined,
-
-    @Body()
-    request: DeleteAccountRequest,
-
-    @Res({ passthrough: true })
-    response: Response,
-  ): Promise<void> {
-    this.authCookies.setNoStoreHeaders(response);
-
-    await this.accountSettings.deleteAccount(userId, sessionId, request);
-
-    this.authCookies.clearAuthCookies(response);
   }
 }
 
