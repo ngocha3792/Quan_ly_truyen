@@ -51,12 +51,12 @@ import {
     }
 
     .switch-card {
-      min-height: 62px;
-      padding: 12px 14px;
+      min-height: 66px;
+      padding: 14px 16px;
       display: grid;
       grid-template-columns: auto 1fr auto;
       align-items: center;
-      gap: 11px;
+      gap: 12px;
       border: 1px solid var(--border);
       border-radius: 9px;
       cursor: pointer;
@@ -72,7 +72,7 @@ import {
     }
 
     .switch-icon {
-      color: #b78aff;
+      color: #c084fc;
     }
 
     .switch-copy {
@@ -82,14 +82,15 @@ import {
     }
 
     strong {
-      color: #e9e7ef;
-      font-size: 11px;
+      color: #f8fafc;
+      font-size: 13.5px;
+      font-weight: 650;
     }
 
     small {
       overflow: hidden;
-      color: #737e92;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 11.5px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -101,8 +102,8 @@ import {
     }
 
     .switch-control {
-      width: 32px;
-      height: 18px;
+      width: 36px;
+      height: 20px;
       padding: 2px;
       display: flex;
       border-radius: 20px;
@@ -111,8 +112,8 @@ import {
     }
 
     .switch-control span {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: #c4c8d3;
       transition: transform 160ms ease;
@@ -127,7 +128,7 @@ import {
     }
 
     input:checked + .switch-control span {
-      transform: translateX(14px);
+      transform: translateX(16px);
       background: #fff;
     }
   `,

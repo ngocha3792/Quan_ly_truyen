@@ -60,8 +60,9 @@ import { WeeklySummaryItem } from '../../domain/account-activity.models';
 
     h2 {
       margin: 0 0 19px;
-      color: #ebe9ef;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     .summary-list {
@@ -72,19 +73,21 @@ import { WeeklySummaryItem } from '../../domain/account-activity.models';
     .summary-item {
       display: grid;
       grid-template-columns:
-        95px minmax(0, 1fr) 24px;
+        110px minmax(0, 1fr) 28px;
       align-items: center;
       gap: 10px;
     }
 
     .summary-item > span {
-      color: #8a94a7;
-      font-size: 8px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .summary-item strong {
-      color: #dcd9e2;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 12.5px;
+      font-weight: 600;
       text-align: right;
     }
 

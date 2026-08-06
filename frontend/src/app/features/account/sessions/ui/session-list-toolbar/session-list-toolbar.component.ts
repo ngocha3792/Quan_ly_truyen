@@ -110,8 +110,9 @@ import { SessionFilter } from '../../domain/account-session.models';
 
     h2 {
       margin: 0;
-      color: #ebe9ef;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 15px;
+      font-weight: 700;
       white-space: nowrap;
     }
 
@@ -125,20 +126,20 @@ import { SessionFilter } from '../../domain/account-session.models';
 
     .search-field,
     .filter-field {
-      min-height: 37px;
+      min-height: 42px;
       display: flex;
       align-items: center;
       border: 1px solid
         rgba(139, 151, 181, .2);
       border-radius: 7px;
-      color: #707b90;
+      color: #94a3b8;
       background:
         rgba(5, 10, 21, .48);
     }
 
     .search-field {
-      width: 235px;
-      padding: 0 11px;
+      width: 250px;
+      padding: 0 12px;
       gap: 8px;
     }
 
@@ -147,8 +148,8 @@ import { SessionFilter } from '../../domain/account-session.models';
       flex: 1;
       border: 0;
       outline: 0;
-      color: #dcd9e3;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13.5px;
       background: transparent;
     }
 
@@ -159,13 +160,13 @@ import { SessionFilter } from '../../domain/account-session.models';
 
     .filter-field select {
       width: 100%;
-      min-height: 35px;
+      min-height: 40px;
       padding: 0 34px 0 12px;
       appearance: none;
       border: 0;
       outline: 0;
-      color: #b6bdca;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13.5px;
       cursor: pointer;
       background: transparent;
     }
@@ -177,21 +178,21 @@ import { SessionFilter } from '../../domain/account-session.models';
     }
 
     .filter-field option {
-      color: #e5e3ea;
+      color: #f8fafc;
       background: #101728;
     }
 
     .revoke-all-button {
-      min-height: 38px;
-      padding: 0 14px;
+      min-height: 42px;
+      padding: 0 16px;
       display: inline-flex;
       align-items: center;
       gap: 7px;
       border: 0;
       border-radius: 7px;
       color: #fff;
-      font-size: 9px;
-      font-weight: 750;
+      font-size: 13px;
+      font-weight: 650;
       cursor: pointer;
       background:
         linear-gradient(

@@ -5,6 +5,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { SectionHeadingComponent } from '../../../../shared/components/section-heading/section-heading.component';
 import { StoryCardComponent } from '../../../../shared/components/story-card/story-card.component';
@@ -23,7 +24,10 @@ import { HomeStore } from '../../data-access/home.store';
     SectionHeadingComponent,
     StoryCardComponent,
   ],
+
+  // Store chỉ tồn tại trong vòng đời của trang Home.
   providers: [HomeStore],
+
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',

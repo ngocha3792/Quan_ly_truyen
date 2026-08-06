@@ -3,9 +3,9 @@
 }
 
 .alert {
-    padding: 12px 14px;
+    padding: 13px 16px;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 12.5px;
 
     &.error {
         border: 1px solid rgba(251, 113, 133, 0.24);
@@ -49,8 +49,8 @@
     place-items: center;
     border-radius: 8px;
     color: #c28aff;
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 700;
     background:
         rgba(125, 63, 209, 0.18);
 }
@@ -67,27 +67,28 @@ label {
     gap: 7px;
 
     >span {
-        color: #aeb5c4;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 600;
     }
 
     >small {
-        color: #667085;
-        font-size: 9px;
+        color: #94a3b8;
+        font-size: 12px;
     }
 }
 
 input,
 select {
     width: 100%;
-    min-height: 41px;
-    padding: 0 12px;
+    min-height: 42px;
+    padding: 0 14px;
     border: 1px solid rgba(139, 151, 181, 0.25);
     border-radius: 8px;
     outline: 0;
-    color: #eceaf0;
+    color: #f8fafc;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 14px;
     background:
         rgba(5, 10, 21, 0.55);
 
@@ -98,7 +99,7 @@ select {
 }
 
 select option {
-    color: #e8e6ed;
+    color: #f8fafc;
     background: #101728;
 }
 
@@ -111,7 +112,7 @@ select option {
     border: 1px solid rgba(251, 113, 133, 0.22);
     border-radius: 7px;
     color: #fda4b5;
-    font-size: 10px;
+    font-size: 12.5px;
     background:
         rgba(190, 24, 93, 0.08);
 }
@@ -123,11 +124,11 @@ select option {
 
 .primary-button,
 .danger-button {
-    min-height: 39px;
-    padding: 0 16px;
+    min-height: 42px;
+    padding: 0 18px;
     border-radius: 7px;
-    font-size: 10px;
-    font-weight: 750;
+    font-size: 13.5px;
+    font-weight: 650;
     cursor: pointer;
 
     &:disabled {
@@ -162,8 +163,9 @@ select option {
 
     h3 {
         margin: 0 0 13px;
-        color: #e8e5ed;
-        font-size: 12px;
+        color: #f8fafc;
+        font-size: 14.5px;
+        font-weight: 700;
     }
 
     ul {
@@ -174,8 +176,8 @@ select option {
     }
 
     li {
-        color: #778196;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 12.5px;
         line-height: 1.65;
     }
 }

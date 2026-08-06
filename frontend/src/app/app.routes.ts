@@ -8,24 +8,26 @@ import { provideStoryCatalog } from './features/story-catalog/data-access/story-
 import { provideStoryDetail } from './features/story/data-access/story.providers';
 import { provideStoryRanking } from './features/story-ranking/data-access/story-ranking.providers';
 import { provideStoryUpdates } from './features/story-updates/data-access/story-updates.providers';
+import { HomePageComponent } from './features/home/pages/home-page/home-page.component';
 import { environment } from '../environments/environment';
 
 export const routes: Routes = [
   {
     path: '',
     component: AppShellComponent,
+
+    // HomeRepository phải nằm ở route cha vì AppHeaderComponent cũng sử dụng nó.
+    providers: provideHome({
+      useMock: true,
+    }),
     children: [
       {
         path: '',
         pathMatch: 'full',
         title: 'TruyenHub - Đọc truyện online',
-        providers: provideHome({
-          useMock: true,
-        }),
-        loadComponent: () =>
-          import('./features/home/pages/home-page/home-page.component').then(
-            (module) => module.HomePageComponent,
-          ),
+
+        // Import trực tiếp thay vì lazy-load.
+        component: HomePageComponent,
       },
       {
         path: 'truyen/:slug',
@@ -149,6 +151,38 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'gioi-thieu',
+        title: 'Giới thiệu - TruyenHub',
+        loadComponent: () =>
+          import(
+            './features/static/pages/about-page/about-page.component'
+          ).then((module) => module.AboutPageComponent),
+      },
+      {
+        path: 'dieu-khoan',
+        title: 'Điều khoản sử dụng - TruyenHub',
+        loadComponent: () =>
+          import(
+            './features/static/pages/terms-page/terms-page.component'
+          ).then((module) => module.TermsPageComponent),
+      },
+      {
+        path: 'quyen-rieng-tu',
+        title: 'Chính sách quyền riêng tư - TruyenHub',
+        loadComponent: () =>
+          import(
+            './features/static/pages/privacy-page/privacy-page.component'
+          ).then((module) => module.PrivacyPageComponent),
+      },
+      {
+        path: 'cong-dong',
+        title: 'Liên hệ hỗ trợ - TruyenHub',
+        loadComponent: () =>
+          import(
+            './features/static/pages/support-page/support-page.component'
+          ).then((module) => module.SupportPageComponent),
+      },
+      {
         path: 'change-email/confirm',
         title: 'Xác nhận email mới - TruyenHub',
         data: { authActionMode: 'confirm-email-change' },
@@ -170,9 +204,6 @@ function staticRoutes(): Routes {
   const definitions = [
     ['thu-vien', 'Thư viện', 'Quản lý thư viện truyện riêng.'],
     ['lich-su', 'Lịch sử đọc', 'Theo dõi lịch sử đọc truyện.'],
-    ['gioi-thieu', 'Giới thiệu', 'Thông tin về TruyenHub.'],
-    ['dieu-khoan', 'Điều khoản sử dụng', 'Điều khoản sử dụng dịch vụ.'],
-    ['quyen-rieng-tu', 'Quyền riêng tư', 'Chính sách quyền riêng tư.'],
   ] as const;
 
   return definitions.map(([path, title, description]) => ({

@@ -117,12 +117,13 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
       display: flex;
       align-items: center;
       gap: 7px;
-      color: #eeecf3;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     .completion-title app-icon {
-      color: #6f788e;
+      color: #94a3b8;
     }
 
     .progress-ring {
@@ -145,20 +146,21 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
     }
 
     .ring-inner strong {
-      color: #f5f3fa;
-      font-size: 27px;
+      color: #f8fafc;
+      font-size: 28px;
+      font-weight: 700;
     }
 
     .ring-inner span {
-      color: #8992a7;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .message {
       margin: 0;
       text-align: center;
-      color: #8d96a9;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 12.5px;
     }
 
     .progress-bar {
@@ -194,13 +196,13 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
     }
 
     .item-icon {
-      width: 19px;
-      height: 19px;
+      width: 22px;
+      height: 22px;
       display: grid;
       place-items: center;
       border-radius: 50%;
       color: #4ade80;
-      background: rgba(34, 197, 94, .15);
+      background: rgba(34, 197, 94, .18);
     }
 
     .completion-item div {
@@ -209,27 +211,28 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
     }
 
     .completion-item strong {
-      color: #d9d7df;
-      font-size: 10px;
+      color: #f8fafc;
+      font-size: 13.5px;
+      font-weight: 600;
     }
 
     .completion-item small {
-      color: #687286;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .view-profile-button {
-      min-height: 39px;
+      min-height: 42px;
       margin-top: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
+      gap: 8px;
       border: 1px solid #7543c7;
       border-radius: 7px;
-      color: #bd81ff;
-      font-size: 10px;
-      font-weight: 750;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 650;
       text-decoration: none;
     }
 

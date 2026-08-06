@@ -123,8 +123,9 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
     h2 {
       margin: 0;
-      color: #ebe9ef;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     .tip {
@@ -144,40 +145,41 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
     }
 
     .tip-icon.green {
-      color: #57d977;
+      color: #4ade80;
       background:
-        rgba(34, 197, 94, .12);
+        rgba(34, 197, 94, .16);
     }
 
     .tip-icon.yellow {
-      color: #f0b84d;
+      color: #fbbf24;
       background:
-        rgba(245, 158, 11, .12);
+        rgba(245, 158, 11, .16);
     }
 
     .tip strong {
-      color: #d7d5dd;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .tip p {
       margin: 5px 0 0;
-      color: #6f798e;
-      font-size: 8px;
+      color: #94a3b8;
+      font-size: 12px;
       line-height: 1.55;
     }
 
     a {
-      min-height: 36px;
+      min-height: 42px;
       margin-top: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid #7543c7;
       border-radius: 7px;
-      color: #bc80fa;
-      font-size: 9px;
-      font-weight: 750;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 650;
       text-decoration: none;
     }
   `,

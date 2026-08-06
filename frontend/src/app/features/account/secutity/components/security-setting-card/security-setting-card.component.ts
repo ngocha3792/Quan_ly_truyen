@@ -135,51 +135,52 @@ export type SecurityCardTone =
 
     h3 {
       margin: 0 0 7px;
-      color: #f0eef5;
-      font-size: 14px;
+      color: #f8fafc;
+      font-size: 15.5px;
+      font-weight: 700;
     }
 
     p {
       margin: 0;
-      color: #808a9f;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 12.5px;
       line-height: 1.55;
     }
 
     .setting-value {
       max-width: 220px;
       overflow: hidden;
-      color: #d2d4de;
-      font-size: 11px;
+      color: #cbd5e1;
+      font-size: 13px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .setting-badge {
-      padding: 6px 10px;
+      padding: 5px 10px;
       border-radius: 20px;
-      color: #f4bb58;
-      font-size: 9px;
-      font-weight: 800;
+      color: #fbbf24;
+      font-size: 12px;
+      font-weight: 650;
       background:
-        rgba(245, 158, 11, .13);
+        rgba(245, 158, 11, .16);
     }
 
     .setting-badge.enabled {
-      color: #57da77;
+      color: #4ade80;
       background:
-        rgba(34, 197, 94, .13);
+        rgba(34, 197, 94, .16);
     }
 
     .setting-action {
       min-width: 120px;
-      min-height: 38px;
-      padding: 0 15px;
-      border: 1px solid #7042bf;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid #8b5cf6;
       border-radius: 7px;
-      color: #bb7df7;
-      font-size: 10px;
-      font-weight: 750;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 650;
       cursor: pointer;
       background: transparent;
     }

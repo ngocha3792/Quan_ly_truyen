@@ -123,14 +123,15 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
     h2 {
       margin: 0;
-      color: #f4f2f7;
-      font-size: 19px;
+      color: #f8fafc;
+      font-size: 20px;
+      font-weight: 700;
     }
 
     p {
       margin: 13px 0 0;
-      color: #818b9f;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 13px;
       line-height: 1.65;
     }
 
@@ -142,11 +143,11 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
     }
 
     button {
-      min-height: 39px;
-      padding: 0 17px;
+      min-height: 42px;
+      padding: 0 18px;
       border-radius: 7px;
-      font-size: 10px;
-      font-weight: 750;
+      font-size: 13.5px;
+      font-weight: 650;
       cursor: pointer;
     }
 

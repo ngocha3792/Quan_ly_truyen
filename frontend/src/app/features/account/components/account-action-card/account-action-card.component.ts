@@ -135,16 +135,17 @@ export type AccountActionTone =
 
     h3 {
       margin: 1px 0 8px;
-      color: #f1eff6;
-      font-size: 13px;
+      color: #f8fafc;
+      font-size: 15.5px;
+      font-weight: 700;
     }
 
     p {
-      min-height: 38px;
+      min-height: 40px;
       margin: 0;
-      color: #7f899f;
-      font-size: 10px;
-      line-height: 1.65;
+      color: #94a3b8;
+      font-size: 12.5px;
+      line-height: 1.55;
     }
 
     .action-link {
@@ -152,9 +153,9 @@ export type AccountActionTone =
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      color: #ad77f8;
-      font-size: 10px;
-      font-weight: 780;
+      color: #c084fc;
+      font-size: 12.5px;
+      font-weight: 650;
     }
 
     @media (max-width: 520px) {

@@ -146,20 +146,22 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
 
     h2 {
       margin: 0;
-      color: #e9e7ed;
-      font-size: 13px;
+      color: #f8fafc;
+      font-size: 15.5px;
+      font-weight: 700;
     }
 
     .protected-badge {
-      padding: 6px 9px;
+      padding: 5px 10px;
       display: inline-flex;
       align-items: center;
       gap: 5px;
       border-radius: 6px;
-      color: #bb82f6;
-      font-size: 9px;
+      color: #c084fc;
+      font-size: 12px;
+      font-weight: 650;
       background:
-        rgba(124, 58, 237, .15);
+        rgba(124, 58, 237, .18);
     }
 
     .current-content {
@@ -193,31 +195,32 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
     }
 
     .device-title strong {
-      color: #f0eef4;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 15px;
+      font-weight: 700;
     }
 
     .device-title span,
     .trusted-badge {
-      padding: 5px 8px;
+      padding: 4px 8px;
       border-radius: 5px;
-      font-size: 8px;
-      font-weight: 750;
+      font-size: 11.5px;
+      font-weight: 650;
     }
 
     .device-title span {
-      color: #bd82f8;
+      color: #c084fc;
       background:
-        rgba(125, 61, 204, .17);
+        rgba(125, 61, 204, .2);
     }
 
     .trusted-badge {
       width: max-content;
       margin-top: 6px;
       display: block;
-      color: #56d776;
+      color: #4ade80;
       background:
-        rgba(34, 197, 94, .13);
+        rgba(34, 197, 94, .16);
     }
 
     p,
@@ -229,13 +232,13 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
 
     p {
       margin: 7px 0 4px;
-      color: #858fa3;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12.5px;
     }
 
     small {
-      color: #687287;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .current-divider {
@@ -251,20 +254,21 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
     }
 
     .detail-column > span {
-      color: #8992a5;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .detail-column strong {
-      color: #ebe9ef;
-      font-size: 11px;
+      color: #f8fafc;
+      font-size: 14px;
+      font-weight: 600;
     }
 
     .detail-column.status strong {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #56d875;
+      color: #4ade80;
     }
 
     @media (max-width: 930px) {

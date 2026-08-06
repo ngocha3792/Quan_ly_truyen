@@ -103,18 +103,20 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
 
     h2 {
       margin: 0;
-      color: #f0e9ee;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     header > span {
-      width: 19px;
-      height: 19px;
+      width: 22px;
+      height: 22px;
       display: grid;
       place-items: center;
       border-radius: 50%;
       color: #fb7185;
-      font-size: 8px;
+      font-size: 11px;
+      font-weight: 600;
       background:
         rgba(190, 24, 93, .2);
     }
@@ -145,27 +147,28 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
     }
 
     strong {
-      color: #efcbd2;
-      font-size: 9px;
+      color: #fda4b5;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     p {
       margin: 0;
       overflow: hidden;
-      color: #9b6d76;
-      font-size: 7px;
+      color: #fca5b5;
+      font-size: 11.5px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     time {
-      color: #926a73;
-      font-size: 7px;
+      color: #fca5b5;
+      font-size: 11.5px;
       white-space: nowrap;
     }
 
     a {
-      min-height: 37px;
+      min-height: 42px;
       margin-top: 18px;
       display: flex;
       align-items: center;
@@ -173,8 +176,8 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
       gap: 7px;
       border-radius: 6px;
       color: #fff;
-      font-size: 9px;
-      font-weight: 750;
+      font-size: 13px;
+      font-weight: 650;
       text-decoration: none;
       background:
         linear-gradient(

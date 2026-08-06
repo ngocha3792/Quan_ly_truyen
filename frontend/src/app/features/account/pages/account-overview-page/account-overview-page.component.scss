@@ -8,17 +8,18 @@
 
     h1 {
         margin: 0;
-        color: #f6f4fa;
-        font-size: clamp(22px,
-                2.2vw,
-                28px);
+        color: #f8fafc;
+        font-size: clamp(24px,
+                2.4vw,
+                30px);
+        font-weight: 700;
         line-height: 1.25;
     }
 
     p {
         margin: 8px 0 0;
-        color: #818a9d;
-        font-size: 13px;
+        color: #94a3b8;
+        font-size: 14.5px;
     }
 }
 
@@ -41,12 +42,12 @@
 
     strong {
         color: #fb9aae;
-        font-size: 12px;
+        font-size: 14px;
     }
 
     span {
-        color: #a6838c;
-        font-size: 10px;
+        color: #fca5b5;
+        font-size: 12px;
     }
 
     button {
@@ -65,8 +66,9 @@
 
     h2 {
         margin: 0 0 17px;
-        color: #f4f2f8;
-        font-size: 20px;
+        color: #f8fafc;
+        font-size: 22px;
+        font-weight: 700;
     }
 }
 
@@ -90,8 +92,8 @@
 
     p {
         margin: 0;
-        color: #7f899e;
-        font-size: 13px;
+        color: #94a3b8;
+        font-size: 14px;
     }
 }
 

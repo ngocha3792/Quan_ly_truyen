@@ -113,13 +113,15 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
 
     h2 {
       margin: 0;
-      color: #ebe9ef;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     header a {
-      color: #b776f4;
-      font-size: 8px;
+      color: #c084fc;
+      font-size: 12px;
+      font-weight: 600;
       text-decoration: none;
     }
 
@@ -148,9 +150,9 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
       display: grid;
       place-items: center;
       border-radius: 7px;
-      color: #80aaff;
+      color: #60a5fa;
       background:
-        rgba(37, 99, 235, .15);
+        rgba(37, 99, 235, .18);
     }
 
     .device > div {
@@ -167,34 +169,36 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
     }
 
     .device strong {
-      color: #d8d5de;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .device small {
-      color: #677186;
-      font-size: 7px;
+      color: #94a3b8;
+      font-size: 11.5px;
     }
 
     time {
-      color: #818b9e;
-      font-size: 8px;
+      color: #94a3b8;
+      font-size: 11.5px;
       white-space: nowrap;
     }
 
     .current-badge {
-      padding: 4px 7px;
+      padding: 4px 8px;
       border-radius: 5px;
-      color: #55d875;
-      font-size: 7px;
+      color: #4ade80;
+      font-size: 11px;
+      font-weight: 600;
       background:
-        rgba(34, 197, 94, .12);
+        rgba(34, 197, 94, .16);
     }
 
     .empty {
       margin: 0;
-      color: #707a8e;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12.5px;
     }
   `,
 })

@@ -59,17 +59,17 @@
     h2 {
         margin: 0;
         color: #f7f5fb;
-        font-size: clamp(22px,
-                2.3vw,
-                28px);
+        font-size: clamp(24px,
+                2.4vw,
+                30px);
         line-height: 1.2;
     }
 }
 
 .identity>p {
-    margin: 11px 0 9px;
-    color: #bfc5d4;
-    font-size: 13px;
+    margin: 10px 0 10px;
+    color: #cbd5e1;
+    font-size: 14.5px;
 }
 
 .member-badge,
@@ -78,35 +78,35 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-weight: 750;
+    font-weight: 700;
 }
 
 .member-badge {
-    padding: 7px 10px;
+    padding: 7px 12px;
     border-radius: 6px;
-    color: #bd86ff;
-    font-size: 11px;
+    color: #c084fc;
+    font-size: 12.5px;
     background:
-        rgba(128, 63, 214, 0.18);
+        rgba(128, 63, 214, 0.22);
 }
 
 .email-status {
-    padding: 6px 10px;
+    padding: 7px 12px;
     border-radius: 6px;
-    color: #62d879;
-    font-size: 11px;
+    color: #4ade80;
+    font-size: 12.5px;
     background:
-        rgba(45, 180, 77, 0.13);
+        rgba(45, 180, 77, 0.16);
 
     &.unverified {
-        color: #f5b950;
+        color: #fbbf24;
         background:
-            rgba(245, 158, 11, 0.13);
+            rgba(245, 158, 11, 0.16);
     }
 }
 
 .account-stats {
-    min-height: 68px;
+    min-height: 72px;
     margin-top: 20px;
     display: grid;
     grid-template-columns:
@@ -121,7 +121,7 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    color: #9a6af4;
+    color: #a855f7;
 
     div {
         display: grid;
@@ -129,13 +129,14 @@
     }
 
     strong {
-        color: #f5f3f8;
-        font-size: 13px;
+        color: #f8fafc;
+        font-size: 18px;
+        font-weight: 700;
     }
 
     span {
-        color: #858da0;
-        font-size: 11px;
+        color: #94a3b8;
+        font-size: 13px;
     }
 }
 
@@ -156,10 +157,10 @@
 }
 
 .security-title {
-    margin: 0 0 13px;
-    color: #f0eef5;
-    font-size: 12px;
-    font-weight: 800;
+    margin: 0 0 14px;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .security-content {
@@ -169,8 +170,8 @@
 }
 
 .security-ring {
-    width: 59px;
-    height: 59px;
+    width: 62px;
+    height: 62px;
     flex: 0 0 auto;
     padding: 6px;
     border-radius: 50%;
@@ -183,7 +184,7 @@
     display: grid;
     place-items: center;
     border-radius: 50%;
-    color: #4ed36d;
+    color: #4ade80;
     background: #172138;
     transform: rotate(90deg);
 }
@@ -191,16 +192,17 @@
 .security-copy {
     min-width: 0;
     display: grid;
-    gap: 7px;
+    gap: 6px;
 
     strong {
-        color: #5dde75;
-        font-size: 12px;
+        color: #4ade80;
+        font-size: 15px;
+        font-weight: 700;
     }
 
     span {
-        color: #8790a4;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 12.5px;
         line-height: 1.5;
     }
 }
@@ -209,7 +211,7 @@
 
     .ring-inner,
     .security-copy strong {
-        color: #f6bc4c;
+        color: #fbbf24;
     }
 }
 
@@ -223,17 +225,17 @@
 
 .security-button {
     width: max-content;
-    min-height: 35px;
+    min-height: 38px;
     margin-top: 18px;
-    padding: 0 14px;
+    padding: 0 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #7945cc;
-    border-radius: 6px;
-    color: #bb7dff;
-    font-size: 10px;
-    font-weight: 750;
+    border: 1px solid #8b5cf6;
+    border-radius: 7px;
+    color: #c084fc;
+    font-size: 12.5px;
+    font-weight: 700;
     text-decoration: none;
     transition:
         color 160ms ease,
@@ -242,7 +244,7 @@
     &:hover {
         color: #fff;
         background:
-            rgba(128, 70, 216, 0.15);
+            rgba(139, 92, 246, 0.2);
     }
 }
 

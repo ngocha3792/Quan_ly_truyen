@@ -125,8 +125,9 @@ interface ActivityTab {
 
     h2 {
       margin: 0;
-      color: #ebe9ef;
-      font-size: 13px;
+      color: #f8fafc;
+      font-size: 15px;
+      font-weight: 700;
     }
 
     .toolbar-controls {
@@ -137,20 +138,20 @@ interface ActivityTab {
 
     .search-field,
     .period-field {
-      min-height: 36px;
+      min-height: 42px;
       display: flex;
       align-items: center;
       border: 1px solid
         rgba(139, 151, 181, .2);
       border-radius: 7px;
-      color: #727d91;
+      color: #94a3b8;
       background:
         rgba(5, 10, 21, .5);
     }
 
     .search-field {
-      width: 210px;
-      padding: 0 10px;
+      width: 230px;
+      padding: 0 12px;
       gap: 8px;
     }
 
@@ -159,26 +160,26 @@ interface ActivityTab {
       flex: 1;
       border: 0;
       outline: 0;
-      color: #dcd9e3;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13.5px;
       background: transparent;
     }
 
     .period-field {
       position: relative;
-      min-width: 118px;
+      min-width: 130px;
       padding-left: 10px;
       gap: 4px;
     }
 
     .period-field select {
-      min-height: 34px;
+      min-height: 40px;
       flex: 1;
       appearance: none;
       border: 0;
       outline: 0;
-      color: #aeb6c5;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13.5px;
       cursor: pointer;
       background: transparent;
     }
@@ -189,7 +190,7 @@ interface ActivityTab {
     }
 
     .period-field option {
-      color: #e6e3eb;
+      color: #f8fafc;
       background: #101728;
     }
 
@@ -203,13 +204,14 @@ interface ActivityTab {
     }
 
     .category-tabs button {
-      min-height: 30px;
-      padding: 0 14px;
+      min-height: 36px;
+      padding: 0 16px;
       border: 1px solid
         rgba(139, 151, 181, .14);
       border-radius: 6px;
-      color: #808a9f;
-      font-size: 9px;
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
       background: transparent;
     }

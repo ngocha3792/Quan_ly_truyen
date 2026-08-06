@@ -8,17 +8,18 @@
 
     h1 {
         margin: 0;
-        color: #f7f5fb;
+        color: #f8fafc;
         font-size: clamp(24px,
                 2.4vw,
                 30px);
+        font-weight: 700;
         line-height: 1.2;
     }
 
     p {
         margin: 9px 0 0;
-        color: #818ba0;
-        font-size: 12px;
+        color: #94a3b8;
+        font-size: 14.5px;
         line-height: 1.6;
     }
 }
@@ -26,8 +27,8 @@
 .security-layout {
     display: grid;
     grid-template-columns:
-        minmax(0, 1fr) 235px;
-    gap: 19px;
+        minmax(0, 1fr) 260px;
+    gap: 20px;
     align-items: start;
 }
 
@@ -39,13 +40,13 @@
 
 .alert {
     margin-bottom: 15px;
-    padding: 12px 14px;
+    padding: 13px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 17px;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 12.5px;
 
     div {
         display: grid;

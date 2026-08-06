@@ -96,14 +96,16 @@ import {
     }
 
     .stat-copy > span {
-      color: #969fb1;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     strong {
       overflow: hidden;
-      color: #f1eff5;
+      color: #f8fafc;
       font-size: 18px;
+      font-weight: 700;
       line-height: 1.15;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -111,8 +113,8 @@ import {
 
     small {
       overflow: hidden;
-      color: #6f798e;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 11.5px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }

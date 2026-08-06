@@ -3,9 +3,9 @@
 }
 
 .alert {
-    padding: 12px 14px;
+    padding: 13px 16px;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 12.5px;
 
     &.error {
         border: 1px solid rgba(251, 113, 133, 0.24);
@@ -26,8 +26,8 @@
     display: flex;
     align-items: center;
     gap: 11px;
-    color: #858fa3;
-    font-size: 11px;
+    color: #94a3b8;
+    font-size: 13.5px;
 }
 
 .spinner {
@@ -49,19 +49,20 @@
 .manual-setup {
     h3 {
         margin: 0;
-        color: #e9e7ee;
-        font-size: 13px;
+        color: #f8fafc;
+        font-size: 15px;
+        font-weight: 700;
     }
 
     p {
-        color: #7d879b;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 12.5px;
         line-height: 1.6;
     }
 
     small {
-        color: #687286;
-        font-size: 9px;
+        color: #94a3b8;
+        font-size: 11.5px;
     }
 }
 
@@ -80,8 +81,8 @@
         min-width: 0;
         flex: 1;
         overflow-wrap: anywhere;
-        color: #dedbe5;
-        font-size: 11px;
+        color: #f8fafc;
+        font-size: 13.5px;
     }
 
     button {
@@ -89,8 +90,9 @@
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        color: #ba7ff8;
-        font-size: 9px;
+        color: #c084fc;
+        font-size: 12px;
+        font-weight: 650;
         cursor: pointer;
         background: transparent;
     }
@@ -105,19 +107,20 @@
         gap: 7px;
 
         >span {
-            color: #aeb5c4;
-            font-size: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 600;
         }
     }
 
     input {
-        min-height: 41px;
-        padding: 0 12px;
+        min-height: 42px;
+        padding: 0 14px;
         border: 1px solid rgba(139, 151, 181, 0.25);
         border-radius: 8px;
         outline: 0;
-        color: #eceaf0;
-        font-size: 11px;
+        color: #f8fafc;
+        font-size: 14px;
         background:
             rgba(5, 10, 21, 0.55);
 
@@ -138,11 +141,11 @@
 .primary-button,
 .secondary-button,
 .danger-button {
-    min-height: 39px;
-    padding: 0 16px;
+    min-height: 42px;
+    padding: 0 18px;
     border-radius: 7px;
-    font-size: 10px;
-    font-weight: 750;
+    font-size: 13.5px;
+    font-weight: 650;
     cursor: pointer;
 
     &:disabled {
@@ -162,7 +165,7 @@
 
 .secondary-button {
     border: 1px solid rgba(139, 151, 181, 0.25);
-    color: #b8becb;
+    color: #cbd5e1;
     background: transparent;
 }
 
@@ -191,9 +194,9 @@
         display: inline-flex;
         align-items: center;
         gap: 7px;
-        color: #5dde78;
-        font-size: 11px;
-        font-weight: 750;
+        color: #4ade80;
+        font-size: 13.5px;
+        font-weight: 650;
     }
 
     >div {
@@ -201,13 +204,13 @@
         text-align: right;
 
         strong {
-            color: #eeeaf4;
-            font-size: 17px;
+            color: #f8fafc;
+            font-size: 18px;
         }
 
         small {
-            color: #758095;
-            font-size: 9px;
+            color: #94a3b8;
+            font-size: 12px;
         }
     }
 }
@@ -217,8 +220,8 @@
     padding-left: 18px;
     display: grid;
     gap: 9px;
-    color: #818b9e;
-    font-size: 10px;
+    color: #94a3b8;
+    font-size: 12.5px;
     line-height: 1.6;
 }
 
@@ -231,14 +234,15 @@
 
     h3 {
         margin: 0 0 13px;
-        color: #e8e5ed;
-        font-size: 12px;
+        color: #f8fafc;
+        font-size: 14.5px;
+        font-weight: 700;
     }
 
     p,
     li {
-        color: #778196;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 12.5px;
         line-height: 1.65;
     }
 

@@ -158,8 +158,9 @@ import { UserAvatarComponent } from '../../../../../shared/components/user-avata
 
     h2 {
       margin: 0 0 12px;
-      color: #f7f5fb;
-      font-size: clamp(23px, 2.4vw, 30px);
+      color: #f8fafc;
+      font-size: clamp(24px, 2.4vw, 30px);
+      font-weight: 700;
     }
 
     .badges {
@@ -170,41 +171,41 @@ import { UserAvatarComponent } from '../../../../../shared/components/user-avata
 
     .member-badge,
     .verified-badge {
-      padding: 7px 10px;
+      padding: 7px 12px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
       border-radius: 7px;
-      font-size: 10px;
-      font-weight: 750;
+      font-size: 12.5px;
+      font-weight: 650;
     }
 
     .member-badge {
-      color: #c58fff;
-      background: rgba(129, 67, 214, .18);
+      color: #c084fc;
+      background: rgba(129, 67, 214, .2);
     }
 
     .verified-badge {
-      color: #64dc79;
-      background: rgba(34, 197, 94, .13);
+      color: #4ade80;
+      background: rgba(34, 197, 94, .16);
     }
 
     .verified-badge.unverified {
-      color: #f6bc50;
-      background: rgba(245, 158, 11, .13);
+      color: #fbbf24;
+      background: rgba(245, 158, 11, .16);
     }
 
     .change-avatar-button {
-      min-height: 40px;
-      padding: 0 15px;
+      min-height: 42px;
+      padding: 0 16px;
       display: inline-flex;
       align-items: center;
       gap: 8px;
       border: 1px solid rgba(150, 161, 192, .3);
       border-radius: 7px;
       color: #e4e1eb;
-      font-size: 11px;
-      font-weight: 720;
+      font-size: 13px;
+      font-weight: 650;
       cursor: pointer;
       background: rgba(255, 255, 255, .025);
     }

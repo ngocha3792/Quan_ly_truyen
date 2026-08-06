@@ -7,32 +7,33 @@
 
     h1 {
         margin: 0;
-        color: #f6f4fa;
-        font-size: clamp(23px,
-                2.3vw,
-                29px);
+        color: #f8fafc;
+        font-size: clamp(24px,
+                2.4vw,
+                30px);
+        font-weight: 700;
     }
 
     p {
         margin: 8px 0 0;
-        color: #818a9d;
-        font-size: 12px;
+        color: #94a3b8;
+        font-size: 14.5px;
     }
 }
 
 .profile-layout {
     display: grid;
     grid-template-columns:
-        minmax(0, 1fr) 235px;
-    gap: 18px;
+        minmax(0, 1fr) 260px;
+    gap: 20px;
     align-items: start;
 }
 
 .alert {
     margin-bottom: 15px;
-    padding: 12px 14px;
+    padding: 13px 16px;
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 13px;
 }
 
 .error-alert {

@@ -17,13 +17,13 @@
 
     strong {
         color: #fda4b5;
-        font-size: 11px;
+        font-size: 13.5px;
     }
 
     p {
         margin: 6px 0 0;
-        color: #a87984;
-        font-size: 9px;
+        color: #fca5b5;
+        font-size: 12px;
         line-height: 1.6;
     }
 }
@@ -33,8 +33,9 @@ label {
     gap: 7px;
 
     >span {
-        color: #b0b6c5;
-        font-size: 10px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 600;
 
         strong {
             color: #fb7185;
@@ -44,13 +45,13 @@ label {
 
 .input-field {
     min-height: 42px;
-    padding: 0 11px;
+    padding: 0 12px;
     display: flex;
     align-items: center;
     gap: 10px;
     border: 1px solid rgba(139, 151, 181, 0.25);
     border-radius: 8px;
-    color: #838da2;
+    color: #94a3b8;
     background:
         rgba(5, 10, 21, 0.52);
 
@@ -66,8 +67,8 @@ label {
         flex: 1;
         border: 0;
         outline: 0;
-        color: #eeecf2;
-        font-size: 11px;
+        color: #f8fafc;
+        font-size: 14px;
         background: transparent;
     }
 }
@@ -83,15 +84,15 @@ label {
 
 .cancel-button,
 .delete-button {
-    min-height: 39px;
-    padding: 0 17px;
+    min-height: 42px;
+    padding: 0 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     border-radius: 7px;
-    font-size: 10px;
-    font-weight: 750;
+    font-size: 13.5px;
+    font-weight: 650;
     cursor: pointer;
 
     &:disabled {

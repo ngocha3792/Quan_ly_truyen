@@ -88,7 +88,7 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
             Điều khoản sử dụng
           </a>
 
-          <a routerLink="/bao-mat">
+          <a routerLink="/quyen-rieng-tu">
             Quyền riêng tư
           </a>
 

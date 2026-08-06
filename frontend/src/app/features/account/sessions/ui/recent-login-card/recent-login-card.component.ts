@@ -98,8 +98,9 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
 
     h2 {
       margin: 0 0 17px;
-      color: #e9e7ed;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     .activity-list {
@@ -112,13 +113,13 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
       grid-template-columns:
         auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
     }
 
     .activity app-session-device-icon {
-      transform: scale(.72);
+      transform: scale(.85);
       transform-origin: center;
-      margin: -5px;
+      margin: -2px;
     }
 
     .activity-copy {
@@ -136,46 +137,48 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
     }
 
     .activity-copy strong {
-      color: #dcd9e2;
-      font-size: 9px;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .activity-copy span {
-      color: #818b9f;
-      font-size: 8px;
+      color: #cbd5e1;
+      font-size: 12px;
     }
 
     .activity-copy small {
-      color: #626d82;
-      font-size: 7px;
+      color: #94a3b8;
+      font-size: 11px;
     }
 
     .activity-status {
-      padding: 4px 6px;
+      padding: 4px 8px;
       border-radius: 5px;
-      color: #55d875;
-      font-size: 7px;
+      color: #4ade80;
+      font-size: 11px;
+      font-weight: 600;
       background:
-        rgba(34, 197, 94, .11);
+        rgba(34, 197, 94, .16);
     }
 
     .activity-status[data-status='signed-out'] {
-      color: #929bad;
+      color: #94a3b8;
       background:
-        rgba(100, 116, 139, .12);
+        rgba(100, 116, 139, .16);
     }
 
     a {
-      min-height: 35px;
+      min-height: 42px;
       margin-top: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid #7543c7;
       border-radius: 7px;
-      color: #bc80fa;
-      font-size: 9px;
-      font-weight: 750;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 650;
       text-decoration: none;
     }
   `,

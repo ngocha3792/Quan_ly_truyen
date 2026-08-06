@@ -128,12 +128,13 @@ import { SecurityScore } from '../../data/account-security.models';
       display: flex;
       align-items: center;
       gap: 7px;
-      color: #efedf4;
-      font-size: 12px;
+      color: #f8fafc;
+      font-size: 14.5px;
+      font-weight: 700;
     }
 
     .score-title app-icon {
-      color: #747e93;
+      color: #94a3b8;
     }
 
     .score-ring {
@@ -156,20 +157,21 @@ import { SecurityScore } from '../../data/account-security.models';
     }
 
     .score-ring-inner strong {
-      color: #f6f4fa;
-      font-size: 27px;
+      color: #f8fafc;
+      font-size: 28px;
+      font-weight: 700;
     }
 
     .score-ring-inner span {
-      color: #929bad;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .score-description {
       margin: 0;
       text-align: center;
-      color: #818b9f;
-      font-size: 10px;
+      color: #94a3b8;
+      font-size: 12.5px;
       line-height: 1.55;
     }
 
@@ -207,8 +209,8 @@ import { SecurityScore } from '../../data/account-security.models';
     }
 
     .item-status {
-      width: 19px;
-      height: 19px;
+      width: 22px;
+      height: 22px;
       display: grid;
       place-items: center;
       border: 1px solid #465067;
@@ -218,9 +220,9 @@ import { SecurityScore } from '../../data/account-security.models';
 
     .item-status.completed {
       border-color:
-        rgba(34, 197, 94, .15);
+        rgba(34, 197, 94, .18);
       background:
-        rgba(34, 197, 94, .15);
+        rgba(34, 197, 94, .18);
     }
 
     .score-item div {
@@ -229,18 +231,19 @@ import { SecurityScore } from '../../data/account-security.models';
     }
 
     .score-item strong {
-      color: #dbd9e1;
-      font-size: 10px;
+      color: #f8fafc;
+      font-size: 13.5px;
+      font-weight: 600;
     }
 
     .score-item small {
-      color: #687286;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     .suggestion-button {
       width: 100%;
-      min-height: 40px;
+      min-height: 42px;
       margin-top: 25px;
       display: flex;
       align-items: center;
@@ -248,9 +251,9 @@ import { SecurityScore } from '../../data/account-security.models';
       gap: 8px;
       border: 1px solid #7543c7;
       border-radius: 7px;
-      color: #be82ff;
-      font-size: 10px;
-      font-weight: 750;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 650;
       cursor: pointer;
       background: transparent;
     }

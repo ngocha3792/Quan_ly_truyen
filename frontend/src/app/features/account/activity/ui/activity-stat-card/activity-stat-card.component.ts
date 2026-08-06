@@ -104,19 +104,21 @@ import {
     }
 
     span {
-      color: #969fb1;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     strong {
-      color: #f2eff6;
+      color: #f8fafc;
       font-size: 21px;
+      font-weight: 700;
       line-height: 1.1;
     }
 
     small {
-      color: #6e788d;
-      font-size: 9px;
+      color: #94a3b8;
+      font-size: 11.5px;
     }
   `,
 })
