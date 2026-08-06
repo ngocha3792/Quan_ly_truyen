@@ -1,95 +1,304 @@
 <header class="header">
   <div class="header-inner page-container">
-    <button class="icon-button mobile-menu" type="button" (click)="toggleMobile()" aria-label="Mở menu">
-      <app-icon [name]="mobileOpen() ? 'close' : 'menu'" />
+    <button class="icon-button mobile-menu" type="button" aria-label="Mở menu" [attr.aria-expanded]="mobileOpen()"
+      (click)="toggleMobile()">
+      <app-icon [name]="mobileOpen() ? 'close' : 'menu'"></app-icon>
     </button>
 
-    <app-brand-logo />
+    <app-brand-logo></app-brand-logo>
 
     <nav class="desktop-nav" aria-label="Điều hướng chính">
       @for (item of navItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.route === '/' }">{{ item.label }}</a>
+      <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{
+            exact: item.route === '/'
+          }" (click)="closeHeaderPopovers()">
+        {{ item.label }}
+      </a>
       }
     </nav>
 
     <div class="actions">
+      <!-- SEARCH DESKTOP -->
       <button class="search-trigger" type="button" (click)="showSearch()">
-        <app-icon name="search" [size]="17" />
+        <app-icon name="search" [size]="17"></app-icon>
+
         <span>Tìm truyện, tác giả...</span>
+
         <kbd>⌘ K</kbd>
       </button>
-      <button class="icon-button desktop-only" type="button" (click)="showSearch()" aria-label="Tìm kiếm"><app-icon name="search" /></button>
+
+      <!-- SEARCH MOBILE / TABLET -->
+      <button class="icon-button desktop-only" type="button" aria-label="Tìm kiếm" (click)="showSearch()">
+        <app-icon name="search"></app-icon>
+      </button>
+
+      <!-- NOTIFICATIONS -->
       <div class="popover-wrap">
-        <button class="icon-button" type="button" (click)="toggleNotifications()" aria-label="Thông báo">
-          <app-icon name="bell" /> <span class="dot"></span>
+        <button class="icon-button" type="button" aria-label="Thông báo" aria-controls="header-notifications"
+          [attr.aria-expanded]="notificationsOpen()" (click)="toggleNotifications()">
+          <app-icon name="bell"></app-icon>
+
+          @if (notificationUnreadCount() > 0) {
+          <span class="dot" aria-hidden="true"></span>
+          }
         </button>
+
         @if (notificationsOpen()) {
-          <div class="popover notifications">
-            <div class="popover-title"><strong>Thông báo</strong><span>2 mới</span></div>
-            <a routerLink="/truyen/van-co-than-de" (click)="notificationsOpen.set(false)"><span class="notice-icon">233</span><div><b>Vạn Cổ Thần Đế</b><small>Đã cập nhật Chương 233</small></div></a>
-            <a routerLink="/truyen/so-huu-nguyen-thuy-chi-luc" (click)="notificationsOpen.set(false)"><span class="notice-icon blue">89</span><div><b>Sở Hữu Nguyên Thủy Chi Lực</b><small>Đã cập nhật Chương 89</small></div></a>
+        <div id="header-notifications" class="popover notifications">
+          <div class="popover-title">
+            <strong>Thông báo</strong>
+
+            <div class="popover-title__actions">
+              <span>
+                {{ notificationUnreadCount() }} mới
+              </span>
+            </div>
           </div>
+
+          <a class="notification-item notification-item--unread" routerLink="/truyen/van-co-than-de/chuong/233"
+            (click)="closeNotifications()">
+            <span class="notice-icon">
+              233
+            </span>
+
+            <div class="notification-item__content">
+              <b>Vạn Cổ Thần Đế</b>
+
+              <small>
+                Đã cập nhật Chương 233
+              </small>
+            </div>
+
+            <span class="notification-unread-dot" aria-label="Chưa đọc"></span>
+          </a>
+
+          <a class="notification-item notification-item--unread"
+            routerLink="/truyen/so-huu-nguyen-thuy-chi-luc/chuong/89" (click)="closeNotifications()">
+            <span class="notice-icon notice-icon--blue">
+              89
+            </span>
+
+            <div class="notification-item__content">
+              <b>Sở Hữu Nguyên Thủy Chi Lực</b>
+
+              <small>
+                Đã cập nhật Chương 89
+              </small>
+            </div>
+
+            <span class="notification-unread-dot" aria-label="Chưa đọc"></span>
+          </a>
+
+          <a class="notifications-footer" routerLink="/thong-bao" (click)="closeNotifications()">
+            Xem tất cả thông báo
+
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="m13 6 6 6-6 6"></path>
+            </svg>
+          </a>
+        </div>
         }
       </div>
-      <a class="icon-button" routerLink="/lich-su" aria-label="Lịch sử"><app-icon name="history" /></a>
 
+      <!-- READING HISTORY -->
+      <a class="icon-button" routerLink="/lich-su" routerLinkActive="active" aria-label="Lịch sử đọc"
+        (click)="closeHeaderPopovers()">
+        <app-icon name="history"></app-icon>
+      </a>
+
+      <!-- PROFILE / LOGIN -->
       <div class="popover-wrap">
         @if (auth.isAuthenticated()) {
-          <button class="profile-button" type="button" (click)="toggleProfile()">
-            <span class="avatar">{{ auth.user()?.displayName?.charAt(0) || 'U' }}</span>
-            <span class="profile-name">{{ auth.user()?.displayName }}</span>
-            <app-icon name="chevron-down" [size]="15" />
-          </button>
-          @if (profileOpen()) {
-            <div class="popover profile-menu">
-              <div class="user-summary"><span class="avatar large">{{ auth.user()?.displayName?.charAt(0) }}</span><div><strong>{{ auth.user()?.displayName }}</strong><small>{{ auth.user()?.email }}</small></div></div>
-              <a routerLink="/thu-vien" (click)="profileOpen.set(false)"><app-icon name="bookmark" [size]="18" /> Thư viện của tôi</a>
-              <a routerLink="/tai-khoan" (click)="profileOpen.set(false)"><app-icon name="user" [size]="18" /> Tài khoản</a>
-              <button type="button" (click)="logout()"><app-icon name="logout" [size]="18" /> Đăng xuất</button>
+        <button class="profile-button" type="button" aria-controls="header-profile-menu"
+          [attr.aria-expanded]="profileOpen()" (click)="toggleProfile()">
+          <span class="avatar">
+            {{
+            auth.user()?.displayName?.charAt(0)
+            || 'U'
+            }}
+          </span>
+
+          <span class="profile-name">
+            {{ auth.user()?.displayName }}
+          </span>
+
+          <app-icon name="chevron-down" [size]="15"></app-icon>
+        </button>
+
+        @if (profileOpen()) {
+        <div id="header-profile-menu" class="popover profile-menu">
+          <div class="user-summary">
+            <span class="avatar large">
+              {{
+              auth.user()?.displayName?.charAt(0)
+              || 'U'
+              }}
+            </span>
+
+            <div>
+              <strong>
+                {{ auth.user()?.displayName }}
+              </strong>
+
+              <small>
+                {{ auth.user()?.email }}
+              </small>
             </div>
-          }
+          </div>
+
+          <!-- ROUTE ĐÚNG CỦA THƯ VIỆN -->
+          <a routerLink="/thu-vien" (click)="closeProfile()">
+            <app-icon name="bookmark" [size]="18"></app-icon>
+
+            <span>Thư viện của tôi</span>
+          </a>
+
+          <!-- LỊCH SỬ ĐỌC -->
+          <a routerLink="/lich-su-doc" (click)="closeProfile()">
+            <app-icon name="history" [size]="18"></app-icon>
+
+            <span>Lịch sử đọc</span>
+          </a>
+
+          <!-- THÔNG BÁO -->
+          <a routerLink="/thong-bao" (click)="closeProfile()">
+            <app-icon name="bell" [size]="18"></app-icon>
+
+            <span>Thông báo</span>
+
+            @if (notificationUnreadCount() > 0) {
+            <small class="profile-notification-count">
+              {{ notificationUnreadCount() }}
+            </small>
+            }
+          </a>
+
+          <a routerLink="/tai-khoan" (click)="closeProfile()">
+            <app-icon name="user" [size]="18"></app-icon>
+
+            <span>Tài khoản</span>
+          </a>
+
+          <button type="button" (click)="logout()">
+            <app-icon name="logout" [size]="18"></app-icon>
+
+            <span>Đăng xuất</span>
+          </button>
+        </div>
+        }
         } @else {
-          <button class="login-button" type="button" (click)="openAuth()"><app-icon name="user" [size]="17" /><span>Đăng nhập</span></button>
+        <button class="login-button" type="button" (click)="openAuth()">
+          <app-icon name="user" [size]="17"></app-icon>
+
+          <span>Đăng nhập</span>
+        </button>
         }
       </div>
     </div>
   </div>
 
+  <!-- MOBILE NAV -->
   @if (mobileOpen()) {
-    <nav class="mobile-nav page-container" aria-label="Điều hướng di động">
-      @for (item of navItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.route === '/' }" (click)="mobileOpen.set(false)">{{ item.label }}</a>
-      }
-    </nav>
+  <nav class="mobile-nav page-container" aria-label="Điều hướng di động">
+    @for (item of navItems; track item.route) {
+    <a [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{
+            exact: item.route === '/'
+          }" (click)="closeMobileMenu()">
+      {{ item.label }}
+    </a>
+    }
+
+    @if (auth.isAuthenticated()) {
+    <a routerLink="/thu-vien-cua-toi" routerLinkActive="active" (click)="closeMobileMenu()">
+      Thư viện của tôi
+    </a>
+
+    <a routerLink="/lich-su-doc" routerLinkActive="active" (click)="closeMobileMenu()">
+      Lịch sử đọc
+    </a>
+
+    <a routerLink="/thong-bao" routerLinkActive="active" (click)="closeMobileMenu()">
+      Thông báo
+    </a>
+    }
+  </nav>
   }
 </header>
 
+<!-- SEARCH OVERLAY -->
 @if (searchOpen()) {
-  <div class="search-layer" (click)="hideSearch()">
-    <section class="search-panel" (click)="$event.stopPropagation()">
-      <div class="search-input">
-        <app-icon name="search" />
-        <input autofocus [ngModel]="query()" (ngModelChange)="query.set($event)" (keyup.enter)="submitSearch()" placeholder="Nhập tên truyện, tác giả hoặc thể loại..." />
-        <button type="button" (click)="hideSearch()"><app-icon name="close" /></button>
+<div class="search-layer" (click)="hideSearch()">
+  <section class="search-panel" role="dialog" aria-modal="true" aria-label="Tìm kiếm truyện"
+    (click)="$event.stopPropagation()">
+    <div class="search-input">
+      <app-icon name="search"></app-icon>
+
+      <input autofocus [ngModel]="query()" placeholder="Nhập tên truyện, tác giả hoặc thể loại..."
+        (ngModelChange)="query.set($event)" (keyup.enter)="submitSearch()">
+
+      <button type="button" aria-label="Đóng tìm kiếm" (click)="hideSearch()">
+        <app-icon name="close"></app-icon>
+      </button>
+    </div>
+
+    @if (query().trim()) {
+    <div class="suggestions">
+      <div class="result-label">
+        Kết quả tìm kiếm
       </div>
-      @if (query().trim()) {
-        <div class="suggestions">
-          <div class="result-label">Kết quả tìm kiếm</div>
-          @for (story of suggestions(); track story.id) {
-            <a [routerLink]="['/truyen', story.slug]" (click)="hideSearch(); query.set('')">
-              <img [src]="story.coverUrl" [alt]="story.title" />
-              <div><strong>{{ story.title }}</strong><small>{{ story.author }} · {{ story.categories.join(', ') }}</small></div>
-              <span>Ch.{{ story.latestChapter.number }}</span>
-            </a>
-          } @empty {
-            <div class="no-result">Không tìm thấy truyện phù hợp.</div>
-          }
+
+      @for (
+      story of suggestions();
+      track story.id
+      ) {
+      <a [routerLink]="[
+                '/truyen',
+                story.slug
+              ]" (click)="selectSuggestion()">
+        <img [src]="story.coverUrl" [alt]="story.title">
+
+        <div>
+          <strong>
+            {{ story.title }}
+          </strong>
+
+          <small>
+            {{ story.author }}
+            ·
+            {{ story.categories.join(', ') }}
+          </small>
         </div>
-      } @else {
-        <div class="search-hints"><span>Tìm nhanh:</span><button type="button" (click)="query.set('Solo Leveling')">Solo Leveling</button><button type="button" (click)="query.set('Huyền huyễn')">Huyền huyễn</button><button type="button" (click)="query.set('Hệ thống')">Hệ thống</button></div>
+
+        <span>
+          Ch.{{ story.latestChapter.number }}
+        </span>
+      </a>
+      } @empty {
+      <div class="no-result">
+        Không tìm thấy truyện phù hợp.
+      </div>
       }
-    </section>
-  </div>
+    </div>
+    } @else {
+    <div class="search-hints">
+      <span>Tìm nhanh:</span>
+
+      <button type="button" (click)="query.set('Solo Leveling')">
+        Solo Leveling
+      </button>
+
+      <button type="button" (click)="query.set('Huyền huyễn')">
+        Huyền huyễn
+      </button>
+
+      <button type="button" (click)="query.set('Hệ thống')">
+        Hệ thống
+      </button>
+    </div>
+    }
+  </section>
+</div>
 }
 
-<app-auth-dialog [open]="authOpen()" (closed)="authOpen.set(false)" />
+<app-auth-dialog [open]="authOpen()" (closed)="authOpen.set(false)"></app-auth-dialog>

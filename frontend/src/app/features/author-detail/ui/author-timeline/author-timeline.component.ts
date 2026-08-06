@@ -1,0 +1,178 @@
+
+import {
+    ChangeDetectionStrategy,
+    Component,
+    Input,
+} from '@angular/core';
+
+import {
+    AuthorTimelineItem,
+} from '../../domain/author-detail.models';
+
+@Component({
+    selector: 'app-author-timeline',
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+
+    template: `
+    <section class="timeline-panel">
+      <header>
+        <svg viewBox="0 0 24 24">
+          <path d="M8 21h8"></path>
+          <path d="M12 17v4"></path>
+          <path d="M7 4h10v3a5 5 0 0 1-10 0V4Z"></path>
+          <path d="M7 6H4v1a4 4 0 0 0 4 4"></path>
+          <path d="M17 6h3v1a4 4 0 0 1-4 4"></path>
+        </svg>
+
+        <h2>Dấu ấn sự nghiệp</h2>
+      </header>
+
+      <div class="timeline">
+        @for (item of timeline; track item.year) {
+          <article>
+            <span class="timeline-dot"></span>
+
+            <strong>{{ item.year }}</strong>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.description }}</p>
+          </article>
+        }
+      </div>
+    </section>
+  `,
+
+    styles: [`
+    :host {
+      display: block;
+    }
+
+    .timeline-panel {
+      margin-top: 0;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background:
+        linear-gradient(
+          145deg,
+          rgba(16, 22, 39, 0.9),
+          rgba(10, 15, 28, 0.92)
+        );
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: var(--primary-soft);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h2 {
+      margin: 0;
+      color: var(--text-strong);
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 24px;
+      padding-top: 20px;
+    }
+
+    .timeline::before {
+      position: absolute;
+      top: 4px;
+      right: 5%;
+      left: 5%;
+      height: 2px;
+      content: "";
+      background: linear-gradient(
+        90deg,
+        rgba(140, 77, 232, 0.7),
+        rgba(139, 92, 246, 0.35),
+        rgba(140, 77, 232, 0.7)
+      );
+    }
+
+    article {
+      position: relative;
+      text-align: center;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--primary-soft);
+      border-radius: 50%;
+      background: #11172a;
+      box-shadow: 0 0 11px rgba(140, 77, 232, 0.55);
+      transform: translateX(-50%);
+    }
+
+    article strong {
+      color: var(--primary-soft);
+      font-size: .88rem;
+      font-weight: 700;
+    }
+
+    article h3 {
+      margin: 6px 0 4px;
+      color: var(--text-strong);
+      font-size: .9rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    article p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: .8rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 760px) {
+      .timeline {
+        grid-template-columns: 1fr;
+        padding: 0 0 0 20px;
+      }
+
+      .timeline::before {
+        top: 7px;
+        bottom: 7px;
+        left: 4px;
+        width: 2px;
+        height: auto;
+      }
+
+      article {
+        text-align: left;
+      }
+
+      .timeline-dot {
+        top: 4px;
+        left: -16px;
+      }
+    }
+  `],
+})
+export class AuthorTimelineComponent {
+    @Input({ required: true })
+    timeline: readonly AuthorTimelineItem[] = [];
+}

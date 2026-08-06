@@ -1,0 +1,36 @@
+<main class="author-page">
+    @if (store.view(); as view) {
+    <div class="page-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a routerLink="/">Trang chủ</a>
+            <span>›</span>
+
+            <a routerLink="/tac-gia">
+                Tác giả
+            </a>
+
+            <span>›</span>
+
+            <strong>{{ view.profile.name }}</strong>
+        </nav>
+
+        <div class="author-layout">
+            <section class="main-column">
+                <app-author-hero [profile]="view.profile" [following]="store.isFollowing()"
+                    [followerLabel]="store.followerLabel()" (followToggle)="store.toggleFollow()"></app-author-hero>
+
+                <app-author-stats [statistics]="view.statistics"></app-author-stats>
+
+                <app-author-biography [biography]="view.profile.biography"></app-author-biography>
+
+                <app-author-works [works]="view.featuredWorks"></app-author-works>
+
+                <app-author-timeline [timeline]="view.timeline"></app-author-timeline>
+            </section>
+
+            <app-author-sidebar [statistics]="view.statistics" [joinedAt]="view.profile.joinedAt"
+                [recentUpdates]="view.recentUpdates" [hotWorks]="view.hotWorks"></app-author-sidebar>
+        </div>
+    </div>
+    }
+</main>

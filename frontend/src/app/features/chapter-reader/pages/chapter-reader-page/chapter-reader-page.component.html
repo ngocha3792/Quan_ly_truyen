@@ -1,0 +1,108 @@
+<main class="chapter-page" [class.chapter-page--lights-off]="store.lightsOff()">
+    @if (store.view(); as view) {
+    <div class="chapter-layout">
+        <section class="reader-column">
+            <section class="reader-card">
+                <app-chapter-heading [data]="view"></app-chapter-heading>
+
+                <div class="chapter-divider"></div>
+
+                <nav class="chapter-navigation chapter-navigation--top" aria-label="Điều hướng chương">
+                    @if (view.navigation.previous; as previous) {
+                    <a class="navigation-side" [routerLink]="previous.url">
+                        <svg viewBox="0 0 24 24">
+                            <path d="m15 18-6-6 6-6"></path>
+                        </svg>
+
+                        <span>
+                            <small>Chương trước</small>
+
+                            Chương {{ previous.number }}:
+                            {{ previous.title }}
+                        </span>
+                    </a>
+                    } @else {
+                    <span class="navigation-side navigation-side--disabled">
+                        Chưa có chương trước
+                    </span>
+                    }
+
+                    <strong class="current-chapter">
+                        Chương {{ view.chapter.number }}:
+                        {{ view.chapter.title }}
+                    </strong>
+
+                    @if (view.navigation.next; as next) {
+                    <a class="navigation-side navigation-side--next" [routerLink]="next.url">
+                        <span>
+                            <small>Chương tiếp theo</small>
+
+                            Chương {{ next.number }}:
+                            {{ next.title }}
+                        </span>
+
+                        <svg viewBox="0 0 24 24">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </a>
+                    }
+                </nav>
+
+                <article class="chapter-content" [style.font-size.px]="store.fontSize()">
+                    @for (
+                    paragraph of view.chapter.paragraphs;
+                    track $index
+                    ) {
+                    <p [class.chapter-separator]="paragraph === '---'">
+                        {{ paragraph }}
+                    </p>
+                    }
+                </article>
+
+                <nav class="chapter-navigation chapter-navigation--bottom" aria-label="Điều hướng cuối chương">
+                    @if (view.navigation.previous; as previous) {
+                    <a class="bottom-button" [routerLink]="previous.url">
+                        <svg viewBox="0 0 24 24">
+                            <path d="m15 18-6-6 6-6"></path>
+                        </svg>
+
+                        Chương trước
+                    </a>
+                    }
+
+                    <button class="bottom-button chapter-list-button" type="button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M8 6h13"></path>
+                            <path d="M8 12h13"></path>
+                            <path d="M8 18h13"></path>
+                            <path d="M3 6h.01"></path>
+                            <path d="M3 12h.01"></path>
+                            <path d="M3 18h.01"></path>
+                        </svg>
+
+                        Danh sách chương
+                    </button>
+
+                    @if (view.navigation.next; as next) {
+                    <a class="bottom-button bottom-button--primary" [routerLink]="next.url">
+                        Chương tiếp theo
+
+                        <svg viewBox="0 0 24 24">
+                            <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                    </a>
+                    }
+                </nav>
+            </section>
+
+            <app-chapter-comments [comments]="view.comments"
+                [totalComments]="view.totalComments"></app-chapter-comments>
+        </section>
+
+        <app-chapter-sidebar [data]="view" [fontSize]="store.fontSize()" [lightsOff]="store.lightsOff()"
+            [bookmarked]="store.bookmarked()" (fontDecrease)="store.decreaseFontSize()"
+            (fontIncrease)="store.increaseFontSize()" (fontReset)="store.resetFontSize()"
+            (lightsToggle)="store.toggleLights()" (bookmarkToggle)="store.toggleBookmark()"></app-chapter-sidebar>
+    </div>
+    }
+</main>

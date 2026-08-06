@@ -1,0 +1,70 @@
+<main class="reading-history-page">
+    @if (store.view(); as view) {
+    <div class="page-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a routerLink="/">
+                <svg viewBox="0 0 24 24">
+                    <path d="m3 11 9-8 9 8"></path>
+
+                    <path d="M5 10v10h5v-6h4v6h5V10"></path>
+                </svg>
+
+                Trang chủ
+            </a>
+
+            <span>›</span>
+
+            <strong>Lịch sử đọc</strong>
+        </nav>
+
+        <header class="page-heading">
+            <h1>Lịch sử đọc</h1>
+
+            <p>
+                Theo dõi tiến độ và các chương truyện bạn đã đọc gần đây.
+            </p>
+        </header>
+
+        <div class="history-layout">
+            <section class="history-main">
+                <section class="history-panel">
+                    <app-reading-history-toolbar [query]="store.query()" [period]="store.period()" [sort]="store.sort()"
+                        (queryChange)="
+                store.setQuery($event)
+              " (periodChange)="
+                changePeriod($event)
+              " (sortChange)="
+                changeSort($event)
+              "></app-reading-history-toolbar>
+
+                    <header class="list-heading">
+                        <h2>Đã đọc gần đây</h2>
+
+                        <span>
+                            Tìm thấy
+                            <strong>
+                                {{ store.resultCount() }}
+                            </strong>
+                            truyện
+                        </span>
+                    </header>
+
+                    <app-reading-history-list [items]="store.filteredHistory()" [bookmarkedIds]="
+                store.bookmarkedIds()
+              " (bookmarkToggle)="
+                store.toggleBookmark($event)
+              "></app-reading-history-list>
+                </section>
+            </section>
+
+            <app-reading-history-sidebar [statistics]="view.statistics" [continueReading]="
+            view.continueReading
+          " [syncState]="store.syncState()" (clearHistory)="
+            store.clearHistory()
+          " (syncDevices)="
+            store.syncDevices()
+          "></app-reading-history-sidebar>
+        </div>
+    </div>
+    }
+</main>

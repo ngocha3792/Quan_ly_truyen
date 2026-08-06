@@ -19,10 +19,24 @@
     gap: 8px;
     color: #727c90;
     font-size: .85rem;
+    margin-bottom: .25rem;
 
     a {
         color: #a773ef;
         text-decoration: none;
+
+        &:hover {
+            color: var(--primary-soft);
+        }
+    }
+
+    svg {
+        display: none !important;
+    }
+
+    span, strong {
+        color: #727c90;
+        font-weight: 400;
     }
 }
 

@@ -41,6 +41,16 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'truyen/:storySlug/chuong/:chapterNumber',
+        title: 'Đọc chương - TruyenHub',
+        loadComponent: () =>
+          import(
+            './features/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component'
+          ).then(
+            (module) => module.ChapterReaderPageComponent,
+          ),
+      },
+      {
         path: 'danh-sach',
 
         title: 'Danh sách truyện - TruyenHub',
@@ -126,7 +136,7 @@ export const routes: Routes = [
 
       {
         path: 'verify-email',
-        title: 'XÃ¡c minh email - TruyenHub',
+        title: 'Xác minh email - TruyenHub',
         loadComponent: () =>
           import('./features/auth/pages/verify-email-page/verify-email-page.component').then(
             (module) => module.VerifyEmailPageComponent,
@@ -191,6 +201,65 @@ export const routes: Routes = [
             (module) => module.ComingSoonComponent,
           ),
       },
+      {
+        path: 'tac-gia',
+        title: 'Tác giả nổi bật - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/author-directory/pages/author-directory-page/author-directory-page.component'
+          ).then(
+            (module) =>
+              module.AuthorDirectoryPageComponent,
+          ),
+      },
+      {
+        path: 'tac-gia/:authorSlug',
+        title: 'Chi tiết tác giả - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/author-detail/pages/author-detail-page/author-detail-page.component'
+          ).then(
+            (module) => module.AuthorDetailPageComponent,
+          ),
+      },
+      {
+        path: 'lich-su',
+        title: 'Lịch sử đọc - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/reading-history/pages/reading-history-page/reading-history-page.component'
+          ).then(
+            (module) =>
+              module.ReadingHistoryPageComponent,
+          ),
+      },
+      {
+        path: 'thong-bao',
+        title: 'Thông báo - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/notifications/pages/notifications-page/notifications-page.component'
+          ).then(
+            (module) =>
+              module.NotificationsPageComponent,
+          ),
+      },
+      {
+        path: 'thu-vien',
+        title: 'Thư viện của tôi - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/my-library/pages/my-library-page/my-library-page.component'
+          ).then(
+            (module) =>
+              module.MyLibraryPageComponent,
+          ),
+      },
       ...staticRoutes(),
     ],
   },
@@ -203,7 +272,6 @@ export const routes: Routes = [
 function staticRoutes(): Routes {
   const definitions = [
     ['thu-vien', 'Thư viện', 'Quản lý thư viện truyện riêng.'],
-    ['lich-su', 'Lịch sử đọc', 'Theo dõi lịch sử đọc truyện.'],
   ] as const;
 
   return definitions.map(([path, title, description]) => ({
