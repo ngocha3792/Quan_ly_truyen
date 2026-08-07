@@ -5,7 +5,7 @@ import { RoleCode } from '@/common/enums';
 import type { AuthConfig } from '@/config';
 import { OAuthProvider } from '@/generated/prisma/client';
 
-import type { AdminMfaChallengePort } from '../../application/ports';
+import type { MfaChallengePort } from '../../application/ports';
 import { OAuthFlowInvalidException } from '../../domain/exceptions';
 
 import { OAuthFlowService } from './oauth-flow.service';
@@ -137,7 +137,7 @@ describe('OAuthFlowService state protection', () => {
       client: { deviceName: 'Browser' },
     });
     const createAdminMfaChallenge: jest.MockedFunction<
-      AdminMfaChallengePort['create']
+      MfaChallengePort['create']
     > = jest.fn().mockResolvedValue({
       ticket: 'mfa-ticket',
       mode: 'verify',

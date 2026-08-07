@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -27,6 +27,8 @@ import {
   type PasswordHasherPort,
 } from '@/modules/auth/application/ports';
 
+import { OAuthHandoffStore } from '@/modules/auth/infrastructure';
+
 import { MailPayloadCipherService } from '@/infrastructure/mail/security';
 
 import { MailTemplateId } from '@/infrastructure/mail/templates';
@@ -45,6 +47,10 @@ describe('Auth HTTP lifecycle', () => {
   let redis: Redis;
 
   let cipher: MailPayloadCipherService;
+
+  let oauthHandoffs: OAuthHandoffStore;
+
+  const createdUserIds = new Set<string>();
 
   const runId = randomUUID();
 
@@ -105,6 +111,8 @@ describe('Auth HTTP lifecycle', () => {
 
     cipher = app.get(MailPayloadCipherService);
 
+    oauthHandoffs = app.get(OAuthHandoffStore);
+
     await prisma.role.upsert({
       where: {
         code: RoleCode.USER,
@@ -122,6 +130,58 @@ describe('Auth HTTP lifecycle', () => {
         isSystem: true,
       },
     });
+
+    await prisma.role.upsert({
+      where: {
+        code: RoleCode.ADMIN,
+      },
+
+      update: {},
+
+      create: {
+        code: RoleCode.ADMIN,
+
+        name: 'Admin',
+
+        description: 'E2E administrator role',
+
+        isSystem: true,
+      },
+    });
+
+    for (const [index, label] of [
+      'E2E: Biệt danh thời thơ ấu của bạn là gì?',
+      'E2E: Tên người bạn thân đầu tiên của bạn là gì?',
+      'E2E: Thành phố đầu tiên bạn từng sống là gì?',
+    ].entries()) {
+      await prisma.securityQuestion.upsert({
+        where: {
+          code: `e2e_auth_question_${index + 1}`,
+        },
+
+        update: {
+          label,
+
+          locale: 'vi',
+
+          isActive: true,
+
+          sortOrder: index + 1,
+        },
+
+        create: {
+          code: `e2e_auth_question_${index + 1}`,
+
+          label,
+
+          locale: 'vi',
+
+          isActive: true,
+
+          sortOrder: index + 1,
+        },
+      });
+    }
   });
 
   afterEach(async () => {
@@ -1191,6 +1251,1033 @@ describe('Auth HTTP lifecycle', () => {
     expect(session.revokedReason).toBe('refresh_token_reuse_detected');
   });
 
+  it('validates password reset tokens without consuming them and rejects expired or consumed tokens', async () => {
+    const user = await registerAndVerify('reset-token-validation');
+
+    await request(httpServer())
+      .post('/api/v1/auth/forgot-password')
+      .send({
+        email: user.email,
+      })
+      .expect(202);
+
+    const resetToken = await readMailToken(
+      user.id,
+
+      MailTemplateId.PASSWORD_RESET,
+
+      'resetUrl',
+    );
+
+    const validResponse = await request(httpServer())
+      .post('/api/v1/auth/reset-password/validate')
+      .send({
+        token: resetToken,
+      })
+      .expect(200);
+
+    const valid = unwrap<{
+      valid: true;
+
+      expiresAt: string;
+    }>(validResponse.body);
+
+    expect(valid.valid).toBe(true);
+
+    expect(new Date(valid.expiresAt).toISOString()).toBe(valid.expiresAt);
+
+    const tokenRecord = await prisma.userToken.findFirstOrThrow({
+      where: {
+        userId: user.id,
+
+        type: 'PASSWORD_RESET',
+
+        consumedAt: null,
+      },
+
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    expect(tokenRecord.consumedAt).toBeNull();
+
+    await prisma.userToken.update({
+      where: {
+        id: tokenRecord.id,
+      },
+
+      data: {
+        expiresAt: new Date(Date.now() - 1000),
+      },
+    });
+
+    const expiredResponse = await request(httpServer())
+      .post('/api/v1/auth/reset-password/validate')
+      .send({
+        token: resetToken,
+      });
+
+    expect(expiredResponse.status).toBe(410);
+
+    expectErrorCode(expiredResponse.body, [
+      'AUTH_PASSWORD_RESET_TOKEN_EXPIRED',
+    ]);
+
+    await prisma.userToken.update({
+      where: {
+        id: tokenRecord.id,
+      },
+
+      data: {
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    await request(httpServer())
+      .post('/api/v1/auth/reset-password')
+      .send({
+        token: resetToken,
+
+        newPassword: 'ResetValidation123!',
+      })
+      .expect(200);
+
+    const consumedResponse = await request(httpServer())
+      .post('/api/v1/auth/reset-password/validate')
+      .send({
+        token: resetToken,
+      });
+
+    expect(consumedResponse.status).toBe(401);
+
+    expectErrorCode(consumedResponse.body, [
+      'AUTH_PASSWORD_RESET_TOKEN_INVALID',
+    ]);
+  });
+
+  it('returns the authenticated security overview contract', async () => {
+    const user = await registerAndVerify('security-overview');
+
+    const authenticated = await login(
+      user.email,
+
+      defaultPassword,
+
+      'security-overview-device',
+    );
+
+    const response = await request(httpServer())
+      .get('/api/v1/auth/security-overview')
+      .set(
+        'Authorization',
+
+        `Bearer ${authenticated.accessToken}`,
+      )
+      .expect(200);
+
+    const overview = unwrap<{
+      passwordConfigured: boolean;
+
+      passwordUpdatedAt: string | null;
+
+      mfaEnabled: boolean;
+
+      mfaConfiguredAt: string | null;
+
+      recoveryEmail: string | null;
+
+      recoveryEmailVerified: boolean;
+
+      securityQuestionsConfigured: boolean;
+
+      trustedDeviceCount: number;
+    }>(response.body);
+
+    expect(overview.passwordConfigured).toBe(true);
+
+    expect(
+      overview.passwordUpdatedAt === null ||
+        typeof overview.passwordUpdatedAt === 'string',
+    ).toBe(true);
+
+    expect(overview).toMatchObject({
+      mfaEnabled: false,
+
+      mfaConfiguredAt: null,
+
+      recoveryEmail: null,
+
+      recoveryEmailVerified: false,
+
+      securityQuestionsConfigured: false,
+
+      trustedDeviceCount: 0,
+    });
+  });
+
+  it('soft deletes and anonymizes an account while revoking every authentication session', async () => {
+    const user = await registerAndVerify('delete-account');
+
+    const first = await login(
+      user.email,
+
+      defaultPassword,
+
+      'delete-account-first',
+    );
+
+    const second = await login(
+      user.email,
+
+      defaultPassword,
+
+      'delete-account-second',
+    );
+
+    const wrongPasswordResponse = await request(httpServer())
+      .delete('/api/v1/auth/account')
+      .set(
+        'Authorization',
+
+        `Bearer ${first.accessToken}`,
+      )
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        password: 'WrongPassword123!',
+
+        confirmation: 'XOA TAI KHOAN',
+      });
+
+    expect(wrongPasswordResponse.status).toBe(403);
+
+    expectErrorCode(wrongPasswordResponse.body, [
+      'AUTH_CURRENT_PASSWORD_INVALID',
+    ]);
+
+    await request(httpServer())
+      .delete('/api/v1/auth/account')
+      .set(
+        'Authorization',
+
+        `Bearer ${first.accessToken}`,
+      )
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        password: defaultPassword,
+
+        confirmation: 'XOA TAI KHOAN',
+      })
+      .expect(204);
+
+    await request(httpServer())
+      .get('/api/v1/auth/me')
+      .set(
+        'Authorization',
+
+        `Bearer ${first.accessToken}`,
+      )
+      .expect(401);
+
+    await request(httpServer())
+      .get('/api/v1/auth/me')
+      .set(
+        'Authorization',
+
+        `Bearer ${second.accessToken}`,
+      )
+      .expect(401);
+
+    await request(httpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set('Cookie', first.cookieHeader)
+      .set('X-CSRF-Token', first.csrfToken)
+      .expect(401);
+
+    const deleted = await prisma.user.findUniqueOrThrow({
+      where: {
+        id: user.id,
+      },
+    });
+
+    expect(deleted.status).toBe('DELETED');
+
+    expect(deleted.deletedAt).not.toBeNull();
+
+    expect(deleted.passwordHash).toBeNull();
+
+    expect(deleted.email).toMatch(/^deleted\+[a-f0-9]+@deleted\.invalid$/u);
+
+    expect(deleted.username).toMatch(/^deleted_[a-f0-9]+$/u);
+
+    expect(deleted.displayName).toBe('Người dùng đã xóa');
+
+    expect(
+      await prisma.userRole.count({
+        where: {
+          userId: user.id,
+        },
+      }),
+    ).toBe(0);
+
+    expect(
+      await prisma.userToken.count({
+        where: {
+          userId: user.id,
+        },
+      }),
+    ).toBe(0);
+
+    const deletionRequest =
+      await prisma.accountDeletionRequest.findFirstOrThrow({
+        where: {
+          userId: user.id,
+        },
+
+        orderBy: {
+          requestedAt: 'desc',
+        },
+      });
+
+    expect(deletionRequest.status).toBe('COMPLETED');
+
+    expect(deletionRequest.completedAt).not.toBeNull();
+
+    await request(httpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: user.email,
+
+        password: defaultPassword,
+      })
+      .expect(401);
+  });
+
+  it('allows a normal user to enable MFA and later authenticate with TOTP or a one-time recovery code', async () => {
+    const user = await registerAndVerify('user-mfa');
+
+    const current = await login(
+      user.email,
+
+      defaultPassword,
+
+      'mfa-current',
+    );
+
+    const oldSession = await login(
+      user.email,
+
+      defaultPassword,
+
+      'mfa-old-session',
+    );
+
+    const beginResponse = await request(httpServer())
+      .post('/api/v1/auth/security/mfa/enrollment')
+      .set(
+        'Authorization',
+
+        `Bearer ${current.accessToken}`,
+      )
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+      })
+      .expect(200);
+
+    const enrollment = unwrap<{
+      enrollmentId: string;
+
+      secret: string;
+
+      otpAuthUri: string;
+
+      expiresAt: string;
+    }>(beginResponse.body);
+
+    expect(enrollment.otpAuthUri).toContain('otpauth://totp/');
+
+    const confirmResponse = await request(httpServer())
+      .post('/api/v1/auth/security/mfa/enrollment/confirm')
+      .set(
+        'Authorization',
+
+        `Bearer ${current.accessToken}`,
+      )
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        enrollmentId: enrollment.enrollmentId,
+
+        totpCode: generateTotpCode(enrollment.secret),
+
+        deviceName: 'MFA E2E device',
+      })
+      .expect(200);
+
+    const confirmed = unwrap<{
+      status: {
+        enabled: boolean;
+
+        recoveryCodesRemaining: number;
+      };
+
+      recoveryCodes: string[];
+    }>(confirmResponse.body);
+
+    expect(confirmed.status.enabled).toBe(true);
+
+    expect(confirmed.recoveryCodes.length).toBeGreaterThan(0);
+
+    expect(confirmed.status.recoveryCodesRemaining).toBe(
+      confirmed.recoveryCodes.length,
+    );
+
+    await request(httpServer())
+      .get('/api/v1/auth/me')
+      .set(
+        'Authorization',
+
+        `Bearer ${oldSession.accessToken}`,
+      )
+      .expect(401);
+
+    const statusResponse = await request(httpServer())
+      .get('/api/v1/auth/security/mfa')
+      .set(
+        'Authorization',
+
+        `Bearer ${current.accessToken}`,
+      )
+      .expect(200);
+
+    expect(
+      unwrap<{
+        enabled: boolean;
+      }>(statusResponse.body).enabled,
+    ).toBe(true);
+
+    await request(httpServer())
+      .post('/api/v1/auth/logout')
+      .set('Origin', origin)
+      .set('Cookie', current.cookieHeader)
+      .set('X-CSRF-Token', current.csrfToken)
+      .expect(204);
+
+    const loginChallengeResponse = await request(httpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: user.email,
+
+        password: defaultPassword,
+
+        deviceName: 'mfa-login',
+      });
+
+    expect(loginChallengeResponse.status).toBe(412);
+
+    expectErrorCode(loginChallengeResponse.body, ['AUTH_MFA_REQUIRED']);
+
+    const challenge = readMfaChallenge(loginChallengeResponse.body);
+
+    expect(challenge.mode).toBe('verify');
+
+    const verifyResponse = await request(httpServer())
+      .post('/api/v1/auth/mfa/verify')
+      .send({
+        mfaTicket: challenge.mfaTicket,
+
+        totpCode: generateTotpCode(enrollment.secret, 1),
+
+        deviceName: 'mfa-login',
+      })
+      .expect(200);
+
+    const verified = unwrap<{
+      accessToken: string;
+    }>(verifyResponse.body);
+
+    await request(httpServer())
+      .get('/api/v1/auth/me')
+      .set(
+        'Authorization',
+
+        `Bearer ${verified.accessToken}`,
+      )
+      .expect(200);
+
+    const verifiedCookies = readAuthCookies(verifyResponse);
+
+    await request(httpServer())
+      .post('/api/v1/auth/logout')
+      .set('Origin', origin)
+      .set('Cookie', verifiedCookies.cookieHeader)
+      .set('X-CSRF-Token', verifiedCookies.csrfToken)
+      .expect(204);
+
+    const recoveryChallengeResponse = await request(httpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: user.email,
+
+        password: defaultPassword,
+      });
+
+    expect(recoveryChallengeResponse.status).toBe(412);
+
+    const recoveryChallenge = readMfaChallenge(recoveryChallengeResponse.body);
+
+    const recoveryCode = confirmed.recoveryCodes[0];
+
+    if (!recoveryCode) {
+      throw new Error('Expected at least one MFA recovery code');
+    }
+
+    const recoveryLogin = await request(httpServer())
+      .post('/api/v1/auth/mfa/verify')
+      .send({
+        mfaTicket: recoveryChallenge.mfaTicket,
+
+        recoveryCode,
+      })
+      .expect(200);
+
+    const recoveryCookies = readAuthCookies(recoveryLogin);
+
+    await request(httpServer())
+      .post('/api/v1/auth/logout')
+      .set('Origin', origin)
+      .set('Cookie', recoveryCookies.cookieHeader)
+      .set('X-CSRF-Token', recoveryCookies.csrfToken)
+      .expect(204);
+
+    const reuseChallengeResponse = await request(httpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: user.email,
+
+        password: defaultPassword,
+      });
+
+    expect(reuseChallengeResponse.status).toBe(412);
+
+    const reuseChallenge = readMfaChallenge(reuseChallengeResponse.body);
+
+    const reusedRecoveryCodeResponse = await request(httpServer())
+      .post('/api/v1/auth/mfa/verify')
+      .send({
+        mfaTicket: reuseChallenge.mfaTicket,
+
+        recoveryCode,
+      });
+
+    expect(reusedRecoveryCodeResponse.status).toBe(401);
+
+    expectErrorCode(reusedRecoveryCodeResponse.body, ['AUTH_MFA_CODE_INVALID']);
+  });
+
+  it('forces an admin to enroll MFA before login and prevents disabling policy-required MFA', async () => {
+    const user = await registerAndVerify('admin-mfa-policy');
+
+    await grantRole(user.id, RoleCode.ADMIN);
+
+    const loginResponse = await request(httpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: user.email,
+
+        password: defaultPassword,
+
+        deviceName: 'admin-policy',
+      });
+
+    expect(loginResponse.status).toBe(412);
+
+    expectErrorCode(loginResponse.body, ['AUTH_MFA_ENROLLMENT_REQUIRED']);
+
+    const challenge = readMfaChallenge(loginResponse.body);
+
+    expect(challenge.mode).toBe('enroll');
+
+    const beginResponse = await request(httpServer())
+      .post('/api/v1/auth/mfa/enrollment')
+      .send({
+        mfaTicket: challenge.mfaTicket,
+      })
+      .expect(200);
+
+    const enrollment = unwrap<{
+      secret: string;
+
+      otpAuthUri: string;
+    }>(beginResponse.body);
+
+    expect(enrollment.otpAuthUri).toContain('otpauth://totp/');
+
+    const confirmResponse = await request(httpServer())
+      .post('/api/v1/auth/mfa/enrollment/confirm')
+      .send({
+        mfaTicket: challenge.mfaTicket,
+
+        totpCode: generateTotpCode(enrollment.secret),
+
+        deviceName: 'admin-policy',
+      })
+      .expect(200);
+
+    const authenticated = unwrap<{
+      accessToken: string;
+    }>(confirmResponse.body);
+
+    const disableResponse = await request(httpServer())
+      .delete('/api/v1/auth/security/mfa')
+      .set(
+        'Authorization',
+
+        `Bearer ${authenticated.accessToken}`,
+      )
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+
+        totpCode: generateTotpCode(enrollment.secret, 1),
+      });
+
+    expect(disableResponse.status).toBe(403);
+
+    expectErrorCode(disableResponse.body, ['AUTH_MFA_REQUIRED_BY_POLICY']);
+
+    const credential = await prisma.mfaCredential.findFirst({
+      where: {
+        userId: user.id,
+
+        status: 'ENABLED',
+      },
+    });
+
+    expect(credential).not.toBeNull();
+  });
+
+  it('requests verifies and removes a recovery email with cooldown and wrong-code protection', async () => {
+    const user = await registerAndVerify('recovery-email');
+
+    const authenticated = await login(
+      user.email,
+
+      defaultPassword,
+
+      'recovery-email-device',
+    );
+
+    const authorization = `Bearer ${authenticated.accessToken}`;
+
+    const initialResponse = await request(httpServer())
+      .get('/api/v1/auth/security/recovery-email')
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(unwrap(initialResponse.body)).toMatchObject({
+      email: null,
+
+      verified: false,
+
+      pendingEmail: null,
+    });
+
+    const recoveryEmail = `backup.${runId}@example.test`;
+
+    const requestedResponse = await request(httpServer())
+      .post('/api/v1/auth/security/recovery-email/request')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        email: recoveryEmail,
+
+        currentPassword: defaultPassword,
+      })
+      .expect(200);
+
+    expect(unwrap(requestedResponse.body)).toMatchObject({
+      email: null,
+
+      verified: false,
+
+      pendingEmail: recoveryEmail,
+    });
+
+    const tooSoonResponse = await request(httpServer())
+      .post('/api/v1/auth/security/recovery-email/resend')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({});
+
+    expect(tooSoonResponse.status).toBe(429);
+
+    expectErrorCode(tooSoonResponse.body, [
+      'AUTH_RECOVERY_EMAIL_RESEND_TOO_SOON',
+    ]);
+
+    const verificationCode = await readMailStringVariable(
+      user.id,
+
+      MailTemplateId.RECOVERY_EMAIL_CODE,
+
+      'code',
+    );
+
+    const wrongCodeResponse = await request(httpServer())
+      .post('/api/v1/auth/security/recovery-email/verify')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        code: differentNumericCode(verificationCode),
+      });
+
+    expect(wrongCodeResponse.status).toBe(401);
+
+    expectErrorCode(wrongCodeResponse.body, [
+      'AUTH_RECOVERY_EMAIL_CODE_INVALID',
+    ]);
+
+    const verifiedResponse = await request(httpServer())
+      .post('/api/v1/auth/security/recovery-email/verify')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        code: verificationCode,
+      })
+      .expect(200);
+
+    expect(unwrap(verifiedResponse.body)).toMatchObject({
+      email: recoveryEmail,
+
+      verified: true,
+
+      pendingEmail: null,
+    });
+
+    const overviewResponse = await request(httpServer())
+      .get('/api/v1/auth/security-overview')
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      unwrap<{
+        recoveryEmail: string | null;
+
+        recoveryEmailVerified: boolean;
+      }>(overviewResponse.body),
+    ).toMatchObject({
+      recoveryEmail,
+
+      recoveryEmailVerified: true,
+    });
+
+    const removedResponse = await request(httpServer())
+      .delete('/api/v1/auth/security/recovery-email')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+      })
+      .expect(200);
+
+    expect(unwrap(removedResponse.body)).toEqual({
+      email: null,
+
+      verified: false,
+
+      verifiedAt: null,
+
+      pendingEmail: null,
+
+      pendingExpiresAt: null,
+    });
+
+    expect(
+      await prisma.recoveryEmail.findUnique({
+        where: {
+          userId: user.id,
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it('configures exactly three security questions without exposing plaintext answers', async () => {
+    const user = await registerAndVerify('security-questions');
+
+    const authenticated = await login(
+      user.email,
+
+      defaultPassword,
+
+      'security-questions-device',
+    );
+
+    const authorization = `Bearer ${authenticated.accessToken}`;
+
+    const catalogResponse = await request(httpServer())
+      .get('/api/v1/auth/security/questions/catalog')
+      .set('Authorization', authorization)
+      .expect(200);
+
+    const catalog = unwrap<
+      Array<{
+        id: string;
+
+        label: string;
+      }>
+    >(catalogResponse.body).filter(({ label }) => label.startsWith('E2E:'));
+
+    expect(catalog).toHaveLength(3);
+
+    const [first, second, third] = catalog;
+
+    if (!first || !second || !third) {
+      throw new Error('Expected three E2E security questions');
+    }
+
+    const initialResponse = await request(httpServer())
+      .get('/api/v1/auth/security/questions')
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      unwrap<{
+        configured: boolean;
+      }>(initialResponse.body).configured,
+    ).toBe(false);
+
+    const answers = [
+      {
+        questionId: first.id,
+
+        answer: 'Alpha secret answer',
+      },
+
+      {
+        questionId: second.id,
+
+        answer: 'Beta secret answer',
+      },
+
+      {
+        questionId: third.id,
+
+        answer: 'Gamma secret answer',
+      },
+    ];
+
+    const updatedResponse = await request(httpServer())
+      .put('/api/v1/auth/security/questions')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+
+        answers,
+      })
+      .expect(200);
+
+    const updated = unwrap<{
+      configured: boolean;
+
+      questions: Array<{
+        questionId: string;
+      }>;
+    }>(updatedResponse.body);
+
+    expect(updated.configured).toBe(true);
+
+    expect(updated.questions).toHaveLength(3);
+
+    const databaseAnswers = await prisma.userSecurityQuestion.findMany({
+      where: {
+        userId: user.id,
+      },
+
+      orderBy: {
+        position: 'asc',
+      },
+    });
+
+    expect(databaseAnswers).toHaveLength(3);
+
+    for (const row of databaseAnswers) {
+      expect(row.answerHash).toMatch(/^\$2[aby]\$/u);
+
+      expect(answers.some(({ answer }) => row.answerHash === answer)).toBe(
+        false,
+      );
+    }
+
+    const serialized = JSON.stringify(updatedResponse.body);
+
+    expect(serialized).not.toContain('Alpha secret answer');
+
+    expect(serialized).not.toContain('answerHash');
+
+    const overviewResponse = await request(httpServer())
+      .get('/api/v1/auth/security-overview')
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      unwrap<{
+        securityQuestionsConfigured: boolean;
+      }>(overviewResponse.body).securityQuestionsConfigured,
+    ).toBe(true);
+
+    const duplicateQuestionResponse = await request(httpServer())
+      .put('/api/v1/auth/security/questions')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+
+        answers: [
+          {
+            questionId: first.id,
+
+            answer: 'One answer',
+          },
+
+          {
+            questionId: first.id,
+
+            answer: 'Another answer',
+          },
+
+          {
+            questionId: third.id,
+
+            answer: 'Third answer',
+          },
+        ],
+      });
+
+    expect(duplicateQuestionResponse.status).toBe(400);
+
+    expectErrorCode(duplicateQuestionResponse.body, [
+      'AUTH_SECURITY_QUESTION_INVALID',
+    ]);
+
+    const removedResponse = await request(httpServer())
+      .delete('/api/v1/auth/security/questions')
+      .set('Authorization', authorization)
+      .set('x-idempotency-key', randomUUID())
+      .send({
+        currentPassword: defaultPassword,
+      })
+      .expect(200);
+
+    expect(
+      unwrap<{
+        configured: boolean;
+
+        questions: unknown[];
+      }>(removedResponse.body),
+    ).toMatchObject({
+      configured: false,
+
+      questions: [],
+    });
+
+    expect(
+      await prisma.userSecurityQuestion.count({
+        where: {
+          userId: user.id,
+        },
+      }),
+    ).toBe(0);
+  });
+
+  it('starts Google OAuth with PKCE state and an HttpOnly state cookie', async () => {
+    const response = await request(httpServer())
+      .get('/api/v1/auth/oauth/google')
+      .redirects(0)
+      .expect(302);
+
+    const location = response.headers.location;
+
+    expect(typeof location).toBe('string');
+
+    expect(location).toMatch(
+      /^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/u,
+    );
+
+    const url = new URL(location);
+
+    expect(url.searchParams.get('client_id')).toBe('qlt-e2e-google-client');
+
+    expect(url.searchParams.get('response_type')).toBe('code');
+
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+
+    expect(url.searchParams.get('state')).toEqual(expect.any(String));
+
+    expect(url.searchParams.get('nonce')).toEqual(expect.any(String));
+
+    const cookies = readSetCookieHeaders(response.headers['set-cookie']);
+
+    const oauthCookie = findSetCookie(cookies, 'oauth_state');
+
+    expect(oauthCookie).toContain('HttpOnly');
+
+    expect(oauthCookie).toContain('Path=/api/v1/auth/oauth');
+
+    expect(oauthCookie.toLowerCase()).toContain('samesite=lax');
+  });
+
+  it('consumes an OAuth handoff exactly once', async () => {
+    const mfaTicket = randomUUID();
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    const handoff = await oauthHandoffs.issue({
+      status: 'mfa',
+
+      challenge: {
+        mfaTicket,
+
+        mode: 'verify',
+
+        expiresAt,
+      },
+    });
+
+    expect(handoff).not.toContain(mfaTicket);
+
+    const firstResponse = await request(httpServer())
+      .post('/api/v1/auth/oauth/finalize')
+      .send({
+        handoff,
+      })
+      .expect(200);
+
+    expect(unwrap(firstResponse.body)).toEqual({
+      status: 'mfa',
+
+      challenge: {
+        mfaTicket,
+
+        mode: 'verify',
+
+        expiresAt,
+      },
+    });
+
+    const secondResponse = await request(httpServer())
+      .post('/api/v1/auth/oauth/finalize')
+      .send({
+        handoff,
+      });
+
+    expect(secondResponse.status).toBe(400);
+
+    expectErrorCode(secondResponse.body, ['AUTH_OAUTH_FLOW_INVALID']);
+  });
+
   async function registerAndVerify(name: string): Promise<{
     id: string;
 
@@ -1225,6 +2312,8 @@ describe('Auth HTTP lifecycle', () => {
 
       verificationRequired: boolean;
     }>(registerResponse.body);
+
+    createdUserIds.add(registered.id);
 
     expect(registered.verificationRequired).toBe(true);
 
@@ -1291,12 +2380,12 @@ describe('Auth HTTP lifecycle', () => {
     };
   }
 
-  async function readMailToken(
+  async function readMailStringVariable(
     userId: string,
 
     templateId: MailTemplateId,
 
-    variableName: 'verificationUrl' | 'resetUrl' | 'confirmationUrl',
+    variableName: string,
   ): Promise<string> {
     const events = await prisma.outboxEvent.findMany({
       where: {
@@ -1333,20 +2422,40 @@ describe('Auth HTTP lifecycle', () => {
         continue;
       }
 
-      const rawUrl = payload.variables[variableName];
+      const value = payload.variables[variableName];
 
-      if (typeof rawUrl !== 'string') {
-        continue;
-      }
-
-      const token = new URL(rawUrl).searchParams.get('token');
-
-      if (token) {
-        return token;
+      if (typeof value === 'string') {
+        return value;
       }
     }
 
-    throw new Error(`Mail token not found for template ${templateId}`);
+    throw new Error(
+      `Mail variable ${variableName} not found for template ${templateId}`,
+    );
+  }
+
+  async function readMailToken(
+    userId: string,
+
+    templateId: MailTemplateId,
+
+    variableName: 'verificationUrl' | 'resetUrl' | 'confirmationUrl',
+  ): Promise<string> {
+    const rawUrl = await readMailStringVariable(
+      userId,
+
+      templateId,
+
+      variableName,
+    );
+
+    const token = new URL(rawUrl).searchParams.get('token');
+
+    if (!token) {
+      throw new Error(`Mail token not found for template ${templateId}`);
+    }
+
+    return token;
   }
 
   function readAuthCookies(response: { headers: Record<string, unknown> }) {
@@ -1469,11 +2578,27 @@ describe('Auth HTTP lifecycle', () => {
       return;
     }
 
+    const trackedIds = [...createdUserIds];
+
     const users = await prisma.user.findMany({
       where: {
-        email: {
-          contains: runId,
-        },
+        OR: [
+          {
+            email: {
+              contains: runId,
+            },
+          },
+
+          ...(trackedIds.length > 0
+            ? [
+                {
+                  id: {
+                    in: trackedIds,
+                  },
+                },
+              ]
+            : []),
+        ],
       },
 
       select: {
@@ -1508,6 +2633,148 @@ describe('Auth HTTP lifecycle', () => {
         },
       },
     });
+
+    createdUserIds.clear();
+  }
+
+  async function grantRole(
+    userId: string,
+
+    roleCode: RoleCode,
+  ): Promise<void> {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: {
+        code: roleCode,
+      },
+    });
+
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId,
+
+          roleId: role.id,
+        },
+      },
+
+      update: {},
+
+      create: {
+        userId,
+
+        roleId: role.id,
+      },
+    });
+  }
+
+  function readMfaChallenge(body: unknown): {
+    mfaTicket: string;
+
+    mode: 'enroll' | 'verify';
+
+    expiresAt: string;
+  } {
+    if (!body || typeof body !== 'object' || !('error' in body)) {
+      throw new Error('MFA error envelope is missing');
+    }
+
+    const details = (
+      body as {
+        error?: {
+          details?: {
+            mfaTicket?: unknown;
+
+            mode?: unknown;
+
+            expiresAt?: unknown;
+          };
+        };
+      }
+    ).error?.details;
+
+    if (
+      typeof details?.mfaTicket !== 'string' ||
+      (details.mode !== 'enroll' && details.mode !== 'verify') ||
+      typeof details.expiresAt !== 'string'
+    ) {
+      throw new Error('Invalid MFA challenge details');
+    }
+
+    return {
+      mfaTicket: details.mfaTicket,
+
+      mode: details.mode,
+
+      expiresAt: details.expiresAt,
+    };
+  }
+
+  function differentNumericCode(actual: string): string {
+    return actual === '000000' ? '000001' : '000000';
+  }
+
+  const testTotpPeriodSeconds = 30;
+
+  const testTotpDigits = 6;
+
+  const testBase32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+  function generateTotpCode(secret: string, stepOffset = 0): string {
+    const key = decodeTestBase32(secret);
+
+    const currentStep = Math.floor(Date.now() / 1000 / testTotpPeriodSeconds);
+
+    const counter = BigInt(currentStep + stepOffset);
+
+    const buffer = Buffer.alloc(8);
+
+    buffer.writeBigUInt64BE(counter);
+
+    const digest = createHmac('sha1', key).update(buffer).digest();
+
+    const offset = digest[digest.length - 1] & 0x0f;
+
+    const binary =
+      ((digest[offset] & 0x7f) << 24) |
+      ((digest[offset + 1] & 0xff) << 16) |
+      ((digest[offset + 2] & 0xff) << 8) |
+      (digest[offset + 3] & 0xff);
+
+    return String(binary % 10 ** testTotpDigits).padStart(
+      testTotpDigits,
+
+      '0',
+    );
+  }
+
+  function decodeTestBase32(input: string): Buffer {
+    const normalized = input.toUpperCase().replace(/=+$/u, '');
+
+    let bits = 0;
+
+    let value = 0;
+
+    const bytes: number[] = [];
+
+    for (const character of normalized) {
+      const index = testBase32Alphabet.indexOf(character);
+
+      if (index < 0) {
+        throw new Error('Invalid base32 MFA secret');
+      }
+
+      value = (value << 5) | index;
+
+      bits += 5;
+
+      if (bits >= 8) {
+        bytes.push((value >>> (bits - 8)) & 0xff);
+
+        bits -= 8;
+      }
+    }
+
+    return Buffer.from(bytes);
   }
 
   function httpServer() {

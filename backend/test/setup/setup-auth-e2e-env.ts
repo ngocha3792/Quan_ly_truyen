@@ -72,6 +72,37 @@ process.env.AUTH_SESSION_LIST_LIMIT = '20';
 
 process.env.AUTH_SECURITY_EVENT_HISTORY_LIMIT = '50';
 
+process.env.AUTH_ADMIN_MFA_ENABLED = 'true';
+
+process.env.AUTH_ADMIN_MFA_ISSUER = 'Quan Ly Truyen E2E';
+
+process.env.AUTH_MFA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+
+process.env.AUTH_MFA_PREAUTH_TTL_SECONDS = '300';
+
+process.env.AUTH_MFA_MAX_VERIFICATION_ATTEMPTS = '5';
+
+process.env.AUTH_MFA_TOTP_WINDOW = '1';
+
+process.env.AUTH_MFA_RECOVERY_CODE_COUNT = '10';
+
+process.env.AUTH_OAUTH_ENABLED = 'true';
+
+process.env.AUTH_OAUTH_STATE_TTL_SECONDS = '600';
+
+process.env.AUTH_OAUTH_STATE_COOKIE_NAME = 'oauth_state';
+
+process.env.AUTH_OAUTH_GOOGLE_ENABLED = 'true';
+
+process.env.AUTH_OAUTH_GOOGLE_CLIENT_ID = 'qlt-e2e-google-client';
+
+process.env.AUTH_OAUTH_GOOGLE_CLIENT_SECRET = 'qlt-e2e-google-client-secret';
+
+process.env.AUTH_OAUTH_GOOGLE_CALLBACK_URL =
+  'http://localhost:3000/api/v1/auth/oauth/google/callback';
+
+process.env.AUTH_OAUTH_GITHUB_ENABLED = 'false';
+
 process.env.AUTH_CSRF_ENABLED = 'true';
 
 process.env.AUTH_CSRF_SECRET = 'e2e-csrf-secret-at-least-32-characters';

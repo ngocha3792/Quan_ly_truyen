@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import type { LoginResultDto } from '../../dto';
 import { LoginResultMapper } from '../../mappers';

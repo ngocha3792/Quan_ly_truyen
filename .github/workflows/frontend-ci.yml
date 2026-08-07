@@ -1,0 +1,116 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+  push:
+    branches:
+      - main
+
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+        with:
+          node-version: 24.15.0
+
+          cache: npm
+
+          cache-dependency-path:
+            frontend/package-lock.json
+
+      - name: Setup npm
+        run: npm install --global npm@11.12.1
+
+      - name: Show versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Production build
+        run: npm run build:ci
+
+      - name: Typecheck Playwright E2E
+        run: npm run typecheck:e2e
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build runtime Docker image
+        run: |
+          docker build \
+            --tag quan-ly-truyen-frontend:${{ github.sha }} \
+            .
+
+      - name: Smoke test Docker image
+        run: |
+          docker run \
+            --detach \
+            --name frontend-ci \
+            --publish 8080:80 \
+            quan-ly-truyen-frontend:${{ github.sha }}
+
+          for attempt in $(seq 1 20); do
+            if curl \
+              --fail \
+              --silent \
+              http://127.0.0.1:8080/health \
+              >/dev/null
+            then
+              echo "Frontend container is healthy"
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          echo "Frontend container failed health check"
+
+          docker logs frontend-ci
+
+          exit 1
+
+      - name: Container logs
+        if: failure()
+
+        run: |
+          docker logs frontend-ci || true
+
+      - name: Stop container
+        if: always()
+
+        run: |
+          docker rm \
+            --force \
+            frontend-ci \
+            2>/dev/null || true

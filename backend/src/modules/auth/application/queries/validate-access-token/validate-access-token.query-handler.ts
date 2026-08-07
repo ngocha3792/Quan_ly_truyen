@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { JwtTokenType, RoleCode } from '@/common/enums';
 import { InvalidTokenException } from '@/common/exceptions';
