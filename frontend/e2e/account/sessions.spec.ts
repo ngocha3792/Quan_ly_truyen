@@ -1,19 +1,26 @@
 import {
     expect,
     test,
-} from '@playwright/test';
+} from '../fixtures/authenticated-test';
 
 test(
     'hiển thị phiên hiện tại và các phiên khác',
-    async ({ page }) => {
+    async ({
+        page,
+    }) => {
         await page.goto(
             '/tai-khoan/thiet-bi',
         );
 
         await expect(
-            page.getByRole('heading', {
-                name: 'Thiết bị đăng nhập',
-            }),
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Thiết bị đăng nhập',
+                },
+            ),
         ).toBeVisible();
 
         await expect(

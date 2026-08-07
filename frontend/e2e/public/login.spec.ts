@@ -3,13 +3,19 @@ import {
     test,
 } from '@playwright/test';
 
-import { AuthDialogPage } from '../pages/auth-dialog.page';
+import {
+    AuthDialogPage,
+} from '../pages/auth-dialog.page';
 
 test(
     '@smoke người dùng đăng nhập thành công',
-    async ({ page }) => {
+    async ({
+        page,
+    }) => {
         const authDialog =
-            new AuthDialogPage(page);
+            new AuthDialogPage(
+                page,
+            );
 
         await page.goto('/');
 
@@ -17,22 +23,36 @@ test(
 
         await authDialog.login(
             'e2e.user@truyenhub.test',
+
             'E2eUser@2026',
         );
 
         await expect(
-            page.getByTestId(
-                'header-user-menu',
-            ),
-        ).toContainText('E2E User');
+            page
+                .locator(
+                    'header',
+                )
+                .getByRole(
+                    'button',
+
+                    {
+                        name:
+                            /E2E User/,
+                    },
+                ),
+        ).toBeVisible();
     },
 );
 
 test(
     'hiển thị lỗi khi mật khẩu sai',
-    async ({ page }) => {
+    async ({
+        page,
+    }) => {
         const authDialog =
-            new AuthDialogPage(page);
+            new AuthDialogPage(
+                page,
+            );
 
         await page.goto('/');
 
@@ -40,11 +60,12 @@ test(
 
         await authDialog.login(
             'e2e.user@truyenhub.test',
+
             'SaiMatKhau@2026',
         );
 
         await expect(
-            page.getByTestId('auth-error'),
+            authDialog.error,
         ).toBeVisible();
     },
 );

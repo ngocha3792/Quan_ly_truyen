@@ -145,7 +145,7 @@ describe('OAuthFlowService state protection', () => {
     });
 
     const adminMfa = {
-      isEnabled: jest.fn().mockReturnValue(true),
+      isAdminMfaRequired: jest.fn().mockReturnValue(true),
       create: createAdminMfaChallenge,
     };
     const loginPersistence = { createSession: jest.fn() };
@@ -186,7 +186,7 @@ describe('OAuthFlowService state protection', () => {
         undefined,
         { ipAddress: '203.0.113.20' },
       ),
-    ).rejects.toMatchObject({ code: 'AUTH_ADMIN_MFA_REQUIRED' });
+    ).rejects.toMatchObject({ code: 'AUTH_MFA_REQUIRED' });
 
     expect(createAdminMfaChallenge).toHaveBeenCalledTimes(1);
 

@@ -1,352 +1,457 @@
 @if (open()) {
-  <div class="backdrop" role="presentation" (click)="close()">
-    <section
-      class="dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="auth-title"
-      (click)="$event.stopPropagation()"
-    >
-      <button class="close" type="button" aria-label="Đóng" (click)="close()">
-        <app-icon name="close" />
+<div class="backdrop" role="presentation" (click)="close()">
+  <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title"
+    (click)="$event.stopPropagation()">
+    <button class="close" type="button" aria-label="Đóng" (click)="close()">
+      <app-icon name="close" />
+    </button>
+
+    <div class="brand">
+      <app-brand-logo />
+    </div>
+
+    <div class="intro">
+      <span class="eyebrow">
+        @switch (stage()) {
+        @case ('verify-email') {
+        XÁC MINH EMAIL
+        }
+
+        @case ('mfa-enroll') {
+        XÁC THỰC 2 LỚP
+        }
+
+        @case ('mfa-verify') {
+        XÁC THỰC 2 LỚP
+        }
+
+        @case ('recovery-codes') {
+        BẢO MẬT TÀI KHOẢN
+        }
+
+        @default {
+        TÀI KHOẢN TRUYENHUB
+        }
+        }
+      </span>
+
+      <h2 id="auth-title">
+        @switch (stage()) {
+        @case ('verify-email') {
+        Xác minh địa chỉ email
+        }
+
+        @case ('mfa-enroll') {
+        Thiết lập xác thực 2 lớp
+        }
+
+        @case ('mfa-verify') {
+        Xác minh đăng nhập
+        }
+
+        @case ('recovery-codes') {
+        Lưu mã khôi phục
+        }
+
+        @default {
+        {{
+        mode() === 'login'
+        ? 'Chào mừng trở lại'
+        : 'Tạo tài khoản mới'
+        }}
+        }
+        }
+      </h2>
+
+      <p>
+        @switch (stage()) {
+        @case ('verify-email') {
+        Kiểm tra hộp thư của bạn hoặc yêu cầu gửi lại email xác minh.
+        }
+
+        @case ('mfa-enroll') {
+        Quét mã QR bằng ứng dụng Authenticator, sau đó nhập mã gồm 6 chữ số.
+        }
+
+        @case ('mfa-verify') {
+        Nhập mã Authenticator hoặc một mã khôi phục để hoàn tất đăng nhập.
+        }
+
+        @case ('recovery-codes') {
+        Mỗi mã chỉ dùng được một lần. Hãy lưu chúng ở nơi an toàn.
+        }
+
+        @default {
+        {{
+        mode() === 'login'
+        ? 'Đồng bộ thư viện, lịch sử đọc và tiến độ của bạn.'
+        : 'Tham gia cộng đồng đọc truyện và lưu mọi hành trình.'
+        }}
+        }
+        }
+      </p>
+    </div>
+
+    @if (stage() === 'credentials') {
+    <div class="tabs" role="tablist">
+      <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">
+        Đăng nhập
       </button>
 
-      <div class="brand">
-        <app-brand-logo />
-      </div>
+      <button type="button" [class.active]="mode() === 'register'" (click)="switchMode('register')">
+        Đăng ký
+      </button>
+    </div>
 
-      <div class="intro">
-        <span class="eyebrow">
-          {{ stage() === 'credentials' ? 'TÀI KHOẢN TRUYENHUB' : 'XÁC THỰC 2 LỚP' }}
+    <form (ngSubmit)="submit()">
+      @if (mode() === 'register') {
+      <label>
+        <span>Tên hiển thị</span>
+
+        <div class="field">
+          <app-icon name="user" [size]="18" />
+
+          <input name="displayName" [(ngModel)]="displayName" autocomplete="name" placeholder="Nguyễn Minh Anh"
+            maxlength="120" required />
+        </div>
+      </label>
+
+      <label>
+        <span>Email</span>
+
+        <div class="field">
+          <app-icon name="mail" [size]="18" />
+
+          <input name="email" [(ngModel)]="email" type="email" autocomplete="email" placeholder="ban@email.com"
+            maxlength="320" required />
+        </div>
+      </label>
+
+      <label>
+        <span>Tên đăng nhập</span>
+
+        <div class="field">
+          <app-icon name="user" [size]="18" />
+
+          <input name="username" [(ngModel)]="username" autocomplete="username" placeholder="minhanh_99" minlength="3"
+            maxlength="50" pattern="[A-Za-z0-9_]+" required />
+        </div>
+      </label>
+      } @else {
+      <label>
+        <span>
+          Email hoặc tên đăng nhập
         </span>
 
-        <h2 id="auth-title">
-          @switch (stage()) {
-            @case ('mfa-enroll') {
-              Thiết lập xác thực 2 lớp
-            }
-            @case ('mfa-verify') {
-              Xác minh đăng nhập
-            }
-            @case ('recovery-codes') {
-              Lưu mã khôi phục
-            }
-            @default {
-              {{ mode() === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản mới' }}
-            }
-          }
-        </h2>
+        <div class="field">
+          <app-icon name="user" [size]="18" />
 
-        <p>
-          @switch (stage()) {
-            @case ('mfa-enroll') {
-              Quét mã QR bằng ứng dụng Authenticator, sau đó nhập mã gồm 6 chữ số.
-            }
-            @case ('mfa-verify') {
-              Nhập mã Authenticator hoặc một mã khôi phục để hoàn tất đăng nhập.
-            }
-            @case ('recovery-codes') {
-              Mỗi mã chỉ dùng được một lần. Hãy lưu chúng ở nơi an toàn.
-            }
-            @default {
-              {{
-                mode() === 'login'
-                  ? 'Đồng bộ thư viện, lịch sử đọc và tiến độ của bạn.'
-                  : 'Tham gia cộng đồng đọc truyện và lưu mọi hành trình.'
-              }}
-            }
+          <input name="identifier" [(ngModel)]="identifier" autocomplete="username" placeholder="Email hoặc username"
+            required />
+        </div>
+      </label>
+      }
+
+      <label>
+        <span>Mật khẩu</span>
+
+        <div class="field">
+          <app-icon name="lock" [size]="18" />
+
+          <input name="password" [(ngModel)]="password" type="password" [autocomplete]="
+                  mode() === 'login'
+                    ? 'current-password'
+                    : 'new-password'
+                " placeholder="••••••••" minlength="8" maxlength="72" required />
+        </div>
+      </label>
+
+      @if (mode() === 'login') {
+      <a class="forgot-link" routerLink="/forgot-password" (click)="close()">
+        Quên mật khẩu?
+      </a>
+      } @else {
+      <small class="hint">
+        Từ 8 đến 72 ký tự, có chữ hoa,
+        chữ thường, số và ký tự đặc biệt.
+      </small>
+      }
+
+      @if (localError() || auth.error()) {
+      <div class="alert error">
+        {{
+        localError() ||
+        auth.error()
+        }}
+      </div>
+      }
+
+      @if (message()) {
+      <div class="alert success">
+        <app-icon name="check" [size]="18" />
+
+        {{ message() }}
+      </div>
+      }
+
+      <button class="submit" type="submit" [disabled]="submitting()">
+        @if (submitting()) {
+        <span class="spinner"></span>
+        }
+
+        {{
+        mode() === 'login'
+        ? 'Đăng nhập'
+        : 'Tạo tài khoản'
+        }}
+      </button>
+    </form>
+
+    <div class="oauth-divider">
+      <span>hoặc</span>
+    </div>
+
+    <div class="oauth-options">
+      <button type="button" class="oauth-button" [disabled]="submitting()" (click)="continueWithOAuth('google')">
+        <span class="oauth-logo google">
+          G
+        </span>
+
+        Tiếp tục với Google
+      </button>
+
+      <button type="button" class="oauth-button" [disabled]="submitting()" (click)="continueWithOAuth('github')">
+        <span class="oauth-logo github">
+          GH
+        </span>
+
+        Tiếp tục với GitHub
+      </button>
+    </div>
+    }
+
+    @if (stage() === 'verify-email') {
+    <form class="mfa-form" (ngSubmit)="resendVerification()">
+      @if (message()) {
+      <div class="alert success">
+        <app-icon name="mail" [size]="18" />
+
+        {{ message() }}
+      </div>
+      }
+
+      <label>
+        <span>
+          Email cần xác minh
+        </span>
+
+        <div class="field">
+          <app-icon name="mail" [size]="18" />
+
+          <input name="verificationEmail" [(ngModel)]="verificationEmail" type="email" autocomplete="email"
+            maxlength="320" placeholder="ban@email.com" required />
+        </div>
+      </label>
+
+      <small class="hint">
+        Nếu tài khoản tồn tại và chưa được
+        xác minh, hệ thống sẽ gửi một link
+        xác minh mới tới email này.
+      </small>
+
+      @if (localError()) {
+      <div class="alert error">
+        {{ localError() }}
+      </div>
+      }
+
+      <div class="challenge-actions">
+        <button class="secondary" type="button" [disabled]="submitting()" (click)="backToCredentials()">
+          Quay lại
+        </button>
+
+        <button class="submit" type="submit" [disabled]="
+                submitting() ||
+                resendCooldownSeconds() > 0
+              ">
+          @if (submitting()) {
+          <span class="spinner"></span>
           }
-        </p>
+
+          @if (
+          resendCooldownSeconds() > 0
+          ) {
+          Gửi lại sau
+          {{ resendCooldownSeconds() }}s
+          } @else {
+          Gửi lại email xác minh
+          }
+        </button>
+      </div>
+    </form>
+    }
+
+    @if (
+    stage() === 'mfa-enroll' &&
+    enrollment();
+    as setup
+    ) {
+    <form class="mfa-form" (ngSubmit)="submitMfa()">
+      <app-mfa-qr-code [value]="setup.otpAuthUri" />
+
+      <div class="secret-box">
+        <span>
+          Khóa thiết lập thủ công
+        </span>
+
+        <code>
+              {{ setup.secret }}
+            </code>
       </div>
 
-      @if (stage() === 'credentials') {
-        <div class="tabs" role="tablist">
-          <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">
-            Đăng nhập
-          </button>
-          <button
-            type="button"
-            [class.active]="mode() === 'register'"
-            (click)="switchMode('register')"
-          >
-            Đăng ký
-          </button>
-          <div class="oauth-options">
-            <button
-              type="button"
-              class="oauth-button"
-              [disabled]="submitting()"
-              (click)="continueWithOAuth('google')"
-            >
-              <span class="oauth-logo google"> G </span>
+      <label>
+        <span>
+          Mã Authenticator
+        </span>
 
-              Tiếp tục với Google
-            </button>
+        <div class="field">
+          <app-icon name="shield" [size]="18" />
 
-            <button
-              type="button"
-              class="oauth-button"
-              [disabled]="submitting()"
-              (click)="continueWithOAuth('github')"
-            >
-              <span class="oauth-logo github"> GH </span>
-
-              Tiếp tục với GitHub
-            </button>
-          </div>
-
-          <div class="oauth-divider">
-            <span>hoặc</span>
-          </div>
+          <input name="totpCode" [(ngModel)]="totpCode" inputmode="numeric" autocomplete="one-time-code" minlength="6"
+            maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
         </div>
+      </label>
 
-        <form (ngSubmit)="submit()">
-          @if (mode() === 'register') {
-            <label>
-              <span>Tên hiển thị</span>
-              <div class="field">
-                <app-icon name="user" [size]="18" />
-                <input
-                  name="displayName"
-                  [(ngModel)]="displayName"
-                  autocomplete="name"
-                  placeholder="Nguyễn Minh Anh"
-                  maxlength="120"
-                  required
-                />
-              </div>
-            </label>
-
-            <label>
-              <span>Email</span>
-              <div class="field">
-                <app-icon name="mail" [size]="18" />
-                <input
-                  name="email"
-                  [(ngModel)]="email"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="ban@email.com"
-                  maxlength="320"
-                  required
-                />
-              </div>
-            </label>
-
-            <label>
-              <span>Tên đăng nhập</span>
-              <div class="field">
-                <app-icon name="user" [size]="18" />
-                <input
-                  name="username"
-                  [(ngModel)]="username"
-                  autocomplete="username"
-                  placeholder="minhanh_99"
-                  minlength="3"
-                  maxlength="50"
-                  pattern="[A-Za-z0-9_]+"
-                  required
-                />
-              </div>
-            </label>
-          } @else {
-            <label>
-              <span>Email hoặc tên đăng nhập</span>
-              <div class="field">
-                <app-icon name="user" [size]="18" />
-                <input
-                  name="identifier"
-                  [(ngModel)]="identifier"
-                  autocomplete="username"
-                  placeholder="Email hoặc username"
-                  required
-                />
-              </div>
-            </label>
-          }
-
-          <label>
-            <span>Mật khẩu</span>
-            <div class="field">
-              <app-icon name="lock" [size]="18" />
-              <input
-                name="password"
-                [(ngModel)]="password"
-                type="password"
-                [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
-                placeholder="••••••••"
-                minlength="8"
-                maxlength="72"
-                required
-              />
-            </div>
-          </label>
-
-          @if (mode() === 'login') {
-            <a class="forgot-link" routerLink="/forgot-password" (click)="close()">
-              Quên mật khẩu?
-            </a>
-          } @else {
-            <small class="hint">
-              Từ 8 đến 72 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
-            </small>
-          }
-
-          @if (localError() || auth.error()) {
-            <div class="alert error">{{ localError() || auth.error() }}</div>
-          }
-
-          @if (message()) {
-            <div class="alert success">
-              <app-icon name="check" [size]="18" />
-              {{ message() }}
-            </div>
-          }
-
-          <button class="submit" type="submit" [disabled]="submitting()">
-            @if (submitting()) {
-              <span class="spinner"></span>
-            }
-            {{ mode() === 'login' ? 'Đăng nhập' : 'Tạo tài khoản' }}
-          </button>
-        </form>
+      @if (
+      localError() ||
+      auth.error()
+      ) {
+      <div class="alert error">
+        {{
+        localError() ||
+        auth.error()
+        }}
+      </div>
       }
 
-      @if (stage() === 'mfa-enroll' && enrollment(); as setup) {
-        <form class="mfa-form" (ngSubmit)="submitMfa()">
-          <app-mfa-qr-code [value]="setup.otpAuthUri" />
+      <div class="challenge-actions">
+        <button class="secondary" type="button" (click)="backToCredentials()">
+          Quay lại
+        </button>
 
-          <div class="secret-box">
-            <span>Khóa thiết lập thủ công</span>
-            <code>{{ setup.secret }}</code>
-          </div>
-
-          <label>
-            <span>Mã Authenticator</span>
-            <div class="field">
-              <app-icon name="shield" [size]="18" />
-              <input
-                name="totpCode"
-                [(ngModel)]="totpCode"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                minlength="6"
-                maxlength="6"
-                pattern="[0-9]{6}"
-                placeholder="000000"
-                required
-              />
-            </div>
-          </label>
-
-          @if (localError() || auth.error()) {
-            <div class="alert error">{{ localError() || auth.error() }}</div>
+        <button class="submit" type="submit" [disabled]="submitting()">
+          @if (submitting()) {
+          <span class="spinner"></span>
           }
 
-          <div class="challenge-actions">
-            <button class="secondary" type="button" (click)="backToCredentials()">Quay lại</button>
-            <button class="submit" type="submit" [disabled]="submitting()">
-              @if (submitting()) {
-                <span class="spinner"></span>
-              }
-              Bật MFA và đăng nhập
-            </button>
-          </div>
-        </form>
-      }
+          Bật MFA và đăng nhập
+        </button>
+      </div>
+    </form>
+    }
 
-      @if (stage() === 'mfa-verify') {
-        <form class="mfa-form" (ngSubmit)="submitMfa()">
-          <div class="code-tabs">
-            <button
-              type="button"
-              [class.active]="!useRecoveryCode()"
-              (click)="useRecoveryCode.set(false)"
-            >
-              Mã TOTP
-            </button>
-            <button
-              type="button"
-              [class.active]="useRecoveryCode()"
-              (click)="useRecoveryCode.set(true)"
-            >
-              Mã khôi phục
-            </button>
-          </div>
+    @if (stage() === 'mfa-verify') {
+    <form class="mfa-form" (ngSubmit)="submitMfa()">
+      <div class="code-tabs">
+        <button type="button" [class.active]="!useRecoveryCode()" (click)="
+                useRecoveryCode.set(false)
+              ">
+          Mã TOTP
+        </button>
 
-          @if (useRecoveryCode()) {
-            <label>
-              <span>Mã khôi phục</span>
-              <div class="field">
-                <app-icon name="key" [size]="18" />
-                <input
-                  name="recoveryCode"
-                  [(ngModel)]="recoveryCode"
-                  autocomplete="one-time-code"
-                  maxlength="120"
-                  placeholder="Nhập mã khôi phục"
-                  required
-                />
-              </div>
-            </label>
-          } @else {
-            <label>
-              <span>Mã Authenticator</span>
-              <div class="field">
-                <app-icon name="shield" [size]="18" />
-                <input
-                  name="totpCode"
-                  [(ngModel)]="totpCode"
-                  inputmode="numeric"
-                  autocomplete="one-time-code"
-                  minlength="6"
-                  maxlength="6"
-                  pattern="[0-9]{6}"
-                  placeholder="000000"
-                  required
-                />
-              </div>
-            </label>
-          }
+        <button type="button" [class.active]="useRecoveryCode()" (click)="
+                useRecoveryCode.set(true)
+              ">
+          Mã khôi phục
+        </button>
+      </div>
 
-          @if (localError() || auth.error()) {
-            <div class="alert error">{{ localError() || auth.error() }}</div>
-          }
+      @if (useRecoveryCode()) {
+      <label>
+        <span>Mã khôi phục</span>
 
-          <div class="challenge-actions">
-            <button class="secondary" type="button" (click)="backToCredentials()">Quay lại</button>
-            <button class="submit" type="submit" [disabled]="submitting()">
-              @if (submitting()) {
-                <span class="spinner"></span>
-              }
-              Xác minh và đăng nhập
-            </button>
-          </div>
-        </form>
-      }
+        <div class="field">
+          <app-icon name="key" [size]="18" />
 
-      @if (stage() === 'recovery-codes') {
-        <div class="recovery-panel">
-          <div class="recovery-grid">
-            @for (code of recoveryCodes(); track code) {
-              <code>{{ code }}</code>
-            }
-          </div>
-
-          <div class="alert success">
-            Tài khoản đã đăng nhập. Đừng đóng bước này trước khi lưu các mã trên.
-          </div>
-
-          <button class="submit" type="button" (click)="finishRecoveryCodes()">
-            Tôi đã lưu mã khôi phục
-          </button>
+          <input name="recoveryCode" [(ngModel)]="recoveryCode" autocomplete="one-time-code" maxlength="120"
+            placeholder="Nhập mã khôi phục" required />
         </div>
+      </label>
+      } @else {
+      <label>
+        <span>
+          Mã Authenticator
+        </span>
+
+        <div class="field">
+          <app-icon name="shield" [size]="18" />
+
+          <input name="totpCode" [(ngModel)]="totpCode" inputmode="numeric" autocomplete="one-time-code" minlength="6"
+            maxlength="6" pattern="[0-9]{6}" placeholder="000000" required />
+        </div>
+      </label>
       }
 
-      <p class="legal">
-        <app-icon name="shield" [size]="15" />
-        Kết nối an toàn qua refresh cookie HttpOnly và CSRF token của backend.
-      </p>
-    </section>
-  </div>
+      @if (
+      localError() ||
+      auth.error()
+      ) {
+      <div class="alert error">
+        {{
+        localError() ||
+        auth.error()
+        }}
+      </div>
+      }
+
+      <div class="challenge-actions">
+        <button class="secondary" type="button" (click)="backToCredentials()">
+          Quay lại
+        </button>
+
+        <button class="submit" type="submit" [disabled]="submitting()">
+          @if (submitting()) {
+          <span class="spinner"></span>
+          }
+
+          Xác minh và đăng nhập
+        </button>
+      </div>
+    </form>
+    }
+
+    @if (
+    stage() === 'recovery-codes'
+    ) {
+    <div class="recovery-panel">
+      <div class="recovery-grid">
+        @for (
+        code of recoveryCodes();
+        track code
+        ) {
+        <code>
+                {{ code }}
+              </code>
+        }
+      </div>
+
+      <div class="alert success">
+        Tài khoản đã đăng nhập. Đừng đóng
+        bước này trước khi lưu các mã trên.
+      </div>
+
+      <button class="submit" type="button" (click)="finishRecoveryCodes()">
+        Tôi đã lưu mã khôi phục
+      </button>
+    </div>
+    }
+
+    <p class="legal">
+      <app-icon name="shield" [size]="15" />
+
+      Kết nối an toàn qua refresh cookie
+      HttpOnly và CSRF token của backend.
+    </p>
+  </section>
+</div>
 }

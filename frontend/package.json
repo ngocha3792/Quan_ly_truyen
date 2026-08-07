@@ -4,7 +4,8 @@
   "scripts": {
     "start": "ng serve --proxy-config proxy.conf.json",
     "lint": "ng lint",
-    "test:ci": "ng test --watch=false --code-coverage",
+    "test": "ng test",
+    "test:ci": "ng test",
     "build:ci": "ng build --configuration production",
     "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit",
     "e2e": "playwright test",
@@ -35,8 +36,10 @@
     "@angular/compiler-cli": "^22.1.0",
     "@playwright/test": "^1.62.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "typescript": "~6.0.2",
+    "vitest": "^4.1.10",
     "wait-on": "^9.1.0"
   }
 }

@@ -1,39 +1,87 @@
 import {
     expect,
-    type Page,
+    Locator,
+    Page,
 } from '@playwright/test';
 
 export class AuthDialogPage {
     constructor(
-        private readonly page: Page,
+        private readonly page:
+            Page,
     ) { }
 
-    async open(): Promise<void> {
+    get dialog():
+        Locator {
+        return this.page
+            .getByRole(
+                'dialog',
+            );
+    }
+
+    get error():
+        Locator {
+        return this.dialog
+            .locator(
+                '.alert.error',
+            );
+    }
+
+    async open():
+        Promise<void> {
         await this.page
-            .getByTestId('header-login')
+            .getByRole(
+                'button',
+
+                {
+                    name:
+                        'Đăng nhập',
+
+                    exact:
+                        true,
+                },
+            )
             .click();
 
         await expect(
-            this.page.getByTestId(
-                'auth-dialog',
-            ),
+            this.dialog,
         ).toBeVisible();
     }
 
     async login(
-        identifier: string,
-        password: string,
+        identifier:
+            string,
+
+        password:
+            string,
     ): Promise<void> {
-        await this.page
-            .getByTestId('auth-identifier')
-            .fill(identifier);
+        await this.dialog
+            .getByLabel(
+                'Email hoặc tên đăng nhập',
+            )
+            .fill(
+                identifier,
+            );
 
-        await this.page
-            .getByTestId('auth-password')
-            .fill(password);
+        await this.dialog
+            .getByLabel(
+                'Mật khẩu',
+            )
+            .fill(
+                password,
+            );
 
-        await this.page
-            .getByTestId('auth-submit')
+        await this.dialog
+            .getByRole(
+                'button',
+
+                {
+                    name:
+                        'Đăng nhập',
+
+                    exact:
+                        true,
+                },
+            )
             .click();
     }
 }

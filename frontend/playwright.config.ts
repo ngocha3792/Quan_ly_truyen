@@ -3,127 +3,177 @@ import {
     devices,
 } from '@playwright/test';
 
-import path from 'node:path';
-
-const isCi = Boolean(process.env['CI']);
+const isCi =
+    Boolean(
+        process.env['CI'],
+    );
 
 const isExternalServer =
-    process.env['E2E_EXTERNAL'] === 'true';
+    process.env[
+    'E2E_EXTERNAL'
+    ] === 'true';
 
 const baseURL =
-    process.env['E2E_BASE_URL'] ??
+    process.env[
+    'E2E_BASE_URL'
+    ] ??
     'http://127.0.0.1:4200';
 
-const authFile = path.join(
-    __dirname,
-    'playwright/.auth/user.json',
-);
-
 export default defineConfig({
-    testDir: './e2e',
+    testDir:
+        './e2e',
 
-    fullyParallel: true,
+    fullyParallel:
+        true,
 
-    forbidOnly: isCi,
+    forbidOnly:
+        isCi,
 
-    retries: isCi ? 2 : 0,
+    retries:
+        isCi
+            ? 2
+            : 0,
 
-    workers: isCi ? 2 : undefined,
+    workers:
+        isCi
+            ? 2
+            : undefined,
 
-    timeout: 30_000,
+    timeout:
+        30_000,
 
     expect: {
-        timeout: 8_000,
+        timeout:
+            8_000,
     },
 
-    outputDir: 'test-results',
+    outputDir:
+        'test-results',
 
-    reporter: isCi
-        ? [
-            ['github'],
-            [
-                'html',
-                {
-                    outputFolder: 'playwright-report',
-                    open: 'never',
-                },
+    reporter:
+        isCi
+            ? [
+                [
+                    'github',
+                ],
+
+                [
+                    'html',
+
+                    {
+                        outputFolder:
+                            'playwright-report',
+
+                        open:
+                            'never',
+                    },
+                ],
+            ]
+            : [
+                [
+                    'list',
+                ],
+
+                [
+                    'html',
+
+                    {
+                        outputFolder:
+                            'playwright-report',
+
+                        open:
+                            'never',
+                    },
+                ],
             ],
-        ]
-        : [
-            ['list'],
-            [
-                'html',
-                {
-                    outputFolder: 'playwright-report',
-                    open: 'never',
-                },
-            ],
-        ],
 
     use: {
         baseURL,
 
-        trace: 'on-first-retry',
+        trace:
+            'on-first-retry',
 
-        screenshot: 'only-on-failure',
+        screenshot:
+            'only-on-failure',
 
-        video: 'retain-on-failure',
+        video:
+            'retain-on-failure',
 
-        actionTimeout: 10_000,
+        actionTimeout:
+            10_000,
 
-        navigationTimeout: 20_000,
+        navigationTimeout:
+            20_000,
     },
 
     projects: [
         {
-            name: 'setup',
-            testMatch: /auth\.setup\.ts/,
-        },
-
-        {
-            name: 'public-chromium',
+            name:
+                'public-chromium',
 
             testMatch:
                 /public\/.*\.spec\.ts/,
 
             use: {
-                ...devices['Desktop Chrome'],
+                ...devices[
+                'Desktop Chrome'
+                ],
 
                 storageState: {
                     cookies: [],
+
                     origins: [],
                 },
             },
         },
 
         {
-            name: 'account-chromium',
+            name:
+                'account-chromium',
 
             testMatch:
                 /account\/.*\.spec\.ts/,
 
-            dependencies: ['setup'],
-
             use: {
-                ...devices['Desktop Chrome'],
-                storageState: authFile,
+                ...devices[
+                'Desktop Chrome'
+                ],
+
+                /**
+                 * Không dùng shared storageState.
+                 *
+                 * authenticated-test.ts sẽ login
+                 * riêng cho mỗi test.
+                 */
+                storageState: {
+                    cookies: [],
+
+                    origins: [],
+                },
             },
         },
     ],
 
-    webServer: isExternalServer
-        ? undefined
-        : {
-            command:
-                'npm start -- --host 127.0.0.1 --port 4200',
+    webServer:
+        isExternalServer
+            ? undefined
+            : {
+                command:
+                    'npm start -- --host 127.0.0.1 --port 4200',
 
-            url: baseURL,
+                url:
+                    baseURL,
 
-            timeout: 120_000,
+                timeout:
+                    120_000,
 
-            reuseExistingServer: !isCi,
+                reuseExistingServer:
+                    !isCi,
 
-            stdout: 'pipe',
-            stderr: 'pipe',
-        },
+                stdout:
+                    'pipe',
+
+                stderr:
+                    'pipe',
+            },
 });

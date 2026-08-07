@@ -68,7 +68,7 @@ describe('ValidateAccessTokenQueryHandler blacklist', () => {
 
       jwtBlacklist,
 
-      { isEnabled: () => true, create: jest.fn() },
+      { isAdminMfaRequired: () => true, create: jest.fn() },
     );
   });
 
@@ -92,12 +92,12 @@ describe('ValidateAccessTokenQueryHandler blacklist', () => {
 
     await expect(
       handler.execute(new ValidateAccessTokenQuery(payload)),
-    ).rejects.toMatchObject({ code: 'AUTH_ADMIN_MFA_REQUIRED' });
+    ).rejects.toMatchObject({ code: 'AUTH_MFA_REQUIRED' });
   });
 
   it('allows a non-MFA admin session only when MFA is disabled outside production', async () => {
     handler = new ValidateAccessTokenQueryHandler(sessionReader, jwtBlacklist, {
-      isEnabled: () => false,
+      isAdminMfaRequired: () => false,
       create: jest.fn(),
     });
     jwtBlacklist.isBlacklisted.mockResolvedValue(false);

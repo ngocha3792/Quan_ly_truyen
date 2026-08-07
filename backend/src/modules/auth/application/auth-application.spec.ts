@@ -231,6 +231,11 @@ describe('Auth application handlers', () => {
           .mockReturnValueOnce(FAMILY_ID),
       };
 
+      const mfaChallenge = {
+        isAdminMfaRequired: jest.fn().mockReturnValue(false),
+        create: jest.fn(),
+      };
+
       const handler = new LoginCommandHandler(
         persistence,
 
@@ -243,6 +248,8 @@ describe('Auth application handlers', () => {
         secureToken as never,
 
         idGenerator,
+
+        mfaChallenge,
       );
 
       const result = await handler.execute(
@@ -342,7 +349,7 @@ describe('Auth application handlers', () => {
       };
       const tokenIssuer = { issue: jest.fn() };
       const mfaChallenge = {
-        isEnabled: jest.fn().mockReturnValue(true),
+        isAdminMfaRequired: jest.fn().mockReturnValue(true),
         create: jest.fn().mockResolvedValue({
           ticket: 'mfa-ticket',
           mode: 'enroll',
@@ -366,7 +373,7 @@ describe('Auth application handlers', () => {
           }),
         ),
       ).rejects.toMatchObject({
-        code: 'AUTH_ADMIN_MFA_ENROLLMENT_REQUIRED',
+        code: 'AUTH_MFA_ENROLLMENT_REQUIRED',
         details: {
           mfaTicket: 'mfa-ticket',
           mode: 'enroll',
@@ -419,6 +426,11 @@ describe('Auth application handlers', () => {
 
         {
           generate: jest.fn(),
+        },
+
+        {
+          isAdminMfaRequired: jest.fn().mockReturnValue(false),
+          create: jest.fn(),
         },
       );
 
@@ -485,6 +497,11 @@ describe('Auth application handlers', () => {
 
         {
           generate: jest.fn(),
+        },
+
+        {
+          isAdminMfaRequired: jest.fn().mockReturnValue(false),
+          create: jest.fn(),
         },
       );
 

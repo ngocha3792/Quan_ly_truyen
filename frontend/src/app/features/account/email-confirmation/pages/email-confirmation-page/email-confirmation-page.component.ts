@@ -1,6 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import {
+  Location,
+} from '@angular/common';
 
-import { ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
+
+import {
+  ActivatedRoute,
+} from '@angular/router';
 
 import { AuthFlowPageShellComponent } from '../../../shared/ui/auth-flow-page-shell/auth-flow-page-shell.component';
 
@@ -11,25 +22,58 @@ import { EmailConfirmationStore } from '../../data-access/email-confirmation.sto
 import { EmailConfirmationCardComponent } from '../../ui/email-confirmation-card/email-confirmation-card.component';
 
 @Component({
-  selector: 'app-email-confirmation-page',
+  selector:
+    'app-email-confirmation-page',
 
   standalone: true,
 
-  imports: [AuthFlowPageShellComponent, EmailConfirmationCardComponent],
+  imports: [
+    AuthFlowPageShellComponent,
 
-  providers: [...provideEmailConfirmation(), EmailConfirmationStore],
+    EmailConfirmationCardComponent,
+  ],
 
-  templateUrl: './email-confirmation-page.component.html',
+  providers: [
+    ...provideEmailConfirmation(),
 
-  changeDetection: ChangeDetectionStrategy.OnPush,
+    EmailConfirmationStore,
+  ],
+
+  templateUrl:
+    './email-confirmation-page.component.html',
+
+  changeDetection:
+    ChangeDetectionStrategy.OnPush,
 })
-export class EmailConfirmationPageComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
+export class EmailConfirmationPageComponent
+  implements OnInit {
+  private readonly route =
+    inject(ActivatedRoute);
 
-  protected readonly store = inject(EmailConfirmationStore);
+  private readonly location =
+    inject(Location);
+
+  protected readonly store =
+    inject(EmailConfirmationStore);
 
   ngOnInit(): void {
-    const token = this.route.snapshot.queryParamMap.get('token') ?? '';
+    const token =
+      this.route.snapshot.queryParamMap
+        .get('token')
+        ?.trim() ?? '';
+
+    /**
+     * Token đổi email là credential nhạy cảm.
+     *
+     * Đọc xong phải xóa khỏi address bar để:
+     *
+     * - không lưu trong browser history
+     * - giảm nguy cơ lộ qua screenshot
+     * - giảm nguy cơ copy URL chứa token
+     */
+    this.location.replaceState(
+      '/change-email/confirm',
+    );
 
     this.store.confirm(token);
   }

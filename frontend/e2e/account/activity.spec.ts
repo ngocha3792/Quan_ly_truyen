@@ -1,19 +1,26 @@
 import {
     expect,
     test,
-} from '@playwright/test';
+} from '../fixtures/authenticated-test';
 
 test(
     'lọc lịch sử theo hoạt động đăng nhập',
-    async ({ page }) => {
+    async ({
+        page,
+    }) => {
         await page.goto(
             '/tai-khoan/hoat-dong',
         );
 
         await page
-            .getByRole('tab', {
-                name: 'Đăng nhập',
-            })
+            .getByRole(
+                'tab',
+
+                {
+                    name:
+                        'Đăng nhập',
+                },
+            )
             .click();
 
         await expect(

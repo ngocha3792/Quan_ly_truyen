@@ -1,34 +1,48 @@
-import { inject } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
-import { CanActivateFn, Router } from '@angular/router';
+import {
+  inject,
+} from '@angular/core';
 
-import { filter, map, take } from 'rxjs';
+import {
+  CanActivateFn,
+  Router,
+} from '@angular/router';
 
-import { AuthStore } from './auth.store';
+import {
+  map,
+} from 'rxjs';
 
-export const authenticatedGuard: CanActivateFn = () => {
-  const auth = inject(AuthStore);
-  const router = inject(Router);
+import {
+  createLoginRequiredUrlTree,
+  resolveAuthenticatedUser,
+} from './auth-guard.util';
 
-  if (auth.status() === 'authenticated') {
-    return true;
-  }
+import {
+  AuthStore,
+} from './auth.store';
 
-  auth.initialize();
+export const authenticatedGuard:
+  CanActivateFn = (
+    _route,
+    state,
+  ) => {
+    const auth =
+      inject(AuthStore);
 
-  return toObservable(auth.status).pipe(
-    filter((status) => status !== 'idle' && status !== 'loading'),
-    take(1),
-    map((status) => {
-      if (status === 'authenticated') {
-        return true;
-      }
+    const router =
+      inject(Router);
 
-      return router.createUrlTree(['/'], {
-        queryParams: {
-          loginRequired: true,
-        },
-      });
-    }),
-  );
-};
+    return resolveAuthenticatedUser(
+      auth,
+    ).pipe(
+      map((user) => {
+        if (user) {
+          return true;
+        }
+
+        return createLoginRequiredUrlTree(
+          router,
+          state,
+        );
+      }),
+    );
+  };

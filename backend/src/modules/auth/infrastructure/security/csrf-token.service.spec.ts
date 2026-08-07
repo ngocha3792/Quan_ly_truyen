@@ -272,6 +272,7 @@ function createService(
       enabled: false,
       stateTtlSeconds: 600,
       stateCookieName: 'oauth_state',
+      frontendCallbackUrl: 'http://localhost:3000/auth/oauth/callback',
       google: { enabled: false },
       github: { enabled: false },
     },
