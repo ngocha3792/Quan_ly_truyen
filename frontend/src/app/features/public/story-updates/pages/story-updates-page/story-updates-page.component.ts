@@ -14,7 +14,11 @@ import {
     Router,
 } from '@angular/router';
 
-import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { BreadcrumbComponent, BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 
 import { StoryUpdatesStore } from '../../data-access/story-updates.store';
@@ -39,8 +43,11 @@ import { UpdateStoryGridComponent } from '../../ui/update-story-grid/update-stor
     standalone: true,
 
     imports: [
-        IconComponent,
         PaginationComponent,
+        BreadcrumbComponent,
+        ErrorAlertComponent,
+        PageHeadingComponent,
+        ContentLayoutComponent,
 
         UpdateStatCardComponent,
         UpdateFilterBarComponent,
@@ -62,6 +69,11 @@ import { UpdateStoryGridComponent } from '../../ui/update-story-grid/update-stor
         ChangeDetectionStrategy.OnPush,
 })
 export class StoryUpdatesPageComponent {
+    protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+        { label: 'Trang chủ', route: '/' },
+        { label: 'Cập nhật mới' },
+    ];
+
     private readonly route =
         inject(ActivatedRoute);
 

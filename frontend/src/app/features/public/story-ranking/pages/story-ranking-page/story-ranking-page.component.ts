@@ -14,7 +14,12 @@ import {
     Router,
 } from '@angular/router';
 
-import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { BreadcrumbComponent, BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
 import { StoryRankingStore } from '../../data-access/story-ranking.store';
 
@@ -38,7 +43,11 @@ import { RankingTrendCardComponent } from '../../ui/ranking-trend-card/ranking-t
     standalone: true,
 
     imports: [
-        IconComponent,
+        BreadcrumbComponent,
+        ErrorAlertComponent,
+        PageHeadingComponent,
+        ContentLayoutComponent,
+        LoadingStateComponent,
 
         RankingFilterBarComponent,
         RankingPodiumComponent,
@@ -60,6 +69,11 @@ import { RankingTrendCardComponent } from '../../ui/ranking-trend-card/ranking-t
         ChangeDetectionStrategy.OnPush,
 })
 export class StoryRankingPageComponent {
+    protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+        { label: 'Trang chủ', route: '/' },
+        { label: 'Xếp hạng truyện' },
+    ];
+
     private readonly route =
         inject(ActivatedRoute);
 

@@ -1,78 +1,57 @@
 <main class="updates-page">
     <div class="page-container">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a routerLink="/">Trang chủ</a>
-            <span>›</span>
-            <span>Cập nhật mới</span>
-        </nav>
+        <app-breadcrumb [items]="breadcrumbs" />
 
-        <header class="page-heading">
-            <div>
-                <h1>
-                    Cập nhật mới
-                    <app-icon name="sparkles" [size]="18" />
-                </h1>
-
-                <p>
-                    Theo dõi những bộ truyện vừa ra chương mới nhất.
-                </p>
-            </div>
-        </header>
+        <app-page-heading
+            title="Cập nhật mới"
+            description="Theo dõi những bộ truyện vừa ra chương mới nhất."
+            icon="sparkles"
+        />
 
         @if (store.error()) {
-        <section class="error-alert">
-            <div>
-                <strong>
-                    Không thể tải danh sách cập nhật
-                </strong>
-
-                <span>
-                    {{ store.error() }}
-                </span>
-            </div>
-
-            <button type="button" (click)="store.reload()">
-                Thử lại
-            </button>
-        </section>
+            <app-error-alert
+                title="Không thể tải danh sách cập nhật"
+                [message]="store.error()"
+                (retry)="store.reload()"
+            />
         }
 
-        <div class="updates-layout">
-            <section class="updates-main">
+        <app-content-layout>
+            <ng-container main>
                 <section class="stats-grid">
                     @for (stat of store.stats(); track stat.id) {
                         <app-update-stat-card [stat]="stat" />
                     }
                 </section>
 
-                <app-update-filter-bar 
-                    [tab]="store.query().tab" 
-                    [sort]="store.query().sort" 
-                    (tabChange)="changeTab($event)" 
-                    (sortChange)="changeSort($event)" 
+                <app-update-filter-bar
+                    [tab]="store.query().tab"
+                    [sort]="store.query().sort"
+                    (tabChange)="changeTab($event)"
+                    (sortChange)="changeSort($event)"
                 />
 
                 @if (store.featured(); as featured) {
                     <app-featured-update-card [story]="featured" />
                 }
 
-                <app-update-story-grid 
-                    [stories]="store.stories()" 
-                    [loading]="store.loading() && !store.hasData()" 
+                <app-update-story-grid
+                    [stories]="store.stories()"
+                    [loading]="store.loading() && !store.hasData()"
                 />
 
-                <app-pagination 
-                    [page]="store.pagination().page" 
-                    [totalPages]="store.pagination().totalPages" 
-                    (pageChange)="changePage($event)" 
+                <app-pagination
+                    [page]="store.pagination().page"
+                    [totalPages]="store.pagination().totalPages"
+                    (pageChange)="changePage($event)"
                 />
-            </section>
+            </ng-container>
 
-            <aside class="updates-aside">
+            <ng-container aside>
                 <app-top-updates-card [stories]="store.topUpdates()" />
                 <app-update-schedule-card [items]="store.schedule()" />
                 <app-popular-update-genres [genres]="store.popularGenres()" />
-            </aside>
-        </div>
+            </ng-container>
+        </app-content-layout>
     </div>
 </main>

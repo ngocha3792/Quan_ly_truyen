@@ -4,8 +4,12 @@ import {
     inject,
 } from '@angular/core';
 
-import { RouterLink } from '@angular/router';
 
+
+import { BreadcrumbComponent, BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 
@@ -24,9 +28,12 @@ import { StoryCatalogGridComponent } from '../../ui/story-catalog-grid/story-cat
     standalone: true,
 
     imports: [
-        RouterLink,
         CompactNumberPipe,
         PaginationComponent,
+        BreadcrumbComponent,
+        ErrorAlertComponent,
+        PageHeadingComponent,
+        ContentLayoutComponent,
 
         CatalogToolbarComponent,
         CatalogQuickFiltersComponent,
@@ -45,6 +52,11 @@ import { StoryCatalogGridComponent } from '../../ui/story-catalog-grid/story-cat
         ChangeDetectionStrategy.OnPush,
 })
 export class StoryCatalogPageComponent {
+    protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+        { label: 'Trang chủ', route: '/' },
+        { label: 'Danh sách' },
+    ];
+
     protected readonly store =
         inject(StoryCatalogStore);
 }

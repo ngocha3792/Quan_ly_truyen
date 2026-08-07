@@ -5,15 +5,12 @@ import {
     output,
 } from '@angular/core';
 
+import { TabFilterComponent, TabFilterOption } from '../../../../../shared/components/tab-filter/tab-filter.component';
+
 import {
     StoryRankingMetric,
     StoryRankingPeriod,
 } from '../../domain/story-ranking.models';
-
-interface FilterOption<T> {
-    readonly value: T;
-    readonly label: string;
-}
 
 @Component({
     selector:
@@ -21,72 +18,30 @@ interface FilterOption<T> {
 
     standalone: true,
 
+    imports: [TabFilterComponent],
+
     changeDetection:
         ChangeDetectionStrategy.OnPush,
 
     template: `
     <section class="filter-bar">
-      <div
-        class="filter-group"
-        role="tablist"
-        aria-label="Khoảng thời gian"
-      >
-        @for (
-          option of periods;
-          track option.value
-        ) {
-          <button
-            type="button"
-            role="tab"
-            [class.active]="
-              period() ===
-              option.value
-            "
-            [attr.aria-selected]="
-              period() ===
-              option.value
-            "
-            (click)="
-              periodChange.emit(
-                option.value
-              )
-            "
-          >
-            {{ option.label }}
-          </button>
-        }
-      </div>
+      <app-tab-filter
+        [options]="$any(periods)"
+        [selected]="period()"
+        ariaLabel="Khoảng thời gian"
+        (selectedChange)="
+          periodChange.emit($event)
+        "
+      />
 
-      <div
-        class="filter-group metric-group"
-        role="tablist"
-        aria-label="Tiêu chí xếp hạng"
-      >
-        @for (
-          option of metrics;
-          track option.value
-        ) {
-          <button
-            type="button"
-            role="tab"
-            [class.active]="
-              metric() ===
-              option.value
-            "
-            [attr.aria-selected]="
-              metric() ===
-              option.value
-            "
-            (click)="
-              metricChange.emit(
-                option.value
-              )
-            "
-          >
-            {{ option.label }}
-          </button>
-        }
-      </div>
+      <app-tab-filter
+        [options]="$any(metrics)"
+        [selected]="metric()"
+        ariaLabel="Tiêu chí xếp hạng"
+        (selectedChange)="
+          metricChange.emit($event)
+        "
+      />
     </section>
   `,
 
@@ -103,62 +58,10 @@ interface FilterOption<T> {
       gap: 1.5rem;
     }
 
-    .filter-group {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 7px;
-    }
-
-    button {
-      min-height: 31px;
-      padding: 0 13px;
-      flex: 0 0 auto;
-      border: 1px solid
-        rgba(132, 145, 177, .15);
-      border-radius: 7px;
-      color: #969fb0;
-      font-size: .85rem;
-      font-weight: 620;
-      cursor: pointer;
-      background:
-        rgba(12, 18, 33, .72);
-      transition:
-        color 160ms ease,
-        border-color 160ms ease,
-        background 160ms ease;
-    }
-
-    button:hover {
-      color: #e8e5ed;
-      border-color:
-        rgba(155, 92, 238, .3);
-    }
-
-    button.active {
-      border-color: transparent;
-      color: #fff;
-      background:
-        linear-gradient(
-          135deg,
-          #743bde,
-          #a153eb
-        );
-      box-shadow:
-        0 7px 18px
-        rgba(114, 55, 216, .22);
-    }
-
     @media (max-width: 760px) {
       .filter-bar {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 470px) {
-      .filter-group {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
+        flex-direction: column;
+        align-items: stretch;
       }
     }
   `,
@@ -177,7 +80,7 @@ export class RankingFilterBarComponent {
         output<StoryRankingMetric>();
 
     protected readonly periods:
-        readonly FilterOption<
+        readonly TabFilterOption<
             StoryRankingPeriod
         >[] = [
             {
@@ -199,7 +102,7 @@ export class RankingFilterBarComponent {
         ];
 
     protected readonly metrics:
-        readonly FilterOption<
+        readonly TabFilterOption<
             StoryRankingMetric
         >[] = [
             {

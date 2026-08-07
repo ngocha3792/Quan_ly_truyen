@@ -13,62 +13,6 @@
         #060b16;
 }
 
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #727c90;
-    font-size: .85rem;
-
-    a {
-        color: #a773ef;
-        text-decoration: none;
-    }
-}
-
-.page-header {
-    margin: 0 0 1.5rem;
-
-    h1 {
-        margin: 0;
-        color: #f8f6fb;
-        font-size: clamp(1.65rem, 2.8vw, 2.1rem);
-        line-height: 1.2;
-        letter-spacing: -.02em;
-    }
-
-    p {
-        margin: .45rem 0 0;
-        color: #7f899d;
-        font-size: .85rem;
-        line-height: 1.6;
-    }
-}
-
-.catalog-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 1.25rem;
-    align-items: start;
-}
-
-.catalog-main-card {
-    min-width: 0;
-    padding: 1.25rem;
-    display: grid;
-    gap: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: linear-gradient(145deg, rgba(16, 22, 39, .9), rgba(10, 15, 28, .92));
-    box-shadow: 0 14px 35px rgba(0,0,0,.15);
-}
-
-.catalog-aside {
-    min-width: 0;
-    display: grid;
-    gap: 13px;
-}
-
 .result-summary {
     min-height: 27px;
     display: flex;
@@ -95,67 +39,8 @@
     padding: 11px 0 1px;
 }
 
-.error-alert {
-    margin-bottom: 15px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 17px;
-    border: 1px solid rgba(251, 113, 133, 0.24);
-    border-radius: 8px;
-    color: #fda4b5;
-    background:
-        rgba(190, 24, 93, 0.08);
-
-    >div {
-        display: grid;
-        gap: 4px;
-    }
-
-    strong {
-        font-size: .95rem;
-    }
-
-    span {
-        color: #a67a84;
-        font-size: .85rem;
-    }
-
-    button {
-        min-height: 31px;
-        padding: 0 12px;
-        border: 1px solid rgba(251, 113, 133, 0.3);
-        border-radius: 6px;
-        color: #fda4b5;
-        font-size: .85rem;
-        cursor: pointer;
-        background: transparent;
-    }
-}
-
-@media (max-width: 1080px) {
-    .catalog-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .catalog-aside {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-}
-
 @media (max-width: 720px) {
     .catalog-page {
         padding-top: .75rem;
-    }
-
-    .catalog-aside {
-        grid-template-columns: 1fr;
-    }
-
-    .error-alert {
-        align-items: flex-start;
-        flex-direction: column;
     }
 }
