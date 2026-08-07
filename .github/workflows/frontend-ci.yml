@@ -60,6 +60,9 @@ jobs:
       - name: Production build
         run: npm run build:ci
 
+      - name: Verify production artifact
+        run: test -f dist/frontend/browser/index.html
+
       - name: Typecheck Playwright E2E
         run: npm run typecheck:e2e
 
@@ -77,6 +80,7 @@ jobs:
           docker run \
             --detach \
             --name frontend-ci \
+            --add-host api:127.0.0.1 \
             --publish 8080:80 \
             quan-ly-truyen-frontend:${{ github.sha }}
 

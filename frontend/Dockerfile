@@ -20,7 +20,7 @@ COPY nginx/default.conf \
     /etc/nginx/conf.d/default.conf
 
 COPY --from=build \
-    /app/dist/truyenhub/browser \
+    /app/dist/frontend/browser \
     /usr/share/nginx/html
 
 EXPOSE 80
