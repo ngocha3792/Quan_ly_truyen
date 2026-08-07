@@ -23,17 +23,20 @@ export class HomeStore {
     this.loading.set(true);
     this.error.set(null);
 
-    this.repository.loadHome().pipe(
-      tap((data) => {
-        this.data.set(data);
-        this.loading.set(false);
-      }),
-      catchError((err) => {
-        this.loading.set(false);
-        this.error.set(getApiErrorMessage(err, 'Không thể tải dữ liệu trang chủ.'));
-        return of(null);
-      })
-    ).subscribe();
+    this.repository
+      .loadHome()
+      .pipe(
+        tap((data) => {
+          this.data.set(data);
+          this.loading.set(false);
+        }),
+        catchError((err) => {
+          this.loading.set(false);
+          this.error.set(getApiErrorMessage(err, 'Không thể tải dữ liệu trang chủ.'));
+          return of(null);
+        }),
+      )
+      .subscribe();
   }
 
   nextHero(): void {

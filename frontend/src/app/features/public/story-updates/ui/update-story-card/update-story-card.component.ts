@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -13,39 +9,18 @@ import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe
 import { StoryUpdateItem } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-update-story-card',
-    standalone: true,
-    imports: [
-        RouterLink,
-        IconComponent,
-        CompactNumberPipe,
-        RelativeTimePipe,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    <a
-      class="story-card"
-      [routerLink]="['/truyen', story().slug]"
-    >
+  selector: 'app-update-story-card',
+  standalone: true,
+  imports: [RouterLink, IconComponent, CompactNumberPipe, RelativeTimePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <a class="story-card" [routerLink]="['/truyen', story().slug]">
       <div class="cover-wrapper">
-        <img
-          [src]="story().coverUrl"
-          [alt]="story().title"
-          loading="lazy"
-        />
+        <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
 
         @if (story().badge) {
-          <span
-            class="badge"
-            [attr.data-badge]="story().badge"
-          >
-            {{
-              story().badge === 'hot'
-                ? 'HOT'
-                : story().badge === 'new'
-                  ? 'NEW'
-                  : 'NỔI BẬT'
-            }}
+          <span class="badge" [attr.data-badge]="story().badge">
+            {{ story().badge === 'hot' ? 'HOT' : story().badge === 'new' ? 'NEW' : 'NỔI BẬT' }}
           </span>
         }
       </div>
@@ -82,7 +57,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       </div>
     </a>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -94,17 +69,19 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       display: grid;
       grid-template-columns: 85px minmax(0, 1fr);
       gap: 14px;
-      border: 1px solid var(--border, rgba(132, 145, 177, .16));
+      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
       border-radius: 12px;
       color: inherit;
       text-decoration: none;
-      background: linear-gradient(145deg, rgba(16, 24, 42, .95), rgba(9, 15, 29, .95));
-      transition: transform 170ms ease, border-color 170ms ease;
+      background: linear-gradient(145deg, rgba(16, 24, 42, 0.95), rgba(9, 15, 29, 0.95));
+      transition:
+        transform 170ms ease,
+        border-color 170ms ease;
     }
 
     .story-card:hover {
       transform: translateY(-2px);
-      border-color: rgba(158, 97, 241, .4);
+      border-color: rgba(158, 97, 241, 0.4);
     }
 
     .cover-wrapper {
@@ -132,7 +109,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 2px 6px;
       border-radius: 4px;
       color: #fff;
-      font-size: .65rem;
+      font-size: 0.65rem;
       font-weight: 850;
       background: #8b44e5;
     }
@@ -174,8 +151,8 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 2px 7px;
       border-radius: 4px;
       color: #858fa2;
-      font-size: .75rem;
-      background: rgba(76, 89, 118, .18);
+      font-size: 0.75rem;
+      background: rgba(76, 89, 118, 0.18);
     }
 
     .bottom-row {
@@ -194,14 +171,14 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 3px 7px;
       border-radius: 4px;
       color: #fff;
-      font-size: .75rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      background: rgba(111, 54, 187, .75);
+      background: rgba(111, 54, 187, 0.75);
     }
 
     .time {
       color: #7b8599;
-      font-size: .75rem;
+      font-size: 0.75rem;
     }
 
     .meta-row {
@@ -215,10 +192,10 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       align-items: center;
       gap: 4px;
       color: #7f899c;
-      font-size: .75rem;
+      font-size: 0.75rem;
     }
   `,
 })
 export class UpdateStoryCardComponent {
-    readonly story = input.required<StoryUpdateItem>();
+  readonly story = input.required<StoryUpdateItem>();
 }

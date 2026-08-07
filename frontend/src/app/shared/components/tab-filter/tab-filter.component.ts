@@ -1,25 +1,19 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 export interface TabFilterOption<T = string> {
-    readonly value: T;
-    readonly label: string;
+  readonly value: T;
+  readonly label: string;
 }
 
 @Component({
-    selector: 'app-tab-filter',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    <div
-      class="tab-filter"
-      role="tablist"
-      [attr.aria-label]="ariaLabel()"
-    >
+  selector: 'app-tab-filter',
+
+  standalone: true,
+
+  changeDetection: ChangeDetectionStrategy.OnPush,
+
+  template: `
+    <div class="tab-filter" role="tablist" [attr.aria-label]="ariaLabel()">
       @for (option of options(); track option.value) {
         <button
           type="button"
@@ -33,7 +27,8 @@ export interface TabFilterOption<T = string> {
       }
     </div>
   `,
-    styles: `
+
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -42,21 +37,45 @@ export interface TabFilterOption<T = string> {
     .tab-filter {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 7px;
+
+      flex-wrap: var(--tab-wrap, wrap);
+
+      gap: var(--tab-gap, 7px);
+
+      padding: var(--tab-container-padding, 0);
+
+      overflow-x: var(--tab-overflow-x, visible);
+
+      border: var(--tab-container-border, 0);
+
+      border-radius: var(--tab-container-radius, 0);
+
+      background: var(--tab-container-background, transparent);
     }
 
     button {
-      min-height: 31px;
-      padding: 0 13px;
-      flex: 0 0 auto;
-      border: 1px solid rgba(132, 145, 177, .15);
-      border-radius: 7px;
-      color: #969fb0;
-      font-size: .85rem;
-      font-weight: 620;
+      min-height: var(--tab-min-height, 31px);
+
+      padding: var(--tab-padding, 0 13px);
+
+      flex: var(--tab-flex, 0 0 auto);
+
+      border: var(--tab-border, 1px solid rgba(132, 145, 177, 0.15));
+
+      border-radius: var(--tab-radius, 7px);
+
+      color: var(--tab-color, #969fb0);
+
+      font-size: var(--tab-font-size, 0.85rem);
+
+      font-weight: var(--tab-font-weight, 620);
+
+      white-space: nowrap;
+
       cursor: pointer;
-      background: rgba(12, 18, 33, .72);
+
+      background: var(--tab-background, rgba(12, 18, 33, 0.72));
+
       transition:
         color 160ms ease,
         border-color 160ms ease,
@@ -64,41 +83,42 @@ export interface TabFilterOption<T = string> {
     }
 
     button:hover {
-      color: #e8e5ed;
-      border-color: rgba(155, 92, 238, .3);
+      color: var(--tab-hover-color, #e8e5ed);
+
+      border-color: var(--tab-hover-border-color, rgba(155, 92, 238, 0.3));
     }
 
     button.active {
-      border-color: transparent;
-      color: #fff;
-      background: linear-gradient(
-        135deg,
-        #743bde,
-        #a153eb
-      );
-      box-shadow: 0 7px 18px rgba(114, 55, 216, .22);
+      border-color: var(--tab-active-border-color, transparent);
+
+      color: var(--tab-active-color, #fff);
+
+      background: var(--tab-active-background, linear-gradient(135deg, #743bde, #a153eb));
+
+      box-shadow: var(--tab-active-shadow, 0 7px 18px rgba(114, 55, 216, 0.22));
     }
 
     @media (max-width: 470px) {
       .tab-filter {
-        gap: 5px;
+        gap: var(--tab-mobile-gap, 5px);
       }
 
       button {
-        min-height: 28px;
-        padding: 0 10px;
-        font-size: .8rem;
+        min-height: var(--tab-mobile-min-height, 28px);
+
+        padding: var(--tab-mobile-padding, 0 10px);
+
+        font-size: var(--tab-mobile-font-size, 0.8rem);
       }
     }
   `,
 })
 export class TabFilterComponent<T = string> {
-    readonly options =
-        input.required<readonly TabFilterOption<T>[]>();
+  readonly options = input.required<readonly TabFilterOption<T>[]>();
 
-    readonly selected = input.required<T>();
+  readonly selected = input.required<T>();
 
-    readonly ariaLabel = input('Bộ lọc');
+  readonly ariaLabel = input('Bộ lọc');
 
-    readonly selectedChange = output<T>();
+  readonly selectedChange = output<T>();
 }

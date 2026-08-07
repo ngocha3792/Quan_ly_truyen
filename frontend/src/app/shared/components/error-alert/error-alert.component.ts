@@ -1,15 +1,10 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
-    selector: 'app-error-alert',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-error-alert',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <section class="error-alert" role="alert">
       <div class="error-body">
         <strong>{{ title() }}</strong>
@@ -18,15 +13,12 @@ import {
         }
       </div>
 
-      <button
-        type="button"
-        (click)="retry.emit()"
-      >
+      <button type="button" (click)="retry.emit()">
         {{ retryLabel() }}
       </button>
     </section>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -34,7 +26,7 @@ import {
 
     .error-alert {
       margin-bottom: 1rem;
-      padding: .875rem 1.25rem;
+      padding: 0.875rem 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -51,12 +43,12 @@ import {
     }
 
     strong {
-      font-size: .875rem;
+      font-size: 0.875rem;
     }
 
     span {
       color: #a77c86;
-      font-size: .75rem;
+      font-size: 0.75rem;
     }
 
     button {
@@ -66,7 +58,7 @@ import {
       border: 1px solid rgba(251, 113, 133, 0.3);
       border-radius: 6px;
       color: #fda4b5;
-      font-size: .75rem;
+      font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
       background: transparent;
@@ -89,9 +81,9 @@ import {
   `,
 })
 export class ErrorAlertComponent {
-    readonly title = input('Đã xảy ra lỗi');
-    readonly message = input<string | null>(null);
-    readonly retryLabel = input('Thử lại');
+  readonly title = input('Đã xảy ra lỗi');
+  readonly message = input<string | null>(null);
+  readonly retryLabel = input('Thử lại');
 
-    readonly retry = output<void>();
+  readonly retry = output<void>();
 }

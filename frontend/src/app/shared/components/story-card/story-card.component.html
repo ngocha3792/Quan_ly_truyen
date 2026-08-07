@@ -2,7 +2,9 @@
   <a class="cover" [routerLink]="['/truyen', story().slug]" [attr.aria-label]="story().title">
     <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
     <span class="shade"></span>
-    @if (story().badge) { <span class="badge">{{ story().badge }}</span> }
+    @if (story().badge) {
+      <span class="badge">{{ story().badge }}</span>
+    }
     <button
       type="button"
       class="save"

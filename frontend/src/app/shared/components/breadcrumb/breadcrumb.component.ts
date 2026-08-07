@@ -1,22 +1,18 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 export interface BreadcrumbItem {
-    readonly label: string;
-    readonly route?: string;
+  readonly label: string;
+  readonly route?: string;
 }
 
 @Component({
-    selector: 'app-breadcrumb',
-    standalone: true,
-    imports: [RouterLink],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-breadcrumb',
+  standalone: true,
+  imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <nav class="breadcrumb" aria-label="Breadcrumb">
       @for (item of items(); track item.label; let last = $last) {
         @if (item.route && !last) {
@@ -31,7 +27,7 @@ export interface BreadcrumbItem {
       }
     </nav>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -42,8 +38,8 @@ export interface BreadcrumbItem {
       align-items: center;
       gap: 8px;
       color: #727c90;
-      font-size: .85rem;
-      margin-bottom: .25rem;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
     }
 
     a {
@@ -62,5 +58,5 @@ export interface BreadcrumbItem {
   `,
 })
 export class BreadcrumbComponent {
-    readonly items = input.required<readonly BreadcrumbItem[]>();
+  readonly items = input.required<readonly BreadcrumbItem[]>();
 }

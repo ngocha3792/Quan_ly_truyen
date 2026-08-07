@@ -17,14 +17,20 @@
 
       <div class="intro">
         <span class="eyebrow">
-          {{ stage() === 'credentials' ? 'TÀI KHOẢN TRUYENHUB' : 'XÁC THỰC QUẢN TRỊ VIÊN' }}
+          {{ stage() === 'credentials' ? 'TÀI KHOẢN TRUYENHUB' : 'XÁC THỰC 2 LỚP' }}
         </span>
 
         <h2 id="auth-title">
           @switch (stage()) {
-            @case ('mfa-enroll') { Thiết lập xác thực 2 lớp }
-            @case ('mfa-verify') { Xác minh đăng nhập }
-            @case ('recovery-codes') { Lưu mã khôi phục }
+            @case ('mfa-enroll') {
+              Thiết lập xác thực 2 lớp
+            }
+            @case ('mfa-verify') {
+              Xác minh đăng nhập
+            }
+            @case ('recovery-codes') {
+              Lưu mã khôi phục
+            }
             @default {
               {{ mode() === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản mới' }}
             }
@@ -58,9 +64,40 @@
           <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">
             Đăng nhập
           </button>
-          <button type="button" [class.active]="mode() === 'register'" (click)="switchMode('register')">
+          <button
+            type="button"
+            [class.active]="mode() === 'register'"
+            (click)="switchMode('register')"
+          >
             Đăng ký
           </button>
+          <div class="oauth-options">
+            <button
+              type="button"
+              class="oauth-button"
+              [disabled]="submitting()"
+              (click)="continueWithOAuth('google')"
+            >
+              <span class="oauth-logo google"> G </span>
+
+              Tiếp tục với Google
+            </button>
+
+            <button
+              type="button"
+              class="oauth-button"
+              [disabled]="submitting()"
+              (click)="continueWithOAuth('github')"
+            >
+              <span class="oauth-logo github"> GH </span>
+
+              Tiếp tục với GitHub
+            </button>
+          </div>
+
+          <div class="oauth-divider">
+            <span>hoặc</span>
+          </div>
         </div>
 
         <form (ngSubmit)="submit()">
@@ -167,7 +204,9 @@
           }
 
           <button class="submit" type="submit" [disabled]="submitting()">
-            @if (submitting()) { <span class="spinner"></span> }
+            @if (submitting()) {
+              <span class="spinner"></span>
+            }
             {{ mode() === 'login' ? 'Đăng nhập' : 'Tạo tài khoản' }}
           </button>
         </form>
@@ -207,7 +246,9 @@
           <div class="challenge-actions">
             <button class="secondary" type="button" (click)="backToCredentials()">Quay lại</button>
             <button class="submit" type="submit" [disabled]="submitting()">
-              @if (submitting()) { <span class="spinner"></span> }
+              @if (submitting()) {
+                <span class="spinner"></span>
+              }
               Bật MFA và đăng nhập
             </button>
           </div>
@@ -217,10 +258,18 @@
       @if (stage() === 'mfa-verify') {
         <form class="mfa-form" (ngSubmit)="submitMfa()">
           <div class="code-tabs">
-            <button type="button" [class.active]="!useRecoveryCode()" (click)="useRecoveryCode.set(false)">
+            <button
+              type="button"
+              [class.active]="!useRecoveryCode()"
+              (click)="useRecoveryCode.set(false)"
+            >
               Mã TOTP
             </button>
-            <button type="button" [class.active]="useRecoveryCode()" (click)="useRecoveryCode.set(true)">
+            <button
+              type="button"
+              [class.active]="useRecoveryCode()"
+              (click)="useRecoveryCode.set(true)"
+            >
               Mã khôi phục
             </button>
           </div>
@@ -267,7 +316,9 @@
           <div class="challenge-actions">
             <button class="secondary" type="button" (click)="backToCredentials()">Quay lại</button>
             <button class="submit" type="submit" [disabled]="submitting()">
-              @if (submitting()) { <span class="spinner"></span> }
+              @if (submitting()) {
+                <span class="spinner"></span>
+              }
               Xác minh và đăng nhập
             </button>
           </div>

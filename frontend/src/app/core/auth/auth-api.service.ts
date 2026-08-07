@@ -1,8 +1,4 @@
-import {
-  HttpClient,
-  HttpContext,
-  HttpHeaders,
-} from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
@@ -10,19 +6,21 @@ import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
 import { ApiSuccessEnvelope } from '../http/api-envelope.model';
 import { SKIP_AUTH_REFRESH } from '../http/auth-http.context';
 import {
-  AdminMfaAuthenticationResponse,
-  AdminMfaEnrollmentResponse,
-  ConfirmAdminMfaEnrollmentRequest,
+  MfaAuthenticationResponse,
+  MfaEnrollmentResponse,
+  ValidateResetPasswordTokenResponse,
+  ConfirmMfaEnrollmentRequest,
   ConfirmEmailChangeResponse,
   CurrentUser,
   ForgotPasswordResponse,
+  OAuthFinalizeResult,
   LoginRequest,
   LoginResponse,
   RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
   ResetPasswordResponse,
-  VerifyAdminMfaRequest,
+  VerifyMfaRequest,
   VerifyEmailResponse,
 } from './auth.models';
 
@@ -34,11 +32,9 @@ export class AuthApiService {
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http
-      .post<ApiSuccessEnvelope<LoginResponse>>(
-        `${this.baseUrl}/login`,
-        payload,
-        { context: this.skipRefreshContext() },
-      )
+      .post<ApiSuccessEnvelope<LoginResponse>>(`${this.baseUrl}/login`, payload, {
+        context: this.skipRefreshContext(),
+      })
       .pipe(map((response) => response.data));
   }
 
@@ -48,14 +44,10 @@ export class AuthApiService {
     });
 
     return this.http
-      .post<ApiSuccessEnvelope<RegisterResponse>>(
-        `${this.baseUrl}/register`,
-        payload,
-        {
-          headers,
-          context: this.skipRefreshContext(),
-        },
-      )
+      .post<ApiSuccessEnvelope<RegisterResponse>>(`${this.baseUrl}/register`, payload, {
+        headers,
+        context: this.skipRefreshContext(),
+      })
       .pipe(map((response) => response.data));
   }
 
@@ -113,10 +105,21 @@ export class AuthApiService {
       .pipe(map((response) => response.data));
   }
 
-  resetPassword(
-    token: string,
-    newPassword: string,
-  ): Observable<ResetPasswordResponse> {
+  validateResetPasswordToken(token: string): Observable<ValidateResetPasswordTokenResponse> {
+    return this.http
+      .post<ApiSuccessEnvelope<ValidateResetPasswordTokenResponse>>(
+        `${this.baseUrl}/reset-password/validate`,
+        {
+          token,
+        },
+        {
+          context: this.skipRefreshContext(),
+        },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<ResetPasswordResponse> {
     return this.http
       .post<ApiSuccessEnvelope<ResetPasswordResponse>>(
         `${this.baseUrl}/reset-password`,
@@ -136,38 +139,63 @@ export class AuthApiService {
       .pipe(map((response) => response.data));
   }
 
-  beginAdminMfaEnrollment(
-    mfaTicket: string,
-  ): Observable<AdminMfaEnrollmentResponse> {
+  beginMfaEnrollment(mfaTicket: string): Observable<MfaEnrollmentResponse> {
     return this.http
-      .post<ApiSuccessEnvelope<AdminMfaEnrollmentResponse>>(
-        `${this.baseUrl}/mfa/admin/enrollment`,
-        { mfaTicket },
-        { context: this.skipRefreshContext() },
+      .post<ApiSuccessEnvelope<MfaEnrollmentResponse>>(
+        `${this.baseUrl}/mfa/enrollment`,
+
+        {
+          mfaTicket,
+        },
+
+        {
+          context: this.skipRefreshContext(),
+        },
       )
       .pipe(map((response) => response.data));
   }
 
-  confirmAdminMfaEnrollment(
-    request: ConfirmAdminMfaEnrollmentRequest,
-  ): Observable<AdminMfaAuthenticationResponse> {
+  confirmMfaEnrollment(
+    request: ConfirmMfaEnrollmentRequest,
+  ): Observable<MfaAuthenticationResponse> {
     return this.http
-      .post<ApiSuccessEnvelope<AdminMfaAuthenticationResponse>>(
-        `${this.baseUrl}/mfa/admin/enrollment/confirm`,
+      .post<ApiSuccessEnvelope<MfaAuthenticationResponse>>(
+        `${this.baseUrl}/mfa/enrollment/confirm`,
+
         request,
-        { context: this.skipRefreshContext() },
+
+        {
+          context: this.skipRefreshContext(),
+        },
       )
       .pipe(map((response) => response.data));
   }
 
-  verifyAdminMfa(
-    request: VerifyAdminMfaRequest,
-  ): Observable<AdminMfaAuthenticationResponse> {
+  verifyMfa(request: VerifyMfaRequest): Observable<MfaAuthenticationResponse> {
     return this.http
-      .post<ApiSuccessEnvelope<AdminMfaAuthenticationResponse>>(
-        `${this.baseUrl}/mfa/admin/verify`,
+      .post<ApiSuccessEnvelope<MfaAuthenticationResponse>>(
+        `${this.baseUrl}/mfa/verify`,
+
         request,
-        { context: this.skipRefreshContext() },
+
+        {
+          context: this.skipRefreshContext(),
+        },
+      )
+      .pipe(map((response) => response.data));
+  }
+  finalizeOAuth(handoff: string): Observable<OAuthFinalizeResult> {
+    return this.http
+      .post<ApiSuccessEnvelope<OAuthFinalizeResult>>(
+        `${this.baseUrl}/oauth/finalize`,
+
+        {
+          handoff,
+        },
+
+        {
+          context: this.skipRefreshContext(),
+        },
       )
       .pipe(map((response) => response.data));
   }

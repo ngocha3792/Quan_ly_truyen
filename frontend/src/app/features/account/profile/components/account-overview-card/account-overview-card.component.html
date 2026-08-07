@@ -1,107 +1,95 @@
 <section class="overview-card">
-    <div class="profile-area">
-        <div class="profile-heading">
-            <div class="avatar-wrapper">
-                <app-user-avatar [name]="user().displayName" [url]="
-            user().avatar?.url ?? null
-          " [size]="90" />
+  <div class="profile-area">
+    <div class="profile-heading">
+      <div class="avatar-wrapper">
+        <app-user-avatar
+          [name]="user().displayName"
+          [url]="user().avatar?.url ?? null"
+          [size]="90"
+        />
 
-                <a class="edit-avatar" routerLink="/tai-khoan/thong-tin-ca-nhan" aria-label="Chỉnh sửa ảnh đại diện">
-                    <app-icon name="edit" [size]="14" />
-                </a>
-            </div>
+        <a
+          class="edit-avatar"
+          routerLink="/tai-khoan/thong-tin-ca-nhan"
+          aria-label="Chỉnh sửa ảnh đại diện"
+        >
+          <app-icon name="edit" [size]="14" />
+        </a>
+      </div>
 
-            <div class="identity">
-                <div class="identity-name">
-                    <h2>
-                        {{ user().displayName }}
-                    </h2>
+      <div class="identity">
+        <div class="identity-name">
+          <h2>
+            {{ user().displayName }}
+          </h2>
 
-                    <span class="member-badge">
-                        <app-icon name="sparkles" [size]="14" />
+          <span class="member-badge">
+            <app-icon name="sparkles" [size]="14" />
 
-                        {{ membershipLabel() }}
-                    </span>
-                </div>
-
-                <p>{{ user().email }}</p>
-
-                <span class="email-status" [class.unverified]="
-            !user().emailVerified
-          ">
-                    <app-icon [name]="
-              user().emailVerified
-                ? 'check'
-                : 'mail'
-            " [size]="15" />
-
-                    {{
-                    user().emailVerified
-                    ? 'Email đã xác minh'
-                    : 'Email chưa xác minh'
-                    }}
-                </span>
-            </div>
+            {{ membershipLabel() }}
+          </span>
         </div>
 
-        <div class="account-stats">
-            <div class="stat">
-                <app-icon name="star" [size]="18" />
+        <p>{{ user().email }}</p>
 
-                <div>
-                    <strong>
-                        {{ walletBalance() }}
-                    </strong>
+        <span class="email-status" [class.unverified]="!user().emailVerified">
+          <app-icon [name]="user().emailVerified ? 'check' : 'mail'" [size]="15" />
 
-                    <span>Xu của bạn</span>
-                </div>
-            </div>
-
-            <div class="stat-divider"></div>
-
-            <div class="stat">
-                <app-icon name="clock" [size]="18" />
-
-                <div>
-                    <strong>
-                        {{ joinedDays() }}
-                    </strong>
-
-                    <span>Ngày tham gia</span>
-                </div>
-            </div>
-        </div>
+          {{ user().emailVerified ? 'Email đã xác minh' : 'Email chưa xác minh' }}
+        </span>
+      </div>
     </div>
 
-    <aside class="security-area" [attr.data-tone]="
-      security().tone
-    ">
-        <p class="security-title">
-            Mức độ bảo mật
-        </p>
+    <div class="account-stats">
+      <div class="stat">
+        <app-icon name="star" [size]="18" />
 
-        <div class="security-content">
-            <div class="security-ring" [style.background]="
-          ringBackground()
-        ">
-                <div class="ring-inner">
-                    <app-icon name="shield" [size]="22" />
-                </div>
-            </div>
+        <div>
+          <strong>
+            {{ walletBalance() }}
+          </strong>
 
-            <div class="security-copy">
-                <strong>
-                    {{ security().label }}
-                </strong>
-
-                <span>
-                    {{ security().description }}
-                </span>
-            </div>
+          <span>Xu của bạn</span>
         </div>
+      </div>
 
-        <a class="security-button" routerLink="/tai-khoan/bao-mat">
-            Xem chi tiết bảo mật
-        </a>
-    </aside>
+      <div class="stat-divider"></div>
+
+      <div class="stat">
+        <app-icon name="clock" [size]="18" />
+
+        <div>
+          <strong>
+            {{ joinedDays() }}
+          </strong>
+
+          <span>Ngày tham gia</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="security-area" [attr.data-tone]="security().tone">
+    <p class="security-title">Mức độ bảo mật</p>
+
+    <div class="security-content">
+      <div class="security-ring" [style.background]="ringBackground()">
+        <div class="ring-inner">
+          <app-icon name="shield" [size]="22" />
+        </div>
+      </div>
+
+      <div class="security-copy">
+        <strong>
+          {{ security().label }}
+        </strong>
+
+        <span>
+          {{ security().description }}
+        </span>
+      </div>
+    </div>
+
+    <a class="security-button" routerLink="/tai-khoan/bao-mat"> Xem chi tiết bảo mật </a>
+  </aside>
 </section>

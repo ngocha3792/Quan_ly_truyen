@@ -14,6 +14,7 @@ export interface AccessSessionSnapshot {
   expiresAt: Date;
   revokedAt: Date | null;
   mfaVerifiedAt?: Date | null;
+  mfaEnabled: boolean;
 
   email: string;
   emailVerifiedAt: Date | null;

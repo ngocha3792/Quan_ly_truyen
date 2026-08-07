@@ -21,10 +21,7 @@ export function getApiErrorMessage(
 
     const backendMessage = body?.error?.message;
 
-    if (
-      typeof backendMessage === 'string' &&
-      backendMessage.trim()
-    ) {
+    if (typeof backendMessage === 'string' && backendMessage.trim()) {
       return backendMessage.trim();
     }
 
@@ -52,19 +49,14 @@ export function getApiErrorMessage(
     }
   }
 
-  if (
-    error instanceof Error &&
-    error.message.trim()
-  ) {
+  if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
   }
 
   return fallbackMessage;
 }
 
-function getValidationIssueMessage(
-  body: Partial<ApiErrorEnvelope> | undefined,
-): string | null {
+function getValidationIssueMessage(body: Partial<ApiErrorEnvelope> | undefined): string | null {
   const details = body?.error?.details;
 
   if (!isRecord(details)) {
@@ -83,9 +75,7 @@ function getValidationIssueMessage(
 
   const uniqueMessages = [...new Set(messages)];
 
-  return uniqueMessages.length > 0
-    ? uniqueMessages.join(' ')
-    : null;
+  return uniqueMessages.length > 0 ? uniqueMessages.join(' ') : null;
 }
 
 function readIssueMessage(issue: unknown): string | null {
@@ -95,18 +85,13 @@ function readIssueMessage(issue: unknown): string | null {
 
   const validationIssue = issue as ApiValidationIssue;
 
-  if (
-    typeof validationIssue.message === 'string' &&
-    validationIssue.message.trim()
-  ) {
+  if (typeof validationIssue.message === 'string' && validationIssue.message.trim()) {
     return validationIssue.message.trim();
   }
 
   return null;
 }
 
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }

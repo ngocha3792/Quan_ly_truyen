@@ -1,42 +1,41 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    effect,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
 
-import {
-    FormControl,
-    FormGroup,
-    ReactiveFormsModule,
-    Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
+import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+
+import { AccountFormFieldComponent } from '../../../../shared/ui/account-form-field/account-form-field.component';
+
+import { AccountPasswordInputComponent } from '../../../../shared/ui/account-password-input/account-password-input.component';
+
 import { DeleteAccountRequest } from '../../data/account-security.models';
 
-import { AccountDialogShellComponent } from '../account-dialog-shell/account-dialog-shell.component';
-
 interface DeleteAccountForm {
-    password: FormControl<string>;
-    confirmation: FormControl<string>;
+  password: FormControl<string>;
+
+  confirmation: FormControl<string>;
 }
 
-const DELETE_CONFIRMATION =
-    'XOA TAI KHOAN';
+const DELETE_CONFIRMATION = 'XOA TAI KHOAN';
 
 @Component({
-    selector:
-        'app-delete-account-dialog',
-    standalone: true,
-    imports: [
-        ReactiveFormsModule,
-        IconComponent,
-        AccountDialogShellComponent,
-    ],
-    template: `
+  selector: 'app-delete-account-dialog',
+
+  standalone: true,
+
+  imports: [
+    ReactiveFormsModule,
+
+    IconComponent,
+
+    AccountDialogShellComponent,
+    AccountFormFieldComponent,
+    AccountPasswordInputComponent,
+  ],
+
+  template: `
     <app-account-dialog-shell
       [open]="open()"
       [busy]="submitting()"
@@ -45,72 +44,34 @@ const DELETE_CONFIRMATION =
       dialogTitleId="delete-account-title"
       (closed)="closed.emit()"
     >
-      <form
-        class="delete-form"
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-      >
+      <form class="delete-form" [formGroup]="form" (ngSubmit)="submit()">
         <div class="warning-box">
-          <app-icon
-            name="alert-triangle"
-            [size]="22"
-          />
+          <app-icon name="alert-triangle" [size]="22" />
 
           <div>
-            <strong>
-              Hành động này không thể hoàn tác
-            </strong>
+            <strong> Hành động này không thể hoàn tác </strong>
 
-            <p>
-              Tài khoản, phiên đăng nhập và dữ liệu
-              cá nhân của bạn sẽ bị xóa vĩnh viễn.
-            </p>
+            <p>Tài khoản, phiên đăng nhập và dữ liệu cá nhân của bạn sẽ bị xóa vĩnh viễn.</p>
           </div>
         </div>
 
-        <label>
-          <span>Mật khẩu hiện tại</span>
+        <app-account-password-input
+          label="Mật khẩu hiện tại"
+          icon="lock"
+          autocomplete="current-password"
+          placeholder="Nhập mật khẩu"
+          formControlName="password"
+          [error]="passwordError"
+        />
 
-          <div class="input-field">
-            <app-icon
-              name="lock"
-              [size]="17"
-            />
-
-            <input
-              type="password"
-              formControlName="password"
-              autocomplete="current-password"
-              placeholder="Nhập mật khẩu"
-            />
-          </div>
-        </label>
-
-        <label>
-          <span>
-            Nhập
-            <strong>
-              {{ confirmationText }}
-            </strong>
-            để xác nhận
-          </span>
-
-          <div class="input-field">
-            <app-icon
-              name="trash"
-              [size]="17"
-            />
-
-            <input
-              type="text"
-              formControlName="confirmation"
-              autocomplete="off"
-              [placeholder]="
-                confirmationText
-              "
-            />
-          </div>
-        </label>
+        <app-account-form-field
+          label="Nhập XOA TAI KHOAN để xác nhận"
+          icon="trash"
+          autocomplete="off"
+          [placeholder]="confirmationText"
+          formControlName="confirmation"
+          [error]="confirmationError"
+        />
 
         <div class="dialog-actions">
           <button
@@ -126,19 +87,13 @@ const DELETE_CONFIRMATION =
             class="delete-button"
             type="submit"
             [disabled]="
-              submitting() ||
-              form.invalid ||
-              form.controls.confirmation
-                .value !== confirmationText
+              submitting() || form.invalid || form.controls.confirmation.value !== confirmationText
             "
           >
             @if (submitting()) {
               <span class="spinner"></span>
             } @else {
-              <app-icon
-                name="trash"
-                [size]="16"
-              />
+              <app-icon name="trash" [size]="16" />
             }
 
             Xóa vĩnh viễn
@@ -147,69 +102,81 @@ const DELETE_CONFIRMATION =
       </form>
     </app-account-dialog-shell>
   `,
-    styleUrl:
-        './delete-account-dialog.component.scss',
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+
+  styleUrl: './delete-account-dialog.component.scss',
+
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeleteAccountDialogComponent {
-    readonly open = input(false);
-    readonly submitting = input(false);
+  readonly open = input(false);
 
-    readonly closed = output<void>();
+  readonly submitting = input(false);
 
-    readonly submitted =
-        output<DeleteAccountRequest>();
+  readonly closed = output<void>();
 
-    protected readonly confirmationText =
-        DELETE_CONFIRMATION;
+  readonly submitted = output<DeleteAccountRequest>();
 
-    protected readonly form =
-        new FormGroup<DeleteAccountForm>({
-            password:
-                new FormControl('', {
-                    nonNullable: true,
-                    validators: [
-                        Validators.required,
-                    ],
-                }),
+  protected readonly confirmationText = DELETE_CONFIRMATION;
 
-            confirmation:
-                new FormControl('', {
-                    nonNullable: true,
-                    validators: [
-                        Validators.required,
-                    ],
-                }),
-        });
+  protected readonly form = new FormGroup<DeleteAccountForm>({
+    password: new FormControl('', {
+      nonNullable: true,
 
-    constructor() {
-        effect(() => {
-            if (!this.open()) {
-                this.form.reset();
-            }
-        });
+      validators: [Validators.required],
+    }),
+
+    confirmation: new FormControl('', {
+      nonNullable: true,
+
+      validators: [Validators.required],
+    }),
+  });
+
+  constructor() {
+    effect(() => {
+      if (!this.open()) {
+        this.form.reset();
+      }
+    });
+  }
+
+  protected get passwordError(): string {
+    const control = this.form.controls.password;
+
+    return control.touched && control.hasError('required')
+      ? 'Vui lòng nhập mật khẩu hiện tại.'
+      : '';
+  }
+
+  protected get confirmationError(): string {
+    const control = this.form.controls.confirmation;
+
+    if (!control.touched) {
+      return '';
     }
 
-    protected submit(): void {
-        this.form.markAllAsTouched();
-
-        const value =
-            this.form.getRawValue();
-
-        if (
-            this.form.invalid ||
-            this.submitting() ||
-            value.confirmation !==
-            DELETE_CONFIRMATION
-        ) {
-            return;
-        }
-
-        this.submitted.emit({
-            password: value.password,
-            confirmation:
-                value.confirmation,
-        });
+    if (control.hasError('required')) {
+      return 'Vui lòng nhập cụm từ xác nhận.';
     }
+
+    return control.value !== DELETE_CONFIRMATION
+      ? `Hãy nhập chính xác ${DELETE_CONFIRMATION}.`
+      : '';
+  }
+
+  protected submit(): void {
+    this.form.markAllAsTouched();
+
+    const value = this.form.getRawValue();
+
+    if (this.form.invalid || this.submitting() || value.confirmation !== DELETE_CONFIRMATION) {
+      return;
+    }
+
+    this.submitted.emit({
+      password: value.password,
+
+      confirmation: value.confirmation,
+    });
+  }
 }

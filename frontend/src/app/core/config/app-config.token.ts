@@ -7,7 +7,6 @@ export interface AppRuntimeConfig {
   readonly production: boolean;
 }
 
-export const APP_RUNTIME_CONFIG = new InjectionToken<AppRuntimeConfig>(
-  'APP_RUNTIME_CONFIG',
-  { factory: () => environment },
-);
+export const APP_RUNTIME_CONFIG = new InjectionToken<AppRuntimeConfig>('APP_RUNTIME_CONFIG', {
+  factory: () => environment,
+});

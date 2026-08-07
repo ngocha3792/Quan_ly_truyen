@@ -1,131 +1,115 @@
 .delete-form {
-    display: grid;
-    gap: 17px;
+  display: grid;
+
+  gap: 17px;
 }
 
 .warning-box {
-    padding: 14px;
-    display: grid;
-    grid-template-columns:
-        auto minmax(0, 1fr);
-    gap: 12px;
-    border: 1px solid rgba(244, 63, 94, 0.24);
-    border-radius: 9px;
-    color: #fb7185;
-    background:
-        rgba(190, 24, 93, 0.08);
+  padding: 14px;
 
-    strong {
-        color: #fda4b5;
-        font-size: 13.5px;
-    }
+  display: grid;
 
-    p {
-        margin: 6px 0 0;
-        color: #fca5b5;
-        font-size: 12px;
-        line-height: 1.6;
-    }
-}
+  grid-template-columns: auto minmax(0, 1fr);
 
-label {
-    display: grid;
-    gap: 7px;
+  gap: 12px;
 
-    >span {
-        color: #94a3b8;
-        font-size: 13px;
-        font-weight: 600;
+  border: 1px solid rgba(244, 63, 94, 0.24);
 
-        strong {
-            color: #fb7185;
-        }
-    }
-}
+  border-radius: 9px;
 
-.input-field {
-    min-height: 42px;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 1px solid rgba(139, 151, 181, 0.25);
-    border-radius: 8px;
-    color: #94a3b8;
-    background:
-        rgba(5, 10, 21, 0.52);
+  color: #fb7185;
 
-    &:focus-within {
-        border-color:
-            rgba(244, 63, 94, 0.62);
-        box-shadow:
-            0 0 0 3px rgba(190, 24, 93, 0.09);
-    }
+  background: rgba(190, 24, 93, 0.08);
 
-    input {
-        min-width: 0;
-        flex: 1;
-        border: 0;
-        outline: 0;
-        color: #f8fafc;
-        font-size: 14px;
-        background: transparent;
-    }
+  strong {
+    color: #fda4b5;
+
+    font-size: 13.5px;
+  }
+
+  p {
+    margin: 6px 0 0;
+
+    color: #fca5b5;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+  }
 }
 
 .dialog-actions {
-    padding-top: 17px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 9px;
-    border-top:
-        1px solid rgba(139, 151, 181, 0.13);
+  padding-top: 17px;
+
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 9px;
+
+  border-top: 1px solid rgba(139, 151, 181, 0.13);
 }
 
 .cancel-button,
 .delete-button {
-    min-height: 42px;
-    padding: 0 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border-radius: 7px;
-    font-size: 13.5px;
-    font-weight: 650;
-    cursor: pointer;
+  min-height: 42px;
 
-    &:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
+  padding: 0 18px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  border-radius: 7px;
+
+  font-size: 13.5px;
+
+  font-weight: 650;
+
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+
+    cursor: not-allowed;
+  }
 }
 
 .cancel-button {
-    border: 1px solid rgba(139, 151, 181, 0.25);
-    color: #babfcb;
-    background: transparent;
+  border: 1px solid rgba(139, 151, 181, 0.25);
+
+  color: #babfcb;
+
+  background: transparent;
 }
 
 .delete-button {
-    border: 1px solid rgba(244, 63, 94, 0.75);
-    color: #fb7185;
-    background:
-        rgba(190, 24, 93, 0.07);
+  border: 1px solid rgba(244, 63, 94, 0.75);
+
+  color: #fb7185;
+
+  background: rgba(190, 24, 93, 0.07);
 }
 
 .spinner {
-    width: 15px;
-    height: 15px;
-    border: 2px solid rgba(251, 113, 133, 0.3);
-    border-top-color: #fb7185;
-    border-radius: 50%;
-    animation:
-        delete-spinner 700ms linear infinite;
+  width: 15px;
+  height: 15px;
+
+  border: 2px solid rgba(251, 113, 133, 0.3);
+
+  border-top-color: #fb7185;
+
+  border-radius: 50%;
+
+  animation: delete-spinner 700ms linear infinite;
 }
 
 @keyframes delete-spinner {
-    to {
-        transform: rotate(360deg);
-    }
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -1,17 +1,13 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { IconComponent, IconName } from '../icon/icon.component';
 
 @Component({
-    selector: 'app-page-heading',
-    standalone: true,
-    imports: [IconComponent],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-page-heading',
+  standalone: true,
+  imports: [IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <header class="page-heading">
       <div>
         <h1>
@@ -28,7 +24,7 @@ import { IconComponent, IconName } from '../icon/icon.component';
       <ng-content />
     </header>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -46,12 +42,12 @@ import { IconComponent, IconName } from '../icon/icon.component';
       margin: 0;
       display: flex;
       align-items: center;
-      gap: .35rem;
+      gap: 0.35rem;
       color: #f8f6fb;
       font-size: clamp(1.65rem, 2.8vw, 2.1rem);
       font-style: normal;
       line-height: 1.2;
-      letter-spacing: -.02em;
+      letter-spacing: -0.02em;
     }
 
     h1 app-icon {
@@ -59,15 +55,15 @@ import { IconComponent, IconName } from '../icon/icon.component';
     }
 
     p {
-      margin: .45rem 0 0;
+      margin: 0.45rem 0 0;
       color: #7f899d;
-      font-size: .85rem;
+      font-size: 0.85rem;
       line-height: 1.6;
     }
   `,
 })
 export class PageHeadingComponent {
-    readonly title = input.required<string>();
-    readonly description = input<string | null>(null);
-    readonly icon = input<IconName | null>(null);
+  readonly title = input.required<string>();
+  readonly description = input<string | null>(null);
+  readonly icon = input<IconName | null>(null);
 }

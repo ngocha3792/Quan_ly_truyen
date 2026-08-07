@@ -154,14 +154,24 @@ export interface AuthConfig {
 
   oauth: {
     enabled: boolean;
+
     stateTtlSeconds: number;
+
     stateCookieName: string;
+
+    /*
+     * Sau khi provider callback xong,
+     * backend redirect browser về URL này.
+     */
+    frontendCallbackUrl: string;
+
     google: {
       enabled: boolean;
       clientId?: string;
       clientSecret?: string;
       callbackUrl?: string;
     };
+
     github: {
       enabled: boolean;
       clientId?: string;

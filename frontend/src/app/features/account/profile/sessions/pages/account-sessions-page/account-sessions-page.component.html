@@ -1,109 +1,99 @@
 <header class="page-header">
-    <h1>Thiết bị đăng nhập</h1>
+  <h1>Thiết bị đăng nhập</h1>
 
-    <p>
-        Theo dõi và thu hồi các phiên đăng nhập.
-    </p>
+  <p>Theo dõi và thu hồi các phiên đăng nhập.</p>
 </header>
 
 @if (store.error()) {
-<div class="alert error-alert">
+  <div class="alert error-alert">
     <span>{{ store.error() }}</span>
 
-    <button type="button" (click)="store.clearMessages()">
-        Đóng
-    </button>
-</div>
+    <button type="button" (click)="store.clearMessages()">Đóng</button>
+  </div>
 }
 
 @if (store.success()) {
-<div class="alert success-alert">
+  <div class="alert success-alert">
     <span>{{ store.success() }}</span>
 
-    <button type="button" (click)="store.clearMessages()">
-        Đóng
-    </button>
-</div>
+    <button type="button" (click)="store.clearMessages()">Đóng</button>
+  </div>
 }
 
 @if (store.loading()) {
-<section class="loading-card">
+  <section class="loading-card">
     <span class="spinner"></span>
 
-    <p>
-        Đang tải danh sách thiết bị...
-    </p>
-</section>
+    <p>Đang tải danh sách thiết bị...</p>
+  </section>
 } @else {
-<div class="session-layout">
+  <div class="session-layout">
     <main class="session-main">
-        <section class="stats-grid">
-            <app-session-stat-card label="Phiên đang hoạt động" [value]="
-            store.activeSessionCount()
-          " description="Đang sử dụng tài khoản" icon="monitor" tone="purple" />
+      <section class="stats-grid">
+        <app-stat-card
+          label="Phiên đang hoạt động"
+          [value]="store.activeSessionCount()"
+          description="Đang sử dụng tài khoản"
+          icon="monitor"
+          tone="purple"
+        />
 
-            <app-session-stat-card label="Thiết bị tin cậy" [value]="
-            store.trustedDeviceCount()
-          " description="Được tin cậy bởi bạn" icon="shield" tone="green" />
+        <app-stat-card
+          label="Thiết bị tin cậy"
+          [value]="store.trustedDeviceCount()"
+          description="Được tin cậy bởi bạn"
+          icon="shield"
+          tone="green"
+        />
 
-            <app-session-stat-card label="Lần đăng nhập gần nhất" [value]="
-            store.latestLoginAt()
-              ? (
-                  store.latestLoginAt()
-                    | relativeTime
-                )
-              : 'Không xác định'
-          " [description]="
-            store.currentSession()
-              ?.subtitle ||
-            'Không có dữ liệu'
-          " icon="clock" tone="blue" />
-        </section>
+        <app-stat-card
+          label="Lần đăng nhập gần nhất"
+          [value]="
+            store.latestLoginAt() ? (store.latestLoginAt() | relativeTime) : 'Không xác định'
+          "
+          [description]="store.currentSession()?.subtitle || 'Không có dữ liệu'"
+          icon="clock"
+          tone="blue"
+        />
+      </section>
 
-        @if (
-        store.currentSession();
-        as currentSession
-        ) {
+      @if (store.currentSession(); as currentSession) {
         <app-current-session-card [session]="currentSession" />
-        }
+      }
 
-        <section class="sessions-card">
-            <app-session-list-toolbar [query]="store.query()" [filter]="store.filter()" [busy]="store.submitting()"
-                [revocableCount]="
-            store.revocableSessionCount()
-          " (queryChange)="
-            store.setQuery($event)
-          " (filterChange)="
-            setFilter($event)
-          " (revokeAllRequested)="
-            requestAllRevoke()
-          " />
+      <section class="sessions-card">
+        <app-session-list-toolbar
+          [query]="store.query()"
+          [filter]="store.filter()"
+          [busy]="store.submitting()"
+          [revocableCount]="store.revocableSessionCount()"
+          (queryChange)="store.setQuery($event)"
+          (filterChange)="setFilter($event)"
+          (revokeAllRequested)="requestAllRevoke()"
+        />
 
-            <app-session-list [sessions]="
-            store.filteredSessions()
-          " [revokingIds]="
-            store.revokingIds()
-          " (revokeRequested)="
-            requestSingleRevoke($event)
-          " />
-        </section>
+        <app-session-list
+          [sessions]="store.filteredSessions()"
+          [revokingIds]="store.revokingIds()"
+          (revokeRequested)="requestSingleRevoke($event)"
+        />
+      </section>
     </main>
 
     <aside class="session-aside">
-        <app-security-tips-card />
+      <app-security-tips-card />
 
-        <app-recent-login-card [activities]="
-          store.recentLogins()
-        " />
+      <app-recent-login-card [activities]="store.recentLogins()" />
     </aside>
-</div>
+  </div>
 }
 
-<app-confirm-session-dialog [open]="confirmation() !== null" [busy]="store.submitting()" [title]="confirmationTitle()"
-    [message]="confirmationMessage()" [confirmLabel]="
-    confirmation()?.type === 'all'
-      ? 'Thu hồi tất cả'
-      : 'Thu hồi phiên'
-  " (confirmed)="confirmRevoke()" (cancelled)="
-    confirmation.set(null)
-  " />
+<app-confirm-session-dialog
+  [open]="confirmation() !== null"
+  [busy]="store.submitting()"
+  [title]="confirmationTitle()"
+  [message]="confirmationMessage()"
+  [confirmLabel]="confirmation()?.type === 'all' ? 'Thu hồi tất cả' : 'Thu hồi phiên'"
+  (confirmed)="confirmRevoke()"
+  (cancelled)="confirmation.set(null)"
+/>

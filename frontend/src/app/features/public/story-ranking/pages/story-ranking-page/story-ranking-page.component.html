@@ -1,66 +1,48 @@
 <main class="ranking-page">
-    <div class="page-container">
-        <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-        <app-page-heading
-            title="Xếp hạng truyện"
-            description="Theo dõi những bộ truyện nổi bật nhất theo lượt xem, đánh giá và xu hướng đọc."
-            icon="trophy"
+    <app-page-heading
+      title="Xếp hạng truyện"
+      description="Theo dõi những bộ truyện nổi bật nhất theo lượt xem, đánh giá và xu hướng đọc."
+      icon="trophy"
+    />
+
+    @if (store.error()) {
+      <app-error-alert
+        title="Không thể tải bảng xếp hạng"
+        [message]="store.error()"
+        (retry)="store.reload()"
+      />
+    }
+
+    <app-content-layout>
+      <ng-container main>
+        <app-ranking-filter-bar
+          [period]="store.query().period"
+          [metric]="store.query().metric"
+          (periodChange)="changePeriod($event)"
+          (metricChange)="changeMetric($event)"
         />
 
-        @if (store.error()) {
-            <app-error-alert
-                title="Không thể tải bảng xếp hạng"
-                [message]="store.error()"
-                (retry)="store.reload()"
-            />
+        @if (store.loading() && !store.hasData()) {
+          <app-loading-state message="Đang tải bảng xếp hạng..." />
+        } @else {
+          <app-ranking-podium [stories]="store.topStories()" />
+
+          <app-ranking-table [stories]="store.remainingStories()" />
         }
+      </ng-container>
 
-        <app-content-layout>
-            <section main>
-                <app-ranking-filter-bar [period]="
-                    store.query().period
-                " [metric]="
-                    store.query().metric
-                " (periodChange)="
-                    changePeriod($event)
-                " (metricChange)="
-                    changeMetric($event)
-                " />
+      <ng-container aside>
+        <app-ranking-summary-card [summary]="store.summary()" />
 
-                @if (
-                    store.loading() &&
-                    !store.hasData()
-                ) {
-                    <app-loading-state
-                        message="Đang tải bảng xếp hạng..."
-                    />
-                } @else {
-                    <app-ranking-podium [stories]="
-                        store.topStories()
-                    " />
+        <app-genre-distribution-card [genres]="store.genres()" />
 
-                    <app-ranking-table [stories]="
-                        store.remainingStories()
-                    " />
-                }
-            </section>
+        <app-ranking-trend-card [trends]="store.trends()" />
 
-            <ng-container aside>
-                <app-ranking-summary-card [summary]="
-                    store.summary()
-                " />
-
-                <app-genre-distribution-card [genres]="
-                    store.genres()
-                " />
-
-                <app-ranking-trend-card [trends]="
-                    store.trends()
-                " />
-
-                <app-ranking-discovery-card />
-            </ng-container>
-        </app-content-layout>
-    </div>
+        <app-ranking-discovery-card />
+      </ng-container>
+    </app-content-layout>
+  </div>
 </main>

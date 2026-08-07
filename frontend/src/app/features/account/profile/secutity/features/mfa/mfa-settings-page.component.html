@@ -1,249 +1,260 @@
-<app-security-feature-shell title="Xác thực hai lớp"
-    description="Bảo vệ tài khoản bằng mã dùng một lần từ ứng dụng xác thực.">
-    <div security-main>
-        @if (store.error()) {
-        <div class="alert error">
-            {{ store.error() }}
+<app-security-feature-shell
+  title="Xác thực hai lớp"
+  description="Bảo vệ tài khoản bằng mã dùng một lần từ ứng dụng xác thực."
+>
+  <div security-main>
+    @if (store.error()) {
+      <div class="alert error">
+        {{ store.error() }}
+      </div>
+    }
+
+    @if (store.success()) {
+      <div class="alert success">
+        {{ store.success() }}
+      </div>
+    }
+
+    @if (store.loading()) {
+      <app-security-panel
+        title="Đang tải trạng thái"
+        description="Hệ thống đang kiểm tra cấu hình xác thực hai lớp."
+        icon="history"
+      >
+        <div class="loading-row">
+          <span class="spinner"></span>
+          Vui lòng chờ...
         </div>
-        }
+      </app-security-panel>
+    } @else if (store.recoveryCodes().length > 0) {
+      <app-security-panel
+        title="Lưu mã khôi phục"
+        description="Lưu các mã này ở nơi an toàn trước khi tiếp tục."
+        icon="key"
+      >
+        <app-recovery-codes [codes]="store.recoveryCodes()" />
 
-        @if (store.success()) {
-        <div class="alert success">
-            {{ store.success() }}
-        </div>
-        }
+        <button class="primary-button top-gap" type="button" (click)="store.hideRecoveryCodes()">
+          Tôi đã lưu mã khôi phục
+        </button>
+      </app-security-panel>
+    } @else if (store.enrollment(); as enrollment) {
+      <app-security-panel
+        title="Quét mã QR"
+        description="Mở Google Authenticator, Microsoft Authenticator hoặc ứng dụng TOTP tương thích."
+        icon="grid"
+      >
+        <div class="enrollment-grid">
+          <app-mfa-qr-code [value]="enrollment.otpAuthUri" />
 
-        @if (store.loading()) {
-        <app-security-panel title="Đang tải trạng thái" description="Hệ thống đang kiểm tra cấu hình xác thực hai lớp."
-            icon="history">
-            <div class="loading-row">
-                <span class="spinner"></span>
-                Vui lòng chờ...
-            </div>
-        </app-security-panel>
-        } @else if (
-        store.recoveryCodes().length > 0
-        ) {
-        <app-security-panel title="Lưu mã khôi phục" description="Lưu các mã này ở nơi an toàn trước khi tiếp tục."
-            icon="key">
-            <app-recovery-codes [codes]="store.recoveryCodes()" />
+          <div class="manual-setup">
+            <h3>Thiết lập thủ công</h3>
 
-            <button class="primary-button top-gap" type="button" (click)="
-            store.hideRecoveryCodes()
-          ">
-                Tôi đã lưu mã khôi phục
-            </button>
-        </app-security-panel>
-        } @else if (store.enrollment(); as enrollment) {
-        <app-security-panel title="Quét mã QR"
-            description="Mở Google Authenticator, Microsoft Authenticator hoặc ứng dụng TOTP tương thích." icon="grid">
-            <div class="enrollment-grid">
-                <app-mfa-qr-code [value]="
-              enrollment.otpAuthUri
-            " />
+            <p>Không quét được QR? Nhập khóa dưới đây vào ứng dụng xác thực.</p>
 
-                <div class="manual-setup">
-                    <h3>Thiết lập thủ công</h3>
-
-                    <p>
-                        Không quét được QR? Nhập khóa
-                        dưới đây vào ứng dụng xác thực.
-                    </p>
-
-                    <div class="secret-box">
-                        <code>
+            <div class="secret-box">
+              <code>
                 {{ enrollment.secret }}
               </code>
 
-                        <button type="button" (click)="copySecret()">
-                            <app-icon name="copy" [size]="15" />
+              <button type="button" (click)="copySecret()">
+                <app-icon name="copy" [size]="15" />
 
-                            {{
-                            copiedSecret()
-                            ? 'Đã chép'
-                            : 'Sao chép'
-                            }}
-                        </button>
-                    </div>
-
-                    <small>
-                        Cấu hình hết hạn:
-                        {{
-                        enrollment.expiresAt
-                        | date: 'HH:mm dd/MM/yyyy'
-                        }}
-                    </small>
-                </div>
+                {{ copiedSecret() ? 'Đã chép' : 'Sao chép' }}
+              </button>
             </div>
-        </app-security-panel>
 
-        <app-security-panel title="Xác nhận mã" description="Nhập mã sáu chữ số đang hiển thị trong ứng dụng xác thực."
-            icon="shield">
-            <app-otp-code-input #setupOtp [disabled]="store.submitting()" (valueChange)="
-            setupCode.set($event)
-          " />
+            <small>
+              Cấu hình hết hạn:
+              {{ enrollment.expiresAt | date: 'HH:mm dd/MM/yyyy' }}
+            </small>
+          </div>
+        </div>
+      </app-security-panel>
 
-            <div class="form-actions">
-                <button class="secondary-button" type="button" [disabled]="
-              store.submitting()
-            " (click)="
-              store.cancelEnrollment()
-            ">
-                    Hủy thiết lập
-                </button>
+      <app-security-panel
+        title="Xác nhận mã"
+        description="Nhập mã sáu chữ số đang hiển thị trong ứng dụng xác thực."
+        icon="shield"
+      >
+        <app-otp-code-input
+          #setupOtp
+          [disabled]="store.submitting()"
+          (valueChange)="setupCode.set($event)"
+        />
 
-                <button class="primary-button" type="button" [disabled]="
-              setupCode().length !== 6 ||
-              store.submitting()
-            " (click)="
-              confirmEnrollment()
-            ">
-                    Xác nhận và bật 2FA
-                </button>
-            </div>
-        </app-security-panel>
-        } @else if (
-        store.status()?.enabled
-        ) {
-        <app-security-panel title="Xác thực hai lớp đang bật"
-            description="Tài khoản yêu cầu mã TOTP khi thực hiện các hoạt động nhạy cảm." icon="shield">
-            <div class="enabled-status">
-                <span>
-                    <app-icon name="check" [size]="17" />
+        <div class="form-actions">
+          <button
+            class="secondary-button"
+            type="button"
+            [disabled]="store.submitting()"
+            (click)="store.cancelEnrollment()"
+          >
+            Hủy thiết lập
+          </button>
 
-                    Đang hoạt động
-                </span>
+          <button
+            class="primary-button"
+            type="button"
+            [disabled]="setupCode().length !== 6 || store.submitting()"
+            (click)="confirmEnrollment()"
+          >
+            Xác nhận và bật 2FA
+          </button>
+        </div>
+      </app-security-panel>
+    } @else if (store.status()?.enabled) {
+      <app-security-panel
+        title="Xác thực hai lớp đang bật"
+        description="Tài khoản yêu cầu mã TOTP khi thực hiện các hoạt động nhạy cảm."
+        icon="shield"
+      >
+        <div class="enabled-status">
+          <span>
+            <app-icon name="check" [size]="17" />
 
-                <div>
-                    <strong>
-                        {{
-                        store.status()
-                        ?.recoveryCodesRemaining
-                        }}
-                    </strong>
+            Đang hoạt động
+          </span>
 
-                    <small>
-                        mã khôi phục còn lại
-                    </small>
-                </div>
-            </div>
-        </app-security-panel>
+          <div>
+            <strong>
+              {{ store.status()?.recoveryCodesRemaining }}
+            </strong>
 
-        <app-security-panel title="Tạo lại mã khôi phục" description="Bộ mã cũ sẽ bị vô hiệu hóa ngay lập tức."
-            icon="rotate-ccw">
-            <form class="security-form" [formGroup]="regenerateForm" (ngSubmit)="regenerateCodes()">
-                <label>
-                    <span>Mật khẩu hiện tại</span>
+            <small> mã khôi phục còn lại </small>
+          </div>
+        </div>
+      </app-security-panel>
 
-                    <input type="password" formControlName="currentPassword" autocomplete="current-password" />
-                </label>
+      <app-security-panel
+        title="Tạo lại mã khôi phục"
+        description="Bộ mã cũ sẽ bị vô hiệu hóa ngay lập tức."
+        icon="rotate-ccw"
+      >
+        <form class="security-form" [formGroup]="regenerateForm" (ngSubmit)="regenerateCodes()">
+          <label>
+            <span>Mật khẩu hiện tại</span>
 
-                <label>
-                    <span>Mã xác thực</span>
+            <input
+              type="password"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+            />
+          </label>
 
-                    <app-otp-code-input [disabled]="
-                store.submitting()
-              " (valueChange)="
-                sensitiveCode.set($event)
-              " />
-                </label>
+          <label>
+            <span>Mã xác thực</span>
 
-                <button class="primary-button" type="submit" [disabled]="
-              regenerateForm.invalid ||
-              sensitiveCode().length !== 6 ||
-              store.submitting()
-            ">
-                    Tạo bộ mã mới
-                </button>
-            </form>
-        </app-security-panel>
+            <app-otp-code-input
+              [disabled]="store.submitting()"
+              (valueChange)="sensitiveCode.set($event)"
+            />
+          </label>
 
-        <app-security-panel title="Tắt xác thực hai lớp" description="Tài khoản sẽ mất một lớp bảo vệ quan trọng."
-            icon="alert-triangle" tone="danger">
-            <form class="security-form" [formGroup]="disableForm" (ngSubmit)="disableMfa()">
-                <label>
-                    <span>Mật khẩu hiện tại</span>
+          <button
+            class="primary-button"
+            type="submit"
+            [disabled]="
+              regenerateForm.invalid || sensitiveCode().length !== 6 || store.submitting()
+            "
+          >
+            Tạo bộ mã mới
+          </button>
+        </form>
+      </app-security-panel>
 
-                    <input type="password" formControlName="currentPassword" autocomplete="current-password" />
-                </label>
+      <app-security-panel
+        title="Tắt xác thực hai lớp"
+        description="Tài khoản sẽ mất một lớp bảo vệ quan trọng."
+        icon="alert-triangle"
+        tone="danger"
+      >
+        <form class="security-form" [formGroup]="disableForm" (ngSubmit)="disableMfa()">
+          <label>
+            <span>Mật khẩu hiện tại</span>
 
-                <label>
-                    <span>Mã xác thực</span>
+            <input
+              type="password"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+            />
+          </label>
 
-                    <app-otp-code-input [disabled]="
-                store.submitting()
-              " (valueChange)="
-                sensitiveCode.set($event)
-              " />
-                </label>
+          <label>
+            <span>Mã xác thực</span>
 
-                <button class="danger-button" type="submit" [disabled]="
-              disableForm.invalid ||
-              sensitiveCode().length !== 6 ||
-              store.submitting()
-            ">
-                    Tắt xác thực hai lớp
-                </button>
-            </form>
-        </app-security-panel>
-        } @else {
-        <app-security-panel title="Bật xác thực hai lớp"
-            description="Sau khi bật, bạn cần mã từ ứng dụng xác thực để hoàn tất các thao tác quan trọng."
-            icon="shield">
-            <ul class="benefits">
-                <li>
-                    Ngăn truy cập khi mật khẩu bị lộ.
-                </li>
+            <app-otp-code-input
+              [disabled]="store.submitting()"
+              (valueChange)="sensitiveCode.set($event)"
+            />
+          </label>
 
-                <li>
-                    Có mã khôi phục khi mất điện thoại.
-                </li>
+          <button
+            class="danger-button"
+            type="submit"
+            [disabled]="disableForm.invalid || sensitiveCode().length !== 6 || store.submitting()"
+          >
+            Tắt xác thực hai lớp
+          </button>
+        </form>
+      </app-security-panel>
+    } @else {
+      <app-security-panel
+        title="Bật xác thực hai lớp"
+        description="Sau khi bật, bạn cần mã từ ứng dụng xác thực để hoàn tất các thao tác quan trọng."
+        icon="shield"
+      >
+        <ul class="benefits">
+          <li>Ngăn truy cập khi mật khẩu bị lộ.</li>
 
-                <li>
-                    Bảo vệ đổi mật khẩu và thiết lập bảo mật.
-                </li>
-            </ul>
+          <li>Có mã khôi phục khi mất điện thoại.</li>
 
-            <form class="security-form" [formGroup]="beginForm" (ngSubmit)="beginEnrollment()">
-                <label>
-                    <span>
-                        Xác nhận mật khẩu hiện tại
-                    </span>
+          <li>Bảo vệ đổi mật khẩu và thiết lập bảo mật.</li>
+        </ul>
 
-                    <input type="password" formControlName="currentPassword" autocomplete="current-password"
-                        placeholder="Nhập mật khẩu" />
-                </label>
+        <form class="security-form" [formGroup]="beginForm" (ngSubmit)="beginEnrollment()">
+          <label>
+            <span> Xác nhận mật khẩu hiện tại </span>
 
-                <button class="primary-button" type="submit" [disabled]="
-              beginForm.invalid ||
-              store.submitting()
-            ">
-                    Bắt đầu thiết lập
-                </button>
-            </form>
-        </app-security-panel>
-        }
-    </div>
+            <input
+              type="password"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              placeholder="Nhập mật khẩu"
+            />
+          </label>
 
-    <div security-aside>
-        <section class="aside-card">
-            <h3>Cách hoạt động</h3>
+          <button
+            class="primary-button"
+            type="submit"
+            [disabled]="beginForm.invalid || store.submitting()"
+          >
+            Bắt đầu thiết lập
+          </button>
+        </form>
+      </app-security-panel>
+    }
+  </div>
 
-            <ol>
-                <li>Cài ứng dụng xác thực.</li>
-                <li>Quét QR hoặc nhập khóa.</li>
-                <li>Nhập mã sáu chữ số.</li>
-                <li>Lưu mã khôi phục.</li>
-            </ol>
-        </section>
+  <div security-aside>
+    <section class="aside-card">
+      <h3>Cách hoạt động</h3>
 
-        <section class="aside-card">
-            <h3>Ứng dụng hỗ trợ</h3>
+      <ol>
+        <li>Cài ứng dụng xác thực.</li>
+        <li>Quét QR hoặc nhập khóa.</li>
+        <li>Nhập mã sáu chữ số.</li>
+        <li>Lưu mã khôi phục.</li>
+      </ol>
+    </section>
 
-            <p>Google Authenticator</p>
-            <p>Microsoft Authenticator</p>
-            <p>1Password</p>
-            <p>Authy và các ứng dụng TOTP</p>
-        </section>
-    </div>
+    <section class="aside-card">
+      <h3>Ứng dụng hỗ trợ</h3>
+
+      <p>Google Authenticator</p>
+      <p>Microsoft Authenticator</p>
+      <p>1Password</p>
+      <p>Authy và các ứng dụng TOTP</p>
+    </section>
+  </div>
 </app-security-feature-shell>

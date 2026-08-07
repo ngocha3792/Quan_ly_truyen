@@ -13,7 +13,7 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 export class ComingSoonComponent {
   title = input<string>('Tính năng đang phát triển');
   description = input<string>(
-    'Chúng tôi đang nỗ lực hoàn thiện tính năng này để mang lại trải nghiệm tốt nhất cho bạn.'
+    'Chúng tôi đang nỗ lực hoàn thiện tính năng này để mang lại trải nghiệm tốt nhất cho bạn.',
   );
   authActionMode = input<string>();
 }

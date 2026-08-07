@@ -1,54 +1,30 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
-import {
-    StoryGenre,
-    StoryPublicationStatus,
-} from '../../domain/story-catalog.models';
+import { StoryGenre, StoryPublicationStatus } from '../../domain/story-catalog.models';
 
 @Component({
-    selector:
-        'app-catalog-quick-filters',
+  selector: 'app-catalog-quick-filters',
 
-    standalone: true,
+  standalone: true,
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <div class="quick-filters">
       <div class="genre-list">
         <button
           type="button"
-          [class.active]="
-            selectedGenre() === null
-          "
-          (click)="
-            genreChange.emit(null)
-          "
+          [class.active]="selectedGenre() === null"
+          (click)="genreChange.emit(null)"
         >
           Tất cả
         </button>
 
-        @for (
-          genre of genres();
-          track genre.id
-        ) {
+        @for (genre of genres(); track genre.id) {
           <button
             type="button"
-            [class.active]="
-              selectedGenre() ===
-              genre.slug
-            "
-            (click)="
-              genreChange.emit(
-                genre.slug
-              )
-            "
+            [class.active]="selectedGenre() === genre.slug"
+            (click)="genreChange.emit(genre.slug)"
           >
             {{ genre.name }}
           </button>
@@ -58,32 +34,16 @@ import {
       <div class="status-list">
         <button
           type="button"
-          [class.active]="
-            status() === 'ongoing'
-          "
-          (click)="
-            statusChange.emit(
-              status() === 'ongoing'
-                ? 'all'
-                : 'ongoing'
-            )
-          "
+          [class.active]="status() === 'ongoing'"
+          (click)="statusChange.emit(status() === 'ongoing' ? 'all' : 'ongoing')"
         >
           Đang tiến hành
         </button>
 
         <button
           type="button"
-          [class.active]="
-            status() === 'completed'
-          "
-          (click)="
-            statusChange.emit(
-              status() === 'completed'
-                ? 'all'
-                : 'completed'
-            )
-          "
+          [class.active]="status() === 'completed'"
+          (click)="statusChange.emit(status() === 'completed' ? 'all' : 'completed')"
         >
           Hoàn thành
         </button>
@@ -91,7 +51,7 @@ import {
     </div>
   `,
 
-    styles: `
+  styles: `
     .quick-filters {
       display: flex;
       align-items: center;
@@ -110,15 +70,13 @@ import {
     button {
       min-height: 31px;
       padding: 0 13px;
-      border: 1px solid
-        rgba(132, 145, 177, .15);
+      border: 1px solid rgba(132, 145, 177, 0.15);
       border-radius: 7px;
       color: #969fb0;
-      font-size: .85rem;
+      font-size: 0.85rem;
       font-weight: 620;
       cursor: pointer;
-      background:
-        rgba(12, 18, 33, .72);
+      background: rgba(12, 18, 33, 0.72);
       transition:
         color 160ms ease,
         border-color 160ms ease,
@@ -127,22 +85,14 @@ import {
 
     button:hover {
       color: #e8e5ed;
-      border-color:
-        rgba(155, 92, 238, .3);
+      border-color: rgba(155, 92, 238, 0.3);
     }
 
     button.active {
       border-color: transparent;
       color: #fff;
-      background:
-        linear-gradient(
-          135deg,
-          #743bde,
-          #a153eb
-        );
-      box-shadow:
-        0 7px 18px
-        rgba(114, 55, 216, .22);
+      background: linear-gradient(135deg, #743bde, #a153eb);
+      box-shadow: 0 7px 18px rgba(114, 55, 216, 0.22);
     }
 
     @media (max-width: 820px) {
@@ -154,24 +104,13 @@ import {
   `,
 })
 export class CatalogQuickFiltersComponent {
-    readonly genres =
-        input.required<
-            readonly StoryGenre[]
-        >();
+  readonly genres = input.required<readonly StoryGenre[]>();
 
-    readonly selectedGenre =
-        input<string | null>(null);
+  readonly selectedGenre = input<string | null>(null);
 
-    readonly status =
-        input<
-            StoryPublicationStatus | 'all'
-        >('all');
+  readonly status = input<StoryPublicationStatus | 'all'>('all');
 
-    readonly genreChange =
-        output<string | null>();
+  readonly genreChange = output<string | null>();
 
-    readonly statusChange =
-        output<
-            StoryPublicationStatus | 'all'
-        >();
+  readonly statusChange = output<StoryPublicationStatus | 'all'>();
 }

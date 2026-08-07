@@ -1,93 +1,78 @@
 <main class="catalog-page">
-    <div class="page-container">
-        <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-        <app-page-heading
-            title="Danh sách truyện"
-            description="Khám phá kho truyện đa dạng theo thể loại, trạng thái và mức độ phổ biến."
+    <app-page-heading
+      title="Danh sách truyện"
+      description="Khám phá kho truyện đa dạng theo thể loại, trạng thái và mức độ phổ biến."
+    />
+
+    @if (store.error()) {
+      <app-error-alert
+        title="Không thể tải danh sách truyện"
+        [message]="store.error()"
+        (retry)="store.reload()"
+      />
+    }
+
+    <app-content-layout>
+      <ng-container main>
+        <app-catalog-toolbar
+          [query]="store.filter().query"
+          [sort]="store.filter().sort"
+          [viewMode]="store.filter().viewMode"
+          (queryChange)="store.setQuery($event)"
+          (sortChange)="store.setSort($event)"
+          (viewModeChange)="store.setViewMode($event)"
         />
 
-        @if (store.error()) {
-            <app-error-alert
-                title="Không thể tải danh sách truyện"
-                [message]="store.error()"
-                (retry)="store.reload()"
-            />
-        }
+        <app-catalog-quick-filters
+          [genres]="store.genres()"
+          [selectedGenre]="store.filter().genre"
+          [status]="store.filter().status"
+          (genreChange)="store.setGenre($event)"
+          (statusChange)="store.setStatus($event)"
+        />
 
-        <app-content-layout>
-            <ng-container main>
-                <app-catalog-toolbar [query]="store.filter().query" [sort]="store.filter().sort" [viewMode]="
-                    store.filter().viewMode
-                " (queryChange)="
-                    store.setQuery($event)
-                " (sortChange)="
-                    store.setSort($event)
-                " (viewModeChange)="
-                    store.setViewMode($event)
-                " />
+        <div class="result-summary">
+          <span>
+            Tìm thấy
+            <strong>
+              {{ store.pagination().totalItems | compactNumber }}
+            </strong>
+            truyện
+          </span>
 
-                <app-catalog-quick-filters [genres]="store.genres()" [selectedGenre]="
-                    store.filter().genre
-                " [status]="
-                    store.filter().status
-                " (genreChange)="
-                    store.setGenre($event)
-                " (statusChange)="
-                    store.setStatus($event)
-                " />
+          @if (store.hasActiveFilters()) {
+            <button type="button" (click)="store.resetFilters()">Xóa bộ lọc</button>
+          }
+        </div>
 
-                <div class="result-summary">
-                    <span>
-                        Tìm thấy
-                        <strong>
-                            {{
-                            store.pagination()
-                            .totalItems
-                            | compactNumber
-                            }}
-                        </strong>
-                        truyện
-                    </span>
+        <app-story-catalog-grid
+          [stories]="store.stories()"
+          [viewMode]="store.filter().viewMode"
+          [loading]="store.loading()"
+        />
 
-                    @if (
-                    store.hasActiveFilters()
-                    ) {
-                    <button type="button" (click)="
-                        store.resetFilters()
-                    ">
-                        Xóa bộ lọc
-                    </button>
-                    }
-                </div>
+        <div class="pagination-wrapper">
+          <app-pagination
+            [page]="store.pagination().page"
+            [totalPages]="store.pagination().totalPages"
+            (pageChange)="store.setPage($event)"
+          />
+        </div>
+      </ng-container>
 
-                <app-story-catalog-grid [stories]="store.stories()" [viewMode]="
-                    store.filter().viewMode
-                " [loading]="store.loading()" />
+      <ng-container aside>
+        <app-catalog-filter-panel
+          [filter]="store.filter()"
+          [genres]="store.genres()"
+          (applied)="store.applyAdvancedFilter($event)"
+          (resetRequested)="store.resetFilters()"
+        />
 
-                <div class="pagination-wrapper">
-                    <app-pagination [page]="
-                        store.pagination().page
-                    " [totalPages]="
-                        store.pagination()
-                            .totalPages
-                    " (pageChange)="
-                        store.setPage($event)
-                    " />
-                </div>
-            </ng-container>
-
-            <ng-container aside>
-                <app-catalog-filter-panel [filter]="store.filter()" [genres]="store.genres()" (applied)="
-                    store.applyAdvancedFilter(
-                        $event
-                    )
-                " (resetRequested)="
-                    store.resetFilters()
-                " />
-
-                <app-catalog-ranking [stories]="store.ranking()" />
-            </ng-container>
-        </app-content-layout>
-    </div>
+        <app-catalog-ranking [stories]="store.ranking()" />
+      </ng-container>
+    </app-content-layout>
+  </div>
 </main>

@@ -13,3 +13,6 @@ export * from './request-email-change-result.dto';
 export * from './confirm-email-change-result.dto';
 export * from './security-event-result.dto';
 export * from './security-overview-result.dto';
+export * from './validate-password-reset-token-result.dto';
+export * from './recovery-email-status-result.dto';
+export * from './security-questions-result.dto';

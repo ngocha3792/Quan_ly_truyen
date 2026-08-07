@@ -11,10 +11,11 @@ import {
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-
+import { OAuthBrowserService } from '../../../../../core/auth/oauth-browser.service';
 import {
-  AdminMfaChallengeDetails,
-  AdminMfaEnrollmentResponse,
+  MfaChallengeDetails,
+  MfaEnrollmentResponse,
+  OAuthProvider,
 } from '../../../../../core/auth/auth.models';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { getRegisterValidationMessage } from '../../../../../core/auth/auth-validation';
@@ -24,31 +25,23 @@ import { BrandLogoComponent } from '../../../../../shared/components/brand-logo/
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { MfaQrCodeComponent } from '../../../profile/secutity/ui/mfa-qr-code/mfa-qr-code.component';
 
-type AuthDialogStage =
-  | 'credentials'
-  | 'mfa-enroll'
-  | 'mfa-verify'
-  | 'recovery-codes';
+type AuthDialogStage = 'credentials' | 'mfa-enroll' | 'mfa-verify' | 'recovery-codes';
 
 @Component({
   selector: 'app-auth-dialog',
   standalone: true,
-  imports: [
-    FormsModule,
-    RouterLink,
-    BrandLogoComponent,
-    IconComponent,
-    MfaQrCodeComponent,
-  ],
+  imports: [FormsModule, RouterLink, BrandLogoComponent, IconComponent, MfaQrCodeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './auth-dialog.component.html',
   styleUrl: './auth-dialog.component.scss',
 })
 export class AuthDialogComponent {
   readonly open = input(false);
+  readonly initialMfaChallenge = input<MfaChallengeDetails | null>(null);
   readonly closed = output<void>();
 
   protected readonly auth = inject(AuthStore);
+  private readonly oauth = inject(OAuthBrowserService);
 
   protected readonly mode = signal<'login' | 'register'>('login');
   protected readonly stage = signal<AuthDialogStage>('credentials');
@@ -56,8 +49,7 @@ export class AuthDialogComponent {
   protected readonly message = signal<string | null>(null);
   protected readonly localError = signal<string | null>(null);
 
-  protected readonly enrollment =
-    signal<AdminMfaEnrollmentResponse | null>(null);
+  protected readonly enrollment = signal<MfaEnrollmentResponse | null>(null);
   protected readonly useRecoveryCode = signal(false);
   protected readonly recoveryCodes = signal<readonly string[]>([]);
 
@@ -75,14 +67,30 @@ export class AuthDialogComponent {
 
   constructor() {
     effect(() => {
-      if (!this.open()) {
+      const isOpen = this.open();
+
+      const initialChallenge = this.initialMfaChallenge();
+
+      if (!isOpen) {
         return;
       }
 
       this.resetChallenge();
+
       this.auth.clearError();
+
       this.localError.set(null);
+
       this.message.set(null);
+
+      /*
+       * OAuth callback có thể mở dialog
+       * thẳng ở stage MFA mà không quay
+       * lại credential form.
+       */
+      if (initialChallenge) {
+        this.startMfaChallenge(initialChallenge);
+      }
     });
   }
 
@@ -162,34 +170,40 @@ export class AuthDialogComponent {
         },
 
         error: (error: unknown) => {
-          const challenge = readAdminMfaChallenge(error);
-
+          const challenge = readMfaChallenge(error);
           if (!challenge) {
             this.submitting.set(false);
             this.localError.set(getApiErrorMessage(error));
             return;
           }
 
-          this.auth.clearError();
-          this.localError.set(null);
-          this.mfaTicket = challenge.mfaTicket;
-
-          if (challenge.mode === 'verify') {
-            this.submitting.set(false);
-            this.stage.set('mfa-verify');
-            return;
-          }
-
-          this.loadEnrollment(challenge.mfaTicket);
+          this.startMfaChallenge(challenge);
         },
       });
+  }
+  private startMfaChallenge(challenge: MfaChallengeDetails): void {
+    this.auth.clearError();
+
+    this.localError.set(null);
+
+    this.mfaTicket = challenge.mfaTicket;
+
+    if (challenge.mode === 'verify') {
+      this.submitting.set(false);
+
+      this.stage.set('mfa-verify');
+
+      return;
+    }
+
+    this.loadEnrollment(challenge.mfaTicket);
   }
 
   private loadEnrollment(mfaTicket: string): void {
     this.submitting.set(true);
 
     this.auth
-      .beginAdminMfaEnrollment(mfaTicket)
+      .beginMfaEnrollment(mfaTicket)
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: (enrollment) => {
@@ -216,7 +230,7 @@ export class AuthDialogComponent {
     this.submitting.set(true);
 
     this.auth
-      .confirmAdminMfaEnrollment({
+      .confirmMfaEnrollment({
         mfaTicket: ticket,
         totpCode,
         deviceName: 'TruyenHub Web',
@@ -266,11 +280,9 @@ export class AuthDialogComponent {
     this.submitting.set(true);
 
     this.auth
-      .verifyAdminMfa({
+      .verifyMfa({
         mfaTicket: ticket,
-        ...(this.useRecoveryCode()
-          ? { recoveryCode }
-          : { totpCode }),
+        ...(this.useRecoveryCode() ? { recoveryCode } : { totpCode }),
         deviceName: 'TruyenHub Web',
       })
       .pipe(finalize(() => this.submitting.set(false)))
@@ -284,6 +296,19 @@ export class AuthDialogComponent {
           this.localError.set(getApiErrorMessage(error));
         },
       });
+  }
+  protected continueWithOAuth(provider: OAuthProvider): void {
+    if (this.submitting()) {
+      return;
+    }
+
+    this.auth.clearError();
+
+    this.localError.set(null);
+
+    this.message.set(null);
+
+    this.oauth.start(provider);
   }
 
   private register(): void {
@@ -338,17 +363,24 @@ export class AuthDialogComponent {
   }
 }
 
-function readAdminMfaChallenge(
-  error: unknown,
-): AdminMfaChallengeDetails | null {
+function readMfaChallenge(error: unknown): MfaChallengeDetails | null {
   if (!(error instanceof HttpErrorResponse)) {
     return null;
   }
 
   const body = error.error as Partial<ApiErrorEnvelope> | undefined;
+
   const code = body?.error?.code;
 
+  /*
+   * Hai code ADMIN cũ được giữ tạm
+   * trong parser để frontend vẫn chạy
+   * nếu rollout backend/frontend lệch
+   * nhau một version.
+   */
   if (
+    code !== 'AUTH_MFA_REQUIRED' &&
+    code !== 'AUTH_MFA_ENROLLMENT_REQUIRED' &&
     code !== 'AUTH_ADMIN_MFA_REQUIRED' &&
     code !== 'AUTH_ADMIN_MFA_ENROLLMENT_REQUIRED'
   ) {
@@ -356,8 +388,11 @@ function readAdminMfaChallenge(
   }
 
   const details = body?.error?.details;
+
   const mfaTicket = details?.['mfaTicket'];
+
   const mode = details?.['mode'];
+
   const expiresAt = details?.['expiresAt'];
 
   if (
@@ -370,7 +405,9 @@ function readAdminMfaChallenge(
 
   return {
     mfaTicket,
+
     mode,
+
     expiresAt,
   };
 }

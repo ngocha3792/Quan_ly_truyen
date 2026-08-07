@@ -1,57 +1,57 @@
 <main class="updates-page">
-    <div class="page-container">
-        <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-        <app-page-heading
-            title="Cập nhật mới"
-            description="Theo dõi những bộ truyện vừa ra chương mới nhất."
-            icon="sparkles"
+    <app-page-heading
+      title="Cập nhật mới"
+      description="Theo dõi những bộ truyện vừa ra chương mới nhất."
+      icon="sparkles"
+    />
+
+    @if (store.error()) {
+      <app-error-alert
+        title="Không thể tải danh sách cập nhật"
+        [message]="store.error()"
+        (retry)="store.reload()"
+      />
+    }
+
+    <app-content-layout>
+      <ng-container main>
+        <section class="stats-grid">
+          @for (stat of store.stats(); track stat.id) {
+            <app-update-stat-card [stat]="stat" />
+          }
+        </section>
+
+        <app-update-filter-bar
+          [tab]="store.query().tab"
+          [sort]="store.query().sort"
+          (tabChange)="changeTab($event)"
+          (sortChange)="changeSort($event)"
         />
 
-        @if (store.error()) {
-            <app-error-alert
-                title="Không thể tải danh sách cập nhật"
-                [message]="store.error()"
-                (retry)="store.reload()"
-            />
+        @if (store.featured(); as featured) {
+          <app-featured-update-card [story]="featured" />
         }
 
-        <app-content-layout>
-            <ng-container main>
-                <section class="stats-grid">
-                    @for (stat of store.stats(); track stat.id) {
-                        <app-update-stat-card [stat]="stat" />
-                    }
-                </section>
+        <app-update-story-grid
+          [stories]="store.stories()"
+          [loading]="store.loading() && !store.hasData()"
+        />
 
-                <app-update-filter-bar
-                    [tab]="store.query().tab"
-                    [sort]="store.query().sort"
-                    (tabChange)="changeTab($event)"
-                    (sortChange)="changeSort($event)"
-                />
+        <app-pagination
+          [page]="store.pagination().page"
+          [totalPages]="store.pagination().totalPages"
+          (pageChange)="changePage($event)"
+        />
+      </ng-container>
 
-                @if (store.featured(); as featured) {
-                    <app-featured-update-card [story]="featured" />
-                }
-
-                <app-update-story-grid
-                    [stories]="store.stories()"
-                    [loading]="store.loading() && !store.hasData()"
-                />
-
-                <app-pagination
-                    [page]="store.pagination().page"
-                    [totalPages]="store.pagination().totalPages"
-                    (pageChange)="changePage($event)"
-                />
-            </ng-container>
-
-            <ng-container aside>
-                <app-top-updates-card [stories]="store.topUpdates()" />
-                <app-update-schedule-card [items]="store.schedule()" />
-                <app-popular-update-genres [genres]="store.popularGenres()" />
-            </ng-container>
-        </app-content-layout>
-    </div>
+      <ng-container aside>
+        <app-top-updates-card [stories]="store.topUpdates()" />
+        <app-update-schedule-card [items]="store.schedule()" />
+        <app-popular-update-genres [genres]="store.popularGenres()" />
+      </ng-container>
+    </app-content-layout>
+  </div>
 </main>

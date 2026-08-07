@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,15 +8,11 @@ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pi
 import { StoryUpdateScheduleItem } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-update-schedule-card',
-    standalone: true,
-    imports: [
-        RouterLink,
-        IconComponent,
-        CompactNumberPipe,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-update-schedule-card',
+  standalone: true,
+  imports: [RouterLink, IconComponent, CompactNumberPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <section class="side-card">
       <header>
         <h2>Lịch cập nhật</h2>
@@ -43,24 +35,18 @@ import { StoryUpdateScheduleItem } from '../../domain/story-updates.models';
 
             <span>{{ item.label }}</span>
 
-            <strong>
-              {{ item.chapterCount | compactNumber }} chương
-            </strong>
+            <strong> {{ item.chapterCount | compactNumber }} chương </strong>
           </div>
         }
       </div>
     </section>
   `,
-    styles: `
+  styles: `
     .side-card {
       padding: 1.25rem;
-      border: 1px solid var(--border, rgba(132, 145, 177, .16));
+      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
       border-radius: 12px;
-      background: linear-gradient(
-        145deg,
-        rgba(17, 25, 44, .98),
-        rgba(10, 16, 31, .98)
-      );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     header {
@@ -80,7 +66,7 @@ import { StoryUpdateScheduleItem } from '../../domain/story-updates.models';
 
     header a {
       color: #a76cea;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-decoration: none;
     }
 
@@ -97,22 +83,28 @@ import { StoryUpdateScheduleItem } from '../../domain/story-updates.models';
       color: #7e88a0;
     }
 
-    .schedule-row:nth-child(1) { color: #5caaff; }
-    .schedule-row:nth-child(2) { color: #b46ff3; }
-    .schedule-row:nth-child(3) { color: #e367db; }
+    .schedule-row:nth-child(1) {
+      color: #5caaff;
+    }
+    .schedule-row:nth-child(2) {
+      color: #b46ff3;
+    }
+    .schedule-row:nth-child(3) {
+      color: #e367db;
+    }
 
     .schedule-row span {
       color: #919aad;
-      font-size: .9rem;
+      font-size: 0.9rem;
     }
 
     .schedule-row strong {
       color: #afb6c3;
-      font-size: .85rem;
+      font-size: 0.85rem;
       font-weight: 600;
     }
   `,
 })
 export class UpdateScheduleCardComponent {
-    readonly items = input.required<readonly StoryUpdateScheduleItem[]>();
+  readonly items = input.required<readonly StoryUpdateScheduleItem[]>();
 }

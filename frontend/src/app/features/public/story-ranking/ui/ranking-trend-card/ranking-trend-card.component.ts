@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -11,52 +7,31 @@ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pi
 import { StoryRankingTrend } from '../../domain/story-ranking.models';
 
 @Component({
-    selector:
-        'app-ranking-trend-card',
+  selector: 'app-ranking-trend-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        CompactNumberPipe,
-    ],
+  imports: [RouterLink, CompactNumberPipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="trend-card">
       <h2>Xu hướng tuần này</h2>
 
       <div class="trend-list">
-        @for (
-          item of trends();
-          track item.id
-        ) {
-          <a
-            class="trend-row"
-            [routerLink]="[
-              '/truyen',
-              item.slug
-            ]"
-          >
+        @for (item of trends(); track item.id) {
+          <a class="trend-row" [routerLink]="['/truyen', item.slug]">
             <strong>
               {{ item.title }}
             </strong>
 
             <span class="progress">
-              <span
-                [style.width.%]="
-                  getWidth(item)
-                "
-              ></span>
+              <span [style.width.%]="getWidth(item)"></span>
             </span>
 
             <small>
-              {{
-                item.value
-                  | compactNumber
-              }}
+              {{ item.value | compactNumber }}
             </small>
           </a>
         }
@@ -64,7 +39,7 @@ import { StoryRankingTrend } from '../../domain/story-ranking.models';
     </section>
   `,
 
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -74,12 +49,7 @@ import { StoryRankingTrend } from '../../domain/story-ranking.models';
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(16, 24, 42, .96),
-          rgba(9, 15, 29, .96)
-        );
+      background: linear-gradient(145deg, rgba(16, 24, 42, 0.96), rgba(9, 15, 29, 0.96));
     }
 
     h2 {
@@ -90,15 +60,14 @@ import { StoryRankingTrend } from '../../domain/story-ranking.models';
 
     .trend-list {
       display: grid;
-      gap: .875rem;
+      gap: 0.875rem;
     }
 
     .trend-row {
       display: grid;
-      grid-template-columns:
-        130px minmax(0, 1fr) 56px;
+      grid-template-columns: 130px minmax(0, 1fr) 56px;
       align-items: center;
-      gap: .75rem;
+      gap: 0.75rem;
       color: inherit;
       text-decoration: none;
     }
@@ -114,7 +83,7 @@ import { StoryRankingTrend } from '../../domain/story-ranking.models';
 
     small {
       color: #9ba3b4;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-align: right;
     }
 
@@ -130,39 +99,18 @@ import { StoryRankingTrend } from '../../domain/story-ranking.models';
       min-width: 3px;
       display: block;
       border-radius: inherit;
-      background:
-        linear-gradient(
-          90deg,
-          #7c3cde,
-          #a356eb
-        );
+      background: linear-gradient(90deg, #7c3cde, #a356eb);
     }
   `,
 })
 export class RankingTrendCardComponent {
-    readonly trends =
-        input.required<
-            readonly StoryRankingTrend[]
-        >();
+  readonly trends = input.required<readonly StoryRankingTrend[]>();
 
-    protected getWidth(
-        item: StoryRankingTrend,
-    ): number {
-        if (
-            item.maximumValue <= 0
-        ) {
-            return 0;
-        }
-
-        return Math.max(
-            4,
-            Math.min(
-                100,
-                (
-                    item.value /
-                    item.maximumValue
-                ) * 100,
-            ),
-        );
+  protected getWidth(item: StoryRankingTrend): number {
+    if (item.maximumValue <= 0) {
+      return 0;
     }
+
+    return Math.max(4, Math.min(100, (item.value / item.maximumValue) * 100));
+  }
 }

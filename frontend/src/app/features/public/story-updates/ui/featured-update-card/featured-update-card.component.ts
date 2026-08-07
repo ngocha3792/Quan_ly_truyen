@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -13,24 +9,13 @@ import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe
 import { StoryUpdateItem } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-featured-update-card',
-    standalone: true,
-    imports: [
-        RouterLink,
-        IconComponent,
-        CompactNumberPipe,
-        RelativeTimePipe,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    <a
-      class="featured-card"
-      [routerLink]="['/truyen', story().slug]"
-    >
-      <img
-        [src]="story().bannerUrl || story().coverUrl"
-        [alt]="story().title"
-      />
+  selector: 'app-featured-update-card',
+  standalone: true,
+  imports: [RouterLink, IconComponent, CompactNumberPipe, RelativeTimePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <a class="featured-card" [routerLink]="['/truyen', story().slug]">
+      <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" />
 
       <span class="overlay"></span>
 
@@ -51,9 +36,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
 
         <div class="footer-row">
           <div>
-            <span class="chapter">
-              Ch.{{ story().latestChapter }}
-            </span>
+            <span class="chapter"> Ch.{{ story().latestChapter }} </span>
 
             <span>
               {{ story().updatedAt | relativeTime }}
@@ -75,7 +58,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       </div>
     </a>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -86,12 +69,12 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       min-height: 200px;
       display: block;
       overflow: hidden;
-      border: 1px solid rgba(139, 83, 219, .35);
+      border: 1px solid rgba(139, 83, 219, 0.35);
       border-radius: 12px;
       color: inherit;
       text-decoration: none;
       background: #0f1627;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
     }
 
     img {
@@ -113,9 +96,9 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       inset: 0;
       background: linear-gradient(
         90deg,
-        rgba(13, 7, 35, .1),
-        rgba(15, 11, 39, .82) 42%,
-        rgba(13, 14, 34, .98) 65%
+        rgba(13, 7, 35, 0.1),
+        rgba(15, 11, 39, 0.82) 42%,
+        rgba(13, 14, 34, 0.98) 65%
       );
     }
 
@@ -134,7 +117,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 4px 8px;
       border-radius: 4px;
       color: #fff;
-      font-size: .75rem;
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
       background: linear-gradient(135deg, #7d3fe0, #a553ec);
@@ -159,15 +142,15 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 2px 8px;
       border-radius: 4px;
       color: #9a9fac;
-      font-size: .8rem;
-      background: rgba(90, 102, 132, .2);
+      font-size: 0.8rem;
+      background: rgba(90, 102, 132, 0.2);
     }
 
     p {
       max-width: 520px;
       margin: 8px 0 0;
       color: #8d96a8;
-      font-size: .875rem;
+      font-size: 0.875rem;
       line-height: 1.5;
       display: -webkit-box;
       overflow: hidden;
@@ -183,7 +166,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       justify-content: space-between;
       gap: 12px;
       color: #858fa2;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
     .footer-row > div {
@@ -202,23 +185,19 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 4px 8px;
       border-radius: 4px;
       color: #fff;
-      font-size: .8rem;
+      font-size: 0.8rem;
       font-weight: 700;
-      background: rgba(111, 54, 187, .75);
+      background: rgba(111, 54, 187, 0.75);
     }
 
     @media (max-width: 650px) {
       img {
         width: 100%;
-        opacity: .35;
+        opacity: 0.35;
       }
 
       .overlay {
-        background: linear-gradient(
-          90deg,
-          rgba(11, 9, 30, .85),
-          rgba(11, 12, 29, .98)
-        );
+        background: linear-gradient(90deg, rgba(11, 9, 30, 0.85), rgba(11, 12, 29, 0.98));
       }
 
       .featured-content {
@@ -228,5 +207,5 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
   `,
 })
 export class FeaturedUpdateCardComponent {
-    readonly story = input.required<StoryUpdateItem>();
+  readonly story = input.required<StoryUpdateItem>();
 }

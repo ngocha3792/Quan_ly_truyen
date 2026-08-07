@@ -1,14 +1,6 @@
-import {
-  HttpErrorResponse,
-  HttpInterceptorFn,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
-import {
-  catchError,
-  switchMap,
-  throwError,
-} from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthRefreshService } from '../auth/auth-refresh.service';
 import { TokenStore } from '../auth/token.store';
@@ -42,11 +34,9 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
         return throwError(() => error);
       }
 
-      return refreshService.refreshAccessToken().pipe(
-        switchMap((newAccessToken) =>
-          next(prepareApiRequest(request, newAccessToken)),
-        ),
-      );
+      return refreshService
+        .refreshAccessToken()
+        .pipe(switchMap((newAccessToken) => next(prepareApiRequest(request, newAccessToken))));
     }),
   );
 };

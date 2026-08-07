@@ -15,6 +15,8 @@ import type {
   RequestPasswordResetStatus,
   ResetPasswordInput,
   ResetPasswordPersistenceResult,
+  ValidatePasswordResetTokenInput,
+  ValidatePasswordResetTokenPersistenceResult,
 } from '../../../../application/ports';
 import { SessionRevocationReason } from '../../../../domain/enums';
 import { PasswordResetUrlBuilder } from '../../../mail';
@@ -47,6 +49,70 @@ export class PrismaPasswordResetPersistence implements PasswordResetPersistenceP
         operation: 'auth-request-password-reset',
 
         resource: 'Yêu cầu đặt lại mật khẩu',
+      });
+    }
+  }
+
+  async validate(
+    input: ValidatePasswordResetTokenInput,
+  ): Promise<ValidatePasswordResetTokenPersistenceResult> {
+    try {
+      const token = await this.prisma.userToken.findUnique({
+        where: {
+          tokenHash: input.tokenHash,
+        },
+
+        select: {
+          type: true,
+
+          expiresAt: true,
+
+          consumedAt: true,
+
+          user: {
+            select: {
+              deletedAt: true,
+            },
+          },
+        },
+      });
+
+      /*
+       * Token không tồn tại, sai loại,
+       * đã được consume hoặc user đã bị xóa
+       * đều được coi là invalid.
+       *
+       * Không tiết lộ thêm thông tin ra ngoài.
+       */
+      if (
+        !token ||
+        token.type !== TokenType.PASSWORD_RESET ||
+        token.consumedAt !== null ||
+        token.user.deletedAt !== null
+      ) {
+        return {
+          status: 'invalid',
+        };
+      }
+
+      if (token.expiresAt <= input.now) {
+        return {
+          status: 'expired',
+
+          expiresAt: token.expiresAt,
+        };
+      }
+
+      return {
+        status: 'valid',
+
+        expiresAt: token.expiresAt,
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'auth-validate-password-reset-token',
+
+        resource: 'Liên kết đặt lại mật khẩu',
       });
     }
   }

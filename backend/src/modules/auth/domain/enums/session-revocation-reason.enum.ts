@@ -15,4 +15,5 @@ export enum SessionRevocationReason {
 
   REFRESH_TOKEN_REUSE_DETECTED = 'refresh_token_reuse_detected',
   SESSION_LIMIT_EXCEEDED = 'session_limit_exceeded',
+  MFA_ENABLED = 'mfa_enabled',
 }

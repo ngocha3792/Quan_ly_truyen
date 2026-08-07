@@ -5,5 +5,5 @@ export const environment = {
   storyCatalogUseMock: true,
   genreDiscoveryUseMock: true,
   storyRankingUseMock: true,
-  storyUpdatesUseMock: true
+  storyUpdatesUseMock: true,
 } as const;

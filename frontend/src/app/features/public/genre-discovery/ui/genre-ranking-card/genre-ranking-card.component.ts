@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,86 +8,58 @@ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pi
 import { GenreRankingItem } from '../../domain/genre-discovery.models';
 
 @Component({
-    selector:
-        'app-genre-ranking-card',
+  selector: 'app-genre-ranking-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-        CompactNumberPipe,
-    ],
+  imports: [RouterLink, IconComponent, CompactNumberPipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="ranking-card">
       <header>
         <div>
-          <app-icon
-            name="fire"
-            [size]="16"
-          />
+          <app-icon name="fire" [size]="16" />
 
           <h2>Top thể loại</h2>
         </div>
       </header>
 
       <div class="ranking-list">
-        @for (
-          item of items();
-          track item.id
-        ) {
+        @for (item of items(); track item.id) {
           <a
             class="ranking-item"
             [routerLink]="['/danh-sach']"
             [queryParams]="{
               genre: item.slug,
-              sort: 'popular'
+              sort: 'popular',
             }"
           >
-            <span
-              class="rank"
-              [attr.data-rank]="item.rank"
-            >
+            <span class="rank" [attr.data-rank]="item.rank">
               {{ item.rank }}
             </span>
 
             <strong>{{ item.name }}</strong>
 
             <small>
-              {{
-                item.storyCount
-                  | compactNumber
-              }}
+              {{ item.storyCount | compactNumber }}
               truyện
             </small>
           </a>
         }
       </div>
 
-      <a
-        class="ranking-link"
-        routerLink="/xep-hang"
-      >
-        Xem tất cả bảng xếp hạng
-      </a>
+      <a class="ranking-link" routerLink="/xep-hang"> Xem tất cả bảng xếp hạng </a>
     </section>
   `,
 
-    styles: `
+  styles: `
     .ranking-card {
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .95),
-          rgba(9, 15, 29, .95)
-        );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.95), rgba(9, 15, 29, 0.95));
     }
 
     header {
@@ -118,8 +86,7 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
     .ranking-item {
       min-height: 44px;
       display: grid;
-      grid-template-columns:
-        28px minmax(0, 1fr) auto;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
       color: inherit;
@@ -131,11 +98,10 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
       height: 26px;
       display: grid;
       place-items: center;
-      border: 1px solid
-        rgba(122, 135, 165, .34);
+      border: 1px solid rgba(122, 135, 165, 0.34);
       border-radius: 50%;
       color: #99a2b4;
-      font-size: .85rem;
+      font-size: 0.85rem;
       font-weight: 800;
     }
 
@@ -161,7 +127,7 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
 
     small {
       color: #778195;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
     .ranking-link {
@@ -170,21 +136,16 @@ import { GenreRankingItem } from '../../domain/genre-discovery.models';
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid
-        rgba(127, 68, 205, .37);
+      border: 1px solid rgba(127, 68, 205, 0.37);
       border-radius: 8px;
       color: #ba7af5;
-      font-size: .9rem;
+      font-size: 0.9rem;
       font-weight: 700;
       text-decoration: none;
-      background:
-        rgba(95, 42, 151, .1);
+      background: rgba(95, 42, 151, 0.1);
     }
   `,
 })
 export class GenreRankingCardComponent {
-    readonly items =
-        input.required<
-            readonly GenreRankingItem[]
-        >();
+  readonly items = input.required<readonly GenreRankingItem[]>();
 }

@@ -1,9 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    computed,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,34 +7,21 @@ import { IconComponent } from '../../../../../../shared/components/icon/icon.com
 import { ProfileCompletion } from '../../domain/account-profile.models';
 
 @Component({
-    selector:
-        'app-profile-completion-card',
-    standalone: true,
-    imports: [
-        RouterLink,
-        IconComponent,
-    ],
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-profile-completion-card',
+  standalone: true,
+  imports: [RouterLink, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <aside class="completion-card">
       <div class="completion-title">
         <strong>Mức độ hồ sơ</strong>
 
-        <app-icon
-          name="info"
-          [size]="15"
-        />
+        <app-icon name="info" [size]="15" />
       </div>
 
-      <div
-        class="progress-ring"
-        [style.background]="ringBackground()"
-      >
+      <div class="progress-ring" [style.background]="ringBackground()">
         <div class="ring-inner">
-          <strong>
-            {{ completion().percent }}%
-          </strong>
+          <strong> {{ completion().percent }}% </strong>
 
           <span>Hoàn thiện</span>
         </div>
@@ -50,28 +32,14 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
       </p>
 
       <div class="progress-bar">
-        <span
-          [style.width.%]="
-            completion().percent
-          "
-        ></span>
+        <span [style.width.%]="completion().percent"></span>
       </div>
 
       <div class="completion-list">
-        @for (
-          item of completion().items;
-          track item.label
-        ) {
+        @for (item of completion().items; track item.label) {
           <div class="completion-item">
             <span class="item-icon">
-              <app-icon
-                [name]="
-                  item.completed
-                    ? 'check'
-                    : 'close'
-                "
-                [size]="13"
-              />
+              <app-icon [name]="item.completed ? 'check' : 'close'" [size]="13" />
             </span>
 
             <div>
@@ -87,30 +55,19 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
         }
       </div>
 
-      <a
-        class="view-profile-button"
-        routerLink="/tai-khoan"
-      >
-        <app-icon
-          name="user"
-          [size]="16"
-        />
+      <a class="view-profile-button" routerLink="/tai-khoan">
+        <app-icon name="user" [size]="16" />
 
         Xem tổng quan tài khoản
       </a>
     </aside>
   `,
-    styles: `
+  styles: `
     .completion-card {
       padding: 22px 20px;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(16, 24, 42, .98),
-          rgba(10, 16, 31, .98)
-        );
+      background: linear-gradient(145deg, rgba(16, 24, 42, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     .completion-title {
@@ -175,12 +132,7 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
       height: 100%;
       display: block;
       border-radius: inherit;
-      background:
-        linear-gradient(
-          90deg,
-          #733bdf,
-          #b35cf3
-        );
+      background: linear-gradient(90deg, #733bdf, #b35cf3);
     }
 
     .completion-list {
@@ -202,7 +154,7 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
       place-items: center;
       border-radius: 50%;
       color: #4ade80;
-      background: rgba(34, 197, 94, .18);
+      background: rgba(34, 197, 94, 0.18);
     }
 
     .completion-item div {
@@ -238,27 +190,24 @@ import { ProfileCompletion } from '../../domain/account-profile.models';
 
     .view-profile-button:hover {
       color: #fff;
-      background: rgba(128, 70, 216, .14);
+      background: rgba(128, 70, 216, 0.14);
     }
   `,
 })
 export class ProfileCompletionCardComponent {
-    readonly completion =
-        input.required<ProfileCompletion>();
+  readonly completion = input.required<ProfileCompletion>();
 
-    readonly ringBackground =
-        computed(() => {
-            const percent =
-                this.completion().percent;
+  readonly ringBackground = computed(() => {
+    const percent = this.completion().percent;
 
-            return [
-                'conic-gradient(',
-                '#9350ec 0%,',
-                `#9350ec ${percent}%,`,
-                'rgba(91, 102, 130, .2)',
-                `${percent}%,`,
-                'rgba(91, 102, 130, .2) 100%',
-                ')',
-            ].join(' ');
-        });
+    return [
+      'conic-gradient(',
+      '#9350ec 0%,',
+      `#9350ec ${percent}%,`,
+      'rgba(91, 102, 130, .2)',
+      `${percent}%,`,
+      'rgba(91, 102, 130, .2) 100%',
+      ')',
+    ].join(' ');
+  });
 }

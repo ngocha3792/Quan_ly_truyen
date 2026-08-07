@@ -28,4 +28,17 @@ export enum AuthAuditAction {
   EMAIL_CHANGE_REQUESTED = 'auth.email_change.requested',
 
   EMAIL_CHANGED = 'auth.email_change.confirmed',
+  MFA_DISABLED = 'auth.mfa.disabled',
+
+  MFA_RECOVERY_CODES_REGENERATED = 'auth.mfa.recovery_codes_regenerated',
+  RECOVERY_EMAIL_REQUESTED = 'auth.recovery_email.requested',
+
+  RECOVERY_EMAIL_VERIFIED = 'auth.recovery_email.verified',
+
+  RECOVERY_EMAIL_RESENT = 'auth.recovery_email.resent',
+
+  RECOVERY_EMAIL_REMOVED = 'auth.recovery_email.removed',
+  SECURITY_QUESTIONS_UPDATED = 'auth.security_questions.updated',
+
+  SECURITY_QUESTIONS_REMOVED = 'auth.security_questions.removed',
 }

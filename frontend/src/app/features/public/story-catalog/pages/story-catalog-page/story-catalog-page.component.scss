@@ -1,46 +1,43 @@
 :host {
-    display: block;
-    min-width: 0;
+  display: block;
+  min-width: 0;
 }
 
 .catalog-page {
-    min-height: calc(100vh - 72px);
-    padding: 1.25rem 0 4rem;
-    background:
-        radial-gradient(circle at 58% 4%,
-            rgba(112, 56, 202, 0.08),
-            transparent 580px),
-        #060b16;
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  background:
+    radial-gradient(circle at 58% 4%, rgba(112, 56, 202, 0.08), transparent 580px), #060b16;
 }
 
 .result-summary {
-    min-height: 27px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 13px;
-    color: #717b8f;
-    font-size: .85rem;
+  min-height: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  color: #717b8f;
+  font-size: 0.85rem;
 
-    strong {
-        color: #c281ff;
-    }
+  strong {
+    color: #c281ff;
+  }
 
-    button {
-        border: 0;
-        color: #a773ed;
-        font-size: .8rem;
-        cursor: pointer;
-        background: transparent;
-    }
+  button {
+    border: 0;
+    color: #a773ed;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: transparent;
+  }
 }
 
 .pagination-wrapper {
-    padding: 11px 0 1px;
+  padding: 11px 0 1px;
 }
 
 @media (max-width: 720px) {
-    .catalog-page {
-        padding-top: .75rem;
-    }
+  .catalog-page {
+    padding-top: 0.75rem;
+  }
 }

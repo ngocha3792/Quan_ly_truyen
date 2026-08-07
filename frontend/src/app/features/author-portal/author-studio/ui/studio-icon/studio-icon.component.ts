@@ -1,27 +1,14 @@
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
-import {
-    ChangeDetectionStrategy,
-    Component,
-    Input,
-} from '@angular/core';
-
-import {
-    StudioIconName,
-} from '../../domain/author-studio.models';
+import { StudioIconName } from '../../domain/author-studio.models';
 
 @Component({
-    selector: 'app-studio-icon',
-    standalone: true,
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  selector: 'app-studio-icon',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
-    <svg
-      [attr.width]="size"
-      [attr.height]="size"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
+  template: `
+    <svg [attr.width]="size" [attr.height]="size" viewBox="0 0 24 24" aria-hidden="true">
       @switch (name) {
         @case ('home') {
           <path d="m3 11 9-8 9 8"></path>
@@ -90,7 +77,9 @@ import {
 
         @case ('settings') {
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path>
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"
+          ></path>
         }
 
         @case ('search') {
@@ -173,26 +162,28 @@ import {
     </svg>
   `,
 
-    styles: [`
-    :host {
-      display: inline-flex;
-      line-height: 0;
-    }
+  styles: [
+    `
+      :host {
+        display: inline-flex;
+        line-height: 0;
+      }
 
-    svg {
-      display: block;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-  `],
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    `,
+  ],
 })
 export class StudioIconComponent {
-    @Input({ required: true })
-    name!: StudioIconName;
+  @Input({ required: true })
+  name!: StudioIconName;
 
-    @Input()
-    size = 20;
+  @Input()
+  size = 20;
 }

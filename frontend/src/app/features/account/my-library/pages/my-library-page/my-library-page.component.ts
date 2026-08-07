@@ -1,73 +1,75 @@
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
 import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-    OnInit,
-} from '@angular/core';
-import { RouterLink } from '@angular/router';
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+
+import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
 import { provideMyLibrary } from '../../data-access/my-library.providers';
+
 import { MyLibraryStore } from '../../data-access/my-library.store';
-import {
-    LibraryFilter,
-    LibrarySort,
-    LibraryViewMode,
-} from '../../domain/my-library.models';
+
+import { LibraryFilter, LibrarySort, LibraryViewMode } from '../../domain/my-library.models';
+
 import { LibrarySidebarComponent } from '../../ui/library-sidebar/library-sidebar.component';
+
 import { LibraryStoryListComponent } from '../../ui/library-story-list/library-story-list.component';
+
 import { LibraryToolbarComponent } from '../../ui/library-toolbar/library-toolbar.component';
 
 @Component({
-    selector: 'app-my-library-page',
-    standalone: true,
+  selector: 'app-my-library-page',
 
-    imports: [
-        RouterLink,
-        LibraryToolbarComponent,
-        LibraryStoryListComponent,
-        LibrarySidebarComponent,
-    ],
+  standalone: true,
 
-    providers: [
-        ...provideMyLibrary(),
-        MyLibraryStore,
-    ],
+  imports: [
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    ContentLayoutComponent,
 
-    templateUrl:
-        './my-library-page.component.html',
+    LibraryToolbarComponent,
+    LibraryStoryListComponent,
+    LibrarySidebarComponent,
+  ],
 
-    styleUrls: [
-        './my-library-page.component.scss',
-    ],
+  providers: [...provideMyLibrary(), MyLibraryStore],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  templateUrl: './my-library-page.component.html',
+
+  styleUrls: ['./my-library-page.component.scss'],
+
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MyLibraryPageComponent
-    implements OnInit {
-    protected readonly store =
-        inject(MyLibraryStore);
+export class MyLibraryPageComponent implements OnInit {
+  protected readonly store = inject(MyLibraryStore);
 
-    ngOnInit(): void {
-        this.store.load();
-    }
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    {
+      label: 'Trang chủ',
+      route: '/',
+    },
+    {
+      label: 'Thư viện của tôi',
+    },
+  ];
 
-    protected changeFilter(
-        filter: LibraryFilter,
-    ): void {
-        this.store.setFilter(filter);
-    }
+  ngOnInit(): void {
+    this.store.load();
+  }
 
-    protected changeSort(
-        sort: LibrarySort,
-    ): void {
-        this.store.setSort(sort);
-    }
+  protected changeFilter(filter: LibraryFilter): void {
+    this.store.setFilter(filter);
+  }
 
-    protected changeViewMode(
-        viewMode: LibraryViewMode,
-    ): void {
-        this.store.setViewMode(viewMode);
-    }
+  protected changeSort(sort: LibrarySort): void {
+    this.store.setSort(sort);
+  }
+
+  protected changeViewMode(viewMode: LibraryViewMode): void {
+    this.store.setViewMode(viewMode);
+  }
 }

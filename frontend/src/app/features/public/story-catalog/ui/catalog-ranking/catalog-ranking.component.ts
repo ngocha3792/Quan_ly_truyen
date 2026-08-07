@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,27 +8,19 @@ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pi
 import { StoryRankingItem } from '../../domain/story-catalog.models';
 
 @Component({
-    selector: 'app-catalog-ranking',
+  selector: 'app-catalog-ranking',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-        CompactNumberPipe,
-    ],
+  imports: [RouterLink, IconComponent, CompactNumberPipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="ranking-card">
       <header>
         <div>
-          <app-icon
-            name="trophy"
-            [size]="18"
-          />
+          <app-icon name="trophy" [size]="18" />
 
           <h2>Top truyện nổi bật</h2>
         </div>
@@ -40,38 +28,18 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
         <a routerLink="/xep-hang">
           Xem tất cả
 
-          <app-icon
-            name="chevron-right"
-            [size]="13"
-          />
+          <app-icon name="chevron-right" [size]="13" />
         </a>
       </header>
 
       <div class="ranking-list">
-        @for (
-          story of stories();
-          track story.id;
-          let rank = $index
-        ) {
-          <a
-            class="ranking-item"
-            [routerLink]="[
-              '/truyen',
-              story.slug
-            ]"
-          >
-            <span
-              class="rank"
-              [class.top]="rank < 3"
-            >
+        @for (story of stories(); track story.id; let rank = $index) {
+          <a class="ranking-item" [routerLink]="['/truyen', story.slug]">
+            <span class="rank" [class.top]="rank < 3">
               {{ rank + 1 }}
             </span>
 
-            <img
-              [src]="story.coverUrl"
-              [alt]="story.title"
-              loading="lazy"
-            />
+            <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
 
             <div class="ranking-copy">
               <strong>
@@ -79,31 +47,20 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
               </strong>
 
               <small>
-                {{
-                  story.genres[0]?.name
-                }}
+                {{ story.genres[0]?.name }}
               </small>
 
               <div>
                 <span>
-                  <app-icon
-                    name="star"
-                    [size]="12"
-                  />
+                  <app-icon name="star" [size]="12" />
 
                   {{ story.rating }}
                 </span>
 
                 <span>
-                  <app-icon
-                    name="eye"
-                    [size]="12"
-                  />
+                  <app-icon name="eye" [size]="12" />
 
-                  {{
-                    story.views
-                      | compactNumber
-                  }}
+                  {{ story.views | compactNumber }}
                 </span>
               </div>
             </div>
@@ -113,20 +70,13 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
     </section>
   `,
 
-    styles: `
+  styles: `
     .ranking-card {
       padding: 18px;
       border: 1px solid var(--border);
       border-radius: 13px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
-      box-shadow:
-        0 18px 44px
-        rgba(0, 0, 0, .11);
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.11);
     }
 
     header {
@@ -155,7 +105,7 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
       align-items: center;
       gap: 4px;
       color: #778196;
-      font-size: .9rem;
+      font-size: 0.9rem;
       text-decoration: none;
     }
 
@@ -166,14 +116,12 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
     .ranking-item {
       min-height: 72px;
       display: grid;
-      grid-template-columns:
-        28px 48px minmax(0, 1fr);
+      grid-template-columns: 28px 48px minmax(0, 1fr);
       align-items: center;
       gap: 12px;
       color: inherit;
       text-decoration: none;
-      border-bottom:
-        1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     .ranking-item:last-child {
@@ -218,7 +166,7 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
 
     small {
       color: #687287;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
     .ranking-copy > div {
@@ -231,18 +179,14 @@ import { StoryRankingItem } from '../../domain/story-catalog.models';
       align-items: center;
       gap: 4px;
       color: #7e879a;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
-    .ranking-copy
-    > div span:first-child {
+    .ranking-copy > div span:first-child {
       color: #f1b93f;
     }
   `,
 })
 export class CatalogRankingComponent {
-    readonly stories =
-        input.required<
-            readonly StoryRankingItem[]
-        >();
+  readonly stories = input.required<readonly StoryRankingItem[]>();
 }

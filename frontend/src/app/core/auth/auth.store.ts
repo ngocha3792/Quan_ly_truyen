@@ -1,42 +1,24 @@
-import {
-  computed,
-  inject,
-  Injectable,
-  signal,
-} from '@angular/core';
-import {
-  catchError,
-  finalize,
-  map,
-  Observable,
-  of,
-  switchMap,
-  tap,
-  throwError,
-} from 'rxjs';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
 import { getApiErrorMessage } from '../http/api-error.util';
 import { AuthApiService } from './auth-api.service';
 import { AuthRefreshService } from './auth-refresh.service';
 import { AuthSessionHintStore } from './auth-session-hint.store';
 import {
-  AdminMfaAuthenticationResult,
-  AdminMfaEnrollmentResponse,
-  ConfirmAdminMfaEnrollmentRequest,
+  MfaAuthenticationResult,
+  MfaEnrollmentResponse,
+  ConfirmMfaEnrollmentRequest,
   CurrentUser,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
-  VerifyAdminMfaRequest,
+  VerifyMfaRequest,
 } from './auth.models';
 import { TokenStore } from './token.store';
 
-export type AuthStatus =
-  | 'idle'
-  | 'loading'
-  | 'authenticated'
-  | 'anonymous';
+export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
@@ -56,10 +38,7 @@ export class AuthStore {
   readonly error = this.errorState.asReadonly();
 
   readonly isAuthenticated = computed(() => {
-    return (
-      this.statusState() === 'authenticated' &&
-      Boolean(this.userState())
-    );
+    return this.statusState() === 'authenticated' && Boolean(this.userState());
   });
 
   initialize(): void {
@@ -119,12 +98,10 @@ export class AuthStore {
     );
   }
 
-  beginAdminMfaEnrollment(
-    mfaTicket: string,
-  ): Observable<AdminMfaEnrollmentResponse> {
+  beginMfaEnrollment(mfaTicket: string): Observable<MfaEnrollmentResponse> {
     this.errorState.set(null);
 
-    return this.api.beginAdminMfaEnrollment(mfaTicket).pipe(
+    return this.api.beginMfaEnrollment(mfaTicket).pipe(
       catchError((error: unknown) => {
         this.errorState.set(getApiErrorMessage(error));
 
@@ -133,33 +110,34 @@ export class AuthStore {
     );
   }
 
-  confirmAdminMfaEnrollment(
-    request: ConfirmAdminMfaEnrollmentRequest,
-  ): Observable<AdminMfaAuthenticationResult> {
+  confirmMfaEnrollment(request: ConfirmMfaEnrollmentRequest): Observable<MfaAuthenticationResult> {
     this.statusState.set('loading');
+
     this.errorState.set(null);
 
-    return this.api.confirmAdminMfaEnrollment(request).pipe(
+    return this.api.confirmMfaEnrollment(request).pipe(
       switchMap((result) =>
         this.acceptLogin(result).pipe(
           map((user) => ({
             user,
+
             recoveryCodes: result.recoveryCodes ?? [],
           })),
         ),
       ),
+
       catchError((error: unknown) => this.handleAuthenticationError(error)),
     );
   }
 
-  verifyAdminMfa(
-    request: VerifyAdminMfaRequest,
-  ): Observable<CurrentUser> {
+  verifyMfa(request: VerifyMfaRequest): Observable<CurrentUser> {
     this.statusState.set('loading');
+
     this.errorState.set(null);
 
-    return this.api.verifyAdminMfa(request).pipe(
+    return this.api.verifyMfa(request).pipe(
       switchMap((result) => this.acceptLogin(result)),
+
       catchError((error: unknown) => this.handleAuthenticationError(error)),
     );
   }
@@ -199,16 +177,11 @@ export class AuthStore {
 
   private acceptLogin(result: LoginResponse): Observable<CurrentUser> {
     this.tokens.set(result.accessToken);
-    this.sessionHint.markSessionPresent();
 
-    return this.api.me().pipe(
-      tap((user) => this.setAuthenticated(user)),
-    );
+    return this.api.me().pipe(tap((user) => this.setAuthenticated(user)));
   }
 
-  private handleAuthenticationError(
-    error: unknown,
-  ): Observable<never> {
+  private handleAuthenticationError(error: unknown): Observable<never> {
     this.setAnonymous();
     this.errorState.set(getApiErrorMessage(error));
 
@@ -216,7 +189,17 @@ export class AuthStore {
   }
 
   private setAuthenticated(user: CurrentUser): void {
+    /*
+     * Đặc biệt quan trọng với OAuth:
+     *
+     * browser callback có refresh cookie,
+     * sau đó refreshSession() dựng lại
+     * access token.
+     */
+    this.sessionHint.markSessionPresent();
+
     this.userState.set(user);
+
     this.statusState.set('authenticated');
   }
 

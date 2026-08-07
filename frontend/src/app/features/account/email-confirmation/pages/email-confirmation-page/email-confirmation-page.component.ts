@@ -1,67 +1,36 @@
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
-import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-    OnInit,
-} from '@angular/core';
-import {
-    ActivatedRoute,
-} from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
-import {
-    provideEmailConfirmation,
-} from '../../data-access/email-confirmation.providers';
-import {
-    EmailConfirmationStore,
-} from '../../data-access/email-confirmation.store';
-import {
-    EmailConfirmationCardComponent,
-} from '../../ui/email-confirmation-card/email-confirmation-card.component';
+import { AuthFlowPageShellComponent } from '../../../shared/ui/auth-flow-page-shell/auth-flow-page-shell.component';
+
+import { provideEmailConfirmation } from '../../data-access/email-confirmation.providers';
+
+import { EmailConfirmationStore } from '../../data-access/email-confirmation.store';
+
+import { EmailConfirmationCardComponent } from '../../ui/email-confirmation-card/email-confirmation-card.component';
 
 @Component({
-    selector: 'app-email-confirmation-page',
-    standalone: true,
+  selector: 'app-email-confirmation-page',
 
-    imports: [
-        EmailConfirmationCardComponent,
-    ],
+  standalone: true,
 
-    providers: [
-        ...provideEmailConfirmation(),
-        EmailConfirmationStore,
-    ],
+  imports: [AuthFlowPageShellComponent, EmailConfirmationCardComponent],
 
-    templateUrl:
-        './email-confirmation-page.component.html',
+  providers: [...provideEmailConfirmation(), EmailConfirmationStore],
 
-    styleUrl:
-        './email-confirmation-page.component.scss',
+  templateUrl: './email-confirmation-page.component.html',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmailConfirmationPageComponent
-    implements OnInit {
-    private readonly route =
-        inject(ActivatedRoute);
+export class EmailConfirmationPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
 
-    protected readonly store =
-        inject(EmailConfirmationStore);
+  protected readonly store = inject(EmailConfirmationStore);
 
-    ngOnInit(): void {
-        /*
-         * Dùng demo-token làm mặc định để copy code
-         * xong truy cập route là thấy giao diện ngay.
-         *
-         * Khi nối backend thật, có thể bỏ fallback
-         * và bắt buộc URL phải chứa token.
-         */
-        const token =
-            this.route.snapshot.queryParamMap.get(
-                'token',
-            ) ?? 'demo-token';
+  ngOnInit(): void {
+    const token = this.route.snapshot.queryParamMap.get('token') ?? '';
 
-        this.store.confirm(token);
-    }
+    this.store.confirm(token);
+  }
 }

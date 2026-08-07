@@ -1,34 +1,20 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import {
-    IconComponent,
-    IconName,
-} from '../../../../../../shared/components/icon/icon.component';
+import { IconComponent, IconName } from '../../../../../../shared/components/icon/icon.component';
 
 @Component({
-    selector: 'app-session-stat-card',
+  selector: 'app-session-stat-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [IconComponent],
+  imports: [IconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
-    <article
-      class="stat-card"
-      [attr.data-tone]="tone()"
-    >
+  template: `
+    <article class="stat-card" [attr.data-tone]="tone()">
       <div class="stat-icon">
-        <app-icon
-          [name]="icon()"
-          [size]="23"
-        />
+        <app-icon [name]="icon()" [size]="23" />
       </div>
 
       <div class="stat-copy">
@@ -41,7 +27,7 @@ import {
     </article>
   `,
 
-    styles: `
+  styles: `
     :host {
       min-width: 0;
       display: block;
@@ -55,12 +41,7 @@ import {
       gap: 14px;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     .stat-icon {
@@ -71,22 +52,17 @@ import {
       place-items: center;
       border-radius: 10px;
       color: #bb7df8;
-      background:
-        rgba(121, 58, 195, .2);
+      background: rgba(121, 58, 195, 0.2);
     }
 
-    .stat-card[data-tone='green']
-    .stat-icon {
+    .stat-card[data-tone='green'] .stat-icon {
       color: #56dc76;
-      background:
-        rgba(34, 197, 94, .15);
+      background: rgba(34, 197, 94, 0.15);
     }
 
-    .stat-card[data-tone='blue']
-    .stat-icon {
+    .stat-card[data-tone='blue'] .stat-icon {
       color: #4bbcff;
-      background:
-        rgba(37, 99, 235, .16);
+      background: rgba(37, 99, 235, 0.16);
     }
 
     .stat-copy {
@@ -121,22 +97,13 @@ import {
   `,
 })
 export class SessionStatCardComponent {
-    readonly label =
-        input.required<string>();
+  readonly label = input.required<string>();
 
-    readonly value =
-        input.required<
-            string | number
-        >();
+  readonly value = input.required<string | number>();
 
-    readonly description =
-        input.required<string>();
+  readonly description = input.required<string>();
 
-    readonly icon =
-        input.required<IconName>();
+  readonly icon = input.required<IconName>();
 
-    readonly tone =
-        input<
-            'purple' | 'green' | 'blue'
-        >('purple');
+  readonly tone = input<'purple' | 'green' | 'blue'>('purple');
 }

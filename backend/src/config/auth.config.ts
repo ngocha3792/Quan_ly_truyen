@@ -100,6 +100,11 @@ export default registerAs(AUTH_CONFIG_KEY, (): AuthConfig => ({
     enabled: parseBoolean(process.env.AUTH_OAUTH_ENABLED, false),
     stateTtlSeconds: Number(process.env.AUTH_OAUTH_STATE_TTL_SECONDS ?? 600),
     stateCookieName: process.env.AUTH_OAUTH_STATE_COOKIE_NAME ?? 'oauth_state',
+    frontendCallbackUrl: new URL(
+      '/oauth/callback',
+
+      process.env.FRONTEND_PUBLIC_URL ?? 'http://localhost:4200',
+    ).toString(),
     google: {
       enabled: parseBoolean(process.env.AUTH_OAUTH_GOOGLE_ENABLED, false),
       clientId: optionalString(process.env.AUTH_OAUTH_GOOGLE_CLIENT_ID),

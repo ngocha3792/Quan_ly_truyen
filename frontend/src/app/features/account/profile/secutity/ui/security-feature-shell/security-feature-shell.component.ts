@@ -1,38 +1,23 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
 @Component({
-    selector:
-        'app-security-feature-shell',
+  selector: 'app-security-feature-shell',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-    ],
+  imports: [RouterLink, IconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <header class="page-header">
       <div>
-        <a
-          class="back-link"
-          routerLink="/tai-khoan/bao-mat"
-        >
-          <app-icon
-            name="chevron-left"
-            [size]="16"
-          />
+        <a class="back-link" routerLink="/tai-khoan/bao-mat">
+          <app-icon name="chevron-left" [size]="16" />
 
           Bảo mật tài khoản
         </a>
@@ -54,7 +39,7 @@ import { IconComponent } from '../../../../../../shared/components/icon/icon.com
     </div>
   `,
 
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -117,9 +102,7 @@ import { IconComponent } from '../../../../../../shared/components/icon/icon.com
   `,
 })
 export class SecurityFeatureShellComponent {
-    readonly title =
-        input.required<string>();
+  readonly title = input.required<string>();
 
-    readonly description =
-        input.required<string>();
+  readonly description = input.required<string>();
 }

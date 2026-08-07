@@ -1,654 +1,453 @@
 import {
-    AccountActivityViewModel,
-    AccountSecurityEventDto,
-    ActivityCategory,
-    ActivitySessionDto,
-    ActivityStatus,
-    ActivityTone,
-    ActivityVisual,
-    RecentDeviceViewModel,
+  AccountActivityViewModel,
+  AccountSecurityEventDto,
+  ActivityCategory,
+  ActivitySessionDto,
+  ActivityStatus,
+  ActivityTone,
+  ActivityVisual,
+  RecentDeviceViewModel,
 } from '../domain/account-activity.models';
 
 interface DeviceInfo {
-    readonly browserName: string;
-    readonly operatingSystem: string;
+  readonly browserName: string;
+  readonly operatingSystem: string;
 }
 
 interface ActivityDescriptor {
-    readonly title: string;
+  readonly title: string;
 
-    readonly category: Exclude<
-        ActivityCategory,
-        'all'
-    >;
+  readonly category: Exclude<ActivityCategory, 'all'>;
 
-    readonly visual: ActivityVisual;
-    readonly tone: ActivityTone;
+  readonly visual: ActivityVisual;
+  readonly tone: ActivityTone;
 
-    readonly status: ActivityStatus;
-    readonly statusLabel: string | null;
+  readonly status: ActivityStatus;
+  readonly statusLabel: string | null;
 
-    readonly suspicious: boolean;
+  readonly suspicious: boolean;
 }
 
-export function mapSecurityEvent(
-    event: AccountSecurityEventDto,
-): AccountActivityViewModel {
-    const normalizedAction = normalizeAction(
-        event.action,
-    );
+export function mapSecurityEvent(event: AccountSecurityEventDto): AccountActivityViewModel {
+  const normalizedAction = normalizeAction(event.action);
 
-    const descriptor = describeAction(
-        normalizedAction,
-    );
+  const descriptor = describeAction(normalizedAction);
 
-    const device = parseDevice(
-        event.userAgent,
-    );
+  const device = parseDevice(event.userAgent);
 
-    const metadata = event.metadata;
+  const metadata = event.metadata;
 
-    const deviceName =
-        readString(metadata, 'deviceName') ??
-        readString(metadata, 'device_name') ??
-        `${device.browserName} trên ${device.operatingSystem}`;
+  const deviceName =
+    readString(metadata, 'deviceName') ??
+    readString(metadata, 'device_name') ??
+    `${device.browserName} trên ${device.operatingSystem}`;
 
-    const location =
-        readString(metadata, 'location') ??
-        readString(metadata, 'city') ??
-        readString(metadata, 'country') ??
-        'Không xác định';
+  const location =
+    readString(metadata, 'location') ??
+    readString(metadata, 'city') ??
+    readString(metadata, 'country') ??
+    'Không xác định';
 
-    const description =
-        createDescription(
-            normalizedAction,
-            event,
-            deviceName,
-            location,
-        );
+  const description = createDescription(normalizedAction, event, deviceName, location);
 
-    const metadataSuspicious =
-        readBoolean(
-            metadata,
-            'suspicious',
-        ) ||
-        readBoolean(
-            metadata,
-            'isSuspicious',
-        ) ||
-        readString(
-            metadata,
-            'riskLevel',
-        )?.toLowerCase() === 'high';
+  const metadataSuspicious =
+    readBoolean(metadata, 'suspicious') ||
+    readBoolean(metadata, 'isSuspicious') ||
+    readString(metadata, 'riskLevel')?.toLowerCase() === 'high';
 
-    return {
-        id: event.id,
-        action: event.action,
+  return {
+    id: event.id,
+    action: event.action,
 
-        title: descriptor.title,
-        description,
+    title: descriptor.title,
+    description,
 
-        category: descriptor.category,
+    category: descriptor.category,
 
-        visual: descriptor.visual,
-        tone: descriptor.tone,
+    visual: descriptor.visual,
+    tone: descriptor.tone,
 
-        status: descriptor.status,
-        statusLabel:
-            descriptor.statusLabel,
+    status: descriptor.status,
+    statusLabel: descriptor.statusLabel,
 
-        browserName:
-            device.browserName,
+    browserName: device.browserName,
 
-        operatingSystem:
-            device.operatingSystem,
+    operatingSystem: device.operatingSystem,
 
-        deviceLabel: deviceName,
+    deviceLabel: deviceName,
 
-        location,
-        ipAddress: event.ipAddress,
+    location,
+    ipAddress: event.ipAddress,
 
-        occurredAt: event.createdAt,
+    occurredAt: event.createdAt,
 
-        suspicious:
-            descriptor.suspicious ||
-            metadataSuspicious,
-    };
+    suspicious: descriptor.suspicious || metadataSuspicious,
+  };
 }
 
 export function mapSessionToRecentDevice(
-    session: ActivitySessionDto,
-    now = Date.now(),
+  session: ActivitySessionDto,
+  now = Date.now(),
 ): RecentDeviceViewModel {
-    const device = parseDevice(
-        session.userAgent,
-    );
+  const device = parseDevice(session.userAgent);
 
-    const expiresAt =
-        new Date(
-            session.expiresAt,
-        ).getTime();
+  const expiresAt = new Date(session.expiresAt).getTime();
 
-    const active =
-        !session.revokedAt &&
-        (
-            !Number.isFinite(expiresAt) ||
-            expiresAt > now
-        );
+  const active = !session.revokedAt && (!Number.isFinite(expiresAt) || expiresAt > now);
 
-    const deviceName =
-        session.deviceName?.trim() ||
-        `${device.operatingSystem} • ${device.browserName}`;
+  const deviceName =
+    session.deviceName?.trim() || `${device.operatingSystem} • ${device.browserName}`;
 
-    return {
-        id: session.id,
+  return {
+    id: session.id,
 
-        deviceName,
+    deviceName,
 
-        description: [
-            device.operatingSystem,
-            device.browserName,
-        ].join(' • '),
+    description: [device.operatingSystem, device.browserName].join(' • '),
 
-        operatingSystem:
-            device.operatingSystem,
+    operatingSystem: device.operatingSystem,
 
-        browserName:
-            device.browserName,
+    browserName: device.browserName,
 
-        location:
-            session.location?.trim() ||
-            'Không xác định',
+    location: session.location?.trim() || 'Không xác định',
 
-        ipAddress:
-            session.ipAddress,
+    ipAddress: session.ipAddress,
 
-        lastUsedAt:
-            session.lastUsedAt ??
-            session.createdAt,
+    lastUsedAt: session.lastUsedAt ?? session.createdAt,
 
-        current:
-            session.isCurrent,
+    current: session.isCurrent,
 
-        active,
-    };
+    active,
+  };
 }
 
-export function normalizeSearchText(
-    value: string,
-): string {
-    return value
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .toLowerCase()
-        .trim();
+export function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
 }
 
-function describeAction(
-    action: string,
-): ActivityDescriptor {
-    if (
-        includesAny(action, [
-            'suspicious_login',
-            'unusual_login',
-            'login_risk',
-            'login_failed',
-            'failed_login',
-        ])
-    ) {
-        return {
-            title:
-                action.includes('failed')
-                    ? 'Đăng nhập thất bại'
-                    : 'Phát hiện đăng nhập lạ',
-
-            category: 'login',
-
-            visual: 'warning',
-            tone: 'red',
-
-            status: 'warning',
-            statusLabel: 'Cảnh báo',
-
-            suspicious: true,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'login_success',
-            'logged_in',
-            'session_created',
-            'sign_in',
-        ])
-    ) {
-        return {
-            title: 'Đăng nhập thành công',
-            category: 'login',
-
-            visual: 'login',
-            tone: 'green',
-
-            status: 'success',
-            statusLabel: 'Thành công',
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'logout',
-            'logged_out',
-            'sign_out',
-        ])
-    ) {
-        return {
-            title: 'Đăng xuất',
-            category: 'login',
-
-            visual: 'logout',
-            tone: 'neutral',
-
-            status: 'neutral',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'password_changed',
-            'change_password',
-            'password_updated',
-            'password_reset',
-        ])
-    ) {
-        return {
-            title: 'Đổi mật khẩu',
-            category: 'security',
-
-            visual: 'password',
-            tone: 'blue',
-
-            status: 'success',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'mfa_enabled',
-            'mfa_setup',
-            'two_factor_enabled',
-            '2fa_enabled',
-        ])
-    ) {
-        return {
-            title: 'Bật xác thực hai lớp',
-            category: 'security',
-
-            visual: 'mfa',
-            tone: 'green',
-
-            status: 'success',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'mfa_disabled',
-            'two_factor_disabled',
-            '2fa_disabled',
-        ])
-    ) {
-        return {
-            title: 'Tắt xác thực hai lớp',
-            category: 'security',
-
-            visual: 'mfa',
-            tone: 'orange',
-
-            status: 'warning',
-            statusLabel: 'Cần chú ý',
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'recovery_email',
-            'email_recovery',
-            'email_verified',
-        ])
-    ) {
-        return {
-            title:
-                action.includes('remove') ||
-                    action.includes('delete')
-                    ? 'Xóa email khôi phục'
-                    : 'Thêm email khôi phục',
-
-            category: 'security',
-
-            visual: 'email',
-            tone: 'purple',
-
-            status: 'success',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'session_revoked',
-            'revoke_session',
-            'session_terminated',
-        ])
-    ) {
-        return {
-            title: 'Thu hồi phiên đăng nhập',
-            category: 'device',
-
-            visual: 'session',
-            tone: 'orange',
-
-            status: 'info',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'new_device',
-            'device_added',
-            'trusted_device',
-        ])
-    ) {
-        return {
-            title: 'Thiết bị đăng nhập mới',
-            category: 'device',
-
-            visual: 'device',
-            tone: 'orange',
-
-            status: 'info',
-            statusLabel: 'Thiết bị mới',
-
-            suspicious: false,
-        };
-    }
-
-    if (
-        includesAny(action, [
-            'profile_updated',
-            'user_updated',
-            'account_updated',
-            'display_name_changed',
-            'avatar_changed',
-        ])
-    ) {
-        return {
-            title: 'Cập nhật thông tin cá nhân',
-            category: 'account',
-
-            visual: 'profile',
-            tone: 'blue',
-
-            status: 'info',
-            statusLabel: null,
-
-            suspicious: false,
-        };
-    }
-
+function describeAction(action: string): ActivityDescriptor {
+  if (
+    includesAny(action, [
+      'suspicious_login',
+      'unusual_login',
+      'login_risk',
+      'login_failed',
+      'failed_login',
+    ])
+  ) {
     return {
-        title: humanizeAction(action),
+      title: action.includes('failed') ? 'Đăng nhập thất bại' : 'Phát hiện đăng nhập lạ',
 
-        category: 'account',
+      category: 'login',
 
-        visual: 'generic',
-        tone: 'neutral',
+      visual: 'warning',
+      tone: 'red',
 
-        status: 'neutral',
-        statusLabel: null,
+      status: 'warning',
+      statusLabel: 'Cảnh báo',
 
-        suspicious: false,
+      suspicious: true,
     };
+  }
+
+  if (includesAny(action, ['login_success', 'logged_in', 'session_created', 'sign_in'])) {
+    return {
+      title: 'Đăng nhập thành công',
+      category: 'login',
+
+      visual: 'login',
+      tone: 'green',
+
+      status: 'success',
+      statusLabel: 'Thành công',
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['logout', 'logged_out', 'sign_out'])) {
+    return {
+      title: 'Đăng xuất',
+      category: 'login',
+
+      visual: 'logout',
+      tone: 'neutral',
+
+      status: 'neutral',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  if (
+    includesAny(action, [
+      'password_changed',
+      'change_password',
+      'password_updated',
+      'password_reset',
+    ])
+  ) {
+    return {
+      title: 'Đổi mật khẩu',
+      category: 'security',
+
+      visual: 'password',
+      tone: 'blue',
+
+      status: 'success',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['mfa_enabled', 'mfa_setup', 'two_factor_enabled', '2fa_enabled'])) {
+    return {
+      title: 'Bật xác thực hai lớp',
+      category: 'security',
+
+      visual: 'mfa',
+      tone: 'green',
+
+      status: 'success',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['mfa_disabled', 'two_factor_disabled', '2fa_disabled'])) {
+    return {
+      title: 'Tắt xác thực hai lớp',
+      category: 'security',
+
+      visual: 'mfa',
+      tone: 'orange',
+
+      status: 'warning',
+      statusLabel: 'Cần chú ý',
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['recovery_email', 'email_recovery', 'email_verified'])) {
+    return {
+      title:
+        action.includes('remove') || action.includes('delete')
+          ? 'Xóa email khôi phục'
+          : 'Thêm email khôi phục',
+
+      category: 'security',
+
+      visual: 'email',
+      tone: 'purple',
+
+      status: 'success',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['session_revoked', 'revoke_session', 'session_terminated'])) {
+    return {
+      title: 'Thu hồi phiên đăng nhập',
+      category: 'device',
+
+      visual: 'session',
+      tone: 'orange',
+
+      status: 'info',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  if (includesAny(action, ['new_device', 'device_added', 'trusted_device'])) {
+    return {
+      title: 'Thiết bị đăng nhập mới',
+      category: 'device',
+
+      visual: 'device',
+      tone: 'orange',
+
+      status: 'info',
+      statusLabel: 'Thiết bị mới',
+
+      suspicious: false,
+    };
+  }
+
+  if (
+    includesAny(action, [
+      'profile_updated',
+      'user_updated',
+      'account_updated',
+      'display_name_changed',
+      'avatar_changed',
+    ])
+  ) {
+    return {
+      title: 'Cập nhật thông tin cá nhân',
+      category: 'account',
+
+      visual: 'profile',
+      tone: 'blue',
+
+      status: 'info',
+      statusLabel: null,
+
+      suspicious: false,
+    };
+  }
+
+  return {
+    title: humanizeAction(action),
+
+    category: 'account',
+
+    visual: 'generic',
+    tone: 'neutral',
+
+    status: 'neutral',
+    statusLabel: null,
+
+    suspicious: false,
+  };
 }
 
 function createDescription(
-    action: string,
-    event: AccountSecurityEventDto,
-    deviceName: string,
-    location: string,
+  action: string,
+  event: AccountSecurityEventDto,
+  deviceName: string,
+  location: string,
 ): string {
-    const metadata = event.metadata;
+  const metadata = event.metadata;
 
-    const description =
-        readString(
-            metadata,
-            'description',
-        ) ??
-        readString(
-            metadata,
-            'message',
-        );
+  const description = readString(metadata, 'description') ?? readString(metadata, 'message');
 
-    if (description) {
-        return description;
-    }
+  if (description) {
+    return description;
+  }
 
-    if (
-        includesAny(action, [
-            'login_success',
-            'logged_in',
-            'sign_in',
-        ])
-    ) {
-        return [
-            deviceName,
-            event.ipAddress
-                ? `IP ${event.ipAddress}`
-                : null,
-            location,
-        ]
-            .filter(Boolean)
-            .join(' • ');
-    }
+  if (includesAny(action, ['login_success', 'logged_in', 'sign_in'])) {
+    return [deviceName, event.ipAddress ? `IP ${event.ipAddress}` : null, location]
+      .filter(Boolean)
+      .join(' • ');
+  }
 
-    if (
-        includesAny(action, [
-            'suspicious_login',
-            'unusual_login',
-            'login_failed',
-        ])
-    ) {
-        return [
-            deviceName,
-            event.ipAddress
-                ? `IP ${event.ipAddress}`
-                : null,
-            location,
-        ]
-            .filter(Boolean)
-            .join(' • ');
-    }
+  if (includesAny(action, ['suspicious_login', 'unusual_login', 'login_failed'])) {
+    return [deviceName, event.ipAddress ? `IP ${event.ipAddress}` : null, location]
+      .filter(Boolean)
+      .join(' • ');
+  }
 
-    if (
-        action.includes('password')
-    ) {
-        return 'Bảo mật tài khoản đã được cập nhật';
-    }
+  if (action.includes('password')) {
+    return 'Bảo mật tài khoản đã được cập nhật';
+  }
 
-    if (
-        action.includes('mfa') ||
-        action.includes('two_factor') ||
-        action.includes('2fa')
-    ) {
-        return 'Cấu hình xác thực hai lớp đã thay đổi';
-    }
+  if (action.includes('mfa') || action.includes('two_factor') || action.includes('2fa')) {
+    return 'Cấu hình xác thực hai lớp đã thay đổi';
+  }
 
-    if (
-        action.includes('recovery_email') ||
-        action.includes('email_recovery')
-    ) {
-        const email =
-            readString(
-                metadata,
-                'email',
-            );
+  if (action.includes('recovery_email') || action.includes('email_recovery')) {
+    const email = readString(metadata, 'email');
 
-        return email
-            ? `${email} đã được cập nhật`
-            : 'Email khôi phục đã được cập nhật';
-    }
+    return email ? `${email} đã được cập nhật` : 'Email khôi phục đã được cập nhật';
+  }
 
-    if (
-        action.includes('session')
-    ) {
-        return [
-            deviceName,
-            location,
-        ].join(' • ');
-    }
+  if (action.includes('session')) {
+    return [deviceName, location].join(' • ');
+  }
 
-    if (
-        action.includes('profile') ||
-        action.includes('user_updated')
-    ) {
-        return 'Thông tin tài khoản đã được thay đổi';
-    }
+  if (action.includes('profile') || action.includes('user_updated')) {
+    return 'Thông tin tài khoản đã được thay đổi';
+  }
 
-    return [
-        event.entityType,
-        event.entityId,
-    ]
-        .filter(Boolean)
-        .join(' • ') ||
-        'Hoạt động tài khoản';
+  return [event.entityType, event.entityId].filter(Boolean).join(' • ') || 'Hoạt động tài khoản';
 }
 
-function parseDevice(
-    userAgent: string | null,
-): DeviceInfo {
-    const ua = userAgent ?? '';
+function parseDevice(userAgent: string | null): DeviceInfo {
+  const ua = userAgent ?? '';
 
-    let browserName =
-        'Trình duyệt';
+  let browserName = 'Trình duyệt';
 
-    if (/Edg\//u.test(ua)) {
-        browserName =
-            'Microsoft Edge';
-    } else if (/OPR\//u.test(ua)) {
-        browserName = 'Opera';
-    } else if (/Firefox\//u.test(ua)) {
-        browserName = 'Firefox';
-    } else if (/Chrome\//u.test(ua)) {
-        browserName = 'Chrome';
-    } else if (
-        /Safari\//u.test(ua)
-    ) {
-        browserName = 'Safari';
-    }
+  if (/Edg\//u.test(ua)) {
+    browserName = 'Microsoft Edge';
+  } else if (/OPR\//u.test(ua)) {
+    browserName = 'Opera';
+  } else if (/Firefox\//u.test(ua)) {
+    browserName = 'Firefox';
+  } else if (/Chrome\//u.test(ua)) {
+    browserName = 'Chrome';
+  } else if (/Safari\//u.test(ua)) {
+    browserName = 'Safari';
+  }
 
-    let operatingSystem =
-        'Thiết bị không xác định';
+  let operatingSystem = 'Thiết bị không xác định';
 
-    if (
-        /Windows NT 10\.0/u.test(ua)
-    ) {
-        operatingSystem = 'Windows';
-    } else if (/Windows/u.test(ua)) {
-        operatingSystem = 'Windows';
-    } else if (/iPhone/u.test(ua)) {
-        operatingSystem = 'iPhone';
-    } else if (/iPad/u.test(ua)) {
-        operatingSystem = 'iPad';
-    } else if (/Android/u.test(ua)) {
-        operatingSystem = 'Android';
-    } else if (
-        /Mac OS X|Macintosh/u.test(ua)
-    ) {
-        operatingSystem = 'macOS';
-    } else if (/Linux/u.test(ua)) {
-        operatingSystem = 'Linux';
-    }
+  if (/Windows NT 10\.0/u.test(ua)) {
+    operatingSystem = 'Windows';
+  } else if (/Windows/u.test(ua)) {
+    operatingSystem = 'Windows';
+  } else if (/iPhone/u.test(ua)) {
+    operatingSystem = 'iPhone';
+  } else if (/iPad/u.test(ua)) {
+    operatingSystem = 'iPad';
+  } else if (/Android/u.test(ua)) {
+    operatingSystem = 'Android';
+  } else if (/Mac OS X|Macintosh/u.test(ua)) {
+    operatingSystem = 'macOS';
+  } else if (/Linux/u.test(ua)) {
+    operatingSystem = 'Linux';
+  }
 
-    return {
-        browserName,
-        operatingSystem,
-    };
+  return {
+    browserName,
+    operatingSystem,
+  };
 }
 
-function normalizeAction(
-    action: string,
-): string {
-    return action
-        .trim()
-        .toLowerCase()
-        .replace(/[.\s-]+/gu, '_');
+function normalizeAction(action: string): string {
+  return action
+    .trim()
+    .toLowerCase()
+    .replace(/[.\s-]+/gu, '_');
 }
 
-function includesAny(
-    value: string,
-    candidates: readonly string[],
-): boolean {
-    return candidates.some(
-        (candidate) =>
-            value.includes(candidate),
-    );
+function includesAny(value: string, candidates: readonly string[]): boolean {
+  return candidates.some((candidate) => value.includes(candidate));
 }
 
-function humanizeAction(
-    action: string,
-): string {
-    const value = action
-        .replace(/[_-]+/gu, ' ')
-        .trim();
+function humanizeAction(action: string): string {
+  const value = action.replace(/[_-]+/gu, ' ').trim();
 
-    if (!value) {
-        return 'Hoạt động tài khoản';
-    }
+  if (!value) {
+    return 'Hoạt động tài khoản';
+  }
 
-    return (
-        value.charAt(0).toUpperCase() +
-        value.slice(1)
-    );
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function readString(
-    record:
-        | Readonly<Record<string, unknown>>
-        | null
-        | undefined,
-    key: string,
+  record: Readonly<Record<string, unknown>> | null | undefined,
+  key: string,
 ): string | null {
-    const value = record?.[key];
+  const value = record?.[key];
 
-    return typeof value === 'string' &&
-        value.trim()
-        ? value.trim()
-        : null;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function readBoolean(
-    record:
-        | Readonly<Record<string, unknown>>
-        | null
-        | undefined,
-    key: string,
+  record: Readonly<Record<string, unknown>> | null | undefined,
+  key: string,
 ): boolean {
-    return record?.[key] === true;
+  return record?.[key] === true;
 }

@@ -1,189 +1,175 @@
 :host {
-    display: block;
+  display: block;
 }
 
 .alert {
-    padding: 13px 16px;
-    border-radius: 8px;
-    font-size: 12.5px;
+  padding: 13px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
 
-    &.error {
-        border: 1px solid rgba(251, 113, 133, 0.24);
-        color: #fda4b5;
-        background:
-            rgba(190, 24, 93, 0.08);
-    }
+  &.error {
+    border: 1px solid rgba(251, 113, 133, 0.24);
+    color: #fda4b5;
+    background: rgba(190, 24, 93, 0.08);
+  }
 
-    &.success {
-        border: 1px solid rgba(74, 222, 128, 0.22);
-        color: #75e58c;
-        background:
-            rgba(34, 197, 94, 0.08);
-    }
+  &.success {
+    border: 1px solid rgba(74, 222, 128, 0.22);
+    color: #75e58c;
+    background: rgba(34, 197, 94, 0.08);
+  }
 }
 
 .questions-form,
 .remove-form {
-    display: grid;
-    gap: 18px;
+  display: grid;
+  gap: 18px;
 }
 
 .question-group {
-    padding: 17px 0;
-    display: grid;
-    grid-template-columns:
-        32px minmax(0, 1fr);
-    gap: 13px;
-    border-bottom:
-        1px solid var(--border);
+  padding: 17px 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 13px;
+  border-bottom: 1px solid var(--border);
 
-    &:first-child {
-        padding-top: 0;
-    }
+  &:first-child {
+    padding-top: 0;
+  }
 }
 
 .question-number {
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    border-radius: 8px;
-    color: #c28aff;
-    font-size: 13px;
-    font-weight: 700;
-    background:
-        rgba(125, 63, 209, 0.18);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #c28aff;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(125, 63, 209, 0.18);
 }
 
 .question-fields {
-    display: grid;
-    grid-template-columns:
-        minmax(0, 1.2fr) minmax(0, 1fr);
-    gap: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 13px;
 }
 
 label {
-    display: grid;
-    gap: 7px;
+  display: grid;
+  gap: 7px;
 
-    >span {
-        color: #94a3b8;
-        font-size: 13px;
-        font-weight: 600;
-    }
+  > span {
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+  }
 
-    >small {
-        color: #94a3b8;
-        font-size: 12px;
-    }
+  > small {
+    color: #94a3b8;
+    font-size: 12px;
+  }
 }
 
 input,
 select {
-    width: 100%;
-    min-height: 42px;
-    padding: 0 14px;
-    border: 1px solid rgba(139, 151, 181, 0.25);
-    border-radius: 8px;
-    outline: 0;
-    color: #f8fafc;
-    font-family: inherit;
-    font-size: 14px;
-    background:
-        rgba(5, 10, 21, 0.55);
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(139, 151, 181, 0.25);
+  border-radius: 8px;
+  outline: 0;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 14px;
+  background: rgba(5, 10, 21, 0.55);
 
-    &:focus {
-        border-color:
-            rgba(156, 91, 239, 0.75);
-    }
+  &:focus {
+    border-color: rgba(156, 91, 239, 0.75);
+  }
 }
 
 select option {
-    color: #f8fafc;
-    background: #101728;
+  color: #f8fafc;
+  background: #101728;
 }
 
 .password-field {
-    max-width: 430px;
+  max-width: 430px;
 }
 
 .form-error {
-    padding: 10px 12px;
-    border: 1px solid rgba(251, 113, 133, 0.22);
-    border-radius: 7px;
-    color: #fda4b5;
-    font-size: 12.5px;
-    background:
-        rgba(190, 24, 93, 0.08);
+  padding: 10px 12px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  border-radius: 7px;
+  color: #fda4b5;
+  font-size: 12.5px;
+  background: rgba(190, 24, 93, 0.08);
 }
 
 .form-actions {
-    display: flex;
-    justify-content: flex-end;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .primary-button,
 .danger-button {
-    min-height: 42px;
-    padding: 0 18px;
-    border-radius: 7px;
-    font-size: 13.5px;
-    font-weight: 650;
-    cursor: pointer;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
 
-    &:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 }
 
 .primary-button {
-    border: 0;
-    color: #fff;
-    background:
-        linear-gradient(135deg,
-            #743bde,
-            #a153eb);
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #743bde, #a153eb);
 }
 
 .danger-button {
-    width: max-content;
-    border: 1px solid #e43d5c;
-    color: #fb7185;
-    background:
-        rgba(190, 24, 93, 0.08);
+  width: max-content;
+  border: 1px solid #e43d5c;
+  color: #fb7185;
+  background: rgba(190, 24, 93, 0.08);
 }
 
 .aside-card {
-    padding: 19px;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    background:
-        rgba(14, 21, 38, 0.88);
+  padding: 19px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: rgba(14, 21, 38, 0.88);
 
-    h3 {
-        margin: 0 0 13px;
-        color: #f8fafc;
-        font-size: 14.5px;
-        font-weight: 700;
-    }
+  h3 {
+    margin: 0 0 13px;
+    color: #f8fafc;
+    font-size: 14.5px;
+    font-weight: 700;
+  }
 
-    ul {
-        margin: 0;
-        padding-left: 17px;
-        display: grid;
-        gap: 10px;
-    }
+  ul {
+    margin: 0;
+    padding-left: 17px;
+    display: grid;
+    gap: 10px;
+  }
 
-    li {
-        color: #94a3b8;
-        font-size: 12.5px;
-        line-height: 1.65;
-    }
+  li {
+    color: #94a3b8;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
 }
 
 @media (max-width: 760px) {
-    .question-fields {
-        grid-template-columns: 1fr;
-    }
+  .question-fields {
+    grid-template-columns: 1fr;
+  }
 }

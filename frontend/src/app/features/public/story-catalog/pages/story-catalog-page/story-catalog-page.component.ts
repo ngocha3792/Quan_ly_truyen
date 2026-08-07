@@ -1,12 +1,9 @@
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+
 import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-} from '@angular/core';
-
-
-
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
@@ -22,41 +19,36 @@ import { CatalogToolbarComponent } from '../../ui/catalog-toolbar/catalog-toolba
 import { StoryCatalogGridComponent } from '../../ui/story-catalog-grid/story-catalog-grid.component';
 
 @Component({
-    selector:
-        'app-story-catalog-page',
+  selector: 'app-story-catalog-page',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        CompactNumberPipe,
-        PaginationComponent,
-        BreadcrumbComponent,
-        ErrorAlertComponent,
-        PageHeadingComponent,
-        ContentLayoutComponent,
+  imports: [
+    CompactNumberPipe,
+    PaginationComponent,
+    BreadcrumbComponent,
+    ErrorAlertComponent,
+    PageHeadingComponent,
+    ContentLayoutComponent,
 
-        CatalogToolbarComponent,
-        CatalogQuickFiltersComponent,
-        StoryCatalogGridComponent,
-        CatalogFilterPanelComponent,
-        CatalogRankingComponent,
-    ],
+    CatalogToolbarComponent,
+    CatalogQuickFiltersComponent,
+    StoryCatalogGridComponent,
+    CatalogFilterPanelComponent,
+    CatalogRankingComponent,
+  ],
 
-    templateUrl:
-        './story-catalog-page.component.html',
+  templateUrl: './story-catalog-page.component.html',
 
-    styleUrl:
-        './story-catalog-page.component.scss',
+  styleUrl: './story-catalog-page.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StoryCatalogPageComponent {
-    protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
-        { label: 'Trang chủ', route: '/' },
-        { label: 'Danh sách' },
-    ];
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Danh sách' },
+  ];
 
-    protected readonly store =
-        inject(StoryCatalogStore);
+  protected readonly store = inject(StoryCatalogStore);
 }

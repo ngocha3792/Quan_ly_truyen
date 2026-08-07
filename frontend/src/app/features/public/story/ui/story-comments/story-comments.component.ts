@@ -40,13 +40,13 @@ import { StoryComment } from '../../domain/story.models';
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background: rgba(13, 18, 33, .88);
+      background: rgba(13, 18, 33, 0.88);
     }
 
     .card-heading {
       display: flex;
       align-items: center;
-      gap: .6rem;
+      gap: 0.6rem;
       margin-bottom: 1rem;
       color: #a868ef;
 
@@ -60,19 +60,19 @@ import { StoryComment } from '../../domain/story.models';
 
     .comment-input-box {
       display: grid;
-      gap: .6rem;
+      gap: 0.6rem;
       margin-bottom: 1.25rem;
 
       textarea {
         width: 100%;
-        padding: .75rem;
-        border: 1px solid rgba(132, 145, 177, .18);
+        padding: 0.75rem;
+        border: 1px solid rgba(132, 145, 177, 0.18);
         border-radius: 8px;
         outline: none;
         color: #dedbe4;
-        background: rgba(5, 10, 21, .5);
+        background: rgba(5, 10, 21, 0.5);
         font-family: inherit;
-        font-size: .875rem;
+        font-size: 0.875rem;
         resize: none;
 
         &:focus {
@@ -82,17 +82,17 @@ import { StoryComment } from '../../domain/story.models';
 
       button {
         justify-self: flex-end;
-        padding: .45rem 1.25rem;
+        padding: 0.45rem 1.25rem;
         border: 0;
         border-radius: 6px;
         color: white;
         font-weight: 700;
-        font-size: .85rem;
+        font-size: 0.85rem;
         background: linear-gradient(135deg, #a04eed, #6842dc);
         cursor: pointer;
 
         &:hover {
-          opacity: .9;
+          opacity: 0.9;
         }
       }
     }
@@ -104,7 +104,7 @@ import { StoryComment } from '../../domain/story.models';
 
     .comment-item {
       display: flex;
-      gap: .75rem;
+      gap: 0.75rem;
       align-items: flex-start;
     }
 
@@ -117,7 +117,7 @@ import { StoryComment } from '../../domain/story.models';
       border-radius: 50%;
       color: #fff;
       font-weight: 700;
-      font-size: .85rem;
+      font-size: 0.85rem;
       background: linear-gradient(135deg, #8b44e5, #6366f1);
     }
 
@@ -130,7 +130,7 @@ import { StoryComment } from '../../domain/story.models';
       p {
         margin: 0;
         color: #b2b7c7;
-        font-size: .85rem;
+        font-size: 0.85rem;
         line-height: 1.45;
       }
     }
@@ -139,16 +139,16 @@ import { StoryComment } from '../../domain/story.models';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: .5rem;
+      gap: 0.5rem;
 
       strong {
         color: #e0dde6;
-        font-size: .85rem;
+        font-size: 0.85rem;
       }
 
       small {
         color: #727c90;
-        font-size: .75rem;
+        font-size: 0.75rem;
       }
     }
   `,

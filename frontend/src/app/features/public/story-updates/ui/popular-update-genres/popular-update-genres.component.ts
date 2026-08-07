@@ -1,19 +1,15 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 import { StoryUpdateGenreSummary } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-popular-update-genres',
-    standalone: true,
-    imports: [RouterLink],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-popular-update-genres',
+  standalone: true,
+  imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <section class="side-card">
       <header>
         <h2>Thể loại nổi bật</h2>
@@ -22,26 +18,19 @@ import { StoryUpdateGenreSummary } from '../../domain/story-updates.models';
 
       <div class="genre-list">
         @for (genre of genres(); track genre.slug) {
-          <a
-            routerLink="/danh-sach"
-            [queryParams]="{ genre: genre.slug, sort: 'latest' }"
-          >
+          <a routerLink="/danh-sach" [queryParams]="{ genre: genre.slug, sort: 'latest' }">
             {{ genre.name }}
           </a>
         }
       </div>
     </section>
   `,
-    styles: `
+  styles: `
     .side-card {
       padding: 1.25rem;
-      border: 1px solid var(--border, rgba(132, 145, 177, .16));
+      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
       border-radius: 12px;
-      background: linear-gradient(
-        145deg,
-        rgba(17, 25, 44, .98),
-        rgba(10, 16, 31, .98)
-      );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     header {
@@ -61,7 +50,7 @@ import { StoryUpdateGenreSummary } from '../../domain/story-updates.models';
 
     header a {
       color: #a76cea;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-decoration: none;
     }
 
@@ -76,22 +65,22 @@ import { StoryUpdateGenreSummary } from '../../domain/story-updates.models';
       padding: 0 12px;
       display: inline-flex;
       align-items: center;
-      border: 1px solid rgba(132, 145, 177, .16);
+      border: 1px solid rgba(132, 145, 177, 0.16);
       border-radius: 6px;
       color: #b7becb;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-decoration: none;
-      background: rgba(52, 63, 88, .28);
+      background: rgba(52, 63, 88, 0.28);
       transition: all 150ms ease;
     }
 
     .genre-list a:hover {
       color: #c789ff;
-      border-color: rgba(155, 91, 236, .35);
-      background: rgba(125, 61, 204, .15);
+      border-color: rgba(155, 91, 236, 0.35);
+      background: rgba(125, 61, 204, 0.15);
     }
   `,
 })
 export class PopularUpdateGenresComponent {
-    readonly genres = input.required<readonly StoryUpdateGenreSummary[]>();
+  readonly genres = input.required<readonly StoryUpdateGenreSummary[]>();
 }

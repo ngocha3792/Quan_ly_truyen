@@ -1,60 +1,54 @@
 :host {
-    display: block;
-    min-width: 0;
+  display: block;
+  min-width: 0;
 }
 
 .account-page {
-    min-height: calc(100vh - 72px);
-    padding: 32px 0 56px;
-    background:
-        radial-gradient(circle at 70% 8%,
-            rgba(119, 65, 210, 0.08),
-            transparent 520px),
-        #060b16;
+  min-height: calc(100vh - 72px);
+  padding: 32px 0 56px;
+  background:
+    radial-gradient(circle at 70% 8%, rgba(119, 65, 210, 0.08), transparent 520px), #060b16;
 }
 
 .account-container {
-    width: min(calc(100% - 40px),
-            1440px);
-    margin-inline: auto;
+  width: min(calc(100% - 40px), 1440px);
+  margin-inline: auto;
 }
 
 .account-grid {
-    display: grid;
-    grid-template-columns:
-        250px minmax(0, 1fr);
-    gap: 26px;
-    align-items: start;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
 }
 
 .account-sidebar {
-    min-width: 0;
+  min-width: 0;
 }
 
 .account-content {
-    min-width: 0;
+  min-width: 0;
 }
 
 @media (max-width: 1050px) {
-    .account-grid {
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 18px;
-    }
+  .account-grid {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 18px;
+  }
 }
 
 @media (max-width: 880px) {
-    .account-page {
-        padding-top: 20px;
-    }
+  .account-page {
+    padding-top: 20px;
+  }
 
-    .account-grid {
-        grid-template-columns: 1fr;
-    }
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 600px) {
-    .account-container {
-        width: min(calc(100% - 24px),
-                1440px);
-    }
+  .account-container {
+    width: min(calc(100% - 24px), 1440px);
+  }
 }

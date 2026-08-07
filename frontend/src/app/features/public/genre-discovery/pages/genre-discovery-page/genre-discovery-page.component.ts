@@ -1,20 +1,8 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    DestroyRef,
-    inject,
-    OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 
-import {
-    takeUntilDestroyed,
-} from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import {
-    ActivatedRoute,
-    Router,
-    RouterLink,
-} from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
@@ -28,96 +16,73 @@ import { GenreRecommendationCardComponent } from '../../ui/genre-recommendation-
 import { GenreTrendingCardComponent } from '../../ui/genre-trending-card/genre-trending-card.component';
 
 @Component({
-    selector:
-        'app-genre-discovery-page',
+  selector: 'app-genre-discovery-page',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        IconComponent,
-        RouterLink,
+  imports: [
+    IconComponent,
+    RouterLink,
 
-        GenreQuickFilterComponent,
-        FeaturedGenreRailComponent,
-        GenreGridComponent,
-        GenreRankingCardComponent,
-        GenreTrendingCardComponent,
-        GenreRecommendationCardComponent,
-    ],
+    GenreQuickFilterComponent,
+    FeaturedGenreRailComponent,
+    GenreGridComponent,
+    GenreRankingCardComponent,
+    GenreTrendingCardComponent,
+    GenreRecommendationCardComponent,
+  ],
 
-    templateUrl:
-        './genre-discovery-page.component.html',
+  templateUrl: './genre-discovery-page.component.html',
 
-    styleUrl:
-        './genre-discovery-page.component.scss',
+  styleUrl: './genre-discovery-page.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GenreDiscoveryPageComponent
-    implements OnInit {
-    private readonly router =
-        inject(Router);
+export class GenreDiscoveryPageComponent implements OnInit {
+  private readonly router = inject(Router);
 
-    private readonly route =
-        inject(ActivatedRoute);
+  private readonly route = inject(ActivatedRoute);
 
-    private readonly destroyRef =
-        inject(DestroyRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-    protected readonly store =
-        inject(GenreDiscoveryStore);
+  protected readonly store = inject(GenreDiscoveryStore);
 
-    ngOnInit(): void {
-        this.route.queryParamMap
-            .pipe(
-                takeUntilDestroyed(
-                    this.destroyRef,
-                ),
-            )
-            .subscribe((params) => {
-                this.store.selectGenre(
-                    params.get('genre'),
-                );
-            });
+  ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.store.selectGenre(params.get('genre'));
+    });
 
-        this.store.load();
+    this.store.load();
+  }
+
+  protected selectGenre(slug: string | null): void {
+    this.store.selectGenre(slug);
+
+    void this.router.navigate([], {
+      relativeTo: this.route,
+
+      queryParams: {
+        genre: slug,
+      },
+
+      queryParamsHandling: 'merge',
+
+      replaceUrl: true,
+    });
+  }
+
+  protected exploreRandom(): void {
+    const genre = this.store.randomGenre();
+
+    if (!genre) {
+      return;
     }
 
-    protected selectGenre(
-        slug: string | null,
-    ): void {
-        this.store.selectGenre(slug);
-
-        void this.router.navigate([], {
-            relativeTo: this.route,
-
-            queryParams: {
-                genre: slug,
-            },
-
-            queryParamsHandling: 'merge',
-
-            replaceUrl: true,
-        });
-    }
-
-    protected exploreRandom(): void {
-        const genre =
-            this.store.randomGenre();
-
-        if (!genre) {
-            return;
-        }
-
-        void this.router.navigate(
-            ['/danh-sach'],
-            {
-                queryParams: {
-                    genre: genre.slug,
-                    sort: 'popular',
-                },
-            },
-        );
-    }
+    void this.router.navigate(['/danh-sach'], {
+      queryParams: {
+        genre: genre.slug,
+        sort: 'popular',
+      },
+    });
+  }
 }

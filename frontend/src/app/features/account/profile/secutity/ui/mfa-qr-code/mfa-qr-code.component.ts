@@ -1,25 +1,24 @@
 import {
-    AfterViewInit,
-    ChangeDetectionStrategy,
-    Component,
-    effect,
-    ElementRef,
-    input,
-    signal,
-    ViewChild,
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  input,
+  signal,
+  ViewChild,
 } from '@angular/core';
 
 import * as QRCode from 'qrcode';
 
 @Component({
-    selector: 'app-mfa-qr-code',
+  selector: 'app-mfa-qr-code',
 
-    standalone: true,
+  standalone: true,
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <div class="qr-wrapper">
       <canvas #canvas></canvas>
 
@@ -29,7 +28,7 @@ import * as QRCode from 'qrcode';
     </div>
   `,
 
-    styles: `
+  styles: `
     .qr-wrapper {
       min-height: 210px;
       display: grid;
@@ -51,55 +50,43 @@ import * as QRCode from 'qrcode';
     }
   `,
 })
-export class MfaQrCodeComponent
-    implements AfterViewInit {
-    readonly value =
-        input.required<string>();
+export class MfaQrCodeComponent implements AfterViewInit {
+  readonly value = input.required<string>();
 
-    protected readonly error =
-        signal<string | null>(null);
+  protected readonly error = signal<string | null>(null);
 
-    @ViewChild('canvas')
-    private canvas?:
-        ElementRef<HTMLCanvasElement>;
+  @ViewChild('canvas')
+  private canvas?: ElementRef<HTMLCanvasElement>;
 
-    constructor() {
-        effect(() => {
-            const value = this.value();
+  constructor() {
+    effect(() => {
+      const value = this.value();
 
-            queueMicrotask(() => {
-                void this.render(value);
-            });
-        });
+      queueMicrotask(() => {
+        void this.render(value);
+      });
+    });
+  }
+
+  ngAfterViewInit(): void {
+    void this.render(this.value());
+  }
+
+  private async render(value: string): Promise<void> {
+    if (!this.canvas || !value) {
+      return;
     }
 
-    ngAfterViewInit(): void {
-        void this.render(this.value());
+    try {
+      this.error.set(null);
+
+      await QRCode.toCanvas(this.canvas.nativeElement, value, {
+        width: 190,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+    } catch {
+      this.error.set('Không thể tạo mã QR. Hãy sử dụng khóa thiết lập thủ công.');
     }
-
-    private async render(
-        value: string,
-    ): Promise<void> {
-        if (!this.canvas || !value) {
-            return;
-        }
-
-        try {
-            this.error.set(null);
-
-            await QRCode.toCanvas(
-                this.canvas.nativeElement,
-                value,
-                {
-                    width: 190,
-                    margin: 1,
-                    errorCorrectionLevel: 'M',
-                },
-            );
-        } catch {
-            this.error.set(
-                'Không thể tạo mã QR. Hãy sử dụng khóa thiết lập thủ công.',
-            );
-        }
-    }
+  }
 }

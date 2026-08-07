@@ -1,37 +1,26 @@
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-} from '@angular/core';
+import { AuthFlowPageShellComponent } from '../../../shared/ui/auth-flow-page-shell/auth-flow-page-shell.component';
 
 import { provideForgotPassword } from '../../data-access/forgot-password.providers';
+
 import { ForgotPasswordStore } from '../../data-access/forgot-password.store';
+
 import { ForgotPasswordCardComponent } from '../../ui/forgot-password-card/forgot-password-card.component';
 
 @Component({
-    selector: 'app-forgot-password-page',
-    standalone: true,
+  selector: 'app-forgot-password-page',
 
-    imports: [
-        ForgotPasswordCardComponent,
-    ],
+  standalone: true,
 
-    providers: [
-        ...provideForgotPassword(),
-        ForgotPasswordStore,
-    ],
+  imports: [AuthFlowPageShellComponent, ForgotPasswordCardComponent],
 
-    templateUrl:
-        './forgot-password-page.component.html',
+  providers: [...provideForgotPassword(), ForgotPasswordStore],
 
-    styleUrl:
-        './forgot-password-page.component.scss',
+  templateUrl: './forgot-password-page.component.html',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ForgotPasswordPageComponent {
-    protected readonly store =
-        inject(ForgotPasswordStore);
+  protected readonly store = inject(ForgotPasswordStore);
 }

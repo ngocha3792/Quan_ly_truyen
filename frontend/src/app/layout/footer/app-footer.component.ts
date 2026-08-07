@@ -1,7 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -10,22 +7,15 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [
-    RouterLink,
-    BrandLogoComponent,
-  ],
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, BrandLogoComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <footer>
       <div class="page-container footer-grid">
         <div class="brand-column">
           <app-brand-logo />
 
-          <p>
-            Nền tảng đọc và quản lý truyện
-            hiện đại, tối ưu cho mọi thiết bị.
-          </p>
+          <p>Nền tảng đọc và quản lý truyện hiện đại, tối ưu cho mọi thiết bị.</p>
 
           <div class="socials">
             <span>f</span>
@@ -38,76 +28,48 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
         <div class="footer-column">
           <strong>Khám phá</strong>
 
-          <a routerLink="/danh-sach">
-            Danh sách truyện
-          </a>
+          <a routerLink="/danh-sach"> Danh sách truyện </a>
 
-          <a routerLink="/the-loai">
-            Thể loại
-          </a>
+          <a routerLink="/the-loai"> Thể loại </a>
 
-          <a routerLink="/xep-hang">
-            Xếp hạng
-          </a>
+          <a routerLink="/xep-hang"> Xếp hạng </a>
 
-          <a routerLink="/cap-nhat">
-            Cập nhật mới
-          </a>
+          <a routerLink="/cap-nhat"> Cập nhật mới </a>
         </div>
 
         <div class="footer-column">
           <strong>Tài khoản</strong>
 
-          <a routerLink="/tai-khoan">
-            Tổng quan
-          </a>
+          <a routerLink="/tai-khoan"> Tổng quan </a>
 
-          <a
-            routerLink="/tai-khoan/thong-tin-ca-nhan"
-          >
-            Thông tin cá nhân
-          </a>
+          <a routerLink="/tai-khoan/thong-tin-ca-nhan"> Thông tin cá nhân </a>
 
-          <a routerLink="/tai-khoan/bao-mat">
-            Bảo mật
-          </a>
+          <a routerLink="/tai-khoan/bao-mat"> Bảo mật </a>
 
-          <a routerLink="/tai-khoan/thiet-bi">
-            Thiết bị đăng nhập
-          </a>
+          <a routerLink="/tai-khoan/thiet-bi"> Thiết bị đăng nhập </a>
         </div>
 
         <div class="footer-column">
           <strong>Hỗ trợ</strong>
 
-          <a routerLink="/gioi-thieu">
-            Giới thiệu
-          </a>
+          <a routerLink="/gioi-thieu"> Giới thiệu </a>
 
-          <a routerLink="/dieu-khoan">
-            Điều khoản sử dụng
-          </a>
+          <a routerLink="/dieu-khoan"> Điều khoản sử dụng </a>
 
-          <a routerLink="/quyen-rieng-tu">
-            Quyền riêng tư
-          </a>
+          <a routerLink="/quyen-rieng-tu"> Quyền riêng tư </a>
 
-          <a routerLink="/cong-dong">
-            Liên hệ hỗ trợ
-          </a>
+          <a routerLink="/cong-dong"> Liên hệ hỗ trợ </a>
         </div>
       </div>
 
       <div class="page-container copyright">
-        © 2026 TruyenHub. Giao diện mẫu
-        cho dự án Quản lý truyện.
+        © 2026 TruyenHub. Giao diện mẫu cho dự án Quản lý truyện.
       </div>
     </footer>
   `,
   styles: `
     footer {
-      border-top:
-        1px solid var(--border);
+      border-top: 1px solid var(--border);
       background: #070b16;
     }
 
@@ -115,8 +77,7 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       padding-top: 2.8rem;
       padding-bottom: 2.4rem;
       display: grid;
-      grid-template-columns:
-        2fr repeat(3, 1fr);
+      grid-template-columns: 2fr repeat(3, 1fr);
       gap: 3rem;
     }
 
@@ -124,14 +85,14 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       max-width: 330px;
       margin: 1rem 0 0;
       color: var(--text-muted);
-      font-size: .95rem;
+      font-size: 0.95rem;
       line-height: 1.65;
     }
 
     .socials {
       margin-top: 1.2rem;
       display: flex;
-      gap: .55rem;
+      gap: 0.55rem;
     }
 
     .socials span {
@@ -141,7 +102,7 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       place-items: center;
       border-radius: 50%;
       color: #a7afc0;
-      font-size: .95rem;
+      font-size: 0.95rem;
       background: #171d2d;
     }
 
@@ -152,14 +113,14 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
     }
 
     strong {
-      margin-bottom: .25rem;
+      margin-bottom: 0.25rem;
       color: var(--text-strong);
       font-size: 1.05rem;
     }
 
     a {
       color: var(--text-muted);
-      font-size: .95rem;
+      font-size: 0.95rem;
       text-decoration: none;
     }
 
@@ -170,16 +131,14 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
     .copyright {
       padding-top: 1rem;
       padding-bottom: 1.2rem;
-      border-top:
-        1px solid var(--border);
+      border-top: 1px solid var(--border);
       color: #5e6678;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
     @media (max-width: 760px) {
       .footer-grid {
-        grid-template-columns:
-          1fr 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 2rem;
       }
 
@@ -189,4 +148,4 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
     }
   `,
 })
-export class AppFooterComponent { }
+export class AppFooterComponent {}

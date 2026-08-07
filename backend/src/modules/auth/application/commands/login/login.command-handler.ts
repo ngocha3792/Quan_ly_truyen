@@ -3,8 +3,8 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { LoginResultDto } from '../../dto';
 import { LoginResultMapper } from '../../mappers';
 import {
-  ADMIN_MFA_CHALLENGE_PORT,
-  type AdminMfaChallengePort,
+  MFA_CHALLENGE_PORT,
+  type MfaChallengePort,
   AUTH_TOKEN_ISSUER_PORT,
   type AuthTokenIssuerPort,
   ID_GENERATOR_PORT,
@@ -19,7 +19,7 @@ import {
   type SecureTokenPort,
 } from '../../ports';
 import {
-  AdminMfaRequiredException,
+  MfaRequiredException,
   InvalidLoginCredentialsException,
 } from '../../../domain/exceptions';
 import { RoleCode } from '@/common/enums';
@@ -55,9 +55,8 @@ export class LoginCommandHandler {
     @Inject(ID_GENERATOR_PORT)
     private readonly idGenerator: IdGeneratorPort,
 
-    @Optional()
-    @Inject(ADMIN_MFA_CHALLENGE_PORT)
-    private readonly adminMfaChallenge?: AdminMfaChallengePort,
+    @Inject(MFA_CHALLENGE_PORT)
+    private readonly mfaChallenge: MfaChallengePort,
   ) {}
 
   async execute(command: LoginCommand): Promise<LoginResultDto> {
@@ -117,18 +116,24 @@ export class LoginCommandHandler {
      */
     await this.rateLimiter.resetAfterSuccess(rateLimitInput);
 
-    if (
+    const adminMfaRequired =
       account.roles.includes(RoleCode.ADMIN) &&
-      this.adminMfaChallenge?.isEnabled()
-    ) {
-      const challenge = await this.adminMfaChallenge.create({
+      this.mfaChallenge.isAdminMfaRequired();
+
+    const mfaRequired = Boolean(account.mfaEnabled) || adminMfaRequired;
+
+    if (mfaRequired) {
+      const challenge = await this.mfaChallenge.create({
         userId: account.id,
+
         mode: account.mfaEnabled ? 'verify' : 'enroll',
+
         source: 'password',
+
         client: command.client,
       });
 
-      throw new AdminMfaRequiredException(challenge);
+      throw new MfaRequiredException(challenge);
     }
 
     const sessionId = this.idGenerator.generate();

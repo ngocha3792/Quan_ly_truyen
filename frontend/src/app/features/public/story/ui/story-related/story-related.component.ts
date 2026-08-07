@@ -33,13 +33,13 @@ import { RelatedStoryItem } from '../../domain/story.models';
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background: rgba(13, 18, 33, .88);
+      background: rgba(13, 18, 33, 0.88);
     }
 
     .card-heading {
       display: flex;
       align-items: center;
-      gap: .6rem;
+      gap: 0.6rem;
       margin-bottom: 1rem;
       color: #a868ef;
 
@@ -53,21 +53,21 @@ import { RelatedStoryItem } from '../../domain/story.models';
 
     .related-list {
       display: grid;
-      gap: .8rem;
+      gap: 0.8rem;
     }
 
     .related-item {
       display: flex;
       align-items: center;
-      gap: .75rem;
-      padding: .4rem;
+      gap: 0.75rem;
+      padding: 0.4rem;
       border-radius: 8px;
       color: inherit;
       text-decoration: none;
       transition: background 150ms ease;
 
       &:hover {
-        background: rgba(255,255,255,.04);
+        background: rgba(255, 255, 255, 0.04);
 
         strong {
           color: #c58aff;
@@ -90,7 +90,7 @@ import { RelatedStoryItem } from '../../domain/story.models';
         strong {
           overflow: hidden;
           color: #dedbe4;
-          font-size: .875rem;
+          font-size: 0.875rem;
           font-weight: 600;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -98,7 +98,7 @@ import { RelatedStoryItem } from '../../domain/story.models';
 
         small {
           color: #727c90;
-          font-size: .78rem;
+          font-size: 0.78rem;
         }
       }
     }

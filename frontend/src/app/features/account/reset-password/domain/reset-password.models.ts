@@ -1,37 +1,43 @@
-
 export type ResetPasswordStatus =
-    | 'idle'
-    | 'validating'
-    | 'ready'
-    | 'submitting'
-    | 'success'
-    | 'expired'
-    | 'invalid'
-    | 'error';
+  'idle' | 'validating' | 'ready' | 'submitting' | 'success' | 'expired' | 'invalid' | 'error';
 
 export interface ResetPasswordConfig {
-    readonly minimumLength: number;
-    readonly maximumLength: number;
-    readonly tokenExpiresInMinutes: number;
+  readonly minimumLength: number;
+  readonly maximumLength: number;
+  readonly tokenExpiresInMinutes: number;
 }
 
 export interface ResetPasswordTokenRequest {
-    readonly token: string;
+  readonly token: string;
 }
 
 export interface ResetPasswordTokenValidation {
-    readonly email: string;
-    readonly expiresAt: string;
-    readonly isValid: boolean;
+  /*
+   * Backend hiện chưa có endpoint validate
+   * reset token và không expose email từ token,
+   * nên email là optional.
+   */
+  readonly email?: string;
+
+  readonly expiresAt: string;
+
+  readonly isValid: boolean;
 }
 
 export interface ResetPasswordRequest {
-    readonly token: string;
-    readonly newPassword: string;
+  readonly token: string;
+  readonly newPassword: string;
 }
 
 export interface ResetPasswordResult {
-    readonly email: string;
-    readonly changedAt: string;
-    readonly message: string;
+  /*
+   * Backend POST /auth/reset-password không trả email.
+   */
+  readonly email?: string;
+
+  readonly changedAt: string;
+
+  readonly sessionsRevoked: number;
+
+  readonly message: string;
 }

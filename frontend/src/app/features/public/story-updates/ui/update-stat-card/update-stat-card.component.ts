@@ -1,37 +1,20 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    computed,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-import {
-    IconComponent,
-    IconName,
-} from '../../../../../shared/components/icon/icon.component';
+import { IconComponent, IconName } from '../../../../../shared/components/icon/icon.component';
 
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 
 import { StoryUpdateStat } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-update-stat-card',
-    standalone: true,
-    imports: [
-        IconComponent,
-        CompactNumberPipe,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    <article
-      class="stat-card"
-      [attr.data-tone]="stat().tone"
-    >
+  selector: 'app-update-stat-card',
+  standalone: true,
+  imports: [IconComponent, CompactNumberPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <article class="stat-card" [attr.data-tone]="stat().tone">
       <span class="stat-icon">
-        <app-icon
-          [name]="iconName()"
-          [size]="20"
-        />
+        <app-icon [name]="iconName()" [size]="20" />
       </span>
 
       <div>
@@ -47,16 +30,13 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
           }
         </strong>
 
-        <span
-          class="comparison"
-          [class.neutral]="stat().id === 'average-speed'"
-        >
+        <span class="comparison" [class.neutral]="stat().id === 'average-speed'">
           {{ stat().comparisonText }}
         </span>
       </div>
     </article>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -68,13 +48,9 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
       display: flex;
       align-items: center;
       gap: 14px;
-      border: 1px solid var(--border, rgba(132, 145, 177, .16));
+      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
       border-radius: 12px;
-      background: linear-gradient(
-        145deg,
-        rgba(16, 24, 42, .96),
-        rgba(9, 15, 29, .96)
-      );
+      background: linear-gradient(145deg, rgba(16, 24, 42, 0.96), rgba(9, 15, 29, 0.96));
     }
 
     .stat-icon {
@@ -85,22 +61,22 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
       place-items: center;
       border-radius: 50%;
       color: #bc7df9;
-      background: rgba(121, 58, 195, .19);
+      background: rgba(121, 58, 195, 0.19);
     }
 
     .stat-card[data-tone='blue'] .stat-icon {
       color: #62adff;
-      background: rgba(37, 99, 235, .17);
+      background: rgba(37, 99, 235, 0.17);
     }
 
     .stat-card[data-tone='pink'] .stat-icon {
       color: #ff6da7;
-      background: rgba(219, 39, 119, .18);
+      background: rgba(219, 39, 119, 0.18);
     }
 
     .stat-card[data-tone='orange'] .stat-icon {
       color: #fb923c;
-      background: rgba(234, 88, 12, .17);
+      background: rgba(234, 88, 12, 0.17);
     }
 
     .stat-card > div {
@@ -112,7 +88,7 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
     .label {
       overflow: hidden;
       color: #8b96aa;
-      font-size: .8rem;
+      font-size: 0.8rem;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -126,14 +102,14 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
 
     strong small {
       color: #a0aab8;
-      font-size: .8rem;
+      font-size: 0.8rem;
       font-weight: 400;
       margin-left: 4px;
     }
 
     .comparison {
       color: #3ddc77;
-      font-size: .75rem;
+      font-size: 0.75rem;
     }
 
     .comparison.neutral {
@@ -142,18 +118,18 @@ import { StoryUpdateStat } from '../../domain/story-updates.models';
   `,
 })
 export class UpdateStatCardComponent {
-    readonly stat = input.required<StoryUpdateStat>();
+  readonly stat = input.required<StoryUpdateStat>();
 
-    protected readonly iconName = computed<IconName>(() => {
-        switch (this.stat().id) {
-            case 'updated-stories':
-                return 'book-open';
-            case 'chapters-today':
-                return 'calendar';
-            case 'following':
-                return 'heart';
-            case 'average-speed':
-                return 'zap';
-        }
-    });
+  protected readonly iconName = computed<IconName>(() => {
+    switch (this.stat().id) {
+      case 'updated-stories':
+        return 'book-open';
+      case 'chapters-today':
+        return 'calendar';
+      case 'following':
+        return 'heart';
+      case 'average-speed':
+        return 'zap';
+    }
+  });
 }

@@ -1,49 +1,30 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { IconComponent } from '../../../../../shared/components/icon/icon.component';
-
-import {
-    GenreRankingItem,
-    GenreSummary,
-} from '../../domain/genre-discovery.models';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { GenreRankingItem, GenreSummary } from '../../domain/genre-discovery.models';
 
 import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.component';
 
 @Component({
-    selector: 'app-genre-grid',
+  selector: 'app-genre-grid',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        IconComponent,
-        GenreGridCardComponent,
-    ],
+  imports: [EmptyStateComponent, GenreGridCardComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="genre-section">
       <header>
         <h2>
-          {{
-            selected()
-              ? 'Thể loại đã chọn'
-              : 'Tất cả thể loại'
-          }}
+          {{ selected() ? 'Thể loại đã chọn' : 'Tất cả thể loại' }}
         </h2>
       </header>
 
       @if (loading()) {
         <div class="genre-grid">
-          @for (
-            item of skeletons;
-            track item
-          ) {
+          @for (item of skeletons; track item) {
             <div class="skeleton-card">
               <span></span>
 
@@ -55,38 +36,24 @@ import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.compo
             </div>
           }
         </div>
-      } @else if (
-        genres().length === 0
-      ) {
-        <div class="empty-state">
-          <app-icon
-            name="book"
-            [size]="31"
-          />
-
-          <strong>
-            Không tìm thấy thể loại
-          </strong>
-        </div>
+      } @else if (genres().length === 0) {
+        <app-empty-state
+          class="genre-empty"
+          icon="book"
+          [iconSize]="31"
+          title="Không tìm thấy thể loại"
+        />
       } @else {
         <div class="genre-grid">
-          @for (
-            genre of genres();
-            track genre.id
-          ) {
-            <app-genre-grid-card
-              [genre]="genre"
-              [rank]="
-                findRank(genre.slug)
-              "
-            />
+          @for (genre of genres(); track genre.id) {
+            <app-genre-grid-card [genre]="genre" [rank]="findRank(genre.slug)" />
           }
         </div>
       }
     </section>
   `,
 
-    styles: `
+  styles: `
     .genre-section {
       /* Uses parent container padding and background */
     }
@@ -98,13 +65,12 @@ import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.compo
     h2 {
       margin: 0;
       color: #f0edf4;
-      font-size: .9375rem;
+      font-size: 0.9375rem;
     }
 
     .genre-grid {
       display: grid;
-      grid-template-columns:
-        repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -112,8 +78,7 @@ import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.compo
       min-height: 78px;
       padding: 12px;
       display: grid;
-      grid-template-columns:
-        39px minmax(0, 1fr);
+      grid-template-columns: 39px minmax(0, 1fr);
       gap: 11px;
       border-radius: 10px;
       background: #10182a;
@@ -137,41 +102,35 @@ import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.compo
       background: #1a243a;
     }
 
-    .skeleton-card > div
-    span:nth-child(2) {
+    .skeleton-card > div span:nth-child(2) {
       width: 85%;
     }
 
-    .skeleton-card > div
-    span:nth-child(3) {
+    .skeleton-card > div span:nth-child(3) {
       width: 45%;
     }
 
-    .empty-state {
-      min-height: 220px;
-      display: grid;
-      place-items: center;
-      align-content: center;
-      gap: 10px;
-      color: #a76def;
-    }
+    .genre-empty {
+      --empty-min-height: 220px;
 
-    .empty-state strong {
-      color: #dbd8e1;
-      font-size: .875rem;
+      --empty-padding: 0;
+
+      --empty-icon-color: #a76def;
+
+      --empty-title-color: #dbd8e1;
+
+      --empty-title-size: 0.875rem;
     }
 
     @media (max-width: 1050px) {
       .genre-grid {
-        grid-template-columns:
-          repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 720px) {
       .genre-grid {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -183,35 +142,17 @@ import { GenreGridCardComponent } from '../genre-grid-card/genre-grid-card.compo
   `,
 })
 export class GenreGridComponent {
-    readonly genres =
-        input.required<
-            readonly GenreSummary[]
-        >();
+  readonly genres = input.required<readonly GenreSummary[]>();
 
-    readonly ranking =
-        input.required<
-            readonly GenreRankingItem[]
-        >();
+  readonly ranking = input.required<readonly GenreRankingItem[]>();
 
-    readonly loading = input(false);
+  readonly loading = input(false);
 
-    readonly selected = input(false);
+  readonly selected = input(false);
 
-    protected readonly skeletons =
-        Array.from(
-            { length: 12 },
-            (_, index) => index,
-        );
+  protected readonly skeletons = Array.from({ length: 12 }, (_, index) => index);
 
-    protected findRank(
-        slug: string,
-    ): number | null {
-        return (
-            this.ranking().find(
-                (item) =>
-                    item.slug === slug &&
-                    item.rank <= 3,
-            )?.rank ?? null
-        );
-    }
+  protected findRank(slug: string): number | null {
+    return this.ranking().find((item) => item.slug === slug && item.rank <= 3)?.rank ?? null;
+  }
 }

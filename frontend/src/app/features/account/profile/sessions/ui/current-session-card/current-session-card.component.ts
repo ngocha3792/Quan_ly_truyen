@@ -1,10 +1,6 @@
 import { DatePipe } from '@angular/common';
 
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
@@ -13,30 +9,21 @@ import { AccountSessionViewModel } from '../../domain/account-session.models';
 import { SessionDeviceIconComponent } from '../session-device-icon/session-device-icon.component';
 
 @Component({
-    selector:
-        'app-current-session-card',
+  selector: 'app-current-session-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        DatePipe,
-        IconComponent,
-        SessionDeviceIconComponent,
-    ],
+  imports: [DatePipe, IconComponent, SessionDeviceIconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="current-card">
       <header>
         <h2>Thiết bị hiện tại</h2>
 
         <span class="protected-badge">
-          <app-icon
-            name="shield"
-            [size]="13"
-          />
+          <app-icon name="shield" [size]="13" />
 
           Được bảo vệ
         </span>
@@ -44,10 +31,7 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
 
       <div class="current-content">
         <div class="device-info">
-          <app-session-device-icon
-            [browser]="session().browser"
-            [label]="session().browserName"
-          />
+          <app-session-device-icon [browser]="session().browser" [label]="session().browserName" />
 
           <div>
             <div class="device-title">
@@ -55,15 +39,11 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
                 {{ session().title }}
               </strong>
 
-              <span>
-                Thiết bị hiện tại
-              </span>
+              <span> Thiết bị hiện tại </span>
             </div>
 
             @if (session().trusted) {
-              <span class="trusted-badge">
-                Thiết bị tin cậy
-              </span>
+              <span class="trusted-badge"> Thiết bị tin cậy </span>
             }
 
             <p>
@@ -73,9 +53,7 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
             <small>
               {{ session().location }}
 
-              @if (
-                session().ipAddress
-              ) {
+              @if (session().ipAddress) {
                 •
                 {{ session().ipAddress }}
               }
@@ -89,16 +67,10 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
           <span>Đăng nhập lúc</span>
 
           <strong>
-            {{
-              session().createdAt
-                | date:
-                    'HH:mm, dd/MM/yyyy'
-            }}
+            {{ session().createdAt | date: 'HH:mm, dd/MM/yyyy' }}
           </strong>
 
-          <small>
-            Phiên được tạo trên thiết bị này
-          </small>
+          <small> Phiên được tạo trên thiết bị này </small>
         </div>
 
         <div class="current-divider"></div>
@@ -107,33 +79,23 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
           <span>Trạng thái</span>
 
           <strong>
-            <app-icon
-              name="shield"
-              [size]="14"
-            />
+            <app-icon name="shield" [size]="14" />
 
             {{ session().statusLabel }}
           </strong>
 
-          <small>
-            Phiên này đang hoạt động
-          </small>
+          <small> Phiên này đang hoạt động </small>
         </div>
       </div>
     </section>
   `,
 
-    styles: `
+  styles: `
     .current-card {
       padding: 18px;
       border: 1px solid var(--border);
       border-radius: 13px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     header {
@@ -160,8 +122,7 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
       color: #c084fc;
       font-size: 12px;
       font-weight: 650;
-      background:
-        rgba(124, 58, 237, .18);
+      background: rgba(124, 58, 237, 0.18);
     }
 
     .current-content {
@@ -169,9 +130,9 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
       grid-template-columns:
         minmax(320px, 1.5fr)
         auto
-        minmax(170px, .7fr)
+        minmax(170px, 0.7fr)
         auto
-        minmax(170px, .7fr);
+        minmax(170px, 0.7fr);
       align-items: center;
       gap: 18px;
     }
@@ -210,8 +171,7 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
 
     .device-title span {
       color: #c084fc;
-      background:
-        rgba(125, 61, 204, .2);
+      background: rgba(125, 61, 204, 0.2);
     }
 
     .trusted-badge {
@@ -219,8 +179,7 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
       margin-top: 6px;
       display: block;
       color: #4ade80;
-      background:
-        rgba(34, 197, 94, .16);
+      background: rgba(34, 197, 94, 0.16);
     }
 
     p,
@@ -293,6 +252,5 @@ import { SessionDeviceIconComponent } from '../session-device-icon/session-devic
   `,
 })
 export class CurrentSessionCardComponent {
-    readonly session =
-        input.required<AccountSessionViewModel>();
+  readonly session = input.required<AccountSessionViewModel>();
 }

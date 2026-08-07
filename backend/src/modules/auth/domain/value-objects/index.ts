@@ -8,3 +8,4 @@ export * from './email-verification-token.value-object';
 export * from './password-reset-token.value-object';
 export * from './current-password.value-object';
 export * from './email-change-token.value-object';
+export * from './security-question-answer.value-object';

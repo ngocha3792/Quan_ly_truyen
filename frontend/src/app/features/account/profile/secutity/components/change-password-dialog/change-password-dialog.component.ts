@@ -1,47 +1,46 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    effect,
-    input,
-    output,
-    signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
 
 import {
-    AbstractControl,
-    FormControl,
-    FormGroup,
-    ReactiveFormsModule,
-    ValidationErrors,
-    ValidatorFn,
-    Validators,
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
 } from '@angular/forms';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
+import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+
+import { AccountPasswordInputComponent } from '../../../../shared/ui/account-password-input/account-password-input.component';
+
 import { ChangePasswordRequest } from '../../data/account-security.models';
 
-import { AccountDialogShellComponent } from '../account-dialog-shell/account-dialog-shell.component';
-
 interface ChangePasswordForm {
-    currentPassword: FormControl<string>;
-    newPassword: FormControl<string>;
-    confirmPassword: FormControl<string>;
+  currentPassword: FormControl<string>;
+
+  newPassword: FormControl<string>;
+
+  confirmPassword: FormControl<string>;
 }
 
-const STRONG_PASSWORD_PATTERN =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 @Component({
-    selector:
-        'app-change-password-dialog',
-    standalone: true,
-    imports: [
-        ReactiveFormsModule,
-        IconComponent,
-        AccountDialogShellComponent,
-    ],
-    template: `
+  selector: 'app-change-password-dialog',
+
+  standalone: true,
+
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    AccountDialogShellComponent,
+    AccountPasswordInputComponent,
+  ],
+
+  template: `
     <app-account-dialog-shell
       [open]="open()"
       [busy]="submitting()"
@@ -49,138 +48,40 @@ const STRONG_PASSWORD_PATTERN =
       dialogTitleId="change-password-title"
       (closed)="closed.emit()"
     >
-      <form
-        class="password-form"
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-      >
+      <form class="password-form" [formGroup]="form" (ngSubmit)="submit()">
         <p class="form-description">
-          Sử dụng mật khẩu mạnh mà bạn chưa
-          từng sử dụng cho tài khoản này.
+          Sử dụng mật khẩu mạnh mà bạn chưa từng sử dụng cho tài khoản này.
         </p>
 
-        <label>
-          <span>Mật khẩu hiện tại</span>
+        <app-account-password-input
+          label="Mật khẩu hiện tại"
+          icon="lock"
+          autocomplete="current-password"
+          placeholder="Nhập mật khẩu hiện tại"
+          formControlName="currentPassword"
+          [error]="currentPasswordError"
+        />
 
-          <div class="password-field">
-            <app-icon
-              name="lock"
-              [size]="17"
-            />
+        <app-account-password-input
+          label="Mật khẩu mới"
+          icon="key"
+          autocomplete="new-password"
+          placeholder="Nhập mật khẩu mới"
+          [maxLength]="72"
+          formControlName="newPassword"
+          hint="8–72 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt."
+          [error]="newPasswordError"
+        />
 
-            <input
-              [type]="
-                showCurrentPassword()
-                  ? 'text'
-                  : 'password'
-              "
-              formControlName="currentPassword"
-              autocomplete="current-password"
-              placeholder="Nhập mật khẩu hiện tại"
-            />
-
-            <button
-              type="button"
-              (click)="
-                showCurrentPassword.update(
-                  (value) => !value
-                )
-              "
-            >
-              <app-icon
-                [name]="
-                  showCurrentPassword()
-                    ? 'eye-off'
-                    : 'eye'
-                "
-                [size]="17"
-              />
-            </button>
-          </div>
-        </label>
-
-        <label>
-          <span>Mật khẩu mới</span>
-
-          <div class="password-field">
-            <app-icon
-              name="key"
-              [size]="17"
-            />
-
-            <input
-              [type]="
-                showNewPassword()
-                  ? 'text'
-                  : 'password'
-              "
-              formControlName="newPassword"
-              autocomplete="new-password"
-              maxlength="72"
-              placeholder="Nhập mật khẩu mới"
-            />
-
-            <button
-              type="button"
-              (click)="
-                showNewPassword.update(
-                  (value) => !value
-                )
-              "
-            >
-              <app-icon
-                [name]="
-                  showNewPassword()
-                    ? 'eye-off'
-                    : 'eye'
-                "
-                [size]="17"
-              />
-            </button>
-          </div>
-
-          <small>
-            8–72 ký tự, có chữ hoa, chữ thường,
-            chữ số và ký tự đặc biệt.
-          </small>
-        </label>
-
-        <label>
-          <span>Xác nhận mật khẩu mới</span>
-
-          <div class="password-field">
-            <app-icon
-              name="check"
-              [size]="17"
-            />
-
-            <input
-              type="password"
-              formControlName="confirmPassword"
-              autocomplete="new-password"
-              maxlength="72"
-              placeholder="Nhập lại mật khẩu mới"
-            />
-          </div>
-        </label>
-
-        @if (
-          form.hasError('passwordMismatch') &&
-          form.controls.confirmPassword.touched
-        ) {
-          <div class="form-error">
-            Mật khẩu xác nhận không trùng khớp.
-          </div>
-        }
-
-        @if (
-          form.controls.newPassword.invalid &&
-          form.controls.newPassword.touched
-        ) {
-          <div class="form-error">
-            Mật khẩu mới chưa đáp ứng yêu cầu bảo mật.
-          </div>
-        }
+        <app-account-password-input
+          label="Xác nhận mật khẩu mới"
+          icon="check"
+          autocomplete="new-password"
+          placeholder="Nhập lại mật khẩu mới"
+          [maxLength]="72"
+          formControlName="confirmPassword"
+          [error]="confirmPasswordError"
+        />
 
         <div class="dialog-actions">
           <button
@@ -192,21 +93,11 @@ const STRONG_PASSWORD_PATTERN =
             Hủy
           </button>
 
-          <button
-            class="submit-button"
-            type="submit"
-            [disabled]="
-              submitting() ||
-              form.invalid
-            "
-          >
+          <button class="submit-button" type="submit" [disabled]="submitting() || form.invalid">
             @if (submitting()) {
               <span class="spinner"></span>
             } @else {
-              <app-icon
-                name="lock"
-                [size]="16"
-              />
+              <app-icon name="lock" [size]="16" />
             }
 
             Đổi mật khẩu
@@ -215,114 +106,120 @@ const STRONG_PASSWORD_PATTERN =
       </form>
     </app-account-dialog-shell>
   `,
-    styleUrl:
-        './change-password-dialog.component.scss',
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+
+  styleUrl: './change-password-dialog.component.scss',
+
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangePasswordDialogComponent {
-    readonly open = input(false);
-    readonly submitting = input(false);
+  readonly open = input(false);
 
-    readonly closed = output<void>();
+  readonly submitting = input(false);
 
-    readonly submitted =
-        output<ChangePasswordRequest>();
+  readonly closed = output<void>();
 
-    protected readonly showCurrentPassword =
-        signal(false);
+  readonly submitted = output<ChangePasswordRequest>();
 
-    protected readonly showNewPassword =
-        signal(false);
+  protected readonly form = new FormGroup<ChangePasswordForm>(
+    {
+      currentPassword: new FormControl('', {
+        nonNullable: true,
 
-    protected readonly form =
-        new FormGroup<ChangePasswordForm>(
-            {
-                currentPassword:
-                    new FormControl('', {
-                        nonNullable: true,
-                        validators: [
-                            Validators.required,
-                        ],
-                    }),
+        validators: [Validators.required],
+      }),
 
-                newPassword:
-                    new FormControl('', {
-                        nonNullable: true,
-                        validators: [
-                            Validators.required,
-                            Validators.minLength(8),
-                            Validators.maxLength(72),
-                            Validators.pattern(
-                                STRONG_PASSWORD_PATTERN,
-                            ),
-                        ],
-                    }),
+      newPassword: new FormControl('', {
+        nonNullable: true,
 
-                confirmPassword:
-                    new FormControl('', {
-                        nonNullable: true,
-                        validators: [
-                            Validators.required,
-                        ],
-                    }),
-            },
-            {
-                validators:
-                    passwordsMatchValidator(),
-            },
-        );
+        validators: [
+          Validators.required,
 
-    constructor() {
-        effect(() => {
-            if (!this.open()) {
-                this.form.reset();
-                this.showCurrentPassword.set(
-                    false,
-                );
-                this.showNewPassword.set(false);
-            }
-        });
+          Validators.minLength(8),
+
+          Validators.maxLength(72),
+
+          Validators.pattern(STRONG_PASSWORD_PATTERN),
+        ],
+      }),
+
+      confirmPassword: new FormControl('', {
+        nonNullable: true,
+
+        validators: [Validators.required],
+      }),
+    },
+    {
+      validators: passwordsMatchValidator(),
+    },
+  );
+
+  constructor() {
+    effect(() => {
+      if (!this.open()) {
+        this.form.reset();
+      }
+    });
+  }
+
+  protected get currentPasswordError(): string {
+    const control = this.form.controls.currentPassword;
+
+    return control.touched && control.hasError('required')
+      ? 'Vui lòng nhập mật khẩu hiện tại.'
+      : '';
+  }
+
+  protected get newPasswordError(): string {
+    const control = this.form.controls.newPassword;
+
+    if (!control.touched) {
+      return '';
     }
 
-    protected submit(): void {
-        this.form.markAllAsTouched();
+    return control.invalid ? 'Mật khẩu mới chưa đáp ứng yêu cầu bảo mật.' : '';
+  }
 
-        if (
-            this.form.invalid ||
-            this.submitting()
-        ) {
-            return;
-        }
+  protected get confirmPasswordError(): string {
+    const control = this.form.controls.confirmPassword;
 
-        const value =
-            this.form.getRawValue();
-
-        this.submitted.emit({
-            currentPassword:
-                value.currentPassword,
-
-            newPassword:
-                value.newPassword,
-        });
+    if (!control.touched) {
+      return '';
     }
+
+    if (control.hasError('required')) {
+      return 'Vui lòng xác nhận mật khẩu mới.';
+    }
+
+    return this.form.hasError('passwordMismatch') ? 'Mật khẩu xác nhận không trùng khớp.' : '';
+  }
+
+  protected submit(): void {
+    this.form.markAllAsTouched();
+
+    if (this.form.invalid || this.submitting()) {
+      return;
+    }
+
+    const value = this.form.getRawValue();
+
+    this.submitted.emit({
+      currentPassword: value.currentPassword,
+
+      newPassword: value.newPassword,
+    });
+  }
 }
 
-function passwordsMatchValidator():
-    ValidatorFn {
-    return (
-        control: AbstractControl,
-    ): ValidationErrors | null => {
-        const newPassword =
-            control.get('newPassword')?.value;
+function passwordsMatchValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const newPassword = control.get('newPassword')?.value;
 
-        const confirmPassword =
-            control.get('confirmPassword')?.value;
+    const confirmPassword = control.get('confirmPassword')?.value;
 
-        return newPassword === confirmPassword
-            ? null
-            : {
-                passwordMismatch: true,
-            };
-    };
+    return newPassword === confirmPassword
+      ? null
+      : {
+          passwordMismatch: true,
+        };
+  };
 }

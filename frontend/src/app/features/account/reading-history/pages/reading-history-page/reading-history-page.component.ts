@@ -1,66 +1,71 @@
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
 import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-    OnInit,
-} from '@angular/core';
-import { RouterLink } from '@angular/router';
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+
+import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
 import { provideReadingHistory } from '../../data-access/reading-history.providers';
+
 import { ReadingHistoryStore } from '../../data-access/reading-history.store';
-import {
-    ReadingHistoryPeriod,
-    ReadingHistorySort,
-} from '../../domain/reading-history.models';
+
+import { ReadingHistoryPeriod, ReadingHistorySort } from '../../domain/reading-history.models';
+
 import { ReadingHistoryListComponent } from '../../ui/reading-history-list/reading-history-list.component';
+
 import { ReadingHistorySidebarComponent } from '../../ui/reading-history-sidebar/reading-history-sidebar.component';
+
 import { ReadingHistoryToolbarComponent } from '../../ui/reading-history-toolbar/reading-history-toolbar.component';
 
 @Component({
-    selector: 'app-reading-history-page',
-    standalone: true,
+  selector: 'app-reading-history-page',
 
-    imports: [
-        RouterLink,
-        ReadingHistoryToolbarComponent,
-        ReadingHistoryListComponent,
-        ReadingHistorySidebarComponent,
-    ],
+  standalone: true,
 
-    providers: [
-        ...provideReadingHistory(),
-        ReadingHistoryStore,
-    ],
+  imports: [
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    ContentLayoutComponent,
 
-    templateUrl:
-        './reading-history-page.component.html',
+    ReadingHistoryToolbarComponent,
+    ReadingHistoryListComponent,
+    ReadingHistorySidebarComponent,
+  ],
 
-    styleUrls: [
-        './reading-history-page.component.scss',
-    ],
+  providers: [...provideReadingHistory(), ReadingHistoryStore],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  templateUrl: './reading-history-page.component.html',
+
+  styleUrls: ['./reading-history-page.component.scss'],
+
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ReadingHistoryPageComponent
-    implements OnInit {
-    protected readonly store =
-        inject(ReadingHistoryStore);
+export class ReadingHistoryPageComponent implements OnInit {
+  protected readonly store = inject(ReadingHistoryStore);
 
-    ngOnInit(): void {
-        this.store.load();
-    }
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    {
+      label: 'Trang chủ',
+      route: '/',
+    },
+    {
+      label: 'Lịch sử đọc',
+    },
+  ];
 
-    protected changePeriod(
-        period: ReadingHistoryPeriod,
-    ): void {
-        this.store.setPeriod(period);
-    }
+  ngOnInit(): void {
+    this.store.load();
+  }
 
-    protected changeSort(
-        sort: ReadingHistorySort,
-    ): void {
-        this.store.setSort(sort);
-    }
+  protected changePeriod(period: ReadingHistoryPeriod): void {
+    this.store.setPeriod(period);
+  }
+
+  protected changeSort(sort: ReadingHistorySort): void {
+    this.store.setSort(sort);
+  }
 }

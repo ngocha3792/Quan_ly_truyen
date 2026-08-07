@@ -14,6 +14,8 @@ import type {
   LoginPersistencePort,
 } from '../../../../application/ports';
 
+import { MfaCredentialStatus, MfaMethod } from '@/generated/prisma/client';
+
 import {
   AuthAccountStatus,
   AuthAuditAction,
@@ -70,9 +72,28 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
         status: true,
         deletedAt: true,
         emailVerifiedAt: true,
+        mfaCredentials: {
+          where: {
+            method: MfaMethod.TOTP,
+
+            status: MfaCredentialStatus.ENABLED,
+
+            disabledAt: null,
+          },
+
+          take: 1,
+
+          select: {
+            id: true,
+          },
+        },
+
+        /*
+         * Legacy compatibility.
+         */
         adminMfaCredential: {
           select: {
-            enabledAt: true,
+            id: true,
           },
         },
 
@@ -123,7 +144,8 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
       emailVerifiedAt: user.emailVerifiedAt,
 
       roles,
-      mfaEnabled: user.adminMfaCredential !== null,
+      mfaEnabled:
+        user.mfaCredentials.length > 0 || user.adminMfaCredential !== null,
     };
   }
 

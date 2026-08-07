@@ -1,14 +1,10 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-    selector: 'app-loading-state',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-loading-state',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <section class="loading-state">
       <span class="spinner"></span>
       @if (message()) {
@@ -16,7 +12,7 @@ import {
       }
     </section>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -36,7 +32,7 @@ import {
     p {
       margin: 0;
       color: #788297;
-      font-size: .875rem;
+      font-size: 0.875rem;
     }
 
     .spinner {
@@ -56,5 +52,5 @@ import {
   `,
 })
 export class LoadingStateComponent {
-    readonly message = input<string | null>(null);
+  readonly message = input<string | null>(null);
 }

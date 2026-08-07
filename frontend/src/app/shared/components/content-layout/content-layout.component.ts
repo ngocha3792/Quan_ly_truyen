@@ -1,15 +1,11 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-    selector: 'app-content-layout',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    <div class="layout">
+  selector: 'app-content-layout',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="layout" [style.--aside-width]="asideWidth()">
       <section class="main-panel">
         <ng-content select="[main]" />
       </section>
@@ -19,7 +15,7 @@ import {
       </aside>
     </div>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -27,29 +23,42 @@ import {
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) var(--aside-width, 340px);
+      grid-template-columns:
+        minmax(0, 1fr)
+        var(--aside-width, 340px);
+
       gap: var(--layout-gap, 1.25rem);
       align-items: start;
     }
 
     .main-panel {
       min-width: 0;
+
       padding: var(--main-padding, 1.25rem);
+
       display: grid;
+
       gap: var(--main-gap, 1.25rem);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: linear-gradient(
-        145deg,
-        rgba(16, 22, 39, .9),
-        rgba(10, 15, 28, .92)
+
+      overflow: var(--main-overflow, visible);
+
+      border: var(--main-border, 1px solid var(--border));
+
+      border-radius: var(--main-radius, 12px);
+
+      background: var(
+        --main-background,
+        linear-gradient(145deg, rgba(16, 22, 39, 0.9), rgba(10, 15, 28, 0.92))
       );
-      box-shadow: 0 14px 35px rgba(0, 0, 0, .15);
+
+      box-shadow: var(--main-shadow, 0 14px 35px rgba(0, 0, 0, 0.15));
     }
 
     .aside-panel {
       min-width: 0;
+
       display: grid;
+
       gap: var(--aside-gap, 1.25rem);
     }
 
@@ -59,8 +68,7 @@ import {
       }
 
       .aside-panel {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -72,5 +80,5 @@ import {
   `,
 })
 export class ContentLayoutComponent {
-    readonly asideWidth = input('340px');
+  readonly asideWidth = input('340px');
 }

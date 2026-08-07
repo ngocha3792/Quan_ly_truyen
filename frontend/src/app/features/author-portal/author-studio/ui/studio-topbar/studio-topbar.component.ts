@@ -1,32 +1,17 @@
-
-import {
-    ChangeDetectionStrategy,
-    Component,
-    EventEmitter,
-    Input,
-    Output,
-} from '@angular/core';
-import {
-    RouterLink,
-} from '@angular/router';
-
-import {
-    StudioIconComponent,
-} from '../studio-icon/studio-icon.component';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
+import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
 @Component({
-    selector: 'app-studio-topbar',
-    standalone: true,
+  selector: 'app-studio-topbar',
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        StudioIconComponent,
-    ],
+  imports: [RouterLink, SearchFieldComponent, StudioIconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <header class="studio-topbar">
       <button
         class="mobile-menu-button"
@@ -34,33 +19,18 @@ import {
         aria-label="Mở menu"
         (click)="menuRequested.emit()"
       >
-        <app-studio-icon
-          name="menu"
-          [size]="20"
-        ></app-studio-icon>
+        <app-studio-icon name="menu" [size]="20"></app-studio-icon>
       </button>
 
-      <label class="studio-search">
-        <app-studio-icon
-          name="search"
-          [size]="18"
-        ></app-studio-icon>
+      <app-search-field
+        class="studio-search"
+        placeholder="Tìm kiếm truyện, chương..."
+        ariaLabel="Tìm kiếm truyện hoặc chương"
+        [iconSize]="18"
+      />
 
-        <input
-          type="search"
-          placeholder="Tìm kiếm truyện, chương..."
-        >
-      </label>
-
-      <a
-        class="notification-button"
-        routerLink="/author-studio/thong-bao"
-        aria-label="Thông báo"
-      >
-        <app-studio-icon
-          name="bell"
-          [size]="21"
-        ></app-studio-icon>
+      <a class="notification-button" routerLink="/author-studio/thong-bao" aria-label="Thông báo">
+        <app-studio-icon name="bell" [size]="21"></app-studio-icon>
 
         @if (unreadNotifications > 0) {
           <span>
@@ -69,162 +39,146 @@ import {
         }
       </a>
 
-      <a
-        class="create-story-button"
-        routerLink="/author-studio/truyen/tao-moi"
-      >
-        <app-studio-icon
-          name="plus"
-          [size]="18"
-        ></app-studio-icon>
+      <a class="create-story-button" routerLink="/author-studio/truyen/tao-moi">
+        <app-studio-icon name="plus" [size]="18"></app-studio-icon>
 
         Tạo truyện mới
       </a>
     </header>
   `,
 
-    styles: [`
-    :host {
-      display: block;
-    }
+  styles: [
+    `
+      :host {
+        display: block;
+      }
 
-    .studio-topbar {
-      display: flex;
-      min-height: 72px;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 14px;
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(8, 17, 31, 0.94);
-      backdrop-filter: blur(16px);
-    }
-
-    .mobile-menu-button {
-      display: none;
-      width: 42px;
-      height: 42px;
-      place-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #111d31;
-      color: #c5cddd;
-      cursor: pointer;
-    }
-
-    .studio-search {
-      display: grid;
-      width: min(340px, 36vw);
-      min-height: 44px;
-      grid-template-columns:
-        24px minmax(0, 1fr);
-      align-items: center;
-      gap: 8px;
-      padding: 0 16px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: rgba(7, 13, 27, 0.72);
-      color: var(--text-muted);
-    }
-
-    .studio-search input {
-      width: 100%;
-      height: 42px;
-      border: 0;
-      outline: none;
-      background: transparent;
-      color: var(--text-strong);
-      font: inherit;
-      font-size: 13.5px;
-    }
-
-    .studio-search input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .notification-button {
-      position: relative;
-      display: grid;
-      width: 44px;
-      height: 44px;
-      place-items: center;
-      border-left: 1px solid var(--border);
-      color: #d8deea;
-      text-decoration: none;
-    }
-
-    .notification-button span {
-      position: absolute;
-      top: -1px;
-      right: -2px;
-      display: grid;
-      min-width: 18px;
-      height: 18px;
-      place-items: center;
-      padding: 0 4px;
-      border: 2px solid #08111f;
-      border-radius: 999px;
-      background: #ef4444;
-      color: #ffffff;
-      font-size: 10px;
-      font-weight: 800;
-    }
-
-    .create-story-button {
-      display: inline-flex;
-      min-height: 44px;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 0 20px;
-      border: 1px solid rgba(220, 186, 255, 0.23);
-      border-radius: 8px;
-      background:
-        linear-gradient(
-          135deg,
-          #9d43ef,
-          #6e31da
-        );
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: 700;
-      text-decoration: none;
-      box-shadow:
-        0 8px 24px rgba(114, 46, 208, 0.25);
-    }
-
-    @media (max-width: 900px) {
       .studio-topbar {
-        justify-content: space-between;
-        padding: 12px 15px;
+        display: flex;
+        min-height: 72px;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 14px;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(8, 17, 31, 0.94);
+        backdrop-filter: blur(16px);
       }
 
       .mobile-menu-button {
-        display: grid;
-      }
-
-      .studio-search {
-        margin-left: auto;
-      }
-    }
-
-    @media (max-width: 600px) {
-      .studio-search {
         display: none;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #111d31;
+        color: #c5cddd;
+        cursor: pointer;
+      }
+
+      .studio-search {
+        width: min(340px, 36vw);
+
+        --search-min-height: 44px;
+
+        --search-input-height: 42px;
+
+        --search-radius: 999px;
+
+        --search-border: 1px solid var(--border);
+
+        --search-background: rgba(7, 13, 27, 0.72);
+
+        --search-padding: 0 16px;
+
+        --search-gap: 8px;
+
+        --search-color: var(--text-strong);
+
+        --search-font-size: 13.5px;
+
+        --search-icon-color: var(--text-muted);
+
+        --search-placeholder-color: var(--text-muted);
+      }
+      .notification-button {
+        position: relative;
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border-left: 1px solid var(--border);
+        color: #d8deea;
+        text-decoration: none;
+      }
+
+      .notification-button span {
+        position: absolute;
+        top: -1px;
+        right: -2px;
+        display: grid;
+        min-width: 18px;
+        height: 18px;
+        place-items: center;
+        padding: 0 4px;
+        border: 2px solid #08111f;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 800;
       }
 
       .create-story-button {
-        padding: 0 14px;
-        font-size: 12px;
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 20px;
+        border: 1px solid rgba(220, 186, 255, 0.23);
+        border-radius: 8px;
+        background: linear-gradient(135deg, #9d43ef, #6e31da);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 0 8px 24px rgba(114, 46, 208, 0.25);
       }
-    }
-  `],
+
+      @media (max-width: 900px) {
+        .studio-topbar {
+          justify-content: space-between;
+          padding: 12px 15px;
+        }
+
+        .mobile-menu-button {
+          display: grid;
+        }
+
+        .studio-search {
+          margin-left: auto;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .studio-search {
+          display: none;
+        }
+
+        .create-story-button {
+          padding: 0 14px;
+          font-size: 12px;
+        }
+      }
+    `,
+  ],
 })
 export class StudioTopbarComponent {
-    @Input()
-    unreadNotifications = 0;
+  @Input()
+  unreadNotifications = 0;
 
-    @Output()
-    readonly menuRequested =
-        new EventEmitter<void>();
+  @Output()
+  readonly menuRequested = new EventEmitter<void>();
 }

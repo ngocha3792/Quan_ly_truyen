@@ -11,57 +11,55 @@ const CSRF_COOKIE_NAME = 'csrf_token';
  */
 @Injectable({ providedIn: 'root' })
 export class AuthSessionHintStore {
-    shouldAttemptRefresh(): boolean {
-        if (typeof window === 'undefined') {
-            return false;
-        }
-
-        const storedHint = window.localStorage.getItem(SESSION_HINT_KEY);
-
-        if (storedHint !== null) {
-            return storedHint === 'true';
-        }
-
-        /**
-         * csrf_token là cookie frontend có thể đọc.
-         * Nó thường được backend tạo cùng refresh_token HttpOnly.
-         *
-         * Trường hợp localStorage chưa có hint nhưng csrf_token tồn tại,
-         * frontend vẫn thử khôi phục phiên.
-         */
-        return readCookie(CSRF_COOKIE_NAME) !== null;
+  shouldAttemptRefresh(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
     }
 
-    markSessionPresent(): void {
-        if (typeof window === 'undefined') {
-            return;
-        }
+    const storedHint = window.localStorage.getItem(SESSION_HINT_KEY);
 
-        window.localStorage.setItem(SESSION_HINT_KEY, 'true');
+    if (storedHint !== null) {
+      return storedHint === 'true';
     }
 
-    markSessionAbsent(): void {
-        if (typeof window === 'undefined') {
-            return;
-        }
+    /**
+     * csrf_token là cookie frontend có thể đọc.
+     * Nó thường được backend tạo cùng refresh_token HttpOnly.
+     *
+     * Trường hợp localStorage chưa có hint nhưng csrf_token tồn tại,
+     * frontend vẫn thử khôi phục phiên.
+     */
+    return readCookie(CSRF_COOKIE_NAME) !== null;
+  }
 
-        window.localStorage.setItem(SESSION_HINT_KEY, 'false');
+  markSessionPresent(): void {
+    if (typeof window === 'undefined') {
+      return;
     }
+
+    window.localStorage.setItem(SESSION_HINT_KEY, 'true');
+  }
+
+  markSessionAbsent(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(SESSION_HINT_KEY, 'false');
+  }
 }
 
 function readCookie(name: string): string | null {
-    if (typeof document === 'undefined') {
-        return null;
-    }
+  if (typeof document === 'undefined') {
+    return null;
+  }
 
-    const prefix = `${encodeURIComponent(name)}=`;
+  const prefix = `${encodeURIComponent(name)}=`;
 
-    const entry = document.cookie
-        .split(';')
-        .map((item) => item.trim())
-        .find((item) => item.startsWith(prefix));
+  const entry = document.cookie
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix));
 
-    return entry
-        ? decodeURIComponent(entry.slice(prefix.length))
-        : null;
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
 }

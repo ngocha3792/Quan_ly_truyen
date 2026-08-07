@@ -18,31 +18,40 @@ export class StoryDetailStore {
     this.loading.set(true);
     this.error.set(null);
 
-    this.repository.getStoryBySlug(slug).pipe(
-      tap((story) => {
-        this.story.set(story);
-        this.loading.set(false);
-      }),
-      switchMap((story) => {
-        if (!story) return of(null);
+    this.repository
+      .getStoryBySlug(slug)
+      .pipe(
+        tap((story) => {
+          this.story.set(story);
+          this.loading.set(false);
+        }),
+        switchMap((story) => {
+          if (!story) return of(null);
 
-        this.repository.getComments(story.id).pipe(
-          tap((comments) => this.comments.set(comments)),
-          catchError(() => of([]))
-        ).subscribe();
+          this.repository
+            .getComments(story.id)
+            .pipe(
+              tap((comments) => this.comments.set(comments)),
+              catchError(() => of([])),
+            )
+            .subscribe();
 
-        this.repository.getRelatedStories(story.categories).pipe(
-          tap((related) => this.relatedStories.set(related)),
-          catchError(() => of([]))
-        ).subscribe();
+          this.repository
+            .getRelatedStories(story.categories)
+            .pipe(
+              tap((related) => this.relatedStories.set(related)),
+              catchError(() => of([])),
+            )
+            .subscribe();
 
-        return of(story);
-      }),
-      catchError((err) => {
-        this.loading.set(false);
-        this.error.set(getApiErrorMessage(err, 'Không thể tải thông tin truyện.'));
-        return of(null);
-      })
-    ).subscribe();
+          return of(story);
+        }),
+        catchError((err) => {
+          this.loading.set(false);
+          this.error.set(getApiErrorMessage(err, 'Không thể tải thông tin truyện.'));
+          return of(null);
+        }),
+      )
+      .subscribe();
   }
 }

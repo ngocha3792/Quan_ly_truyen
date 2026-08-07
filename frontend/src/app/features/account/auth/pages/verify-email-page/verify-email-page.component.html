@@ -1,64 +1,53 @@
 <main class="verification-page">
-    <section class="verification-card">
-        @if (status() === 'verifying') {
-        <div class="status-icon loading">
-            <span class="spinner"></span>
-        </div>
+  <section class="verification-card">
+    @if (status() === 'verifying') {
+      <div class="status-icon loading">
+        <span class="spinner"></span>
+      </div>
 
-        <p class="eyebrow">TRUYENHUB</p>
+      <p class="eyebrow">TRUYENHUB</p>
 
-        <h1>Đang xác minh email</h1>
+      <h1>Đang xác minh email</h1>
 
-        <p class="description">
-            {{ message() }}
-        </p>
-        }
+      <p class="description">
+        {{ message() }}
+      </p>
+    }
 
-        @if (status() === 'success') {
-        <div class="status-icon success">
-            ✓
-        </div>
+    @if (status() === 'success') {
+      <div class="status-icon success">✓</div>
 
-        <p class="eyebrow">XÁC MINH THÀNH CÔNG</p>
+      <p class="eyebrow">XÁC MINH THÀNH CÔNG</p>
 
-        <h1>Email đã được xác minh</h1>
+      <h1>Email đã được xác minh</h1>
 
-        <p class="description">
-            {{ message() }}
-        </p>
+      <p class="description">
+        {{ message() }}
+      </p>
 
-        @if (verifiedAt()) {
-        <p class="verified-time">
-            Thời gian xác minh: {{ verifiedAt() }}
-        </p>
-        }
+      @if (verifiedAt()) {
+        <p class="verified-time">Thời gian xác minh: {{ verifiedAt() }}</p>
+      }
 
-        <a class="primary-button" routerLink="/">
-            Về trang chủ để đăng nhập
-        </a>
-        }
+      <a class="primary-button" routerLink="/"> Về trang chủ để đăng nhập </a>
+    }
 
-        @if (status() === 'error') {
-        <div class="status-icon error">
-            !
-        </div>
+    @if (status() === 'error') {
+      <div class="status-icon error">!</div>
 
-        <p class="eyebrow">KHÔNG THỂ XÁC MINH</p>
+      <p class="eyebrow">KHÔNG THỂ XÁC MINH</p>
 
-        <h1>Link xác minh không hợp lệ</h1>
+      <h1>Link xác minh không hợp lệ</h1>
 
-        <p class="description">
-            {{ message() }}
-        </p>
+      <p class="description">
+        {{ message() }}
+      </p>
 
-        <p class="support-text">
-            Link có thể đã hết hạn, đã được sử dụng hoặc bị thay thế
-            bởi một link xác minh mới.
-        </p>
+      <p class="support-text">
+        Link có thể đã hết hạn, đã được sử dụng hoặc bị thay thế bởi một link xác minh mới.
+      </p>
 
-        <a class="secondary-button" routerLink="/">
-            Quay về trang chủ
-        </a>
-        }
-    </section>
+      <a class="secondary-button" routerLink="/"> Quay về trang chủ </a>
+    }
+  </section>
 </main>

@@ -8,15 +8,11 @@ export interface ProvideHomeOptions {
   readonly useMock?: boolean;
 }
 
-export function provideHome(
-  options: ProvideHomeOptions = {},
-): Provider[] {
+export function provideHome(options: ProvideHomeOptions = {}): Provider[] {
   return [
     {
       provide: HomeRepository,
-      useClass: options.useMock
-        ? HomeMockRepository
-        : HomeHttpRepository,
+      useClass: options.useMock ? HomeMockRepository : HomeHttpRepository,
     },
   ];
 }

@@ -81,6 +81,12 @@ export interface ForgotPasswordResponse {
   readonly message: string;
 }
 
+export interface ValidateResetPasswordTokenResponse {
+  readonly valid: true;
+
+  readonly expiresAt: string;
+}
+
 export interface ResetPasswordResponse {
   readonly passwordReset: true;
   readonly sessionsRevoked: number;
@@ -97,38 +103,69 @@ export interface ConfirmEmailChangeResponse {
   readonly changedAt: string;
 }
 
-export interface AdminMfaChallengeDetails {
+export interface MfaChallengeDetails {
   readonly mfaTicket: string;
+
   readonly mode: 'enroll' | 'verify';
+
   readonly expiresAt: string;
 }
 
-export interface AdminMfaEnrollmentResponse {
+export interface MfaEnrollmentResponse {
   readonly secret: string;
+
   readonly otpAuthUri: string;
+
   readonly expiresAt: string;
 }
 
-export interface AdminMfaAuthenticationResponse extends LoginResponse {
+export interface MfaAuthenticationResponse extends LoginResponse {
   readonly recoveryCodes?: readonly string[];
 }
 
-export interface ConfirmAdminMfaEnrollmentRequest {
+export interface ConfirmMfaEnrollmentRequest {
   readonly mfaTicket: string;
+
   readonly totpCode: string;
+
   readonly deviceId?: string;
+
   readonly deviceName?: string;
 }
 
-export interface VerifyAdminMfaRequest {
+export interface VerifyMfaRequest {
   readonly mfaTicket: string;
+
   readonly totpCode?: string;
+
   readonly recoveryCode?: string;
+
   readonly deviceId?: string;
+
   readonly deviceName?: string;
 }
 
-export interface AdminMfaAuthenticationResult {
+export interface MfaAuthenticationResult {
   readonly user: CurrentUser;
+
   readonly recoveryCodes: readonly string[];
 }
+
+export type OAuthProvider = 'google' | 'github';
+
+export type OAuthFinalizeResult =
+  | {
+      readonly status: 'success';
+    }
+  | {
+      readonly status: 'mfa';
+
+      readonly challenge: MfaChallengeDetails;
+    }
+  | {
+      readonly status: 'error';
+
+      readonly code: string;
+
+      readonly message: string;
+    };

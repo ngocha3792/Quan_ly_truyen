@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PermissionCode, RoleCode } from '@/common/enums';
 
 import { PrismaService } from '@/infrastructure/database';
-
+import { MfaCredentialStatus, MfaMethod } from '@/generated/prisma/client';
 import type {
   AccessSessionReaderPort,
   AccessSessionSnapshot,
@@ -60,6 +60,27 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
             status: true,
 
             deletedAt: true,
+            mfaCredentials: {
+              where: {
+                method: MfaMethod.TOTP,
+
+                status: MfaCredentialStatus.ENABLED,
+
+                disabledAt: null,
+              },
+
+              take: 1,
+
+              select: {
+                id: true,
+              },
+            },
+
+            adminMfaCredential: {
+              select: {
+                id: true,
+              },
+            },
           },
         },
       },
@@ -82,6 +103,9 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
 
       revokedAt: session.revokedAt,
       mfaVerifiedAt: session.mfaVerifiedAt,
+      mfaEnabled:
+        session.user.mfaCredentials.length > 0 ||
+        session.user.adminMfaCredential !== null,
 
       email: session.user.email,
 

@@ -8,8 +8,8 @@ import { isUuidV4 } from '@/common/utils';
 import {
   ACCESS_SESSION_READER_PORT,
   type AccessSessionReaderPort,
-  ADMIN_MFA_CHALLENGE_PORT,
-  type AdminMfaChallengePort,
+  MFA_CHALLENGE_PORT,
+  type MfaChallengePort,
   JWT_BLACKLIST_PORT,
   type JwtBlacklistPort,
 } from '../../ports';
@@ -25,10 +25,8 @@ export class ValidateAccessTokenQueryHandler {
 
     @Inject(JWT_BLACKLIST_PORT)
     private readonly jwtBlacklist: JwtBlacklistPort,
-
-    @Optional()
-    @Inject(ADMIN_MFA_CHALLENGE_PORT)
-    private readonly adminMfaChallenge?: AdminMfaChallengePort,
+    @Inject(MFA_CHALLENGE_PORT)
+    private readonly mfaChallenge: MfaChallengePort,
   ) {}
 
   async execute(query: ValidateAccessTokenQuery): Promise<AuthPrincipal> {
@@ -76,14 +74,17 @@ export class ValidateAccessTokenQueryHandler {
       });
     }
 
-    if (
-      this.adminMfaChallenge?.isEnabled() &&
+    const adminMfaRequired =
       session.roles.includes(RoleCode.ADMIN) &&
-      !session.mfaVerifiedAt
-    ) {
+      this.mfaChallenge.isAdminMfaRequired();
+
+    const sessionRequiresMfa = session.mfaEnabled || adminMfaRequired;
+
+    if (sessionRequiresMfa && !session.mfaVerifiedAt) {
       throw new InvalidTokenException({
-        code: 'AUTH_ADMIN_MFA_REQUIRED',
-        message: 'Session quản trị viên chưa được xác minh MFA',
+        code: 'AUTH_MFA_REQUIRED',
+
+        message: 'Session chưa được xác minh MFA',
       });
     }
 

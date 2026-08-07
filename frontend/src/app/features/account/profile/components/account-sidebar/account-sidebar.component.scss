@@ -1,204 +1,188 @@
 :host {
-    display: block;
-    position: sticky;
-    top: 90px;
+  display: block;
+  position: sticky;
+  top: 90px;
 }
 
 .sidebar {
-    display: grid;
-    gap: 18px;
+  display: grid;
+  gap: 18px;
 }
 
 .sidebar-card {
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    background:
-        linear-gradient(145deg,
-            rgba(15, 22, 39, 0.96),
-            rgba(9, 14, 27, 0.96));
-    box-shadow:
-        0 16px 40px rgba(0, 0, 0, 0.13);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(15, 22, 39, 0.96), rgba(9, 14, 27, 0.96));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.13);
 }
 
 .navigation-card {
-    padding: 17px 13px 14px;
+  padding: 17px 13px 14px;
 }
 
 .sidebar-title {
-    margin:
-        0 8px 12px;
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+  margin: 0 8px 12px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .navigation-list {
-    display: grid;
-    gap: 4px;
+  display: grid;
+  gap: 4px;
 }
 
 .navigation-item {
-    min-height: 44px;
-    padding: 0 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-radius: 8px;
-    color: #cbd5e1;
-    font-size: 14.5px;
-    font-weight: 600;
-    text-decoration: none;
-    transition:
-        color 160ms ease,
-        background 160ms ease,
-        transform 160ms ease;
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 
-    &:hover {
-        color: #fff;
-        background:
-            rgba(255, 255, 255, 0.06);
-    }
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
 
-    &.active {
-        color: #fff;
-        background:
-            linear-gradient(135deg,
-                #6c38dc,
-                #9854ec);
-        box-shadow:
-            0 10px 26px rgba(116, 57, 218, 0.27);
-    }
+  &.active {
+    color: #fff;
+    background: linear-gradient(135deg, #6c38dc, #9854ec);
+    box-shadow: 0 10px 26px rgba(116, 57, 218, 0.27);
+  }
 }
 
 .user-card {
-    padding: 19px;
+  padding: 19px;
 }
 
 .user-heading {
-    display: flex;
-    align-items: center;
-    gap: 13px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
 }
 
 .user-heading-content {
-    min-width: 0;
-    display: grid;
-    gap: 6px;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 
-    strong {
-        overflow: hidden;
-        color: #f8fafc;
-        font-size: 15.5px;
-        font-weight: 600;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+  strong {
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: 15.5px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .member-badge {
-    width: max-content;
-    padding: 5px 9px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border-radius: 6px;
-    color: #c084fc;
-    font-size: 12px;
-    font-weight: 650;
-    background:
-        rgba(128, 63, 214, 0.2);
+  width: max-content;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  color: #c084fc;
+  font-size: 12px;
+  font-weight: 650;
+  background: rgba(128, 63, 214, 0.2);
 }
 
 .user-detail {
-    margin-top: 17px;
-    display: grid;
-    gap: 8px;
+  margin-top: 17px;
+  display: grid;
+  gap: 8px;
 }
 
 .user-email {
-    overflow: hidden;
-    color: #cbd5e1;
-    font-size: 13px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  color: #cbd5e1;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .verification-badge {
-    width: max-content;
-    padding: 5px 9px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border-radius: 6px;
-    color: #4ade80;
-    font-size: 12px;
-    font-weight: 650;
-    background:
-        rgba(45, 180, 77, 0.16);
+  width: max-content;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  color: #4ade80;
+  font-size: 12px;
+  font-weight: 650;
+  background: rgba(45, 180, 77, 0.16);
 
-    &.unverified {
-        color: #fbbf24;
-        background:
-            rgba(245, 158, 11, 0.16);
-    }
+  &.unverified {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.16);
+  }
 }
 
 .logout-button {
-    width: 100%;
-    min-height: 42px;
-    margin-top: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1px solid #8b5cf6;
-    border-radius: 7px;
-    color: #c084fc;
-    font-size: 13.5px;
-    font-weight: 650;
-    cursor: pointer;
-    background: transparent;
-    transition:
-        color 160ms ease,
-        background 160ms ease;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #8b5cf6;
+  border-radius: 7px;
+  color: #c084fc;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  background: transparent;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 
-    &:hover {
-        color: #fff;
-        background:
-            rgba(139, 92, 246, 0.2);
-    }
+  &:hover {
+    color: #fff;
+    background: rgba(139, 92, 246, 0.2);
+  }
 }
 
 @media (max-width: 980px) {
-    :host {
-        position: static;
-    }
+  :host {
+    position: static;
+  }
 
-    .sidebar {
-        grid-template-columns: 1fr;
-    }
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
 
-    .navigation-list {
-        grid-template-columns:
-            repeat(5, minmax(150px, 1fr));
-        overflow-x: auto;
-        padding-bottom: 4px;
-    }
+  .navigation-list {
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
 
-    .navigation-item {
-        white-space: nowrap;
-    }
+  .navigation-item {
+    white-space: nowrap;
+  }
 
-    .user-card {
-        display: none;
-    }
+  .user-card {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
-    .navigation-list {
-        grid-template-columns:
-            repeat(5, max-content);
-    }
+  .navigation-list {
+    grid-template-columns: repeat(5, max-content);
+  }
 }

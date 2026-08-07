@@ -1,64 +1,36 @@
-import {
-    HttpClient,
-    HttpParams,
-} from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 
-import {
-    inject,
-    Injectable,
-} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 
-import {
-    map,
-    Observable,
-} from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 
-import {
-    AccountSecurityEventsResponse,
-    AccountSessionsResponse,
-} from './account-api.models';
+import { AccountSecurityEventsResponse, AccountSessionsResponse } from './account-api.models';
 
 @Injectable({
-    providedIn: 'root',
+  providedIn: 'root',
 })
 export class AccountApiService {
-    private readonly http = inject(HttpClient);
-    private readonly config =
-        inject(APP_RUNTIME_CONFIG);
+  private readonly http = inject(HttpClient);
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
-    private readonly authUrl =
-        `${this.config.apiBaseUrl}/auth`;
+  private readonly authUrl = `${this.config.apiBaseUrl}/auth`;
 
-    getSessions():
-        Observable<AccountSessionsResponse> {
-        return this.http
-            .get<
-                ApiSuccessEnvelope<AccountSessionsResponse>
-            >(`${this.authUrl}/sessions`)
-            .pipe(
-                map((response) => response.data),
-            );
-    }
+  getSessions(): Observable<AccountSessionsResponse> {
+    return this.http
+      .get<ApiSuccessEnvelope<AccountSessionsResponse>>(`${this.authUrl}/sessions`)
+      .pipe(map((response) => response.data));
+  }
 
-    getSecurityEvents(
-        limit = 5,
-    ): Observable<AccountSecurityEventsResponse> {
-        const params = new HttpParams().set(
-            'limit',
-            String(limit),
-        );
+  getSecurityEvents(limit = 5): Observable<AccountSecurityEventsResponse> {
+    const params = new HttpParams().set('limit', String(limit));
 
-        return this.http
-            .get<
-                ApiSuccessEnvelope<AccountSecurityEventsResponse>
-            >(`${this.authUrl}/security-events`, {
-                params,
-            })
-            .pipe(
-                map((response) => response.data),
-            );
-    }
+    return this.http
+      .get<ApiSuccessEnvelope<AccountSecurityEventsResponse>>(`${this.authUrl}/security-events`, {
+        params,
+      })
+      .pipe(map((response) => response.data));
+  }
 }

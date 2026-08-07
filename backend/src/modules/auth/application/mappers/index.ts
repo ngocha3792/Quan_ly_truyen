@@ -12,3 +12,5 @@ export * from './request-email-change-result.mapper';
 
 export * from './confirm-email-change-result.mapper';
 export * from './security-event-result.mapper';
+export * from './recovery-email-status.mapper';
+export * from './security-questions.mapper';

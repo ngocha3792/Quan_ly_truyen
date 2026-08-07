@@ -1,24 +1,10 @@
-export type StoryPublicationStatus =
-  | 'ongoing'
-  | 'completed'
-  | 'hiatus';
+export type StoryPublicationStatus = 'ongoing' | 'completed' | 'hiatus';
 
-export type StoryCatalogSort =
-  | 'latest'
-  | 'popular'
-  | 'rating'
-  | 'chapter-count'
-  | 'oldest';
+export type StoryCatalogSort = 'latest' | 'popular' | 'rating' | 'chapter-count' | 'oldest';
 
-export type StoryCatalogViewMode =
-  | 'grid'
-  | 'list';
+export type StoryCatalogViewMode = 'grid' | 'list';
 
-export type StoryCatalogBadge =
-  | 'HOT'
-  | 'NEW'
-  | 'FULL'
-  | null;
+export type StoryCatalogBadge = 'HOT' | 'NEW' | 'FULL' | null;
 
 export interface StoryGenre {
   readonly id: string;
@@ -41,14 +27,11 @@ export interface StoryCatalogItem {
 
   readonly coverUrl: string;
 
-  readonly genres:
-  readonly StoryGenreSummary[];
+  readonly genres: readonly StoryGenreSummary[];
 
-  readonly status:
-  StoryPublicationStatus;
+  readonly status: StoryPublicationStatus;
 
-  readonly badge:
-  StoryCatalogBadge;
+  readonly badge: StoryCatalogBadge;
 
   readonly latestChapter: number;
   readonly chapterCount: number;
@@ -66,8 +49,7 @@ export interface StoryRankingItem {
   readonly title: string;
 
   readonly coverUrl: string;
-  readonly genres:
-  readonly StoryGenreSummary[];
+  readonly genres: readonly StoryGenreSummary[];
 
   readonly views: number;
   readonly rating: number;
@@ -81,60 +63,45 @@ export interface StoryCatalogPagination {
 }
 
 export interface StoryCatalogPage {
-  readonly items:
-  readonly StoryCatalogItem[];
+  readonly items: readonly StoryCatalogItem[];
 
-  readonly pagination:
-  StoryCatalogPagination;
+  readonly pagination: StoryCatalogPagination;
 }
 
 export interface StoryCatalogQuery {
   readonly query: string;
 
-  readonly genre:
-  string | null;
+  readonly genre: string | null;
 
-  readonly status:
-  StoryPublicationStatus | 'all';
+  readonly status: StoryPublicationStatus | 'all';
 
-  readonly sort:
-  StoryCatalogSort;
+  readonly sort: StoryCatalogSort;
 
-  readonly yearFrom:
-  number | null;
+  readonly yearFrom: number | null;
 
-  readonly yearTo:
-  number | null;
+  readonly yearTo: number | null;
 
   readonly page: number;
   readonly pageSize: number;
 }
 
-export interface StoryCatalogFilter
-  extends StoryCatalogQuery {
-  readonly viewMode:
-  StoryCatalogViewMode;
+export interface StoryCatalogFilter extends StoryCatalogQuery {
+  readonly viewMode: StoryCatalogViewMode;
 }
 
 export interface StoryCatalogAdvancedFilter {
-  readonly genre:
-  string | null;
+  readonly genre: string | null;
 
-  readonly status:
-  StoryPublicationStatus | 'all';
+  readonly status: StoryPublicationStatus | 'all';
 
-  readonly sort:
-  StoryCatalogSort;
+  readonly sort: StoryCatalogSort;
 
-  readonly yearFrom:
-  number | null;
+  readonly yearFrom: number | null;
 
-  readonly yearTo:
-  number | null;
+  readonly yearTo: number | null;
 }
 
-export const DEFAULT_STORY_CATALOG_FILTER:
-  StoryCatalogFilter = {
+export const DEFAULT_STORY_CATALOG_FILTER: StoryCatalogFilter = {
   query: '',
 
   genre: null,

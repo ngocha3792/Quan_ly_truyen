@@ -1,24 +1,16 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { IconComponent } from '../../../../../shared/components/icon/icon.component';
-
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { StoryUpdateItem } from '../../domain/story-updates.models';
 
 import { UpdateStoryCardComponent } from '../update-story-card/update-story-card.component';
 
 @Component({
-    selector: 'app-update-story-grid',
-    standalone: true,
-    imports: [
-        IconComponent,
-        UpdateStoryCardComponent,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-update-story-grid',
+  standalone: true,
+  imports: [EmptyStateComponent, UpdateStoryCardComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     @if (loading()) {
       <div class="story-grid">
         @for (item of skeletons; track item) {
@@ -33,11 +25,13 @@ import { UpdateStoryCardComponent } from '../update-story-card/update-story-card
         }
       </div>
     } @else if (stories().length === 0) {
-      <section class="empty-state">
-        <app-icon name="book-open" [size]="32" />
-        <strong>Không có truyện phù hợp</strong>
-        <p>Thử chọn bộ lọc hoặc cách sắp xếp khác.</p>
-      </section>
+      <app-empty-state
+        class="updates-empty"
+        icon="book-open"
+        [iconSize]="32"
+        title="Không có truyện phù hợp"
+        description="Thử chọn bộ lọc hoặc cách sắp xếp khác."
+      />
     } @else {
       <div class="story-grid">
         @for (story of stories(); track story.id) {
@@ -46,7 +40,7 @@ import { UpdateStoryCardComponent } from '../update-story-card/update-story-card
       </div>
     }
   `,
-    styles: `
+  styles: `
     .story-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -81,28 +75,28 @@ import { UpdateStoryCardComponent } from '../update-story-card/update-story-card
       background: #1e293b;
     }
 
-    .skeleton > div span:nth-child(2) { width: 60%; }
-    .skeleton > div span:nth-child(3) { width: 40%; margin-top: 18px; }
-
-    .empty-state {
-      min-height: 240px;
-      display: grid;
-      place-items: center;
-      align-content: center;
-      gap: 10px;
-      color: #a66bef;
-      text-align: center;
+    .skeleton > div span:nth-child(2) {
+      width: 60%;
+    }
+    .skeleton > div span:nth-child(3) {
+      width: 40%;
+      margin-top: 18px;
     }
 
-    .empty-state strong {
-      color: #dcd9e2;
-      font-size: 1rem;
-    }
+    .updates-empty {
+      --empty-min-height: 240px;
 
-    .empty-state p {
-      margin: 0;
-      color: #717b8f;
-      font-size: .875rem;
+      --empty-padding: 0;
+
+      --empty-icon-color: #a66bef;
+
+      --empty-title-color: #dcd9e2;
+
+      --empty-title-size: 1rem;
+
+      --empty-description-color: #717b8f;
+
+      --empty-description-size: 0.875rem;
     }
 
     @media (max-width: 1100px) {
@@ -119,11 +113,8 @@ import { UpdateStoryCardComponent } from '../update-story-card/update-story-card
   `,
 })
 export class UpdateStoryGridComponent {
-    readonly stories = input.required<readonly StoryUpdateItem[]>();
-    readonly loading = input(false);
+  readonly stories = input.required<readonly StoryUpdateItem[]>();
+  readonly loading = input(false);
 
-    protected readonly skeletons = Array.from(
-        { length: 6 },
-        (_, index) => index,
-    );
+  protected readonly skeletons = Array.from({ length: 6 }, (_, index) => index);
 }

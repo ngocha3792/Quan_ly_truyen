@@ -1,102 +1,58 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    computed,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
-    selector: 'app-pagination',
+  selector: 'app-pagination',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [IconComponent],
+  imports: [IconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     @if (totalPages() > 1) {
-      <nav
-        class="pagination"
-        aria-label="Phân trang"
-      >
+      <nav class="pagination" aria-label="Phân trang">
         <button
           type="button"
           aria-label="Trang trước"
           [disabled]="page() <= 1"
-          (click)="
-            pageChange.emit(
-              page() - 1
-            )
-          "
+          (click)="pageChange.emit(page() - 1)"
         >
-          <app-icon
-            name="chevron-left"
-            [size]="16"
-          />
+          <app-icon name="chevron-left" [size]="16" />
         </button>
 
         @if (showFirstPage()) {
-          <button
-            type="button"
-            [class.active]="page() === 1"
-            (click)="pageChange.emit(1)"
-          >
+          <button type="button" [class.active]="page() === 1" (click)="pageChange.emit(1)">
             1
           </button>
 
-          @if (
-            visiblePages()[0] > 2
-          ) {
+          @if (visiblePages()[0] > 2) {
             <span>…</span>
           }
         }
 
-        @for (
-          item of visiblePages();
-          track item
-        ) {
+        @for (item of visiblePages(); track item) {
           <button
             type="button"
-            [class.active]="
-              item === page()
-            "
-            [attr.aria-current]="
-              item === page()
-                ? 'page'
-                : null
-            "
-            (click)="
-              pageChange.emit(item)
-            "
+            [class.active]="item === page()"
+            [attr.aria-current]="item === page() ? 'page' : null"
+            (click)="pageChange.emit(item)"
           >
             {{ item }}
           </button>
         }
 
         @if (showLastPage()) {
-          @if (
-            visiblePages()[
-              visiblePages().length - 1
-            ] < totalPages() - 1
-          ) {
+          @if (visiblePages()[visiblePages().length - 1] < totalPages() - 1) {
             <span>…</span>
           }
 
           <button
             type="button"
-            [class.active]="
-              page() === totalPages()
-            "
-            (click)="
-              pageChange.emit(
-                totalPages()
-              )
-            "
+            [class.active]="page() === totalPages()"
+            (click)="pageChange.emit(totalPages())"
           >
             {{ totalPages() }}
           </button>
@@ -105,25 +61,16 @@ import { IconComponent } from '../icon/icon.component';
         <button
           type="button"
           aria-label="Trang sau"
-          [disabled]="
-            page() >= totalPages()
-          "
-          (click)="
-            pageChange.emit(
-              page() + 1
-            )
-          "
+          [disabled]="page() >= totalPages()"
+          (click)="pageChange.emit(page() + 1)"
         >
-          <app-icon
-            name="chevron-right"
-            [size]="16"
-          />
+          <app-icon name="chevron-right" [size]="16" />
         </button>
       </nav>
     }
   `,
 
-    styles: `
+  styles: `
     :host {
       display: block;
     }
@@ -141,15 +88,13 @@ import { IconComponent } from '../icon/icon.component';
       padding: 0 9px;
       display: grid;
       place-items: center;
-      border: 1px solid
-        rgba(132, 145, 177, .17);
+      border: 1px solid rgba(132, 145, 177, 0.17);
       border-radius: 7px;
       color: #939caf;
       font-size: 10px;
       font-weight: 700;
       cursor: pointer;
-      background:
-        rgba(19, 27, 46, .78);
+      background: rgba(19, 27, 46, 0.78);
       transition:
         color 160ms ease,
         border-color 160ms ease,
@@ -158,26 +103,18 @@ import { IconComponent } from '../icon/icon.component';
 
     button:hover:not(:disabled) {
       color: #fff;
-      border-color:
-        rgba(163, 99, 242, .4);
+      border-color: rgba(163, 99, 242, 0.4);
     }
 
     button.active {
       border-color: transparent;
       color: #fff;
-      background:
-        linear-gradient(
-          135deg,
-          #743bde,
-          #a153eb
-        );
-      box-shadow:
-        0 8px 22px
-        rgba(114, 55, 216, .28);
+      background: linear-gradient(135deg, #743bde, #a153eb);
+      box-shadow: 0 8px 22px rgba(114, 55, 216, 0.28);
     }
 
     button:disabled {
-      opacity: .38;
+      opacity: 0.38;
       cursor: not-allowed;
     }
 
@@ -188,61 +125,34 @@ import { IconComponent } from '../icon/icon.component';
   `,
 })
 export class PaginationComponent {
-    readonly page = input(1);
-    readonly totalPages = input(1);
-    readonly siblingCount = input(2);
+  readonly page = input(1);
+  readonly totalPages = input(1);
+  readonly siblingCount = input(2);
 
-    readonly pageChange =
-        output<number>();
+  readonly pageChange = output<number>();
 
-    readonly visiblePages =
-        computed(() => {
-            const current = this.page();
-            const total =
-                this.totalPages();
+  readonly visiblePages = computed(() => {
+    const current = this.page();
+    const total = this.totalPages();
 
-            const start = Math.max(
-                2,
-                current -
-                this.siblingCount(),
-            );
+    const start = Math.max(2, current - this.siblingCount());
 
-            const end = Math.min(
-                total - 1,
-                current +
-                this.siblingCount(),
-            );
+    const end = Math.min(total - 1, current + this.siblingCount());
 
-            const pages: number[] = [];
+    const pages: number[] = [];
 
-            for (
-                let page = start;
-                page <= end;
-                page += 1
-            ) {
-                pages.push(page);
-            }
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
 
-            if (total <= 7) {
-                return Array.from(
-                    { length: total },
-                    (_, index) =>
-                        index + 1,
-                );
-            }
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, index) => index + 1);
+    }
 
-            return pages;
-        });
+    return pages;
+  });
 
-    readonly showFirstPage =
-        computed(
-            () =>
-                this.totalPages() > 7,
-        );
+  readonly showFirstPage = computed(() => this.totalPages() > 7);
 
-    readonly showLastPage =
-        computed(
-            () =>
-                this.totalPages() > 7,
-        );
+  readonly showLastPage = computed(() => this.totalPages() > 7);
 }

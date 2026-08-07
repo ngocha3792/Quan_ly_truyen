@@ -1,28 +1,16 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
-import {
-    IconComponent,
-    IconName,
-} from '../../../../../../shared/components/icon/icon.component';
+import { IconComponent, IconName } from '../../../../../../shared/components/icon/icon.component';
 
 @Component({
-    selector: 'app-profile-switch',
-    standalone: true,
-    imports: [IconComponent],
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-profile-switch',
+  standalone: true,
+  imports: [IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <label class="switch-card">
       <span class="switch-icon">
-        <app-icon
-          [name]="icon()"
-          [size]="19"
-        />
+        <app-icon [name]="icon()" [size]="19" />
       </span>
 
       <span class="switch-copy">
@@ -30,21 +18,14 @@ import {
         <small>{{ description() }}</small>
       </span>
 
-      <input
-        type="checkbox"
-        [checked]="checked()"
-        (change)="onChange($event)"
-      />
+      <input type="checkbox" [checked]="checked()" (change)="onChange($event)" />
 
-      <span
-        class="switch-control"
-        aria-hidden="true"
-      >
+      <span class="switch-control" aria-hidden="true">
         <span></span>
       </span>
     </label>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -60,15 +41,15 @@ import {
       border: 1px solid var(--border);
       border-radius: 9px;
       cursor: pointer;
-      background: rgba(10, 16, 30, .7);
+      background: rgba(10, 16, 30, 0.7);
       transition:
         border-color 160ms ease,
         background 160ms ease;
     }
 
     .switch-card:hover {
-      border-color: rgba(158, 102, 240, .28);
-      background: rgba(17, 24, 43, .86);
+      border-color: rgba(158, 102, 240, 0.28);
+      background: rgba(17, 24, 43, 0.86);
     }
 
     .switch-icon {
@@ -120,11 +101,7 @@ import {
     }
 
     input:checked + .switch-control {
-      background: linear-gradient(
-        135deg,
-        #7138d8,
-        #a454ed
-      );
+      background: linear-gradient(135deg, #7138d8, #a454ed);
     }
 
     input:checked + .switch-control span {
@@ -134,22 +111,16 @@ import {
   `,
 })
 export class ProfileSwitchComponent {
-    readonly title = input.required<string>();
-    readonly description = input.required<string>();
-    readonly icon = input.required<IconName>();
-    readonly checked = input(false);
+  readonly title = input.required<string>();
+  readonly description = input.required<string>();
+  readonly icon = input.required<IconName>();
+  readonly checked = input(false);
 
-    readonly checkedChange =
-        output<boolean>();
+  readonly checkedChange = output<boolean>();
 
-    protected onChange(
-        event: Event,
-    ): void {
-        const inputElement =
-            event.target as HTMLInputElement;
+  protected onChange(event: Event): void {
+    const inputElement = event.target as HTMLInputElement;
 
-        this.checkedChange.emit(
-            inputElement.checked,
-        );
-    }
+    this.checkedChange.emit(inputElement.checked);
+  }
 }

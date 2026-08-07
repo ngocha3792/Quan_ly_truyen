@@ -1,76 +1,52 @@
 <main class="author-directory-page">
-    @if (store.view(); as view) {
+  @if (store.view(); as view) {
     <div class="page-container">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a routerLink="/">
-                Trang chủ
-            </a>
+      <app-breadcrumb [items]="breadcrumbs" />
 
-            <span>›</span>
+      <app-page-heading
+        title="Tác giả nổi bật"
+        description="Khám phá những tác giả tài năng và các tác phẩm đặc sắc của họ."
+      />
 
-            <strong>Tác giả</strong>
-        </nav>
+      <app-content-layout class="directory-layout" asideWidth="340px">
+        <app-author-directory-toolbar
+          main
+          [query]="store.query()"
+          [sort]="store.sort()"
+          (queryChange)="store.setQuery($event)"
+          (sortChange)="handleSortChange($event)"
+        />
 
-        <header class="page-heading">
-            <h1>Tác giả nổi bật</h1>
+        <div main class="result-count">
+          Tìm thấy
 
-            <p>
-                Khám phá những tác giả tài năng và các tác phẩm đặc sắc của họ.
-            </p>
-        </header>
+          <strong>
+            {{ store.resultCount() }}
+          </strong>
 
-        <div class="directory-layout">
-            <section class="directory-main">
-                <app-author-directory-toolbar [query]="store.query()" [sort]="store.sort()"
-                    (queryChange)="store.setQuery($event)"
-                    (sortChange)="handleSortChange($event)"></app-author-directory-toolbar>
-
-                <div class="result-count">
-                    Tìm thấy
-                    <strong>
-                        {{ store.resultCount() }}
-                    </strong>
-                    tác giả
-                </div>
-
-                <app-author-list [authors]="store.authors()" [followedAuthorIds]="
-              store.followedAuthorIds()
-            " (followToggle)="
-              store.toggleFollow($event)
-            "></app-author-list>
-
-                <nav class="pagination" aria-label="Phân trang tác giả">
-                    <button type="button" aria-label="Trang trước" [disabled]="store.page() === 1"
-                        (click)="store.previousPage()">
-                        <svg viewBox="0 0 24 24">
-                            <path d="m15 18-6-6 6-6"></path>
-                        </svg>
-                    </button>
-
-                    @for (
-                    pageNumber of store.visiblePages();
-                    track pageNumber
-                    ) {
-                    <button type="button" [class.pagination__active]="
-                  store.page() === pageNumber
-                " (click)="store.setPage(pageNumber)">
-                        {{ pageNumber }}
-                    </button>
-                    }
-
-                    <button type="button" aria-label="Trang tiếp theo" [disabled]="
-                store.page() === store.totalPages()
-              " (click)="store.nextPage()">
-                        <svg viewBox="0 0 24 24">
-                            <path d="m9 18 6-6-6-6"></path>
-                        </svg>
-                    </button>
-                </nav>
-            </section>
-
-            <app-author-directory-sidebar [statistics]="view.statistics"
-                [newAuthors]="view.newAuthors"></app-author-directory-sidebar>
+          tác giả
         </div>
+
+        <app-author-list
+          main
+          [authors]="store.authors()"
+          [followedAuthorIds]="store.followedAuthorIds()"
+          (followToggle)="store.toggleFollow($event)"
+        />
+
+        <app-pagination
+          main
+          [page]="store.page()"
+          [totalPages]="store.totalPages()"
+          (pageChange)="store.setPage($event)"
+        />
+
+        <app-author-directory-sidebar
+          aside
+          [statistics]="view.statistics"
+          [newAuthors]="view.newAuthors"
+        />
+      </app-content-layout>
     </div>
-    }
+  }
 </main>

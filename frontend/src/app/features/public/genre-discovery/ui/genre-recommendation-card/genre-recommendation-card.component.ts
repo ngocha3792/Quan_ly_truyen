@@ -1,91 +1,63 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, output } from '@angular/core';
 
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 @Component({
-    selector:
-        'app-genre-recommendation-card',
+  selector: 'app-genre-recommendation-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [IconComponent],
+  imports: [IconComponent],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="recommendation-card">
       <div>
         <h2>Không biết đọc gì?</h2>
 
-        <p>
-          Khám phá truyện phù hợp với sở thích
-          của bạn chỉ trong vài giây.
-        </p>
+        <p>Khám phá truyện phù hợp với sở thích của bạn chỉ trong vài giây.</p>
 
-        <button
-          type="button"
-          (click)="requested.emit()"
-        >
-          <app-icon
-            name="wand"
-            [size]="15"
-          />
+        <button type="button" (click)="requested.emit()">
+          <app-icon name="wand" [size]="15" />
 
           Tìm truyện cho tôi
         </button>
       </div>
 
       <span class="visual">
-        <app-icon
-          name="wand"
-          [size]="38"
-        />
+        <app-icon name="wand" [size]="38" />
       </span>
     </section>
   `,
 
-    styles: `
+  styles: `
     .recommendation-card {
       position: relative;
       min-height: 116px;
       padding: 16px;
       overflow: hidden;
       display: grid;
-      grid-template-columns:
-        minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
-      border: 1px solid
-        rgba(137, 72, 213, .3);
+      border: 1px solid rgba(137, 72, 213, 0.3);
       border-radius: 10px;
       background:
-        radial-gradient(
-          circle at 95% 80%,
-          rgba(150, 74, 225, .3),
-          transparent 115px
-        ),
-        linear-gradient(
-          145deg,
-          #321069,
-          #231044
-        );
+        radial-gradient(circle at 95% 80%, rgba(150, 74, 225, 0.3), transparent 115px),
+        linear-gradient(145deg, #321069, #231044);
     }
 
     h2 {
       margin: 0;
       color: #d39bff;
-      font-size: .9375rem;
+      font-size: 0.9375rem;
     }
 
     p {
       max-width: 185px;
       margin: 8px 0 12px;
       color: #aa8cc4;
-      font-size: .6875rem;
+      font-size: 0.6875rem;
       line-height: 1.55;
     }
 
@@ -98,15 +70,10 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
       border: 0;
       border-radius: 6px;
       color: #fff;
-      font-size: .75rem;
+      font-size: 0.75rem;
       font-weight: 750;
       cursor: pointer;
-      background:
-        linear-gradient(
-          135deg,
-          #9850e6,
-          #bd6afa
-        );
+      background: linear-gradient(135deg, #9850e6, #bd6afa);
     }
 
     .visual {
@@ -117,12 +84,11 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
       place-items: center;
       border-radius: 50%;
       color: #bd73f6;
-      background:
-        rgba(146, 73, 217, .16);
+      background: rgba(146, 73, 217, 0.16);
       transform: rotate(-12deg);
     }
   `,
 })
 export class GenreRecommendationCardComponent {
-    readonly requested = output<void>();
+  readonly requested = output<void>();
 }

@@ -1,0 +1,43 @@
+<main class="oauth-page">
+  <section class="oauth-card">
+    <div class="brand">
+      <app-brand-logo />
+    </div>
+
+    @if (status() === 'loading') {
+      <div class="loader"></div>
+
+      <h1>Đang hoàn tất đăng nhập</h1>
+
+      <p>TruyenHub đang xác minh phiên đăng nhập với nhà cung cấp OAuth.</p>
+    }
+
+    @if (status() === 'mfa') {
+      <div class="loader"></div>
+
+      <h1>Cần xác thực 2 lớp</h1>
+
+      <p>Hoàn tất bước MFA để tiếp tục đăng nhập.</p>
+    }
+
+    @if (status() === 'error') {
+      <div class="error-mark">!</div>
+
+      <h1>Không thể đăng nhập</h1>
+
+      <p>
+        {{ errorMessage() }}
+      </p>
+
+      <a routerLink="/" class="primary-button"> Quay lại trang chủ </a>
+    }
+  </section>
+</main>
+
+@if (status() === 'mfa' && challenge(); as mfaChallenge) {
+  <app-auth-dialog
+    [open]="true"
+    [initialMfaChallenge]="mfaChallenge"
+    (closed)="handleMfaDialogClosed()"
+  />
+}

@@ -8,6 +8,8 @@
     "build:ci": "ng build --configuration production",
     "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit",
     "e2e": "playwright test",
+    "format": "prettier --write \"src/**/*.{ts,html,scss,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss,css,json}\"",
     "e2e:smoke": "playwright test --grep @smoke",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
@@ -32,7 +34,8 @@
     "@angular/cli": "^22.1.2",
     "@angular/compiler-cli": "^22.1.0",
     "@playwright/test": "^1.62.1",
-    "prettier": "^3.8.1",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "prettier": "^3.9.6",
     "typescript": "~6.0.2",
     "wait-on": "^9.1.0"
   }

@@ -1,115 +1,40 @@
 :host {
-    display: block;
-    min-height: 100%;
+  display: block;
+  min-height: 100%;
 }
 
 .my-library-page {
-    min-height: calc(100vh - 72px);
-    padding: 1.25rem 0 4rem;
-    color: var(--text-strong);
-    background:
-        radial-gradient(circle at 10% 5%,
-            rgba(103, 44, 204, 0.08),
-            transparent 480px),
-        #060b16;
-}
+  min-height: calc(100vh - 72px);
 
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #727c90;
-    font-size: .85rem;
-    margin-bottom: .25rem;
+  padding: 1.25rem 0 4rem;
 
-    a {
-        color: #a773ef;
-        text-decoration: none;
+  color: var(--text-strong);
 
-        &:hover {
-            color: var(--primary-soft);
-        }
-    }
-
-    svg {
-        display: none !important;
-    }
-
-    span, strong {
-        color: #727c90;
-        font-weight: 400;
-    }
-}
-
-.page-heading {
-    margin: 0 0 1.5rem;
-
-    h1 {
-        margin: 0;
-        color: #f8f6fb;
-        font-size: clamp(1.65rem, 2.8vw, 2.1rem);
-        line-height: 1.2;
-        letter-spacing: -.02em;
-    }
-
-    p {
-        margin: .45rem 0 0;
-        color: #7f899d;
-        font-size: .85rem;
-        line-height: 1.6;
-    }
+  background:
+    radial-gradient(circle at 10% 5%, rgba(103, 44, 204, 0.08), transparent 480px), #060b16;
 }
 
 .library-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
-    gap: 1.25rem;
-}
-
-.library-main {
-    min-width: 0;
-}
-
-.library-panel {
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-
-    background:
-        linear-gradient(145deg,
-            rgba(16, 22, 39, .9),
-            rgba(10, 15, 28, .92));
-
-    box-shadow:
-        0 14px 35px rgba(0, 0, 0, .15);
+  --main-padding: 0;
+  --main-gap: 0;
+  --main-overflow: hidden;
 }
 
 .result-heading {
-    padding: 12px 20px 8px;
-    color: var(--text-muted);
-    font-size: 13.5px;
+  padding: 12px 20px 8px;
 
-    strong {
-        color: #c281ff;
-        font-weight: 650;
-    }
-}
+  color: var(--text-muted);
 
-@media (max-width: 1050px) {
-    .library-layout {
-        grid-template-columns: minmax(0, 1fr) 300px;
-    }
-}
+  font-size: 13.5px;
 
-@media (max-width: 900px) {
-    .library-layout {
-        grid-template-columns: 1fr;
-    }
+  strong {
+    color: #c281ff;
+    font-weight: 650;
+  }
 }
 
 @media (max-width: 600px) {
-    .my-library-page {
-        padding: 12px 10px 22px;
-    }
+  .my-library-page {
+    padding: 12px 10px 22px;
+  }
 }

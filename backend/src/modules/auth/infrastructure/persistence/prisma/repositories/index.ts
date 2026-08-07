@@ -10,3 +10,7 @@ export * from './prisma-session-management.persistence';
 export * from './prisma-change-password.persistence';
 export * from './prisma-email-change.persistence';
 export * from './prisma-auth-audit.reader';
+export * from './prisma-account-deletion.persistence';
+export * from './prisma-security-overview.reader';
+export * from './prisma-recovery-email.persistence';
+export * from './prisma-security-questions.persistence';

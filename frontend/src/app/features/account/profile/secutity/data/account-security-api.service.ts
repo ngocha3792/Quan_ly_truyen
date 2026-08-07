@@ -1,7 +1,4 @@
-import {
-  HttpClient,
-  HttpHeaders,
-} from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
@@ -24,20 +21,13 @@ export class AccountSecurityApiService {
 
   getOverview(): Observable<AccountSecurityOverview> {
     return this.http
-      .get<ApiSuccessEnvelope<AccountSecurityOverview>>(
-        `${this.authUrl}/security-overview`,
-      )
+      .get<ApiSuccessEnvelope<AccountSecurityOverview>>(`${this.authUrl}/security-overview`)
       .pipe(map((response) => response.data));
   }
 
-  changePassword(
-    request: ChangePasswordRequest,
-  ): Observable<ChangePasswordResponse> {
+  changePassword(request: ChangePasswordRequest): Observable<ChangePasswordResponse> {
     return this.http
-      .post<ApiSuccessEnvelope<ChangePasswordResponse>>(
-        `${this.authUrl}/change-password`,
-        request,
-      )
+      .post<ApiSuccessEnvelope<ChangePasswordResponse>>(`${this.authUrl}/change-password`, request)
       .pipe(map((response) => response.data));
   }
 

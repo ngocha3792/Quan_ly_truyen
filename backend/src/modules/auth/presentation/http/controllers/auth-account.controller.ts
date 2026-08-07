@@ -16,17 +16,25 @@ import {
 import type { Response } from 'express';
 
 import {
+  ClientIp,
   CurrentSessionId,
   CurrentUserId,
   SkipResponseEnvelope,
+  UserAgent,
 } from '@/common/decorators';
 
+import { Idempotent } from '@/common/decorators/interceptor';
+
 import {
+  DeleteAccountCommand,
+  DeleteAccountCommandHandler,
   GetCurrentUserQuery,
   GetCurrentUserQueryHandler,
   GetSecurityEventsQuery,
   GetSecurityEventsQueryHandler,
   GetSessionsQuery,
+  GetSecurityOverviewQuery,
+  GetSecurityOverviewQueryHandler,
   GetSessionsQueryHandler,
   RevokeSessionCommand,
   RevokeSessionCommandHandler,
@@ -36,10 +44,13 @@ import type { CurrentUserResultDto } from '../../../application';
 import { AuthCookieService } from '../cookies';
 
 import type {
+  SecurityOverviewResponse,
   CurrentUserResponse,
   SecurityEventsResponse,
   SessionsResponse,
 } from '../responses';
+
+import { DeleteAccountRequest } from '../requests';
 
 @Controller('auth')
 export class AuthAccountController {
@@ -53,6 +64,9 @@ export class AuthAccountController {
     private readonly revokeSessionCommandHandler: RevokeSessionCommandHandler,
 
     private readonly authCookies: AuthCookieService,
+
+    private readonly deleteAccountCommandHandler: DeleteAccountCommandHandler,
+    private readonly getSecurityOverviewQueryHandler: GetSecurityOverviewQueryHandler,
   ) {}
 
   @Get('me')
@@ -105,6 +119,96 @@ export class AuthAccountController {
         createdAt: session.createdAt.toISOString(),
         expiresAt: session.expiresAt.toISOString(),
       })),
+    };
+  }
+  @Delete('account')
+  @Idempotent({
+    required: true,
+
+    ttlSeconds: 86_400,
+  })
+  @SkipResponseEnvelope()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAccount(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @CurrentSessionId()
+    currentSessionId: string | undefined,
+
+    @Body()
+    request: DeleteAccountRequest,
+
+    @ClientIp()
+    clientIp: string | undefined,
+
+    @UserAgent()
+    userAgent: string | undefined,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<void> {
+    this.authCookies.setNoStoreHeaders(response);
+
+    await this.deleteAccountCommandHandler.execute(
+      new DeleteAccountCommand(
+        userId,
+
+        currentSessionId,
+
+        request.password,
+
+        request.confirmation,
+
+        clientIp,
+
+        userAgent,
+      ),
+    );
+
+    /*
+     * Persistence đã revoke session.
+     *
+     * Browser vẫn có refresh/CSRF cookies,
+     * nên clear chúng ở response.
+     */
+    this.authCookies.clearAuthCookies(response);
+  }
+
+  @Get('security-overview')
+  async getSecurityOverview(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<SecurityOverviewResponse> {
+    this.authCookies.setNoStoreHeaders(response);
+
+    const result = await this.getSecurityOverviewQueryHandler.execute(
+      new GetSecurityOverviewQuery(userId),
+    );
+
+    return {
+      passwordConfigured: result.passwordConfigured,
+
+      passwordUpdatedAt: result.passwordUpdatedAt?.toISOString() ?? null,
+
+      mfaEnabled: result.mfaEnabled,
+
+      mfaConfiguredAt: result.mfaConfiguredAt?.toISOString() ?? null,
+
+      recoveryEmail: result.recoveryEmail,
+
+      recoveryEmailVerified: result.recoveryEmailVerified,
+
+      securityQuestionsConfigured: result.securityQuestionsConfigured,
+
+      trustedDeviceCount: result.trustedDeviceCount,
     };
   }
 

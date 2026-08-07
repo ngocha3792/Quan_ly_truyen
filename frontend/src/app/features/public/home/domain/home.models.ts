@@ -5,12 +5,7 @@ import type {
   Story,
 } from '../../../../shared/models/story.model';
 
-export type {
-  HeroSlide,
-  HomePageData,
-  QuickAction,
-  Story,
-};
+export type { HeroSlide, HomePageData, QuickAction, Story };
 
 export interface HomeState {
   readonly data: HomePageData | null;

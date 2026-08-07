@@ -1,320 +1,109 @@
-
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import {
-    ChangeDetectionStrategy,
-    Component,
-    EventEmitter,
-    Input,
-    Output,
-} from '@angular/core';
+  SortOption,
+  SortSelectComponent,
+} from '../../../../../shared/components/sort-select/sort-select.component';
 
 import { AuthorDirectorySort } from '../../domain/author-directory.models';
 
 @Component({
-    selector: 'app-author-directory-toolbar',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-author-directory-toolbar',
 
-    template: `
-    <section class="toolbar">
-      <label class="search-box">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle
-            cx="11"
-            cy="11"
-            r="7"
-          ></circle>
+  standalone: true,
 
-          <path d="m16 16 5 5"></path>
-        </svg>
+  imports: [SearchFieldComponent],
 
-        <input
-          type="search"
-          [value]="query"
-          placeholder="Tìm kiếm tác giả..."
-          (input)="handleQueryChange($event)"
-        >
-      </label>
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-      <label class="sort-select">
-        <span>Sắp xếp:</span>
-
-        <select
-          [value]="sort"
-          (change)="handleSortChange($event)"
-        >
-          <option value="featured">
-            Đề xuất
-          </option>
-
-          <option value="followers">
-            Nhiều người theo dõi
-          </option>
-
-          <option value="reads">
-            Nhiều lượt đọc
-          </option>
-
-          <option value="works">
-            Nhiều tác phẩm
-          </option>
-
-          <option value="name">
-            Tên A–Z
-          </option>
-        </select>
-
-        <svg
-          class="select-chevron"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="m8 10 4 4 4-4"></path>
-        </svg>
-      </label>
-
-      <div
-        class="view-switch"
-        aria-label="Kiểu hiển thị"
-      >
-        <button
-          class="view-button view-button--active"
-          type="button"
-          aria-label="Hiển thị danh sách"
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M9 6h11"></path>
-            <path d="M9 12h11"></path>
-            <path d="M9 18h11"></path>
-            <path d="M4 6h.01"></path>
-            <path d="M4 12h.01"></path>
-            <path d="M4 18h.01"></path>
-          </svg>
-        </button>
-
-        <button
-          class="view-button"
-          type="button"
-          aria-label="Hiển thị lưới"
-        >
-          <svg viewBox="0 0 24 24">
-            <rect
-              x="4"
-              y="4"
-              width="6"
-              height="6"
-              rx="1"
-            ></rect>
-
-            <rect
-              x="14"
-              y="4"
-              width="6"
-              height="6"
-              rx="1"
-            ></rect>
-
-            <rect
-              x="4"
-              y="14"
-              width="6"
-              height="6"
-              rx="1"
-            ></rect>
-
-            <rect
-              x="14"
-              y="14"
-              width="6"
-              height="6"
-              rx="1"
-            ></rect>
-          </svg>
-        </button>
-      </div>
-    </section>
+  template: `
+    <app-search-field
+      class="author-search"
+      [value]="query"
+      placeholder="Tìm kiếm tác giả..."
+      ariaLabel="Tìm kiếm tác giả"
+      [iconSize]="18"
+      (valueChange)="queryChange.emit($event)"
+    />
   `,
 
-    styles: [`
-    :host {
-      display: block;
-    }
+  styles: [
+    `
+      .author-search {
+        --search-min-height: 43px;
 
-    .toolbar {
-      display: grid;
-      grid-template-columns:
-        minmax(260px, 1fr)
-        200px
-        99px;
-      gap: 14px;
-      margin-bottom: 0;
-    }
+        --search-input-height: 41px;
 
-    .search-box,
-    .sort-select,
-    .view-switch {
-      min-height: 43px;
-      border: 1px solid rgba(132, 145, 177, 0.18);
-      border-radius: 8px;
-      background: rgba(5, 10, 21, 0.46);
-    }
+        --search-radius: 8px;
 
-    .search-box {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 14px;
-    }
+        --search-border: 1px solid rgba(132, 145, 177, 0.18);
 
-    .search-box svg {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 auto;
-      color: var(--text-muted);
-    }
+        --search-background: rgba(5, 10, 21, 0.46);
 
-    .search-box input {
-      width: 100%;
-      height: 41px;
-      border: 0;
-      outline: none;
-      background: transparent;
-      color: var(--text-strong);
-      font: inherit;
-      font-size: 13.5px;
-    }
+        --search-padding: 0 14px;
 
-    .search-box input::placeholder {
-      color: var(--text-muted);
-    }
+        --search-gap: 10px;
 
-    .sort-select {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
+        --search-color: var(--text-strong);
 
-    .sort-select > span {
-      padding-left: 13px;
-      color: var(--text-secondary);
-      font-size: 12.5px;
-      white-space: nowrap;
-    }
+        --search-font-size: 13.5px;
 
-    .sort-select select {
-      width: 100%;
-      height: 41px;
-      padding: 0 31px 0 6px;
-      border: 0;
-      outline: none;
-      appearance: none;
-      background: transparent;
-      color: var(--text-strong);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-    }
+        --search-icon-color: var(--text-muted);
 
-    .sort-select option {
-      color: #e7e4ec;
-      background: #101728;
-    }
-
-    .select-chevron {
-      position: absolute;
-      right: 10px;
-      width: 15px;
-      height: 15px;
-      pointer-events: none;
-      color: #9099b1;
-    }
-
-    .view-switch {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
-      padding: 4px;
-    }
-
-    .view-button {
-      display: grid;
-      place-items: center;
-      border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: #697388;
-      cursor: pointer;
-    }
-
-    .view-button--active {
-      background: rgba(125, 61, 204, 0.17);
-      color: #c181ff;
-      box-shadow: none;
-    }
-
-    .view-button svg {
-      width: 19px;
-      height: 19px;
-    }
-
-    .search-box svg,
-    .sort-select svg,
-    .view-button svg {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    @media (max-width: 700px) {
-      .toolbar {
-        grid-template-columns: 1fr 1fr;
+        --search-placeholder-color: var(--text-muted);
       }
 
-      .search-box {
-        grid-column: 1 / -1;
-      }
-    }
+      @media (max-width: 480px) {
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
 
-    @media (max-width: 480px) {
-      .toolbar {
-        grid-template-columns: 1fr;
+        .search-box {
+          grid-column: auto;
+        }
       }
-
-      .search-box {
-        grid-column: auto;
-      }
-    }
-  `],
+    `,
+  ],
 })
 export class AuthorDirectoryToolbarComponent {
-    @Input()
-    query = '';
+  protected readonly sortOptions: readonly SortOption<AuthorDirectorySort>[] = [
+    {
+      value: 'featured',
+      label: 'Đề xuất',
+    },
+    {
+      value: 'followers',
+      label: 'Nhiều người theo dõi',
+    },
+    {
+      value: 'reads',
+      label: 'Nhiều lượt đọc',
+    },
+    {
+      value: 'works',
+      label: 'Nhiều tác phẩm',
+    },
+    {
+      value: 'name',
+      label: 'Tên A–Z',
+    },
+  ];
 
-    @Input()
-    sort: AuthorDirectorySort = 'featured';
+  @Input()
+  query = '';
 
-    @Output()
-    readonly queryChange =
-        new EventEmitter<string>();
+  @Input()
+  sort: AuthorDirectorySort = 'featured';
 
-    @Output()
-    readonly sortChange =
-        new EventEmitter<AuthorDirectorySort>();
+  @Output()
+  readonly queryChange = new EventEmitter<string>();
 
-    handleQueryChange(event: Event): void {
-        const input =
-            event.target as HTMLInputElement;
+  @Output()
+  readonly sortChange = new EventEmitter<AuthorDirectorySort>();
 
-        this.queryChange.emit(input.value);
-    }
+  handleQueryChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
-    handleSortChange(event: Event): void {
-        const select =
-            event.target as HTMLSelectElement;
-
-        this.sortChange.emit(
-            select.value as AuthorDirectorySort,
-        );
-    }
+    this.queryChange.emit(input.value);
+  }
 }

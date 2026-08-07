@@ -1,41 +1,45 @@
 <div class="author-studio-shell">
   @if (store.dashboard(); as dashboard) {
-  <div class="sidebar-column" [class.sidebar-column--open]="
-        mobileOpen()
-      ">
-    <app-studio-sidebar [profile]="dashboard.profile" [unreadNotifications]="
-          dashboard.unreadNotifications
-        " (navigated)="closeMobile()"></app-studio-sidebar>
-  </div>
-
-  @if (mobileOpen()) {
-  <button class="mobile-backdrop" type="button" aria-label="Đóng menu" (click)="closeMobile()"></button>
-  }
-
-  <div class="studio-content">
-    <app-studio-topbar [unreadNotifications]="
-          dashboard.unreadNotifications
-        " (menuRequested)="toggleMobile()"></app-studio-topbar>
-
-    <div class="studio-router-content">
-      <router-outlet></router-outlet>
+    <div class="sidebar-column" [class.sidebar-column--open]="mobileOpen()">
+      <app-studio-sidebar
+        [profile]="dashboard.profile"
+        [unreadNotifications]="dashboard.unreadNotifications"
+        (navigated)="closeMobile()"
+      ></app-studio-sidebar>
     </div>
-  </div>
-  } @else {
-  <main class="studio-loading">
-    @if (store.status() === 'error') {
-    <h1>Không thể tải Author Studio</h1>
 
-    <p>{{ store.errorMessage() }}</p>
-
-    <button type="button" (click)="store.load()">
-      Thử lại
-    </button>
-    } @else {
-    <span class="spinner"></span>
-
-    <p>Đang tải Author Studio...</p>
+    @if (mobileOpen()) {
+      <button
+        class="mobile-backdrop"
+        type="button"
+        aria-label="Đóng menu"
+        (click)="closeMobile()"
+      ></button>
     }
-  </main>
+
+    <div class="studio-content">
+      <app-studio-topbar
+        [unreadNotifications]="dashboard.unreadNotifications"
+        (menuRequested)="toggleMobile()"
+      ></app-studio-topbar>
+
+      <div class="studio-router-content">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  } @else {
+    <main class="studio-loading">
+      @if (store.status() === 'error') {
+        <h1>Không thể tải Author Studio</h1>
+
+        <p>{{ store.errorMessage() }}</p>
+
+        <button type="button" (click)="store.load()">Thử lại</button>
+      } @else {
+        <span class="spinner"></span>
+
+        <p>Đang tải Author Studio...</p>
+      }
+    </main>
   }
 </div>

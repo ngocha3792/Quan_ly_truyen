@@ -1,49 +1,35 @@
 import { DecimalPipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 import { GenreTrendingItem } from '../../domain/genre-discovery.models';
 
 @Component({
-  selector:
-    'app-genre-trending-card',
+  selector: 'app-genre-trending-card',
 
   standalone: true,
 
   imports: [RouterLink, DecimalPipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="trending-card">
-      <h2>
-        Thể loại được đọc nhiều tuần này
-      </h2>
+      <h2>Thể loại được đọc nhiều tuần này</h2>
 
       <div class="trending-list">
-        @for (
-          item of items();
-          track item.id
-        ) {
+        @for (item of items(); track item.id) {
           <a
             class="trending-item"
             [routerLink]="['/danh-sach']"
             [queryParams]="{
               genre: item.slug,
-              sort: 'popular'
+              sort: 'popular',
             }"
           >
             <img
-              [src]="
-                item.coverUrl ||
-                '/assets/mock/genres/default.webp'
-              "
+              [src]="item.coverUrl || '/assets/mock/genres/default.webp'"
               [alt]="item.name"
               loading="lazy"
             />
@@ -52,47 +38,25 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
               <strong>{{ item.name }}</strong>
 
               <span class="progress">
-                <span
-                  [attr.data-tone]="
-                    item.tone
-                  "
-                  [style.width.%]="
-                    item.percent
-                  "
-                ></span>
+                <span [attr.data-tone]="item.tone" [style.width.%]="item.percent"></span>
               </span>
             </div>
 
-            <small>
-              {{
-                item.percent
-                  | number: '1.1-1'
-              }}%
-            </small>
+            <small> {{ item.percent | number: '1.1-1' }}% </small>
           </a>
         }
       </div>
 
-      <a
-        class="statistics-link"
-        routerLink="/xep-hang"
-      >
-        Xem chi tiết thống kê
-      </a>
+      <a class="statistics-link" routerLink="/xep-hang"> Xem chi tiết thống kê </a>
     </section>
   `,
 
-    styles: `
+  styles: `
     .trending-card {
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .95),
-          rgba(9, 15, 29, .95)
-        );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.95), rgba(9, 15, 29, 0.95));
     }
 
     h2 {
@@ -109,8 +73,7 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
 
     .trending-item {
       display: grid;
-      grid-template-columns:
-        42px minmax(0, 1fr) auto;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
       color: inherit;
@@ -137,7 +100,7 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
 
     small {
       color: #a9b0be;
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
 
     .progress {
@@ -152,42 +115,19 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
       min-width: 3px;
       display: block;
       border-radius: inherit;
-      background:
-        linear-gradient(
-          90deg,
-          #743bde,
-          #a153eb
-        );
+      background: linear-gradient(90deg, #743bde, #a153eb);
     }
 
-    .progress
-    > span[data-tone='red'] {
-      background:
-        linear-gradient(
-          90deg,
-          #ef4444,
-          #fb7185
-        );
+    .progress > span[data-tone='red'] {
+      background: linear-gradient(90deg, #ef4444, #fb7185);
     }
 
-    .progress
-    > span[data-tone='pink'] {
-      background:
-        linear-gradient(
-          90deg,
-          #db2777,
-          #f472b6
-        );
+    .progress > span[data-tone='pink'] {
+      background: linear-gradient(90deg, #db2777, #f472b6);
     }
 
-    .progress
-    > span[data-tone='yellow'] {
-      background:
-        linear-gradient(
-          90deg,
-          #d97706,
-          #facc15
-        );
+    .progress > span[data-tone='yellow'] {
+      background: linear-gradient(90deg, #d97706, #facc15);
     }
 
     .statistics-link {
@@ -196,21 +136,16 @@ import { GenreTrendingItem } from '../../domain/genre-discovery.models';
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid
-        rgba(127, 68, 205, .37);
+      border: 1px solid rgba(127, 68, 205, 0.37);
       border-radius: 8px;
       color: #ba7af5;
-      font-size: .9rem;
+      font-size: 0.9rem;
       font-weight: 700;
       text-decoration: none;
-      background:
-        rgba(95, 42, 151, .1);
+      background: rgba(95, 42, 151, 0.1);
     }
   `,
 })
 export class GenreTrendingCardComponent {
-    readonly items =
-        input.required<
-            readonly GenreTrendingItem[]
-        >();
+  readonly items = input.required<readonly GenreTrendingItem[]>();
 }

@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -13,31 +9,22 @@ import { GenreSummary } from '../../domain/genre-discovery.models';
 import { GenreIconComponent } from '../genre-icon/genre-icon.component';
 
 @Component({
-    selector:
-        'app-genre-grid-card',
+  selector: 'app-genre-grid-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        CompactNumberPipe,
-        GenreIconComponent,
-    ],
+  imports: [RouterLink, CompactNumberPipe, GenreIconComponent],
 
-    template: `
+  template: `
     <a
       class="genre-card"
       [routerLink]="['/danh-sach']"
       [queryParams]="{
         genre: genre().slug,
-        sort: 'popular'
+        sort: 'popular',
       }"
     >
-      <app-genre-icon
-        [visual]="genre().visual"
-        [tone]="genre().tone"
-        [compact]="true"
-      />
+      <app-genre-icon [visual]="genre().visual" [tone]="genre().tone" [compact]="true" />
 
       <div class="genre-copy">
         <strong>{{ genre().name }}</strong>
@@ -45,32 +32,23 @@ import { GenreIconComponent } from '../genre-icon/genre-icon.component';
         <p>{{ genre().description }}</p>
 
         <span>
-          {{
-            genre().storyCount
-              | compactNumber
-          }}
+          {{ genre().storyCount | compactNumber }}
           truyện
         </span>
       </div>
 
       @if (rank()) {
-        <span class="rank-badge">
-          Top {{ rank() }}
-        </span>
+        <span class="rank-badge"> Top {{ rank() }} </span>
       }
     </a>
   `,
 
-    styleUrl:
-        './genre-grid-card.component.scss',
+  styleUrl: './genre-grid-card.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GenreGridCardComponent {
-    readonly genre =
-        input.required<GenreSummary>();
+  readonly genre = input.required<GenreSummary>();
 
-    readonly rank =
-        input<number | null>(null);
+  readonly rank = input<number | null>(null);
 }

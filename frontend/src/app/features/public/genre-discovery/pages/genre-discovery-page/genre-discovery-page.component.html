@@ -1,78 +1,75 @@
 <main class="genre-page">
-    <div class="page-container">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a routerLink="/">
-                Trang chủ
-            </a>
+  <div class="page-container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a routerLink="/"> Trang chủ </a>
 
-            <span>›</span>
+      <span>›</span>
 
-            <span>Thể loại</span>
-        </nav>
+      <span>Thể loại</span>
+    </nav>
 
-        <header class="page-heading">
-            <div>
-                <h1>
-                    Thể loại
+    <header class="page-heading">
+      <div>
+        <h1>
+          Thể loại
 
-                    <app-icon name="sparkles" [size]="18" />
-                </h1>
+          <app-icon name="sparkles" [size]="18" />
+        </h1>
 
-                <p>
-                    Khám phá thế giới truyện tranh đa dạng
-                    theo mọi sở thích của bạn.
-                </p>
-            </div>
+        <p>Khám phá thế giới truyện tranh đa dạng theo mọi sở thích của bạn.</p>
+      </div>
 
-            <button class="random-button" type="button" [disabled]="store.loading()" (click)="exploreRandom()">
-                <app-icon name="shuffle" [size]="16" />
+      <button
+        class="random-button"
+        type="button"
+        [disabled]="store.loading()"
+        (click)="exploreRandom()"
+      >
+        <app-icon name="shuffle" [size]="16" />
 
-                Khám phá ngẫu nhiên
-            </button>
-        </header>
+        Khám phá ngẫu nhiên
+      </button>
+    </header>
 
-        @if (store.error()) {
-        <section class="error-alert">
-            <div>
-                <strong>
-                    Không thể tải danh sách thể loại
-                </strong>
+    @if (store.error()) {
+      <section class="error-alert">
+        <div>
+          <strong> Không thể tải danh sách thể loại </strong>
 
-                <span>
-                    {{ store.error() }}
-                </span>
-            </div>
-
-            <button type="button" (click)="store.reload()">
-                Thử lại
-            </button>
-        </section>
-        }
-
-        <div class="genre-layout">
-            <section class="genre-main">
-                <app-genre-quick-filter [genres]="store.genres()" [selectedSlug]="
-            store.selectedSlug()
-          " (selectedSlugChange)="
-            selectGenre($event)
-          " />
-
-                <app-featured-genre-rail [genres]="store.featured()" />
-
-                <app-genre-grid [genres]="
-            store.visibleGenres()
-          " [ranking]="store.ranking()" [loading]="store.loading()" [selected]="
-            store.selectedGenre() !== null
-          " />
-            </section>
-
-            <aside class="genre-aside">
-                <app-genre-ranking-card [items]="store.ranking()" />
-
-                <app-genre-trending-card [items]="store.trending()" />
-
-                <app-genre-recommendation-card (requested)="exploreRandom()" />
-            </aside>
+          <span>
+            {{ store.error() }}
+          </span>
         </div>
+
+        <button type="button" (click)="store.reload()">Thử lại</button>
+      </section>
+    }
+
+    <div class="genre-layout">
+      <section class="genre-main">
+        <app-genre-quick-filter
+          [genres]="store.genres()"
+          [selectedSlug]="store.selectedSlug()"
+          (selectedSlugChange)="selectGenre($event)"
+        />
+
+        <app-featured-genre-rail [genres]="store.featured()" />
+
+        <app-genre-grid
+          [genres]="store.visibleGenres()"
+          [ranking]="store.ranking()"
+          [loading]="store.loading()"
+          [selected]="store.selectedGenre() !== null"
+        />
+      </section>
+
+      <aside class="genre-aside">
+        <app-genre-ranking-card [items]="store.ranking()" />
+
+        <app-genre-trending-card [items]="store.trending()" />
+
+        <app-genre-recommendation-card (requested)="exploreRandom()" />
+      </aside>
     </div>
+  </div>
 </main>

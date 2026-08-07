@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -11,49 +7,27 @@ import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe
 import { StoryUpdateItem } from '../../domain/story-updates.models';
 
 @Component({
-    selector: 'app-top-updates-card',
-    standalone: true,
-    imports: [
-        RouterLink,
-        RelativeTimePipe,
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-top-updates-card',
+  standalone: true,
+  imports: [RouterLink, RelativeTimePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <section class="side-card">
       <header>
         <h2>Top cập nhật hôm nay</h2>
 
-        <a
-          routerLink="/xep-hang"
-          [queryParams]="{ metric: 'trending' }"
-        >
-          Xem tất cả
-        </a>
+        <a routerLink="/xep-hang" [queryParams]="{ metric: 'trending' }"> Xem tất cả </a>
       </header>
 
       <div class="ranking-list">
-        @for (
-          story of stories();
-          track story.id;
-          let rank = $index
-        ) {
-          <a
-            class="ranking-item"
-            [routerLink]="['/truyen', story.slug]"
-          >
-            <span
-              class="rank"
-              [class.top]="rank < 3"
-            >
+        @for (story of stories(); track story.id; let rank = $index) {
+          <a class="ranking-item" [routerLink]="['/truyen', story.slug]">
+            <span class="rank" [class.top]="rank < 3">
               {{ rank + 1 }}
             </span>
 
             <div class="img-box">
-              <img
-                [src]="story.coverUrl"
-                [alt]="story.title"
-                loading="lazy"
-              />
+              <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
             </div>
 
             <div class="ranking-info">
@@ -69,17 +43,13 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       </div>
     </section>
   `,
-    styles: `
+  styles: `
     .side-card {
       padding: 1.25rem;
-      border: 1px solid var(--border, rgba(132, 145, 177, .16));
+      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
       border-radius: 12px;
-      background: linear-gradient(
-        145deg,
-        rgba(17, 25, 44, .98),
-        rgba(10, 16, 31, .98)
-      );
-      box-shadow: 0 14px 35px rgba(0, 0, 0, .11);
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.11);
     }
 
     header {
@@ -99,7 +69,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
 
     header a {
       color: #a76cea;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-decoration: none;
     }
 
@@ -114,7 +84,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       align-items: center;
       gap: 10px;
       padding: 8px 0;
-      border-bottom: 1px solid var(--border, rgba(132, 145, 177, .12));
+      border-bottom: 1px solid var(--border, rgba(132, 145, 177, 0.12));
       color: inherit;
       text-decoration: none;
     }
@@ -160,7 +130,7 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
     strong {
       overflow: hidden;
       color: #dad7e0;
-      font-size: .9rem;
+      font-size: 0.9rem;
       font-weight: 600;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -171,17 +141,17 @@ import { StoryUpdateItem } from '../../domain/story-updates.models';
       padding: 2px 6px;
       border-radius: 4px;
       color: #c180fb;
-      font-size: .75rem;
-      background: rgba(111, 54, 187, .2);
+      font-size: 0.75rem;
+      background: rgba(111, 54, 187, 0.2);
     }
 
     time {
       color: #788297;
-      font-size: .8rem;
+      font-size: 0.8rem;
       white-space: nowrap;
     }
   `,
 })
 export class TopUpdatesCardComponent {
-    readonly stories = input.required<readonly StoryUpdateItem[]>();
+  readonly stories = input.required<readonly StoryUpdateItem[]>();
 }

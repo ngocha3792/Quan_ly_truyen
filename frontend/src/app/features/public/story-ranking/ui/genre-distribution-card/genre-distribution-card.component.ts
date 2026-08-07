@@ -1,79 +1,54 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 import { GenreRankingDistribution } from '../../domain/story-ranking.models';
 
 @Component({
-    selector:
-        'app-genre-distribution-card',
+  selector: 'app-genre-distribution-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [RouterLink],
+  imports: [RouterLink],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <section class="distribution-card">
       <header>
         <h2>Thể loại nổi bật</h2>
 
-        <a routerLink="/the-loai">
-          Xem tất cả
-        </a>
+        <a routerLink="/the-loai"> Xem tất cả </a>
       </header>
 
       <div class="genre-list">
-        @for (
-          genre of genres();
-          track genre.slug
-        ) {
+        @for (genre of genres(); track genre.slug) {
           <a
             class="genre-row"
             routerLink="/danh-sach"
             [queryParams]="{
               genre: genre.slug,
-              sort: 'popular'
+              sort: 'popular',
             }"
           >
-            <span
-              class="genre-dot"
-              [attr.data-tone]="
-                genre.tone
-              "
-            ></span>
+            <span class="genre-dot" [attr.data-tone]="genre.tone"></span>
 
             <strong>
               {{ genre.name }}
             </strong>
 
             <span class="progress">
-              <span
-                [attr.data-tone]="
-                  genre.tone
-                "
-                [style.width.%]="
-                  genre.percentage
-                "
-              ></span>
+              <span [attr.data-tone]="genre.tone" [style.width.%]="genre.percentage"></span>
             </span>
 
-            <small>
-              {{ genre.percentage }}%
-            </small>
+            <small> {{ genre.percentage }}% </small>
           </a>
         }
       </div>
     </section>
   `,
 
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -83,12 +58,7 @@ import { GenreRankingDistribution } from '../../domain/story-ranking.models';
       padding: 1.25rem;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(16, 24, 42, .96),
-          rgba(9, 15, 29, .96)
-        );
+      background: linear-gradient(145deg, rgba(16, 24, 42, 0.96), rgba(9, 15, 29, 0.96));
     }
 
     header {
@@ -107,21 +77,20 @@ import { GenreRankingDistribution } from '../../domain/story-ranking.models';
 
     header a {
       color: #a86bea;
-      font-size: .9rem;
+      font-size: 0.9rem;
       text-decoration: none;
     }
 
     .genre-list {
       display: grid;
-      gap: .875rem;
+      gap: 0.875rem;
     }
 
     .genre-row {
       display: grid;
-      grid-template-columns:
-        8px 80px minmax(0, 1fr) 40px;
+      grid-template-columns: 8px 80px minmax(0, 1fr) 40px;
       align-items: center;
-      gap: .75rem;
+      gap: 0.75rem;
       color: inherit;
       text-decoration: none;
     }
@@ -156,7 +125,7 @@ import { GenreRankingDistribution } from '../../domain/story-ranking.models';
 
     small {
       color: #929bad;
-      font-size: .85rem;
+      font-size: 0.85rem;
       text-align: right;
     }
 
@@ -175,30 +144,23 @@ import { GenreRankingDistribution } from '../../domain/story-ranking.models';
       background: #9654e8;
     }
 
-    .progress
-    > span[data-tone='blue'] {
+    .progress > span[data-tone='blue'] {
       background: #608bf5;
     }
 
-    .progress
-    > span[data-tone='pink'] {
+    .progress > span[data-tone='pink'] {
       background: #e65ba0;
     }
 
-    .progress
-    > span[data-tone='orange'] {
+    .progress > span[data-tone='orange'] {
       background: #ef843d;
     }
 
-    .progress
-    > span[data-tone='green'] {
+    .progress > span[data-tone='green'] {
       background: #429de0;
     }
   `,
 })
 export class GenreDistributionCardComponent {
-    readonly genres =
-        input.required<
-            readonly GenreRankingDistribution[]
-        >();
+  readonly genres = input.required<readonly GenreRankingDistribution[]>();
 }

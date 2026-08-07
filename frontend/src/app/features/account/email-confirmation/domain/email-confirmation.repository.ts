@@ -1,13 +1,7 @@
-
 import { Observable } from 'rxjs';
 
-import {
-    EmailConfirmationRequest,
-    EmailConfirmationResult,
-} from './email-confirmation.models';
+import { EmailConfirmationRequest, EmailConfirmationResult } from './email-confirmation.models';
 
 export abstract class EmailConfirmationRepository {
-    abstract confirmEmail(
-        request: EmailConfirmationRequest,
-    ): Observable<EmailConfirmationResult>;
+  abstract confirmEmail(request: EmailConfirmationRequest): Observable<EmailConfirmationResult>;
 }

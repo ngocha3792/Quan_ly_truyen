@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,37 +8,26 @@ import { RelativeTimePipe } from '../../../../../../shared/pipes/relative-time.p
 import { AccountActivityViewModel } from '../../domain/account-activity.models';
 
 @Component({
-    selector:
-        'app-suspicious-activity-card',
+  selector: 'app-suspicious-activity-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-        RelativeTimePipe,
-    ],
+  imports: [RouterLink, IconComponent, RelativeTimePipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     @if (activity()) {
       <aside class="warning-card">
         <header>
-          <h2>
-            Hoạt động bất thường
-          </h2>
+          <h2>Hoạt động bất thường</h2>
 
           <span>{{ count() }}</span>
         </header>
 
         <div class="warning-content">
           <span class="warning-icon">
-            <app-icon
-              name="alert-triangle"
-              [size]="20"
-            />
+            <app-icon name="alert-triangle" [size]="20" />
           </span>
 
           <div>
@@ -51,28 +36,19 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
             </strong>
 
             <p>
-              {{
-                activity()?.ipAddress ||
-                'Không có địa chỉ IP'
-              }}
+              {{ activity()?.ipAddress || 'Không có địa chỉ IP' }}
               •
               {{ activity()?.location }}
             </p>
           </div>
 
           <time>
-            {{
-              activity()?.occurredAt
-                | relativeTime
-            }}
+            {{ activity()?.occurredAt | relativeTime }}
           </time>
         </div>
 
         <a routerLink="/tai-khoan/bao-mat">
-          <app-icon
-            name="shield"
-            [size]="15"
-          />
+          <app-icon name="shield" [size]="15" />
 
           Xem bảo mật
         </a>
@@ -80,18 +56,12 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
     }
   `,
 
-    styles: `
+  styles: `
     .warning-card {
       padding: 18px;
-      border: 1px solid
-        rgba(244, 63, 94, .24);
+      border: 1px solid rgba(244, 63, 94, 0.24);
       border-radius: 13px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(35, 20, 34, .96),
-          rgba(18, 14, 27, .96)
-        );
+      background: linear-gradient(145deg, rgba(35, 20, 34, 0.96), rgba(18, 14, 27, 0.96));
     }
 
     header {
@@ -117,14 +87,12 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
       color: #fb7185;
       font-size: 11px;
       font-weight: 600;
-      background:
-        rgba(190, 24, 93, .2);
+      background: rgba(190, 24, 93, 0.2);
     }
 
     .warning-content {
       display: grid;
-      grid-template-columns:
-        auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
     }
@@ -136,8 +104,7 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
       place-items: center;
       border-radius: 50%;
       color: #fb7185;
-      background:
-        rgba(190, 24, 93, .16);
+      background: rgba(190, 24, 93, 0.16);
     }
 
     .warning-content > div {
@@ -179,20 +146,12 @@ import { AccountActivityViewModel } from '../../domain/account-activity.models';
       font-size: 13px;
       font-weight: 650;
       text-decoration: none;
-      background:
-        linear-gradient(
-          135deg,
-          #743bde,
-          #a153eb
-        );
+      background: linear-gradient(135deg, #743bde, #a153eb);
     }
   `,
 })
 export class SuspiciousActivityCardComponent {
-    readonly activity =
-        input<
-            AccountActivityViewModel | null
-        >(null);
+  readonly activity = input<AccountActivityViewModel | null>(null);
 
-    readonly count = input(0);
+  readonly count = input(0);
 }

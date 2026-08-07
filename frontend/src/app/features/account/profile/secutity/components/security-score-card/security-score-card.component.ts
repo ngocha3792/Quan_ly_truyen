@@ -1,48 +1,25 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    computed,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
 import { SecurityScore } from '../../data/account-security.models';
 
 @Component({
-    selector:
-        'app-security-score-card',
-    standalone: true,
-    imports: [IconComponent],
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
-    template: `
-    <aside
-      class="score-card"
-      [attr.data-level]="
-        score().level
-      "
-    >
+  selector: 'app-security-score-card',
+  standalone: true,
+  imports: [IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <aside class="score-card" [attr.data-level]="score().level">
       <div class="score-title">
         <strong>Mức độ bảo mật</strong>
 
-        <app-icon
-          name="info"
-          [size]="15"
-        />
+        <app-icon name="info" [size]="15" />
       </div>
 
-      <div
-        class="score-ring"
-        [style.background]="
-          ringBackground()
-        "
-      >
+      <div class="score-ring" [style.background]="ringBackground()">
         <div class="score-ring-inner">
-          <strong>
-            {{ score().percent }}%
-          </strong>
+          <strong> {{ score().percent }}% </strong>
 
           <span>
             {{ score().label }}
@@ -55,30 +32,15 @@ import { SecurityScore } from '../../data/account-security.models';
       </p>
 
       <div class="score-progress">
-        <span
-          [style.width.%]="
-            score().percent
-          "
-        ></span>
+        <span [style.width.%]="score().percent"></span>
       </div>
 
       <div class="score-items">
-        @for (
-          item of score().items;
-          track item.id
-        ) {
+        @for (item of score().items; track item.id) {
           <div class="score-item">
-            <span
-              class="item-status"
-              [class.completed]="
-                item.completed
-              "
-            >
+            <span class="item-status" [class.completed]="item.completed">
               @if (item.completed) {
-                <app-icon
-                  name="check"
-                  [size]="12"
-                />
+                <app-icon name="check" [size]="12" />
               }
             </span>
 
@@ -95,33 +57,20 @@ import { SecurityScore } from '../../data/account-security.models';
         }
       </div>
 
-      <button
-        class="suggestion-button"
-        type="button"
-        (click)="suggestionsRequested.emit()"
-      >
-        <app-icon
-          name="shield"
-          [size]="16"
-        />
+      <button class="suggestion-button" type="button" (click)="suggestionsRequested.emit()">
+        <app-icon name="shield" [size]="16" />
 
         Xem gợi ý bảo mật
       </button>
     </aside>
   `,
-    styles: `
+  styles: `
     .score-card {
       padding: 22px 20px;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
-      box-shadow:
-        0 18px 45px rgba(0, 0, 0, .12);
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
     }
 
     .score-title {
@@ -187,12 +136,7 @@ import { SecurityScore } from '../../data/account-security.models';
       height: 100%;
       display: block;
       border-radius: inherit;
-      background:
-        linear-gradient(
-          90deg,
-          #733cdd,
-          #ad58ef
-        );
+      background: linear-gradient(90deg, #733cdd, #ad58ef);
     }
 
     .score-items {
@@ -202,8 +146,7 @@ import { SecurityScore } from '../../data/account-security.models';
 
     .score-item {
       display: grid;
-      grid-template-columns:
-        auto minmax(0, 1fr);
+      grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
       gap: 11px;
     }
@@ -219,10 +162,8 @@ import { SecurityScore } from '../../data/account-security.models';
     }
 
     .item-status.completed {
-      border-color:
-        rgba(34, 197, 94, .18);
-      background:
-        rgba(34, 197, 94, .18);
+      border-color: rgba(34, 197, 94, 0.18);
+      background: rgba(34, 197, 94, 0.18);
     }
 
     .score-item div {
@@ -260,31 +201,26 @@ import { SecurityScore } from '../../data/account-security.models';
 
     .suggestion-button:hover {
       color: #fff;
-      background:
-        rgba(125, 67, 211, .14);
+      background: rgba(125, 67, 211, 0.14);
     }
   `,
 })
 export class SecurityScoreCardComponent {
-    readonly score =
-        input.required<SecurityScore>();
+  readonly score = input.required<SecurityScore>();
 
-    readonly suggestionsRequested =
-        output<void>();
+  readonly suggestionsRequested = output<void>();
 
-    readonly ringBackground =
-        computed(() => {
-            const percent =
-                this.score().percent;
+  readonly ringBackground = computed(() => {
+    const percent = this.score().percent;
 
-            return [
-                'conic-gradient(',
-                '#9552ec 0%,',
-                `#9552ec ${percent}%,`,
-                'rgba(86, 98, 127, .2)',
-                `${percent}%,`,
-                'rgba(86, 98, 127, .2) 100%',
-                ')',
-            ].join(' ');
-        });
+    return [
+      'conic-gradient(',
+      '#9552ec 0%,',
+      `#9552ec ${percent}%,`,
+      'rgba(86, 98, 127, .2)',
+      `${percent}%,`,
+      'rgba(86, 98, 127, .2) 100%',
+      ')',
+    ].join(' ');
+  });
 }

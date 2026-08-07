@@ -14,6 +14,27 @@ export interface RequestPasswordResetInput {
 
 export type RequestPasswordResetStatus = 'queued' | 'ignored';
 
+export interface ValidatePasswordResetTokenInput {
+  tokenHash: string;
+
+  now: Date;
+}
+
+export type ValidatePasswordResetTokenPersistenceResult =
+  | {
+      status: 'valid';
+
+      expiresAt: Date;
+    }
+  | {
+      status: 'expired';
+
+      expiresAt: Date;
+    }
+  | {
+      status: 'invalid';
+    };
+
 export interface ResetPasswordInput {
   tokenHash: string;
   passwordHash: string;
@@ -44,6 +65,10 @@ export interface PasswordResetPersistencePort {
   request(
     input: RequestPasswordResetInput,
   ): Promise<RequestPasswordResetStatus>;
+
+  validate(
+    input: ValidatePasswordResetTokenInput,
+  ): Promise<ValidatePasswordResetTokenPersistenceResult>;
 
   reset(input: ResetPasswordInput): Promise<ResetPasswordPersistenceResult>;
 }

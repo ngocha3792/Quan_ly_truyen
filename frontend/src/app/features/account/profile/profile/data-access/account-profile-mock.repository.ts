@@ -24,7 +24,12 @@ export class AccountProfileMockRepository implements AccountProfileRepository {
       status: 'active',
       emailVerifiedAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      avatar: payload.avatarMediaId ? { id: payload.avatarMediaId, url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' } : null,
+      avatar: payload.avatarMediaId
+        ? {
+            id: payload.avatarMediaId,
+            url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          }
+        : null,
       authorProfile: null,
       permissions: ['read:story'],
       createdAt: new Date().toISOString(),

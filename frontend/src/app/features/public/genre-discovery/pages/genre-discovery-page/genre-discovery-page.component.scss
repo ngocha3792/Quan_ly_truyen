@@ -1,186 +1,179 @@
 :host {
-    display: block;
-    min-width: 0;
+  display: block;
+  min-width: 0;
 }
 
 .genre-page {
-    min-height: calc(100vh - 72px);
-    padding: 1.25rem 0 4rem;
-    background:
-        radial-gradient(circle at 55% 2%,
-            rgba(111, 55, 198, 0.09),
-            transparent 570px),
-        #060b16;
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  background:
+    radial-gradient(circle at 55% 2%, rgba(111, 55, 198, 0.09), transparent 570px), #060b16;
 }
 
 .breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #727c90;
-    font-size: .85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #727c90;
+  font-size: 0.85rem;
 
-    a {
-        color: #a773ef;
-        text-decoration: none;
-    }
+  a {
+    color: #a773ef;
+    text-decoration: none;
+  }
 }
 
 .page-heading {
-    margin: 0 0 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.25rem;
+  margin: 0 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
 }
 
 .page-heading h1 {
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: .35rem;
-    color: #f8f6fb;
-    font-size: clamp(1.65rem, 2.8vw, 2.1rem);
-    font-style: normal;
-    line-height: 1.2;
-    letter-spacing: -.02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f8f6fb;
+  font-size: clamp(1.65rem, 2.8vw, 2.1rem);
+  font-style: normal;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .page-heading h1 app-icon {
-    color: #a868ef;
+  color: #a868ef;
 }
 
 .page-heading p {
-    margin: .45rem 0 0;
-    color: #7f899d;
-    font-size: .85rem;
-    line-height: 1.6;
+  margin: 0.45rem 0 0;
+  color: #7f899d;
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 
 .random-button {
-    min-height: 38px;
-    padding: 0 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    border: 1px solid rgba(130, 72, 205, 0.42);
-    border-radius: 7px;
-    color: #b97bf5;
-    font-size: .75rem;
-    font-weight: 750;
-    cursor: pointer;
-    background:
-        rgba(66, 31, 113, 0.1);
+  min-height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(130, 72, 205, 0.42);
+  border-radius: 7px;
+  color: #b97bf5;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  background: rgba(66, 31, 113, 0.1);
 }
 
 .random-button:hover {
-    color: #fff;
-    background:
-        rgba(102, 48, 171, 0.18);
+  color: #fff;
+  background: rgba(102, 48, 171, 0.18);
 }
 
 .random-button:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .genre-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 1.25rem;
-    align-items: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1.25rem;
+  align-items: start;
 }
 
 .genre-main {
-    min-width: 0;
-    padding: 1.25rem;
-    display: grid;
-    gap: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: linear-gradient(145deg, rgba(16, 22, 39, .9), rgba(10, 15, 28, .92));
-    box-shadow: 0 14px 35px rgba(0,0,0,.15);
+  min-width: 0;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(16, 22, 39, 0.9), rgba(10, 15, 28, 0.92));
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
 }
 
 .genre-aside {
-    min-width: 0;
-    display: grid;
-    gap: 1.25rem;
+  min-width: 0;
+  display: grid;
+  gap: 1.25rem;
 }
 
 .error-alert {
-    margin-bottom: 12px;
-    padding: 11px 13px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    border: 1px solid rgba(251, 113, 133, 0.24);
-    border-radius: 8px;
-    color: #fda4b5;
-    background:
-        rgba(190, 24, 93, 0.08);
+  margin-bottom: 12px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(251, 113, 133, 0.24);
+  border-radius: 8px;
+  color: #fda4b5;
+  background: rgba(190, 24, 93, 0.08);
 }
 
-.error-alert>div {
-    display: grid;
-    gap: 4px;
+.error-alert > div {
+  display: grid;
+  gap: 4px;
 }
 
 .error-alert strong {
-    font-size: .8125rem;
+  font-size: 0.8125rem;
 }
 
 .error-alert span {
-    color: #a77c86;
-    font-size: .6875rem;
+  color: #a77c86;
+  font-size: 0.6875rem;
 }
 
 .error-alert button {
-    min-height: 30px;
-    padding: 0 11px;
-    border: 1px solid rgba(251, 113, 133, 0.3);
-    border-radius: 6px;
-    color: #fda4b5;
-    font-size: .6875rem;
-    cursor: pointer;
-    background: transparent;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  border-radius: 6px;
+  color: #fda4b5;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  background: transparent;
 }
 
 @media (max-width: 1080px) {
-    .genre-layout {
-        grid-template-columns: 1fr;
-    }
+  .genre-layout {
+    grid-template-columns: 1fr;
+  }
 
-    .genre-aside {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
+  .genre-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 810px) {
-    .genre-aside {
-        grid-template-columns: 1fr;
-    }
+  .genre-aside {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
-    .genre-page {
-        padding-top: .75rem;
-    }
+  .genre-page {
+    padding-top: 0.75rem;
+  }
 
-    .page-heading {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-    .random-button {
-        width: 100%;
-        justify-content: center;
-    }
+  .random-button {
+    width: 100%;
+    justify-content: center;
+  }
 
-    .error-alert {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+  .error-alert {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

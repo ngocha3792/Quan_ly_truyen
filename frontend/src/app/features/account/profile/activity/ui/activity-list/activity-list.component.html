@@ -1,78 +1,51 @@
 @if (activities().length === 0) {
-<div class="empty-state">
-    <app-icon name="history" [size]="31" />
-
-    <strong>
-        Không tìm thấy hoạt động
-    </strong>
-
-    <p>
-        Thử thay đổi bộ lọc, thời gian hoặc từ khóa tìm kiếm.
-    </p>
-</div>
+  <app-empty-state
+    class="activity-empty"
+    icon="history"
+    [iconSize]="31"
+    title="Không tìm thấy hoạt động"
+    description="Thử thay đổi bộ lọc, thời gian hoặc từ khóa tìm kiếm."
+  />
 } @else {
-<div class="activity-list">
-    @for (
-    activity of activities();
-    track activity.id
-    ) {
-    <article class="activity-row" [class.suspicious]="
-          activity.suspicious
-        ">
+  <div class="activity-list">
+    @for (activity of activities(); track activity.id) {
+      <article class="activity-row" [class.suspicious]="activity.suspicious">
         <app-activity-event-icon [visual]="activity.visual" [tone]="activity.tone" />
 
         <div class="activity-content">
-            <div class="activity-heading">
-                <strong>
-                    {{ activity.title }}
-                </strong>
-
-                @if (
-                activity.statusLabel
-                ) {
-                <span class="status-badge" [attr.data-status]="
-                  activity.status
-                ">
-                    {{
-                    activity.statusLabel
-                    }}
-                </span>
-                }
-            </div>
-
-            <p>
-                {{ activity.description }}
-            </p>
-        </div>
-
-        <time [attr.datetime]="
-            activity.occurredAt
-          ">
+          <div class="activity-heading">
             <strong>
-                {{
-                activity.occurredAt
-                | date: 'HH:mm'
-                }}
+              {{ activity.title }}
             </strong>
 
-            <span>
-                {{
-                activity.occurredAt
-                | relativeTime
-                }}
-            </span>
-        </time>
-    </article>
-    }
-</div>
+            @if (activity.statusLabel) {
+              <span class="status-badge" [attr.data-status]="activity.status">
+                {{ activity.statusLabel }}
+              </span>
+            }
+          </div>
 
-@if (hasMore()) {
-<div class="load-more">
-    <button type="button" (click)="
-          loadMoreRequested.emit()
-        ">
-        Xem thêm hoạt động
-    </button>
-</div>
-}
+          <p>
+            {{ activity.description }}
+          </p>
+        </div>
+
+        <time [attr.datetime]="activity.occurredAt">
+          <strong>
+            {{ activity.occurredAt | date: 'HH:mm' }}
+          </strong>
+
+          <span>
+            {{ activity.occurredAt | relativeTime }}
+          </span>
+        </time>
+      </article>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button type="button" (click)="loadMoreRequested.emit()">Xem thêm hoạt động</button>
+    </div>
+  }
 }

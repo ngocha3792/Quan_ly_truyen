@@ -1,101 +1,91 @@
 <header class="page-header">
-    <h1>Lịch sử hoạt động</h1>
+  <h1>Lịch sử hoạt động</h1>
 
-    <p>
-        Theo dõi các hoạt động bảo mật và tài khoản gần đây.
-    </p>
+  <p>Theo dõi các hoạt động bảo mật và tài khoản gần đây.</p>
 </header>
 
 @if (store.error()) {
-<div class="error-alert">
+  <div class="error-alert">
     <div>
-        <strong>
-            Không thể tải lịch sử hoạt động
-        </strong>
+      <strong> Không thể tải lịch sử hoạt động </strong>
 
-        <span>{{ store.error() }}</span>
+      <span>{{ store.error() }}</span>
     </div>
 
-    <button type="button" (click)="store.reload()">
-        Thử lại
-    </button>
-</div>
+    <button type="button" (click)="store.reload()">Thử lại</button>
+  </div>
 }
 
 @if (store.loading()) {
-<section class="loading-card">
+  <section class="loading-card">
     <span class="spinner"></span>
 
-    <p>
-        Đang tải lịch sử hoạt động...
-    </p>
-</section>
+    <p>Đang tải lịch sử hoạt động...</p>
+  </section>
 } @else {
-<section class="stats-grid">
-    <app-activity-stat-card label="Tổng hoạt động" [value]="store.summary().total" [description]="
-        'Trong ' +
-        store.periodDays() +
-        ' ngày qua'
-      " icon="activity" tone="purple" />
+  <section class="stats-grid">
+    <app-stat-card
+      label="Tổng hoạt động"
+      [value]="store.summary().total"
+      [description]="'Trong ' + store.periodDays() + ' ngày qua'"
+      icon="activity"
+      tone="purple"
+    />
 
-    <app-activity-stat-card label="Đăng nhập" [value]="
-        store.summary().loginCount
-      " [description]="
-        'Trong ' +
-        store.periodDays() +
-        ' ngày qua'
-      " icon="log-in" tone="blue" />
+    <app-stat-card
+      label="Đăng nhập"
+      [value]="store.summary().loginCount"
+      [description]="'Trong ' + store.periodDays() + ' ngày qua'"
+      icon="log-in"
+      tone="blue"
+    />
 
-    <app-activity-stat-card label="Sự kiện bảo mật" [value]="
-        store.summary()
-          .securityCount
-      " [description]="
-        'Trong ' +
-        store.periodDays() +
-        ' ngày qua'
-      " icon="shield" tone="green" />
+    <app-stat-card
+      label="Sự kiện bảo mật"
+      [value]="store.summary().securityCount"
+      [description]="'Trong ' + store.periodDays() + ' ngày qua'"
+      icon="shield"
+      tone="green"
+    />
 
-    <app-activity-stat-card label="Thiết bị" [value]="
-        store.summary()
-          .activeDeviceCount
-      " description="Đang hoạt động" icon="monitor" tone="orange" />
-</section>
+    <app-stat-card
+      label="Thiết bị"
+      [value]="store.summary().activeDeviceCount"
+      description="Đang hoạt động"
+      icon="monitor"
+      tone="orange"
+    />
+  </section>
 
-<div class="activity-layout">
+  <div class="activity-layout">
     <main class="activity-main">
-        <section class="activity-card">
-            <app-activity-toolbar [query]="store.query()" [category]="store.category()" [periodDays]="
-            store.periodDays()
-          " (queryChange)="
-            store.setQuery($event)
-          " (categoryChange)="
-            changeCategory($event)
-          " (periodDaysChange)="
-            changePeriod($event)
-          " />
+      <section class="activity-card">
+        <app-activity-toolbar
+          [query]="store.query()"
+          [category]="store.category()"
+          [periodDays]="store.periodDays()"
+          (queryChange)="store.setQuery($event)"
+          (categoryChange)="changeCategory($event)"
+          (periodDaysChange)="changePeriod($event)"
+        />
 
-            <app-activity-list [activities]="
-            store.visibleActivities()
-          " [hasMore]="store.hasMore()" (loadMoreRequested)="
-            store.showMore()
-          " />
-        </section>
+        <app-activity-list
+          [activities]="store.visibleActivities()"
+          [hasMore]="store.hasMore()"
+          (loadMoreRequested)="store.showMore()"
+        />
+      </section>
     </main>
 
     <aside class="activity-aside">
-        <app-recent-devices-card [devices]="
-          store.recentDevices()
-        " />
+      <app-recent-devices-card [devices]="store.recentDevices()" />
 
-        <app-suspicious-activity-card [activity]="
-          store.suspiciousActivity()
-        " [count]="
-          store.suspiciousCount()
-        " />
+      <app-suspicious-activity-card
+        [activity]="store.suspiciousActivity()"
+        [count]="store.suspiciousCount()"
+      />
 
-        <app-weekly-summary-card [items]="
-          store.weeklySummary()
-        " />
+      <app-weekly-summary-card [items]="store.weeklySummary()" />
     </aside>
-</div>
+  </div>
 }

@@ -1,14 +1,17 @@
 :host {
-    display: block;
-    min-width: 0;
+  display: block;
+  min-width: 0;
 }
 
 .ranking-page {
-    min-height: calc(100vh - 72px);
-    padding: 1.25rem 0 4rem;
-    background:
-        radial-gradient(circle at 10% 5%,
-            rgba(103, 44, 204, 0.08),
-            transparent 480px),
-        #060b16;
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(103, 44, 204, 0.08), transparent 480px), #060b16;
+}
+
+app-content-layout {
+  --main-gap: 1.85rem;
+  --main-padding: 1.5rem;
+  --layout-gap: 1.75rem;
 }

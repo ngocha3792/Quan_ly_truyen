@@ -1,83 +1,49 @@
 <main class="notifications-page">
-    @if (store.view(); as view) {
+  @if (store.view(); as view) {
     <div class="page-container">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a routerLink="/">
-                Trang chủ
-            </a>
+      <app-breadcrumb [items]="breadcrumbs" />
 
-            <span>›</span>
+      <app-page-heading
+        title="Thông báo"
+        description="Xem tất cả thông báo, cập nhật và hoạt động liên quan đến tài khoản của bạn."
+      />
 
-            <strong>Thông báo</strong>
-        </nav>
+      <app-content-layout class="notifications-layout" asideWidth="340px">
+        <app-notifications-toolbar
+          main
+          [query]="store.query()"
+          [category]="store.category()"
+          [unreadCount]="store.unreadCount()"
+          (queryChange)="store.setQuery($event)"
+          (categoryChange)="changeCategory($event)"
+          (markAllAsRead)="store.markAllAsRead()"
+        />
 
-        <header class="page-heading">
-            <h1>Thông báo</h1>
+        <app-notifications-list
+          main
+          [notifications]="store.notifications()"
+          (readToggle)="store.toggleRead($event)"
+          (savedToggle)="store.toggleSaved($event)"
+        />
 
-            <p>
-                Xem tất cả thông báo, cập nhật và hoạt động liên quan đến tài khoản của bạn.
-            </p>
-        </header>
-
-        <div class="notifications-layout">
-            <section class="notifications-main">
-                <section class="notifications-panel">
-                    <app-notifications-toolbar [query]="store.query()" [category]="store.category()"
-                        [unreadCount]="store.unreadCount()" (queryChange)="
-                store.setQuery($event)
-              " (categoryChange)="
-                changeCategory($event)
-              " (markAllAsRead)="
-                store.markAllAsRead()
-              "></app-notifications-toolbar>
-
-                    <app-notifications-list [notifications]="
-                store.notifications()
-              " (readToggle)="
-                store.toggleRead($event)
-              " (savedToggle)="
-                store.toggleSaved($event)
-              "></app-notifications-list>
-
-                    <nav class="pagination" aria-label="Phân trang thông báo">
-                        <button type="button" aria-label="Trang trước" [disabled]="store.page() === 1"
-                            (click)="store.previousPage()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="m15 18-6-6 6-6"></path>
-                            </svg>
-                        </button>
-
-                        @for (
-                        pageNumber of store.visiblePages();
-                        track pageNumber
-                        ) {
-                        <button type="button" [class.pagination__active]="
-                    store.page() === pageNumber
-                  " (click)="
-                    store.setPage(pageNumber)
-                  ">
-                            {{ pageNumber }}
-                        </button>
-                        }
-
-                        <button type="button" aria-label="Trang tiếp theo" [disabled]="
-                  store.page() ===
-                  store.totalPages()
-                " (click)="store.nextPage()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="m9 18 6-6-6-6"></path>
-                            </svg>
-                        </button>
-                    </nav>
-                </section>
-            </section>
-
-            <app-notifications-sidebar [statistics]="view.statistics" [settings]="store.settings()"
-                [activities]="view.recentActivities" [unreadCount]="store.unreadCount()"
-                [savedCount]="store.savedCount()" (settingToggle)="
-            store.toggleSetting($event)
-          "></app-notifications-sidebar>
+        <div main class="pagination-row">
+          <app-pagination
+            [page]="store.page()"
+            [totalPages]="store.totalPages()"
+            (pageChange)="store.setPage($event)"
+          />
         </div>
+
+        <app-notifications-sidebar
+          aside
+          [statistics]="view.statistics"
+          [settings]="store.settings()"
+          [activities]="view.recentActivities"
+          [unreadCount]="store.unreadCount()"
+          [savedCount]="store.savedCount()"
+          (settingToggle)="store.toggleSetting($event)"
+        />
+      </app-content-layout>
     </div>
-    }
+  }
 </main>

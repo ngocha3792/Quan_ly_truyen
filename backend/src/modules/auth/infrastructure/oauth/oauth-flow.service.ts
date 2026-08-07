@@ -1,5 +1,5 @@
 import { createPublicKey, randomBytes, type JsonWebKey } from 'node:crypto';
-
+import { MfaCredentialStatus, MfaMethod } from '@/generated/prisma/client';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type Redis from 'ioredis';
@@ -32,7 +32,7 @@ import {
 import type { LoginClientContext } from '../../application/commands/login/login.command';
 import { AuthAccountStatus, AuthAuditAction } from '../../domain/enums';
 import {
-  AdminMfaRequiredException,
+  MfaRequiredException,
   OAuthAccountLinkingRequiredException,
   OAuthEmailUnavailableException,
   OAuthFlowInvalidException,
@@ -41,8 +41,7 @@ import {
 } from '../../domain/exceptions';
 import { AccountLoginPolicy } from '../../domain/policies';
 import { AuthAuditWriterService } from '../audit';
-import { RedisAdminMfaChallengeStore } from '../mfa';
-
+import { RedisMfaChallengeStore } from '../mfa';
 interface GoogleJwk extends JsonWebKey {
   kid?: string;
 }
@@ -79,7 +78,7 @@ export class OAuthFlowService {
     configService: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis | null,
     private readonly prisma: PrismaService,
-    private readonly adminMfa: RedisAdminMfaChallengeStore,
+    private readonly mfaChallenges: RedisMfaChallengeStore,
     private readonly auditWriter: AuthAuditWriterService,
     @Inject(LOGIN_PERSISTENCE_PORT)
     private readonly loginPersistence: LoginPersistencePort,
@@ -203,14 +202,24 @@ export class OAuthFlowService {
     });
     const client = mergeClient(flow.client, clientOverride);
 
-    if (account.roles.includes(RoleCode.ADMIN) && this.adminMfa.isEnabled()) {
-      const challenge = await this.adminMfa.create({
+    const adminMfaRequired =
+      account.roles.includes(RoleCode.ADMIN) &&
+      this.mfaChallenges.isAdminMfaRequired();
+
+    const mfaRequired = Boolean(account.mfaEnabled) || adminMfaRequired;
+
+    if (mfaRequired) {
+      const challenge = await this.mfaChallenges.create({
         userId: account.id,
+
         mode: account.mfaEnabled ? 'verify' : 'enroll',
+
         source: normalized,
+
         client,
       });
-      throw new AdminMfaRequiredException(challenge);
+
+      throw new MfaRequiredException(challenge);
     }
 
     return this.createSession(account, client, normalized);
@@ -505,7 +514,27 @@ export class OAuthFlowService {
         status: true,
         deletedAt: true,
         emailVerifiedAt: true,
-        adminMfaCredential: { select: { enabledAt: true } },
+        mfaCredentials: {
+          where: {
+            method: MfaMethod.TOTP,
+
+            status: MfaCredentialStatus.ENABLED,
+
+            disabledAt: null,
+          },
+
+          take: 1,
+
+          select: {
+            id: true,
+          },
+        },
+
+        adminMfaCredential: {
+          select: {
+            id: true,
+          },
+        },
         userRoles: {
           where: { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
           select: { role: { select: { code: true } } },
@@ -526,7 +555,8 @@ export class OAuthFlowService {
       roles: user.userRoles
         .map(({ role }) => role.code)
         .filter((code): code is RoleCode => validRoles.has(code)),
-      mfaEnabled: user.adminMfaCredential !== null,
+      mfaEnabled:
+        user.mfaCredentials.length > 0 || user.adminMfaCredential !== null,
     };
   }
 

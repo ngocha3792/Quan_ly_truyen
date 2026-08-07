@@ -1,19 +1,14 @@
 import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-    OnInit,
-    signal,
-    ViewChild,
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
 } from '@angular/core';
 
 import { DatePipe } from '@angular/common';
-import {
-    FormControl,
-    FormGroup,
-    ReactiveFormsModule,
-    Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
@@ -26,217 +21,163 @@ import { SecurityFeatureShellComponent } from '../../ui/security-feature-shell/s
 import { SecurityPanelComponent } from '../../ui/security-panel/security-panel.component';
 
 @Component({
-    selector: 'app-mfa-settings-page',
+  selector: 'app-mfa-settings-page',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        DatePipe,
-        ReactiveFormsModule,
-        IconComponent,
-        SecurityFeatureShellComponent,
-        SecurityPanelComponent,
-        OtpCodeInputComponent,
-        MfaQrCodeComponent,
-        RecoveryCodesComponent,
-    ],
+  imports: [
+    DatePipe,
+    ReactiveFormsModule,
+    IconComponent,
+    SecurityFeatureShellComponent,
+    SecurityPanelComponent,
+    OtpCodeInputComponent,
+    MfaQrCodeComponent,
+    RecoveryCodesComponent,
+  ],
 
-    templateUrl:
-        './mfa-settings-page.component.html',
+  templateUrl: './mfa-settings-page.component.html',
 
-    styleUrl:
-        './mfa-settings-page.component.scss',
+  styleUrl: './mfa-settings-page.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MfaSettingsPageComponent
-    implements OnInit {
-    protected readonly store =
-        inject(MfaSettingsStore);
+export class MfaSettingsPageComponent implements OnInit {
+  protected readonly store = inject(MfaSettingsStore);
 
-    protected readonly setupCode =
-        signal('');
+  protected readonly setupCode = signal('');
 
-    protected readonly sensitiveCode =
-        signal('');
+  protected readonly sensitiveCode = signal('');
 
-    protected readonly copiedSecret =
-        signal(false);
+  protected readonly copiedSecret = signal(false);
 
-    protected readonly beginForm =
-        new FormGroup({
-            currentPassword:
-                new FormControl('', {
-                    nonNullable: true,
-                    validators: [
-                        Validators.required,
-                    ],
-                }),
-        });
+  protected readonly beginForm = new FormGroup({
+    currentPassword: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
 
-    protected readonly disableForm =
-        new FormGroup({
-            currentPassword:
-                new FormControl('', {
-                    nonNullable: true,
-                    validators: [
-                        Validators.required,
-                    ],
-                }),
-        });
+  protected readonly disableForm = new FormGroup({
+    currentPassword: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
 
-    protected readonly regenerateForm =
-        new FormGroup({
-            currentPassword:
-                new FormControl('', {
-                    nonNullable: true,
-                    validators: [
-                        Validators.required,
-                    ],
-                }),
-        });
+  protected readonly regenerateForm = new FormGroup({
+    currentPassword: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
 
-    @ViewChild('setupOtp')
-    private setupOtp?:
-        OtpCodeInputComponent;
+  @ViewChild('setupOtp')
+  private setupOtp?: OtpCodeInputComponent;
 
-    ngOnInit(): void {
-        this.store.load();
+  ngOnInit(): void {
+    this.store.load();
+  }
+
+  protected beginEnrollment(): void {
+    this.beginForm.markAllAsTouched();
+
+    if (this.beginForm.invalid || this.store.submitting()) {
+      return;
     }
 
-    protected beginEnrollment(): void {
-        this.beginForm.markAllAsTouched();
+    this.store.beginEnrollment(this.beginForm.getRawValue()).subscribe({
+      next: () => {
+        this.beginForm.reset();
+      },
+    });
+  }
 
-        if (
-            this.beginForm.invalid ||
-            this.store.submitting()
-        ) {
-            return;
-        }
+  protected confirmEnrollment(): void {
+    const enrollment = this.store.enrollment();
 
-        this.store
-            .beginEnrollment(
-                this.beginForm.getRawValue(),
-            )
-            .subscribe({
-                next: () => {
-                    this.beginForm.reset();
-                },
-            });
+    if (!enrollment || this.setupCode().length !== 6 || this.store.submitting()) {
+      return;
     }
 
-    protected confirmEnrollment(): void {
-        const enrollment =
-            this.store.enrollment();
+    this.store
+      .confirmEnrollment({
+        enrollmentId: enrollment.enrollmentId,
 
-        if (
-            !enrollment ||
-            this.setupCode().length !== 6 ||
-            this.store.submitting()
-        ) {
-            return;
-        }
+        totpCode: this.setupCode(),
 
-        this.store
-            .confirmEnrollment({
-                enrollmentId:
-                    enrollment.enrollmentId,
+        deviceName: this.getDeviceName(),
+      })
+      .subscribe({
+        error: () => {
+          this.setupOtp?.reset();
+        },
+      });
+  }
 
-                totpCode:
-                    this.setupCode(),
+  protected disableMfa(): void {
+    this.disableForm.markAllAsTouched();
 
-                deviceName:
-                    this.getDeviceName(),
-            })
-            .subscribe({
-                error: () => {
-                    this.setupOtp?.reset();
-                },
-            });
+    if (this.disableForm.invalid || this.sensitiveCode().length !== 6) {
+      return;
     }
 
-    protected disableMfa(): void {
-        this.disableForm.markAllAsTouched();
+    this.store
+      .disable({
+        currentPassword: this.disableForm.controls.currentPassword.value,
 
-        if (
-            this.disableForm.invalid ||
-            this.sensitiveCode().length !== 6
-        ) {
-            return;
-        }
+        totpCode: this.sensitiveCode(),
+      })
+      .subscribe({
+        next: () => {
+          this.disableForm.reset();
+          this.sensitiveCode.set('');
+        },
+      });
+  }
 
-        this.store
-            .disable({
-                currentPassword:
-                    this.disableForm.controls
-                        .currentPassword.value,
+  protected regenerateCodes(): void {
+    this.regenerateForm.markAllAsTouched();
 
-                totpCode:
-                    this.sensitiveCode(),
-            })
-            .subscribe({
-                next: () => {
-                    this.disableForm.reset();
-                    this.sensitiveCode.set('');
-                },
-            });
+    if (this.regenerateForm.invalid || this.sensitiveCode().length !== 6) {
+      return;
     }
 
-    protected regenerateCodes(): void {
-        this.regenerateForm.markAllAsTouched();
+    this.store
+      .regenerateRecoveryCodes({
+        currentPassword: this.regenerateForm.controls.currentPassword.value,
 
-        if (
-            this.regenerateForm.invalid ||
-            this.sensitiveCode().length !== 6
-        ) {
-            return;
-        }
+        totpCode: this.sensitiveCode(),
+      })
+      .subscribe({
+        next: () => {
+          this.regenerateForm.reset();
+          this.sensitiveCode.set('');
+        },
+      });
+  }
 
-        this.store
-            .regenerateRecoveryCodes({
-                currentPassword:
-                    this.regenerateForm.controls
-                        .currentPassword.value,
+  protected async copySecret(): Promise<void> {
+    const secret = this.store.enrollment()?.secret;
 
-                totpCode:
-                    this.sensitiveCode(),
-            })
-            .subscribe({
-                next: () => {
-                    this.regenerateForm.reset();
-                    this.sensitiveCode.set('');
-                },
-            });
+    if (!secret) {
+      return;
     }
 
-    protected async copySecret():
-        Promise<void> {
-        const secret =
-            this.store.enrollment()?.secret;
+    await navigator.clipboard.writeText(secret);
 
-        if (!secret) {
-            return;
-        }
+    this.copiedSecret.set(true);
 
-        await navigator.clipboard.writeText(
-            secret,
-        );
+    window.setTimeout(() => {
+      this.copiedSecret.set(false);
+    }, 1500);
+  }
 
-        this.copiedSecret.set(true);
-
-        window.setTimeout(() => {
-            this.copiedSecret.set(false);
-        }, 1500);
+  private getDeviceName(): string {
+    if (typeof navigator === 'undefined') {
+      return 'TruyenHub Web';
     }
 
-    private getDeviceName(): string {
-        if (
-            typeof navigator === 'undefined'
-        ) {
-            return 'TruyenHub Web';
-        }
-
-        return `TruyenHub Web - ${navigator.platform || 'Browser'}`;
-    }
+    return `TruyenHub Web - ${navigator.platform || 'Browser'}`;
+  }
 }

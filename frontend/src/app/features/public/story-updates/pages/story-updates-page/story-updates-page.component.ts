@@ -1,20 +1,13 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    DestroyRef,
-    inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
-    takeUntilDestroyed,
-} from '@angular/core/rxjs-interop';
-
-import {
-    ActivatedRoute,
-    Router,
-} from '@angular/router';
-
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 
@@ -23,10 +16,7 @@ import { PaginationComponent } from '../../../../../shared/components/pagination
 
 import { StoryUpdatesStore } from '../../data-access/story-updates.store';
 
-import {
-    StoryUpdatesSort,
-    StoryUpdatesTab,
-} from '../../domain/story-updates.models';
+import { StoryUpdatesSort, StoryUpdatesTab } from '../../domain/story-updates.models';
 
 import { FeaturedUpdateCardComponent } from '../../ui/featured-update-card/featured-update-card.component';
 import { PopularUpdateGenresComponent } from '../../ui/popular-update-genres/popular-update-genres.component';
@@ -37,164 +27,126 @@ import { UpdateStatCardComponent } from '../../ui/update-stat-card/update-stat-c
 import { UpdateStoryGridComponent } from '../../ui/update-story-grid/update-story-grid.component';
 
 @Component({
-    selector:
-        'app-story-updates-page',
+  selector: 'app-story-updates-page',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        PaginationComponent,
-        BreadcrumbComponent,
-        ErrorAlertComponent,
-        PageHeadingComponent,
-        ContentLayoutComponent,
+  imports: [
+    PaginationComponent,
+    BreadcrumbComponent,
+    ErrorAlertComponent,
+    PageHeadingComponent,
+    ContentLayoutComponent,
 
-        UpdateStatCardComponent,
-        UpdateFilterBarComponent,
-        FeaturedUpdateCardComponent,
-        UpdateStoryGridComponent,
+    UpdateStatCardComponent,
+    UpdateFilterBarComponent,
+    FeaturedUpdateCardComponent,
+    UpdateStoryGridComponent,
 
-        TopUpdatesCardComponent,
-        UpdateScheduleCardComponent,
-        PopularUpdateGenresComponent,
-    ],
+    TopUpdatesCardComponent,
+    UpdateScheduleCardComponent,
+    PopularUpdateGenresComponent,
+  ],
 
-    templateUrl:
-        './story-updates-page.component.html',
+  templateUrl: './story-updates-page.component.html',
 
-    styleUrl:
-        './story-updates-page.component.scss',
+  styleUrl: './story-updates-page.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StoryUpdatesPageComponent {
-    protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
-        { label: 'Trang chủ', route: '/' },
-        { label: 'Cập nhật mới' },
-    ];
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Cập nhật mới' },
+  ];
 
-    private readonly route =
-        inject(ActivatedRoute);
+  private readonly route = inject(ActivatedRoute);
 
-    private readonly router =
-        inject(Router);
+  private readonly router = inject(Router);
 
-    private readonly destroyRef =
-        inject(DestroyRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-    protected readonly store =
-        inject(StoryUpdatesStore);
+  protected readonly store = inject(StoryUpdatesStore);
 
-    constructor() {
-        this.route.queryParamMap
-            .pipe(
-                takeUntilDestroyed(
-                    this.destroyRef,
-                ),
-            )
-            .subscribe((params) => {
-                this.store.patchQuery({
-                    tab:
-                        parseUpdateTab(
-                            params.get('tab'),
-                        ),
+  constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.store.patchQuery({
+        tab: parseUpdateTab(params.get('tab')),
 
-                    sort:
-                        parseUpdateSort(
-                            params.get('sort'),
-                        ),
+        sort: parseUpdateSort(params.get('sort')),
 
-                    page:
-                        parsePage(
-                            params.get('page'),
-                        ),
-                });
-            });
-    }
+        page: parsePage(params.get('page')),
+      });
+    });
+  }
 
-    protected changeTab(
-        tab: StoryUpdatesTab,
-    ): void {
-        void this.router.navigate([], {
-            relativeTo: this.route,
+  protected changeTab(tab: StoryUpdatesTab): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
 
-            queryParams: {
-                tab,
-                page: 1,
-            },
+      queryParams: {
+        tab,
+        page: 1,
+      },
 
-            queryParamsHandling: 'merge',
-        });
-    }
+      queryParamsHandling: 'merge',
+    });
+  }
 
-    protected changeSort(
-        sort: StoryUpdatesSort,
-    ): void {
-        void this.router.navigate([], {
-            relativeTo: this.route,
+  protected changeSort(sort: StoryUpdatesSort): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
 
-            queryParams: {
-                sort,
-                page: 1,
-            },
+      queryParams: {
+        sort,
+        page: 1,
+      },
 
-            queryParamsHandling: 'merge',
-        });
-    }
+      queryParamsHandling: 'merge',
+    });
+  }
 
-    protected changePage(
-        page: number,
-    ): void {
-        void this.router.navigate([], {
-            relativeTo: this.route,
+  protected changePage(page: number): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
 
-            queryParams: {
-                page,
-            },
+      queryParams: {
+        page,
+      },
 
-            queryParamsHandling: 'merge',
-        });
-    }
+      queryParamsHandling: 'merge',
+    });
+  }
 }
 
-function parseUpdateTab(
-    value: string | null,
-): StoryUpdatesTab {
-    switch (value) {
-        case 'latest':
-        case 'following':
-        case 'hot':
-        case 'completed':
-            return value;
+function parseUpdateTab(value: string | null): StoryUpdatesTab {
+  switch (value) {
+    case 'latest':
+    case 'following':
+    case 'hot':
+    case 'completed':
+      return value;
 
-        case 'all':
-        default:
-            return 'all';
-    }
+    case 'all':
+    default:
+      return 'all';
+  }
 }
 
-function parseUpdateSort(
-    value: string | null,
-): StoryUpdatesSort {
-    switch (value) {
-        case 'views':
-        case 'title':
-            return value;
+function parseUpdateSort(value: string | null): StoryUpdatesSort {
+  switch (value) {
+    case 'views':
+    case 'title':
+      return value;
 
-        case 'latest':
-        default:
-            return 'latest';
-    }
+    case 'latest':
+    default:
+      return 'latest';
+  }
 }
 
-function parsePage(
-    value: string | null,
-): number {
-    const page = Number(value);
+function parsePage(value: string | null): number {
+  const page = Number(value);
 
-    return Number.isInteger(page) &&
-        page > 0
-        ? page
-        : 1;
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }

@@ -40,4 +40,3 @@ export class LibraryStore {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
   }
 }
-

@@ -1,0 +1,95 @@
+.oauth-page {
+  min-height: calc(100dvh - 140px);
+  display: grid;
+  place-items: center;
+  padding: 3rem 1rem;
+}
+
+.oauth-card {
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  padding: 2.2rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(12, 17, 32, 0.92);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.brand {
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  margin: 1rem 0 0.6rem;
+  color: var(--text-strong);
+  font-size: 1.5rem;
+}
+
+p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.loader {
+  width: 42px;
+  height: 42px;
+
+  border: 3px solid rgba(255, 255, 255, 0.12);
+
+  border-top-color: var(--primary-soft);
+
+  border-radius: 50%;
+
+  animation: spin 0.75s linear infinite;
+}
+
+.error-mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(239, 68, 68, 0.3);
+
+  border-radius: 50%;
+
+  color: #ffb4bf;
+
+  background: rgba(239, 68, 68, 0.1);
+
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.primary-button {
+  min-height: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 1.4rem;
+
+  padding: 0 1.2rem;
+
+  border-radius: 10px;
+
+  color: white;
+
+  background: linear-gradient(135deg, #a150f2, #6a43df);
+
+  font-size: 0.85rem;
+  font-weight: 750;
+
+  text-decoration: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

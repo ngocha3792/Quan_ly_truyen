@@ -11,5 +11,7 @@ export * from './reset-password';
 export * from './revoke-session';
 export * from './change-password';
 export * from './request-email-change';
-
 export * from './confirm-email-change';
+export * from './delete-account';
+export * from './recovery-email';
+export * from './security-questions';

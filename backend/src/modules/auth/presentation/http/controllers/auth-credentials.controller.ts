@@ -28,6 +28,8 @@ import {
   ResendEmailVerificationCommandHandler,
   ResetPasswordCommand,
   ResetPasswordCommandHandler,
+  ValidatePasswordResetTokenQuery,
+  ValidatePasswordResetTokenQueryHandler,
   VerifyEmailCommand,
   VerifyEmailCommandHandler,
 } from '../../../application';
@@ -40,6 +42,7 @@ import {
   RequestEmailChangeRequest,
   ResendEmailVerificationRequest,
   ResetPasswordRequest,
+  ValidatePasswordResetTokenRequest,
   VerifyEmailRequest,
 } from '../requests';
 
@@ -51,6 +54,7 @@ import type {
   RequestEmailChangeResponse,
   ResendEmailVerificationResponse,
   ResetPasswordResponse,
+  ValidatePasswordResetTokenResponse,
   VerifyEmailResponse,
 } from '../responses';
 
@@ -69,6 +73,7 @@ export class AuthCredentialsController {
 
     private readonly resetPasswordCommandHandler: ResetPasswordCommandHandler,
 
+    private readonly validatePasswordResetTokenQueryHandler: ValidatePasswordResetTokenQueryHandler,
     private readonly changePasswordCommandHandler: ChangePasswordCommandHandler,
 
     private readonly requestEmailChangeCommandHandler: RequestEmailChangeCommandHandler,
@@ -156,6 +161,35 @@ export class AuthCredentialsController {
     return this.forgotPasswordCommandHandler.execute(
       new ForgotPasswordCommand(request.email),
     );
+  }
+
+  @Post('reset-password/validate')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  async validatePasswordResetToken(
+    @Body()
+    request: ValidatePasswordResetTokenRequest,
+
+    @Res({
+      passthrough: true,
+    })
+    response: Response,
+  ): Promise<ValidatePasswordResetTokenResponse> {
+    /*
+     * Response chứa thông tin về reset token,
+     * không cho browser/proxy cache.
+     */
+    this.authCookies.setNoStoreHeaders(response);
+
+    const result = await this.validatePasswordResetTokenQueryHandler.execute(
+      new ValidatePasswordResetTokenQuery(request.token),
+    );
+
+    return {
+      valid: result.valid,
+
+      expiresAt: result.expiresAt.toISOString(),
+    };
   }
 
   @Post('reset-password')

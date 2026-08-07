@@ -1,28 +1,14 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
-    selector:
-        'app-rank-movement',
+  selector: 'app-rank-movement',
 
-    standalone: true,
+  standalone: true,
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
-    <span
-      class="movement"
-      [attr.data-direction]="
-        direction()
-      "
-      [attr.aria-label]="
-        ariaLabel()
-      "
-    >
+  template: `
+    <span class="movement" [attr.data-direction]="direction()" [attr.aria-label]="ariaLabel()">
       @if (delta() > 0) {
         ↑ {{ delta() }}
       } @else if (delta() < 0) {
@@ -33,14 +19,14 @@ import {
     </span>
   `,
 
-    styles: `
+  styles: `
     .movement {
       min-width: 24px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       color: #697388;
-      font-size: .75rem;
+      font-size: 0.75rem;
       font-weight: 750;
     }
 
@@ -54,37 +40,33 @@ import {
   `,
 })
 export class RankMovementComponent {
-    readonly delta = input(0);
+  readonly delta = input(0);
 
-    protected direction():
-        'up' | 'down' | 'same' {
-        if (this.delta() > 0) {
-            return 'up';
-        }
-
-        if (this.delta() < 0) {
-            return 'down';
-        }
-
-        return 'same';
+  protected direction(): 'up' | 'down' | 'same' {
+    if (this.delta() > 0) {
+      return 'up';
     }
 
-    protected absoluteDelta():
-        number {
-        return Math.abs(
-            this.delta(),
-        );
+    if (this.delta() < 0) {
+      return 'down';
     }
 
-    protected ariaLabel(): string {
-        if (this.delta() > 0) {
-            return `Tăng ${this.delta()} bậc`;
-        }
+    return 'same';
+  }
 
-        if (this.delta() < 0) {
-            return `Giảm ${this.absoluteDelta()} bậc`;
-        }
+  protected absoluteDelta(): number {
+    return Math.abs(this.delta());
+  }
 
-        return 'Không thay đổi';
+  protected ariaLabel(): string {
+    if (this.delta() > 0) {
+      return `Tăng ${this.delta()} bậc`;
     }
+
+    if (this.delta() < 0) {
+      return `Giảm ${this.absoluteDelta()} bậc`;
+    }
+
+    return 'Không thay đổi';
+  }
 }

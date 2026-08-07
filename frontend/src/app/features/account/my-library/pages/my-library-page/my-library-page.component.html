@@ -1,56 +1,50 @@
 <main class="my-library-page">
-    @if (store.view(); as view) {
+  @if (store.view(); as view) {
     <div class="page-container">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a routerLink="/">
-                Trang chủ
-            </a>
+      <app-breadcrumb [items]="breadcrumbs" />
 
-            <span>›</span>
+      <app-page-heading
+        title="Thư viện của tôi"
+        description="Quản lý các truyện bạn đang theo dõi, đã lưu và đang đọc."
+      />
 
-            <strong>Thư viện của tôi</strong>
-        </nav>
+      <app-content-layout class="library-layout" asideWidth="340px">
+        <app-library-toolbar
+          main
+          [query]="store.query()"
+          [filter]="store.filter()"
+          [sort]="store.sort()"
+          [viewMode]="store.viewMode()"
+          (queryChange)="store.setQuery($event)"
+          (filterChange)="changeFilter($event)"
+          (sortChange)="changeSort($event)"
+          (viewModeChange)="changeViewMode($event)"
+        />
 
-        <header class="page-heading">
-            <h1>Thư viện của tôi</h1>
+        <div main class="result-heading">
+          Có
 
-            <p>
-                Quản lý các truyện bạn đang theo dõi, đã lưu và đang đọc.
-            </p>
-        </header>
+          <strong>
+            {{ store.resultCount() }}
+          </strong>
 
-        <div class="library-layout">
-            <section class="library-main">
-                <section class="library-panel">
-                    <app-library-toolbar [query]="store.query()" [filter]="store.filter()" [sort]="store.sort()"
-                        [viewMode]="store.viewMode()" (queryChange)="
-                store.setQuery($event)
-              " (filterChange)="
-                changeFilter($event)
-              " (sortChange)="
-                changeSort($event)
-              " (viewModeChange)="
-                changeViewMode($event)
-              "></app-library-toolbar>
-
-                    <div class="result-heading">
-                        Có
-                        <strong>
-                            {{ store.resultCount() }}
-                        </strong>
-                        truyện trong thư viện
-                    </div>
-
-                    <app-library-story-list [stories]="store.filteredStories()" [viewMode]="store.viewMode()"
-                        (favoriteToggle)="
-                store.toggleFavorite($event)
-              "></app-library-story-list>
-                </section>
-            </section>
-
-            <app-library-sidebar [statistics]="store.statistics()" [quickItems]="view.quickItems"
-                [goal]="view.goal"></app-library-sidebar>
+          truyện trong thư viện
         </div>
+
+        <app-library-story-list
+          main
+          [stories]="store.filteredStories()"
+          [viewMode]="store.viewMode()"
+          (favoriteToggle)="store.toggleFavorite($event)"
+        />
+
+        <app-library-sidebar
+          aside
+          [statistics]="store.statistics()"
+          [quickItems]="view.quickItems"
+          [goal]="view.goal"
+        />
+      </app-content-layout>
     </div>
-    }
+  }
 </main>

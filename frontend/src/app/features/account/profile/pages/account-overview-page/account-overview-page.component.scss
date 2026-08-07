@@ -1,132 +1,124 @@
 :host {
-    display: block;
+  display: block;
 }
 
 .page-header {
-    margin:
-        3px 0 20px;
+  margin: 3px 0 20px;
 
-    h1 {
-        margin: 0;
-        color: #f8fafc;
-        font-size: clamp(24px,
-                2.4vw,
-                30px);
-        font-weight: 700;
-        line-height: 1.25;
-    }
+  h1 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(24px, 2.4vw, 30px);
+    font-weight: 700;
+    line-height: 1.25;
+  }
 
-    p {
-        margin: 8px 0 0;
-        color: #94a3b8;
-        font-size: 14.5px;
-    }
+  p {
+    margin: 8px 0 0;
+    color: #94a3b8;
+    font-size: 14.5px;
+  }
 }
 
 .error-alert {
-    margin-bottom: 16px;
-    padding: 13px 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    border: 1px solid rgba(251, 113, 133, 0.25);
-    border-radius: 9px;
-    background:
-        rgba(190, 24, 93, 0.08);
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  border-radius: 9px;
+  background: rgba(190, 24, 93, 0.08);
 
-    div {
-        display: grid;
-        gap: 4px;
-    }
+  div {
+    display: grid;
+    gap: 4px;
+  }
 
-    strong {
-        color: #fb9aae;
-        font-size: 14px;
-    }
+  strong {
+    color: #fb9aae;
+    font-size: 14px;
+  }
 
-    span {
-        color: #fca5b5;
-        font-size: 12px;
-    }
+  span {
+    color: #fca5b5;
+    font-size: 12px;
+  }
 
-    button {
-        min-height: 33px;
-        padding-inline: 13px;
-        border: 1px solid rgba(251, 113, 133, 0.3);
-        border-radius: 6px;
-        color: #fca5b5;
-        cursor: pointer;
-        background: transparent;
-    }
+  button {
+    min-height: 33px;
+    padding-inline: 13px;
+    border: 1px solid rgba(251, 113, 133, 0.3);
+    border-radius: 6px;
+    color: #fca5b5;
+    cursor: pointer;
+    background: transparent;
+  }
 }
 
 .quick-actions {
-    margin-top: 28px;
+  margin-top: 28px;
 
-    h2 {
-        margin: 0 0 17px;
-        color: #f8fafc;
-        font-size: 22px;
-        font-weight: 700;
-    }
+  h2 {
+    margin: 0 0 17px;
+    color: #f8fafc;
+    font-size: 22px;
+    font-weight: 700;
+  }
 }
 
 .action-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-    gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
 }
 
 .loading-card {
-    min-height: 320px;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 17px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background:
-        rgba(13, 20, 36, 0.82);
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 17px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(13, 20, 36, 0.82);
 
-    p {
-        margin: 0;
-        color: #94a3b8;
-        font-size: 14px;
-    }
+  p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 14px;
+  }
 }
 
 .spinner {
-    width: 35px;
-    height: 35px;
-    border: 3px solid rgba(167, 139, 250, 0.2);
-    border-top-color: #a78bfa;
-    border-radius: 50%;
-    animation:
-        account-spin 750ms linear infinite;
+  width: 35px;
+  height: 35px;
+  border: 3px solid rgba(167, 139, 250, 0.2);
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: account-spin 750ms linear infinite;
 }
 
 @keyframes account-spin {
-    to {
-        transform: rotate(360deg);
-    }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 1250px) {
-    .action-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
+  .action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
-    .action-grid {
-        grid-template-columns: 1fr;
-    }
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
 
-    .error-alert {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+  .error-alert {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

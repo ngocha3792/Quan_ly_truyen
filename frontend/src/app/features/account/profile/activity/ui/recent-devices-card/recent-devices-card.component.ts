@@ -1,8 +1,4 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -12,44 +8,28 @@ import { RelativeTimePipe } from '../../../../../../shared/pipes/relative-time.p
 import { RecentDeviceViewModel } from '../../domain/account-activity.models';
 
 @Component({
-    selector:
-        'app-recent-devices-card',
+  selector: 'app-recent-devices-card',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-        RelativeTimePipe,
-    ],
+  imports: [RouterLink, IconComponent, RelativeTimePipe],
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
-    template: `
+  template: `
     <aside class="devices-card">
       <header>
         <h2>Thiết bị gần đây</h2>
 
-        <a routerLink="/tai-khoan/thiet-bi">
-          Xem tất cả
-        </a>
+        <a routerLink="/tai-khoan/thiet-bi"> Xem tất cả </a>
       </header>
 
       <div class="device-list">
-        @for (
-          device of devices();
-          track device.id
-        ) {
+        @for (device of devices(); track device.id) {
           <article class="device">
             <span class="device-icon">
               <app-icon
-                [name]="
-                  device.operatingSystem ===
-                    'iPhone'
-                    ? 'smartphone'
-                    : 'monitor'
-                "
+                [name]="device.operatingSystem === 'iPhone' ? 'smartphone' : 'monitor'"
                 [size]="18"
               />
             </span>
@@ -69,38 +49,26 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
             </div>
 
             @if (device.current) {
-              <span class="current-badge">
-                Hiện tại
-              </span>
+              <span class="current-badge"> Hiện tại </span>
             } @else {
               <time>
-                {{
-                  device.lastUsedAt
-                    | relativeTime
-                }}
+                {{ device.lastUsedAt | relativeTime }}
               </time>
             }
           </article>
         } @empty {
-          <p class="empty">
-            Chưa có dữ liệu thiết bị.
-          </p>
+          <p class="empty">Chưa có dữ liệu thiết bị.</p>
         }
       </div>
     </aside>
   `,
 
-    styles: `
+  styles: `
     .devices-card {
       padding: 18px;
       border: 1px solid var(--border);
       border-radius: 13px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
     }
 
     header {
@@ -132,12 +100,10 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
     .device {
       min-height: 59px;
       display: grid;
-      grid-template-columns:
-        auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
-      border-bottom:
-        1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     .device:last-child {
@@ -151,8 +117,7 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
       place-items: center;
       border-radius: 7px;
       color: #60a5fa;
-      background:
-        rgba(37, 99, 235, .18);
+      background: rgba(37, 99, 235, 0.18);
     }
 
     .device > div {
@@ -191,8 +156,7 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
       color: #4ade80;
       font-size: 11px;
       font-weight: 600;
-      background:
-        rgba(34, 197, 94, .16);
+      background: rgba(34, 197, 94, 0.16);
     }
 
     .empty {
@@ -203,8 +167,5 @@ import { RecentDeviceViewModel } from '../../domain/account-activity.models';
   `,
 })
 export class RecentDevicesCardComponent {
-    readonly devices =
-        input.required<
-            readonly RecentDeviceViewModel[]
-        >();
+  readonly devices = input.required<readonly RecentDeviceViewModel[]>();
 }

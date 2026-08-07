@@ -1,162 +1,142 @@
 .activity-list {
-    min-width: 0;
+  min-width: 0;
 }
 
 .activity-row {
-    min-height: 70px;
-    padding: 12px 16px;
-    display: grid;
-    grid-template-columns:
-        auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 13px;
-    border-bottom:
-        1px solid var(--border);
-    transition:
-        background 160ms ease;
+  min-height: 70px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  border-bottom: 1px solid var(--border);
+  transition: background 160ms ease;
 }
 
 .activity-row:last-child {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 
 .activity-row:hover {
-    background:
-        rgba(255, 255, 255, 0.018);
+  background: rgba(255, 255, 255, 0.018);
 }
 
 .activity-row.suspicious {
-    border:
-        1px solid rgba(244, 63, 94, 0.18);
-    background:
-        linear-gradient(90deg,
-            rgba(190, 24, 93, 0.1),
-            rgba(190, 24, 93, 0.025));
+  border: 1px solid rgba(244, 63, 94, 0.18);
+  background: linear-gradient(90deg, rgba(190, 24, 93, 0.1), rgba(190, 24, 93, 0.025));
 }
 
 .activity-content {
-    min-width: 0;
-    display: grid;
-    gap: 6px;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .activity-heading {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 9px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
 }
 
 .activity-heading strong {
-    color: #f8fafc;
-    font-size: 14px;
-    font-weight: 600;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .activity-row.suspicious .activity-heading strong {
-    color: #fb8da0;
+  color: #fb8da0;
 }
 
 .activity-content p {
-    margin: 0;
-    overflow: hidden;
-    color: #94a3b8;
-    font-size: 12.5px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  margin: 0;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-badge {
-    padding: 4px 8px;
-    border-radius: 5px;
-    color: #4ade80;
-    font-size: 11.5px;
-    font-weight: 650;
-    background:
-        rgba(34, 197, 94, 0.16);
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: #4ade80;
+  font-size: 11.5px;
+  font-weight: 650;
+  background: rgba(34, 197, 94, 0.16);
 }
 
 .status-badge[data-status='warning'] {
-    color: #fb8a9e;
-    background:
-        rgba(190, 24, 93, 0.16);
+  color: #fb8a9e;
+  background: rgba(190, 24, 93, 0.16);
 }
 
 .status-badge[data-status='info'] {
-    color: #60a5fa;
-    background:
-        rgba(37, 99, 235, 0.16);
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.16);
 }
 
 time {
-    min-width: 80px;
-    display: grid;
-    gap: 4px;
-    text-align: right;
+  min-width: 80px;
+  display: grid;
+  gap: 4px;
+  text-align: right;
 }
 
 time strong {
-    color: #f8fafc;
-    font-size: 12.5px;
-    font-weight: 600;
+  color: #f8fafc;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 time span {
-    color: #94a3b8;
-    font-size: 11.5px;
+  color: #94a3b8;
+  font-size: 11.5px;
 }
 
 .load-more {
-    padding: 14px;
-    display: flex;
-    justify-content: center;
-    border-top:
-        1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border);
 }
 
 .load-more button {
-    min-height: 42px;
-    padding: 0 18px;
-    border: 1px solid rgba(135, 77, 218, 0.55);
-    border-radius: 7px;
-    color: #c084fc;
-    font-size: 13px;
-    font-weight: 650;
-    cursor: pointer;
-    background: transparent;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(135, 77, 218, 0.55);
+  border-radius: 7px;
+  color: #c084fc;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  background: transparent;
 }
 
-.empty-state {
-    min-height: 260px;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 9px;
-    color: #c084fc;
-    text-align: center;
-}
+.activity-empty {
+  --empty-min-height: 260px;
 
-.empty-state strong {
-    color: #f8fafc;
-    font-size: 14.5px;
-}
+  --empty-padding: 0;
 
-.empty-state p {
-    max-width: 350px;
-    margin: 0;
-    color: #94a3b8;
-    font-size: 12.5px;
-    line-height: 1.6;
+  --empty-title-size: 14.5px;
+
+  --empty-title-color: #f8fafc;
+
+  --empty-description-color: #94a3b8;
+
+  --empty-description-size: 12.5px;
+
+  --empty-description-max-width: 350px;
 }
 
 @media (max-width: 560px) {
-    .activity-row {
-        grid-template-columns:
-            auto minmax(0, 1fr);
-    }
+  .activity-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 
-    time {
-        grid-column: 2;
-        text-align: left;
-    }
+  time {
+    grid-column: 2;
+    text-align: left;
+  }
 }

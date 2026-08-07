@@ -14,7 +14,17 @@ import { PrismaModule } from '@/infrastructure/database';
 import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
 
 import {
-  ADMIN_MFA_CHALLENGE_PORT,
+  RECOVERY_EMAIL_PERSISTENCE_PORT,
+  GetRecoveryEmailStatusQueryHandler,
+  RequestRecoveryEmailCommandHandler,
+  VerifyRecoveryEmailCommandHandler,
+  ResendRecoveryEmailCommandHandler,
+  RemoveRecoveryEmailCommandHandler,
+  SECURITY_OVERVIEW_READER_PORT,
+  GetSecurityOverviewQueryHandler,
+  ACCOUNT_DELETION_PERSISTENCE_PORT,
+  DeleteAccountCommandHandler,
+  MFA_CHALLENGE_PORT,
   AUTH_AUDIT_READER_PORT,
   GetSecurityEventsQueryHandler,
   CURRENT_USER_READER_PORT,
@@ -39,6 +49,11 @@ import {
   LOGIN_PERSISTENCE_PORT,
   LOGIN_RATE_LIMITER_PORT,
   LoginCommandHandler,
+  SECURITY_QUESTIONS_PERSISTENCE_PORT,
+  GetSecurityQuestionCatalogQueryHandler,
+  GetSecurityQuestionsQueryHandler,
+  UpdateSecurityQuestionsCommandHandler,
+  RemoveSecurityQuestionsCommandHandler,
   LogoutAllCommandHandler,
   LogoutCommandHandler,
   PASSWORD_HASHER_PORT,
@@ -57,8 +72,10 @@ import {
   SECURE_TOKEN_PORT,
   type SecureTokenPort,
   ValidateAccessTokenQueryHandler,
+  ValidatePasswordResetTokenQueryHandler,
 } from './application';
 import {
+  PrismaSecurityOverviewReader,
   CsrfTokenService,
   PrismaCurrentUserReader,
   PrismaSessionManagementPersistence,
@@ -66,6 +83,7 @@ import {
   JwtAuthTokenIssuer,
   JwtRefreshTokenVerifier,
   PrismaEmailVerificationPersistence,
+  PrismaRecoveryEmailPersistence,
   PrismaAccessSessionReader,
   PrismaLoginPersistence,
   PrismaRefreshSessionPersistence,
@@ -73,6 +91,7 @@ import {
   ChangeEmailUrlBuilder,
   AuthAuditWriterService,
   PrismaAuthAuditReader,
+  PrismaSecurityQuestionsPersistence,
   PrismaEmailChangePersistence,
   RedisJwtBlacklist,
   PasswordResetUrlBuilder,
@@ -84,17 +103,22 @@ import {
   RedisLoginRateLimiter,
   PrismaChangePasswordPersistence,
   AccessAuthorizationCacheService,
-  AdminMfaService,
   MfaSecretCipherService,
-  PrismaAdminMfaPersistence,
-  RedisAdminMfaChallengeStore,
+  PrismaAccountDeletionPersistence,
   TotpService,
+  MfaService,
+  PrismaMfaPersistence,
+  RedisMfaChallengeStore,
   OAuthFlowService,
+  OAuthHandoffStore,
 } from './infrastructure';
 import {
-  AdminMfaController,
+  MfaController,
+  MfaSecurityController,
   OAuthController,
+  SecurityQuestionsController,
   AuthAccountController,
+  RecoveryEmailSecurityController,
   AuthCookieService,
   AuthCredentialsController,
   AuthTokenController,
@@ -149,9 +173,11 @@ const idGeneratorProvider = {
     AuthCredentialsController,
 
     AuthTokenController,
-
+    RecoveryEmailSecurityController,
+    SecurityQuestionsController,
     AuthAccountController,
-    AdminMfaController,
+    MfaController,
+    MfaSecurityController,
     OAuthController,
   ],
 
@@ -159,24 +185,48 @@ const idGeneratorProvider = {
     CsrfTokenService,
     AuthCookieService,
 
+    DeleteAccountCommandHandler,
     AccessAuthorizationCacheService,
+    GetSecurityQuestionCatalogQueryHandler,
+
+    GetSecurityQuestionsQueryHandler,
+
+    UpdateSecurityQuestionsCommandHandler,
+
+    RemoveSecurityQuestionsCommandHandler,
+
+    PrismaSecurityQuestionsPersistence,
     AuthAuditWriterService,
-    RedisAdminMfaChallengeStore,
-    PrismaAdminMfaPersistence,
+    RedisMfaChallengeStore,
+    PrismaMfaPersistence,
     MfaSecretCipherService,
     TotpService,
-    AdminMfaService,
+    MfaService,
     OAuthFlowService,
+    OAuthHandoffStore,
+    GetRecoveryEmailStatusQueryHandler,
+
+    RequestRecoveryEmailCommandHandler,
+
+    VerifyRecoveryEmailCommandHandler,
+
+    ResendRecoveryEmailCommandHandler,
+
+    RemoveRecoveryEmailCommandHandler,
+
+    PrismaRecoveryEmailPersistence,
 
     PrismaAuthAuditReader,
 
     GetSecurityEventsQueryHandler,
-
+    ValidatePasswordResetTokenQueryHandler,
+    GetSecurityOverviewQueryHandler,
     RefreshCookieCsrfGuard,
     RevokeSessionCommandHandler,
     GetCurrentUserQueryHandler,
     GetSessionsQueryHandler,
     RegisterCommandHandler,
+    PrismaSecurityOverviewReader,
     LoginCommandHandler,
     LogoutCommandHandler,
     RequestEmailChangeCommandHandler,
@@ -203,6 +253,7 @@ const idGeneratorProvider = {
     PrismaLoginPersistence,
     PrismaRefreshSessionPersistence,
     PrismaAccessSessionReader,
+    PrismaAccountDeletionPersistence,
     PrismaSessionManagementPersistence,
     PrismaCurrentUserReader,
 
@@ -219,13 +270,24 @@ const idGeneratorProvider = {
     JwtRefreshTokenVerifier,
     JwtAccessStrategy,
     {
-      provide: ADMIN_MFA_CHALLENGE_PORT,
-      useExisting: RedisAdminMfaChallengeStore,
+      provide: MFA_CHALLENGE_PORT,
+
+      useExisting: RedisMfaChallengeStore,
+    },
+    {
+      provide: RECOVERY_EMAIL_PERSISTENCE_PORT,
+
+      useExisting: PrismaRecoveryEmailPersistence,
     },
     {
       provide: CHANGE_PASSWORD_PERSISTENCE_PORT,
 
       useExisting: PrismaChangePasswordPersistence,
+    },
+    {
+      provide: ACCOUNT_DELETION_PERSISTENCE_PORT,
+
+      useExisting: PrismaAccountDeletionPersistence,
     },
     {
       provide: EMAIL_VERIFICATION_PERSISTENCE_PORT,
@@ -238,6 +300,11 @@ const idGeneratorProvider = {
       useExisting: PrismaAuthAuditReader,
     },
     {
+      provide: SECURITY_OVERVIEW_READER_PORT,
+
+      useExisting: PrismaSecurityOverviewReader,
+    },
+    {
       provide: EMAIL_CHANGE_PERSISTENCE_PORT,
 
       useExisting: PrismaEmailChangePersistence,
@@ -246,6 +313,11 @@ const idGeneratorProvider = {
       provide: EMAIL_VERIFICATION_COOLDOWN_PORT,
 
       useExisting: RedisEmailVerificationCooldown,
+    },
+    {
+      provide: SECURITY_QUESTIONS_PERSISTENCE_PORT,
+
+      useExisting: PrismaSecurityQuestionsPersistence,
     },
     {
       provide: CURRENT_USER_READER_PORT,

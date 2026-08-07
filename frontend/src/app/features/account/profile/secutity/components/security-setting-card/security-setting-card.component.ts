@@ -1,37 +1,18 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
-import {
-    IconComponent,
-    IconName,
-} from '../../../../../../shared/components/icon/icon.component';
+import { IconComponent, IconName } from '../../../../../../shared/components/icon/icon.component';
 
-export type SecurityCardTone =
-    | 'default'
-    | 'success'
-    | 'danger';
+export type SecurityCardTone = 'default' | 'success' | 'danger';
 
 @Component({
-    selector:
-        'app-security-setting-card',
-    standalone: true,
-    imports: [IconComponent],
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
-    template: `
-    <article
-      class="setting-card"
-      [attr.data-tone]="tone()"
-    >
+  selector: 'app-security-setting-card',
+  standalone: true,
+  imports: [IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <article class="setting-card" [attr.data-tone]="tone()">
       <div class="setting-icon">
-        <app-icon
-          [name]="icon()"
-          [size]="23"
-        />
+        <app-icon [name]="icon()" [size]="23" />
       </div>
 
       <div class="setting-copy">
@@ -47,12 +28,7 @@ export type SecurityCardTone =
       }
 
       @if (badge()) {
-        <span
-          class="setting-badge"
-          [class.enabled]="
-            badgeTone() === 'success'
-          "
-        >
+        <span class="setting-badge" [class.enabled]="badgeTone() === 'success'">
           {{ badge() }}
         </span>
       }
@@ -61,9 +37,7 @@ export type SecurityCardTone =
         <button
           type="button"
           class="setting-action"
-          [class.danger]="
-            tone() === 'danger'
-          "
+          [class.danger]="tone() === 'danger'"
           (click)="action.emit()"
         >
           {{ actionLabel() }}
@@ -75,15 +49,12 @@ export type SecurityCardTone =
           aria-label="Mở chi tiết"
           (click)="action.emit()"
         >
-          <app-icon
-            name="chevron-right"
-            [size]="20"
-          />
+          <app-icon name="chevron-right" [size]="20" />
         </button>
       }
     </article>
   `,
-    styles: `
+  styles: `
     :host {
       display: block;
       min-width: 0;
@@ -93,20 +64,13 @@ export type SecurityCardTone =
       min-height: 94px;
       padding: 18px 20px;
       display: grid;
-      grid-template-columns:
-        auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 17px;
       border: 1px solid var(--border);
       border-radius: 13px;
-      background:
-        linear-gradient(
-          145deg,
-          rgba(17, 25, 44, .98),
-          rgba(10, 16, 31, .98)
-        );
-      box-shadow:
-        0 14px 38px rgba(0, 0, 0, .1);
+      background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.1);
       transition:
         transform 170ms ease,
         border-color 170ms ease;
@@ -114,8 +78,7 @@ export type SecurityCardTone =
 
     .setting-card:hover {
       transform: translateY(-2px);
-      border-color:
-        rgba(148, 93, 232, .3);
+      border-color: rgba(148, 93, 232, 0.3);
     }
 
     .setting-icon {
@@ -125,8 +88,7 @@ export type SecurityCardTone =
       place-items: center;
       border-radius: 10px;
       color: #bf7fff;
-      background:
-        rgba(121, 58, 195, .2);
+      background: rgba(121, 58, 195, 0.2);
     }
 
     .setting-copy {
@@ -162,14 +124,12 @@ export type SecurityCardTone =
       color: #fbbf24;
       font-size: 12px;
       font-weight: 650;
-      background:
-        rgba(245, 158, 11, .16);
+      background: rgba(245, 158, 11, 0.16);
     }
 
     .setting-badge.enabled {
       color: #4ade80;
-      background:
-        rgba(34, 197, 94, .16);
+      background: rgba(34, 197, 94, 0.16);
     }
 
     .setting-action {
@@ -187,19 +147,16 @@ export type SecurityCardTone =
 
     .setting-action:hover {
       color: #fff;
-      background:
-        rgba(122, 64, 210, .14);
+      background: rgba(122, 64, 210, 0.14);
     }
 
     .setting-action.danger {
-      border-color:
-        rgba(244, 63, 94, .75);
+      border-color: rgba(244, 63, 94, 0.75);
       color: #fb7185;
     }
 
     .setting-action.danger:hover {
-      background:
-        rgba(190, 24, 93, .12);
+      background: rgba(190, 24, 93, 0.12);
     }
 
     .chevron-action {
@@ -215,8 +172,7 @@ export type SecurityCardTone =
 
     @media (max-width: 650px) {
       .setting-card {
-        grid-template-columns:
-          auto minmax(0, 1fr);
+        grid-template-columns: auto minmax(0, 1fr);
       }
 
       .setting-action,
@@ -230,31 +186,21 @@ export type SecurityCardTone =
   `,
 })
 export class SecuritySettingCardComponent {
-    readonly title =
-        input.required<string>();
+  readonly title = input.required<string>();
 
-    readonly description =
-        input.required<string>();
+  readonly description = input.required<string>();
 
-    readonly icon =
-        input.required<IconName>();
+  readonly icon = input.required<IconName>();
 
-    readonly actionLabel =
-        input<string | null>(null);
+  readonly actionLabel = input<string | null>(null);
 
-    readonly value =
-        input<string | null>(null);
+  readonly value = input<string | null>(null);
 
-    readonly badge =
-        input<string | null>(null);
+  readonly badge = input<string | null>(null);
 
-    readonly badgeTone =
-        input<'success' | 'warning'>(
-            'warning',
-        );
+  readonly badgeTone = input<'success' | 'warning'>('warning');
 
-    readonly tone =
-        input<SecurityCardTone>('default');
+  readonly tone = input<SecurityCardTone>('default');
 
-    readonly action = output<void>();
+  readonly action = output<void>();
 }
