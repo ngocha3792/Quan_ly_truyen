@@ -1,4 +1,8 @@
 import {
+    HttpErrorResponse,
+} from '@angular/common/http';
+
+import {
     TestBed,
 } from '@angular/core/testing';
 
@@ -255,6 +259,116 @@ describe(
                     sessionHint
                         .markSessionPresent,
                 ).toHaveBeenCalled();
+            },
+        );
+
+        it(
+            'bootstrap chỉ xóa session hint khi backend từ chối phiên',
+            () => {
+                sessionHint
+                    .shouldAttemptRefresh
+                    .mockReturnValue(
+                        true,
+                    );
+
+                refreshService
+                    .refreshAccessToken
+                    .mockReturnValue(
+                        throwError(
+                            () =>
+                                new HttpErrorResponse({
+                                    status:
+                                        401,
+                                }),
+                        ),
+                    );
+
+                store.initialize();
+
+                expect(
+                    store.status(),
+                ).toBe(
+                    'anonymous',
+                );
+
+                expect(
+                    sessionHint
+                        .markSessionAbsent,
+                ).toHaveBeenCalledTimes(
+                    1,
+                );
+            },
+        );
+
+        it(
+            'bootstrap giữ session hint và cho retry khi lỗi tạm thời',
+            () => {
+                const user =
+                    createCurrentUser();
+
+                sessionHint
+                    .shouldAttemptRefresh
+                    .mockReturnValue(
+                        true,
+                    );
+
+                refreshService
+                    .refreshAccessToken
+                    .mockReturnValueOnce(
+                        throwError(
+                            () =>
+                                new HttpErrorResponse({
+                                    status:
+                                        503,
+
+                                    statusText:
+                                        'Service Unavailable',
+                                }),
+                        ),
+                    )
+                    .mockImplementationOnce(
+                        () => {
+                            tokens.set(
+                                'access-token-after-retry',
+                            );
+
+                            return of(
+                                'access-token-after-retry',
+                            );
+                        },
+                    );
+
+                api.me.mockReturnValue(
+                    of(user),
+                );
+
+                store.initialize();
+
+                expect(
+                    store.status(),
+                ).toBe(
+                    'idle',
+                );
+
+                expect(
+                    sessionHint
+                        .markSessionAbsent,
+                ).not.toHaveBeenCalled();
+
+                store.initialize();
+
+                expect(
+                    refreshService
+                        .refreshAccessToken,
+                ).toHaveBeenCalledTimes(
+                    2,
+                );
+
+                expect(
+                    store.status(),
+                ).toBe(
+                    'authenticated',
+                );
             },
         );
 

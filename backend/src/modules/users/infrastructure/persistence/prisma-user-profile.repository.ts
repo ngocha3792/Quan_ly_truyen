@@ -14,13 +14,17 @@ import {
 } from '@/infrastructure/database';
 
 import {
+    type UpdateUserPreferencesPersistenceInput,
+    type UpdateUserPreferencesPersistenceResult,
+    type UpdateUserProfilePersistenceInput,
+    type UpdateUserProfilePersistenceResult,
+    type UserProfilePersistencePort,
+    type UserProfileReaderPort,
+} from '../../application/ports';
+
+import {
     UserPreferencesEntity,
     UserProfileEntity,
-    type UpdateUserPreferencesRepositoryInput,
-    type UpdateUserPreferencesRepositoryResult,
-    type UpdateUserProfileRepositoryInput,
-    type UpdateUserProfileRepositoryResult,
-    type UserProfileRepository,
 } from '../../domain';
 
 const PROFILE_SELECT = {
@@ -77,7 +81,9 @@ type PreferencesRecord =
 
 @Injectable()
 export class PrismaUserProfileRepository
-    implements UserProfileRepository {
+    implements
+    UserProfileReaderPort,
+    UserProfilePersistencePort {
     constructor(
         private readonly prisma:
             PrismaService,
@@ -124,8 +130,8 @@ export class PrismaUserProfileRepository
 
     async updateProfile(
         input:
-            UpdateUserProfileRepositoryInput,
-    ): Promise<UpdateUserProfileRepositoryResult> {
+            UpdateUserProfilePersistenceInput,
+    ): Promise<UpdateUserProfilePersistenceResult> {
         try {
             return await this.prisma.$transaction(
                 async (
@@ -211,6 +217,9 @@ export class PrismaUserProfileRepository
                             },
 
                             data: {
+                                updatedAt:
+                                    input.changedAt,
+
                                 ...(input.displayName !==
                                     undefined
                                     ? {
@@ -285,6 +294,9 @@ export class PrismaUserProfileRepository
 
                             requestId:
                                 input.audit.requestId,
+
+                            createdAt:
+                                input.changedAt,
                         },
                     });
 
@@ -368,8 +380,8 @@ export class PrismaUserProfileRepository
 
     async updatePreferences(
         input:
-            UpdateUserPreferencesRepositoryInput,
-    ): Promise<UpdateUserPreferencesRepositoryResult> {
+            UpdateUserPreferencesPersistenceInput,
+    ): Promise<UpdateUserPreferencesPersistenceResult> {
         try {
             return await this.prisma.$transaction(
                 async (
@@ -446,6 +458,9 @@ export class PrismaUserProfileRepository
                                 userId:
                                     input.userId,
 
+                                updatedAt:
+                                    input.changedAt,
+
                                 emailEnabled:
                                     nextAllowUpdateEmails,
 
@@ -457,6 +472,9 @@ export class PrismaUserProfileRepository
                             },
 
                             update: {
+                                updatedAt:
+                                    input.changedAt,
+
                                 emailEnabled:
                                     nextAllowUpdateEmails,
 
@@ -520,6 +538,9 @@ export class PrismaUserProfileRepository
 
                             requestId:
                                 input.audit.requestId,
+
+                            createdAt:
+                                input.changedAt,
                         },
                     });
 

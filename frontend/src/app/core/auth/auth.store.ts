@@ -1,5 +1,6 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
 import { getApiErrorMessage } from '../http/api-error.util';
 import { AuthApiService } from './auth-api.service';
@@ -60,7 +61,21 @@ export class AuthStore {
       .refreshAccessToken()
       .pipe(
         switchMap(() => this.api.me()),
-        catchError(() => of(null)),
+        catchError((error: unknown) => {
+          if (this.isRejectedSession(error)) {
+            return of(null);
+          }
+
+          /*
+           * Lỗi mạng/5xx không chứng minh refresh session đã hết hạn.
+           * Giữ session hint và cho phép initialize() được gọi lại.
+           */
+          this.bootstrapped = false;
+          this.statusState.set('idle');
+          this.errorState.set(getApiErrorMessage(error));
+
+          return EMPTY;
+        }),
       )
       .subscribe((user: CurrentUser | null) => {
         if (!user) {
@@ -186,6 +201,10 @@ export class AuthStore {
     this.errorState.set(getApiErrorMessage(error));
 
     return throwError(() => error);
+  }
+
+  private isRejectedSession(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
   }
 
   private setAuthenticated(user: CurrentUser): void {

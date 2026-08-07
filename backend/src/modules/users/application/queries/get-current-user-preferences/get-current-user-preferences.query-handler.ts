@@ -12,10 +12,13 @@ import {
 } from '@/common/utils';
 
 import {
-    USER_PROFILE_REPOSITORY,
-    type UserProfileRepository,
     UserProfileUnavailableException,
 } from '../../../domain';
+
+import {
+    USER_PROFILE_READER_PORT,
+    type UserProfileReaderPort,
+} from '../../ports';
 
 import type {
     UserPreferencesResultDto,
@@ -32,9 +35,9 @@ import {
 @Injectable()
 export class GetCurrentUserPreferencesQueryHandler {
     constructor(
-        @Inject(USER_PROFILE_REPOSITORY)
-        private readonly repository:
-            UserProfileRepository,
+        @Inject(USER_PROFILE_READER_PORT)
+        private readonly reader:
+            UserProfileReaderPort,
     ) { }
 
     async execute(
@@ -51,7 +54,7 @@ export class GetCurrentUserPreferencesQueryHandler {
         }
 
         const preferences =
-            await this.repository.findPreferencesByUserId(
+            await this.reader.findPreferencesByUserId(
                 query.userId,
             );
 

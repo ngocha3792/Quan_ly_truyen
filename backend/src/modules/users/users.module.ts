@@ -9,13 +9,11 @@ import {
 import {
     GetCurrentUserPreferencesQueryHandler,
     GetCurrentUserProfileQueryHandler,
+    USER_PROFILE_PERSISTENCE_PORT,
+    USER_PROFILE_READER_PORT,
     UpdateCurrentUserPreferencesCommandHandler,
     UpdateCurrentUserProfileCommandHandler,
 } from './application';
-
-import {
-    USER_PROFILE_REPOSITORY,
-} from './domain';
 
 import {
     PrismaUserProfileRepository,
@@ -47,7 +45,15 @@ import {
 
         {
             provide:
-                USER_PROFILE_REPOSITORY,
+                USER_PROFILE_READER_PORT,
+
+            useExisting:
+                PrismaUserProfileRepository,
+        },
+
+        {
+            provide:
+                USER_PROFILE_PERSISTENCE_PORT,
 
             useExisting:
                 PrismaUserProfileRepository,

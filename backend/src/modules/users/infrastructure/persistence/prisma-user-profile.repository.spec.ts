@@ -1,0 +1,134 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest asymmetric matchers are typed as any. */
+import { PrismaUserProfileRepository } from './prisma-user-profile.repository';
+
+describe('PrismaUserProfileRepository', () => {
+  const userId = '11111111-1111-4111-8111-111111111111';
+
+  const changedAt = new Date('2026-08-08T01:00:00.000Z');
+
+  it('uses the command timestamp for profile and audit writes', async () => {
+    const profile = {
+      id: userId,
+      email: 'reader@example.com',
+      username: 'reader',
+      displayName: 'Reader',
+      bio: null,
+      status: 'ACTIVE',
+      emailVerifiedAt: null,
+      lastLoginAt: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: changedAt,
+      avatarMedia: null,
+    };
+
+    const transaction = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          displayName: 'Old name',
+          bio: null,
+          avatarMediaId: null,
+        }),
+        update: jest.fn().mockResolvedValue(profile),
+      },
+      mediaAsset: {
+        findFirst: jest.fn(),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const prisma = {
+      $transaction: jest.fn(
+        async (operation: (client: typeof transaction) => Promise<unknown>) =>
+          operation(transaction),
+      ),
+    };
+
+    const repository = new PrismaUserProfileRepository(prisma as never);
+
+    await repository.updateProfile({
+      userId,
+      displayName: 'Reader',
+      changedAt,
+      audit: {
+        requestId: 'request-1',
+      },
+    });
+
+    expect(transaction.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          updatedAt: changedAt,
+        }),
+      }),
+    );
+
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          createdAt: changedAt,
+        }),
+      }),
+    );
+  });
+
+  it('uses the command timestamp for preference and audit writes', async () => {
+    const transaction = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: userId,
+        }),
+      },
+      notificationPreference: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue({
+          emailEnabled: false,
+          newChapterEnabled: true,
+          preferences: {
+            showRecentActivity: true,
+          },
+          updatedAt: changedAt,
+        }),
+      },
+      auditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const prisma = {
+      $transaction: jest.fn(
+        async (operation: (client: typeof transaction) => Promise<unknown>) =>
+          operation(transaction),
+      ),
+    };
+
+    const repository = new PrismaUserProfileRepository(prisma as never);
+
+    await repository.updatePreferences({
+      userId,
+      allowUpdateEmails: false,
+      changedAt,
+      audit: {},
+    });
+
+    expect(transaction.notificationPreference.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          updatedAt: changedAt,
+        }),
+        update: expect.objectContaining({
+          updatedAt: changedAt,
+        }),
+      }),
+    );
+
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          createdAt: changedAt,
+        }),
+      }),
+    );
+  });
+});

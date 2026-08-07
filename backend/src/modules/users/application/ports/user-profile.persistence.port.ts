@@ -1,10 +1,10 @@
 import type {
     UserPreferencesEntity,
     UserProfileEntity,
-} from '../entities';
+} from '../../domain';
 
-export const USER_PROFILE_REPOSITORY = Symbol(
-    'USER_PROFILE_REPOSITORY',
+export const USER_PROFILE_PERSISTENCE_PORT = Symbol(
+    'USER_PROFILE_PERSISTENCE_PORT',
 );
 
 export interface UserRequestAuditContext {
@@ -13,21 +13,16 @@ export interface UserRequestAuditContext {
     readonly requestId?: string;
 }
 
-export interface UpdateUserProfileRepositoryInput {
+export interface UpdateUserProfilePersistenceInput {
     readonly userId: string;
-
     readonly displayName?: string;
-
     readonly bio?: string | null;
-
     readonly avatarMediaId?: string | null;
-
     readonly changedAt: Date;
-
     readonly audit: UserRequestAuditContext;
 }
 
-export type UpdateUserProfileRepositoryResult =
+export type UpdateUserProfilePersistenceResult =
     | {
         readonly status: 'updated';
         readonly profile: UserProfileEntity;
@@ -39,21 +34,16 @@ export type UpdateUserProfileRepositoryResult =
         readonly status: 'invalid_avatar';
     };
 
-export interface UpdateUserPreferencesRepositoryInput {
+export interface UpdateUserPreferencesPersistenceInput {
     readonly userId: string;
-
     readonly newChapterNotifications?: boolean;
-
     readonly showRecentActivity?: boolean;
-
     readonly allowUpdateEmails?: boolean;
-
     readonly changedAt: Date;
-
     readonly audit: UserRequestAuditContext;
 }
 
-export type UpdateUserPreferencesRepositoryResult =
+export type UpdateUserPreferencesPersistenceResult =
     | {
         readonly status: 'updated';
         readonly preferences: UserPreferencesEntity;
@@ -62,20 +52,12 @@ export type UpdateUserPreferencesRepositoryResult =
         readonly status: 'user_not_found';
     };
 
-export interface UserProfileRepository {
-    findProfileByUserId(
-        userId: string,
-    ): Promise<UserProfileEntity | null>;
-
+export interface UserProfilePersistencePort {
     updateProfile(
-        input: UpdateUserProfileRepositoryInput,
-    ): Promise<UpdateUserProfileRepositoryResult>;
-
-    findPreferencesByUserId(
-        userId: string,
-    ): Promise<UserPreferencesEntity | null>;
+        input: UpdateUserProfilePersistenceInput,
+    ): Promise<UpdateUserProfilePersistenceResult>;
 
     updatePreferences(
-        input: UpdateUserPreferencesRepositoryInput,
-    ): Promise<UpdateUserPreferencesRepositoryResult>;
+        input: UpdateUserPreferencesPersistenceInput,
+    ): Promise<UpdateUserPreferencesPersistenceResult>;
 }

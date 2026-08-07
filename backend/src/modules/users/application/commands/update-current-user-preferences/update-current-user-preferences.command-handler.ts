@@ -13,10 +13,15 @@ import {
 } from '@/common/utils';
 
 import {
-    USER_PROFILE_REPOSITORY,
-    type UserProfileRepository,
     UserProfileUnavailableException,
 } from '../../../domain';
+
+import {
+    USER_PROFILE_PERSISTENCE_PORT,
+    USER_PROFILE_READER_PORT,
+    type UserProfilePersistencePort,
+    type UserProfileReaderPort,
+} from '../../ports';
 
 import type {
     UserPreferencesResultDto,
@@ -33,9 +38,13 @@ import {
 @Injectable()
 export class UpdateCurrentUserPreferencesCommandHandler {
     constructor(
-        @Inject(USER_PROFILE_REPOSITORY)
-        private readonly repository:
-            UserProfileRepository,
+        @Inject(USER_PROFILE_READER_PORT)
+        private readonly reader:
+            UserProfileReaderPort,
+
+        @Inject(USER_PROFILE_PERSISTENCE_PORT)
+        private readonly persistence:
+            UserProfilePersistencePort,
     ) { }
 
     async execute(
@@ -70,7 +79,7 @@ export class UpdateCurrentUserPreferencesCommandHandler {
             undefined
         ) {
             const current =
-                await this.repository.findPreferencesByUserId(
+                await this.reader.findPreferencesByUserId(
                     userId,
                 );
 
@@ -84,7 +93,7 @@ export class UpdateCurrentUserPreferencesCommandHandler {
         }
 
         const result =
-            await this.repository.updatePreferences({
+            await this.persistence.updatePreferences({
                 userId,
 
                 newChapterNotifications:

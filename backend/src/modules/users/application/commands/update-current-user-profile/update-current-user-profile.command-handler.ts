@@ -13,12 +13,17 @@ import {
 
 import {
     InvalidUserAvatarException,
-    USER_PROFILE_REPOSITORY,
-    type UserProfileRepository,
     UserBioValueObject,
     UserDisplayNameValueObject,
     UserProfileUnavailableException,
 } from '../../../domain';
+
+import {
+    USER_PROFILE_PERSISTENCE_PORT,
+    USER_PROFILE_READER_PORT,
+    type UserProfilePersistencePort,
+    type UserProfileReaderPort,
+} from '../../ports';
 
 import type {
     UserProfileResultDto,
@@ -35,9 +40,13 @@ import {
 @Injectable()
 export class UpdateCurrentUserProfileCommandHandler {
     constructor(
-        @Inject(USER_PROFILE_REPOSITORY)
-        private readonly repository:
-            UserProfileRepository,
+        @Inject(USER_PROFILE_READER_PORT)
+        private readonly reader:
+            UserProfileReaderPort,
+
+        @Inject(USER_PROFILE_PERSISTENCE_PORT)
+        private readonly persistence:
+            UserProfilePersistencePort,
     ) { }
 
     async execute(
@@ -79,7 +88,7 @@ export class UpdateCurrentUserProfileCommandHandler {
             command.avatarMediaId === undefined
         ) {
             const current =
-                await this.repository.findProfileByUserId(
+                await this.reader.findProfileByUserId(
                     userId,
                 );
 
@@ -93,7 +102,7 @@ export class UpdateCurrentUserProfileCommandHandler {
         }
 
         const result =
-            await this.repository.updateProfile({
+            await this.persistence.updateProfile({
                 userId,
 
                 displayName,
