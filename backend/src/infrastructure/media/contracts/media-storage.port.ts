@@ -3,6 +3,7 @@ import type {
   MediaStorageResourceType,
   StoredMedia,
 } from './stored-media.interface';
+import { MediaPurpose } from '@/generated/prisma/client';
 
 export const MEDIA_STORAGE = Symbol.for(
   'quan-ly-truyen.infrastructure.media-storage',
@@ -10,8 +11,7 @@ export const MEDIA_STORAGE = Symbol.for(
 
 export interface CreateSignedUploadInput {
   mediaAssetId: string;
-  purpose:
-    'AVATAR' | 'AUTHOR_BANNER' | 'STORY_COVER' | 'CHAPTER_IMAGE' | 'ATTACHMENT';
+  purpose: MediaPurpose;
   publicId: string;
   assetFolder: string;
   resourceType: MediaStorageResourceType;
@@ -43,7 +43,8 @@ export interface BuildMediaUrlInput {
     | 'authorBanner'
     | 'storyCover'
     | 'storyThumbnail'
-    | 'chapterImage';
+    | 'chapterImage'
+    | 'genreCover';
 }
 
 export interface MediaStoragePort {

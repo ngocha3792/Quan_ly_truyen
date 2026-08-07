@@ -7,6 +7,7 @@ import { emailVerificationTemplate } from './email-verification.template';
 import { moderationResultTemplate } from './moderation-result.template';
 import { newChapterTemplate } from './new-chapter.template';
 import { passwordResetTemplate } from './password-reset.template';
+import { recoveryEmailCodeTemplate } from './recovery-email-code.template';
 
 @Injectable()
 export class MailTemplateRegistry {
@@ -15,6 +16,7 @@ export class MailTemplateRegistry {
       emailVerificationTemplate,
       passwordResetTemplate,
       changeEmailTemplate,
+      recoveryEmailCodeTemplate,
       moderationResultTemplate,
       newChapterTemplate,
     ].map((template) => [template.id, template]),
@@ -22,7 +24,11 @@ export class MailTemplateRegistry {
 
   get(templateId: string): MailTemplate {
     const template = this.templates.get(templateId);
-    if (!template) throw new MailTemplateNotFoundException(templateId);
+
+    if (!template) {
+      throw new MailTemplateNotFoundException(templateId);
+    }
+
     return template;
   }
 }

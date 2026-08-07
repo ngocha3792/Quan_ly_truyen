@@ -14,6 +14,9 @@ const prisma = new PrismaClient({ adapter });
 const permissions = [
     ["user.profile.read", "Read own profile", "user.profile", "read"],
     ["user.profile.update", "Update own profile", "user.profile", "update"],
+    ["user.security.read", "Read own security settings", "user.security", "read"],
+    ["user.security.manage", "Manage own security settings", "user.security", "manage"],
+    ["user.account.delete", "Request deletion of own account", "user.account", "delete"],
     ["user.manage", "Manage users", "user", "manage"],
     ["role.manage", "Manage roles and permissions", "role", "manage"],
 
@@ -43,6 +46,7 @@ const permissions = [
     ["library.manage.own", "Manage own reading library", "library", "manage.own"],
     ["follow.manage.own", "Manage own story follows", "follow", "manage.own"],
     ["reading-history.manage.own", "Manage own reading history", "reading-history", "manage.own"],
+    ["reading-bookmark.manage.own", "Manage own reading bookmarks", "reading-bookmark", "manage.own"],
 
     ["report.create", "Create reports", "report", "create"],
     ["report.review", "Review and resolve reports", "report", "review"],
@@ -62,6 +66,9 @@ type PermissionCode = (typeof permissions)[number][0];
 const userPermissionCodes: PermissionCode[] = [
     "user.profile.read",
     "user.profile.update",
+    "user.security.read",
+    "user.security.manage",
+    "user.account.delete",
     "story.read",
     "comment.create",
     "comment.update.own",
@@ -71,10 +78,22 @@ const userPermissionCodes: PermissionCode[] = [
     "library.manage.own",
     "follow.manage.own",
     "reading-history.manage.own",
+    "reading-bookmark.manage.own",
     "report.create",
     "media.upload",
     "notification.manage.own",
 ];
+
+const securityQuestions = [
+    ["childhood_nickname", "Biệt danh thời thơ ấu của bạn là gì?", 10],
+    ["first_school", "Tên trường tiểu học đầu tiên của bạn là gì?", 20],
+    ["first_teacher", "Tên giáo viên đầu tiên của bạn là gì?", 30],
+    ["childhood_friend", "Tên người bạn thân thời thơ ấu của bạn là gì?", 40],
+    ["favorite_childhood_book", "Cuốn sách yêu thích thời thơ ấu của bạn là gì?", 50],
+    ["first_pet", "Tên thú cưng đầu tiên của bạn là gì?", 60],
+    ["parents_meeting_city", "Cha mẹ bạn gặp nhau lần đầu ở thành phố nào?", 70],
+    ["memorable_place", "Địa điểm đáng nhớ nhất trong tuổi thơ của bạn là gì?", 80],
+] as const;
 
 const authorPermissionCodes: PermissionCode[] = [
     ...userPermissionCodes,
@@ -145,8 +164,16 @@ async function main() {
         });
     }
 
+    for (const [code, label, sortOrder] of securityQuestions) {
+        await prisma.securityQuestion.upsert({
+            where: { code },
+            update: { label, locale: "vi", sortOrder, isActive: true },
+            create: { code, label, locale: "vi", sortOrder, isActive: true },
+        });
+    }
+
     console.log(
-        `Seeded ${permissions.length} permissions and ${Object.keys(roles).length} system roles`,
+        `Seeded ${permissions.length} permissions, ${Object.keys(roles).length} system roles and ${securityQuestions.length} security questions`,
     );
 }
 

@@ -56,6 +56,10 @@ export class MediaOwnershipAuthorizationService {
           select: { id: true },
         }),
       );
+    } else if (purpose === MediaPurpose.GENRE_COVER) {
+      allowed =
+        principal.permissions.includes(PermissionCode.CATEGORY_MANAGE) ||
+        principal.permissions.includes(PermissionCode.MEDIA_MANAGE_ANY);
     } else if (purpose === MediaPurpose.ATTACHMENT) {
       const [story, chapter] = await Promise.all([
         this.prisma.story.findFirst({

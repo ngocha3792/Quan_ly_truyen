@@ -20,9 +20,9 @@ import {
 } from 'rxjs';
 
 import { AuthStore } from '../../core/auth/auth.store';
-import { AuthDialogComponent } from '../../features/auth/ui/auth-dialog/auth-dialog.component';
-import { HomeRepository } from '../../features/home/data-access/home.repository';
-import { Story } from '../../features/home/domain/home.models';
+import { AuthDialogComponent } from '../../features/account/auth/ui/auth-dialog/auth-dialog.component';
+import { HomeRepository } from '../../features/public/home/data-access/home.repository';
+import { Story } from '../../features/public/home/domain/home.models';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 

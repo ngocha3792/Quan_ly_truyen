@@ -106,6 +106,21 @@ export class CloudinaryUrlService {
             fetch_format: 'auto',
           },
         ];
+
+      case 'genreCover':
+      default:
+        return [
+          {
+            width: 600,
+            height: 400,
+            crop: 'fill',
+            gravity: 'auto',
+          },
+          {
+            quality: 'auto',
+            fetch_format: 'auto',
+          },
+        ];
     }
   }
 }

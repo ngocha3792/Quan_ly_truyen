@@ -70,6 +70,20 @@ export const MEDIA_UPLOAD_POLICIES: Record<MediaPurpose, MediaUploadPolicy> = {
     maxBytes: 15 * MB,
   },
 
+  [MediaPurpose.GENRE_COVER]: {
+    resourceType: 'image',
+    uploadPresetConfigKey: 'cloudinary.uploadPresets.storyCover',
+    folderSegment: 'genres/covers',
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeFormatPairs: {
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/webp': ['webp'],
+    },
+    maxBytes: 5 * MB,
+  },
+
   [MediaPurpose.ATTACHMENT]: {
     resourceType: 'raw',
     uploadPresetConfigKey: 'cloudinary.uploadPresets.attachment',

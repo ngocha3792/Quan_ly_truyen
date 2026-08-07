@@ -23,6 +23,16 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'reports_open_user_unique',
 
+  'recovery_emails_email_lower_unique',
+
+  'recovery_emails_pending_email_lower_unique',
+
+  'account_deletion_requests_one_active_per_user',
+
+  'author_profiles_slug_lower_unique',
+
+  'chapters_id_story_id_unique',
+
   /*
    * Đã thêm trong phase retention.
    */
@@ -47,6 +57,42 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'reports_exactly_one_matching_target',
 
   'moderation_actions_exactly_one_target',
+
+  'mfa_credentials_state_consistent',
+
+  'recovery_emails_verified_state_consistent',
+
+  'recovery_emails_pending_state_consistent',
+
+  'recovery_emails_attempts_non_negative',
+
+  'recovery_emails_current_and_pending_different',
+
+  'user_security_questions_position_valid',
+
+  'trusted_devices_expiration_valid',
+
+  'account_deletion_requests_schedule_valid',
+
+  'account_deletion_requests_state_consistent',
+
+  'author_profiles_counters_non_negative',
+
+  'author_profiles_featured_rank_positive',
+
+  'stories_release_year_valid',
+
+  'stories_featured_order_positive',
+
+  'categories_featured_order_positive',
+
+  'categories_visual_key_supported',
+
+  'categories_tone_supported',
+
+  'chapters_counters_non_negative',
+
+  'reading_bookmarks_position_non_negative',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

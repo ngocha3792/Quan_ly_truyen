@@ -1,0 +1,81 @@
+<main class="author-application-page">
+    <div class="page-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a routerLink="/">
+                Trang chủ
+            </a>
+
+            <span>›</span>
+
+            <a routerLink="/tac-gia">
+                Tác giả
+            </a>
+
+            <span>›</span>
+
+            <strong>
+                Trở thành tác giả
+            </strong>
+        </nav>
+
+        <header class="page-heading">
+            <div class="heading-title">
+                <h1>
+                    Gửi yêu cầu trở thành tác giả
+                </h1>
+
+                <span aria-hidden="true">
+                    ✦
+                </span>
+            </div>
+
+            <p>
+                Điền đầy đủ thông tin bên dưới để ứng tuyển và bắt đầu hành trình chia sẻ câu chuyện của bạn trên
+                TruyenHub.
+            </p>
+        </header>
+
+        @if (store.config(); as config) {
+        <div class="application-layout">
+            <app-author-application-form [config]="config" [submitting]="
+            store.status() === 'submitting'
+          " [draftSaving]="
+            store.status() ===
+            'saving-draft'
+          " [successMessage]="store.message()" [errorMessage]="store.errorMessage()" (saveDraft)="
+            handleSaveDraft($event)
+          " (submitApplication)="
+            handleSubmit($event)
+          "></app-author-application-form>
+
+            <app-author-application-sidebar [requirements]="
+            config.requirements
+          " [reviewSteps]="
+            config.reviewSteps
+          " [benefits]="config.benefits"></app-author-application-sidebar>
+        </div>
+        } @else {
+        <section class="loading-card">
+            @if (
+            store.status() === 'error'
+            ) {
+            <div class="loading-error">
+                <h2>Không thể tải biểu mẫu</h2>
+
+                <p>
+                    {{ store.errorMessage() }}
+                </p>
+
+                <button type="button" (click)="store.load()">
+                    Thử lại
+                </button>
+            </div>
+            } @else {
+            <span class="page-spinner"></span>
+
+            <p>Đang tải biểu mẫu đăng ký...</p>
+            }
+        </section>
+        }
+    </div>
+</main>

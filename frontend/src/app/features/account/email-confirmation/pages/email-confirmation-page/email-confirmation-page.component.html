@@ -1,0 +1,6 @@
+<main class="email-confirmation-page">
+    <div class="page-container">
+        <app-email-confirmation-card [status]="store.status()" [result]="store.result()"
+            [errorMessage]="store.errorMessage()" (retry)="store.retry()"></app-email-confirmation-card>
+    </div>
+</main>

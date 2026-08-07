@@ -2,16 +2,60 @@ import { Routes } from '@angular/router';
 
 import { authenticatedGuard } from './core/auth/authenticated.guard';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
-import { provideGenreDiscovery } from './features/genre-discovery/data-access/genre-discovery.providers';
-import { provideHome } from './features/home/data-access/home.providers';
-import { provideStoryCatalog } from './features/story-catalog/data-access/story-catalog.providers';
-import { provideStoryDetail } from './features/story/data-access/story.providers';
-import { provideStoryRanking } from './features/story-ranking/data-access/story-ranking.providers';
-import { provideStoryUpdates } from './features/story-updates/data-access/story-updates.providers';
-import { HomePageComponent } from './features/home/pages/home-page/home-page.component';
+import { provideGenreDiscovery } from './features/public/genre-discovery/data-access/genre-discovery.providers';
+import { provideHome } from './features/public/home/data-access/home.providers';
+import { provideStoryCatalog } from './features/public/story-catalog/data-access/story-catalog.providers';
+import { provideStoryDetail } from './features/public/story/data-access/story.providers';
+import { provideStoryRanking } from './features/public/story-ranking/data-access/story-ranking.providers';
+import { provideStoryUpdates } from './features/public/story-updates/data-access/story-updates.providers';
+import { HomePageComponent } from './features/public/home/pages/home-page/home-page.component';
 import { environment } from '../environments/environment';
 
+
 export const routes: Routes = [
+
+  {
+    path: 'author-studio',
+
+    loadComponent: () =>
+      import(
+        './features/author-portal/author-studio/pages/author-studio-shell/author-studio-shell.component'
+      ).then(
+        (module) =>
+          module.AuthorStudioShellComponent,
+      ),
+
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'tong-quan',
+      },
+
+      {
+        path: 'tong-quan',
+        title:
+          'Tổng quan tác giả - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component'
+          ).then(
+            (module) =>
+              module.AuthorDashboardPageComponent,
+          ),
+      },
+
+      /*
+       * Các module chưa làm sẽ tạm quay về tổng quan.
+       * Khi làm từng trang thì thay từng route riêng.
+       */
+      {
+        path: '**',
+        redirectTo: 'tong-quan',
+      },
+    ],
+  },
   {
     path: '',
     component: AppShellComponent,
@@ -36,7 +80,7 @@ export const routes: Routes = [
           useMock: true,
         }),
         loadComponent: () =>
-          import('./features/story/pages/story-detail/story-detail.component').then(
+          import('./features/public/story/pages/story-detail/story-detail.component').then(
             (module) => module.StoryDetailComponent,
           ),
       },
@@ -45,7 +89,7 @@ export const routes: Routes = [
         title: 'Đọc chương - TruyenHub',
         loadComponent: () =>
           import(
-            './features/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component'
+            './features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component'
           ).then(
             (module) => module.ChapterReaderPageComponent,
           ),
@@ -60,7 +104,7 @@ export const routes: Routes = [
         }),
 
         loadComponent: () =>
-          import('./features/story-catalog/pages/story-catalog-page/story-catalog-page.component').then(
+          import('./features/public/story-catalog/pages/story-catalog-page/story-catalog-page.component').then(
             (module) => module.StoryCatalogPageComponent,
           ),
       },
@@ -79,7 +123,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/genre-discovery/pages/genre-discovery-page/genre-discovery-page.component'
+            './features/public/genre-discovery/pages/genre-discovery-page/genre-discovery-page.component'
           ).then(
             (module) =>
               module
@@ -101,7 +145,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/story-ranking/pages/story-ranking-page/story-ranking-page.component'
+            './features/public/story-ranking/pages/story-ranking-page/story-ranking-page.component'
           ).then(
             (module) =>
               module
@@ -116,7 +160,7 @@ export const routes: Routes = [
         }),
         loadComponent: () =>
           import(
-            './features/story-updates/pages/story-updates-page/story-updates-page.component'
+            './features/public/story-updates/pages/story-updates-page/story-updates-page.component'
           ).then(
             (module) =>
               module
@@ -131,14 +175,14 @@ export const routes: Routes = [
         path: 'tai-khoan',
         canActivate: [authenticatedGuard],
         loadChildren: () =>
-          import('./features/account/account.routes').then((module) => module.ACCOUNT_ROUTES),
+          import('./features/account/profile/account.routes').then((module) => module.ACCOUNT_ROUTES),
       },
 
       {
         path: 'verify-email',
         title: 'Xác minh email - TruyenHub',
         loadComponent: () =>
-          import('./features/auth/pages/verify-email-page/verify-email-page.component').then(
+          import('./features/account/auth/pages/verify-email-page/verify-email-page.component').then(
             (module) => module.VerifyEmailPageComponent,
           ),
       },
@@ -147,17 +191,29 @@ export const routes: Routes = [
         title: 'Khôi phục mật khẩu - TruyenHub',
         data: { authActionMode: 'forgot-password' },
         loadComponent: () =>
-          import('./features/static/pages/coming-soon/coming-soon.component').then(
-            (module) => module.ComingSoonComponent,
+          import('./features/account/forgot-password/pages/forgot-password-page/forgot-password-page.component').then(
+            (module) => module.ForgotPasswordPageComponent,
           ),
       },
       {
         path: 'reset-password',
-        title: 'Đặt lại mật khẩu - TruyenHub',
-        data: { authActionMode: 'reset-password' },
+        title: 'Tạo mật khẩu mới - TruyenHub',
+
         loadComponent: () =>
-          import('./features/static/pages/coming-soon/coming-soon.component').then(
-            (module) => module.ComingSoonComponent,
+          import(
+            './features/account/reset-password/pages/reset-password-page/reset-password-page.component'
+          ).then(
+            (module) =>
+              module.ResetPasswordPageComponent,
+          ),
+      },
+      {
+        path: 'change-email/confirm',
+        title: 'Xác nhận email mới - TruyenHub',
+        data: { authActionMode: 'confirm-email-change' },
+        loadComponent: () =>
+          import('./features/account/email-confirmation/pages/email-confirmation-page/email-confirmation-page.component').then(
+            (module) => module.EmailConfirmationPageComponent,
           ),
       },
       {
@@ -165,7 +221,7 @@ export const routes: Routes = [
         title: 'Giới thiệu - TruyenHub',
         loadComponent: () =>
           import(
-            './features/static/pages/about-page/about-page.component'
+            './features/public/static/pages/about-page/about-page.component'
           ).then((module) => module.AboutPageComponent),
       },
       {
@@ -173,7 +229,7 @@ export const routes: Routes = [
         title: 'Điều khoản sử dụng - TruyenHub',
         loadComponent: () =>
           import(
-            './features/static/pages/terms-page/terms-page.component'
+            './features/public/static/pages/terms-page/terms-page.component'
           ).then((module) => module.TermsPageComponent),
       },
       {
@@ -181,7 +237,7 @@ export const routes: Routes = [
         title: 'Chính sách quyền riêng tư - TruyenHub',
         loadComponent: () =>
           import(
-            './features/static/pages/privacy-page/privacy-page.component'
+            './features/public/static/pages/privacy-page/privacy-page.component'
           ).then((module) => module.PrivacyPageComponent),
       },
       {
@@ -189,17 +245,8 @@ export const routes: Routes = [
         title: 'Liên hệ hỗ trợ - TruyenHub',
         loadComponent: () =>
           import(
-            './features/static/pages/support-page/support-page.component'
+            './features/public/static/pages/support-page/support-page.component'
           ).then((module) => module.SupportPageComponent),
-      },
-      {
-        path: 'change-email/confirm',
-        title: 'Xác nhận email mới - TruyenHub',
-        data: { authActionMode: 'confirm-email-change' },
-        loadComponent: () =>
-          import('./features/static/pages/coming-soon/coming-soon.component').then(
-            (module) => module.ComingSoonComponent,
-          ),
       },
       {
         path: 'tac-gia',
@@ -207,7 +254,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/author-directory/pages/author-directory-page/author-directory-page.component'
+            './features/public/author-directory/pages/author-directory-page/author-directory-page.component'
           ).then(
             (module) =>
               module.AuthorDirectoryPageComponent,
@@ -219,7 +266,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/author-detail/pages/author-detail-page/author-detail-page.component'
+            './features/public/author-detail/pages/author-detail-page/author-detail-page.component'
           ).then(
             (module) => module.AuthorDetailPageComponent,
           ),
@@ -230,7 +277,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/reading-history/pages/reading-history-page/reading-history-page.component'
+            './features/account/reading-history/pages/reading-history-page/reading-history-page.component'
           ).then(
             (module) =>
               module.ReadingHistoryPageComponent,
@@ -242,7 +289,7 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/notifications/pages/notifications-page/notifications-page.component'
+            './features/account/notifications/pages/notifications-page/notifications-page.component'
           ).then(
             (module) =>
               module.NotificationsPageComponent,
@@ -254,13 +301,45 @@ export const routes: Routes = [
 
         loadComponent: () =>
           import(
-            './features/my-library/pages/my-library-page/my-library-page.component'
+            './features/account/my-library/pages/my-library-page/my-library-page.component'
           ).then(
             (module) =>
               module.MyLibraryPageComponent,
           ),
       },
-      ...staticRoutes(),
+      {
+        path: 'dang-ky-tac-gia',
+        title: 'Trở thành tác giả - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/account/author-application/pages/author-application-page/author-application-page.component'
+          ).then(
+            (module) =>
+              module.AuthorApplicationPageComponent,
+          ),
+      },
+      {
+        path: 'tac-gia-studio',
+        title: 'Studio Tác giả - TruyenHub',
+
+        loadComponent: () =>
+          import(
+            './features/author-portal/author-studio/pages/author-studio-shell/author-studio-shell.component'
+          ).then(
+            (module) =>
+              module.AuthorStudioShellComponent,
+          ),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import(
+                './features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component'
+              ).then((m) => m.AuthorDashboardPageComponent),
+          },
+        ],
+      },
     ],
   },
   {
@@ -268,22 +347,3 @@ export const routes: Routes = [
     redirectTo: '',
   },
 ];
-
-function staticRoutes(): Routes {
-  const definitions = [
-    ['thu-vien', 'Thư viện', 'Quản lý thư viện truyện riêng.'],
-  ] as const;
-
-  return definitions.map(([path, title, description]) => ({
-    path,
-    title: `${title} - TruyenHub`,
-    data: {
-      title,
-      description,
-    },
-    loadComponent: () =>
-      import('./features/static/pages/coming-soon/coming-soon.component').then(
-        (module) => module.ComingSoonComponent,
-      ),
-  }));
-}

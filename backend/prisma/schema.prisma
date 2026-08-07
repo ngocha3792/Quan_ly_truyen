@@ -44,11 +44,34 @@ enum OAuthProvider {
   @@map("oauth_provider")
 }
 
+enum MfaMethod {
+  TOTP @map("totp")
+
+  @@map("mfa_method")
+}
+
+enum MfaCredentialStatus {
+  PENDING  @map("pending")
+  ENABLED  @map("enabled")
+  DISABLED @map("disabled")
+
+  @@map("mfa_credential_status")
+}
+
+enum AccountDeletionStatus {
+  REQUESTED @map("requested")
+  CANCELED  @map("canceled")
+  COMPLETED @map("completed")
+
+  @@map("account_deletion_status")
+}
+
 enum StoryStatus {
   DRAFT          @map("draft")
   PENDING_REVIEW @map("pending_review")
   REJECTED       @map("rejected")
   PUBLISHED      @map("published")
+  HIATUS         @map("hiatus")
   SUSPENDED      @map("suspended")
   COMPLETED      @map("completed")
   ARCHIVED       @map("archived")
@@ -207,6 +230,7 @@ enum MediaPurpose {
   AVATAR        @map("avatar")
   AUTHOR_BANNER @map("author_banner")
   STORY_COVER   @map("story_cover")
+  GENRE_COVER   @map("genre_cover")
   CHAPTER_IMAGE @map("chapter_image")
   ATTACHMENT    @map("attachment")
 
@@ -245,8 +269,9 @@ model User {
   displayName     String        @map("display_name") @db.VarChar(120)
   bio             String?       @db.Text
   status          AccountStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?     @map("email_verified_at") @db.Timestamptz(3)
-  lastLoginAt     DateTime?     @map("last_login_at") @db.Timestamptz(3)
+  emailVerifiedAt  DateTime?     @map("email_verified_at") @db.Timestamptz(3)
+  passwordUpdatedAt DateTime?    @map("password_updated_at") @db.Timestamptz(3)
+  lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz(3)
   avatarMediaId   String?       @map("avatar_media_id") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -256,6 +281,11 @@ model User {
   authorProfile          AuthorProfile?
   oauthAccounts          OAuthAccount[]
   adminMfaCredential     AdminMfaCredential?
+  mfaCredentials         MfaCredential[]
+  recoveryEmail          RecoveryEmail?
+  securityQuestions      UserSecurityQuestion[]
+  trustedDevices         TrustedDevice[]
+  accountDeletionRequests AccountDeletionRequest[]
   sessions               Session[]
   tokens                 UserToken[]
   userRoles              UserRole[]              @relation("UserRoles")
@@ -272,6 +302,7 @@ model User {
   storyFollows           StoryFollow[]
   readingProgresses      ReadingProgress[]
   readingSessions        ReadingSession[]
+  readingBookmarks       ReadingBookmark[]
   reportsFiled           Report[]                @relation("ReportsFiled")
   reportsAssigned        Report[]                @relation("ReportsAssigned")
   reportedInReports      Report[]                @relation("ReportedUserReports")
@@ -320,6 +351,140 @@ model AdminMfaCredential {
   @@map("admin_mfa_credentials")
 }
 
+model MfaCredential {
+  id               String              @id @default(uuid()) @db.Uuid
+  userId           String              @map("user_id") @db.Uuid
+  method           MfaMethod           @default(TOTP)
+  status           MfaCredentialStatus @default(PENDING)
+  encryptedSecret  String              @map("encrypted_secret") @db.Text
+  enrollmentExpiresAt DateTime?         @map("enrollment_expires_at") @db.Timestamptz(3)
+  enrolledDeviceName String?            @map("enrolled_device_name") @db.VarChar(200)
+  lastUsedStep     BigInt?             @map("last_used_step")
+  enabledAt        DateTime?           @map("enabled_at") @db.Timestamptz(3)
+  disabledAt       DateTime?           @map("disabled_at") @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recoveryCodes MfaRecoveryCode[]
+
+  @@unique([userId, method])
+  @@index([status, enrollmentExpiresAt])
+  @@map("mfa_credentials")
+}
+
+model MfaRecoveryCode {
+  id           String    @id @default(uuid()) @db.Uuid
+  credentialId String    @map("credential_id") @db.Uuid
+  codeHash     String    @unique @map("code_hash") @db.VarChar(255)
+  usedAt       DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  credential MfaCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId, usedAt])
+  @@map("mfa_recovery_codes")
+}
+
+model RecoveryEmail {
+  userId                     String    @id @map("user_id") @db.Uuid
+  email                      String?   @db.VarChar(320)
+  verifiedAt                 DateTime? @map("verified_at") @db.Timestamptz(3)
+  pendingEmail               String?   @map("pending_email") @db.VarChar(320)
+  pendingCodeHash            String?   @map("pending_code_hash") @db.VarChar(255)
+  pendingRequestedAt         DateTime? @map("pending_requested_at") @db.Timestamptz(3)
+  pendingExpiresAt           DateTime? @map("pending_expires_at") @db.Timestamptz(3)
+  verificationSentAt         DateTime? @map("verification_sent_at") @db.Timestamptz(3)
+  failedVerificationAttempts Int       @default(0) @map("failed_verification_attempts")
+  resendCount                Int       @default(0) @map("resend_count")
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pendingExpiresAt])
+  @@map("recovery_emails")
+}
+
+model SecurityQuestion {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(80)
+  label     String   @db.VarChar(500)
+  locale    String   @default("vi") @db.VarChar(10)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  userAnswers UserSecurityQuestion[]
+
+  @@index([locale, isActive, sortOrder])
+  @@map("security_questions")
+}
+
+model UserSecurityQuestion {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  questionId   String   @map("question_id") @db.Uuid
+  answerHash   String   @map("answer_hash") @db.VarChar(255)
+  position     Int      @db.SmallInt
+  lastVerifiedAt DateTime? @map("last_verified_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question SecurityQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, questionId])
+  @@unique([userId, position])
+  @@index([questionId])
+  @@map("user_security_questions")
+}
+
+model TrustedDevice {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  deviceId        String    @map("device_id") @db.VarChar(120)
+  deviceName      String?   @map("device_name") @db.VarChar(200)
+  fingerprintHash String?   @map("fingerprint_hash") @db.VarChar(255)
+  trustTokenHash  String    @unique @map("trust_token_hash") @db.VarChar(255)
+  trustedAt       DateTime  @default(now()) @map("trusted_at") @db.Timestamptz(3)
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason   String?   @map("revoked_reason") @db.VarChar(120)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@unique([userId, deviceId])
+  @@index([userId, revokedAt, expiresAt])
+  @@map("trusted_devices")
+}
+
+model AccountDeletionRequest {
+  id             String                @id @default(uuid()) @db.Uuid
+  userId         String                @map("user_id") @db.Uuid
+  status         AccountDeletionStatus @default(REQUESTED)
+  reason         String?               @db.Text
+  requestedAt    DateTime              @default(now()) @map("requested_at") @db.Timestamptz(3)
+  scheduledFor   DateTime              @map("scheduled_for") @db.Timestamptz(3)
+  canceledAt     DateTime?             @map("canceled_at") @db.Timestamptz(3)
+  completedAt    DateTime?             @map("completed_at") @db.Timestamptz(3)
+  requestIp      String?               @map("request_ip") @db.VarChar(45)
+  requestUserAgent String?             @map("request_user_agent") @db.Text
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@index([userId, requestedAt])
+  @@map("account_deletion_requests")
+}
+
 model Session {
   id                   String    @id @default(uuid()) @db.Uuid
   userId               String    @map("user_id") @db.Uuid
@@ -328,6 +493,7 @@ model Session {
   refreshTokenVersion  Int       @default(0) @map("refresh_token_version")
   accessTokenVersion   Int       @default(0) @map("access_token_version")
   mfaVerifiedAt        DateTime? @map("mfa_verified_at") @db.Timestamptz(3)
+  trustedDeviceId      String?   @map("trusted_device_id") @db.Uuid
 
   deviceId             String?   @map("device_id") @db.VarChar(120)
   deviceName           String?   @map("device_name") @db.VarChar(200)
@@ -342,9 +508,11 @@ model Session {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trustedDevice TrustedDevice? @relation(fields: [trustedDeviceId], references: [id], onDelete: SetNull)
 
   @@index([userId, revokedAt])
+  @@index([trustedDeviceId])
   @@index([refreshTokenFamilyId])
   @@index([expiresAt])
   @@map("sessions")
@@ -436,12 +604,17 @@ model RolePermission {
 model AuthorProfile {
   userId             String                   @id @map("user_id") @db.Uuid
   penName            String                   @unique @map("pen_name") @db.VarChar(120)
+  slug               String                   @unique @db.VarChar(160)
   biography          String?                  @db.Text
   verificationStatus AuthorVerificationStatus @default(PENDING) @map("verification_status")
   verifiedAt         DateTime?                @map("verified_at") @db.Timestamptz(3)
   websiteUrl         String?                  @map("website_url") @db.VarChar(500)
   socialLinks        Json?                    @map("social_links")
   bannerMediaId      String?                  @map("banner_media_id") @db.Uuid
+  featuredRank       Int?                     @map("featured_rank")
+  followerCount      Int                      @default(0) @map("follower_count")
+  totalReadCount     BigInt                   @default(0) @map("total_read_count")
+  storyCount         Int                      @default(0) @map("story_count")
   createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -450,6 +623,9 @@ model AuthorProfile {
   stories     Story[]
 
   @@index([verificationStatus])
+  @@index([featuredRank])
+  @@index([followerCount])
+  @@index([totalReadCount])
   @@map("author_profiles")
 }
 
@@ -493,6 +669,7 @@ model MediaAsset {
   avatarOfUsers   User[]          @relation("UserAvatar")
   bannerOfAuthors AuthorProfile[] @relation("AuthorBanner")
   coverOfStories  Story[]         @relation("StoryCover")
+  coverOfCategories Category[]     @relation("CategoryCover")
   chapterLinks    ChapterMedia[]
 
   @@index([uploaderId, createdAt])
@@ -533,7 +710,11 @@ model Story {
   status        StoryStatus     @default(DRAFT)
   visibility    StoryVisibility @default(PRIVATE)
   contentRating ContentRating   @default(TEEN) @map("content_rating")
+  releaseYear   Int?            @map("release_year") @db.SmallInt
   coverMediaId  String?         @map("cover_media_id") @db.Uuid
+  isFeatured    Boolean         @default(false) @map("is_featured")
+  featuredOrder Int?            @map("featured_order")
+  featuredUntil DateTime?       @map("featured_until") @db.Timestamptz(3)
   publishedAt   DateTime?       @map("published_at") @db.Timestamptz(3)
   completedAt   DateTime?       @map("completed_at") @db.Timestamptz(3)
   lastChapterAt DateTime?       @map("last_chapter_at") @db.Timestamptz(3)
@@ -560,6 +741,7 @@ model Story {
   follows           StoryFollow[]
   readingProgress   ReadingProgress[]
   readingSessions   ReadingSession[]
+  readingBookmarks  ReadingBookmark[]
   submissions       StorySubmission[]
   reports           Report[]           @relation("StoryReports")
   moderationActions ModerationAction[] @relation("ModerationStory")
@@ -568,6 +750,8 @@ model Story {
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])
   @@index([contentRating, status])
+  @@index([releaseYear, status])
+  @@index([isFeatured, featuredOrder, featuredUntil])
   @@index([lastChapterAt])
   @@index([deletedAt])
   @@map("stories")
@@ -594,18 +778,26 @@ model Category {
   parentId    String?  @map("parent_id") @db.Uuid
   name        String   @db.VarChar(100)
   slug        String   @unique @db.VarChar(120)
-  description String?  @db.Text
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
+  description   String?  @db.Text
+  coverMediaId  String?  @map("cover_media_id") @db.Uuid
+  visualKey     String?  @map("visual_key") @db.VarChar(50)
+  tone          String?  @db.VarChar(30)
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  isFeatured    Boolean  @default(false) @map("is_featured")
+  featuredOrder Int?     @map("featured_order")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  parent   Category?       @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children Category[]      @relation("CategoryTree")
-  stories  StoryCategory[]
+  parent     Category?       @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Category[]      @relation("CategoryTree")
+  coverMedia MediaAsset?     @relation("CategoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  stories    StoryCategory[]
 
   @@index([parentId, sortOrder])
   @@index([isActive, sortOrder])
+  @@index([isFeatured, featuredOrder])
+  @@index([coverMediaId])
   @@map("categories")
 }
 
@@ -658,6 +850,8 @@ model Chapter {
   contentFormat ContentFormat @default(MARKDOWN) @map("content_format")
   status        ChapterStatus @default(DRAFT)
   wordCount     Int           @default(0) @map("word_count")
+  viewCount     BigInt        @default(0) @map("view_count")
+  commentCount  Int           @default(0) @map("comment_count")
   version       Int           @default(1)
   scheduledAt   DateTime?     @map("scheduled_at") @db.Timestamptz(3)
   publishedAt   DateTime?     @map("published_at") @db.Timestamptz(3)
@@ -674,12 +868,14 @@ model Chapter {
   lastReadEntries   LibraryEntry[]     @relation("LibraryLastReadChapter")
   currentProgress   ReadingProgress[]  @relation("CurrentProgressChapter")
   readingSessions   ReadingSession[]
+  readingBookmarks  ReadingBookmark[]
   reports           Report[]           @relation("ChapterReports")
   moderationActions ModerationAction[] @relation("ModerationChapter")
   dailyStats        ChapterDailyStat[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])
+  @@unique([id, storyId], map: "chapters_id_story_id_unique")
   @@index([storyId, status, publishedAt])
   @@index([scheduledAt, status])
   @@index([deletedAt])
@@ -811,6 +1007,27 @@ model CommentReaction {
   @@id([commentId, userId])
   @@index([userId, createdAt])
   @@map("comment_reactions")
+}
+
+model ReadingBookmark {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  storyId   String   @map("story_id") @db.Uuid
+  chapterId String   @map("chapter_id") @db.Uuid
+  position  Int      @default(0)
+  label     String?  @db.VarChar(200)
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId, position])
+  @@index([userId, createdAt])
+  @@index([storyId, chapterId])
+  @@map("reading_bookmarks")
 }
 
 model ReadingProgress {

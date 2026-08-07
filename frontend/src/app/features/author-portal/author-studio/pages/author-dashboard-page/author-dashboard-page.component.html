@@ -1,0 +1,42 @@
+<main class="author-dashboard">
+  @if (store.dashboard(); as dashboard) {
+  <header class="dashboard-heading">
+    <h1>
+      Tổng quan tác giả
+      <span aria-hidden="true">👋</span>
+    </h1>
+
+    <p>
+      Tổng hợp nhanh tình hình sáng tác và hiệu suất truyện của bạn.
+    </p>
+  </header>
+
+  <section class="metric-grid">
+    @for (
+    metric of dashboard.metrics;
+    track metric.id
+    ) {
+    <app-studio-stat-card [metric]="metric"></app-studio-stat-card>
+    }
+  </section>
+
+  <section class="dashboard-row dashboard-row--analytics">
+    <app-readership-chart [points]="store.readershipPoints()" [period]="store.selectedPeriod()" (periodChange)="
+          changePeriod($event)
+        "></app-readership-chart>
+
+    <app-publication-schedule [items]="dashboard.schedule"></app-publication-schedule>
+  </section>
+
+  <section class="dashboard-row dashboard-row--management">
+    <app-author-story-table [stories]="dashboard.stories"></app-author-story-table>
+
+    <app-recent-drafts [drafts]="dashboard.drafts"></app-recent-drafts>
+
+    <app-reader-comments [comments]="dashboard.comments"></app-reader-comments>
+  </section>
+
+  <app-dashboard-bottom-panels [topStories]="dashboard.topStories"
+    [monthlyGoals]="dashboard.monthlyGoals"></app-dashboard-bottom-panels>
+  }
+</main>

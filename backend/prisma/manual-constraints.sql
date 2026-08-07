@@ -103,3 +103,43 @@ CREATE UNIQUE INDEX reports_open_user_unique
 -- reading_progress.current_chapter_id belongs to reading_progress.story_id;
 -- library_entries.last_read_chapter_id belongs to library_entries.story_id;
 -- reading_sessions.chapter_id belongs to reading_sessions.story_id.
+
+-- Account-security and frontend-support constraints introduced after the initial
+-- schema. These are also included in the corresponding versioned migration.
+ALTER TABLE mfa_credentials
+  ADD CONSTRAINT mfa_credentials_state_consistent
+  CHECK (
+    (status = 'pending' AND enabled_at IS NULL AND disabled_at IS NULL AND enrollment_expires_at IS NOT NULL)
+    OR (status = 'enabled' AND enabled_at IS NOT NULL AND disabled_at IS NULL)
+    OR (status = 'disabled' AND disabled_at IS NOT NULL)
+  );
+
+ALTER TABLE recovery_emails
+  ADD CONSTRAINT recovery_emails_verified_state_consistent
+  CHECK (
+    (email IS NULL AND verified_at IS NULL)
+    OR (email IS NOT NULL AND verified_at IS NOT NULL)
+  );
+
+CREATE UNIQUE INDEX recovery_emails_email_lower_unique
+  ON recovery_emails (LOWER(email))
+  WHERE email IS NOT NULL;
+
+CREATE UNIQUE INDEX recovery_emails_pending_email_lower_unique
+  ON recovery_emails (LOWER(pending_email))
+  WHERE pending_email IS NOT NULL;
+
+CREATE UNIQUE INDEX account_deletion_requests_one_active_per_user
+  ON account_deletion_requests (user_id)
+  WHERE status = 'requested';
+
+CREATE UNIQUE INDEX author_profiles_slug_lower_unique
+  ON author_profiles (LOWER(slug));
+
+ALTER TABLE stories
+  ADD CONSTRAINT stories_release_year_valid
+  CHECK (release_year IS NULL OR release_year BETWEEN 1000 AND 9999);
+
+ALTER TABLE reading_bookmarks
+  ADD CONSTRAINT reading_bookmarks_position_non_negative
+  CHECK (position >= 0);
