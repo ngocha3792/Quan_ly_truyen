@@ -154,15 +154,26 @@ function describeAction(action: string): ActivityDescriptor {
     };
   }
 
-  if (includesAny(action, ['login_success', 'logged_in', 'session_created', 'sign_in'])) {
+  if (
+    includesAny(action, [
+      'login_succeeded',
+      'login_success',
+      'logged_in',
+      'session_created',
+      'sign_in',
+    ])
+  ) {
     return {
       title: 'Đăng nhập thành công',
+
       category: 'login',
 
       visual: 'login',
+
       tone: 'green',
 
       status: 'success',
+
       statusLabel: 'Thành công',
 
       suspicious: false,
@@ -337,8 +348,24 @@ function createDescription(
     return description;
   }
 
-  if (includesAny(action, ['login_success', 'logged_in', 'sign_in'])) {
-    return [deviceName, event.ipAddress ? `IP ${event.ipAddress}` : null, location]
+  if (
+    includesAny(action, [
+      'login_succeeded',
+      'login_success',
+      'logged_in',
+      'session_created',
+      'sign_in',
+    ])
+  ) {
+    return [
+      deviceName,
+
+      event.ipAddress
+        ? `IP ${event.ipAddress}`
+        : null,
+
+      location,
+    ]
       .filter(Boolean)
       .join(' • ');
   }

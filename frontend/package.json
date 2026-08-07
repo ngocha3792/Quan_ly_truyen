@@ -14,7 +14,9 @@
     "e2e:smoke": "playwright test --grep @smoke",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e",
+    "pree2e": "npm run e2e:prepare"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

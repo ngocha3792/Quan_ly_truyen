@@ -19,20 +19,39 @@ test(
                 {
                     name:
                         'Thiết bị đăng nhập',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();
 
         await expect(
-            page.getByText(
-                'Thiết bị hiện tại',
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Thiết bị hiện tại',
+
+                    level:
+                        2,
+                },
             ),
         ).toBeVisible();
 
         await expect(
-            page.getByText(
-                'Các phiên đăng nhập khác',
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Các phiên đăng nhập khác',
+
+                    level:
+                        2,
+                },
             ),
         ).toBeVisible();
     },
-);
+);  

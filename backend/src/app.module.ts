@@ -5,7 +5,9 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
+import {
+  UsersModule,
+} from './modules/users';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommonFiltersModule } from './common/filters';
@@ -33,6 +35,7 @@ import { ObservabilityModule } from './infrastructure/observability';
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,
+    UsersModule,
     CommonMiddlewaresModule.registerAsync({
       imports: [AppConfigModule],
       inject: [ConfigService],

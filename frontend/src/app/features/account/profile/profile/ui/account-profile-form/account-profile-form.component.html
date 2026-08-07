@@ -1,11 +1,7 @@
 <form class="profile-card" [formGroup]="form" (ngSubmit)="submit()">
-  <app-profile-avatar-editor
-    [displayName]="form.controls.displayName.value || user().displayName"
-    [avatarUrl]="user().avatar?.url ?? null"
-    [emailVerified]="user().emailVerified"
-    [membershipLabel]="membershipLabel()"
-    (fileSelected)="avatarSelected.emit($event)"
-  />
+  <app-profile-avatar-editor [displayName]="form.controls.displayName.value || user().displayName"
+    [avatarUrl]="user().avatar?.url ?? null" [emailVerified]="user().emailVerified"
+    [membershipLabel]="membershipLabel()" (fileSelected)="avatarSelected.emit($event)" />
 
   <div class="card-divider"></div>
 
@@ -16,17 +12,15 @@
       <label class="field">
         <span>Tên hiển thị</span>
 
-        <div
-          class="input-wrapper"
-          [class.invalid]="form.controls.displayName.invalid && form.controls.displayName.touched"
-        >
+        <div class="input-wrapper"
+          [class.invalid]="form.controls.displayName.invalid && form.controls.displayName.touched">
           <app-icon name="user" [size]="17" />
 
           <input type="text" formControlName="displayName" maxlength="120" autocomplete="name" />
         </div>
 
         @if (form.controls.displayName.invalid && form.controls.displayName.touched) {
-          <small class="field-error"> Tên hiển thị phải có từ 1 đến 120 ký tự. </small>
+        <small class="field-error"> Tên hiển thị phải có từ 1 đến 120 ký tự. </small>
         }
       </label>
 
@@ -69,16 +63,9 @@
       <label class="field">
         <span>Giới thiệu ngắn</span>
 
-        <div
-          class="textarea-wrapper"
-          [class.invalid]="form.controls.bio.invalid && form.controls.bio.touched"
-        >
-          <textarea
-            formControlName="bio"
-            maxlength="1000"
-            rows="5"
-            placeholder="Giới thiệu đôi chút về bạn..."
-          ></textarea>
+        <div class="textarea-wrapper" [class.invalid]="form.controls.bio.invalid && form.controls.bio.touched">
+          <textarea formControlName="bio" maxlength="1000" rows="5"
+            placeholder="Giới thiệu đôi chút về bạn..."></textarea>
 
           <span class="character-count"> {{ bioLength }}/1000 </span>
         </div>
@@ -92,54 +79,40 @@
     <h3>Tùy chọn tài khoản</h3>
 
     <div class="preferences-grid">
-      <app-profile-switch
-        title="Nhận thông báo chương mới"
-        description="Thông báo khi truyện bạn theo dõi có chương mới"
-        icon="bell"
-        [checked]="preferences().newChapterNotifications"
-        (checkedChange)="
+      <app-profile-switch title="Nhận thông báo chương mới"
+        description="Thông báo khi truyện bạn theo dõi có chương mới" icon="bell"
+        [checked]="preferences().newChapterNotifications" (checkedChange)="
           preferencesChanged.emit({
             newChapterNotifications: $event,
           })
-        "
-      />
+        " />
 
-      <app-profile-switch
-        title="Hiển thị hoạt động gần đây"
-        description="Cho phép hiển thị hoạt động của bạn"
-        icon="history"
-        [checked]="preferences().showRecentActivity"
-        (checkedChange)="
+      <app-profile-switch title="Hiển thị hoạt động gần đây" description="Cho phép hiển thị hoạt động của bạn"
+        icon="history" [checked]="preferences().showRecentActivity" (checkedChange)="
           preferencesChanged.emit({
             showRecentActivity: $event,
           })
-        "
-      />
+        " />
 
-      <app-profile-switch
-        title="Cho phép email cập nhật"
-        description="Nhận email về tin tức và ưu đãi"
-        icon="mail"
-        [checked]="preferences().allowUpdateEmails"
-        (checkedChange)="
+      <app-profile-switch title="Cho phép email cập nhật" description="Nhận email về tin tức và ưu đãi" icon="mail"
+        [checked]="preferences().allowUpdateEmails" (checkedChange)="
           preferencesChanged.emit({
             allowUpdateEmails: $event,
           })
-        "
-      />
+        " />
     </div>
   </section>
 
   <div class="form-actions">
-    <button
-      class="primary-button"
-      type="submit"
-      [disabled]="saving() || form.invalid || !form.dirty"
-    >
+    <button class="primary-button" type="submit" [disabled]="
+  saving() ||
+  form.invalid ||
+  (!form.dirty && !avatarChanged())
+">
       @if (saving()) {
-        <span class="spinner"></span>
+      <span class="spinner"></span>
       } @else {
-        <app-icon name="save" [size]="16" />
+      <app-icon name="save" [size]="16" />
       }
 
       Lưu thay đổi
@@ -151,12 +124,7 @@
       Đặt lại
     </button>
 
-    <button
-      class="secondary-button"
-      type="button"
-      [disabled]="saving()"
-      (click)="cancelRequested.emit()"
-    >
+    <button class="secondary-button" type="button" [disabled]="saving()" (click)="cancelRequested.emit()">
       <app-icon name="close" [size]="16" />
 
       Hủy

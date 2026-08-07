@@ -4,6 +4,11 @@ import {
 } from '@playwright/test';
 
 import {
+    E2E_USER_EMAIL,
+    E2E_USER_PASSWORD,
+} from '../fixtures/e2e-user';
+
+import {
     AuthDialogPage,
 } from '../pages/auth-dialog.page';
 
@@ -32,9 +37,8 @@ test(
         ).toBeVisible();
 
         await authDialog.login(
-            'e2e.user@truyenhub.test',
-
-            'E2eUser@2026',
+            E2E_USER_EMAIL,
+            E2E_USER_PASSWORD,
         );
 
         await expect(
@@ -44,11 +48,15 @@ test(
         );
 
         await expect(
-            page.getByText(
-                'Thư viện của tôi',
+            page.getByRole(
+                'heading',
+
                 {
-                    exact:
-                        true,
+                    name:
+                        'Thư viện của tôi',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();

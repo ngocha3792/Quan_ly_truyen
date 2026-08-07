@@ -19,25 +19,52 @@ test(
                 {
                     name:
                         'Bảo mật tài khoản',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();
 
         await expect(
-            page.getByText(
-                'Đổi mật khẩu',
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Đổi mật khẩu',
+
+                    level:
+                        3,
+                },
             ),
         ).toBeVisible();
 
         await expect(
-            page.getByText(
-                'Xác thực 2 lớp',
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Xác thực 2 lớp (2FA)',
+
+                    level:
+                        3,
+                },
             ),
         ).toBeVisible();
 
         await expect(
-            page.getByText(
-                'Email khôi phục',
+            page.getByRole(
+                'heading',
+
+                {
+                    name:
+                        'Email khôi phục',
+
+                    level:
+                        3,
+                },
             ),
         ).toBeVisible();
     },

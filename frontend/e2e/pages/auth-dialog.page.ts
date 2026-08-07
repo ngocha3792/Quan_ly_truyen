@@ -18,6 +18,15 @@ export class AuthDialogPage {
             );
     }
 
+    get credentialsForm():
+        Locator {
+        return this.dialog
+            .locator(
+                'form',
+            )
+            .first();
+    }
+
     get error():
         Locator {
         return this.dialog
@@ -28,17 +37,12 @@ export class AuthDialogPage {
 
     async open():
         Promise<void> {
+        /**
+         * Chỉ nút login ở header.
+         */
         await this.page
-            .getByRole(
-                'button',
-
-                {
-                    name:
-                        'Đăng nhập',
-
-                    exact:
-                        true,
-                },
+            .locator(
+                'header .login-button',
             )
             .click();
 
@@ -54,7 +58,7 @@ export class AuthDialogPage {
         password:
             string,
     ): Promise<void> {
-        await this.dialog
+        await this.credentialsForm
             .getByLabel(
                 'Email hoặc tên đăng nhập',
             )
@@ -62,7 +66,7 @@ export class AuthDialogPage {
                 identifier,
             );
 
-        await this.dialog
+        await this.credentialsForm
             .getByLabel(
                 'Mật khẩu',
             )
@@ -70,17 +74,17 @@ export class AuthDialogPage {
                 password,
             );
 
-        await this.dialog
-            .getByRole(
-                'button',
-
-                {
-                    name:
-                        'Đăng nhập',
-
-                    exact:
-                        true,
-                },
+        /**
+         * Dialog có:
+         *
+         * - tab "Đăng nhập"
+         * - submit "Đăng nhập"
+         *
+         * Nên phải khóa type=submit.
+         */
+        await this.credentialsForm
+            .locator(
+                'button.submit[type="submit"]',
             )
             .click();
     }

@@ -3,23 +3,10 @@ import {
     test as base,
 } from '@playwright/test';
 
-const email =
-    process.env[
-    'E2E_USER_EMAIL'
-    ] ??
-    'e2e.user@truyenhub.test';
-
-const password =
-    process.env[
-    'E2E_USER_PASSWORD'
-    ] ??
-    'E2eUser@2026';
-
-const baseUrl =
-    process.env[
-    'E2E_BASE_URL'
-    ] ??
-    'http://127.0.0.1:4200';
+import {
+    E2E_USER_EMAIL,
+    E2E_USER_PASSWORD,
+} from './e2e-user';
 
 const SESSION_HINT_KEY =
     'truyenhub.auth.has-refresh-session';
@@ -35,29 +22,33 @@ export const test =
 
             testInfo,
         ) => {
-            /**
-             * Login riêng cho MỖI test.
-             *
-             * page.request dùng chung cookie jar
-             * với BrowserContext.
-             */
             const response =
                 await page.request.post(
                     '/api/v1/auth/login',
 
                     {
+                        /**
+                         * Đây là fixture infrastructure.
+                         *
+                         * Không dùng actionTimeout 10s
+                         * của browser action.
+                         */
+                        timeout:
+                            30_000,
+
                         data: {
                             identifier:
-                                email,
+                                E2E_USER_EMAIL,
 
-                            password,
+                            password:
+                                E2E_USER_PASSWORD,
 
                             deviceName:
-                                `Playwright ${testInfo.title}`,
+                                `Playwright - ${testInfo.title}`,
 
                             deviceId:
                                 [
-                                    'pw',
+                                    'playwright',
                                     testInfo.workerIndex,
                                     Date.now(),
                                     Math.random()
@@ -71,17 +62,26 @@ export const test =
             const responseText =
                 await response.text();
 
-            expect(
-                response.ok(),
-                responseText,
-            ).toBeTruthy();
+            if (
+                !response.ok()
+            ) {
+                throw new Error(
+                    [
+                        'Không thể login E2E user.',
+                        '',
+                        responseText,
+                        '',
+                        'Kiểm tra backend và db:seed:e2e.',
+                    ].join('\n'),
+                );
+            }
 
             /**
-             * Đảm bảo AuthStore thử restore
-             * session ngay khi trang load.
+             * refresh_token đã nằm trong
+             * BrowserContext cookie jar.
              *
-             * Refresh cookie HttpOnly đã nằm
-             * trong BrowserContext.
+             * Hint này khiến AuthStore restore
+             * session khi Angular boot.
              */
             await page.addInitScript(
                 ({
@@ -102,13 +102,6 @@ export const test =
             try {
                 await use(page);
             } finally {
-                /**
-                 * Cleanup session sau mỗi test.
-                 *
-                 * Nếu test đã logout hoặc revoke
-                 * session thì csrf cookie có thể
-                 * không còn; khi đó bỏ qua.
-                 */
                 const cookies =
                     await page
                         .context()
@@ -116,35 +109,33 @@ export const test =
 
                 const csrf =
                     cookies.find(
-                        (cookie) =>
+                        (
+                            cookie,
+                        ) =>
                             cookie.name ===
                             'csrf_token',
                     );
 
-                if (!csrf) {
-                    return;
-                }
+                if (csrf) {
+                    await page.request
+                        .post(
+                            '/api/v1/auth/logout',
 
-                await page.request
-                    .post(
-                        '/api/v1/auth/logout',
+                            {
+                                timeout:
+                                    30_000,
 
-                        {
-                            headers: {
-                                'x-csrf-token':
-                                    csrf.value,
-
-                                origin:
-                                    new URL(
-                                        baseUrl,
-                                    ).origin,
+                                headers: {
+                                    'x-csrf-token':
+                                        csrf.value,
+                                },
                             },
-                        },
-                    )
-                    .catch(
-                        () =>
-                            undefined,
-                    );
+                        )
+                        .catch(
+                            () =>
+                                undefined,
+                        );
+                }
             }
         },
     });

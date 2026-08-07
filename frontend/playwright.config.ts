@@ -14,37 +14,49 @@ const isExternalServer =
     ] === 'true';
 
 const baseURL =
-    process.env[
-    'E2E_BASE_URL'
-    ] ??
-    'http://127.0.0.1:4200';
+    isExternalServer
+        ? (
+            process.env[
+            'E2E_BASE_URL'
+            ] ??
+            'http://localhost:4200'
+        )
+        : 'http://localhost:4200';
 
 export default defineConfig({
     testDir:
         './e2e',
 
+    /**
+     * Auth E2E hiện dùng chung một account:
+     *
+     * e2e.user@truyenhub.test
+     *
+     * Backend cố ý serialize concurrent login
+     * cùng user bằng PostgreSQL row lock.
+     *
+     * Vì vậy không chạy các Auth E2E song song.
+     */
     fullyParallel:
-        true,
+        false,
+
+    workers:
+        1,
 
     forbidOnly:
         isCi,
 
     retries:
         isCi
-            ? 2
+            ? 1
             : 0,
-
-    workers:
-        isCi
-            ? 2
-            : undefined,
 
     timeout:
         30_000,
 
     expect: {
         timeout:
-            8_000,
+            10_000,
     },
 
     outputDir:
@@ -59,7 +71,6 @@ export default defineConfig({
 
                 [
                     'html',
-
                     {
                         outputFolder:
                             'playwright-report',
@@ -76,7 +87,6 @@ export default defineConfig({
 
                 [
                     'html',
-
                     {
                         outputFolder:
                             'playwright-report',
@@ -139,12 +149,6 @@ export default defineConfig({
                 'Desktop Chrome'
                 ],
 
-                /**
-                 * Không dùng shared storageState.
-                 *
-                 * authenticated-test.ts sẽ login
-                 * riêng cho mỗi test.
-                 */
                 storageState: {
                     cookies: [],
 
@@ -159,10 +163,10 @@ export default defineConfig({
             ? undefined
             : {
                 command:
-                    'npm start -- --host 127.0.0.1 --port 4200',
+                    'npm start -- --host localhost --port 4200',
 
                 url:
-                    baseURL,
+                    'http://localhost:4200',
 
                 timeout:
                     120_000,

@@ -1,6 +1,5 @@
 import { Provider } from '@angular/core';
 import { AccountProfileHttpRepository } from './account-profile-http.repository';
-import { AccountProfileMockRepository } from './account-profile-mock.repository';
 import { AccountProfileRepository } from './account-profile.repository';
 import { AccountProfileStore } from './account-profile.store';
 
@@ -12,7 +11,7 @@ export function provideAccountProfile(options: ProvideAccountProfileOptions = {}
   return [
     {
       provide: AccountProfileRepository,
-      useClass: options.useMock ? AccountProfileMockRepository : AccountProfileHttpRepository,
+      useClass: AccountProfileHttpRepository,
     },
     AccountProfileStore,
   ];

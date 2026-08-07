@@ -19,11 +19,15 @@ test(
         );
 
         await expect(
-            page.getByText(
-                'Thư viện của tôi',
+            page.getByRole(
+                'heading',
+
                 {
-                    exact:
-                        true,
+                    name:
+                        'Thư viện của tôi',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();
@@ -85,6 +89,9 @@ test(
                 {
                     name:
                         'Bảo mật tài khoản',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();
@@ -104,6 +111,9 @@ test(
                 {
                     name:
                         'Bảo mật tài khoản',
+
+                    level:
+                        1,
                 },
             ),
         ).toBeVisible();

@@ -1,64 +1,173 @@
-import { Injectable, signal } from '@angular/core';
+import {
+  inject,
+  Injectable,
+  signal,
+} from '@angular/core';
 
-import { AccountUiPreferences } from '../domain/account-profile.models';
+import {
+  catchError,
+  concatMap,
+  EMPTY,
+  finalize,
+  Subject,
+  tap,
+} from 'rxjs';
 
-const STORAGE_KEY = 'truyenhub.account.ui-preferences';
+import {
+  getApiErrorMessage,
+} from '../../../../../core/http/api-error.util';
 
-const DEFAULT_PREFERENCES: AccountUiPreferences = {
-  newChapterNotifications: true,
-  showRecentActivity: true,
-  allowUpdateEmails: true,
+import {
+  AccountUiPreferences,
+} from '../domain/account-profile.models';
+
+import {
+  AccountProfileApiService,
+} from './account-profile-api.service';
+
+const DEFAULT_PREFERENCES:
+  AccountUiPreferences = {
+  newChapterNotifications:
+    true,
+
+  showRecentActivity:
+    true,
+
+  allowUpdateEmails:
+    true,
 };
 
 @Injectable({
   providedIn: 'root',
 })
 export class AccountPreferencesStore {
-  private readonly preferencesState = signal<AccountUiPreferences>(this.read());
+  private readonly api =
+    inject(
+      AccountProfileApiService,
+    );
 
-  readonly preferences = this.preferencesState.asReadonly();
+  private readonly preferencesState =
+    signal<AccountUiPreferences>(
+      DEFAULT_PREFERENCES,
+    );
 
-  update(changes: Partial<AccountUiPreferences>): void {
-    const nextValue = {
+  private readonly errorState =
+    signal<string | null>(
+      null,
+    );
+
+  private readonly writeQueue =
+    new Subject<AccountUiPreferences>();
+
+  readonly preferences =
+    this.preferencesState.asReadonly();
+
+  readonly error =
+    this.errorState.asReadonly();
+
+  constructor() {
+    this.writeQueue
+      .pipe(
+        concatMap(
+          value =>
+            this.api
+              .updatePreferences(
+                value,
+              )
+              .pipe(
+                tap(
+                  serverValue => {
+                    this.preferencesState.set(
+                      serverValue,
+                    );
+                  },
+                ),
+
+                catchError(
+                  error => {
+                    this.errorState.set(
+                      getApiErrorMessage(
+                        error,
+                      ),
+                    );
+
+                    return this.api
+                      .getPreferences()
+                      .pipe(
+                        tap(
+                          serverValue => {
+                            this.preferencesState.set(
+                              serverValue,
+                            );
+                          },
+                        ),
+
+                        catchError(
+                          () =>
+                            EMPTY,
+                        ),
+                      );
+                  },
+                ),
+              ),
+        ),
+      )
+      .subscribe();
+  }
+
+  load(): void {
+    this.api
+      .getPreferences()
+      .pipe(
+        tap(
+          value => {
+            this.preferencesState.set(
+              value,
+            );
+          },
+        ),
+
+        catchError(
+          error => {
+            this.errorState.set(
+              getApiErrorMessage(
+                error,
+              ),
+            );
+
+            return EMPTY;
+          },
+        ),
+      )
+      .subscribe();
+  }
+
+  update(
+    changes:
+      Partial<AccountUiPreferences>,
+  ): void {
+    const next = {
       ...this.preferencesState(),
+
       ...changes,
     };
 
-    this.preferencesState.set(nextValue);
+    this.preferencesState.set(
+      next,
+    );
 
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextValue));
-    }
+    this.errorState.set(
+      null,
+    );
+
+    this.writeQueue.next(
+      next,
+    );
   }
 
   reset(): void {
-    this.preferencesState.set(DEFAULT_PREFERENCES);
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }
-
-  private read(): AccountUiPreferences {
-    if (typeof window === 'undefined') {
-      return DEFAULT_PREFERENCES;
-    }
-
-    const storedValue = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!storedValue) {
-      return DEFAULT_PREFERENCES;
-    }
-
-    try {
-      const parsed = JSON.parse(storedValue) as Partial<AccountUiPreferences>;
-
-      return {
-        ...DEFAULT_PREFERENCES,
-        ...parsed,
-      };
-    } catch {
-      return DEFAULT_PREFERENCES;
-    }
+    this.update(
+      DEFAULT_PREFERENCES,
+    );
   }
 }
