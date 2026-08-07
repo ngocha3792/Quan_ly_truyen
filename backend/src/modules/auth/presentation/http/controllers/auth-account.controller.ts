@@ -9,7 +9,6 @@ import {
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
-  Patch,
   Query,
   Res,
 } from '@nestjs/common';
@@ -21,7 +20,6 @@ import {
   CurrentUserId,
   SkipResponseEnvelope,
 } from '@/common/decorators';
-import { Idempotent } from '@/common/decorators/interceptor';
 
 import {
   GetCurrentUserQuery,
@@ -55,7 +53,7 @@ export class AuthAccountController {
     private readonly revokeSessionCommandHandler: RevokeSessionCommandHandler,
 
     private readonly authCookies: AuthCookieService,
-  ) { }
+  ) {}
 
   @Get('me')
   async getCurrentUser(

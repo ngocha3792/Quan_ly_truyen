@@ -1,13 +1,13 @@
 export interface SecurityOverviewResultDto {
-    passwordConfigured: boolean;
-    passwordUpdatedAt: Date | null;
+  passwordConfigured: boolean;
+  passwordUpdatedAt: Date | null;
 
-    mfaEnabled: boolean;
-    mfaConfiguredAt: Date | null;
+  mfaEnabled: boolean;
+  mfaConfiguredAt: Date | null;
 
-    recoveryEmail: string | null;
-    recoveryEmailVerified: boolean;
+  recoveryEmail: string | null;
+  recoveryEmailVerified: boolean;
 
-    securityQuestionsConfigured: boolean;
-    trustedDeviceCount: number;
+  securityQuestionsConfigured: boolean;
+  trustedDeviceCount: number;
 }

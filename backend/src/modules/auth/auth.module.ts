@@ -341,4 +341,4 @@ const idGeneratorProvider = {
     AccessAuthorizationCacheService,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}
