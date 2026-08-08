@@ -7,6 +7,7 @@ import {
   Logger,
   NestInterceptor,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { from, Observable, of } from 'rxjs';
@@ -20,6 +21,7 @@ import {
   InvalidInputException,
 } from '@/common/exceptions';
 import type { IdempotencyStore } from '@/infrastructure/idempotency';
+import type { IdempotencyConfig } from '@/config';
 import {
   MANUAL_SPANS,
   MetricsService,
@@ -29,6 +31,7 @@ import {
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   private readonly logger = new Logger(IdempotencyInterceptor.name);
+  private readonly processingLeaseTtlSeconds: number;
 
   constructor(
     private readonly reflector: Reflector,
@@ -36,7 +39,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     private readonly idempotencyStore: IdempotencyStore,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
-  ) {}
+    configService: ConfigService,
+  ) {
+    this.processingLeaseTtlSeconds =
+      configService.get<IdempotencyConfig>('idempotency')
+        ?.processingLeaseTtlSeconds ?? 120;
+  }
 
   async intercept(
     context: ExecutionContext,
@@ -77,13 +85,22 @@ export class IdempotencyInterceptor implements NestInterceptor {
       });
     }
     const ttlSeconds = metadata.ttlSeconds ?? 86_400;
+    const processingLeaseTtlSeconds = Math.min(
+      ttlSeconds,
+      this.processingLeaseTtlSeconds,
+    );
     const requestHash = this.computeRequestHash(request);
     const storageKey = this.computeStorageKey(request, trimmedKey);
 
     const acquireResult = await this.tracing.inSpan(
       MANUAL_SPANS.IDEMPOTENCY_ACQUIRE,
       { 'idempotency.system': 'application' },
-      () => this.idempotencyStore.acquire(storageKey, requestHash, ttlSeconds),
+      () =>
+        this.idempotencyStore.acquire(
+          storageKey,
+          requestHash,
+          processingLeaseTtlSeconds,
+        ),
     );
 
     if (!acquireResult.acquired) {
@@ -156,12 +173,23 @@ export class IdempotencyInterceptor implements NestInterceptor {
         } catch (error: unknown) {
           this.metrics.recordIdempotency('save_result', 'failed');
           this.logger.error({
-            message: 'Unable to persist idempotency result',
+            message:
+              'Unable to persist idempotency result after business success',
             category:
               'idempotency-result-persist-failed-after-business-success',
             errorType: this.errorType(error),
+            processingLeaseTtlSeconds,
           });
-          throw error;
+
+          /*
+           * Business handler đã hoàn tất thành công và có thể đã commit DB.
+           * Không được biến lỗi replay-store hậu commit thành HTTP 5xx giả.
+           *
+           * Cũng không markFailed ở đây: xóa lease ngay sẽ cho phép request
+           * trùng lặp chạy lại trong lúc response đầu tiên đang được trả.
+           * Lease PROCESSING tự hết hạn theo TTL ngắn riêng; sau đó client có
+           * thể retry nếu response ban đầu thực sự bị mất.
+           */
         }
         return body;
       }),

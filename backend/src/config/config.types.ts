@@ -239,6 +239,7 @@ export interface QueueConfig {
 export interface IdempotencyConfig {
   failureMode: 'closed' | 'open';
   maxResponseBytes: number;
+  processingLeaseTtlSeconds: number;
 }
 
 export interface InfrastructureFallbackConfig {

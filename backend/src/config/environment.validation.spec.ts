@@ -147,6 +147,26 @@ describe('validateEnvironment', () => {
     );
   });
 
+  it('requires the idempotency processing lease to outlive the HTTP timeout', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        HTTP_REQUEST_TIMEOUT_MS: '60000',
+        IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS: '60',
+      }),
+    ).toThrow(
+      'IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS must exceed HTTP_REQUEST_TIMEOUT_MS',
+    );
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        HTTP_REQUEST_TIMEOUT_MS: '60000',
+        IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS: '61',
+      }),
+    ).not.toThrow();
+  });
+
   it('validates OAuth provider configuration and Redis dependency', () => {
     const googleOAuth: EnvironmentInput = {
       ...validBase,

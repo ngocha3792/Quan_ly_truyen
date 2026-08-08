@@ -10,4 +10,7 @@ export default registerAs(IDEMPOTENCY_CONFIG_KEY, (): IdempotencyConfig => ({
   maxResponseBytes: Number(
     process.env.IDEMPOTENCY_MAX_RESPONSE_BYTES ?? 1_048_576,
   ),
+  processingLeaseTtlSeconds: Number(
+    process.env.IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS ?? 120,
+  ),
 }));

@@ -501,6 +501,12 @@ export class EnvironmentVariables {
   @IsEnum(['closed', 'open'])
   IDEMPOTENCY_FAILURE_MODE: 'closed' | 'open' = 'closed';
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 120))
+  @IsInt()
+  @Min(30)
+  @Max(3600)
+  IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS = 120;
+
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
   ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK = false;
@@ -776,6 +782,15 @@ export function validateEnvironment(
 
 function validateCrossFieldRules(config: EnvironmentVariables): void {
   const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
+
+  if (
+    config.IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS * 1000 <=
+    config.HTTP_REQUEST_TIMEOUT_MS
+  ) {
+    throw new Error(
+      'IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS must exceed HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
 
   if (config.JWT_ACCESS_SECRET === config.JWT_REFRESH_SECRET) {
     throw new Error(

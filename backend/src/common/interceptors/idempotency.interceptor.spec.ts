@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { lastValueFrom, of, throwError } from 'rxjs';
 
@@ -73,6 +74,11 @@ describe('IdempotencyInterceptor', () => {
           (_name: string, _attributes: object, work: () => unknown) => work(),
         ),
       } as never,
+      new ConfigService({
+        idempotency: {
+          processingLeaseTtlSeconds: 120,
+        },
+      }),
     );
   }
 
@@ -125,6 +131,22 @@ describe('IdempotencyInterceptor', () => {
       storageKey,
       'owner-a',
       { statusCode: 201, responseBody: { created: true } },
+      300,
+    );
+  });
+
+  it('uses a short processing lease while retaining the endpoint replay TTL', async () => {
+    await execute({ created: true });
+
+    expect(store.acquire).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      120,
+    );
+    expect(store.saveResult).toHaveBeenCalledWith(
+      expect.any(String),
+      'owner-a',
+      expect.any(Object),
       300,
     );
   });
@@ -203,12 +225,22 @@ describe('IdempotencyInterceptor', () => {
     expect(store.saveResult).not.toHaveBeenCalled();
   });
 
-  it('keeps the lease when result persistence fails after business success', async () => {
+  it('returns the committed business result when result persistence fails', async () => {
     const persistenceError = new Error('redis unavailable');
     store.saveResult.mockRejectedValue(persistenceError);
+    const errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
-    await expect(execute({ committed: true })).rejects.toBe(persistenceError);
+    await expect(execute({ committed: true })).resolves.toEqual({
+      committed: true,
+    });
     expect(store.markFailed).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'idempotency-result-persist-failed-after-business-success',
+        processingLeaseTtlSeconds: 120,
+      }),
+    );
+    errorLog.mockRestore();
   });
 
   it('preserves the business error when failed-lease cleanup also fails', async () => {
@@ -229,14 +261,19 @@ describe('IdempotencyInterceptor', () => {
     warning.mockRestore();
   });
 
-  it('does not release a newer owner when saveResult reports lost ownership', async () => {
+  it('returns the committed result and does not release a newer owner after ownership loss', async () => {
     const ownershipError = new IdempotencyConflictException({
       key: 'hashed-storage-key',
       message: 'Idempotency processing lease is no longer owned',
     });
     store.saveResult.mockRejectedValue(ownershipError);
 
-    await expect(execute({ committed: true })).rejects.toBe(ownershipError);
+    const errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+
+    await expect(execute({ committed: true })).resolves.toEqual({
+      committed: true,
+    });
     expect(store.markFailed).not.toHaveBeenCalled();
+    errorLog.mockRestore();
   });
 });
