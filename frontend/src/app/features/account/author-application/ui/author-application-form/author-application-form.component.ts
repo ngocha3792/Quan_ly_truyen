@@ -823,7 +823,7 @@ import {
     `,
   ],
 })
-export class AuthorApplicationFormComponent {
+export class AuthorApplicationFormComponent implements OnChanges {
   private readonly formBuilder = inject(FormBuilder);
 
   @Input()

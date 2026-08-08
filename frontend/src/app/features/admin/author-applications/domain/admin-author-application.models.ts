@@ -1,12 +1,6 @@
-export type AdminAuthorApplicationStatus =
-  | 'DRAFT'
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED';
+export type AdminAuthorApplicationStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
-export type AdminAuthorApplicationStatusFilter =
-  | 'ALL'
-  | AdminAuthorApplicationStatus;
+export type AdminAuthorApplicationStatusFilter = 'ALL' | AdminAuthorApplicationStatus;
 
 export interface AdminAuthorApplicationSample {
   readonly id: string;
@@ -65,8 +59,7 @@ export interface AdminAuthorApplicationRecord {
 export interface AdminAuthorApplicationListResponse {
   readonly total: number;
 
-  readonly applications:
-    readonly AdminAuthorApplicationRecord[];
+  readonly applications: readonly AdminAuthorApplicationRecord[];
 }
 
 export interface AdminAuthorApplicationListQuery {

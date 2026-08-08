@@ -1,63 +1,37 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
-import {
-  RouterLink,
-} from '@angular/router';
+import { RouterLink } from '@angular/router';
 
 import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 
-import {
-  EmptyStateComponent,
-} from '../../../../../shared/components/empty-state/empty-state.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 
-import {
-  ErrorAlertComponent,
-} from '../../../../../shared/components/error-alert/error-alert.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 
-import {
-  LoadingStateComponent,
-} from '../../../../../shared/components/loading-state/loading-state.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 
-import {
-  PageHeadingComponent,
-} from '../../../../../shared/components/page-heading/page-heading.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
-import {
-  PaginationComponent,
-} from '../../../../../shared/components/pagination/pagination.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 
-import {
-  SearchFieldComponent,
-} from '../../../../../shared/components/search-field/search-field.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 
 import {
   TabFilterComponent,
   TabFilterOption,
 } from '../../../../../shared/components/tab-filter/tab-filter.component';
 
-import {
-  AdminUsersStore,
-} from '../../data-access/admin-users.store';
+import { AdminUsersStore } from '../../data-access/admin-users.store';
 
-import {
-  ManagedUserRoleFilter,
-  ManagedUserStatusFilter,
-} from '../../domain/admin-user.models';
+import { ManagedUserRoleFilter, ManagedUserStatusFilter } from '../../domain/admin-user.models';
 
 @Component({
-  selector:
-    'app-admin-users-list-page',
+  selector: 'app-admin-users-list-page',
 
-  standalone:
-    true,
+  standalone: true,
 
   imports: [
     RouterLink,
@@ -79,19 +53,14 @@ import {
     TabFilterComponent,
   ],
 
-  providers: [
-    AdminUsersStore,
-  ],
+  providers: [AdminUsersStore],
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
     <main class="admin-page">
       <div class="page-container">
-        <app-breadcrumb
-          [items]="breadcrumbs"
-        />
+        <app-breadcrumb [items]="breadcrumbs" />
 
         <app-page-heading
           title="Quản lý người dùng"
@@ -101,51 +70,25 @@ import {
 
         <section class="card">
           <header class="toolbar">
-            <form
-              class="search"
-              (submit)="search($event)"
-            >
+            <form class="search" (submit)="search($event)">
               <app-search-field
                 [value]="store.keyword()"
                 placeholder="Email, username hoặc tên hiển thị..."
                 ariaLabel="Tìm người dùng"
-                (valueChange)="
-                  store.setKeyword(
-                    $event
-                  )
-                "
+                (valueChange)="store.setKeyword($event)"
               />
 
-              <button
-                type="submit"
-              >
-                Tìm
-              </button>
+              <button type="submit">Tìm</button>
             </form>
 
-            <select
-              [value]="store.roleFilter()"
-              (change)="
-                changeRole(
-                  $event
-                )
-              "
-            >
-              <option value="ALL">
-                Tất cả role
-              </option>
+            <select [value]="store.roleFilter()" (change)="changeRole($event)">
+              <option value="ALL">Tất cả role</option>
 
-              <option value="USER">
-                User
-              </option>
+              <option value="USER">User</option>
 
-              <option value="AUTHOR">
-                Author
-              </option>
+              <option value="AUTHOR">Author</option>
 
-              <option value="ADMIN">
-                Admin
-              </option>
+              <option value="ADMIN">Admin</option>
             </select>
           </header>
 
@@ -153,45 +96,23 @@ import {
             class="status-tabs"
             ariaLabel="Trạng thái tài khoản"
             [options]="statusOptions"
-            [selected]="
-              store.statusFilter()
-            "
-            (selectedChange)="
-              store.setStatusFilter(
-                $event
-              )
-            "
+            [selected]="store.statusFilter()"
+            (selectedChange)="store.setStatusFilter($event)"
           />
 
-          @if (
-            store.listError()
-          ) {
+          @if (store.listError()) {
             <div class="state">
               <app-error-alert
                 title="Không thể tải người dùng"
-                [message]="
-                  store.listError()
-                "
-                (retry)="
-                  store.loadList()
-                "
+                [message]="store.listError()"
+                (retry)="store.loadList()"
               />
             </div>
           }
 
-          @if (
-            store.listLoading() &&
-            store.users().length ===
-              0
-          ) {
-            <app-loading-state
-              message="Đang tải người dùng..."
-            />
-          } @else if (
-            store.users().length ===
-              0 &&
-            !store.listError()
-          ) {
+          @if (store.listLoading() && store.users().length === 0) {
+            <app-loading-state message="Đang tải người dùng..." />
+          } @else if (store.users().length === 0 && !store.listError()) {
             <app-empty-state
               icon="users"
               title="Không tìm thấy người dùng"
@@ -202,62 +123,38 @@ import {
               <table>
                 <thead>
                   <tr>
-                    <th>
-                      Người dùng
-                    </th>
+                    <th>Người dùng</th>
 
-                    <th>
-                      Role
-                    </th>
+                    <th>Role</th>
 
-                    <th>
-                      Email
-                    </th>
+                    <th>Email</th>
 
-                    <th>
-                      Trạng thái
-                    </th>
+                    <th>Trạng thái</th>
 
-                    <th>
-                      Đăng nhập gần nhất
-                    </th>
+                    <th>Đăng nhập gần nhất</th>
 
                     <th></th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  @for (
-                    user of store.users();
-                    track user.id
-                  ) {
+                  @for (user of store.users(); track user.id) {
                     <tr>
                       <td>
                         <div class="identity">
                           <strong>
-                            {{
-                              user.displayName
-                            }}
+                            {{ user.displayName }}
                           </strong>
 
-                          <small>
-                            &#64;{{
-                              user.username
-                            }}
-                          </small>
+                          <small> &#64;{{ user.username }} </small>
                         </div>
                       </td>
 
                       <td>
                         <div class="roles">
-                          @for (
-                            role of user.roles;
-                            track role.code
-                          ) {
+                          @for (role of user.roles; track role.code) {
                             <span>
-                              {{
-                                role.code
-                              }}
+                              {{ role.code }}
                             </span>
                           }
                         </div>
@@ -265,16 +162,10 @@ import {
 
                       <td>
                         <div class="email">
-                          {{
-                            user.email
-                          }}
+                          {{ user.email }}
 
-                          @if (
-                            user.emailVerified
-                          ) {
-                            <small>
-                              ✓ đã xác minh
-                            </small>
+                          @if (user.emailVerified) {
+                            <small> ✓ đã xác minh </small>
                           }
                         </div>
                       </td>
@@ -282,47 +173,21 @@ import {
                       <td>
                         <span
                           class="status"
-                          [class.active]="
-                            user.status ===
-                            'ACTIVE'
-                          "
-                          [class.suspended]="
-                            user.status ===
-                            'SUSPENDED'
-                          "
-                          [class.banned]="
-                            user.status ===
-                            'BANNED'
-                          "
-                          [class.deleted]="
-                            user.status ===
-                            'DELETED'
-                          "
+                          [class.active]="user.status === 'ACTIVE'"
+                          [class.suspended]="user.status === 'SUSPENDED'"
+                          [class.banned]="user.status === 'BANNED'"
+                          [class.deleted]="user.status === 'DELETED'"
                         >
-                          {{
-                            statusLabel(
-                              user.status
-                            )
-                          }}
+                          {{ statusLabel(user.status) }}
                         </span>
                       </td>
 
                       <td>
-                        {{
-                          formatDate(
-                            user.lastLoginAt
-                          )
-                        }}
+                        {{ formatDate(user.lastLoginAt) }}
                       </td>
 
                       <td>
-                        <a
-                          class="detail-link"
-                          [routerLink]="[
-                            '/admin/users',
-                            user.id
-                          ]"
-                        >
+                        <a class="detail-link" [routerLink]="['/admin/users', user.id]">
                           Chi tiết
                         </a>
                       </td>
@@ -341,14 +206,8 @@ import {
 
               <app-pagination
                 [page]="store.page()"
-                [totalPages]="
-                  store.totalPages()
-                "
-                (pageChange)="
-                  store.setPage(
-                    $event
-                  )
-                "
+                [totalPages]="store.totalPages()"
+                (pageChange)="store.setPage($event)"
               />
             </footer>
           }
@@ -534,108 +393,75 @@ import {
     }
   `,
 })
-export class AdminUsersListPageComponent
-  implements OnInit
-{
-  protected readonly store =
-    inject(
-      AdminUsersStore,
-    );
+export class AdminUsersListPageComponent implements OnInit {
+  protected readonly store = inject(AdminUsersStore);
 
-  protected readonly breadcrumbs:
-    readonly BreadcrumbItem[] = [
-      {
-        label:
-          'Trang chủ',
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    {
+      label: 'Trang chủ',
 
-        route:
-          '/',
-      },
+      route: '/',
+    },
 
-      {
-        label:
-          'Quản trị',
-      },
+    {
+      label: 'Quản trị',
+    },
 
-      {
-        label:
-          'Người dùng',
-      },
-    ];
+    {
+      label: 'Người dùng',
+    },
+  ];
 
-  protected readonly statusOptions:
-    readonly TabFilterOption<ManagedUserStatusFilter>[] =
-      [
-        {
-          value:
-            'ALL',
+  protected readonly statusOptions: readonly TabFilterOption<ManagedUserStatusFilter>[] = [
+    {
+      value: 'ALL',
 
-          label:
-            'Tất cả',
-        },
+      label: 'Tất cả',
+    },
 
-        {
-          value:
-            'ACTIVE',
+    {
+      value: 'ACTIVE',
 
-          label:
-            'Hoạt động',
-        },
+      label: 'Hoạt động',
+    },
 
-        {
-          value:
-            'SUSPENDED',
+    {
+      value: 'SUSPENDED',
 
-          label:
-            'Tạm khóa',
-        },
+      label: 'Tạm khóa',
+    },
 
-        {
-          value:
-            'BANNED',
+    {
+      value: 'BANNED',
 
-          label:
-            'Bị cấm',
-        },
+      label: 'Bị cấm',
+    },
 
-        {
-          value:
-            'DELETED',
+    {
+      value: 'DELETED',
 
-          label:
-            'Đã xóa',
-        },
-      ];
+      label: 'Đã xóa',
+    },
+  ];
 
   ngOnInit(): void {
     this.store.loadList();
   }
 
-  protected search(
-    event: Event,
-  ): void {
+  protected search(event: Event): void {
     event.preventDefault();
 
     this.store.search();
   }
 
-  protected changeRole(
-    event: Event,
-  ): void {
-    const target =
-      event.target as HTMLSelectElement;
+  protected changeRole(event: Event): void {
+    const target = event.target as HTMLSelectElement;
 
-    this.store.setRoleFilter(
-      target.value as ManagedUserRoleFilter,
-    );
+    this.store.setRoleFilter(target.value as ManagedUserRoleFilter);
   }
 
-  protected statusLabel(
-    status: string,
-  ): string {
-    switch (
-      status
-    ) {
+  protected statusLabel(status: string): string {
+    switch (status) {
       case 'ACTIVE':
         return 'Hoạt động';
 
@@ -653,16 +479,7 @@ export class AdminUsersListPageComponent
     }
   }
 
-  protected formatDate(
-    value:
-      string | null,
-  ): string {
-    return value
-      ? new Date(
-          value,
-        ).toLocaleString(
-          'vi-VN',
-        )
-      : 'Chưa có';
+  protected formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
   }
 }

@@ -1,65 +1,33 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
-import {
-  RouterLink,
-} from '@angular/router';
+import { RouterLink } from '@angular/router';
 
-import {
-  AuthorApplicationRecord,
-} from '../../domain/author-application.models';
+import { AuthorApplicationRecord } from '../../domain/author-application.models';
 
 @Component({
-  selector:
-    'app-author-application-status',
+  selector: 'app-author-application-status',
 
   standalone: true,
 
-  imports: [
-    RouterLink,
-  ],
+  imports: [RouterLink],
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
     <section class="status-card">
-      @if (
-        application.status ===
-        'PENDING'
-      ) {
-        <span
-          class="status-badge pending"
-        >
-          Đang chờ xét duyệt
-        </span>
+      @if (application.status === 'PENDING') {
+        <span class="status-badge pending"> Đang chờ xét duyệt </span>
 
-        <h2>
-          Hồ sơ của bạn đã được gửi
-        </h2>
+        <h2>Hồ sơ của bạn đã được gửi</h2>
 
         <p>
-          Đội ngũ quản trị đang xem
-          xét hồ sơ. Bạn không thể
-          chỉnh sửa hồ sơ trong thời
-          gian này.
+          Đội ngũ quản trị đang xem xét hồ sơ. Bạn không thể chỉnh sửa hồ sơ trong thời gian này.
         </p>
 
-        @if (
-          application.submittedAt
-        ) {
+        @if (application.submittedAt) {
           <small>
             Gửi lúc:
-            {{
-              formatDate(
-                application.submittedAt
-              )
-            }}
+            {{ formatDate(application.submittedAt) }}
           </small>
         }
 
@@ -67,48 +35,26 @@ import {
           type="button"
           class="refresh-button"
           [disabled]="checking"
-          (click)="
-            refreshStatus.emit()
-          "
+          (click)="refreshStatus.emit()"
         >
-          {{
-            checking
-              ? 'Đang kiểm tra...'
-              : 'Kiểm tra trạng thái'
-          }}
+          {{ checking ? 'Đang kiểm tra...' : 'Kiểm tra trạng thái' }}
         </button>
       }
 
-      @if (
-        application.status ===
-        'APPROVED'
-      ) {
-        <span
-          class="status-badge approved"
-        >
-          Đã được duyệt
-        </span>
+      @if (application.status === 'APPROVED') {
+        <span class="status-badge approved"> Đã được duyệt </span>
 
-        <h2>
-          Tài khoản tác giả đã được kích hoạt
-        </h2>
+        <h2>Tài khoản tác giả đã được kích hoạt</h2>
 
         <p>
           Bút danh
           <strong>
-            {{
-              application.penName
-            }}
+            {{ application.penName }}
           </strong>
           đã được xác minh.
         </p>
 
-        <a
-          class="studio-button"
-          routerLink="/author-studio"
-        >
-          Vào Author Studio
-        </a>
+        <a class="studio-button" routerLink="/author-studio"> Vào Author Studio </a>
       }
     </section>
   `,
@@ -121,19 +67,11 @@ import {
     .status-card {
       padding: 32px;
 
-      border:
-        1px solid
-        var(--border);
+      border: 1px solid var(--border);
 
       border-radius: 14px;
 
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          0.72
-        );
+      background: rgba(15, 23, 42, 0.72);
     }
 
     .status-badge {
@@ -153,35 +91,21 @@ import {
     .pending {
       color: #fde68a;
 
-      background:
-        rgba(
-          245,
-          158,
-          11,
-          0.15
-        );
+      background: rgba(245, 158, 11, 0.15);
     }
 
     .approved {
       color: #86efac;
 
-      background:
-        rgba(
-          34,
-          197,
-          94,
-          0.15
-        );
+      background: rgba(34, 197, 94, 0.15);
     }
 
     h2 {
-      margin:
-        0 0 10px;
+      margin: 0 0 10px;
     }
 
     p {
-      color:
-        var(--text-secondary);
+      color: var(--text-secondary);
 
       line-height: 1.6;
     }
@@ -191,8 +115,7 @@ import {
 
       margin-top: 16px;
 
-      color:
-        var(--text-secondary);
+      color: var(--text-secondary);
     }
 
     .refresh-button {
@@ -202,14 +125,7 @@ import {
 
       padding: 0 16px;
 
-      border:
-        1px solid
-        rgba(
-          168,
-          85,
-          247,
-          0.32
-        );
+      border: 1px solid rgba(168, 85, 247, 0.32);
 
       border-radius: 8px;
 
@@ -219,13 +135,7 @@ import {
 
       cursor: pointer;
 
-      background:
-        rgba(
-          124,
-          58,
-          237,
-          0.12
-        );
+      background: rgba(124, 58, 237, 0.12);
     }
 
     .refresh-button:disabled {
@@ -245,12 +155,7 @@ import {
 
       color: #fff;
 
-      background:
-        linear-gradient(
-          135deg,
-          #743cdd,
-          #a451eb
-        );
+      background: linear-gradient(135deg, #743cdd, #a451eb);
 
       font-weight: 700;
 
@@ -268,16 +173,9 @@ export class AuthorApplicationStatusComponent {
   checking = false;
 
   @Output()
-  refreshStatus =
-    new EventEmitter<void>();
+  refreshStatus = new EventEmitter<void>();
 
-  protected formatDate(
-    value: string,
-  ): string {
-    return new Date(
-      value,
-    ).toLocaleString(
-      'vi-VN',
-    );
+  protected formatDate(value: string): string {
+    return new Date(value).toLocaleString('vi-VN');
   }
 }

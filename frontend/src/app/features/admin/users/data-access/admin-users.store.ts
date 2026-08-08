@@ -1,31 +1,12 @@
-import {
-  computed,
-  DestroyRef,
-  inject,
-  Injectable,
-  signal,
-} from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 
-import {
-  takeUntilDestroyed,
-} from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import {
-  catchError,
-  finalize,
-  Observable,
-  takeUntil,
-  tap,
-  throwError,
-} from 'rxjs';
+import { catchError, finalize, Observable, takeUntil, tap, throwError } from 'rxjs';
 
-import {
-  AuthSessionLifecycleService,
-} from '../../../../core/auth/auth-session-lifecycle.service';
+import { AuthSessionLifecycleService } from '../../../../core/auth/auth-session-lifecycle.service';
 
-import {
-  getApiErrorMessage,
-} from '../../../../core/http/api-error.util';
+import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 
 import {
   AdminUserDetail,
@@ -35,122 +16,68 @@ import {
   ManagedUserStatusFilter,
 } from '../domain/admin-user.models';
 
-import {
-  AdminUsersApiService,
-} from './admin-users-api.service';
+import { AdminUsersApiService } from './admin-users-api.service';
 
 @Injectable()
 export class AdminUsersStore {
-  private readonly api =
-    inject(
-      AdminUsersApiService,
-    );
+  private readonly api = inject(AdminUsersApiService);
 
-  private readonly lifecycle =
-    inject(
-      AuthSessionLifecycleService,
-    );
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
-  private readonly destroyRef =
-    inject(
-      DestroyRef,
-    );
+  private readonly destroyRef = inject(DestroyRef);
 
-  private readonly usersState =
-    signal<
-      readonly AdminUserSummary[]
-    >([]);
+  private readonly usersState = signal<readonly AdminUserSummary[]>([]);
 
-  private readonly totalState =
-    signal(0);
+  private readonly totalState = signal(0);
 
-  private readonly detailState =
-    signal<AdminUserDetail | null>(
-      null,
-    );
+  private readonly detailState = signal<AdminUserDetail | null>(null);
 
-  readonly users =
-    this.usersState.asReadonly();
+  readonly users = this.usersState.asReadonly();
 
-  readonly total =
-    this.totalState.asReadonly();
+  readonly total = this.totalState.asReadonly();
 
-  readonly detail =
-    this.detailState.asReadonly();
+  readonly detail = this.detailState.asReadonly();
 
-  readonly keyword =
-    signal('');
+  readonly keyword = signal('');
 
-  readonly statusFilter =
-    signal<ManagedUserStatusFilter>(
-      'ALL',
-    );
+  readonly statusFilter = signal<ManagedUserStatusFilter>('ALL');
 
-  readonly roleFilter =
-    signal<ManagedUserRoleFilter>(
-      'ALL',
-    );
+  readonly roleFilter = signal<ManagedUserRoleFilter>('ALL');
 
-  readonly page =
-    signal(1);
+  readonly page = signal(1);
 
-  readonly pageSize =
-    20;
+  readonly pageSize = 20;
 
-  readonly listLoading =
-    signal(false);
+  readonly listLoading = signal(false);
 
-  readonly detailLoading =
-    signal(false);
+  readonly detailLoading = signal(false);
 
-  readonly actionLoading =
-    signal(false);
+  readonly actionLoading = signal(false);
 
-  readonly listError =
-    signal('');
+  readonly listError = signal('');
 
-  readonly detailError =
-    signal('');
+  readonly detailError = signal('');
 
-  readonly actionError =
-    signal('');
+  readonly actionError = signal('');
 
-  readonly actionMessage =
-    signal('');
+  readonly actionMessage = signal('');
 
-  readonly totalPages =
-    computed(
-      () =>
-        Math.max(
-          1,
+  readonly totalPages = computed(() =>
+    Math.max(
+      1,
 
-          Math.ceil(
-            this.total() /
-              this.pageSize,
-          ),
-        ),
-    );
+      Math.ceil(this.total() / this.pageSize),
+    ),
+  );
 
   constructor() {
-    this.lifecycle.changes$
-      .pipe(
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
-      )
-      .subscribe(
-        () => {
-          this.reset();
-        },
-      );
+    this.lifecycle.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.reset();
+    });
   }
 
-  setKeyword(
-    value: string,
-  ): void {
-    this.keyword.set(
-      value,
-    );
+  setKeyword(value: string): void {
+    this.keyword.set(value);
   }
 
   search(): void {
@@ -159,156 +86,93 @@ export class AdminUsersStore {
     this.loadList();
   }
 
-  setStatusFilter(
-    value:
-      ManagedUserStatusFilter,
-  ): void {
-    this.statusFilter.set(
-      value,
-    );
+  setStatusFilter(value: ManagedUserStatusFilter): void {
+    this.statusFilter.set(value);
 
     this.page.set(1);
 
     this.loadList();
   }
 
-  setRoleFilter(
-    value:
-      ManagedUserRoleFilter,
-  ): void {
-    this.roleFilter.set(
-      value,
-    );
+  setRoleFilter(value: ManagedUserRoleFilter): void {
+    this.roleFilter.set(value);
 
     this.page.set(1);
 
     this.loadList();
   }
 
-  setPage(
-    value: number,
-  ): void {
-    const page =
-      Math.min(
-        this.totalPages(),
+  setPage(value: number): void {
+    const page = Math.min(
+      this.totalPages(),
 
-        Math.max(
-          1,
+      Math.max(
+        1,
 
-          Math.trunc(
-            value,
-          ),
-        ),
-      );
-
-    this.page.set(
-      page,
+        Math.trunc(value),
+      ),
     );
+
+    this.page.set(page);
 
     this.loadList();
   }
 
   loadList(): void {
-    const revision =
-      this.lifecycle.revision();
+    const revision = this.lifecycle.revision();
 
-    this.listLoading.set(
-      true,
-    );
+    this.listLoading.set(true);
 
     this.listError.set('');
 
     this.api
       .list({
-        keyword:
-          this.keyword(),
+        keyword: this.keyword(),
 
-        status:
-          this.statusFilter(),
+        status: this.statusFilter(),
 
-        role:
-          this.roleFilter(),
+        role: this.roleFilter(),
 
-        offset:
-          (
-            this.page() -
-            1
-          ) *
-          this.pageSize,
+        offset: (this.page() - 1) * this.pageSize,
 
-        limit:
-          this.pageSize,
+        limit: this.pageSize,
       })
       .pipe(
-        takeUntil(
-          this.lifecycle.changes$,
-        ),
+        takeUntil(this.lifecycle.changes$),
 
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
+        takeUntilDestroyed(this.destroyRef),
 
-        finalize(
-          () => {
-            if (
-              revision ===
-              this.lifecycle.revision()
-            ) {
-              this.listLoading.set(
-                false,
-              );
-            }
-          },
-        ),
+        finalize(() => {
+          if (revision === this.lifecycle.revision()) {
+            this.listLoading.set(false);
+          }
+        }),
       )
       .subscribe({
-        next: (
-          response,
-        ) => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
+        next: (response) => {
+          if (revision !== this.lifecycle.revision()) {
             return;
           }
 
-          this.usersState.set(
-            response.users,
-          );
+          this.usersState.set(response.users);
 
-          this.totalState.set(
-            response.total,
-          );
+          this.totalState.set(response.total);
         },
 
-        error: (
-          error: unknown,
-        ) => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
+        error: (error: unknown) => {
+          if (revision !== this.lifecycle.revision()) {
             return;
           }
 
-          this.listError.set(
-            getApiErrorMessage(
-              error,
-            ),
-          );
+          this.listError.set(getApiErrorMessage(error));
         },
       });
   }
 
-  loadDetail(
-    userId: string,
-  ): void {
-    const revision =
-      this.lifecycle.revision();
+  loadDetail(userId: string): void {
+    const revision = this.lifecycle.revision();
 
-    this.detailLoading.set(
-      true,
-    );
+    this.detailLoading.set(true);
 
     this.detailError.set('');
 
@@ -317,76 +181,38 @@ export class AdminUsersStore {
     this.actionMessage.set('');
 
     this.api
-      .getOne(
-        userId,
-      )
+      .getOne(userId)
       .pipe(
-        takeUntil(
-          this.lifecycle.changes$,
-        ),
+        takeUntil(this.lifecycle.changes$),
 
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
+        takeUntilDestroyed(this.destroyRef),
 
-        finalize(
-          () => {
-            if (
-              revision ===
-              this.lifecycle.revision()
-            ) {
-              this.detailLoading.set(
-                false,
-              );
-            }
-          },
-        ),
+        finalize(() => {
+          if (revision === this.lifecycle.revision()) {
+            this.detailLoading.set(false);
+          }
+        }),
       )
       .subscribe({
-        next: (
-          user,
-        ) => {
-          if (
-            revision ===
-            this.lifecycle.revision()
-          ) {
-            this.detailState.set(
-              user,
-            );
+        next: (user) => {
+          if (revision === this.lifecycle.revision()) {
+            this.detailState.set(user);
           }
         },
 
-        error: (
-          error: unknown,
-        ) => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
-            this.detailError.set(
-              getApiErrorMessage(
-                error,
-              ),
-            );
+        error: (error: unknown) => {
+          if (revision !== this.lifecycle.revision()) {
+            this.detailError.set(getApiErrorMessage(error));
           }
         },
       });
   }
 
-  updateStatus(
-    status:
-      ManagedUserStatus,
-  ): Observable<AdminUserDetail> {
-    const user =
-      this.detail();
+  updateStatus(status: ManagedUserStatus): Observable<AdminUserDetail> {
+    const user = this.detail();
 
     if (!user) {
-      return throwError(
-        () =>
-          new Error(
-            'Không có người dùng để cập nhật.',
-          ),
-      );
+      return throwError(() => new Error('Không có người dùng để cập nhật.'));
     }
 
     this.prepareAction();
@@ -398,62 +224,33 @@ export class AdminUsersStore {
         status,
       )
       .pipe(
-        tap(
-          (
-            updated,
-          ) => {
-            this.applyUpdatedUser(
-              updated,
-            );
+        tap((updated) => {
+          this.applyUpdatedUser(updated);
 
-            this.actionMessage.set(
-              status ===
-                'ACTIVE'
-                ? 'Tài khoản đã được kích hoạt.'
-                : status ===
-                    'SUSPENDED'
-                  ? 'Tài khoản đã bị tạm khóa và các phiên đăng nhập đã được thu hồi.'
-                  : 'Tài khoản đã bị cấm và các phiên đăng nhập đã được thu hồi.',
-            );
-          },
-        ),
+          this.actionMessage.set(
+            status === 'ACTIVE'
+              ? 'Tài khoản đã được kích hoạt.'
+              : status === 'SUSPENDED'
+                ? 'Tài khoản đã bị tạm khóa và các phiên đăng nhập đã được thu hồi.'
+                : 'Tài khoản đã bị cấm và các phiên đăng nhập đã được thu hồi.',
+          );
+        }),
 
-        catchError(
-          (
-            error: unknown,
-          ) => {
-            this.actionError.set(
-              getApiErrorMessage(
-                error,
-              ),
-            );
+        catchError((error: unknown) => {
+          this.actionError.set(getApiErrorMessage(error));
 
-            return throwError(
-              () => error,
-            );
-          },
-        ),
+          return throwError(() => error);
+        }),
 
-        finalize(
-          () =>
-            this.actionLoading.set(
-              false,
-            ),
-        ),
+        finalize(() => this.actionLoading.set(false)),
       );
   }
 
   assignAdminRole(): Observable<AdminUserDetail> {
-    const user =
-      this.detail();
+    const user = this.detail();
 
     if (!user) {
-      return throwError(
-        () =>
-          new Error(
-            'Không có người dùng để cập nhật.',
-          ),
-      );
+      return throwError(() => new Error('Không có người dùng để cập nhật.'));
     }
 
     this.prepareAction();
@@ -465,56 +262,27 @@ export class AdminUsersStore {
         'ADMIN',
       )
       .pipe(
-        tap(
-          (
-            updated,
-          ) => {
-            this.applyUpdatedUser(
-              updated,
-            );
+        tap((updated) => {
+          this.applyUpdatedUser(updated);
 
-            this.actionMessage.set(
-              'Đã cấp quyền ADMIN cho người dùng.',
-            );
-          },
-        ),
+          this.actionMessage.set('Đã cấp quyền ADMIN cho người dùng.');
+        }),
 
-        catchError(
-          (
-            error: unknown,
-          ) => {
-            this.actionError.set(
-              getApiErrorMessage(
-                error,
-              ),
-            );
+        catchError((error: unknown) => {
+          this.actionError.set(getApiErrorMessage(error));
 
-            return throwError(
-              () => error,
-            );
-          },
-        ),
+          return throwError(() => error);
+        }),
 
-        finalize(
-          () =>
-            this.actionLoading.set(
-              false,
-            ),
-        ),
+        finalize(() => this.actionLoading.set(false)),
       );
   }
 
   removeAdminRole(): Observable<AdminUserDetail> {
-    const user =
-      this.detail();
+    const user = this.detail();
 
     if (!user) {
-      return throwError(
-        () =>
-          new Error(
-            'Không có người dùng để cập nhật.',
-          ),
-      );
+      return throwError(() => new Error('Không có người dùng để cập nhật.'));
     }
 
     this.prepareAction();
@@ -526,42 +294,19 @@ export class AdminUsersStore {
         'ADMIN',
       )
       .pipe(
-        tap(
-          (
-            updated,
-          ) => {
-            this.applyUpdatedUser(
-              updated,
-            );
+        tap((updated) => {
+          this.applyUpdatedUser(updated);
 
-            this.actionMessage.set(
-              'Đã gỡ quyền ADMIN. Các phiên của tài khoản này đã bị thu hồi.',
-            );
-          },
-        ),
+          this.actionMessage.set('Đã gỡ quyền ADMIN. Các phiên của tài khoản này đã bị thu hồi.');
+        }),
 
-        catchError(
-          (
-            error: unknown,
-          ) => {
-            this.actionError.set(
-              getApiErrorMessage(
-                error,
-              ),
-            );
+        catchError((error: unknown) => {
+          this.actionError.set(getApiErrorMessage(error));
 
-            return throwError(
-              () => error,
-            );
-          },
-        ),
+          return throwError(() => error);
+        }),
 
-        finalize(
-          () =>
-            this.actionLoading.set(
-              false,
-            ),
-        ),
+        finalize(() => this.actionLoading.set(false)),
       );
   }
 
@@ -572,106 +317,67 @@ export class AdminUsersStore {
   }
 
   private prepareAction(): void {
-    this.actionLoading.set(
-      true,
-    );
+    this.actionLoading.set(true);
 
     this.actionError.set('');
 
     this.actionMessage.set('');
   }
 
-  private applyUpdatedUser(
-    user:
-      AdminUserDetail,
-  ): void {
-    this.detailState.set(
-      user,
-    );
+  private applyUpdatedUser(user: AdminUserDetail): void {
+    this.detailState.set(user);
 
-    this.usersState.update(
-      (
-        users,
-      ) =>
-        users.map(
-          (
-            current,
-          ) =>
-            current.id ===
-            user.id
-              ? {
-                  id:
-                    user.id,
+    this.usersState.update((users) =>
+      users.map((current) =>
+        current.id === user.id
+          ? {
+              id: user.id,
 
-                  email:
-                    user.email,
+              email: user.email,
 
-                  username:
-                    user.username,
+              username: user.username,
 
-                  displayName:
-                    user.displayName,
+              displayName: user.displayName,
 
-                  status:
-                    user.status,
+              status: user.status,
 
-                  emailVerified:
-                    user.emailVerified,
+              emailVerified: user.emailVerified,
 
-                  emailVerifiedAt:
-                    user.emailVerifiedAt,
+              emailVerifiedAt: user.emailVerifiedAt,
 
-                  lastLoginAt:
-                    user.lastLoginAt,
+              lastLoginAt: user.lastLoginAt,
 
-                  roles:
-                    user.roles,
+              roles: user.roles,
 
-                  createdAt:
-                    user.createdAt,
+              createdAt: user.createdAt,
 
-                  updatedAt:
-                    user.updatedAt,
-                }
-              : current,
-        ),
+              updatedAt: user.updatedAt,
+            }
+          : current,
+      ),
     );
   }
 
   private reset(): void {
-    this.usersState.set(
-      [],
-    );
+    this.usersState.set([]);
 
     this.totalState.set(0);
 
-    this.detailState.set(
-      null,
-    );
+    this.detailState.set(null);
 
     this.keyword.set('');
 
-    this.statusFilter.set(
-      'ALL',
-    );
+    this.statusFilter.set('ALL');
 
-    this.roleFilter.set(
-      'ALL',
-    );
+    this.roleFilter.set('ALL');
 
     this.page.set(1);
 
-    this.listLoading.set(
-      false,
-    );
+    this.listLoading.set(false);
 
-    this.detailLoading.set(
-      false,
-    );
+    this.detailLoading.set(false);
 
-    this.actionLoading.set(
-      false,
-    );
+    this.actionLoading.set(false);
 
     this.listError.set('');
 

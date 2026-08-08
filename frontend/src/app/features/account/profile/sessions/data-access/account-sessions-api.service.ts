@@ -1,8 +1,4 @@
-import {
-  HttpClient,
-  HttpHeaders,
-  HttpParams,
-} from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 
 import { inject, Injectable } from '@angular/core';
 
@@ -29,17 +25,11 @@ export class AccountSessionsApiService {
 
   getSessions(): Observable<AccountSessionsResponse> {
     return this.http
-      .get<ApiSuccessEnvelope<AccountSessionsResponse>>(
-        `${this.authUrl}/sessions`,
-      )
-      .pipe(
-        map((response) => response.data),
-      );
+      .get<ApiSuccessEnvelope<AccountSessionsResponse>>(`${this.authUrl}/sessions`)
+      .pipe(map((response) => response.data));
   }
 
-  getRecentSecurityEvents(
-    limit = 10,
-  ): Observable<AccountSecurityEventsResponse> {
+  getRecentSecurityEvents(limit = 10): Observable<AccountSecurityEventsResponse> {
     const params = new HttpParams().set(
       'limit',
 
@@ -54,9 +44,7 @@ export class AccountSessionsApiService {
           params,
         },
       )
-      .pipe(
-        map((response) => response.data),
-      );
+      .pipe(map((response) => response.data));
   }
 
   revokeOtherSessions(): Observable<RevokeOtherSessionsResponse> {
@@ -66,14 +54,10 @@ export class AccountSessionsApiService {
 
         {},
       )
-      .pipe(
-        map((response) => response.data),
-      );
+      .pipe(map((response) => response.data));
   }
 
-  revokeSession(
-    sessionId: string,
-  ): Observable<void> {
+  revokeSession(sessionId: string): Observable<void> {
     const headers = new HttpHeaders({
       'x-idempotency-key': crypto.randomUUID(),
     });
@@ -86,8 +70,6 @@ export class AccountSessionsApiService {
           headers,
         },
       )
-      .pipe(
-        map(() => undefined),
-      );
+      .pipe(map(() => undefined));
   }
 }

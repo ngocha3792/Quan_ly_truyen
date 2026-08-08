@@ -95,13 +95,9 @@ export class AccountSecurityStore {
 
         label: 'Email khôi phục',
 
-        description:
-          overview.recoveryEmailVerified
-            ? 'Đã xác minh'
-            : 'Chưa xác minh',
+        description: overview.recoveryEmailVerified ? 'Đã xác minh' : 'Chưa xác minh',
 
-        completed:
-          overview.recoveryEmailVerified,
+        completed: overview.recoveryEmailVerified,
       },
 
       {

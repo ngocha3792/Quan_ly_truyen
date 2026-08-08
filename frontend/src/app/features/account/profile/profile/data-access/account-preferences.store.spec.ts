@@ -1,260 +1,153 @@
-import {
-  TestBed,
-} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {
-  of,
-  Subject,
-  throwError,
-} from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AuthSessionLifecycleService,
-} from '../../../../../core/auth/auth-session-lifecycle.service';
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
-import {
-  AccountProfileApiService,
-} from './account-profile-api.service';
+import { AccountProfileApiService } from './account-profile-api.service';
 
-import {
-  AccountPreferencesStore,
-} from './account-preferences.store';
+import { AccountPreferencesStore } from './account-preferences.store';
 
-describe(
-  'AccountPreferencesStore',
+describe('AccountPreferencesStore', () => {
+  let store: AccountPreferencesStore;
 
-  () => {
-    let store:
-      AccountPreferencesStore;
+  let lifecycle: AuthSessionLifecycleService;
 
-    let lifecycle:
-      AuthSessionLifecycleService;
+  let api: {
+    getPreferences: ReturnType<typeof vi.fn>;
 
-    let api: {
-      getPreferences:
-        ReturnType<
-          typeof vi.fn
-        >;
+    updatePreferences: ReturnType<typeof vi.fn>;
+  };
 
-      updatePreferences:
-        ReturnType<
-          typeof vi.fn
-        >;
+  beforeEach(() => {
+    api = {
+      getPreferences: vi.fn(),
+
+      updatePreferences: vi.fn(),
     };
 
-    beforeEach(() => {
-      api = {
-        getPreferences:
-          vi.fn(),
+    TestBed.configureTestingModule({
+      providers: [
+        AccountPreferencesStore,
 
-        updatePreferences:
-          vi.fn(),
-      };
+        AuthSessionLifecycleService,
 
-      TestBed.configureTestingModule({
-        providers: [
-          AccountPreferencesStore,
+        {
+          provide: AccountProfileApiService,
 
-          AuthSessionLifecycleService,
-
-          {
-            provide:
-              AccountProfileApiService,
-
-            useValue:
-              api,
-          },
-        ],
-      });
-
-      lifecycle =
-        TestBed.inject(
-          AuthSessionLifecycleService,
-        );
-
-      store =
-        TestBed.inject(
-          AccountPreferencesStore,
-        );
-
-      lifecycle.establishSession(
-        'alice',
-
-        'alice-session',
-
-        false,
-      );
+          useValue: api,
+        },
+      ],
     });
 
-    afterEach(() => {
-      TestBed.resetTestingModule();
+    lifecycle = TestBed.inject(AuthSessionLifecycleService);
+
+    store = TestBed.inject(AccountPreferencesStore);
+
+    lifecycle.establishSession(
+      'alice',
+
+      'alice-session',
+
+      false,
+    );
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('serialize các update bằng concatMap', () => {
+    const first$ = new Subject<{
+      newChapterNotifications: boolean;
+
+      showRecentActivity: boolean;
+
+      allowUpdateEmails: boolean;
+    }>();
+
+    api.updatePreferences.mockReturnValueOnce(first$.asObservable()).mockReturnValueOnce(
+      of({
+        newChapterNotifications: false,
+
+        showRecentActivity: false,
+
+        allowUpdateEmails: true,
+      }),
+    );
+
+    store.update({
+      newChapterNotifications: false,
     });
 
-    it(
-      'serialize các update bằng concatMap',
+    store.update({
+      showRecentActivity: false,
+    });
 
-      () => {
-        const first$ =
-          new Subject<{
-            newChapterNotifications:
-              boolean;
+    /*
+     * Request 2 chưa được chạy
+     * vì request 1 chưa complete.
+     */
+    expect(api.updatePreferences).toHaveBeenCalledTimes(1);
 
-            showRecentActivity:
-              boolean;
+    first$.next({
+      newChapterNotifications: false,
 
-            allowUpdateEmails:
-              boolean;
-          }>();
+      showRecentActivity: true,
 
-        api.updatePreferences
-          .mockReturnValueOnce(
-            first$.asObservable(),
-          )
-          .mockReturnValueOnce(
-            of({
-              newChapterNotifications:
-                false,
+      allowUpdateEmails: true,
+    });
 
-              showRecentActivity:
-                false,
+    first$.complete();
 
-              allowUpdateEmails:
-                true,
-            }),
-          );
+    expect(api.updatePreferences).toHaveBeenCalledTimes(2);
 
-        store.update({
-          newChapterNotifications:
-            false,
-        });
+    expect(api.updatePreferences.mock.calls[1]?.[0]).toEqual({
+      newChapterNotifications: false,
 
-        store.update({
-          showRecentActivity:
-            false,
-        });
+      showRecentActivity: false,
 
-        /*
-         * Request 2 chưa được chạy
-         * vì request 1 chưa complete.
-         */
-        expect(
-          api.updatePreferences,
-        ).toHaveBeenCalledTimes(
-          1,
-        );
+      allowUpdateEmails: true,
+    });
 
-        first$.next({
-          newChapterNotifications:
-            false,
+    expect(store.preferences()).toEqual({
+      newChapterNotifications: false,
 
-          showRecentActivity:
-            true,
+      showRecentActivity: false,
 
-          allowUpdateEmails:
-            true,
-        });
+      allowUpdateEmails: true,
+    });
+  });
 
-        first$.complete();
+  it('request lỗi phải reload authoritative server state', () => {
+    api.updatePreferences.mockReturnValue(throwError(() => new Error('save failed')));
 
-        expect(
-          api.updatePreferences,
-        ).toHaveBeenCalledTimes(
-          2,
-        );
+    api.getPreferences.mockReturnValue(
+      of({
+        newChapterNotifications: true,
 
-        expect(
-          api.updatePreferences.mock.calls[1]?.[0],
-        ).toEqual({
-          newChapterNotifications:
-            false,
+        showRecentActivity: false,
 
-          showRecentActivity:
-            false,
-
-          allowUpdateEmails:
-            true,
-        });
-
-        expect(
-          store.preferences(),
-        ).toEqual({
-          newChapterNotifications:
-            false,
-
-          showRecentActivity:
-            false,
-
-          allowUpdateEmails:
-            true,
-        });
-      },
+        allowUpdateEmails: true,
+      }),
     );
 
-    it(
-      'request lỗi phải reload authoritative server state',
+    store.update({
+      newChapterNotifications: false,
+    });
 
-      () => {
-        api.updatePreferences.mockReturnValue(
-          throwError(
-            () =>
-              new Error(
-                'save failed',
-              ),
-          ),
-        );
+    expect(api.getPreferences).toHaveBeenCalledTimes(1);
 
-        api.getPreferences.mockReturnValue(
-          of({
-            newChapterNotifications:
-              true,
+    expect(store.preferences()).toEqual({
+      newChapterNotifications: true,
 
-            showRecentActivity:
-              false,
+      showRecentActivity: false,
 
-            allowUpdateEmails:
-              true,
-          }),
-        );
+      allowUpdateEmails: true,
+    });
 
-        store.update({
-          newChapterNotifications:
-            false,
-        });
-
-        expect(
-          api.getPreferences,
-        ).toHaveBeenCalledTimes(
-          1,
-        );
-
-        expect(
-          store.preferences(),
-        ).toEqual({
-          newChapterNotifications:
-            true,
-
-          showRecentActivity:
-            false,
-
-          allowUpdateEmails:
-            true,
-        });
-
-        expect(
-          store.error(),
-        ).toBe(
-          'save failed',
-        );
-      },
-    );
-  },
-);
+    expect(store.error()).toBe('save failed');
+  });
+});

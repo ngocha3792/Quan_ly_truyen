@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
-import { NotificationType, UserNotification } from '../../domain/notifications.models';
+import { UserNotification } from '../../domain/notifications.models';
 
 @Component({
   selector: 'app-notifications-list',

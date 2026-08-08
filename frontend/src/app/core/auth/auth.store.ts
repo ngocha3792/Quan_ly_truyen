@@ -1,11 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  computed,
-  ErrorHandler,
-  inject,
-  Injectable,
-  signal,
-} from '@angular/core';
+import { computed, ErrorHandler, inject, Injectable, signal } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -68,13 +62,9 @@ export class AuthStore {
 
   private readonly sessionHint = inject(AuthSessionHintStore);
 
-  private readonly lifecycle = inject(
-    AuthSessionLifecycleService,
-  );
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
-  private readonly errorHandler = inject(
-    ErrorHandler,
-  );
+  private readonly errorHandler = inject(ErrorHandler);
 
   private readonly userState = signal<CurrentUser | null>(null);
 
@@ -386,30 +376,17 @@ export class AuthStore {
         retry({
           count: 2,
 
-          delay: (
-            error,
-            retryCount,
-          ) => {
-            if (
-              !this.isRetryableLogoutError(
-                error,
-              )
-            ) {
-              return throwError(
-                () => error,
-              );
+          delay: (error, retryCount) => {
+            if (!this.isRetryableLogoutError(error)) {
+              return throwError(() => error);
             }
 
-            return timer(
-              250 * retryCount,
-            );
+            return timer(250 * retryCount);
           },
         }),
       )
       .subscribe({
-        error: (
-          error: unknown,
-        ) => {
+        error: (error: unknown) => {
           /*
            * Local logout đã hoàn tất.
            *
@@ -423,9 +400,7 @@ export class AuthStore {
             'Đã đăng xuất trên thiết bị này nhưng máy chủ chưa xác nhận thu hồi phiên.',
           );
 
-          this.errorHandler.handleError(
-            error,
-          );
+          this.errorHandler.handleError(error);
         },
       });
   }
@@ -483,16 +458,8 @@ export class AuthStore {
     return isTerminalAuthSessionError(error);
   }
 
-  private isRetryableLogoutError(
-    error: unknown,
-  ): boolean {
-    return (
-      error instanceof HttpErrorResponse &&
-      (
-        error.status === 0 ||
-        error.status >= 500
-      )
-    );
+  private isRetryableLogoutError(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
   }
 
   private setAuthenticated(user: CurrentUser): void {

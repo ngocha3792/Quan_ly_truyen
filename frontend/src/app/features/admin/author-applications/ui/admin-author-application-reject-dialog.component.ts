@@ -20,24 +20,16 @@ import {
 } from '../domain/admin-author-application.models';
 
 @Component({
-  selector:
-    'app-admin-author-application-reject-dialog',
+  selector: 'app-admin-author-application-reject-dialog',
 
   standalone: true,
 
-  imports: [
-    ReactiveFormsModule,
-  ],
+  imports: [ReactiveFormsModule],
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
-    <div
-      class="dialog-backdrop"
-      role="presentation"
-      (click)="handleCancel()"
-    >
+    <div class="dialog-backdrop" role="presentation" (click)="handleCancel()">
       <section
         class="dialog-card"
         role="dialog"
@@ -45,57 +37,28 @@ import {
         aria-labelledby="reject-dialog-title"
         (click)="$event.stopPropagation()"
       >
-        <h2
-          id="reject-dialog-title"
-        >
-          Từ chối hồ sơ
-        </h2>
+        <h2 id="reject-dialog-title">Từ chối hồ sơ</h2>
 
-        <p>
-          Hãy ghi rõ lý do để người
-          đăng ký biết phần nào cần
-          chỉnh sửa trước khi gửi lại.
-        </p>
+        <p>Hãy ghi rõ lý do để người đăng ký biết phần nào cần chỉnh sửa trước khi gửi lại.</p>
 
-        <form
-          [formGroup]="form"
-          (ngSubmit)="handleSubmit()"
-        >
-          <label
-            for="author-rejection-reason"
-          >
-            Lý do từ chối
-          </label>
+        <form [formGroup]="form" (ngSubmit)="handleSubmit()">
+          <label for="author-rejection-reason"> Lý do từ chối </label>
 
           <textarea
             id="author-rejection-reason"
             rows="6"
             formControlName="reason"
-            [attr.maxlength]="
-              maximumLength
-            "
+            [attr.maxlength]="maximumLength"
             placeholder="Ví dụ: Mẫu chương truyện còn quá ngắn và chưa thể hiện rõ chất lượng nội dung..."
           ></textarea>
 
           <div class="field-footer">
             <div>
-              @if (
-                form.controls.reason.touched &&
-                form.controls.reason.hasError(
-                  'required'
-                )
-              ) {
-                <small class="error">
-                  Vui lòng nhập lý do từ chối.
-                </small>
+              @if (form.controls.reason.touched && form.controls.reason.hasError('required')) {
+                <small class="error"> Vui lòng nhập lý do từ chối. </small>
               }
 
-              @if (
-                form.controls.reason.touched &&
-                form.controls.reason.hasError(
-                  'minlength'
-                )
-              ) {
+              @if (form.controls.reason.touched && form.controls.reason.hasError('minlength')) {
                 <small class="error">
                   Lý do cần ít nhất
                   {{ minimumLength }}
@@ -103,15 +66,9 @@ import {
                 </small>
               }
 
-              @if (
-                form.controls.reason.touched &&
-                form.controls.reason.hasError(
-                  'maxlength'
-                )
-              ) {
+              @if (form.controls.reason.touched && form.controls.reason.hasError('maxlength')) {
                 <small class="error">
-                  Lý do không được vượt
-                  quá
+                  Lý do không được vượt quá
                   {{ maximumLength }}
                   ký tự.
                 </small>
@@ -119,10 +76,7 @@ import {
             </div>
 
             <small class="counter">
-              {{
-                form.controls.reason.value
-                  .length
-              }}
+              {{ form.controls.reason.value.length }}
               /
               {{ maximumLength }}
             </small>
@@ -138,16 +92,8 @@ import {
               Hủy
             </button>
 
-            <button
-              type="submit"
-              class="reject-button"
-              [disabled]="loading()"
-            >
-              {{
-                loading()
-                  ? 'Đang từ chối...'
-                  : 'Xác nhận từ chối'
-              }}
+            <button type="submit" class="reject-button" [disabled]="loading()">
+              {{ loading() ? 'Đang từ chối...' : 'Xác nhận từ chối' }}
             </button>
           </footer>
         </form>
@@ -169,52 +115,27 @@ import {
 
       padding: 20px;
 
-      background:
-        rgba(
-          2,
-          6,
-          23,
-          0.78
-        );
+      background: rgba(2, 6, 23, 0.78);
 
-      backdrop-filter:
-        blur(5px);
+      backdrop-filter: blur(5px);
     }
 
     .dialog-card {
-      width: min(
-        520px,
-        100%
-      );
+      width: min(520px, 100%);
 
       padding: 28px;
 
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.16
-        );
+      border: 1px solid rgba(148, 163, 184, 0.16);
 
       border-radius: 14px;
 
       background: #0f172a;
 
-      box-shadow:
-        0 24px 80px
-        rgba(
-          0,
-          0,
-          0,
-          0.4
-        );
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
     }
 
     h2 {
-      margin:
-        0 0 8px;
+      margin: 0 0 8px;
 
       color: #f8fafc;
 
@@ -222,8 +143,7 @@ import {
     }
 
     p {
-      margin:
-        0 0 20px;
+      margin: 0 0 20px;
 
       color: #94a3b8;
 
@@ -253,14 +173,7 @@ import {
 
       resize: vertical;
 
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.2
-        );
+      border: 1px solid rgba(148, 163, 184, 0.2);
 
       border-radius: 8px;
 
@@ -272,23 +185,11 @@ import {
 
       line-height: 1.6;
 
-      background:
-        rgba(
-          2,
-          6,
-          23,
-          0.55
-        );
+      background: rgba(2, 6, 23, 0.55);
     }
 
     textarea:focus {
-      border-color:
-        rgba(
-          168,
-          85,
-          247,
-          0.52
-        );
+      border-color: rgba(168, 85, 247, 0.52);
     }
 
     .field-footer {
@@ -296,8 +197,7 @@ import {
 
       display: flex;
 
-      justify-content:
-        space-between;
+      justify-content: space-between;
 
       gap: 12px;
     }
@@ -321,8 +221,7 @@ import {
 
       display: flex;
 
-      justify-content:
-        flex-end;
+      justify-content: flex-end;
 
       gap: 10px;
     }
@@ -346,19 +245,11 @@ import {
     }
 
     .cancel-button {
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.2
-        );
+      border: 1px solid rgba(148, 163, 184, 0.2);
 
       color: #cbd5e1;
 
-      background:
-        transparent;
+      background: transparent;
     }
 
     .reject-button {
@@ -366,48 +257,28 @@ import {
 
       color: #fff;
 
-      background:
-        linear-gradient(
-          135deg,
-          #be123c,
-          #e11d48
-        );
+      background: linear-gradient(135deg, #be123c, #e11d48);
     }
   `,
 })
 export class AdminAuthorApplicationRejectDialogComponent {
-  private readonly formBuilder =
-    inject(FormBuilder);
+  private readonly formBuilder = inject(FormBuilder);
 
-  readonly loading =
-    input(false);
+  readonly loading = input(false);
 
-  readonly confirm =
-    output<string>();
+  readonly confirm = output<string>();
 
-  readonly cancel =
-    output<void>();
+  readonly cancel = output<void>(); // eslint-disable-line @angular-eslint/no-output-native -- legacy public output; rename in the Admin refactor wave.
 
-  protected readonly minimumLength =
-    AUTHOR_REJECTION_REASON_MIN_LENGTH;
+  protected readonly minimumLength = AUTHOR_REJECTION_REASON_MIN_LENGTH;
 
-  protected readonly maximumLength =
-    AUTHOR_REJECTION_REASON_MAX_LENGTH;
+  protected readonly maximumLength = AUTHOR_REJECTION_REASON_MAX_LENGTH;
 
-  protected readonly form =
-    this.formBuilder.nonNullable.group({
-      reason: [
-        '',
+  protected readonly form = this.formBuilder.nonNullable.group({
+    reason: ['', [rejectionReasonValidator]],
+  });
 
-        [
-          rejectionReasonValidator,
-        ],
-      ],
-    });
-
-  @HostListener(
-    'document:keydown.escape',
-  )
+  @HostListener('document:keydown.escape')
   protected handleEscape(): void {
     this.handleCancel();
   }
@@ -433,19 +304,12 @@ export class AdminAuthorApplicationRejectDialogComponent {
       return;
     }
 
-    this.confirm.emit(
-      this.form.controls.reason.value.trim(),
-    );
+    this.confirm.emit(this.form.controls.reason.value.trim());
   }
 }
 
-function rejectionReasonValidator(
-  control: AbstractControl,
-): ValidationErrors | null {
-  const value =
-    String(
-      control.value ?? '',
-    ).trim();
+function rejectionReasonValidator(control: AbstractControl): ValidationErrors | null {
+  const value = String(control.value ?? '').trim();
 
   if (!value) {
     return {
@@ -453,19 +317,13 @@ function rejectionReasonValidator(
     };
   }
 
-  if (
-    value.length <
-    AUTHOR_REJECTION_REASON_MIN_LENGTH
-  ) {
+  if (value.length < AUTHOR_REJECTION_REASON_MIN_LENGTH) {
     return {
       minlength: true,
     };
   }
 
-  if (
-    value.length >
-    AUTHOR_REJECTION_REASON_MAX_LENGTH
-  ) {
+  if (value.length > AUTHOR_REJECTION_REASON_MAX_LENGTH) {
     return {
       maxlength: true,
     };

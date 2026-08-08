@@ -7,54 +7,33 @@ import {
   OnInit,
 } from '@angular/core';
 
-import {
-  takeUntilDestroyed,
-} from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import {
-  ActivatedRoute,
-  RouterLink,
-} from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
-import {
-  AuthStore,
-} from '../../../../../core/auth/auth.store';
+import { AuthStore } from '../../../../../core/auth/auth.store';
 
-import {
-  AUTH_PERMISSIONS,
-} from '../../../../../core/auth/authorization.models';
+import { AUTH_PERMISSIONS } from '../../../../../core/auth/authorization.models';
 
 import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 
-import {
-  ErrorAlertComponent,
-} from '../../../../../shared/components/error-alert/error-alert.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 
-import {
-  LoadingStateComponent,
-} from '../../../../../shared/components/loading-state/loading-state.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 
-import {
-  PageHeadingComponent,
-} from '../../../../../shared/components/page-heading/page-heading.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
-import {
-  AdminUsersStore,
-} from '../../data-access/admin-users.store';
+import { AdminUsersStore } from '../../data-access/admin-users.store';
 
-import {
-  ManagedUserStatus,
-} from '../../domain/admin-user.models';
+import { ManagedUserStatus } from '../../domain/admin-user.models';
 
 @Component({
-  selector:
-    'app-admin-user-detail-page',
+  selector: 'app-admin-user-detail-page',
 
-  standalone:
-    true,
+  standalone: true,
 
   imports: [
     RouterLink,
@@ -68,193 +47,103 @@ import {
     PageHeadingComponent,
   ],
 
-  providers: [
-    AdminUsersStore,
-  ],
+  providers: [AdminUsersStore],
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
     <main class="admin-page">
       <div class="page-container">
-        <app-breadcrumb
-          [items]="breadcrumbs()"
-        />
+        <app-breadcrumb [items]="breadcrumbs()" />
 
         <app-page-heading
           title="Chi tiết người dùng"
           description="Quản lý trạng thái tài khoản, phiên đăng nhập và quyền quản trị."
           icon="users"
         >
-          <a
-            routerLink="/admin/users"
-            class="back"
-          >
-            ← Danh sách người dùng
-          </a>
+          <a routerLink="/admin/users" class="back"> ← Danh sách người dùng </a>
         </app-page-heading>
 
-        @if (
-          store.detailLoading()
-        ) {
-          <app-loading-state
-            message="Đang tải thông tin người dùng..."
-          />
-        } @else if (
-          store.detailError()
-        ) {
+        @if (store.detailLoading()) {
+          <app-loading-state message="Đang tải thông tin người dùng..." />
+        } @else if (store.detailError()) {
           <app-error-alert
             title="Không thể tải người dùng"
-            [message]="
-              store.detailError()
-            "
-            (retry)="
-              store.loadDetail(
-                userId
-              )
-            "
+            [message]="store.detailError()"
+            (retry)="store.loadDetail(userId)"
           />
-        } @else if (
-          store.detail();
-          as user
-        ) {
-          @if (
-            store.actionMessage()
-          ) {
+        } @else if (store.detail(); as user) {
+          @if (store.actionMessage()) {
             <div class="success">
-              {{
-                store.actionMessage()
-              }}
+              {{ store.actionMessage() }}
             </div>
           }
 
-          @if (
-            store.actionError()
-          ) {
+          @if (store.actionError()) {
             <div class="error">
-              {{
-                store.actionError()
-              }}
+              {{ store.actionError() }}
             </div>
           }
 
           <section class="hero">
             <div class="user-heading">
-              @if (
-                user.avatar?.url
-              ) {
-                <img
-                  [src]="user.avatar!.url!"
-                  [alt]="user.displayName"
-                />
+              @if (user.avatar?.url) {
+                <img [src]="user.avatar!.url!" [alt]="user.displayName" />
               } @else {
                 <div class="avatar">
-                  {{
-                    user.displayName
-                      .charAt(0)
-                      .toUpperCase()
-                  }}
+                  {{ user.displayName.charAt(0).toUpperCase() }}
                 </div>
               }
 
               <div>
                 <h2>
-                  {{
-                    user.displayName
-                  }}
+                  {{ user.displayName }}
                 </h2>
 
                 <p>
-                  &#64;{{
-                    user.username
-                  }}
+                  &#64;{{ user.username }}
                   ·
-                  {{
-                    user.email
-                  }}
+                  {{ user.email }}
                 </p>
 
                 <div class="badges">
                   <span
                     class="status"
-                    [class.active]="
-                      user.status ===
-                      'ACTIVE'
-                    "
-                    [class.warning]="
-                      user.status ===
-                      'SUSPENDED'
-                    "
-                    [class.danger]="
-                      user.status ===
-                        'BANNED' ||
-                      user.status ===
-                        'DELETED'
-                    "
+                    [class.active]="user.status === 'ACTIVE'"
+                    [class.warning]="user.status === 'SUSPENDED'"
+                    [class.danger]="user.status === 'BANNED' || user.status === 'DELETED'"
                   >
-                    {{
-                      statusLabel(
-                        user.status
-                      )
-                    }}
+                    {{ statusLabel(user.status) }}
                   </span>
 
-                  @for (
-                    role of user.roles;
-                    track role.code
-                  ) {
+                  @for (role of user.roles; track role.code) {
                     <span class="role">
-                      {{
-                        role.code
-                      }}
+                      {{ role.code }}
                     </span>
                   }
                 </div>
               </div>
             </div>
 
-            @if (
-              !isSelf() &&
-              user.status !==
-                'DELETED'
-            ) {
+            @if (!isSelf() && user.status !== 'DELETED') {
               <div class="status-actions">
-                @if (
-                  user.status !==
-                  'ACTIVE'
-                ) {
+                @if (user.status !== 'ACTIVE') {
                   <button
                     type="button"
                     class="activate"
-                    [disabled]="
-                      store.actionLoading()
-                    "
-                    (click)="
-                      changeStatus(
-                        'ACTIVE'
-                      )
-                    "
+                    [disabled]="store.actionLoading()"
+                    (click)="changeStatus('ACTIVE')"
                   >
                     Kích hoạt
                   </button>
                 }
 
-                @if (
-                  user.status ===
-                  'ACTIVE'
-                ) {
+                @if (user.status === 'ACTIVE') {
                   <button
                     type="button"
                     class="suspend"
-                    [disabled]="
-                      store.actionLoading()
-                    "
-                    (click)="
-                      changeStatus(
-                        'SUSPENDED'
-                      )
-                    "
+                    [disabled]="store.actionLoading()"
+                    (click)="changeStatus('SUSPENDED')"
                   >
                     Tạm khóa
                   </button>
@@ -262,14 +151,8 @@ import {
                   <button
                     type="button"
                     class="ban"
-                    [disabled]="
-                      store.actionLoading()
-                    "
-                    (click)="
-                      changeStatus(
-                        'BANNED'
-                      )
-                    "
+                    [disabled]="store.actionLoading()"
+                    (click)="changeStatus('BANNED')"
                   >
                     Cấm tài khoản
                   </button>
@@ -280,24 +163,17 @@ import {
 
           @if (isSelf()) {
             <div class="notice">
-              Đây là tài khoản của bạn.
-              Hệ thống không cho phép
-              tự khóa/ban hoặc tự gỡ
-              quyền ADMIN.
+              Đây là tài khoản của bạn. Hệ thống không cho phép tự khóa/ban hoặc tự gỡ quyền ADMIN.
             </div>
           }
 
           <div class="grid">
             <section class="card">
-              <h3>
-                Thông tin tài khoản
-              </h3>
+              <h3>Thông tin tài khoản</h3>
 
               <dl>
                 <div>
-                  <dt>
-                    User ID
-                  </dt>
+                  <dt>User ID</dt>
 
                   <dd>
                     {{ user.id }}
@@ -305,9 +181,7 @@ import {
                 </div>
 
                 <div>
-                  <dt>
-                    Email
-                  </dt>
+                  <dt>Email</dt>
 
                   <dd>
                     {{ user.email }}
@@ -315,93 +189,56 @@ import {
                 </div>
 
                 <div>
-                  <dt>
-                    Xác minh email
-                  </dt>
+                  <dt>Xác minh email</dt>
 
                   <dd>
-                    {{
-                      user.emailVerified
-                        ? 'Đã xác minh'
-                        : 'Chưa xác minh'
-                    }}
+                    {{ user.emailVerified ? 'Đã xác minh' : 'Chưa xác minh' }}
                   </dd>
                 </div>
 
                 <div>
-                  <dt>
-                    Tạo tài khoản
-                  </dt>
+                  <dt>Tạo tài khoản</dt>
 
                   <dd>
-                    {{
-                      formatDate(
-                        user.createdAt
-                      )
-                    }}
+                    {{ formatDate(user.createdAt) }}
                   </dd>
                 </div>
 
                 <div>
-                  <dt>
-                    Đăng nhập cuối
-                  </dt>
+                  <dt>Đăng nhập cuối</dt>
 
                   <dd>
-                    {{
-                      formatDate(
-                        user.lastLoginAt
-                      )
-                    }}
+                    {{ formatDate(user.lastLoginAt) }}
                   </dd>
                 </div>
 
                 <div>
-                  <dt>
-                    Session đang hoạt động
-                  </dt>
+                  <dt>Session đang hoạt động</dt>
 
                   <dd>
-                    {{
-                      user.activeSessionCount
-                    }}
+                    {{ user.activeSessionCount }}
                   </dd>
                 </div>
               </dl>
             </section>
 
             <section class="card">
-              <h3>
-                Hồ sơ
-              </h3>
+              <h3>Hồ sơ</h3>
 
               <p class="bio">
-                {{
-                  user.bio ||
-                    'Người dùng chưa có tiểu sử.'
-                }}
+                {{ user.bio || 'Người dùng chưa có tiểu sử.' }}
               </p>
 
-              @if (
-                user.authorProfile
-              ) {
+              @if (user.authorProfile) {
                 <div class="author-box">
-                  <span>
-                    Author profile
-                  </span>
+                  <span> Author profile </span>
 
                   <strong>
-                    {{
-                      user.authorProfile
-                        .penName
-                    }}
+                    {{ user.authorProfile.penName }}
                   </strong>
 
                   <small>
-                    {{
-                      user.authorProfile
-                        .verificationStatus
-                    }}
+                    {{ user.authorProfile.verificationStatus }}
                   </small>
                 </div>
               }
@@ -411,31 +248,21 @@ import {
           <section class="card roles-card">
             <div class="section-heading">
               <div>
-                <h3>
-                  Roles
-                </h3>
+                <h3>Roles</h3>
 
                 <p>
-                  USER là role nền.
-                  AUTHOR được quản lý bởi
-                  Author Application.
-                  Chỉ ADMIN được cấp/gỡ
-                  tại đây.
+                  USER là role nền. AUTHOR được quản lý bởi Author Application. Chỉ ADMIN được
+                  cấp/gỡ tại đây.
                 </p>
               </div>
             </div>
 
             <div class="role-list">
-              @for (
-                role of user.roles;
-                track role.code
-              ) {
+              @for (role of user.roles; track role.code) {
                 <article>
                   <div>
                     <strong>
-                      {{
-                        role.code
-                      }}
+                      {{ role.code }}
                     </strong>
 
                     <span>
@@ -445,33 +272,20 @@ import {
 
                   <small>
                     Cấp:
-                    {{
-                      formatDate(
-                        role.assignedAt
-                      )
-                    }}
+                    {{ formatDate(role.assignedAt) }}
                   </small>
                 </article>
               }
             </div>
 
-            @if (
-              canManageRoles()
-            ) {
+            @if (canManageRoles()) {
               <footer class="role-actions">
-                @if (
-                  hasRole('ADMIN')
-                ) {
+                @if (hasRole('ADMIN')) {
                   <button
                     type="button"
                     class="remove-admin"
-                    [disabled]="
-                      store.actionLoading() ||
-                      isSelf()
-                    "
-                    (click)="
-                      removeAdmin()
-                    "
+                    [disabled]="store.actionLoading() || isSelf()"
+                    (click)="removeAdmin()"
                   >
                     Gỡ quyền ADMIN
                   </button>
@@ -479,25 +293,15 @@ import {
                   <button
                     type="button"
                     class="grant-admin"
-                    [disabled]="
-                      store.actionLoading() ||
-                      user.status ===
-                        'DELETED'
-                    "
-                    (click)="
-                      grantAdmin()
-                    "
+                    [disabled]="store.actionLoading() || user.status === 'DELETED'"
+                    (click)="grantAdmin()"
                   >
                     Cấp quyền ADMIN
                   </button>
                 }
               </footer>
             } @else {
-              <div class="notice">
-                Tài khoản quản trị hiện
-                tại không có permission
-                role.manage.
-              </div>
+              <div class="notice">Tài khoản quản trị hiện tại không có permission role.manage.</div>
             }
           </section>
         }
@@ -793,157 +597,83 @@ import {
     }
   `,
 })
-export class AdminUserDetailPageComponent
-  implements OnInit
-{
-  private readonly route =
-    inject(
-      ActivatedRoute,
-    );
+export class AdminUserDetailPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
 
-  private readonly auth =
-    inject(
-      AuthStore,
-    );
+  private readonly auth = inject(AuthStore);
 
-  private readonly destroyRef =
-    inject(
-      DestroyRef,
-    );
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly store =
-    inject(
-      AdminUsersStore,
-    );
+  protected readonly store = inject(AdminUsersStore);
 
-  protected readonly userId =
-    this.route.snapshot.paramMap.get(
-      'userId',
-    ) ?? '';
+  protected readonly userId = this.route.snapshot.paramMap.get('userId') ?? '';
 
-  protected readonly isSelf =
-    computed(
-      () =>
-        this.auth.user()
-          ?.id ===
-        this.store.detail()?.id,
-    );
+  protected readonly isSelf = computed(() => this.auth.user()?.id === this.store.detail()?.id);
 
-  protected readonly canManageRoles =
-    computed(() => {
-      const user = this.auth.user();
-
-      if (!user) {
-        return false;
-      }
-
-      const targetPermission = AUTH_PERMISSIONS.ROLE_MANAGE.toLowerCase();
-
-      return user.permissions.some(
-        (permission) => permission.toLowerCase() === targetPermission,
-      );
-    });
-
-  protected readonly breadcrumbs =
-    computed<
-      readonly BreadcrumbItem[]
-    >(() => [
-      {
-        label:
-          'Trang chủ',
-
-        route:
-          '/',
-      },
-
-      {
-        label:
-          'Quản trị',
-      },
-
-      {
-        label:
-          'Người dùng',
-
-        route:
-          '/admin/users',
-      },
-
-      {
-        label:
-          this.store.detail()
-            ?.displayName ??
-          'Chi tiết',
-      },
-    ]);
-
-  ngOnInit(): void {
-    if (this.userId) {
-      this.store.loadDetail(
-        this.userId,
-      );
-    }
-  }
-
-  protected changeStatus(
-    status: ManagedUserStatus,
-  ): void {
-    this.store
-      .updateStatus(
-        status,
-      )
-      .pipe(
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
-      )
-      .subscribe();
-  }
-
-  protected grantAdmin(): void {
-    this.store
-      .assignAdminRole()
-      .pipe(
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
-      )
-      .subscribe();
-  }
-
-  protected removeAdmin(): void {
-    this.store
-      .removeAdminRole()
-      .pipe(
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
-      )
-      .subscribe();
-  }
-
-  protected hasRole(
-    code: string,
-  ): boolean {
-    const user =
-      this.store.detail();
+  protected readonly canManageRoles = computed(() => {
+    const user = this.auth.user();
 
     if (!user) {
       return false;
     }
 
-    return user.roles.some(
-      (role) =>
-        role.code === code,
-    );
+    const targetPermission = AUTH_PERMISSIONS.ROLE_MANAGE.toLowerCase();
+
+    return user.permissions.some((permission) => permission.toLowerCase() === targetPermission);
+  });
+
+  protected readonly breadcrumbs = computed<readonly BreadcrumbItem[]>(() => [
+    {
+      label: 'Trang chủ',
+
+      route: '/',
+    },
+
+    {
+      label: 'Quản trị',
+    },
+
+    {
+      label: 'Người dùng',
+
+      route: '/admin/users',
+    },
+
+    {
+      label: this.store.detail()?.displayName ?? 'Chi tiết',
+    },
+  ]);
+
+  ngOnInit(): void {
+    if (this.userId) {
+      this.store.loadDetail(this.userId);
+    }
   }
 
-  protected statusLabel(
-    status: string,
-  ): string {
-    switch (
-      status
-    ) {
+  protected changeStatus(status: ManagedUserStatus): void {
+    this.store.updateStatus(status).pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
+  protected grantAdmin(): void {
+    this.store.assignAdminRole().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
+  protected removeAdmin(): void {
+    this.store.removeAdminRole().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
+  protected hasRole(code: string): boolean {
+    const user = this.store.detail();
+
+    if (!user) {
+      return false;
+    }
+
+    return user.roles.some((role) => role.code === code);
+  }
+
+  protected statusLabel(status: string): string {
+    switch (status) {
       case 'ACTIVE':
         return 'Hoạt động';
 
@@ -961,16 +691,7 @@ export class AdminUserDetailPageComponent
     }
   }
 
-  protected formatDate(
-    value:
-      string | null,
-  ): string {
-    return value
-      ? new Date(
-          value,
-        ).toLocaleString(
-          'vi-VN',
-        )
-      : 'Chưa có';
+  protected formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
   }
 }

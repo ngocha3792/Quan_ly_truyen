@@ -1,106 +1,69 @@
-export type ManagedUserStatus =
-  | 'ACTIVE'
-  | 'SUSPENDED'
-  | 'BANNED'
-  | 'DELETED';
+export type ManagedUserStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETED';
 
-export type ManagedUserStatusFilter =
-  | 'ALL'
-  | ManagedUserStatus;
+export type ManagedUserStatusFilter = 'ALL' | ManagedUserStatus;
 
-export type ManagedUserRoleCode =
-  | 'USER'
-  | 'AUTHOR'
-  | 'ADMIN';
+export type ManagedUserRoleCode = 'USER' | 'AUTHOR' | 'ADMIN';
 
-export type ManagedUserRoleFilter =
-  | 'ALL'
-  | ManagedUserRoleCode;
+export type ManagedUserRoleFilter = 'ALL' | ManagedUserRoleCode;
 
 export interface ManagedUserRole {
-  readonly code:
-    ManagedUserRoleCode;
+  readonly code: ManagedUserRoleCode;
 
-  readonly name:
-    string;
+  readonly name: string;
 
-  readonly assignedAt:
-    string;
+  readonly assignedAt: string;
 
-  readonly expiresAt:
-    string | null;
+  readonly expiresAt: string | null;
 }
 
 export interface AdminUserSummary {
-  readonly id:
-    string;
+  readonly id: string;
 
-  readonly email:
-    string;
+  readonly email: string;
 
-  readonly username:
-    string;
+  readonly username: string;
 
-  readonly displayName:
-    string;
+  readonly displayName: string;
 
-  readonly status:
-    ManagedUserStatus;
+  readonly status: ManagedUserStatus;
 
-  readonly emailVerified:
-    boolean;
+  readonly emailVerified: boolean;
 
-  readonly emailVerifiedAt:
-    string | null;
+  readonly emailVerifiedAt: string | null;
 
-  readonly lastLoginAt:
-    string | null;
+  readonly lastLoginAt: string | null;
 
-  readonly roles:
-    readonly ManagedUserRole[];
+  readonly roles: readonly ManagedUserRole[];
 
-  readonly createdAt:
-    string;
+  readonly createdAt: string;
 
-  readonly updatedAt:
-    string;
+  readonly updatedAt: string;
 }
 
-export interface AdminUserDetail
-  extends AdminUserSummary {
-  readonly bio:
-    string | null;
+export interface AdminUserDetail extends AdminUserSummary {
+  readonly bio: string | null;
 
   readonly avatar: {
-    readonly id:
-      string;
+    readonly id: string;
 
-    readonly url:
-      string | null;
+    readonly url: string | null;
   } | null;
 
   readonly authorProfile: {
-    readonly id:
-      string;
+    readonly id: string;
 
-    readonly penName:
-      string;
+    readonly penName: string;
 
-    readonly verificationStatus:
-      string;
+    readonly verificationStatus: string;
   } | null;
 
-  readonly activeSessionCount:
-    number;
+  readonly activeSessionCount: number;
 
-  readonly deletedAt:
-    string | null;
+  readonly deletedAt: string | null;
 }
 
 export interface AdminUserListResponse {
-  readonly total:
-    number;
+  readonly total: number;
 
-  readonly users:
-    readonly AdminUserSummary[];
+  readonly users: readonly AdminUserSummary[];
 }

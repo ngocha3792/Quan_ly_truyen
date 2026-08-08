@@ -1,180 +1,108 @@
-import {
-  signal,
-} from '@angular/core';
+import { signal } from '@angular/core';
 
-import {
-  TestBed,
-} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {
-  of,
-} from 'rxjs';
+import { of } from 'rxjs';
 
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AuthSessionLifecycleService,
-} from '../../../../../core/auth/auth-session-lifecycle.service';
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
-import {
-  AuthStore,
-} from '../../../../../core/auth/auth.store';
+import { AuthStore } from '../../../../../core/auth/auth.store';
 
-import {
-  createCurrentUser,
-} from '../../../../../core/auth/testing/auth-test.fixtures';
+import { createCurrentUser } from '../../../../../core/auth/testing/auth-test.fixtures';
 
-import {
-  AccountSecurityApiService,
-} from './account-security-api.service';
+import { AccountSecurityApiService } from './account-security-api.service';
 
-import {
-  AccountSecurityStore,
-} from './account-security.store';
+import { AccountSecurityStore } from './account-security.store';
 
-describe(
-  'AccountSecurityStore security score',
+describe('AccountSecurityStore security score', () => {
+  let store: AccountSecurityStore;
 
-  () => {
-    let store:
-      AccountSecurityStore;
+  let api: {
+    getOverview: ReturnType<typeof vi.fn>;
+  };
 
-    let api: {
-      getOverview:
-        ReturnType<
-          typeof vi.fn
-        >;
+  beforeEach(() => {
+    const userState = signal(
+      createCurrentUser({
+        /*
+         * Primary email verified.
+         *
+         * Nhưng recovery email vẫn
+         * chưa configured.
+         */
+        emailVerified: true,
+      }),
+    );
+
+    api = {
+      getOverview: vi.fn(),
     };
 
-    beforeEach(() => {
-      const userState =
-        signal(
-          createCurrentUser({
-            /*
-             * Primary email verified.
-             *
-             * Nhưng recovery email vẫn
-             * chưa configured.
-             */
-            emailVerified:
-              true,
-          }),
-        );
+    const auth = {
+      user: userState.asReadonly(),
+    };
 
-      api = {
-        getOverview:
-          vi.fn(),
-      };
+    TestBed.configureTestingModule({
+      providers: [
+        AccountSecurityStore,
 
-      const auth = {
-        user:
-          userState.asReadonly(),
-      };
+        AuthSessionLifecycleService,
 
-      TestBed.configureTestingModule({
-        providers: [
-          AccountSecurityStore,
+        {
+          provide: AccountSecurityApiService,
 
-          AuthSessionLifecycleService,
+          useValue: api,
+        },
 
-          {
-            provide:
-              AccountSecurityApiService,
+        {
+          provide: AuthStore,
 
-            useValue:
-              api,
-          },
-
-          {
-            provide:
-              AuthStore,
-
-            useValue:
-              auth,
-          },
-        ],
-      });
-
-      store =
-        TestBed.inject(
-          AccountSecurityStore,
-        );
+          useValue: auth,
+        },
+      ],
     });
 
-    afterEach(() => {
-      TestBed.resetTestingModule();
-    });
+    store = TestBed.inject(AccountSecurityStore);
+  });
 
-    it(
-      'primary email verified không được tính recovery-email là hoàn thành',
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
 
-      () => {
-        api.getOverview.mockReturnValue(
-          of({
-            passwordConfigured:
-              true,
+  it('primary email verified không được tính recovery-email là hoàn thành', () => {
+    api.getOverview.mockReturnValue(
+      of({
+        passwordConfigured: true,
 
-            passwordUpdatedAt:
-              null,
+        passwordUpdatedAt: null,
 
-            mfaEnabled:
-              false,
+        mfaEnabled: false,
 
-            mfaConfiguredAt:
-              null,
+        mfaConfiguredAt: null,
 
-            recoveryEmail:
-              null,
+        recoveryEmail: null,
 
-            recoveryEmailVerified:
-              false,
+        recoveryEmailVerified: false,
 
-            securityQuestionsConfigured:
-              false,
+        securityQuestionsConfigured: false,
 
-            trustedDeviceCount:
-              0,
-          }),
-        );
-
-        store.load();
-
-        const recoveryItem =
-          store
-            .securityScore()
-            .items.find(
-              (
-                item,
-              ) =>
-                item.id ===
-                'recovery-email',
-            );
-
-        expect(
-          recoveryItem?.completed,
-        ).toBe(
-          false,
-        );
-
-        /*
-         * Chỉ password = 25%.
-         *
-         * Nếu bug cũ quay lại sẽ thành 50%.
-         */
-        expect(
-          store.securityScore()
-            .percent,
-        ).toBe(
-          25,
-        );
-      },
+        trustedDeviceCount: 0,
+      }),
     );
-  },
-);
+
+    store.load();
+
+    const recoveryItem = store.securityScore().items.find((item) => item.id === 'recovery-email');
+
+    expect(recoveryItem?.completed).toBe(false);
+
+    /*
+     * Chỉ password = 25%.
+     *
+     * Nếu bug cũ quay lại sẽ thành 50%.
+     */
+    expect(store.securityScore().percent).toBe(25);
+  });
+});

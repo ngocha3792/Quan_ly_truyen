@@ -1,35 +1,19 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import {
-  RouterLink,
-} from '@angular/router';
+import { RouterLink } from '@angular/router';
 
-import {
-  AdminAuthorApplicationRecord,
-} from '../domain/admin-author-application.models';
+import { AdminAuthorApplicationRecord } from '../domain/admin-author-application.models';
 
-import {
-  AdminAuthorApplicationStatusBadgeComponent,
-} from './admin-author-application-status-badge.component';
+import { AdminAuthorApplicationStatusBadgeComponent } from './admin-author-application-status-badge.component';
 
 @Component({
-  selector:
-    'app-admin-author-application-table',
+  selector: 'app-admin-author-application-table',
 
   standalone: true,
 
-  imports: [
-    RouterLink,
+  imports: [RouterLink, AdminAuthorApplicationStatusBadgeComponent],
 
-    AdminAuthorApplicationStatusBadgeComponent,
-  ],
-
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
     <div class="table-scroll">
@@ -44,69 +28,43 @@ import {
 
             <th>Trạng thái</th>
 
-            <th class="action-column">
-              Thao tác
-            </th>
+            <th class="action-column">Thao tác</th>
           </tr>
         </thead>
 
         <tbody>
-          @for (
-            application
-              of applications();
-            track application.applicationId
-          ) {
+          @for (application of applications(); track application.applicationId) {
             <tr>
               <td>
                 <div class="applicant">
                   <strong>
-                    {{
-                      application.fullName ||
-                        'Chưa cập nhật'
-                    }}
+                    {{ application.fullName || 'Chưa cập nhật' }}
                   </strong>
 
                   <small>
-                    {{
-                      application.email ||
-                        application.userId
-                    }}
+                    {{ application.email || application.userId }}
                   </small>
                 </div>
               </td>
 
               <td>
                 <span class="pen-name">
-                  {{
-                    application.penName ||
-                      '—'
-                  }}
+                  {{ application.penName || '—' }}
                 </span>
               </td>
 
               <td>
-                {{
-                  formatDate(
-                    application.submittedAt
-                  )
-                }}
+                {{ formatDate(application.submittedAt) }}
               </td>
 
               <td>
-                <app-admin-author-application-status-badge
-                  [status]="
-                    application.status
-                  "
-                />
+                <app-admin-author-application-status-badge [status]="application.status" />
               </td>
 
               <td class="action-column">
                 <a
                   class="review-link"
-                  [routerLink]="[
-                    '/admin/author-applications',
-                    application.applicationId
-                  ]"
+                  [routerLink]="['/admin/author-applications', application.applicationId]"
                 >
                   Xem hồ sơ
                 </a>
@@ -139,8 +97,7 @@ import {
     td {
       padding: 15px 18px;
 
-      border-bottom:
-        1px solid var(--border);
+      border-bottom: 1px solid var(--border);
 
       text-align: left;
     }
@@ -164,18 +121,11 @@ import {
     }
 
     tbody tr {
-      transition:
-        background 160ms ease;
+      transition: background 160ms ease;
     }
 
     tbody tr:hover {
-      background:
-        rgba(
-          124,
-          58,
-          237,
-          0.045
-        );
+      background: rgba(124, 58, 237, 0.045);
     }
 
     .applicant {
@@ -217,14 +167,7 @@ import {
 
       padding: 0 13px;
 
-      border:
-        1px solid
-        rgba(
-          168,
-          85,
-          247,
-          0.26
-        );
+      border: 1px solid rgba(168, 85, 247, 0.26);
 
       border-radius: 7px;
 
@@ -236,53 +179,26 @@ import {
 
       text-decoration: none;
 
-      background:
-        rgba(
-          124,
-          58,
-          237,
-          0.08
-        );
+      background: rgba(124, 58, 237, 0.08);
     }
 
     .review-link:hover {
       color: #fff;
 
-      border-color:
-        rgba(
-          168,
-          85,
-          247,
-          0.5
-        );
+      border-color: rgba(168, 85, 247, 0.5);
 
-      background:
-        rgba(
-          124,
-          58,
-          237,
-          0.18
-        );
+      background: rgba(124, 58, 237, 0.18);
     }
   `,
 })
 export class AdminAuthorApplicationTableComponent {
-  readonly applications =
-    input.required<
-      readonly AdminAuthorApplicationRecord[]
-    >();
+  readonly applications = input.required<readonly AdminAuthorApplicationRecord[]>();
 
-  protected formatDate(
-    value: string | null,
-  ): string {
+  protected formatDate(value: string | null): string {
     if (!value) {
       return 'Chưa gửi';
     }
 
-    return new Date(
-      value,
-    ).toLocaleString(
-      'vi-VN',
-    );
+    return new Date(value).toLocaleString('vi-VN');
   }
 }

@@ -1,25 +1,12 @@
-import {
-  HttpClient,
-  HttpParams,
-} from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 
-import {
-  inject,
-  Injectable,
-} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 
-import {
-  map,
-  Observable,
-} from 'rxjs';
+import { map, Observable } from 'rxjs';
 
-import {
-  APP_RUNTIME_CONFIG,
-} from '../../../../core/config/app-config.token';
+import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 
-import {
-  ApiSuccessEnvelope,
-} from '../../../../core/http/api-envelope.model';
+import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 
 import type {
   AdminUserDetail,
@@ -31,206 +18,120 @@ import type {
 } from '../domain/admin-user.models';
 
 @Injectable({
-  providedIn:
-    'root',
+  providedIn: 'root',
 })
 export class AdminUsersApiService {
-  private readonly http =
-    inject(
-      HttpClient,
-    );
+  private readonly http = inject(HttpClient);
 
-  private readonly config =
-    inject(
-      APP_RUNTIME_CONFIG,
-    );
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  private readonly baseUrl =
-    `${this.config.apiBaseUrl}/admin/users`;
+  private readonly baseUrl = `${this.config.apiBaseUrl}/admin/users`;
 
   list(input: {
-    readonly keyword:
-      string;
+    readonly keyword: string;
 
-    readonly status:
-      ManagedUserStatusFilter;
+    readonly status: ManagedUserStatusFilter;
 
-    readonly role:
-      ManagedUserRoleFilter;
+    readonly role: ManagedUserRoleFilter;
 
-    readonly offset:
-      number;
+    readonly offset: number;
 
-    readonly limit:
-      number;
+    readonly limit: number;
   }): Observable<AdminUserListResponse> {
-    let params =
-      new HttpParams()
-        .set(
-          'offset',
+    let params = new HttpParams()
+      .set(
+        'offset',
 
-          String(
-            input.offset,
-          ),
-        )
-        .set(
-          'limit',
+        String(input.offset),
+      )
+      .set(
+        'limit',
 
-          String(
-            input.limit,
-          ),
-        );
+        String(input.limit),
+      );
 
-    const keyword =
-      input.keyword.trim();
+    const keyword = input.keyword.trim();
 
     if (keyword) {
-      params =
-        params.set(
-          'keyword',
+      params = params.set(
+        'keyword',
 
-          keyword,
-        );
+        keyword,
+      );
     }
 
-    if (
-      input.status !==
-      'ALL'
-    ) {
-      params =
-        params.set(
-          'status',
+    if (input.status !== 'ALL') {
+      params = params.set(
+        'status',
 
-          input.status,
-        );
+        input.status,
+      );
     }
 
-    if (
-      input.role !==
-      'ALL'
-    ) {
-      params =
-        params.set(
-          'role',
+    if (input.role !== 'ALL') {
+      params = params.set(
+        'role',
 
-          input.role,
-        );
+        input.role,
+      );
     }
 
     return this.http
-      .get<
-        ApiSuccessEnvelope<AdminUserListResponse>
-      >(
+      .get<ApiSuccessEnvelope<AdminUserListResponse>>(
         this.baseUrl,
 
         {
           params,
         },
       )
-      .pipe(
-        map(
-          (
-            response,
-          ) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
-  getOne(
-    userId:
-      string,
-  ): Observable<AdminUserDetail> {
+  getOne(userId: string): Observable<AdminUserDetail> {
     return this.http
-      .get<
-        ApiSuccessEnvelope<AdminUserDetail>
-      >(
-        `${this.baseUrl}/${userId}`,
-      )
-      .pipe(
-        map(
-          (
-            response,
-          ) =>
-            response.data,
-        ),
-      );
+      .get<ApiSuccessEnvelope<AdminUserDetail>>(`${this.baseUrl}/${userId}`)
+      .pipe(map((response) => response.data));
   }
 
   updateStatus(
-    userId:
-      string,
+    userId: string,
 
-    status:
-      ManagedUserStatus,
+    status: ManagedUserStatus,
   ): Observable<AdminUserDetail> {
     return this.http
-      .patch<
-        ApiSuccessEnvelope<AdminUserDetail>
-      >(
+      .patch<ApiSuccessEnvelope<AdminUserDetail>>(
         `${this.baseUrl}/${userId}/status`,
 
         {
           status,
         },
       )
-      .pipe(
-        map(
-          (
-            response,
-          ) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
   assignRole(
-    userId:
-      string,
+    userId: string,
 
-    roleCode:
-      ManagedUserRoleCode,
+    roleCode: ManagedUserRoleCode,
   ): Observable<AdminUserDetail> {
     return this.http
-      .post<
-        ApiSuccessEnvelope<AdminUserDetail>
-      >(
+      .post<ApiSuccessEnvelope<AdminUserDetail>>(
         `${this.baseUrl}/${userId}/roles`,
 
         {
           roleCode,
         },
       )
-      .pipe(
-        map(
-          (
-            response,
-          ) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
   removeRole(
-    userId:
-      string,
+    userId: string,
 
-    roleCode:
-      ManagedUserRoleCode,
+    roleCode: ManagedUserRoleCode,
   ): Observable<AdminUserDetail> {
     return this.http
-      .delete<
-        ApiSuccessEnvelope<AdminUserDetail>
-      >(
-        `${this.baseUrl}/${userId}/roles/${roleCode}`,
-      )
-      .pipe(
-        map(
-          (
-            response,
-          ) =>
-            response.data,
-        ),
-      );
+      .delete<ApiSuccessEnvelope<AdminUserDetail>>(`${this.baseUrl}/${userId}/roles/${roleCode}`)
+      .pipe(map((response) => response.data));
   }
 }

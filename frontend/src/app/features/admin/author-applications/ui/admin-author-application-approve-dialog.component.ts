@@ -1,26 +1,14 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  HostListener,
-  input,
-  output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, input, output } from '@angular/core';
 
 @Component({
-  selector:
-    'app-admin-author-application-approve-dialog',
+  selector: 'app-admin-author-application-approve-dialog',
 
   standalone: true,
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
-    <div
-      class="dialog-backdrop"
-      role="presentation"
-      (click)="handleCancel()"
-    >
+    <div class="dialog-backdrop" role="presentation" (click)="handleCancel()">
       <section
         class="dialog-card"
         role="dialog"
@@ -28,21 +16,11 @@ import {
         aria-labelledby="approve-dialog-title"
         (click)="$event.stopPropagation()"
       >
-        <div class="dialog-icon">
-          ✓
-        </div>
+        <div class="dialog-icon">✓</div>
 
-        <h2
-          id="approve-dialog-title"
-        >
-          Duyệt hồ sơ tác giả?
-        </h2>
+        <h2 id="approve-dialog-title">Duyệt hồ sơ tác giả?</h2>
 
-        <p>
-          Tài khoản này sẽ nhận
-          quyền tác giả và có thể
-          truy cập Author Studio.
-        </p>
+        <p>Tài khoản này sẽ nhận quyền tác giả và có thể truy cập Author Studio.</p>
 
         @if (penName()) {
           <div class="pen-name">
@@ -69,11 +47,7 @@ import {
             [disabled]="loading()"
             (click)="confirm.emit()"
           >
-            {{
-              loading()
-                ? 'Đang duyệt...'
-                : 'Duyệt hồ sơ'
-            }}
+            {{ loading() ? 'Đang duyệt...' : 'Duyệt hồ sơ' }}
           </button>
         </footer>
       </section>
@@ -94,34 +68,17 @@ import {
 
       padding: 20px;
 
-      background:
-        rgba(
-          2,
-          6,
-          23,
-          0.78
-        );
+      background: rgba(2, 6, 23, 0.78);
 
-      backdrop-filter:
-        blur(5px);
+      backdrop-filter: blur(5px);
     }
 
     .dialog-card {
-      width: min(
-        440px,
-        100%
-      );
+      width: min(440px, 100%);
 
       padding: 28px;
 
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.16
-        );
+      border: 1px solid rgba(148, 163, 184, 0.16);
 
       border-radius: 14px;
 
@@ -129,14 +86,7 @@ import {
 
       background: #0f172a;
 
-      box-shadow:
-        0 24px 80px
-        rgba(
-          0,
-          0,
-          0,
-          0.4
-        );
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
     }
 
     .dialog-icon {
@@ -144,8 +94,7 @@ import {
 
       height: 52px;
 
-      margin:
-        0 auto 16px;
+      margin: 0 auto 16px;
 
       display: grid;
 
@@ -159,18 +108,11 @@ import {
 
       font-weight: 900;
 
-      background:
-        rgba(
-          34,
-          197,
-          94,
-          0.13
-        );
+      background: rgba(34, 197, 94, 0.13);
     }
 
     h2 {
-      margin:
-        0 0 10px;
+      margin: 0 0 10px;
 
       color: #f8fafc;
 
@@ -194,13 +136,7 @@ import {
 
       color: #94a3b8;
 
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          0.75
-        );
+      background: rgba(15, 23, 42, 0.75);
     }
 
     .pen-name strong {
@@ -212,8 +148,7 @@ import {
 
       display: flex;
 
-      justify-content:
-        flex-end;
+      justify-content: flex-end;
 
       gap: 10px;
     }
@@ -237,19 +172,11 @@ import {
     }
 
     .cancel-button {
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.2
-        );
+      border: 1px solid rgba(148, 163, 184, 0.2);
 
       color: #cbd5e1;
 
-      background:
-        transparent;
+      background: transparent;
     }
 
     .approve-button {
@@ -257,33 +184,20 @@ import {
 
       color: #fff;
 
-      background:
-        linear-gradient(
-          135deg,
-          #16a34a,
-          #22c55e
-        );
+      background: linear-gradient(135deg, #16a34a, #22c55e);
     }
   `,
 })
 export class AdminAuthorApplicationApproveDialogComponent {
-  readonly penName =
-    input<string | null>(
-      null,
-    );
+  readonly penName = input<string | null>(null);
 
-  readonly loading =
-    input(false);
+  readonly loading = input(false);
 
-  readonly confirm =
-    output<void>();
+  readonly confirm = output<void>();
 
-  readonly cancel =
-    output<void>();
+  readonly cancel = output<void>(); // eslint-disable-line @angular-eslint/no-output-native -- legacy public output; rename in the Admin refactor wave.
 
-  @HostListener(
-    'document:keydown.escape',
-  )
+  @HostListener('document:keydown.escape')
   protected handleEscape(): void {
     this.handleCancel();
   }

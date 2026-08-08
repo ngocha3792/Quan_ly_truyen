@@ -281,14 +281,10 @@ export class AccountSessionsStore {
   }
 
   revokeAllOtherSessions(): Observable<void> {
-    const sessions = this.otherSessions().filter(
-      (session) => session.canRevoke,
-    );
+    const sessions = this.otherSessions().filter((session) => session.canRevoke);
 
     if (sessions.length === 0) {
-      this.successState.set(
-        'Không có phiên nào cần thu hồi.',
-      );
+      this.successState.set('Không có phiên nào cần thu hồi.');
 
       return of(undefined);
     }
@@ -306,69 +302,51 @@ export class AccountSessionsStore {
      * Backend mới là authority quyết định chính xác session nào
      * thuộc user và phải revoke.
      */
-    const ids = sessions.map(
-      (session) => session.id,
-    );
+    const ids = sessions.map((session) => session.id);
 
-    this.revokingIdsState.set(
-      new Set(ids),
-    );
+    this.revokingIdsState.set(new Set(ids));
 
-    return this.api
-      .revokeOtherSessions()
-      .pipe(
-        switchMap(({ revokedCount }) =>
-          /*
-           * Quan trọng:
-           *
-           * Không tự xóa ids khỏi state rồi coi là xong.
-           *
-           * Re-read từ backend vì:
-           * - backend có thể revoke nhiều session hơn listLimit;
-           * - tab khác có thể đang thay đổi session;
-           * - server là source of truth.
-           */
-          this.api
-            .getSessions()
-            .pipe(
-              tap((response) => {
-                this.rawSessionsState.set(
-                  response.sessions,
-                );
+    return this.api.revokeOtherSessions().pipe(
+      switchMap(({ revokedCount }) =>
+        /*
+         * Quan trọng:
+         *
+         * Không tự xóa ids khỏi state rồi coi là xong.
+         *
+         * Re-read từ backend vì:
+         * - backend có thể revoke nhiều session hơn listLimit;
+         * - tab khác có thể đang thay đổi session;
+         * - server là source of truth.
+         */
+        this.api.getSessions().pipe(
+          tap((response) => {
+            this.rawSessionsState.set(response.sessions);
 
-                this.successState.set(
-                  revokedCount > 0
-                    ? `Đã thu hồi ${revokedCount} phiên đăng nhập khác.`
-                    : 'Không có phiên nào cần thu hồi.',
-                );
-              }),
-            ),
+            this.successState.set(
+              revokedCount > 0
+                ? `Đã thu hồi ${revokedCount} phiên đăng nhập khác.`
+                : 'Không có phiên nào cần thu hồi.',
+            );
+          }),
         ),
+      ),
 
-        mapToVoid(),
+      mapToVoid(),
 
-        catchError((error: unknown) => {
-          this.errorState.set(
-            getApiErrorMessage(error),
-          );
+      catchError((error: unknown) => {
+        this.errorState.set(getApiErrorMessage(error));
 
-          return throwError(
-            () => error,
-          );
-        }),
+        return throwError(() => error);
+      }),
 
-        takeUntil(
-          this.lifecycle.changes$,
-        ),
+      takeUntil(this.lifecycle.changes$),
 
-        finalize(() => {
-          this.submittingState.set(false);
+      finalize(() => {
+        this.submittingState.set(false);
 
-          this.revokingIdsState.set(
-            new Set(),
-          );
-        }),
-      );
+        this.revokingIdsState.set(new Set());
+      }),
+    );
   }
 
   clearMessages(): void {

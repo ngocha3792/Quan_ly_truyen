@@ -196,18 +196,10 @@
               </a>
 
               @if (canReviewAuthorApplications()) {
-                <a
-                  routerLink="/admin/author-applications"
-                  (click)="closeProfile()"
-                >
-                  <app-icon
-                    name="shield"
-                    [size]="18"
-                  ></app-icon>
+                <a routerLink="/admin/author-applications" (click)="closeProfile()">
+                  <app-icon name="shield" [size]="18"></app-icon>
 
-                  <span>
-                    Xét duyệt tác giả
-                  </span>
+                  <span> Xét duyệt tác giả </span>
                 </a>
               }
 

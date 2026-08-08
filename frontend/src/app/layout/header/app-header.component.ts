@@ -42,28 +42,17 @@ export class AppHeaderComponent {
 
   protected readonly auth = inject(AuthStore);
 
-  protected readonly canReviewAuthorApplications =
-    computed(() => {
-      const user =
-        this.auth.user();
+  protected readonly canReviewAuthorApplications = computed(() => {
+    const user = this.auth.user();
 
-      if (!user) {
-        return false;
-      }
+    if (!user) {
+      return false;
+    }
 
-      const expected =
-        AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW
-          .trim()
-          .toLowerCase();
+    const expected = AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW.trim().toLowerCase();
 
-      return user.permissions.some(
-        (permission) =>
-          permission
-            .trim()
-            .toLowerCase() ===
-          expected,
-      );
-    });
+    return user.permissions.some((permission) => permission.trim().toLowerCase() === expected);
+  });
 
   protected readonly query = signal('');
 

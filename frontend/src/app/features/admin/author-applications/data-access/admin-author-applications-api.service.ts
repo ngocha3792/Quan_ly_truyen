@@ -1,18 +1,8 @@
-import {
-  HttpClient,
-  HttpHeaders,
-  HttpParams,
-} from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 
-import {
-  inject,
-  Injectable,
-} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 
-import {
-  map,
-  Observable,
-} from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 
@@ -28,27 +18,16 @@ import {
   providedIn: 'root',
 })
 export class AdminAuthorApplicationsApiService {
-  private readonly http =
-    inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
-  private readonly config =
-    inject(APP_RUNTIME_CONFIG);
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  private readonly baseUrl =
-    `${this.config.apiBaseUrl}/author-applications/admin`;
+  private readonly baseUrl = `${this.config.apiBaseUrl}/author-applications/admin`;
 
-  list(
-    query: AdminAuthorApplicationListQuery,
-  ): Observable<AdminAuthorApplicationListResponse> {
+  list(query: AdminAuthorApplicationListQuery): Observable<AdminAuthorApplicationListResponse> {
     let params = new HttpParams()
-      .set(
-        'offset',
-        String(query.offset),
-      )
-      .set(
-        'limit',
-        String(query.limit),
-      );
+      .set('offset', String(query.offset))
+      .set('limit', String(query.limit));
 
     if (query.status) {
       params = params.set(
@@ -58,8 +37,7 @@ export class AdminAuthorApplicationsApiService {
       );
     }
 
-    const keyword =
-      query.keyword?.trim();
+    const keyword = query.keyword?.trim();
 
     if (keyword) {
       params = params.set(
@@ -70,53 +48,29 @@ export class AdminAuthorApplicationsApiService {
     }
 
     return this.http
-      .get<
-        ApiSuccessEnvelope<AdminAuthorApplicationListResponse>
-      >(
+      .get<ApiSuccessEnvelope<AdminAuthorApplicationListResponse>>(
         this.baseUrl,
 
         {
           params,
         },
       )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
-  getOne(
-    applicationId: string,
-  ): Observable<AdminAuthorApplicationRecord> {
+  getOne(applicationId: string): Observable<AdminAuthorApplicationRecord> {
     return this.http
-      .get<
-        ApiSuccessEnvelope<AdminAuthorApplicationRecord>
-      >(
-        `${this.baseUrl}/${applicationId}`,
-      )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .get<ApiSuccessEnvelope<AdminAuthorApplicationRecord>>(`${this.baseUrl}/${applicationId}`)
+      .pipe(map((response) => response.data));
   }
 
-  approve(
-    applicationId: string,
-  ): Observable<AdminAuthorApplicationRecord> {
-    const headers =
-      new HttpHeaders({
-        'x-idempotency-key':
-          crypto.randomUUID(),
-      });
+  approve(applicationId: string): Observable<AdminAuthorApplicationRecord> {
+    const headers = new HttpHeaders({
+      'x-idempotency-key': crypto.randomUUID(),
+    });
 
     return this.http
-      .post<
-        ApiSuccessEnvelope<AdminAuthorApplicationRecord>
-      >(
+      .post<ApiSuccessEnvelope<AdminAuthorApplicationRecord>>(
         `${this.baseUrl}/${applicationId}/approve`,
 
         {},
@@ -125,12 +79,7 @@ export class AdminAuthorApplicationsApiService {
           headers,
         },
       )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
   reject(
@@ -138,16 +87,12 @@ export class AdminAuthorApplicationsApiService {
 
     reason: string,
   ): Observable<AdminAuthorApplicationRecord> {
-    const headers =
-      new HttpHeaders({
-        'x-idempotency-key':
-          crypto.randomUUID(),
-      });
+    const headers = new HttpHeaders({
+      'x-idempotency-key': crypto.randomUUID(),
+    });
 
     return this.http
-      .post<
-        ApiSuccessEnvelope<AdminAuthorApplicationRecord>
-      >(
+      .post<ApiSuccessEnvelope<AdminAuthorApplicationRecord>>(
         `${this.baseUrl}/${applicationId}/reject`,
 
         {
@@ -158,11 +103,6 @@ export class AdminAuthorApplicationsApiService {
           headers,
         },
       )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 }

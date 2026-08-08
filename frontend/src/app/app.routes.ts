@@ -462,47 +462,34 @@ export const routes: Routes = [
       {
         path: 'admin/author-applications',
 
-        title:
-          'Xét duyệt hồ sơ tác giả - TruyenHub',
+        title: 'Xét duyệt hồ sơ tác giả - TruyenHub',
 
         canActivate: [
           authenticatedGuard,
 
-          permissionGuard(
-            AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW,
-          ),
+          permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
         ],
 
         loadComponent: () =>
-          import(
-            './features/admin/author-applications/pages/list/admin-author-application-list-page.component'
-          ).then(
-            (module) =>
-              module.AdminAuthorApplicationListPageComponent,
+          import('./features/admin/author-applications/pages/list/admin-author-application-list-page.component').then(
+            (module) => module.AdminAuthorApplicationListPageComponent,
           ),
       },
 
       {
-        path:
-          'admin/author-applications/:applicationId',
+        path: 'admin/author-applications/:applicationId',
 
-        title:
-          'Chi tiết hồ sơ tác giả - TruyenHub',
+        title: 'Chi tiết hồ sơ tác giả - TruyenHub',
 
         canActivate: [
           authenticatedGuard,
 
-          permissionGuard(
-            AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW,
-          ),
+          permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
         ],
 
         loadComponent: () =>
-          import(
-            './features/admin/author-applications/pages/detail/admin-author-application-detail-page.component'
-          ).then(
-            (module) =>
-              module.AdminAuthorApplicationDetailPageComponent,
+          import('./features/admin/author-applications/pages/detail/admin-author-application-detail-page.component').then(
+            (module) => module.AdminAuthorApplicationDetailPageComponent,
           ),
       },
 

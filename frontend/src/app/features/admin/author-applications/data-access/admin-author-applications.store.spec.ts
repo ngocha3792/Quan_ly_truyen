@@ -1,285 +1,151 @@
-import {
-  TestBed,
-} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {
-  firstValueFrom,
-  of,
-  Subject,
-} from 'rxjs';
+import { firstValueFrom, of, Subject } from 'rxjs';
 
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AuthSessionLifecycleService,
-} from '../../../../core/auth/auth-session-lifecycle.service';
+import { AuthSessionLifecycleService } from '../../../../core/auth/auth-session-lifecycle.service';
 
-import {
-  AdminAuthorApplicationsApiService,
-} from './admin-author-applications-api.service';
+import { AdminAuthorApplicationsApiService } from './admin-author-applications-api.service';
 
-import {
-  AdminAuthorApplicationsStore,
-} from './admin-author-applications.store';
+import { AdminAuthorApplicationsStore } from './admin-author-applications.store';
 
-describe(
-  'AdminAuthorApplicationsStore',
+describe('AdminAuthorApplicationsStore', () => {
+  let store: AdminAuthorApplicationsStore;
 
-  () => {
-    let store:
-      AdminAuthorApplicationsStore;
+  let lifecycle: AuthSessionLifecycleService;
 
-    let lifecycle:
-      AuthSessionLifecycleService;
+  let api: {
+    list: ReturnType<typeof vi.fn>;
 
-    let api: {
-      list:
-        ReturnType<
-          typeof vi.fn
-        >;
+    getOne: ReturnType<typeof vi.fn>;
 
-      getOne:
-        ReturnType<
-          typeof vi.fn
-        >;
+    approve: ReturnType<typeof vi.fn>;
 
-      approve:
-        ReturnType<
-          typeof vi.fn
-        >;
+    reject: ReturnType<typeof vi.fn>;
+  };
 
-      reject:
-        ReturnType<
-          typeof vi.fn
-        >;
+  beforeEach(() => {
+    api = {
+      list: vi.fn(),
+
+      getOne: vi.fn(),
+
+      approve: vi.fn(),
+
+      reject: vi.fn(),
     };
 
-    beforeEach(() => {
-      api = {
-        list:
-          vi.fn(),
+    TestBed.configureTestingModule({
+      providers: [
+        AdminAuthorApplicationsStore,
 
-        getOne:
-          vi.fn(),
+        AuthSessionLifecycleService,
 
-        approve:
-          vi.fn(),
+        {
+          provide: AdminAuthorApplicationsApiService,
 
-        reject:
-          vi.fn(),
-      };
-
-      TestBed.configureTestingModule({
-        providers: [
-          AdminAuthorApplicationsStore,
-
-          AuthSessionLifecycleService,
-
-          {
-            provide:
-              AdminAuthorApplicationsApiService,
-
-            useValue:
-              api,
-          },
-        ],
-      });
-
-      lifecycle =
-        TestBed.inject(
-          AuthSessionLifecycleService,
-        );
-
-      store =
-        TestBed.inject(
-          AdminAuthorApplicationsStore,
-        );
-
-      lifecycle.establishSession(
-        'reviewer-a',
-
-        'session-a',
-
-        false,
-      );
+          useValue: api,
+        },
+      ],
     });
 
-    afterEach(() => {
-      TestBed.resetTestingModule();
-    });
+    lifecycle = TestBed.inject(AuthSessionLifecycleService);
 
-    it(
-      'approve phải thay detail từ PENDING sang APPROVED',
+    store = TestBed.inject(AdminAuthorApplicationsStore);
 
-      async () => {
-        api.getOne.mockReturnValue(
-          of(
-            application(
-              'PENDING',
-            ),
-          ),
-        );
+    lifecycle.establishSession(
+      'reviewer-a',
 
-        store.loadDetail(
-          'application-1',
-        );
+      'session-a',
 
-        api.approve.mockReturnValue(
-          of(
-            application(
-              'APPROVED',
-            ),
-          ),
-        );
+      false,
+    );
+  });
 
-        await firstValueFrom(
-          store.approve(),
-        );
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
 
-        expect(
-          api.approve,
-        ).toHaveBeenCalledWith(
-          'application-1',
-        );
+  it('approve phải thay detail từ PENDING sang APPROVED', async () => {
+    api.getOne.mockReturnValue(of(application('PENDING')));
 
-        expect(
-          store.detail()
-            ?.status,
-        ).toBe(
-          'APPROVED',
-        );
+    store.loadDetail('application-1');
 
-        expect(
-          store.actionMessage(),
-        ).toContain(
-          'được duyệt',
-        );
-      },
+    api.approve.mockReturnValue(of(application('APPROVED')));
+
+    await firstValueFrom(store.approve());
+
+    expect(api.approve).toHaveBeenCalledWith('application-1');
+
+    expect(store.detail()?.status).toBe('APPROVED');
+
+    expect(store.actionMessage()).toContain('được duyệt');
+  });
+
+  it('detail response của reviewer cũ không được chảy sang session mới', () => {
+    const result$ = new Subject<ReturnType<typeof application>>();
+
+    api.getOne.mockReturnValue(result$.asObservable());
+
+    store.loadDetail('application-1');
+
+    lifecycle.establishSession(
+      'reviewer-b',
+
+      'session-b',
+
+      false,
     );
 
-    it(
-      'detail response của reviewer cũ không được chảy sang session mới',
+    result$.next(application('PENDING'));
 
-      () => {
-        const result$ =
-          new Subject<
-            ReturnType<
-              typeof application
-            >
-          >();
+    result$.complete();
 
-        api.getOne.mockReturnValue(
-          result$.asObservable(),
-        );
+    expect(store.detail()).toBeNull();
+  });
+});
 
-        store.loadDetail(
-          'application-1',
-        );
-
-        lifecycle.establishSession(
-          'reviewer-b',
-
-          'session-b',
-
-          false,
-        );
-
-        result$.next(
-          application(
-            'PENDING',
-          ),
-        );
-
-        result$.complete();
-
-        expect(
-          store.detail(),
-        ).toBeNull();
-      },
-    );
-  },
-);
-
-function application(
-  status:
-    'PENDING' |
-    'APPROVED' |
-    'REJECTED',
-) {
+function application(status: 'PENDING' | 'APPROVED' | 'REJECTED') {
   return {
-    applicationId:
-      'application-1',
+    applicationId: 'application-1',
 
-    userId:
-      'applicant-1',
+    userId: 'applicant-1',
 
     status,
 
-    penName:
-      'Store Pen',
+    penName: 'Store Pen',
 
-    fullName:
-      'Store Applicant',
+    fullName: 'Store Applicant',
 
-    email:
-      'store@example.test',
+    email: 'store@example.test',
 
-    phone:
-      '0900000000',
+    phone: '0900000000',
 
-    portfolioUrl:
-      null,
+    portfolioUrl: null,
 
-    primaryGenre:
-      'Fantasy',
+    primaryGenre: 'Fantasy',
 
-    experience:
-      '1-3-years',
+    experience: '1-3-years',
 
-    introduction:
-      'Introduction',
+    introduction: 'Introduction',
 
-    firstWorkSynopsis:
-      'Synopsis',
+    firstWorkSynopsis: 'Synopsis',
 
-    acceptedTerms:
-      true,
+    acceptedTerms: true,
 
-    sample:
-      null,
+    sample: null,
 
-    submittedAt:
-      '2026-08-08T12:00:00.000Z',
+    submittedAt: '2026-08-08T12:00:00.000Z',
 
-    reviewedAt:
-      status ===
-      'PENDING'
-        ? null
-        : '2026-08-08T13:00:00.000Z',
+    reviewedAt: status === 'PENDING' ? null : '2026-08-08T13:00:00.000Z',
 
-    reviewedById:
-      status ===
-      'PENDING'
-        ? null
-        : 'reviewer-a',
+    reviewedById: status === 'PENDING' ? null : 'reviewer-a',
 
-    rejectionReason:
-      status ===
-      'REJECTED'
-        ? 'Rejected reason'
-        : null,
+    rejectionReason: status === 'REJECTED' ? 'Rejected reason' : null,
 
-    createdAt:
-      '2026-08-08T11:00:00.000Z',
+    createdAt: '2026-08-08T11:00:00.000Z',
 
-    updatedAt:
-      '2026-08-08T13:00:00.000Z',
+    updatedAt: '2026-08-08T13:00:00.000Z',
   } as const;
 }

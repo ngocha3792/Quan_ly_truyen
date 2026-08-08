@@ -167,67 +167,42 @@ export class AuthorApplicationStore {
   }
 
   refreshApplicationStatus(): void {
-    const current =
-      this.applicationState();
+    const current = this.applicationState();
 
     /*
      * Chỉ cần check tự động
      * khi hồ sơ đang PENDING.
      */
-    if (
-      !current ||
-      current.status !==
-        'PENDING' ||
-      this.checkingStatus()
-    ) {
+    if (!current || current.status !== 'PENDING' || this.checkingStatus()) {
       return;
     }
 
-    const revision =
-      this.lifecycle.revision();
+    const revision = this.lifecycle.revision();
 
-    this.checkingStatus.set(
-      true,
-    );
+    this.checkingStatus.set(true);
 
     this.repository
       .getMine()
       .pipe(
-        takeUntil(
-          this.lifecycle.changes$,
-        ),
+        takeUntil(this.lifecycle.changes$),
 
-        takeUntilDestroyed(
-          this.destroyRef,
-        ),
+        takeUntilDestroyed(this.destroyRef),
 
         finalize(() => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
+          if (revision !== this.lifecycle.revision()) {
             return;
           }
 
-          this.checkingStatus.set(
-            false,
-          );
+          this.checkingStatus.set(false);
         }),
       )
       .subscribe({
-        next: (
-          application,
-        ) => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
+        next: (application) => {
+          if (revision !== this.lifecycle.revision()) {
             return;
           }
 
-          this.applicationState.set(
-            application,
-          );
+          this.applicationState.set(application);
 
           /*
            * Nếu admin vừa approve:
@@ -237,26 +212,15 @@ export class AuthorApplicationStore {
            * → nhận role AUTHOR
            * → nhận permission mới.
            */
-          this.syncAuthorAuthorization(
-            application,
-          );
+          this.syncAuthorAuthorization(application);
         },
 
-        error: (
-          error: unknown,
-        ) => {
-          if (
-            revision !==
-            this.lifecycle.revision()
-          ) {
+        error: (error: unknown) => {
+          if (revision !== this.lifecycle.revision()) {
             return;
           }
 
-          this.errorMessage.set(
-            getApiErrorMessage(
-              error,
-            ),
-          );
+          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }

@@ -1,9 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
-import {
-  SortOption,
-  SortSelectComponent,
-} from '../../../../../shared/components/sort-select/sort-select.component';
+import { SortOption } from '../../../../../shared/components/sort-select/sort-select.component';
 
 import { AuthorDirectorySort } from '../../domain/author-directory.models';
 
