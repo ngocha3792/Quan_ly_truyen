@@ -4,12 +4,13 @@ import { AuthorApplicationPolicy } from '../../../domain';
 
 import type { AuthorApplicationConfigResultDto } from '../../dto';
 
-import { GetAuthorApplicationConfigQuery } from './get-author-application-config.query';
+import type { GetAuthorApplicationConfigQuery } from './get-author-application-config.query';
 
 @Injectable()
 export class GetAuthorApplicationConfigQueryHandler {
   execute(
-    _query: GetAuthorApplicationConfigQuery,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _query?: GetAuthorApplicationConfigQuery,
   ): AuthorApplicationConfigResultDto {
     return {
       genreOptions: AuthorApplicationPolicy.GENRES,

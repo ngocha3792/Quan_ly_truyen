@@ -2,9 +2,9 @@ import { inject } from '@angular/core';
 
 import { CanActivateFn, Router } from '@angular/router';
 
-import { map } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 
-import { AuthPermission } from './authorization.models';
+import { AuthAuthorizationSyncService } from './auth-authorization-sync.service';
 
 import {
   createAccessDeniedUrlTree,
@@ -12,23 +12,12 @@ import {
   resolveAuthenticatedUser,
 } from './auth-guard.util';
 
+import { AuthPermission } from './authorization.models';
+
+import { CurrentUser } from './auth.models';
+
 import { AuthStore } from './auth.store';
 
-/**
- * Permission guard sử dụng ALL-OF.
- *
- * Ví dụ:
- *
- * permissionGuard(
- *   STORY_CREATE,
- *   CHAPTER_CREATE,
- * )
- *
- * User phải có cả hai permission.
- *
- * Hiện tại các route của Stage 3
- * chỉ yêu cầu một permission.
- */
 export function permissionGuard(
   requiredPermission: AuthPermission,
 
@@ -36,31 +25,112 @@ export function permissionGuard(
 ): CanActivateFn {
   const requiredPermissions = [requiredPermission, ...additionalPermissions];
 
-  return (_route, state) => {
+  return (
+    _route,
+
+    state,
+  ) => {
     const auth = inject(AuthStore);
+
+    const authorizationSync = inject(AuthAuthorizationSyncService);
 
     const router = inject(Router);
 
     return resolveAuthenticatedUser(auth).pipe(
-      map((user) => {
+      switchMap((user) => {
         if (!user) {
-          return createLoginRequiredUrlTree(router, state);
+          return of(
+            createLoginRequiredUrlTree(
+              router,
+
+              state,
+            ),
+          );
         }
 
-        const userPermissions = new Set(user.permissions.map(normalizePermission));
+        if (
+          hasAllPermissions(
+            user,
 
-        const hasAllPermissions = requiredPermissions.every((permission) =>
-          userPermissions.has(normalizePermission(permission)),
+            requiredPermissions,
+          )
+        ) {
+          return of(true);
+        }
+
+        /*
+         * Giống roleGuard:
+         *
+         * thiếu permission local chưa chắc
+         * backend authorization hiện tại
+         * thật sự thiếu.
+         */
+        return authorizationSync.revalidateCurrentUser().pipe(
+          map((freshUser) => {
+            if (!freshUser) {
+              return createLoginRequiredUrlTree(
+                router,
+
+                state,
+              );
+            }
+
+            if (
+              hasAllPermissions(
+                freshUser,
+
+                requiredPermissions,
+              )
+            ) {
+              return true;
+            }
+
+            return createAccessDeniedUrlTree(
+              router,
+
+              state,
+
+              'permission',
+            );
+          }),
+
+          catchError(() => {
+            if (auth.status() === 'anonymous') {
+              return of(
+                createLoginRequiredUrlTree(
+                  router,
+
+                  state,
+                ),
+              );
+            }
+
+            return of(
+              createAccessDeniedUrlTree(
+                router,
+
+                state,
+
+                'permission',
+              ),
+            );
+          }),
         );
-
-        if (hasAllPermissions) {
-          return true;
-        }
-
-        return createAccessDeniedUrlTree(router, state, 'permission');
       }),
     );
   };
+}
+
+function hasAllPermissions(
+  user: CurrentUser,
+
+  requiredPermissions: readonly AuthPermission[],
+): boolean {
+  const userPermissions = new Set(user.permissions.map(normalizePermission));
+
+  return requiredPermissions.every((permission) =>
+    userPermissions.has(normalizePermission(permission)),
+  );
 }
 
 function normalizePermission(permission: string): string {

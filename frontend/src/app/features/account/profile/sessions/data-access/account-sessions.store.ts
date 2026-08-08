@@ -1,6 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, forkJoin, Observable, of, tap, throwError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { catchError, finalize, forkJoin, Observable, of, takeUntil, tap, throwError } from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 
@@ -25,6 +29,8 @@ import { AccountSessionsApiService } from './account-sessions-api.service';
 })
 export class AccountSessionsStore {
   private readonly api = inject(AccountSessionsApiService);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly rawSessionsState = signal<readonly AccountSessionDto[]>([]);
 
@@ -171,6 +177,12 @@ export class AccountSessionsStore {
     () => this.otherSessions().filter((session) => session.canRevoke).length,
   );
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -192,6 +204,8 @@ export class AccountSessionsStore {
       ),
     })
       .pipe(
+        takeUntil(this.lifecycle.changes$),
+
         finalize(() => {
           this.loadingState.set(false);
         }),
@@ -248,6 +262,8 @@ export class AccountSessionsStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.removeRevokingId(sessionId);
       }),
@@ -290,6 +306,8 @@ export class AccountSessionsStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
         this.revokingIdsState.set(new Set());
@@ -300,6 +318,28 @@ export class AccountSessionsStore {
   clearMessages(): void {
     this.errorState.set(null);
     this.successState.set(null);
+  }
+
+  private resetSessionState(): void {
+    this.rawSessionsState.set([]);
+
+    this.eventsState.set([]);
+
+    this.loadingState.set(false);
+
+    this.submittingState.set(false);
+
+    this.errorState.set(null);
+
+    this.successState.set(null);
+
+    this.queryState.set('');
+
+    this.filterState.set('all');
+
+    this.revokingIdsState.set(new Set());
+
+    this.loaded = false;
   }
 
   private removeSession(sessionId: string): void {

@@ -11,11 +11,13 @@ import {
   UrlTree,
 } from '@angular/router';
 
-import { firstValueFrom, isObservable } from 'rxjs';
+import { firstValueFrom, isObservable, of } from 'rxjs';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authenticatedGuard } from './authenticated.guard';
+
+import { AuthAuthorizationSyncService } from './auth-authorization-sync.service';
 
 import { AUTH_PERMISSIONS, AUTH_ROLES } from './authorization.models';
 
@@ -38,6 +40,10 @@ describe('Auth authorization guards', () => {
 
   let auth: AuthStore;
 
+  let authorizationSync: {
+    revalidateCurrentUser: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(() => {
     statusState = signal<AuthStatus>('anonymous');
 
@@ -51,6 +57,10 @@ describe('Auth authorization guards', () => {
       initialize: vi.fn(),
     } as unknown as AuthStore;
 
+    authorizationSync = {
+      revalidateCurrentUser: vi.fn(() => of(userState())),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -59,6 +69,12 @@ describe('Auth authorization guards', () => {
           provide: AuthStore,
 
           useValue: auth,
+        },
+
+        {
+          provide: AuthAuthorizationSyncService,
+
+          useValue: authorizationSync,
         },
       ],
     });
@@ -204,6 +220,54 @@ describe('Auth authorization guards', () => {
 
       '/thu-vien',
     );
+
+    expect(result).toBe(true);
+  });
+
+  it('roleGuard revalidate CurrentUser trước khi từ chối role stale', async () => {
+    authenticate(
+      createCurrentUser({
+        roles: ['USER'],
+      }),
+    );
+
+    const freshUser = createCurrentUser({
+      roles: ['USER', 'AUTHOR'],
+    });
+
+    authorizationSync.revalidateCurrentUser.mockReturnValue(of(freshUser));
+
+    const result = await executeGuard(
+      roleGuard(AUTH_ROLES.AUTHOR),
+
+      '/author-studio',
+    );
+
+    expect(authorizationSync.revalidateCurrentUser).toHaveBeenCalledTimes(1);
+
+    expect(result).toBe(true);
+  });
+
+  it('permissionGuard revalidate CurrentUser trước khi từ chối permission stale', async () => {
+    authenticate(
+      createCurrentUser({
+        permissions: [],
+      }),
+    );
+
+    const freshUser = createCurrentUser({
+      permissions: [AUTH_PERMISSIONS.LIBRARY_MANAGE_OWN],
+    });
+
+    authorizationSync.revalidateCurrentUser.mockReturnValue(of(freshUser));
+
+    const result = await executeGuard(
+      permissionGuard(AUTH_PERMISSIONS.LIBRARY_MANAGE_OWN),
+
+      '/thu-vien',
+    );
+
+    expect(authorizationSync.revalidateCurrentUser).toHaveBeenCalledTimes(1);
 
     expect(result).toBe(true);
   });

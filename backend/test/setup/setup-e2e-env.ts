@@ -53,6 +53,10 @@ process.env.AUTH_JWT_BLACKLIST_FAILURE_MODE = 'closed';
 
 process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED = 'false';
 
+process.env.AUTH_ADMIN_MFA_ENABLED = 'false';
+
+process.env.AUTH_OAUTH_ENABLED = 'false';
+
 process.env.AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS = '15';
 
 process.env.AUTH_CSRF_ENABLED = 'false';

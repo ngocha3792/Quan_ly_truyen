@@ -1,6 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, forkJoin, Observable, tap, throwError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { catchError, finalize, forkJoin, Observable, takeUntil, tap, throwError } from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 import { AccountSecurityStore } from '../data/account-security.store';
@@ -19,6 +23,8 @@ import { AccountSecuritySettingsApiService } from './account-security-settings-a
 export class SecurityQuestionsStore {
   private readonly api = inject(AccountSecuritySettingsApiService);
   private readonly accountSecurity = inject(AccountSecurityStore);
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
+
   private readonly optionsState = signal<readonly SecurityQuestionOption[]>([]);
 
   private readonly state = signal<SecurityQuestionsState | null>(null);
@@ -45,6 +51,12 @@ export class SecurityQuestionsStore {
 
   readonly success = this.successState.asReadonly();
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -59,6 +71,8 @@ export class SecurityQuestionsStore {
       state: this.api.getSecurityQuestions(),
     })
       .pipe(
+        takeUntil(this.lifecycle.changes$),
+
         finalize(() => {
           this.loadingState.set(false);
         }),
@@ -119,9 +133,27 @@ export class SecurityQuestionsStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
     );
+  }
+
+  private resetSessionState(): void {
+    this.optionsState.set([]);
+
+    this.state.set(null);
+
+    this.loadingState.set(false);
+
+    this.submittingState.set(false);
+
+    this.errorState.set(null);
+
+    this.successState.set(null);
+
+    this.loaded = false;
   }
 }

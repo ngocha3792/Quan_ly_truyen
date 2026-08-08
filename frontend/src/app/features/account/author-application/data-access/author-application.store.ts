@@ -2,9 +2,9 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 
-import { AuthStore } from '../../../../core/auth/auth.store';
+import { AuthAuthorizationSyncService } from '../../../../core/auth/auth-authorization-sync.service';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 
@@ -22,7 +22,7 @@ import { AuthorApplicationRepository } from '../domain/author-application.reposi
 export class AuthorApplicationStore {
   private readonly repository = inject(AuthorApplicationRepository);
 
-  private readonly auth = inject(AuthStore);
+  private readonly authorizationSync = inject(AuthAuthorizationSyncService);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -171,29 +171,25 @@ export class AuthorApplicationStore {
   }
 
   private syncAuthorAuthorization(application: AuthorApplicationRecord | null): void {
-    if (
-      this.authorAuthorizationSynced ||
-      application?.status !== 'APPROVED' ||
-      this.auth.user()?.roles.includes('AUTHOR')
-    ) {
+    if (this.authorAuthorizationSynced || application?.status !== 'APPROVED') {
       return;
     }
 
     this.authorAuthorizationSynced = true;
 
     /*
-     * Approval đã invalidate backend cache.
+     * AuthorApplication chỉ phát tín hiệu:
      *
-     * FE vẫn giữ CurrentUser cũ,
-     * nên refreshSession để nhận AUTHOR role.
+     * "authorization có thể đã thay đổi".
+     *
+     * Nó không còn biết:
+     *
+     * - phải refresh token hay không
+     * - phải GET /auth/me thế nào
+     * - cross-tab synchronization
+     *
+     * Tất cả nằm trong Core Auth.
      */
-    this.auth
-      .refreshSession()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-
-        catchError(() => of(null)),
-      )
-      .subscribe();
+    this.authorizationSync.notifyAuthorizationMayHaveChanged();
   }
 }

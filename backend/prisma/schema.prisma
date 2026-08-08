@@ -236,12 +236,13 @@ enum MediaResourceType {
 }
 
 enum MediaPurpose {
-  AVATAR        @map("avatar")
-  AUTHOR_BANNER @map("author_banner")
-  STORY_COVER   @map("story_cover")
-  GENRE_COVER   @map("genre_cover")
-  CHAPTER_IMAGE @map("chapter_image")
-  ATTACHMENT    @map("attachment")
+  AVATAR                    @map("avatar")
+  AUTHOR_BANNER             @map("author_banner")
+  STORY_COVER               @map("story_cover")
+  GENRE_COVER               @map("genre_cover")
+  CHAPTER_IMAGE             @map("chapter_image")
+  ATTACHMENT                @map("attachment")
+  AUTHOR_APPLICATION_SAMPLE @map("author_application_sample")
 
   @@map("media_purpose")
 }

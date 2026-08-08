@@ -1,8 +1,23 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import {
+  catchError,
+  finalize,
+  map,
+  Observable,
+  of,
+  switchMap,
+  takeUntil,
+  tap,
+  throwError,
+} from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { AuthStore } from '../../../../../core/auth/auth.store';
+
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 
 import {
@@ -24,6 +39,8 @@ export class AccountSecurityStore {
   private readonly api = inject(AccountSecurityApiService);
 
   private readonly auth = inject(AuthStore);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly overviewState = signal<AccountSecurityOverview>(EMPTY_SECURITY_OVERVIEW);
 
@@ -187,6 +204,12 @@ export class AccountSecurityStore {
     };
   });
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -204,6 +227,8 @@ export class AccountSecurityStore {
 
           return throwError(() => error);
         }),
+
+        takeUntil(this.lifecycle.changes$),
 
         finalize(() => {
           this.loadingState.set(false);
@@ -258,6 +283,8 @@ export class AccountSecurityStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
@@ -297,6 +324,8 @@ export class AccountSecurityStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
@@ -317,6 +346,8 @@ export class AccountSecurityStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
@@ -327,6 +358,20 @@ export class AccountSecurityStore {
     this.errorState.set(null);
 
     this.successState.set(null);
+  }
+
+  private resetSessionState(): void {
+    this.overviewState.set(EMPTY_SECURITY_OVERVIEW);
+
+    this.loadingState.set(false);
+
+    this.submittingState.set(false);
+
+    this.errorState.set(null);
+
+    this.successState.set(null);
+
+    this.loaded = false;
   }
 }
 

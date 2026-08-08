@@ -1,8 +1,13 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../core/auth/auth-session-lifecycle.service';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
+
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 
 import {
@@ -30,6 +35,8 @@ export class AccountStore {
   private readonly api = inject(AccountApiService);
 
   private readonly auth = inject(AuthStore);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly sessionsState = signal<AccountSessionsResponse>(EMPTY_SESSIONS);
 
@@ -134,6 +141,12 @@ export class AccountStore {
     };
   });
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -163,6 +176,8 @@ export class AccountStore {
       securityEvents: securityEventsRequest,
     })
       .pipe(
+        takeUntil(this.lifecycle.changes$),
+
         finalize(() => {
           this.loadingState.set(false);
         }),
@@ -182,5 +197,17 @@ export class AccountStore {
 
   clearError(): void {
     this.errorState.set(null);
+  }
+
+  private resetSessionState(): void {
+    this.sessionsState.set(EMPTY_SESSIONS);
+
+    this.securityEventsState.set(EMPTY_SECURITY_EVENTS);
+
+    this.loadingState.set(false);
+
+    this.errorState.set(null);
+
+    this.loaded = false;
   }
 }

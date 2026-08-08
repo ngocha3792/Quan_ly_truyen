@@ -1,6 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, Observable, tap, throwError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { catchError, finalize, Observable, takeUntil, tap, throwError } from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 
@@ -21,6 +25,8 @@ import { AccountSecuritySettingsApiService } from './account-security-settings-a
 })
 export class MfaSettingsStore {
   private readonly api = inject(AccountSecuritySettingsApiService);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly statusState = signal<MfaStatus | null>(null);
 
@@ -52,6 +58,12 @@ export class MfaSettingsStore {
 
   readonly success = this.successState.asReadonly();
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -63,6 +75,8 @@ export class MfaSettingsStore {
     this.api
       .getMfaStatus()
       .pipe(
+        takeUntil(this.lifecycle.changes$),
+
         finalize(() => {
           this.loadingState.set(false);
         }),
@@ -91,6 +105,8 @@ export class MfaSettingsStore {
 
       catchError((error: unknown) => this.handleError(error)),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
@@ -115,6 +131,8 @@ export class MfaSettingsStore {
 
       catchError((error: unknown) => this.handleError(error)),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.submittingState.set(false);
       }),
@@ -134,6 +152,8 @@ export class MfaSettingsStore {
       }),
 
       catchError((error: unknown) => this.handleError(error)),
+
+      takeUntil(this.lifecycle.changes$),
 
       finalize(() => {
         this.submittingState.set(false);
@@ -163,6 +183,8 @@ export class MfaSettingsStore {
       }),
 
       catchError((error: unknown) => this.handleError(error)),
+
+      takeUntil(this.lifecycle.changes$),
 
       finalize(() => {
         this.submittingState.set(false);
@@ -194,5 +216,27 @@ export class MfaSettingsStore {
     this.errorState.set(getApiErrorMessage(error));
 
     return throwError(() => error);
+  }
+
+  private resetSessionState(): void {
+    this.statusState.set(null);
+
+    this.enrollmentState.set(null);
+
+    /*
+     * Recovery codes đặc biệt nhạy cảm,
+     * phải clear ngay khi session thay đổi.
+     */
+    this.recoveryCodesState.set([]);
+
+    this.loadingState.set(false);
+
+    this.submittingState.set(false);
+
+    this.errorState.set(null);
+
+    this.successState.set(null);
+
+    this.loaded = false;
   }
 }

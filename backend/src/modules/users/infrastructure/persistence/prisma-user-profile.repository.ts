@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 
 import { MediaPurpose, MediaStatus, Prisma } from '@/generated/prisma/client';
 
-import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+import {
+  CURRENT_USER_PROFILE_SELECT,
+  type CurrentUserProfileRow,
+  mapPrismaError,
+  PrismaService,
+} from '@/infrastructure/database';
 
 import {
   type UpdateUserPreferencesPersistenceInput,
@@ -15,37 +20,7 @@ import {
 
 import { UserPreferencesEntity, UserProfileEntity } from '../../domain';
 
-const PROFILE_SELECT = {
-  id: true,
-
-  email: true,
-
-  username: true,
-
-  displayName: true,
-
-  bio: true,
-
-  status: true,
-
-  emailVerifiedAt: true,
-
-  lastLoginAt: true,
-
-  createdAt: true,
-
-  updatedAt: true,
-
-  avatarMedia: {
-    select: {
-      id: true,
-
-      secureUrl: true,
-
-      publicUrl: true,
-    },
-  },
-} satisfies Prisma.UserSelect;
+const PROFILE_SELECT = CURRENT_USER_PROFILE_SELECT;
 
 const PREFERENCES_SELECT = {
   emailEnabled: true,
@@ -57,9 +32,7 @@ const PREFERENCES_SELECT = {
   updatedAt: true,
 } satisfies Prisma.NotificationPreferenceSelect;
 
-type ProfileRecord = Prisma.UserGetPayload<{
-  select: typeof PROFILE_SELECT;
-}>;
+type ProfileRecord = CurrentUserProfileRow;
 
 type PreferencesRecord = Prisma.NotificationPreferenceGetPayload<{
   select: typeof PREFERENCES_SELECT;

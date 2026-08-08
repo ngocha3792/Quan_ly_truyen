@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { CacheModule } from '@/infrastructure/cache';
 import {
   generateSecureToken,
   generateUuid,
@@ -12,6 +11,8 @@ import {
 import { RedisModule } from '@/infrastructure/cache/redis/redis.module';
 import { PrismaModule } from '@/infrastructure/database';
 import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
+
+import { AuthAuthorizationModule } from './auth-authorization.module';
 
 import {
   RECOVERY_EMAIL_PERSISTENCE_PORT,
@@ -102,7 +103,6 @@ import {
   RedisEmailVerificationCooldown,
   RedisLoginRateLimiter,
   PrismaChangePasswordPersistence,
-  AccessAuthorizationCacheService,
   MfaSecretCipherService,
   PrismaAccountDeletionPersistence,
   TotpService,
@@ -163,7 +163,8 @@ const idGeneratorProvider = {
       session: false,
     }),
 
-    CacheModule,
+    AuthAuthorizationModule,
+
     RedisModule,
     PrismaModule,
     OutboxCoreModule,
@@ -186,7 +187,6 @@ const idGeneratorProvider = {
     AuthCookieService,
 
     DeleteAccountCommandHandler,
-    AccessAuthorizationCacheService,
     GetSecurityQuestionCatalogQueryHandler,
 
     GetSecurityQuestionsQueryHandler,
@@ -406,11 +406,7 @@ const idGeneratorProvider = {
 
     ValidateAccessTokenQueryHandler,
 
-    /*
-     * Module quản lý role/author profile sau này
-     * phải gọi invalidateUser() sau khi transaction thành công.
-     */
-    AccessAuthorizationCacheService,
+    AuthAuthorizationModule,
   ],
 })
 export class AuthModule {}

@@ -1,6 +1,20 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import {
+  catchError,
+  finalize,
+  map,
+  Observable,
+  of,
+  switchMap,
+  takeUntil,
+  tap,
+  throwError,
+} from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { CurrentUser } from '../../../../../core/auth/auth.models';
 
@@ -28,6 +42,8 @@ export class AccountProfileStore {
   private readonly api = inject(AccountProfileApiService);
 
   private readonly avatarUpload = inject(AccountAvatarUploadService);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly loadingState = signal(false);
 
@@ -118,6 +134,12 @@ export class AccountProfileStore {
     };
   });
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -143,6 +165,8 @@ export class AccountProfileStore {
 
           return throwError(() => error);
         }),
+
+        takeUntil(this.lifecycle.changes$),
 
         finalize(() => {
           this.loadingState.set(false);
@@ -205,6 +229,8 @@ export class AccountProfileStore {
         return throwError(() => error);
       }),
 
+      takeUntil(this.lifecycle.changes$),
+
       finalize(() => {
         this.savingState.set(false);
       }),
@@ -252,5 +278,17 @@ export class AccountProfileStore {
     this.auth.replaceCurrentUser(updated);
 
     return updated;
+  }
+
+  private resetSessionState(): void {
+    this.loadingState.set(false);
+
+    this.savingState.set(false);
+
+    this.errorState.set(null);
+
+    this.successState.set(null);
+
+    this.loaded = false;
   }
 }

@@ -1,90 +1,107 @@
+import { HttpErrorResponse } from '@angular/common/http';
+
 import { inject, Injectable } from '@angular/core';
+
 import { catchError, finalize, map, Observable, shareReplay, tap, throwError } from 'rxjs';
 
 import { AuthApiService } from './auth-api.service';
+
+import { AuthRefreshCoordinatorService } from './auth-refresh-coordinator.service';
+
+import { AuthSessionLifecycleService } from './auth-session-lifecycle.service';
+
 import { TokenStore } from './token.store';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class AuthRefreshService {
   private readonly api = inject(AuthApiService);
+
   private readonly tokenStore = inject(TokenStore);
 
+  private readonly coordinator = inject(AuthRefreshCoordinatorService);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
+
   /**
-   * Refresh request đang chạy.
+   * Single-flight trong cùng tab.
    *
-   * Mọi caller gọi refreshAccessToken() trong lúc refresh đang chạy
-   * sẽ dùng chung Observable này thay vì tạo request /auth/refresh mới.
+   * Nếu 5 request cùng nhận 401:
+   *
+   * request 1 → tạo refresh$
+   * request 2..5 → dùng lại chính refresh$
    */
   private refreshInFlight$: Observable<string> | null = null;
 
   refreshAccessToken(): Observable<string> {
-    /**
-     * Đã có một refresh request đang chạy.
-     *
-     * Quan trọng:
-     * Không được gọi API refresh lần nữa vì backend sử dụng
-     * refresh-token rotation + reuse detection.
-     */
     if (this.refreshInFlight$) {
       return this.refreshInFlight$;
     }
 
-    const refresh$ = this.api.refresh().pipe(
-      map((response) => response.accessToken),
+    const refresh$ = this.coordinator
+      .runExclusive(() => this.api.refresh())
+      .pipe(
+        tap((response) => {
+          this.tokenStore.set(response.accessToken);
+        }),
 
-      tap((accessToken) => {
-        /**
-         * Cập nhật token trước khi emit cho các request đang chờ.
-         *
-         * Nhờ vậy các request 401 đến trễ cũng có thể nhận biết rằng
-         * token đã được refresh bởi request khác.
+        map((response) => response.accessToken),
+
+        catchError((error: unknown) => {
+          /*
+           * Access token hiện tại vừa bị backend
+           * từ chối nên không giữ nó lại.
+           */
+          this.tokenStore.clear();
+
+          if (isRejectedRefreshSession(error)) {
+            /*
+             * 401 / 403 từ refresh endpoint:
+             * refresh session thật sự không còn hợp lệ.
+             */
+            this.lifecycle.invalidateSession(
+              'refresh-session-rejected',
+
+              true,
+            );
+          } else {
+            /*
+             * Network / 5xx:
+             * không được coi refresh cookie đã chết.
+             */
+            this.lifecycle.loseAccess('refresh-temporarily-unavailable');
+          }
+
+          return throwError(() => error);
+        }),
+
+        finalize(() => {
+          this.refreshInFlight$ = null;
+        }),
+
+        /*
+         * Phải share response/error cho toàn bộ caller
+         * đang chờ cùng một refresh.
          */
-        this.tokenStore.set(accessToken);
-      }),
+        shareReplay({
+          bufferSize: 1,
 
-      catchError((error: unknown) => {
-        /**
-         * Refresh token không còn sử dụng được.
-         *
-         * Không giữ access token cũ vì nó đã bị backend từ chối.
-         */
-        this.tokenStore.clear();
+          refCount: false,
+        }),
+      );
 
-        return throwError(() => error);
-      }),
-
-      finalize(() => {
-        /**
-         * Refresh đã success hoặc error.
-         *
-         * Cho phép lần refresh tiếp theo được tạo khi access token
-         * hết hạn trong tương lai.
-         */
-        this.refreshInFlight$ = null;
-      }),
-
-      /**
-       * Single-flight.
-       *
-       * bufferSize: 1
-       *   Caller đến sau vẫn nhận access token vừa refresh.
-       *
-       * refCount: false
-       *   Nếu một component unsubscribe giữa lúc refresh đang chạy,
-       *   HTTP refresh vẫn tiếp tục.
-       *
-       * Điều này đặc biệt quan trọng với refresh-token rotation:
-       * không nên cancel request sau khi backend có khả năng đã bắt đầu
-       * rotate refresh token.
-       */
-      shareReplay({
-        bufferSize: 1,
-        refCount: false,
-      }),
-    );
-
+    /*
+     * Set field TRƯỚC khi caller subscribe.
+     *
+     * Caller tiếp theo luôn nhìn thấy cùng Observable.
+     */
     this.refreshInFlight$ = refresh$;
 
     return refresh$;
   }
+}
+
+function isRejectedRefreshSession(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
 }

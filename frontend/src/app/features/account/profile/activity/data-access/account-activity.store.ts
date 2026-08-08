@@ -1,6 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+import { catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
+
+import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 
@@ -27,6 +31,8 @@ const DEFAULT_VISIBLE_COUNT = 10;
 })
 export class AccountActivityStore {
   private readonly api = inject(AccountActivityApiService);
+
+  private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly eventsState = signal<readonly AccountSecurityEventDto[]>([]);
 
@@ -188,6 +194,12 @@ export class AccountActivityStore {
     ];
   });
 
+  constructor() {
+    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.resetSessionState();
+    });
+  }
+
   load(force = false): void {
     if (this.loadingState() || (this.loaded && !force)) {
       return;
@@ -209,6 +221,8 @@ export class AccountActivityStore {
       ),
     })
       .pipe(
+        takeUntil(this.lifecycle.changes$),
+
         finalize(() => {
           this.loadingState.set(false);
         }),
@@ -253,6 +267,26 @@ export class AccountActivityStore {
 
   clearError(): void {
     this.errorState.set(null);
+  }
+
+  private resetSessionState(): void {
+    this.eventsState.set([]);
+
+    this.sessionsState.set([]);
+
+    this.loadingState.set(false);
+
+    this.errorState.set(null);
+
+    this.queryState.set('');
+
+    this.categoryState.set('all');
+
+    this.periodDaysState.set(7);
+
+    this.visibleCountState.set(DEFAULT_VISIBLE_COUNT);
+
+    this.loaded = false;
   }
 
   private resetVisibleCount(): void {

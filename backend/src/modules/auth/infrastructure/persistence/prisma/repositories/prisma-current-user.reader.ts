@@ -1,13 +1,62 @@
 import { Injectable } from '@nestjs/common';
 
 import { PermissionCode, RoleCode } from '@/common/enums';
-import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+
+import { Prisma } from '@/generated/prisma/client';
+
+import {
+  CURRENT_USER_PROFILE_SELECT,
+  mapPrismaError,
+  PrismaService,
+} from '@/infrastructure/database';
 
 import type {
   CurrentUserReaderPort,
   CurrentUserRecord,
 } from '../../../../application/ports';
+
 import { AuthAccountStatus } from '../../../../domain/enums';
+
+const CURRENT_USER_SELECT = {
+  ...CURRENT_USER_PROFILE_SELECT,
+
+  authorProfile: {
+    select: {
+      userId: true,
+
+      penName: true,
+
+      verificationStatus: true,
+    },
+  },
+
+  userRoles: {
+    /*
+     * `where` được gắn lúc query vì phụ thuộc thời điểm now.
+     *
+     * Ở select chỉ khai báo shape relation.
+     */
+    select: {
+      expiresAt: true,
+
+      role: {
+        select: {
+          code: true,
+
+          permissions: {
+            select: {
+              permission: {
+                select: {
+                  code: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class PrismaCurrentUserReader implements CurrentUserReaderPort {
@@ -20,47 +69,26 @@ export class PrismaCurrentUserReader implements CurrentUserReaderPort {
       const user = await this.prisma.user.findFirst({
         where: {
           id: userId,
+
           deletedAt: null,
         },
 
         select: {
-          id: true,
+          ...CURRENT_USER_SELECT,
 
-          email: true,
-          username: true,
-          displayName: true,
-          bio: true,
-
-          status: true,
-
-          emailVerifiedAt: true,
-          lastLoginAt: true,
-
-          createdAt: true,
-          updatedAt: true,
-
-          avatarMedia: {
-            select: {
-              id: true,
-              secureUrl: true,
-              publicUrl: true,
-            },
-          },
-
-          authorProfile: {
-            select: {
-              userId: true,
-              penName: true,
-              verificationStatus: true,
-            },
-          },
-
+          /*
+           * Override relation để filter role đã hết hạn.
+           *
+           * Profile fields phía trên vẫn lấy từ
+           * CURRENT_USER_PROFILE_SELECT.
+           */
           userRoles: {
             where: {
               OR: [
                 {
                   expiresAt: null,
                 },
+
                 {
                   expiresAt: {
                     gt: now,
@@ -69,23 +97,7 @@ export class PrismaCurrentUserReader implements CurrentUserReaderPort {
               ],
             },
 
-            select: {
-              role: {
-                select: {
-                  code: true,
-
-                  permissions: {
-                    select: {
-                      permission: {
-                        select: {
-                          code: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+            select: CURRENT_USER_SELECT.userRoles.select,
           },
         },
       });
@@ -114,8 +126,11 @@ export class PrismaCurrentUserReader implements CurrentUserReaderPort {
         id: user.id,
 
         email: user.email,
+
         username: user.username,
+
         displayName: user.displayName,
+
         bio: user.bio,
 
         status: user.status as AuthAccountStatus,
@@ -143,17 +158,23 @@ export class PrismaCurrentUserReader implements CurrentUserReaderPort {
           : null,
 
         roles,
+
         permissions,
 
         createdAt: user.createdAt,
+
         updatedAt: user.updatedAt,
       };
     } catch (error: unknown) {
-      throw mapPrismaError(error, {
-        operation: 'auth-read-current-user',
+      throw mapPrismaError(
+        error,
 
-        resource: 'Người dùng hiện tại',
-      });
+        {
+          operation: 'auth-read-current-user',
+
+          resource: 'Người dùng hiện tại',
+        },
+      );
     }
   }
 }

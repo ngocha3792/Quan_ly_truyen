@@ -293,18 +293,52 @@ describe('AuthStore', () => {
     expect(store.status()).toBe('authenticated');
   });
 
-  it('refresh session fail phải chuyển anonymous', async () => {
+  it('refresh bị backend từ chối phải chuyển anonymous', async () => {
     tokens.set('expired-token');
 
     refreshService.refreshAccessToken.mockReturnValue(
-      throwError(() => new Error('Refresh expired')),
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+
+            statusText: 'Unauthorized',
+          }),
+      ),
     );
 
-    await expect(firstValueFrom(store.refreshSession())).rejects.toThrow('Refresh expired');
+    await expect(firstValueFrom(store.refreshSession())).rejects.toBeInstanceOf(HttpErrorResponse);
 
     expect(store.status()).toBe('anonymous');
 
+    expect(store.user()).toBeNull();
+
     expect(tokens.accessToken()).toBeNull();
+  });
+
+  it('refresh lỗi tạm thời phải về idle để có thể retry', async () => {
+    tokens.set('expired-token');
+
+    refreshService.refreshAccessToken.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 503,
+
+            statusText: 'Service Unavailable',
+          }),
+      ),
+    );
+
+    await expect(firstValueFrom(store.refreshSession())).rejects.toBeInstanceOf(HttpErrorResponse);
+
+    expect(store.status()).toBe('idle');
+
+    expect(store.user()).toBeNull();
+
+    expect(tokens.accessToken()).toBeNull();
+
+    expect(sessionHint.markSessionAbsent).not.toHaveBeenCalled();
   });
 
   it('logout luôn clear local state kể cả backend logout thành công', () => {

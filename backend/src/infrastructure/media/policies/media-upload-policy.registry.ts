@@ -1,3 +1,4 @@
+import { AUTHOR_APPLICATION_SAMPLE_FILE_POLICY } from '@/common/policies/author-application-sample-file.policy';
 import { MediaPurpose } from '@/generated/prisma/client';
 import type { MediaStorageResourceType } from '../contracts/stored-media.interface';
 
@@ -82,6 +83,22 @@ export const MEDIA_UPLOAD_POLICIES: Record<MediaPurpose, MediaUploadPolicy> = {
       'image/webp': ['webp'],
     },
     maxBytes: 5 * MB,
+  },
+
+  [MediaPurpose.AUTHOR_APPLICATION_SAMPLE]: {
+    resourceType: 'raw',
+
+    uploadPresetConfigKey: 'cloudinary.uploadPresets.attachment',
+
+    folderSegment: 'author-applications/samples',
+
+    allowedFormats: AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.allowedFormats,
+
+    allowedMimeTypes: AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.allowedMimeTypes,
+
+    mimeFormatPairs: AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.mimeFormatPairs,
+
+    maxBytes: AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.maxBytes,
   },
 
   [MediaPurpose.ATTACHMENT]: {

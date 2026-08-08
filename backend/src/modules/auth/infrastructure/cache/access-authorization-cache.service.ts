@@ -10,6 +10,8 @@ import type { AuthConfig } from '@/config';
 
 import type { CacheStore } from '@/infrastructure/cache';
 
+import type { AuthorizationInvalidationPort } from '@/common/interfaces/auth';
+
 export interface AccessAuthorizationSnapshot {
   roles: readonly RoleCode[];
 
@@ -29,7 +31,7 @@ interface CachedAccessAuthorizationV1 {
 }
 
 @Injectable()
-export class AccessAuthorizationCacheService {
+export class AccessAuthorizationCacheService implements AuthorizationInvalidationPort {
   private readonly enabled: boolean;
 
   private readonly ttlSeconds: number;

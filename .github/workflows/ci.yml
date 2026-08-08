@@ -1,0 +1,422 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+  merge_group:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+  # Đồng bộ với frontend/package.json packageManager.
+  NPM_VERSION: "11.12.1"
+
+jobs:
+  # ============================================================
+  # FRONTEND QUALITY
+  # ============================================================
+  frontend:
+    name: Frontend / quality
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+
+        with:
+          node-version-file: .nvmrc
+
+          cache: npm
+
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Typecheck Playwright tests
+        run: npm run typecheck:e2e
+
+      - name: Unit tests
+        run: npm run test:ci
+
+      - name: Production build
+        run: npm run build:ci
+
+  # ============================================================
+  # BACKEND QUALITY
+  # ============================================================
+  backend:
+    name: Backend / quality
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 20
+
+    env:
+      NODE_ENV: test
+
+      # prisma.config.ts đọc DATABASE_URL trong npm ci -> postinstall.
+      #
+      # Prisma generate không cần kết nối DB,
+      # nhưng config vẫn cần URL hợp lệ.
+      DATABASE_URL: >-
+        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+
+        with:
+          node-version-file: .nvmrc
+
+          cache: npm
+
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      # Repo hiện tại từng có cloud DB credential ở file này.
+      # Đây là guard để lỗi tương tự không quay lại.
+      - name: Reject cloud credentials in committed Docker env
+        working-directory: .
+
+        shell: bash
+
+        run: |
+          if grep -q 'db\.prisma\.io' backend/docker/.env.docker; then
+            echo 'backend/docker/.env.docker must use the local postgres service, not a cloud database URL.'
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Typecheck scripts
+        run: npm run typecheck:scripts
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test -- --runInBand
+
+  # ============================================================
+  # BACKEND INTEGRATION
+  # ============================================================
+  backend-integration:
+    name: Backend / PostgreSQL + Redis integration
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    needs:
+      - backend
+
+    env:
+      NODE_ENV: test
+
+      DATABASE_URL: >-
+        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+      TEST_DATABASE_URL: >-
+        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+      # Database Redis > 0 vì test safety guard của repo yêu cầu.
+      REDIS_URL: redis://127.0.0.1:6379/1
+
+      TEST_REDIS_URL: redis://127.0.0.1:6379/1
+
+      ALLOW_UNSAFE_TEST_DB: "false"
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+
+        env:
+          POSTGRES_USER: postgres
+
+          POSTGRES_PASSWORD: postgres
+
+          POSTGRES_DB: quan_ly_truyen_test
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U postgres -d quan_ly_truyen_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      redis:
+        image: redis:7-alpine
+
+        ports:
+          - 6379:6379
+
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+
+        with:
+          node-version-file: .nvmrc
+
+          cache: npm
+
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration and E2E suites
+        run: npm run ci:integration
+
+  # ============================================================
+  # FRONTEND REAL E2E
+  # ============================================================
+  frontend-e2e:
+    name: Frontend / Playwright E2E
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 35
+
+    needs:
+      - frontend
+      - backend
+
+    env:
+      NODE_ENV: test
+
+      DATABASE_URL: >-
+        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+      TEST_DATABASE_URL: >-
+        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+      REDIS_ENABLED: "true"
+
+      REDIS_URL: redis://127.0.0.1:6379/0
+
+      TEST_REDIS_URL: redis://127.0.0.1:6379/1
+
+      REDIS_KEY_PREFIX: qlt:ci:e2e
+
+      # E2E frontend không cần worker/mail/cloudinary thật.
+      QUEUE_ENABLED: "false"
+
+      MAIL_ENABLED: "false"
+
+      CLOUDINARY_ENABLED: "false"
+
+      OBSERVABILITY_ENABLED: "false"
+
+      METRICS_ENABLED: "false"
+
+      OTEL_SDK_DISABLED: "true"
+
+      SWAGGER_ENABLED: "false"
+
+      LOG_LEVEL: warn
+
+      LOG_PRETTY: "false"
+
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
+
+      AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: "5"
+
+      ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: "false"
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+
+        env:
+          POSTGRES_USER: postgres
+
+          POSTGRES_PASSWORD: postgres
+
+          POSTGRES_DB: quan_ly_truyen_test
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U postgres -d quan_ly_truyen_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      redis:
+        image: redis:7-alpine
+
+        ports:
+          - 6379:6379
+
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+
+        with:
+          node-version-file: .nvmrc
+
+          cache: npm
+
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      # Dùng default test/dev values đã có sẵn,
+      # còn DATABASE_URL / Redis / Mail... được
+      # workflow env phía trên override.
+      - name: Prepare backend environment
+        working-directory: backend
+
+        run: cp .env.example .env
+
+      - name: Install backend dependencies
+        working-directory: backend
+
+        run: npm ci
+
+      - name: Migrate and seed E2E database
+        working-directory: backend
+
+        run: |
+          npm run db:migrate:deploy
+          npm run db:seed
+          npm run db:seed:e2e
+
+      - name: Build backend
+        working-directory: backend
+
+        run: npm run build
+
+      - name: Start backend
+        working-directory: backend
+
+        shell: bash
+
+        run: |
+          nohup npm run start:prod > backend-ci.log 2>&1 &
+          echo $! > backend-ci.pid
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for backend
+        working-directory: frontend
+
+        run: >-
+          npx wait-on
+          http://127.0.0.1:3000/api/v1/health/live
+          --timeout 120000
+
+      # Gọi Playwright trực tiếp thay vì npm run e2e,
+      # vì database đã seed ở phía trên.
+      #
+      # Nếu gọi npm run e2e thì pree2e sẽ seed thêm lần nữa.
+      - name: Run Playwright E2E
+        working-directory: frontend
+
+        run: npx playwright test
+
+      - name: Print backend log on failure
+        if: failure()
+
+        working-directory: backend
+
+        run: cat backend-ci.log || true
+
+      - name: Upload E2E diagnostics
+        if: failure()
+
+        uses: actions/upload-artifact@v6
+
+        with:
+          name: frontend-e2e-diagnostics-${{ github.run_id }}
+
+          if-no-files-found: ignore
+
+          retention-days: 7
+
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            backend/backend-ci.log

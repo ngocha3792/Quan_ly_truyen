@@ -143,180 +143,252 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
   async saveDraft(
     input: SaveAuthorApplicationDraftInput,
   ): Promise<SaveAuthorApplicationDraftResult> {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const user = await tx.user.findFirst({
-          where: {
-            id: input.userId,
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const user = await tx.user.findFirst({
+            where: {
+              id: input.userId,
 
-            deletedAt: null,
-          },
+              deletedAt: null,
+            },
 
-          select: {
-            id: true,
+            select: {
+              id: true,
 
-            authorProfile: {
-              select: {
-                userId: true,
+              authorProfile: {
+                select: {
+                  userId: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        if (!user || user.authorProfile) {
+          if (!user || user.authorProfile) {
+            return {
+              status: 'already_author',
+            };
+          }
+
+          const existing = await tx.authorApplication.findUnique({
+            where: {
+              userId: input.userId,
+            },
+
+            select: {
+              id: true,
+            },
+          });
+
+          /*
+           * Chưa có application.
+           *
+           * Dùng create thay vì upsert để nhánh update không thể
+           * vô tình ghi lên application đã chuyển PENDING.
+           *
+           * P2002 do 2 request create đồng thời sẽ được retry
+           * ở vòng ngoài.
+           */
+          if (!existing) {
+            const created = await tx.authorApplication.create({
+              data: {
+                userId: input.userId,
+
+                status: PrismaAuthorApplicationStatus.DRAFT,
+
+                penName: input.penName ?? null,
+
+                fullName: input.fullName ?? null,
+
+                email: input.email ?? null,
+
+                phone: input.phone ?? null,
+
+                portfolioUrl: input.portfolioUrl ?? null,
+
+                primaryGenre: input.primaryGenre ?? null,
+
+                experience: input.experience ?? null,
+
+                introduction: input.introduction ?? null,
+
+                firstWorkSynopsis: input.firstWorkSynopsis ?? null,
+
+                acceptedTerms: input.acceptedTerms ?? false,
+              },
+
+              select: APPLICATION_SELECT,
+            });
+
+            return {
+              status: 'saved',
+
+              application: this.toRecord(created),
+            };
+          }
+
+          /*
+           * Quan trọng:
+           *
+           * lock row trước khi đọc status lần cuối.
+           *
+           * Nếu submit() đang chạy:
+           * - saveDraft phải đợi.
+           * - sau khi submit commit, status sẽ là PENDING.
+           * - saveDraft trả về `pending`, không ghi đè nữa.
+           *
+           * Nếu saveDraft lấy lock trước:
+           * - submit phải đợi.
+           * - submit sau đó sẽ đọc đúng draft mới nhất.
+           */
+          await lockAuthorApplicationRow(
+            tx,
+
+            existing.id,
+          );
+
+          const current = await tx.authorApplication.findUnique({
+            where: {
+              id: existing.id,
+            },
+
+            select: {
+              id: true,
+
+              status: true,
+            },
+          });
+
+          if (!current) {
+            throw new Error(
+              'Author application disappeared while saving draft',
+            );
+          }
+
+          if (current.status === PrismaAuthorApplicationStatus.PENDING) {
+            return {
+              status: 'pending',
+            };
+          }
+
+          if (current.status === PrismaAuthorApplicationStatus.APPROVED) {
+            return {
+              status: 'already_author',
+            };
+          }
+
+          const resetReview =
+            current.status === PrismaAuthorApplicationStatus.REJECTED;
+
+          const application = await tx.authorApplication.update({
+            where: {
+              id: current.id,
+            },
+
+            data: {
+              ...(input.penName !== undefined
+                ? {
+                    penName: input.penName,
+                  }
+                : {}),
+
+              ...(input.fullName !== undefined
+                ? {
+                    fullName: input.fullName,
+                  }
+                : {}),
+
+              ...(input.email !== undefined
+                ? {
+                    email: input.email,
+                  }
+                : {}),
+
+              ...(input.phone !== undefined
+                ? {
+                    phone: input.phone,
+                  }
+                : {}),
+
+              ...(input.portfolioUrl !== undefined
+                ? {
+                    portfolioUrl: input.portfolioUrl,
+                  }
+                : {}),
+
+              ...(input.primaryGenre !== undefined
+                ? {
+                    primaryGenre: input.primaryGenre,
+                  }
+                : {}),
+
+              ...(input.experience !== undefined
+                ? {
+                    experience: input.experience,
+                  }
+                : {}),
+
+              ...(input.introduction !== undefined
+                ? {
+                    introduction: input.introduction,
+                  }
+                : {}),
+
+              ...(input.firstWorkSynopsis !== undefined
+                ? {
+                    firstWorkSynopsis: input.firstWorkSynopsis,
+                  }
+                : {}),
+
+              ...(input.acceptedTerms !== undefined
+                ? {
+                    acceptedTerms: input.acceptedTerms,
+                  }
+                : {}),
+
+              ...(resetReview
+                ? {
+                    status: PrismaAuthorApplicationStatus.DRAFT,
+
+                    reviewedAt: null,
+
+                    reviewedById: null,
+
+                    rejectionReason: null,
+                  }
+                : {}),
+            },
+
+            select: APPLICATION_SELECT,
+          });
+
           return {
-            status: 'already_author',
+            status: 'saved',
+
+            application: this.toRecord(application),
           };
+        });
+      } catch (error: unknown) {
+        /*
+         * Hai request save draft đầu tiên có thể cùng thấy
+         * chưa tồn tại application.
+         *
+         * Request thua unique(userId) retry một lần,
+         * lần hai sẽ đi vào nhánh lock/update phía trên.
+         */
+        if (attempt === 0 && isUniqueConstraintViolation(error)) {
+          continue;
         }
 
-        const existing = await tx.authorApplication.findUnique({
-          where: {
-            userId: input.userId,
-          },
+        throw mapPrismaError(error, {
+          operation: 'author-application-save-draft',
 
-          select: {
-            id: true,
-
-            status: true,
-          },
+          resource: 'Hồ sơ đăng ký tác giả',
         });
-
-        if (existing?.status === PrismaAuthorApplicationStatus.PENDING) {
-          return {
-            status: 'pending',
-          };
-        }
-
-        if (existing?.status === PrismaAuthorApplicationStatus.APPROVED) {
-          return {
-            status: 'already_author',
-          };
-        }
-
-        const resetReview =
-          existing?.status === PrismaAuthorApplicationStatus.REJECTED;
-
-        const application = await tx.authorApplication.upsert({
-          where: {
-            userId: input.userId,
-          },
-
-          create: {
-            userId: input.userId,
-
-            status: PrismaAuthorApplicationStatus.DRAFT,
-
-            penName: input.penName ?? null,
-
-            fullName: input.fullName ?? null,
-
-            email: input.email ?? null,
-
-            phone: input.phone ?? null,
-
-            portfolioUrl: input.portfolioUrl ?? null,
-
-            primaryGenre: input.primaryGenre ?? null,
-
-            experience: input.experience ?? null,
-
-            introduction: input.introduction ?? null,
-
-            firstWorkSynopsis: input.firstWorkSynopsis ?? null,
-
-            acceptedTerms: input.acceptedTerms ?? false,
-          },
-
-          update: {
-            ...(input.penName !== undefined
-              ? {
-                  penName: input.penName,
-                }
-              : {}),
-
-            ...(input.fullName !== undefined
-              ? {
-                  fullName: input.fullName,
-                }
-              : {}),
-
-            ...(input.email !== undefined
-              ? {
-                  email: input.email,
-                }
-              : {}),
-
-            ...(input.phone !== undefined
-              ? {
-                  phone: input.phone,
-                }
-              : {}),
-
-            ...(input.portfolioUrl !== undefined
-              ? {
-                  portfolioUrl: input.portfolioUrl,
-                }
-              : {}),
-
-            ...(input.primaryGenre !== undefined
-              ? {
-                  primaryGenre: input.primaryGenre,
-                }
-              : {}),
-
-            ...(input.experience !== undefined
-              ? {
-                  experience: input.experience,
-                }
-              : {}),
-
-            ...(input.introduction !== undefined
-              ? {
-                  introduction: input.introduction,
-                }
-              : {}),
-
-            ...(input.firstWorkSynopsis !== undefined
-              ? {
-                  firstWorkSynopsis: input.firstWorkSynopsis,
-                }
-              : {}),
-
-            ...(input.acceptedTerms !== undefined
-              ? {
-                  acceptedTerms: input.acceptedTerms,
-                }
-              : {}),
-
-            ...(resetReview
-              ? {
-                  status: PrismaAuthorApplicationStatus.DRAFT,
-
-                  reviewedAt: null,
-
-                  reviewedById: null,
-
-                  rejectionReason: null,
-                }
-              : {}),
-          },
-
-          select: APPLICATION_SELECT,
-        });
-
-        return {
-          status: 'saved',
-
-          application: this.toRecord(application),
-        };
-      });
-    } catch (error: unknown) {
-      throw mapPrismaError(error, {
-        operation: 'author-application-save-draft',
-
-        resource: 'Hồ sơ đăng ký tác giả',
-      });
+      }
     }
+
+    throw new Error('Unable to save author application draft');
   }
 
   async submit(
@@ -324,6 +396,24 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
   ): Promise<SubmitAuthorApplicationResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        /*
+         * Lock trước khi đọc application.
+         *
+         * Điều này đảm bảo submit không validate trên một draft cũ
+         * trong lúc saveDraft đang thay đổi cùng record.
+         */
+        const locked = await lockAuthorApplicationRow(
+          tx,
+
+          input.applicationId,
+        );
+
+        if (!locked) {
+          return {
+            status: 'not_found',
+          };
+        }
+
         const application = await tx.authorApplication.findFirst({
           where: {
             id: input.applicationId,
@@ -346,6 +436,9 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
+        /*
+         * Giữ tính idempotent hiện tại.
+         */
         if (application.status === PrismaAuthorApplicationStatus.PENDING) {
           return {
             status: 'submitted',
@@ -364,13 +457,19 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
+        /*
+         * Không còn chấp nhận generic ATTACHMENT.
+         *
+         * Sample bắt buộc phải được tạo qua policy
+         * AUTHOR_APPLICATION_SAMPLE.
+         */
         const sample = await tx.mediaAsset.findFirst({
           where: {
             id: input.sampleMediaId,
 
             uploaderId: input.userId,
 
-            purpose: MediaPurpose.ATTACHMENT,
+            purpose: MediaPurpose.AUTHOR_APPLICATION_SAMPLE,
 
             status: MediaStatus.READY,
 
@@ -440,6 +539,11 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
+        /*
+         * Row vẫn đang bị FOR UPDATE lock.
+         *
+         * saveDraft không thể chen vào giữa validation và update này.
+         */
         const updated = await tx.authorApplication.update({
           where: {
             id: application.id,
@@ -507,7 +611,7 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
     try {
       const where: Prisma.AuthorApplicationWhereInput = input.status
         ? {
-            status: input.status as PrismaAuthorApplicationStatus,
+            status: input.status,
           }
         : {};
 
@@ -558,6 +662,29 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
   ): Promise<ApproveAuthorApplicationResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        /*
+         * Đây là điểm giải quyết race approve/reject.
+         *
+         * Admin thứ hai sẽ block tại đây cho tới khi transaction
+         * admin thứ nhất commit/rollback.
+         */
+        const locked = await lockAuthorApplicationRow(
+          tx,
+
+          input.applicationId,
+        );
+
+        if (!locked) {
+          return {
+            status: 'not_found',
+          };
+        }
+
+        /*
+         * Đọc lại SAU KHI lấy lock.
+         *
+         * Không dùng snapshot đã đọc trước lock.
+         */
         const application = await tx.authorApplication.findUnique({
           where: {
             id: input.applicationId,
@@ -578,6 +705,10 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
+        /*
+         * Nếu một admin khác vừa reject/approve và commit,
+         * admin hiện tại sẽ thấy state mới ở đây.
+         */
         if (application.status !== PrismaAuthorApplicationStatus.PENDING) {
           return {
             status: 'not_pending',
@@ -648,6 +779,15 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           application.userId,
         );
 
+        /*
+         * Tất cả side effect vẫn trong transaction đang giữ
+         * row lock AuthorApplication.
+         *
+         * Nếu bất kỳ bước nào fail:
+         * - authorProfile rollback
+         * - userRole rollback
+         * - status rollback
+         */
         await tx.authorProfile.create({
           data: {
             userId: application.userId,
@@ -764,6 +904,26 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
   ): Promise<RejectAuthorApplicationResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        const locked = await lockAuthorApplicationRow(
+          tx,
+
+          input.applicationId,
+        );
+
+        if (!locked) {
+          return {
+            status: 'not_found',
+          };
+        }
+
+        /*
+         * Phải đọc lại sau FOR UPDATE.
+         *
+         * Nếu approve đã thắng trước đó:
+         * status lúc này là APPROVED
+         * → trả not_pending
+         * → tuyệt đối không REJECT đè lên.
+         */
         const application = await tx.authorApplication.findUnique({
           where: {
             id: input.applicationId,
@@ -910,6 +1070,35 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
       updatedAt: application.updatedAt,
     };
   }
+}
+
+async function lockAuthorApplicationRow(
+  tx: Prisma.TransactionClient,
+
+  applicationId: string,
+): Promise<boolean> {
+  /*
+   * PostgreSQL row-level lock.
+   *
+   * Lock tồn tại cho tới khi transaction commit/rollback.
+   *
+   * Parameter được Prisma bind nên không có SQL injection.
+   */
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id"
+    FROM "author_applications"
+    WHERE "id" = ${applicationId}::uuid
+    FOR UPDATE
+  `);
+
+  return rows.length === 1;
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
 }
 
 function findMissingFields(application: ApplicationRow): string[] {

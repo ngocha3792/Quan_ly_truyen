@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 
-import { AuthModule } from '@/modules/auth';
+import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
   AUTHOR_APPLICATION_PERSISTENCE_PORT,
@@ -28,13 +28,12 @@ import {
     PrismaModule,
 
     /*
-     * Import AuthModule duy nhất để dùng
-     * AccessAuthorizationCacheService.
+     * Không import toàn AuthModule nữa.
      *
-     * AuthModule đã chủ động export service này
-     * cho module role/author.
+     * AuthorApplication chỉ cần integration
+     * authorization rất hẹp.
      */
-    AuthModule,
+    AuthAuthorizationModule,
   ],
 
   controllers: [

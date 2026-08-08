@@ -1,3 +1,5 @@
+import { HttpErrorResponse } from '@angular/common/http';
+
 import { TestBed } from '@angular/core/testing';
 
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
@@ -5,6 +7,8 @@ import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { AuthApiService } from './auth-api.service';
 
 import { AuthRefreshService } from './auth-refresh.service';
+
+import { AuthSessionLifecycleService } from './auth-session-lifecycle.service';
 
 import { RefreshTokenResponse } from './auth.models';
 
@@ -16,6 +20,8 @@ describe('AuthRefreshService', () => {
   let service: AuthRefreshService;
 
   let tokenStore: TokenStore;
+
+  let lifecycle: AuthSessionLifecycleService;
 
   let api: {
     refresh: ReturnType<typeof vi.fn>;
@@ -43,6 +49,8 @@ describe('AuthRefreshService', () => {
     service = TestBed.inject(AuthRefreshService);
 
     tokenStore = TestBed.inject(TokenStore);
+
+    lifecycle = TestBed.inject(AuthSessionLifecycleService);
   });
 
   afterEach(() => {
@@ -133,5 +141,63 @@ describe('AuthRefreshService', () => {
     expect(token).toBe('access-token-new');
 
     expect(api.refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('invalidate toàn bộ session khi refresh token bị backend từ chối', async () => {
+    tokenStore.set('expired-access-token');
+
+    const events: string[] = [];
+
+    lifecycle.changes$.subscribe((event) => {
+      events.push(event.kind);
+    });
+
+    api.refresh.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+
+            statusText: 'Unauthorized',
+          }),
+      ),
+    );
+
+    await expect(firstValueFrom(service.refreshAccessToken())).rejects.toBeInstanceOf(
+      HttpErrorResponse,
+    );
+
+    expect(tokenStore.accessToken()).toBeNull();
+
+    expect(events).toContain('session-invalidated');
+  });
+
+  it('network/5xx chỉ đánh dấu access lost chứ không invalidate refresh session', async () => {
+    tokenStore.set('expired-access-token');
+
+    const events: string[] = [];
+
+    lifecycle.changes$.subscribe((event) => {
+      events.push(event.kind);
+    });
+
+    api.refresh.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 503,
+
+            statusText: 'Service Unavailable',
+          }),
+      ),
+    );
+
+    await expect(firstValueFrom(service.refreshAccessToken())).rejects.toBeInstanceOf(
+      HttpErrorResponse,
+    );
+
+    expect(events).toContain('access-lost');
+
+    expect(events).not.toContain('session-invalidated');
   });
 });

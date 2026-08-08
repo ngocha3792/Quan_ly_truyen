@@ -1,3 +1,5 @@
+import { AUTHOR_APPLICATION_SAMPLE_FILE_POLICY } from '@/common/policies/author-application-sample-file.policy';
+
 export interface AuthorApplicationOption {
   readonly value: string;
 
@@ -39,14 +41,11 @@ export class AuthorApplicationPolicy {
 
   static readonly REJECTION_REASON_MAX_LENGTH = 1000;
 
-  static readonly SAMPLE_MAXIMUM_FILE_SIZE_MB = 10;
+  static readonly SAMPLE_MAXIMUM_FILE_SIZE_MB =
+    AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.maximumFileSizeMb;
 
-  static readonly SAMPLE_FILE_EXTENSIONS = [
-    '.doc',
-    '.docx',
-    '.pdf',
-    '.txt',
-  ] as const;
+  static readonly SAMPLE_FILE_EXTENSIONS =
+    AUTHOR_APPLICATION_SAMPLE_FILE_POLICY.allowedExtensions;
 
   static readonly GENRES: readonly AuthorApplicationOption[] = [
     {

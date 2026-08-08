@@ -1,10 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
-import { isUuidV4 } from '@/common/utils';
+import {
+  AUTHORIZATION_INVALIDATION_PORT,
+  type AuthorizationInvalidationPort,
+} from '@/common/interfaces/auth';
 
-import { AccessAuthorizationCacheService } from '@/modules/auth';
+import { isUuidV4 } from '@/common/utils';
 
 import {
   AuthorAlreadyActiveException,
@@ -28,11 +31,16 @@ import { ApproveAuthorApplicationCommand } from './approve-author-application.co
 
 @Injectable()
 export class ApproveAuthorApplicationCommandHandler {
+  private readonly logger = new Logger(
+    ApproveAuthorApplicationCommandHandler.name,
+  );
+
   constructor(
     @Inject(AUTHOR_APPLICATION_PERSISTENCE_PORT)
     private readonly persistence: AuthorApplicationPersistencePort,
 
-    private readonly authorizationCache: AccessAuthorizationCacheService,
+    @Inject(AUTHORIZATION_INVALIDATION_PORT)
+    private readonly authorizationInvalidation: AuthorizationInvalidationPort,
   ) {}
 
   async execute(
@@ -65,12 +73,29 @@ export class ApproveAuthorApplicationCommandHandler {
     switch (result.status) {
       case 'approved':
         /*
-         * Auth module đã ghi rõ:
+         * Persistence transaction đã commit tại đây.
          *
-         * thay đổi role / author profile
-         * bắt buộc invalidate authorization cache.
+         * Cache invalidation là side effect hậu commit.
+         *
+         * Nếu invalidation fail:
+         * - DB vẫn là source of truth.
+         * - cache sẽ hết TTL.
+         * - client KHÔNG được nhận false failure
+         *   rồi retry approve.
+         *
+         * Đây là role GRANT nên stale cache chủ yếu
+         * gây false-deny tạm thời, không cấp thêm
+         * quyền ngoài ý muốn.
          */
-        await this.authorizationCache.invalidateUser(result.userId);
+        try {
+          await this.authorizationInvalidation.invalidateUser(result.userId);
+        } catch (error: unknown) {
+          this.logger.warn(
+            `Authorization cache invalidation failed after author approval for user ${result.userId}`,
+
+            error instanceof Error ? error.stack : undefined,
+          );
+        }
 
         return AuthorApplicationResultMapper.toDto(result.application);
 
@@ -90,6 +115,8 @@ export class ApproveAuthorApplicationCommandHandler {
         throw new AuthorRoleUnavailableException();
 
       case 'already_author':
+        throw new AuthorAlreadyActiveException();
+
       default:
         throw new AuthorAlreadyActiveException();
     }

@@ -34,6 +34,9 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
     'AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED',
     'AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS',
 
+    'AUTH_ADMIN_MFA_ENABLED',
+    'AUTH_OAUTH_ENABLED',
+
     'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK',
   ] as const;
 
@@ -101,6 +104,10 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: 'false',
 
       AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: '15',
+
+      AUTH_ADMIN_MFA_ENABLED: 'false',
+
+      AUTH_OAUTH_ENABLED: 'false',
 
       /*
        * Test environment được phép dùng adapter fallback

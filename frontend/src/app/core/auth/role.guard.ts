@@ -2,9 +2,9 @@ import { inject } from '@angular/core';
 
 import { CanActivateFn, Router } from '@angular/router';
 
-import { map } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 
-import { AuthRole } from './authorization.models';
+import { AuthAuthorizationSyncService } from './auth-authorization-sync.service';
 
 import {
   createAccessDeniedUrlTree,
@@ -12,56 +12,138 @@ import {
   resolveAuthenticatedUser,
 } from './auth-guard.util';
 
+import { AuthRole } from './authorization.models';
+
+import { CurrentUser } from './auth.models';
+
 import { AuthStore } from './auth.store';
 
-/**
- * Kiểm tra role theo cơ chế ANY-OF.
- *
- * Ví dụ:
- *
- * roleGuard(
- *   AUTH_ROLES.AUTHOR,
- *   AUTH_ROLES.ADMIN,
- * )
- *
- * → chỉ cần có AUTHOR hoặc ADMIN.
- */
 export function roleGuard(
   requiredRole: AuthRole,
+
   ...additionalRoles: readonly AuthRole[]
 ): CanActivateFn {
   const requiredRoles = [requiredRole, ...additionalRoles];
 
-  return (_route, state) => {
+  return (
+    _route,
+
+    state,
+  ) => {
     const auth = inject(AuthStore);
+
+    const authorizationSync = inject(AuthAuthorizationSyncService);
 
     const router = inject(Router);
 
     return resolveAuthenticatedUser(auth).pipe(
-      map((user) => {
-        /**
-         * Guard này vẫn tự xử lý anonymous.
-         *
-         * Không phụ thuộc việc
-         * authenticatedGuard có chạy trước
-         * hay không.
-         */
+      switchMap((user) => {
         if (!user) {
-          return createLoginRequiredUrlTree(router, state);
+          return of(
+            createLoginRequiredUrlTree(
+              router,
+
+              state,
+            ),
+          );
         }
 
-        const userRoles = new Set(user.roles.map(normalizeRole));
+        /*
+         * Fast path:
+         * local authorization đã đủ.
+         */
+        if (
+          hasAnyRequiredRole(
+            user,
 
-        const hasRequiredRole = requiredRoles.some((role) => userRoles.has(normalizeRole(role)));
-
-        if (hasRequiredRole) {
-          return true;
+            requiredRoles,
+          )
+        ) {
+          return of(true);
         }
 
-        return createAccessDeniedUrlTree(router, state, 'role');
+        /*
+         * Local state thiếu role.
+         *
+         * Trước khi kết luận 403 UI,
+         * revalidate /auth/me đúng một lần.
+         *
+         * Đây giải quyết:
+         *
+         * USER
+         * → admin approve
+         * → AUTHOR
+         *
+         * nhưng frontend vẫn giữ USER cũ.
+         */
+        return authorizationSync.revalidateCurrentUser().pipe(
+          map((freshUser) => {
+            if (!freshUser) {
+              return createLoginRequiredUrlTree(
+                router,
+
+                state,
+              );
+            }
+
+            if (
+              hasAnyRequiredRole(
+                freshUser,
+
+                requiredRoles,
+              )
+            ) {
+              return true;
+            }
+
+            return createAccessDeniedUrlTree(
+              router,
+
+              state,
+
+              'role',
+            );
+          }),
+
+          catchError(() => {
+            /*
+             * Nếu sync làm session bị invalidate,
+             * Stage 2 AuthStore đã chuyển anonymous.
+             */
+            if (auth.status() === 'anonymous') {
+              return of(
+                createLoginRequiredUrlTree(
+                  router,
+
+                  state,
+                ),
+              );
+            }
+
+            return of(
+              createAccessDeniedUrlTree(
+                router,
+
+                state,
+
+                'role',
+              ),
+            );
+          }),
+        );
       }),
     );
   };
+}
+
+function hasAnyRequiredRole(
+  user: CurrentUser,
+
+  requiredRoles: readonly AuthRole[],
+): boolean {
+  const userRoles = new Set(user.roles.map(normalizeRole));
+
+  return requiredRoles.some((role) => userRoles.has(normalizeRole(role)));
 }
 
 function normalizeRole(role: string): string {
