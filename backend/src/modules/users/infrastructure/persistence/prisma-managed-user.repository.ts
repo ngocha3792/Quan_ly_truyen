@@ -18,6 +18,7 @@ import type {
 } from '../../application/ports';
 
 import {
+  ManagedUserAdministrationPolicy,
   ManagedUserDetailEntity,
   ManagedUserRoleEntity,
   ManagedUserStatus,
@@ -321,9 +322,13 @@ export class PrismaManagedUserRepository
           };
         }
 
+        const currentStatus = toDomainManagedUserStatus(current.status);
+
         if (
-          current.deletedAt !== null ||
-          current.status === AccountStatus.DELETED
+          ManagedUserAdministrationPolicy.isDeleted(
+            currentStatus,
+            current.deletedAt,
+          )
         ) {
           return {
             status: 'deleted',
@@ -331,8 +336,27 @@ export class PrismaManagedUserRepository
         }
 
         const nextStatus = toPrismaAccountStatus(input.status);
+        const hasActiveAdminRole =
+          currentStatus === ManagedUserStatus.ACTIVE &&
+          input.status !== ManagedUserStatus.ACTIVE
+            ? await this.hasActiveAdminRole(
+                transaction,
+                input.targetUserId,
+                input.changedAt,
+              )
+            : false;
+        const activeAdminCount = hasActiveAdminRole
+          ? await this.countActiveAdmins(transaction, input.changedAt)
+          : 0;
+        const statusTransition =
+          ManagedUserAdministrationPolicy.decideStatusTransition({
+            currentStatus,
+            nextStatus: input.status,
+            hasActiveAdminRole,
+            activeAdminCount,
+          });
 
-        if (current.status === nextStatus) {
+        if (statusTransition === 'unchanged') {
           return {
             status: 'unchanged',
 
@@ -352,28 +376,10 @@ export class PrismaManagedUserRepository
          * Phải đảm bảo vẫn còn ít nhất
          * một ACTIVE admin khác.
          */
-        if (
-          current.status === AccountStatus.ACTIVE &&
-          nextStatus !== AccountStatus.ACTIVE &&
-          (await this.hasActiveAdminRole(
-            transaction,
-
-            input.targetUserId,
-
-            input.changedAt,
-          ))
-        ) {
-          const activeAdminCount = await this.countActiveAdmins(
-            transaction,
-
-            input.changedAt,
-          );
-
-          if (activeAdminCount <= 1) {
-            return {
-              status: 'last_active_admin',
-            };
-          }
+        if (statusTransition === 'last_active_admin') {
+          return {
+            status: 'last_active_admin',
+          };
         }
 
         await transaction.user.update({
@@ -399,7 +405,9 @@ export class PrismaManagedUserRepository
          *
          * Không chỉ dựa vào cache.
          */
-        if (nextStatus !== AccountStatus.ACTIVE) {
+        if (
+          ManagedUserAdministrationPolicy.shouldRevokeSessions(input.status)
+        ) {
           const result = await transaction.session.updateMany({
             where: {
               userId: input.targetUserId,
@@ -415,9 +423,9 @@ export class PrismaManagedUserRepository
               revokedAt: input.changedAt,
 
               revokedReason:
-                input.status === ManagedUserStatus.BANNED
-                  ? 'admin_account_banned'
-                  : 'admin_account_suspended',
+                ManagedUserAdministrationPolicy.statusRevocationReason(
+                  input.status,
+                ),
 
               lastUsedAt: input.changedAt,
 
@@ -526,9 +534,13 @@ export class PrismaManagedUserRepository
           };
         }
 
+        const targetStatus = toDomainManagedUserStatus(target.status);
+
         if (
-          target.deletedAt !== null ||
-          target.status === AccountStatus.DELETED
+          ManagedUserAdministrationPolicy.isDeleted(
+            targetStatus,
+            target.deletedAt,
+          )
         ) {
           return {
             status: 'deleted',
@@ -541,7 +553,11 @@ export class PrismaManagedUserRepository
          * Handler đã chặn USER/AUTHOR,
          * persistence vẫn không tin caller.
          */
-        if (input.roleCode !== RoleCode.ADMIN) {
+        if (
+          !ManagedUserAdministrationPolicy.isDirectlyManageableRole(
+            input.roleCode,
+          )
+        ) {
           return {
             status: 'role_protected',
           };
@@ -578,8 +594,10 @@ export class PrismaManagedUserRepository
         });
 
         if (
-          existing &&
-          (existing.expiresAt === null || existing.expiresAt > input.changedAt)
+          ManagedUserAdministrationPolicy.isRoleActive(
+            existing?.expiresAt,
+            input.changedAt,
+          )
         ) {
           return {
             status: 'unchanged',
@@ -710,16 +728,24 @@ export class PrismaManagedUserRepository
           };
         }
 
+        const targetStatus = toDomainManagedUserStatus(target.status);
+
         if (
-          target.deletedAt !== null ||
-          target.status === AccountStatus.DELETED
+          ManagedUserAdministrationPolicy.isDeleted(
+            targetStatus,
+            target.deletedAt,
+          )
         ) {
           return {
             status: 'deleted',
           };
         }
 
-        if (input.roleCode !== RoleCode.ADMIN) {
+        if (
+          !ManagedUserAdministrationPolicy.isDirectlyManageableRole(
+            input.roleCode,
+          )
+        ) {
           return {
             status: 'role_protected',
           };
@@ -755,9 +781,9 @@ export class PrismaManagedUserRepository
           },
         });
 
-        const isActiveRole = Boolean(
-          existing &&
-          (existing.expiresAt === null || existing.expiresAt > input.changedAt),
+        const isActiveRole = ManagedUserAdministrationPolicy.isRoleActive(
+          existing?.expiresAt,
+          input.changedAt,
         );
 
         if (!isActiveRole) {
@@ -780,14 +806,19 @@ export class PrismaManagedUserRepository
          * Nếu gỡ ADMIN của 1 target đang ACTIVE,
          * số lượng ACTIVE admin phải > 1.
          */
-        if (target.status === AccountStatus.ACTIVE) {
+        if (targetStatus === ManagedUserStatus.ACTIVE) {
           const activeAdminCount = await this.countActiveAdmins(
             transaction,
 
             input.changedAt,
           );
 
-          if (activeAdminCount <= 1) {
+          if (
+            ManagedUserAdministrationPolicy.wouldRemoveLastActiveAdmin(
+              targetStatus,
+              activeAdminCount,
+            )
+          ) {
             return {
               status: 'last_active_admin',
             };

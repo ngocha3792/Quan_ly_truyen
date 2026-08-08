@@ -16,6 +16,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import {
   AuthorApplicationAuditAction,
+  AuthorApplicationLifecyclePolicy,
   AuthorApplicationStatus,
 } from '../../domain';
 
@@ -265,20 +266,25 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
             );
           }
 
-          if (current.status === PrismaAuthorApplicationStatus.PENDING) {
+          const draftTransition =
+            AuthorApplicationLifecyclePolicy.decideDraftTransition(
+              toDomainApplicationStatus(current.status),
+            );
+
+          if (draftTransition === 'pending') {
             return {
               status: 'pending',
             };
           }
 
-          if (current.status === PrismaAuthorApplicationStatus.APPROVED) {
+          if (draftTransition === 'already_approved') {
             return {
               status: 'already_author',
             };
           }
 
           const reopenRejectedApplication =
-            current.status === PrismaAuthorApplicationStatus.REJECTED;
+            draftTransition === 'reopen_rejected';
 
           const application = await tx.authorApplication.update({
             where: {
@@ -463,32 +469,26 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
-        if (application.status === PrismaAuthorApplicationStatus.APPROVED) {
-          return {
-            status: 'already_author',
-          };
-        }
+        const submission = AuthorApplicationLifecyclePolicy.decideSubmission(
+          toDomainApplicationStatus(application.status),
+          application,
+        );
 
-        /*
-         * Submit lại một application đã PENDING
-         * vẫn idempotent.
-         */
-        if (application.status === PrismaAuthorApplicationStatus.PENDING) {
-          return {
-            status: 'submitted',
-
-            application: this.toRecord(application),
-          };
-        }
-
-        const missingFields = findMissingFields(application);
-
-        if (missingFields.length > 0) {
-          return {
-            status: 'incomplete',
-
-            missingFields,
-          };
+        switch (submission.outcome) {
+          case 'already_approved':
+            return { status: 'already_author' };
+          case 'already_submitted':
+            return {
+              status: 'submitted',
+              application: this.toRecord(application),
+            };
+          case 'incomplete':
+            return {
+              status: 'incomplete',
+              missingFields: [...submission.missingFields],
+            };
+          case 'submit':
+            break;
         }
 
         /*
@@ -554,7 +554,7 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
         }
 
         /*
-         * findMissingFields() đã đảm bảo penName tồn tại.
+         * Lifecycle policy đã đảm bảo penName tồn tại.
          */
         const penName = application.penName!;
 
@@ -777,8 +777,7 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
     input: ListAuthorApplicationsInput,
   ): Promise<ListAuthorApplicationsResult> {
     try {
-      const keyword =
-        input.keyword?.trim() || undefined;
+      const keyword = input.keyword?.trim() || undefined;
 
       const where: Prisma.AuthorApplicationWhereInput = {
         ...(input.status
@@ -818,39 +817,37 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           : {}),
       };
 
-      const [total, applications] =
-        await Promise.all([
-          this.prisma.authorApplication.count({
-            where,
-          }),
+      const [total, applications] = await Promise.all([
+        this.prisma.authorApplication.count({
+          where,
+        }),
 
-          this.prisma.authorApplication.findMany({
-            where,
+        this.prisma.authorApplication.findMany({
+          where,
 
-            orderBy: [
-              {
-                submittedAt: 'asc',
-              },
+          orderBy: [
+            {
+              submittedAt: 'asc',
+            },
 
-              {
-                createdAt: 'asc',
-              },
-            ],
+            {
+              createdAt: 'asc',
+            },
+          ],
 
-            skip: input.offset,
+          skip: input.offset,
 
-            take: input.limit,
+          take: input.limit,
 
-            select: APPLICATION_SELECT,
-          }),
-        ]);
+          select: APPLICATION_SELECT,
+        }),
+      ]);
 
       return {
         total,
 
-        applications: applications.map(
-          (application) =>
-            this.toRecord(application),
+        applications: applications.map((application) =>
+          this.toRecord(application),
         ),
       };
     } catch (error: unknown) {
@@ -904,20 +901,14 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
-        if (application.userId === input.reviewerId) {
-          return {
-            status: 'self_review',
-          };
-        }
+        const reviewTransition = AuthorApplicationLifecyclePolicy.decideReview(
+          toDomainApplicationStatus(application.status),
+          application.userId,
+          input.reviewerId,
+        );
 
-        /*
-         * Nếu một admin khác vừa reject/approve và commit,
-         * admin hiện tại sẽ thấy state mới ở đây.
-         */
-        if (application.status !== PrismaAuthorApplicationStatus.PENDING) {
-          return {
-            status: 'not_pending',
-          };
+        if (reviewTransition !== 'review') {
+          return { status: reviewTransition };
         }
 
         const existingProfile = await tx.authorProfile.findUnique({
@@ -1143,16 +1134,14 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
-        if (application.userId === input.reviewerId) {
-          return {
-            status: 'self_review',
-          };
-        }
+        const reviewTransition = AuthorApplicationLifecyclePolicy.decideReview(
+          toDomainApplicationStatus(application.status),
+          application.userId,
+          input.reviewerId,
+        );
 
-        if (application.status !== PrismaAuthorApplicationStatus.PENDING) {
-          return {
-            status: 'not_pending',
-          };
+        if (reviewTransition !== 'review') {
+          return { status: reviewTransition };
         }
 
         const updated = await tx.authorApplication.update({
@@ -1325,38 +1314,19 @@ function isUniqueConstraintViolation(error: unknown): boolean {
   );
 }
 
-function findMissingFields(application: ApplicationRow): string[] {
-  const missing: string[] = [];
-
-  const required: readonly [string, string | null][] = [
-    ['penName', application.penName],
-
-    ['fullName', application.fullName],
-
-    ['email', application.email],
-
-    ['phone', application.phone],
-
-    ['primaryGenre', application.primaryGenre],
-
-    ['experience', application.experience],
-
-    ['introduction', application.introduction],
-
-    ['firstWorkSynopsis', application.firstWorkSynopsis],
-  ];
-
-  for (const [field, value] of required) {
-    if (!value?.trim()) {
-      missing.push(field);
-    }
+function toDomainApplicationStatus(
+  status: PrismaAuthorApplicationStatus,
+): AuthorApplicationStatus {
+  switch (status) {
+    case PrismaAuthorApplicationStatus.DRAFT:
+      return AuthorApplicationStatus.DRAFT;
+    case PrismaAuthorApplicationStatus.PENDING:
+      return AuthorApplicationStatus.PENDING;
+    case PrismaAuthorApplicationStatus.APPROVED:
+      return AuthorApplicationStatus.APPROVED;
+    case PrismaAuthorApplicationStatus.REJECTED:
+      return AuthorApplicationStatus.REJECTED;
   }
-
-  if (!application.acceptedTerms) {
-    missing.push('acceptedTerms');
-  }
-
-  return missing;
 }
 
 function readMediaOwnerId(metadata: Prisma.JsonValue | null): string | null {
