@@ -1,6 +1,14 @@
 import { Type } from 'class-transformer';
 
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 import { AuthorApplicationStatus } from '../../../domain';
 
@@ -8,6 +16,11 @@ export class ListAuthorApplicationsRequest {
   @IsOptional()
   @IsEnum(AuthorApplicationStatus)
   status?: AuthorApplicationStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  keyword?: string;
 
   @IsOptional()
   @Type(() => Number)

@@ -12,7 +12,12 @@
       <app-content-layout class="application-layout" asideWidth="340px">
         @if (store.application(); as application) {
           @if (application.status === 'PENDING' || application.status === 'APPROVED') {
-            <app-author-application-status main [application]="application" />
+            <app-author-application-status
+              main
+              [application]="application"
+              [checking]="store.checkingStatus()"
+              (refreshStatus)="store.refreshApplicationStatus()"
+            />
           } @else {
             <div main>
               @if (application.status === 'REJECTED') {

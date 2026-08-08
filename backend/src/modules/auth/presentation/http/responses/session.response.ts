@@ -15,5 +15,10 @@ export interface SessionResponse {
 
 export interface SessionsResponse {
   sessions: readonly SessionResponse[];
+
   total: number;
+}
+
+export interface RevokeOtherSessionsResponse {
+  revokedCount: number;
 }

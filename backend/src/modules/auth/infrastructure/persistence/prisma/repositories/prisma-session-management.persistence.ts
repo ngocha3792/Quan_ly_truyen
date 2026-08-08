@@ -8,6 +8,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
   ManagedSessionRecord,
+  RevokeOtherUserSessionsInput,
   RevokeUserSessionInput,
   SessionManagementPersistencePort,
 } from '../../../../application/ports';
@@ -82,6 +83,103 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'auth-list-user-sessions',
+
+        resource: 'Phiên đăng nhập',
+      });
+    }
+  }
+
+  async revokeOtherUserSessions(
+    input: RevokeOtherUserSessionsInput,
+  ): Promise<number> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        /*
+         * Một UPDATE duy nhất cho tất cả session khác.
+         *
+         * actorSessionId là session hiện tại và luôn được giữ lại.
+         *
+         * Access token của các session bị revoke mất hiệu lực ngay vì
+         * accessTokenVersion được increment.
+         *
+         * Refresh token cũng mất hiệu lực vì refreshTokenVersion
+         * được increment đồng thời.
+         */
+        const result = await tx.session.updateMany({
+          where: {
+            userId: input.userId,
+
+            id: {
+              not: input.actorSessionId,
+            },
+
+            revokedAt: null,
+
+            expiresAt: {
+              gt: input.revokedAt,
+            },
+          },
+
+          data: {
+            revokedAt: input.revokedAt,
+
+            revokedReason: input.reason,
+
+            lastUsedAt: input.revokedAt,
+
+            accessTokenVersion: {
+              increment: 1,
+            },
+
+            refreshTokenVersion: {
+              increment: 1,
+            },
+          },
+        });
+
+        /*
+         * Chỉ ghi audit nếu thực sự có session bị revoke.
+         *
+         * Không tạo N audit record cho N session.
+         * Một event bulk là đủ cho action "revoke all others".
+         */
+        if (result.count > 0) {
+          await this.auditWriter.write(
+            tx,
+
+            {
+              actorId: input.userId,
+
+              actorSessionId: input.actorSessionId,
+
+              action: AuthAuditAction.SESSION_REVOKED,
+
+              entityType: 'user',
+
+              entityId: input.userId,
+
+              newValues: {
+                revokedCount: result.count,
+
+                revokedAt: input.revokedAt,
+
+                revokedReason: input.reason,
+              },
+
+              metadata: {
+                bulk: true,
+
+                preservedSessionId: input.actorSessionId,
+              },
+            },
+          );
+        }
+
+        return result.count;
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'auth-revoke-other-user-sessions',
 
         resource: 'Phiên đăng nhập',
       });

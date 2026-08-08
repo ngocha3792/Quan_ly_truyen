@@ -69,8 +69,6 @@ export class AccountSecurityStore {
   readonly securityScore = computed<SecurityScore>(() => {
     const overview = this.overviewState();
 
-    const emailVerified = Boolean(this.user()?.emailVerified);
-
     const items: readonly SecurityScoreItem[] = [
       {
         id: 'password',
@@ -98,9 +96,12 @@ export class AccountSecurityStore {
         label: 'Email khôi phục',
 
         description:
-          overview.recoveryEmailVerified || emailVerified ? 'Đã xác minh' : 'Chưa xác minh',
+          overview.recoveryEmailVerified
+            ? 'Đã xác minh'
+            : 'Chưa xác minh',
 
-        completed: overview.recoveryEmailVerified || emailVerified,
+        completed:
+          overview.recoveryEmailVerified,
       },
 
       {

@@ -2,7 +2,17 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { catchError, finalize, forkJoin, Observable, of, takeUntil, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  forkJoin,
+  Observable,
+  of,
+  switchMap,
+  takeUntil,
+  tap,
+  throwError,
+} from 'rxjs';
 
 import { AuthSessionLifecycleService } from '../../../../../core/auth/auth-session-lifecycle.service';
 
@@ -271,48 +281,94 @@ export class AccountSessionsStore {
   }
 
   revokeAllOtherSessions(): Observable<void> {
-    const sessions = this.otherSessions().filter((session) => session.canRevoke);
+    const sessions = this.otherSessions().filter(
+      (session) => session.canRevoke,
+    );
 
     if (sessions.length === 0) {
-      this.successState.set('Không có phiên nào cần thu hồi.');
+      this.successState.set(
+        'Không có phiên nào cần thu hồi.',
+      );
 
       return of(undefined);
     }
 
     this.submittingState.set(true);
+
     this.errorState.set(null);
+
     this.successState.set(null);
 
-    const ids = sessions.map((session) => session.id);
-
-    this.revokingIdsState.set(new Set(ids));
-
-    return forkJoin(ids.map((sessionId) => this.api.revokeSession(sessionId))).pipe(
-      tap(() => {
-        const idSet = new Set(ids);
-
-        this.rawSessionsState.update((currentSessions) =>
-          currentSessions.filter((session) => !idSet.has(session.id)),
-        );
-
-        this.successState.set(`Đã thu hồi ${ids.length} phiên đăng nhập khác.`);
-      }),
-
-      mapToVoid(),
-
-      catchError((error: unknown) => {
-        this.errorState.set(getApiErrorMessage(error));
-
-        return throwError(() => error);
-      }),
-
-      takeUntil(this.lifecycle.changes$),
-
-      finalize(() => {
-        this.submittingState.set(false);
-        this.revokingIdsState.set(new Set());
-      }),
+    /*
+     * IDs này chỉ dùng để render loading cho các session hiện
+     * đang xuất hiện trên UI.
+     *
+     * Backend mới là authority quyết định chính xác session nào
+     * thuộc user và phải revoke.
+     */
+    const ids = sessions.map(
+      (session) => session.id,
     );
+
+    this.revokingIdsState.set(
+      new Set(ids),
+    );
+
+    return this.api
+      .revokeOtherSessions()
+      .pipe(
+        switchMap(({ revokedCount }) =>
+          /*
+           * Quan trọng:
+           *
+           * Không tự xóa ids khỏi state rồi coi là xong.
+           *
+           * Re-read từ backend vì:
+           * - backend có thể revoke nhiều session hơn listLimit;
+           * - tab khác có thể đang thay đổi session;
+           * - server là source of truth.
+           */
+          this.api
+            .getSessions()
+            .pipe(
+              tap((response) => {
+                this.rawSessionsState.set(
+                  response.sessions,
+                );
+
+                this.successState.set(
+                  revokedCount > 0
+                    ? `Đã thu hồi ${revokedCount} phiên đăng nhập khác.`
+                    : 'Không có phiên nào cần thu hồi.',
+                );
+              }),
+            ),
+        ),
+
+        mapToVoid(),
+
+        catchError((error: unknown) => {
+          this.errorState.set(
+            getApiErrorMessage(error),
+          );
+
+          return throwError(
+            () => error,
+          );
+        }),
+
+        takeUntil(
+          this.lifecycle.changes$,
+        ),
+
+        finalize(() => {
+          this.submittingState.set(false);
+
+          this.revokingIdsState.set(
+            new Set(),
+          );
+        }),
+      );
   }
 
   clearMessages(): void {

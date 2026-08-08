@@ -1,4 +1,11 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  computed,
+  ErrorHandler,
+  inject,
+  Injectable,
+  signal,
+} from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -8,10 +15,12 @@ import {
   map,
   Observable,
   of,
+  retry,
   shareReplay,
   switchMap,
   tap,
   throwError,
+  timer,
 } from 'rxjs';
 
 import { getApiErrorMessage } from '../http/api-error.util';
@@ -59,7 +68,13 @@ export class AuthStore {
 
   private readonly sessionHint = inject(AuthSessionHintStore);
 
-  private readonly lifecycle = inject(AuthSessionLifecycleService);
+  private readonly lifecycle = inject(
+    AuthSessionLifecycleService,
+  );
+
+  private readonly errorHandler = inject(
+    ErrorHandler,
+  );
 
   private readonly userState = signal<CurrentUser | null>(null);
 
@@ -347,18 +362,72 @@ export class AuthStore {
 
   logout(): void {
     /*
-     * Clear local ngay lập tức.
+     * Logout optimistic:
      *
-     * /auth/logout của backend là Public và sử dụng
-     * refresh cookie + CSRF, nên không cần giữ
-     * access token để request logout hoạt động.
+     * Xóa local identity/access token ngay để UI không tiếp tục
+     * coi user là authenticated.
+     *
+     * /auth/logout là Public và sử dụng refresh cookie + CSRF,
+     * nên request backend không cần access token còn trong memory.
      */
     this.clearLocalSession();
 
     this.api
       .logout()
-      .pipe(catchError(() => of(undefined)))
-      .subscribe();
+      .pipe(
+        /*
+         * Chỉ retry lỗi có khả năng tạm thời:
+         *
+         * status 0  -> network/offline/CORS connection failure
+         * >= 500    -> backend/infrastructure temporary failure
+         *
+         * Không retry 4xx vì request retry y hệt cũng không sửa được.
+         */
+        retry({
+          count: 2,
+
+          delay: (
+            error,
+            retryCount,
+          ) => {
+            if (
+              !this.isRetryableLogoutError(
+                error,
+              )
+            ) {
+              return throwError(
+                () => error,
+              );
+            }
+
+            return timer(
+              250 * retryCount,
+            );
+          },
+        }),
+      )
+      .subscribe({
+        error: (
+          error: unknown,
+        ) => {
+          /*
+           * Local logout đã hoàn tất.
+           *
+           * Nhưng server chưa xác nhận revoke session.
+           *
+           * Không swallow lỗi nữa. ErrorHandler mặc định sẽ log;
+           * nếu sau này project gắn Sentry/OpenTelemetry client thì
+           * cũng có một điểm tập trung để capture lỗi này.
+           */
+          this.errorState.set(
+            'Đã đăng xuất trên thiết bị này nhưng máy chủ chưa xác nhận thu hồi phiên.',
+          );
+
+          this.errorHandler.handleError(
+            error,
+          );
+        },
+      });
   }
 
   clearLocalSession(): void {
@@ -412,6 +481,18 @@ export class AuthStore {
 
   private isRejectedSession(error: unknown): boolean {
     return isTerminalAuthSessionError(error);
+  }
+
+  private isRetryableLogoutError(
+    error: unknown,
+  ): boolean {
+    return (
+      error instanceof HttpErrorResponse &&
+      (
+        error.status === 0 ||
+        error.status >= 500
+      )
+    );
   }
 
   private setAuthenticated(user: CurrentUser): void {

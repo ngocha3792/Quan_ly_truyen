@@ -67,6 +67,8 @@ export class AdminAuthorApplicationsController {
       new ListAuthorApplicationsQuery(
         request.status,
 
+        request.keyword,
+
         request.offset,
 
         request.limit,

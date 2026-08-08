@@ -37,8 +37,13 @@ export class ListAuthorApplicationsQueryHandler {
       query.offset,
     );
 
+    const normalizedKeyword =
+      query.keyword?.trim() || undefined;
+
     const result = await this.persistence.list({
       status: query.status,
+
+      keyword: normalizedKeyword,
 
       limit,
 
@@ -48,8 +53,11 @@ export class ListAuthorApplicationsQueryHandler {
     return {
       total: result.total,
 
-      applications: result.applications.map((application) =>
-        AuthorApplicationResultMapper.toDto(application),
+      applications: result.applications.map(
+        (application) =>
+          AuthorApplicationResultMapper.toDto(
+            application,
+          ),
       ),
     };
   }

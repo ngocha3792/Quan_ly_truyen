@@ -4,6 +4,8 @@ export class ListAuthorApplicationsQuery {
   constructor(
     readonly status: AuthorApplicationStatus | undefined,
 
+    readonly keyword: string | undefined,
+
     readonly offset: number,
 
     readonly limit: number,

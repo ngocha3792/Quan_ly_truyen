@@ -9,6 +9,7 @@ export * from './resend-email-verification';
 export * from './forgot-password';
 export * from './reset-password';
 export * from './revoke-session';
+export * from './revoke-other-sessions';
 export * from './change-password';
 export * from './request-email-change';
 export * from './confirm-email-change';

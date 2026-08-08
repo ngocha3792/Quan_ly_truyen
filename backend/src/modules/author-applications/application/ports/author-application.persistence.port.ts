@@ -144,6 +144,8 @@ export type SubmitAuthorApplicationResult =
 export interface ListAuthorApplicationsInput {
   readonly status?: AuthorApplicationStatus;
 
+  readonly keyword?: string;
+
   readonly offset: number;
 
   readonly limit: number;

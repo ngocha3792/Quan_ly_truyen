@@ -1,4 +1,8 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpHeaders,
+  HttpParams,
+} from '@angular/common/http';
 
 import { inject, Injectable } from '@angular/core';
 
@@ -10,6 +14,7 @@ import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model'
 import {
   AccountSecurityEventsResponse,
   AccountSessionsResponse,
+  RevokeOtherSessionsResponse,
 } from '../domain/account-session.models';
 
 @Injectable({
@@ -24,34 +29,65 @@ export class AccountSessionsApiService {
 
   getSessions(): Observable<AccountSessionsResponse> {
     return this.http
-      .get<ApiSuccessEnvelope<AccountSessionsResponse>>(`${this.authUrl}/sessions`)
-      .pipe(map((response) => response.data));
+      .get<ApiSuccessEnvelope<AccountSessionsResponse>>(
+        `${this.authUrl}/sessions`,
+      )
+      .pipe(
+        map((response) => response.data),
+      );
   }
 
-  getRecentSecurityEvents(limit = 10): Observable<AccountSecurityEventsResponse> {
-    const params = new HttpParams().set('limit', String(limit));
+  getRecentSecurityEvents(
+    limit = 10,
+  ): Observable<AccountSecurityEventsResponse> {
+    const params = new HttpParams().set(
+      'limit',
+
+      String(limit),
+    );
 
     return this.http
-      .get<ApiSuccessEnvelope<AccountSecurityEventsResponse>>(`${this.authUrl}/security-events`, {
-        params,
-      })
-      .pipe(map((response) => response.data));
+      .get<ApiSuccessEnvelope<AccountSecurityEventsResponse>>(
+        `${this.authUrl}/security-events`,
+
+        {
+          params,
+        },
+      )
+      .pipe(
+        map((response) => response.data),
+      );
   }
 
-  revokeSession(sessionId: string): Observable<void> {
+  revokeOtherSessions(): Observable<RevokeOtherSessionsResponse> {
+    return this.http
+      .post<ApiSuccessEnvelope<RevokeOtherSessionsResponse>>(
+        `${this.authUrl}/sessions/revoke-others`,
+
+        {},
+      )
+      .pipe(
+        map((response) => response.data),
+      );
+  }
+
+  revokeSession(
+    sessionId: string,
+  ): Observable<void> {
     const headers = new HttpHeaders({
       'x-idempotency-key': crypto.randomUUID(),
     });
 
-    /*
-     * Nếu backend sử dụng:
-     * POST /auth/sessions/:id/revoke
-     * thì chỉ sửa method này.
-     */
     return this.http
-      .delete<ApiSuccessEnvelope<unknown> | null>(`${this.authUrl}/sessions/${sessionId}`, {
-        headers,
-      })
-      .pipe(map(() => undefined));
+      .delete<ApiSuccessEnvelope<unknown> | null>(
+        `${this.authUrl}/sessions/${sessionId}`,
+
+        {
+          headers,
+        },
+      )
+      .pipe(
+        map(() => undefined),
+      );
   }
 }

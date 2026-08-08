@@ -7,6 +7,10 @@ export const AUTH_ROLES = {
 export type AuthRole = (typeof AUTH_ROLES)[keyof typeof AUTH_ROLES];
 
 export const AUTH_PERMISSIONS = {
+  USER_MANAGE: 'user.manage',
+
+  ROLE_MANAGE: 'role.manage',
+
   STORY_CREATE: 'story.create',
 
   LIBRARY_MANAGE_OWN: 'library.manage.own',

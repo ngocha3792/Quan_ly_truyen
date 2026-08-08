@@ -73,24 +73,60 @@ describe('PrismaUserProfileRepository', () => {
     );
   });
 
-  it('uses the command timestamp for preference and audit writes', async () => {
+  it('locks preferences and only updates supplied fields', async () => {
+    const oldUpdatedAt = new Date('2026-08-07T01:00:00.000Z');
+
+    const calls: string[] = [];
+
     const transaction = {
+      $executeRaw: jest.fn().mockImplementation(() => {
+        calls.push('ensure-row');
+
+        return Promise.resolve(0);
+      }),
+
+      $queryRaw: jest.fn().mockImplementation(() => {
+        calls.push('lock-row');
+
+        return Promise.resolve([
+          {
+            emailEnabled: true,
+
+            newChapterEnabled: true,
+
+            preferences: {
+              showRecentActivity: true,
+            },
+
+            updatedAt: oldUpdatedAt,
+          },
+        ]);
+      }),
+
       user: {
         findFirst: jest.fn().mockResolvedValue({
           id: userId,
         }),
       },
+
       notificationPreference: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        upsert: jest.fn().mockResolvedValue({
-          emailEnabled: false,
-          newChapterEnabled: true,
-          preferences: {
-            showRecentActivity: true,
-          },
-          updatedAt: changedAt,
+        update: jest.fn().mockImplementation(() => {
+          calls.push('update');
+
+          return Promise.resolve({
+            emailEnabled: false,
+
+            newChapterEnabled: true,
+
+            preferences: {
+              showRecentActivity: true,
+            },
+
+            updatedAt: changedAt,
+          });
         }),
       },
+
       auditLog: {
         create: jest.fn().mockResolvedValue({}),
       },
@@ -107,19 +143,32 @@ describe('PrismaUserProfileRepository', () => {
 
     await repository.updatePreferences({
       userId,
+
+      /*
+       * Chỉ thay allowUpdateEmails.
+       *
+       * Hai field còn lại không được ghi đè.
+       */
       allowUpdateEmails: false,
+
       changedAt,
+
       audit: {},
     });
 
-    expect(transaction.notificationPreference.upsert).toHaveBeenCalledWith(
+    expect(calls).toEqual(['ensure-row', 'lock-row', 'update']);
+
+    expect(transaction.notificationPreference.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        create: expect.objectContaining({
+        where: {
+          userId,
+        },
+
+        data: {
           updatedAt: changedAt,
-        }),
-        update: expect.objectContaining({
-          updatedAt: changedAt,
-        }),
+
+          emailEnabled: false,
+        },
       }),
     );
 
@@ -127,6 +176,22 @@ describe('PrismaUserProfileRepository', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           createdAt: changedAt,
+
+          oldValues: {
+            newChapterNotifications: true,
+
+            showRecentActivity: true,
+
+            allowUpdateEmails: true,
+          },
+
+          newValues: {
+            newChapterNotifications: true,
+
+            showRecentActivity: true,
+
+            allowUpdateEmails: false,
+          },
         }),
       }),
     );

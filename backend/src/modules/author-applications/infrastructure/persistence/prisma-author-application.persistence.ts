@@ -777,43 +777,80 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
     input: ListAuthorApplicationsInput,
   ): Promise<ListAuthorApplicationsResult> {
     try {
-      const where: Prisma.AuthorApplicationWhereInput = input.status
-        ? {
-            status: input.status,
-          }
-        : {};
+      const keyword =
+        input.keyword?.trim() || undefined;
 
-      const [total, applications] = await Promise.all([
-        this.prisma.authorApplication.count({
-          where,
-        }),
+      const where: Prisma.AuthorApplicationWhereInput = {
+        ...(input.status
+          ? {
+              status: input.status,
+            }
+          : {}),
 
-        this.prisma.authorApplication.findMany({
-          where,
+        ...(keyword
+          ? {
+              OR: [
+                {
+                  penName: {
+                    contains: keyword,
 
-          orderBy: [
-            {
-              submittedAt: 'asc',
-            },
+                    mode: 'insensitive',
+                  },
+                },
 
-            {
-              createdAt: 'asc',
-            },
-          ],
+                {
+                  fullName: {
+                    contains: keyword,
 
-          skip: input.offset,
+                    mode: 'insensitive',
+                  },
+                },
 
-          take: input.limit,
+                {
+                  email: {
+                    contains: keyword,
 
-          select: APPLICATION_SELECT,
-        }),
-      ]);
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }
+          : {}),
+      };
+
+      const [total, applications] =
+        await Promise.all([
+          this.prisma.authorApplication.count({
+            where,
+          }),
+
+          this.prisma.authorApplication.findMany({
+            where,
+
+            orderBy: [
+              {
+                submittedAt: 'asc',
+              },
+
+              {
+                createdAt: 'asc',
+              },
+            ],
+
+            skip: input.offset,
+
+            take: input.limit,
+
+            select: APPLICATION_SELECT,
+          }),
+        ]);
 
       return {
         total,
 
-        applications: applications.map((application) =>
-          this.toRecord(application),
+        applications: applications.map(
+          (application) =>
+            this.toRecord(application),
         ),
       };
     } catch (error: unknown) {

@@ -28,6 +28,10 @@ export interface AccountSessionsResponse {
   readonly total: number;
 }
 
+export interface RevokeOtherSessionsResponse {
+  readonly revokedCount: number;
+}
+
 export interface AccountSecurityEventDto {
   readonly id: string;
   readonly action: string;

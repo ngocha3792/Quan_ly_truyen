@@ -286,59 +286,93 @@ export class PrismaUserProfileRepository
           };
         }
 
-        const current = await transaction.notificationPreference.findUnique({
-          where: {
-            userId: input.userId,
-          },
+        /*
+         * NotificationPreference là row 1-1 theo userId.
+         *
+         * Bảo đảm row tồn tại trước khi lock để cả request đầu tiên
+         * (khi user chưa có preferences) cũng đi qua cùng critical section.
+         *
+         * Hai request cùng tạo preferences lần đầu:
+         *
+         * Request A -> INSERT
+         * Request B -> ON CONFLICT chờ A commit
+         *           -> DO NOTHING
+         *           -> tiếp tục lock row mới nhất
+         */
+        await ensureNotificationPreferenceRow(
+          transaction,
 
-          select: PREFERENCES_SELECT,
-        });
+          input.userId,
 
-        const currentPreferences = current
-          ? this.toPreferencesEntity(current)
-          : UserPreferencesEntity.defaults();
+          input.changedAt,
+        );
 
-        const nextNewChapterNotifications =
-          input.newChapterNotifications ??
-          currentPreferences.newChapterNotifications;
+        /*
+         * Serialize read -> merge -> write.
+         *
+         * Đây là phần quan trọng để tránh lost update.
+         *
+         * showRecentActivity hiện nằm trong JSONB nên không thể đơn giản
+         * chỉ PATCH từng Prisma column mà không quan tâm state hiện tại.
+         *
+         * FOR UPDATE bảo đảm request thứ hai chỉ được đọc preferences
+         * sau khi request thứ nhất commit.
+         */
+        const current = await lockNotificationPreferenceRow(
+          transaction,
+
+          input.userId,
+        );
+
+        if (!current) {
+          throw new Error(
+            'Notification preference row is unavailable after ensure',
+          );
+        }
+
+        const currentPreferences = this.toPreferencesEntity(current);
 
         const nextShowRecentActivity =
           input.showRecentActivity ?? currentPreferences.showRecentActivity;
 
-        const nextAllowUpdateEmails =
-          input.allowUpdateEmails ?? currentPreferences.allowUpdateEmails;
-
-        const jsonPreferences = this.mergeJsonPreferences(
-          current?.preferences,
-
-          nextShowRecentActivity,
-        );
-
-        const updated = await transaction.notificationPreference.upsert({
+        /*
+         * Chỉ update field thực sự xuất hiện trong PATCH.
+         *
+         * Ví dụ:
+         *
+         * PATCH { newChapterNotifications: false }
+         *
+         * sẽ không ghi đè emailEnabled hay preferences JSON.
+         */
+        const updated = await transaction.notificationPreference.update({
           where: {
             userId: input.userId,
           },
 
-          create: {
-            userId: input.userId,
-
+          data: {
             updatedAt: input.changedAt,
 
-            emailEnabled: nextAllowUpdateEmails,
+            ...(input.allowUpdateEmails !== undefined
+              ? {
+                  emailEnabled: input.allowUpdateEmails,
+                }
+              : {}),
 
-            newChapterEnabled: nextNewChapterNotifications,
+            ...(input.newChapterNotifications !== undefined
+              ? {
+                  newChapterEnabled: input.newChapterNotifications,
+                }
+              : {}),
 
-            preferences: jsonPreferences,
-          },
+            ...(input.showRecentActivity !== undefined
+              ? {
+                  preferences: this.mergeJsonPreferences(
+                    current.preferences,
 
-          update: {
-            updatedAt: input.changedAt,
-
-            emailEnabled: nextAllowUpdateEmails,
-
-            newChapterEnabled: nextNewChapterNotifications,
-
-            preferences: jsonPreferences,
+                    nextShowRecentActivity,
+                  ),
+                }
+              : {}),
           },
 
           select: PREFERENCES_SELECT,
@@ -471,6 +505,45 @@ export class PrismaUserProfileRepository
       showRecentActivity,
     };
   }
+}
+
+async function ensureNotificationPreferenceRow(
+  tx: Prisma.TransactionClient,
+
+  userId: string,
+
+  changedAt: Date,
+): Promise<void> {
+  await tx.$executeRaw(Prisma.sql`
+    INSERT INTO "notification_preferences" (
+      "user_id",
+      "updated_at"
+    )
+    VALUES (
+      ${userId}::uuid,
+      ${changedAt}
+    )
+    ON CONFLICT ("user_id") DO NOTHING
+  `);
+}
+
+async function lockNotificationPreferenceRow(
+  tx: Prisma.TransactionClient,
+
+  userId: string,
+): Promise<PreferencesRecord | null> {
+  const rows = await tx.$queryRaw<PreferencesRecord[]>(Prisma.sql`
+    SELECT
+      "email_enabled" AS "emailEnabled",
+      "new_chapter_enabled" AS "newChapterEnabled",
+      "preferences",
+      "updated_at" AS "updatedAt"
+    FROM "notification_preferences"
+    WHERE "user_id" = ${userId}::uuid
+    FOR UPDATE
+  `);
+
+  return rows[0] ?? null;
 }
 
 async function lockMediaAssetRow(

@@ -1,0 +1,298 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  input,
+  output,
+} from '@angular/core';
+
+@Component({
+  selector:
+    'app-admin-author-application-approve-dialog',
+
+  standalone: true,
+
+  changeDetection:
+    ChangeDetectionStrategy.OnPush,
+
+  template: `
+    <div
+      class="dialog-backdrop"
+      role="presentation"
+      (click)="handleCancel()"
+    >
+      <section
+        class="dialog-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approve-dialog-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="dialog-icon">
+          ✓
+        </div>
+
+        <h2
+          id="approve-dialog-title"
+        >
+          Duyệt hồ sơ tác giả?
+        </h2>
+
+        <p>
+          Tài khoản này sẽ nhận
+          quyền tác giả và có thể
+          truy cập Author Studio.
+        </p>
+
+        @if (penName()) {
+          <div class="pen-name">
+            Bút danh:
+            <strong>
+              {{ penName() }}
+            </strong>
+          </div>
+        }
+
+        <footer>
+          <button
+            type="button"
+            class="cancel-button"
+            [disabled]="loading()"
+            (click)="cancel.emit()"
+          >
+            Hủy
+          </button>
+
+          <button
+            type="button"
+            class="approve-button"
+            [disabled]="loading()"
+            (click)="confirm.emit()"
+          >
+            {{
+              loading()
+                ? 'Đang duyệt...'
+                : 'Duyệt hồ sơ'
+            }}
+          </button>
+        </footer>
+      </section>
+    </div>
+  `,
+
+  styles: `
+    .dialog-backdrop {
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 1000;
+
+      display: grid;
+
+      place-items: center;
+
+      padding: 20px;
+
+      background:
+        rgba(
+          2,
+          6,
+          23,
+          0.78
+        );
+
+      backdrop-filter:
+        blur(5px);
+    }
+
+    .dialog-card {
+      width: min(
+        440px,
+        100%
+      );
+
+      padding: 28px;
+
+      border:
+        1px solid
+        rgba(
+          148,
+          163,
+          184,
+          0.16
+        );
+
+      border-radius: 14px;
+
+      text-align: center;
+
+      background: #0f172a;
+
+      box-shadow:
+        0 24px 80px
+        rgba(
+          0,
+          0,
+          0,
+          0.4
+        );
+    }
+
+    .dialog-icon {
+      width: 52px;
+
+      height: 52px;
+
+      margin:
+        0 auto 16px;
+
+      display: grid;
+
+      place-items: center;
+
+      border-radius: 50%;
+
+      color: #86efac;
+
+      font-size: 24px;
+
+      font-weight: 900;
+
+      background:
+        rgba(
+          34,
+          197,
+          94,
+          0.13
+        );
+    }
+
+    h2 {
+      margin:
+        0 0 10px;
+
+      color: #f8fafc;
+
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0;
+
+      color: #94a3b8;
+
+      line-height: 1.65;
+    }
+
+    .pen-name {
+      margin-top: 16px;
+
+      padding: 11px;
+
+      border-radius: 8px;
+
+      color: #94a3b8;
+
+      background:
+        rgba(
+          15,
+          23,
+          42,
+          0.75
+        );
+    }
+
+    .pen-name strong {
+      color: #e9d5ff;
+    }
+
+    footer {
+      margin-top: 24px;
+
+      display: flex;
+
+      justify-content:
+        flex-end;
+
+      gap: 10px;
+    }
+
+    button {
+      min-height: 40px;
+
+      padding: 0 17px;
+
+      border-radius: 8px;
+
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+
+      cursor: not-allowed;
+    }
+
+    .cancel-button {
+      border:
+        1px solid
+        rgba(
+          148,
+          163,
+          184,
+          0.2
+        );
+
+      color: #cbd5e1;
+
+      background:
+        transparent;
+    }
+
+    .approve-button {
+      border: 0;
+
+      color: #fff;
+
+      background:
+        linear-gradient(
+          135deg,
+          #16a34a,
+          #22c55e
+        );
+    }
+  `,
+})
+export class AdminAuthorApplicationApproveDialogComponent {
+  readonly penName =
+    input<string | null>(
+      null,
+    );
+
+  readonly loading =
+    input(false);
+
+  readonly confirm =
+    output<void>();
+
+  readonly cancel =
+    output<void>();
+
+  @HostListener(
+    'document:keydown.escape',
+  )
+  protected handleEscape(): void {
+    this.handleCancel();
+  }
+
+  protected handleCancel(): void {
+    if (this.loading()) {
+      return;
+    }
+
+    this.cancel.emit();
+  }
+}

@@ -38,6 +38,19 @@ export interface RevokeUserSessionInput {
   reason: string;
 }
 
+export interface RevokeOtherUserSessionsInput {
+  userId: string;
+
+  /**
+   * Session hiện tại phải được giữ lại.
+   */
+  actorSessionId: string;
+
+  revokedAt: Date;
+
+  reason: string;
+}
+
 export interface SessionManagementPersistencePort {
   listActiveByUserId(
     userId: string,
@@ -45,5 +58,11 @@ export interface SessionManagementPersistencePort {
     now: Date,
   ): Promise<readonly ManagedSessionRecord[]>;
 
-  revokeUserSession(input: RevokeUserSessionInput): Promise<boolean>;
+  revokeUserSession(
+    input: RevokeUserSessionInput,
+  ): Promise<boolean>;
+
+  revokeOtherUserSessions(
+    input: RevokeOtherUserSessionsInput,
+  ): Promise<number>;
 }

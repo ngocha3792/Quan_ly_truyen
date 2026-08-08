@@ -71,17 +71,35 @@ void runScript({
       lazyConnect: true,
       enableReadyCheck: true,
       maxRetriesPerRequest: 1,
+      retryStrategy: () => null,
     });
 
-    await redis.connect();
-    await redis.ping();
-
-    logger.info('Redis test database is reachable', {
-      database: redisDatabase,
+    redis.on('error', (err) => {
+      /* Suppress unhandled ioredis error events during test prep check */
     });
 
-    await redis.quit();
-    redis = undefined;
+    try {
+      await redis.connect();
+      await redis.ping();
+
+      logger.info('Redis test database is reachable', {
+        database: redisDatabase,
+      });
+
+      await redis.quit();
+    } catch (error) {
+      logger.warn(
+        'Redis test instance is not running or unreachable; skipping Redis test prep flush',
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+    } finally {
+      if (redis) {
+        redis.disconnect(false);
+        redis = undefined;
+      }
+    }
 
     logger.info('applying Prisma migrations to the test database');
 

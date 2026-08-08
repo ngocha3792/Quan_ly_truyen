@@ -9,6 +9,7 @@ import {
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
+  Post,
   Query,
   Res,
 } from '@nestjs/common';
@@ -36,6 +37,8 @@ import {
   GetSecurityOverviewQuery,
   GetSecurityOverviewQueryHandler,
   GetSessionsQueryHandler,
+  RevokeOtherSessionsCommand,
+  RevokeOtherSessionsCommandHandler,
   RevokeSessionCommand,
   RevokeSessionCommandHandler,
 } from '../../../application';
@@ -47,6 +50,7 @@ import type {
   SecurityOverviewResponse,
   CurrentUserResponse,
   SecurityEventsResponse,
+  RevokeOtherSessionsResponse,
   SessionsResponse,
 } from '../responses';
 
@@ -62,6 +66,8 @@ export class AuthAccountController {
     private readonly getSecurityEventsQueryHandler: GetSecurityEventsQueryHandler,
 
     private readonly revokeSessionCommandHandler: RevokeSessionCommandHandler,
+
+    private readonly revokeOtherSessionsCommandHandler: RevokeOtherSessionsCommandHandler,
 
     private readonly authCookies: AuthCookieService,
 
@@ -248,6 +254,34 @@ export class AuthAccountController {
         requestId: event.requestId,
         createdAt: event.createdAt.toISOString(),
       })),
+    };
+  }
+
+  @Post('sessions/revoke-others')
+  @HttpCode(HttpStatus.OK)
+  async revokeOtherSessions(
+    @CurrentUserId()
+    userId: string | undefined,
+
+    @CurrentSessionId()
+    currentSessionId: string | undefined,
+
+    @Res({ passthrough: true })
+    response: Response,
+  ): Promise<RevokeOtherSessionsResponse> {
+    this.authCookies.setNoStoreHeaders(response);
+
+    const revokedCount =
+      await this.revokeOtherSessionsCommandHandler.execute(
+        new RevokeOtherSessionsCommand(
+          userId,
+
+          currentSessionId,
+        ),
+      );
+
+    return {
+      revokedCount,
     };
   }
 

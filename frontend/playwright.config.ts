@@ -122,7 +122,7 @@ export default defineConfig({
                 'public-chromium',
 
             testMatch:
-                /public\/.*\.spec\.ts/,
+                'public/**/*.spec.ts',
 
             use: {
                 ...devices[
@@ -142,7 +142,27 @@ export default defineConfig({
                 'account-chromium',
 
             testMatch:
-                /account\/.*\.spec\.ts/,
+                'account/**/*.spec.ts',
+
+            use: {
+                ...devices[
+                'Desktop Chrome'
+                ],
+
+                storageState: {
+                    cookies: [],
+
+                    origins: [],
+                },
+            },
+        },
+
+        {
+            name:
+                'admin-chromium',
+
+            testMatch:
+                'admin/**/*.spec.ts',
 
             use: {
                 ...devices[

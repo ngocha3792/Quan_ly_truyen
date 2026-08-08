@@ -15,7 +15,7 @@
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
-    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e",
+    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e && npm --prefix ../backend run db:seed:e2e:admin",
     "pree2e": "npm run e2e:prepare",
     "ci": "npm run format:check && npm run typecheck:e2e && npm run test:ci && npm run build:ci"
   },

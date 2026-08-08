@@ -52,6 +52,8 @@ export class AuthorApplicationStore {
 
   readonly errorMessage = signal('');
 
+  readonly checkingStatus = signal(false);
+
   readonly editable = computed(() => {
     const application = this.applicationState();
 
@@ -160,6 +162,101 @@ export class AuthorApplicationStore {
           this.status.set('error');
 
           this.errorMessage.set(getApiErrorMessage(error));
+        },
+      });
+  }
+
+  refreshApplicationStatus(): void {
+    const current =
+      this.applicationState();
+
+    /*
+     * Chỉ cần check tự động
+     * khi hồ sơ đang PENDING.
+     */
+    if (
+      !current ||
+      current.status !==
+        'PENDING' ||
+      this.checkingStatus()
+    ) {
+      return;
+    }
+
+    const revision =
+      this.lifecycle.revision();
+
+    this.checkingStatus.set(
+      true,
+    );
+
+    this.repository
+      .getMine()
+      .pipe(
+        takeUntil(
+          this.lifecycle.changes$,
+        ),
+
+        takeUntilDestroyed(
+          this.destroyRef,
+        ),
+
+        finalize(() => {
+          if (
+            revision !==
+            this.lifecycle.revision()
+          ) {
+            return;
+          }
+
+          this.checkingStatus.set(
+            false,
+          );
+        }),
+      )
+      .subscribe({
+        next: (
+          application,
+        ) => {
+          if (
+            revision !==
+            this.lifecycle.revision()
+          ) {
+            return;
+          }
+
+          this.applicationState.set(
+            application,
+          );
+
+          /*
+           * Nếu admin vừa approve:
+           *
+           * APPROVED
+           * → revalidate /auth/me
+           * → nhận role AUTHOR
+           * → nhận permission mới.
+           */
+          this.syncAuthorAuthorization(
+            application,
+          );
+        },
+
+        error: (
+          error: unknown,
+        ) => {
+          if (
+            revision !==
+            this.lifecycle.revision()
+          ) {
+            return;
+          }
+
+          this.errorMessage.set(
+            getApiErrorMessage(
+              error,
+            ),
+          );
         },
       });
   }
@@ -344,6 +441,8 @@ export class AuthorApplicationStore {
     this.message.set('');
 
     this.errorMessage.set('');
+
+    this.checkingStatus.set(false);
 
     this.authorAuthorizationSynced = false;
 

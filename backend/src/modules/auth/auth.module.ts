@@ -33,6 +33,7 @@ import {
   GetSessionsQueryHandler,
   SESSION_MANAGEMENT_PERSISTENCE_PORT,
   RevokeSessionCommandHandler,
+  RevokeOtherSessionsCommandHandler,
   ForgotPasswordCommandHandler,
   PASSWORD_RESET_COOLDOWN_PORT,
   PASSWORD_RESET_PERSISTENCE_PORT,
@@ -222,7 +223,10 @@ const idGeneratorProvider = {
     ValidatePasswordResetTokenQueryHandler,
     GetSecurityOverviewQueryHandler,
     RefreshCookieCsrfGuard,
+
     RevokeSessionCommandHandler,
+    RevokeOtherSessionsCommandHandler,
+
     GetCurrentUserQueryHandler,
     GetSessionsQueryHandler,
     RegisterCommandHandler,

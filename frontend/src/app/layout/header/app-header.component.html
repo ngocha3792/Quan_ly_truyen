@@ -195,6 +195,22 @@
                 }
               </a>
 
+              @if (canReviewAuthorApplications()) {
+                <a
+                  routerLink="/admin/author-applications"
+                  (click)="closeProfile()"
+                >
+                  <app-icon
+                    name="shield"
+                    [size]="18"
+                  ></app-icon>
+
+                  <span>
+                    Xét duyệt tác giả
+                  </span>
+                </a>
+              }
+
               <a routerLink="/tai-khoan" (click)="closeProfile()">
                 <app-icon name="user" [size]="18"></app-icon>
 
@@ -236,6 +252,16 @@
       }
 
       @if (auth.isAuthenticated()) {
+        @if (canReviewAuthorApplications()) {
+          <a
+            routerLink="/admin/author-applications"
+            routerLinkActive="active"
+            (click)="closeMobileMenu()"
+          >
+            Xét duyệt tác giả
+          </a>
+        }
+
         <a routerLink="/thu-vien-cua-toi" routerLinkActive="active" (click)="closeMobileMenu()">
           Thư viện của tôi
         </a>
