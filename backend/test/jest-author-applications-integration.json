@@ -12,7 +12,7 @@
   "setupFiles": [
     "<rootDir>/setup/setup-e2e-env.ts"
   ],
-  "testRegex": "author-applications\\.integration-spec\\.ts$",
+  "testRegex": "author-applications.*\\.integration-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },

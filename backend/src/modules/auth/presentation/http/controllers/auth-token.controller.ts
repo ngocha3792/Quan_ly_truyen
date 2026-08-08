@@ -36,6 +36,11 @@ import {
   RevokeAccessTokenCommandHandler,
 } from '../../../application';
 
+import {
+  InvalidRefreshTokenException,
+  RefreshTokenReuseDetectedException,
+} from '../../../domain/exceptions';
+
 import { LoginRequest } from '../requests';
 
 import type { LoginResponse, RefreshTokenResponse } from '../responses';
@@ -179,9 +184,16 @@ export class AuthTokenController {
       };
     } catch (error: unknown) {
       /*
-       * Tránh browser tiếp tục gửi credential cookie lỗi.
+       * Chỉ clear browser credential khi backend
+       * đã xác định refresh credential/session
+       * thật sự không còn hợp lệ.
+       *
+       * Không clear cookie với DB/network/internal 5xx,
+       * vì những lỗi đó có thể retry.
        */
-      this.authCookies.clearAuthCookies(response);
+      if (isTerminalRefreshSessionError(error)) {
+        this.authCookies.clearAuthCookies(response);
+      }
 
       throw error;
     }
@@ -254,4 +266,11 @@ export class AuthTokenController {
       ),
     );
   }
+}
+
+function isTerminalRefreshSessionError(error: unknown): boolean {
+  return (
+    error instanceof InvalidRefreshTokenException ||
+    error instanceof RefreshTokenReuseDetectedException
+  );
 }

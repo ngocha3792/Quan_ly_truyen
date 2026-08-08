@@ -1,19 +1,28 @@
 import { NestFactory } from '@nestjs/core';
+
 import { MediaCleanupService } from '@/infrastructure/media';
+
 import { MediaCleanupCommandModule } from '@/maintenance/media-cleanup-command.module';
 
 async function main(): Promise<void> {
   const app = await NestFactory.createApplicationContext(
     MediaCleanupCommandModule,
+
     {
       logger: ['error', 'warn', 'log'],
     },
   );
+
   try {
-    const summary = await app
-      .get(MediaCleanupService)
-      .cleanupExpiredUploadIntents({ batchSize: 100 });
-    console.info('Media cleanup completed', summary);
+    const summary = await app.get(MediaCleanupService).cleanupStaleMedia({
+      batchSize: 100,
+    });
+
+    console.info(
+      'Media cleanup completed',
+
+      summary,
+    );
   } finally {
     await app.close();
   }
@@ -22,7 +31,9 @@ async function main(): Promise<void> {
 void main().catch((error: unknown) => {
   console.error(
     'Media cleanup failed',
+
     error instanceof Error ? error.message : 'unknown error',
   );
+
   process.exitCode = 1;
 });

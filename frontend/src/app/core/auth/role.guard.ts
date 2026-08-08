@@ -8,8 +8,9 @@ import { AuthAuthorizationSyncService } from './auth-authorization-sync.service'
 
 import {
   createAccessDeniedUrlTree,
+  createAuthTemporarilyUnavailableUrlTree,
   createLoginRequiredUrlTree,
-  resolveAuthenticatedUser,
+  resolveAuthGuardState,
 } from './auth-guard.util';
 
 import { AuthRole } from './authorization.models';
@@ -36,9 +37,19 @@ export function roleGuard(
 
     const router = inject(Router);
 
-    return resolveAuthenticatedUser(auth).pipe(
-      switchMap((user) => {
-        if (!user) {
+    return resolveAuthGuardState(auth).pipe(
+      switchMap((resolution) => {
+        if (resolution.kind === 'unavailable') {
+          return of(
+            createAuthTemporarilyUnavailableUrlTree(
+              router,
+
+              state,
+            ),
+          );
+        }
+
+        if (resolution.kind === 'anonymous') {
           return of(
             createLoginRequiredUrlTree(
               router,
@@ -48,9 +59,10 @@ export function roleGuard(
           );
         }
 
-        /*
-         * Fast path:
-         * local authorization đã đủ.
+        const user = resolution.user;
+
+        /**
+         * Fast path.
          */
         if (
           hasAnyRequiredRole(
@@ -62,19 +74,11 @@ export function roleGuard(
           return of(true);
         }
 
-        /*
-         * Local state thiếu role.
+        /**
+         * Local role có thể stale.
          *
-         * Trước khi kết luận 403 UI,
-         * revalidate /auth/me đúng một lần.
-         *
-         * Đây giải quyết:
-         *
-         * USER
-         * → admin approve
-         * → AUTHOR
-         *
-         * nhưng frontend vẫn giữ USER cũ.
+         * Revalidate /auth/me trước khi kết luận
+         * user thật sự thiếu role.
          */
         return authorizationSync.revalidateCurrentUser().pipe(
           map((freshUser) => {
@@ -106,10 +110,22 @@ export function roleGuard(
           }),
 
           catchError(() => {
-            /*
-             * Nếu sync làm session bị invalidate,
-             * Stage 2 AuthStore đã chuyển anonymous.
+            /**
+             * Nếu interceptor cố refresh và gặp
+             * network/5xx thì AuthStore sẽ về idle.
+             *
+             * Không biến case đó thành 403.
              */
+            if (auth.status() === 'idle') {
+              return of(
+                createAuthTemporarilyUnavailableUrlTree(
+                  router,
+
+                  state,
+                ),
+              );
+            }
+
             if (auth.status() === 'anonymous') {
               return of(
                 createLoginRequiredUrlTree(

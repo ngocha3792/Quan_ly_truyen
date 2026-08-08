@@ -8,8 +8,9 @@ import { AuthAuthorizationSyncService } from './auth-authorization-sync.service'
 
 import {
   createAccessDeniedUrlTree,
+  createAuthTemporarilyUnavailableUrlTree,
   createLoginRequiredUrlTree,
-  resolveAuthenticatedUser,
+  resolveAuthGuardState,
 } from './auth-guard.util';
 
 import { AuthPermission } from './authorization.models';
@@ -36,9 +37,19 @@ export function permissionGuard(
 
     const router = inject(Router);
 
-    return resolveAuthenticatedUser(auth).pipe(
-      switchMap((user) => {
-        if (!user) {
+    return resolveAuthGuardState(auth).pipe(
+      switchMap((resolution) => {
+        if (resolution.kind === 'unavailable') {
+          return of(
+            createAuthTemporarilyUnavailableUrlTree(
+              router,
+
+              state,
+            ),
+          );
+        }
+
+        if (resolution.kind === 'anonymous') {
           return of(
             createLoginRequiredUrlTree(
               router,
@@ -47,6 +58,8 @@ export function permissionGuard(
             ),
           );
         }
+
+        const user = resolution.user;
 
         if (
           hasAllPermissions(
@@ -58,12 +71,8 @@ export function permissionGuard(
           return of(true);
         }
 
-        /*
-         * Giống roleGuard:
-         *
-         * thiếu permission local chưa chắc
-         * backend authorization hiện tại
-         * thật sự thiếu.
+        /**
+         * Permission local có thể stale.
          */
         return authorizationSync.revalidateCurrentUser().pipe(
           map((freshUser) => {
@@ -95,6 +104,16 @@ export function permissionGuard(
           }),
 
           catchError(() => {
+            if (auth.status() === 'idle') {
+              return of(
+                createAuthTemporarilyUnavailableUrlTree(
+                  router,
+
+                  state,
+                ),
+              );
+            }
+
             if (auth.status() === 'anonymous') {
               return of(
                 createLoginRequiredUrlTree(

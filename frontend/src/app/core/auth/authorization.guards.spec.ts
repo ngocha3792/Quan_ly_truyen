@@ -55,6 +55,8 @@ describe('Auth authorization guards', () => {
       user: userState.asReadonly(),
 
       initialize: vi.fn(),
+
+      ensureInitialized: vi.fn(() => of('anonymous' as const)),
     } as unknown as AuthStore;
 
     authorizationSync = {
@@ -111,10 +113,12 @@ describe('Auth authorization guards', () => {
   it('guard chờ AuthStore bootstrap khi status đang idle', async () => {
     statusState.set('idle');
 
-    vi.mocked(auth.initialize).mockImplementation(() => {
+    vi.mocked(auth.ensureInitialized).mockImplementation(() => {
       userState.set(createCurrentUser());
 
       statusState.set('authenticated');
+
+      return of('authenticated' as const);
     });
 
     const result = await executeGuard(
@@ -123,9 +127,25 @@ describe('Auth authorization guards', () => {
       '/tai-khoan',
     );
 
-    expect(auth.initialize).toHaveBeenCalledTimes(1);
+    expect(auth.ensureInitialized).toHaveBeenCalledTimes(1);
 
     expect(result).toBe(true);
+  });
+
+  it('bootstrap unavailable phải redirect sang trang gián đoạn thay vì treo hoặc login', async () => {
+    statusState.set('idle');
+
+    vi.mocked(auth.ensureInitialized).mockReturnValue(of('unavailable' as const));
+
+    const result = await executeGuard(
+      authenticatedGuard,
+
+      '/tai-khoan',
+    );
+
+    expect(auth.ensureInitialized).toHaveBeenCalledTimes(1);
+
+    expect(serialize(result)).toBe('/tam-thoi-khong-the-xac-thuc?returnUrl=%2Ftai-khoan');
   });
 
   it('USER không được vào route AUTHOR', async () => {

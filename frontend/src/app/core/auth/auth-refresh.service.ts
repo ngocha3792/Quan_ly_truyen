@@ -1,5 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
-
 import { inject, Injectable } from '@angular/core';
 
 import { catchError, finalize, map, Observable, shareReplay, tap, throwError } from 'rxjs';
@@ -9,6 +7,8 @@ import { AuthApiService } from './auth-api.service';
 import { AuthRefreshCoordinatorService } from './auth-refresh-coordinator.service';
 
 import { AuthSessionLifecycleService } from './auth-session-lifecycle.service';
+
+import { isTerminalRefreshSessionError } from './auth-session-error.util';
 
 import { TokenStore } from './token.store';
 
@@ -29,8 +29,8 @@ export class AuthRefreshService {
    *
    * Nếu 5 request cùng nhận 401:
    *
-   * request 1 → tạo refresh$
-   * request 2..5 → dùng lại chính refresh$
+   * request 1 -> tạo refresh$
+   * request 2..5 -> dùng lại chính refresh$
    */
   private refreshInFlight$: Observable<string> | null = null;
 
@@ -51,14 +51,21 @@ export class AuthRefreshService {
         catchError((error: unknown) => {
           /*
            * Access token hiện tại vừa bị backend
-           * từ chối nên không giữ nó lại.
+           * từ chối hoặc quá cũ.
+           *
+           * Không giữ token này lại.
            */
           this.tokenStore.clear();
 
-          if (isRejectedRefreshSession(error)) {
+          if (isTerminalRefreshSessionError(error)) {
             /*
-             * 401 / 403 từ refresh endpoint:
-             * refresh session thật sự không còn hợp lệ.
+             * Chỉ các stable error code:
+             *
+             * AUTH_INVALID_REFRESH_TOKEN
+             * AUTH_REFRESH_TOKEN_REUSE_DETECTED
+             *
+             * mới chứng minh refresh session
+             * thật sự chết.
              */
             this.lifecycle.invalidateSession(
               'refresh-session-rejected',
@@ -67,8 +74,16 @@ export class AuthRefreshService {
             );
           } else {
             /*
-             * Network / 5xx:
-             * không được coi refresh cookie đã chết.
+             * Bao gồm:
+             *
+             * AUTH_CSRF_TOKEN_*
+             * AUTH_CSRF_ORIGIN_REJECTED
+             * network
+             * 5xx
+             * unknown contract error
+             *
+             * Không được suy luận refresh cookie
+             * đã chết.
              */
             this.lifecycle.loseAccess('refresh-temporarily-unavailable');
           }
@@ -80,7 +95,7 @@ export class AuthRefreshService {
           this.refreshInFlight$ = null;
         }),
 
-        /*
+        /**
          * Phải share response/error cho toàn bộ caller
          * đang chờ cùng một refresh.
          */
@@ -92,16 +107,10 @@ export class AuthRefreshService {
       );
 
     /*
-     * Set field TRƯỚC khi caller subscribe.
-     *
-     * Caller tiếp theo luôn nhìn thấy cùng Observable.
+     * Set field trước khi caller subscribe.
      */
     this.refreshInFlight$ = refresh$;
 
     return refresh$;
   }
-}
-
-function isRejectedRefreshSession(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
 }

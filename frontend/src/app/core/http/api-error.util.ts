@@ -1,13 +1,43 @@
 import { HttpErrorResponse } from '@angular/common/http';
+
 import { ApiErrorEnvelope } from './api-envelope.model';
 
 interface ApiValidationIssue {
   readonly field?: unknown;
+
   readonly message?: unknown;
+}
+
+/**
+ * Đọc stable backend error code từ ApiErrorEnvelope.
+ *
+ * Ví dụ:
+ *
+ * AUTH_INVALID_REFRESH_TOKEN
+ * AUTH_REFRESH_TOKEN_REUSE_DETECTED
+ * AUTH_CSRF_TOKEN_MISMATCH
+ *
+ * Không suy luận code từ HTTP status.
+ */
+export function getApiErrorCode(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse)) {
+    return null;
+  }
+
+  const body = error.error as Partial<ApiErrorEnvelope> | null | undefined;
+
+  const code = body?.error?.code;
+
+  if (typeof code !== 'string' || !code.trim()) {
+    return null;
+  }
+
+  return code.trim();
 }
 
 export function getApiErrorMessage(
   error: unknown,
+
   fallbackMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.',
 ): string {
   if (error instanceof HttpErrorResponse) {

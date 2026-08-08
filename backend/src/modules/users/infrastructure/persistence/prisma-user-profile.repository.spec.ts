@@ -131,4 +131,105 @@ describe('PrismaUserProfileRepository', () => {
       }),
     );
   });
+
+  it('locks avatar media row trước khi validate và attach', async () => {
+    const avatarMediaId = '22222222-2222-4222-8222-222222222222';
+
+    const profile = {
+      id: userId,
+
+      email: 'reader@example.com',
+
+      username: 'reader',
+
+      displayName: 'Reader',
+
+      bio: null,
+
+      status: 'ACTIVE',
+
+      emailVerifiedAt: null,
+
+      lastLoginAt: null,
+
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+
+      updatedAt: changedAt,
+
+      avatarMedia: {
+        id: avatarMediaId,
+
+        secureUrl: 'https://example.test/avatar.jpg',
+
+        publicUrl: null,
+      },
+    };
+
+    const calls: string[] = [];
+
+    const transaction = {
+      $queryRaw: jest.fn().mockImplementation(() => {
+        calls.push('lock-media');
+
+        return Promise.resolve([
+          {
+            id: avatarMediaId,
+          },
+        ]);
+      }),
+
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          displayName: 'Old name',
+
+          bio: null,
+
+          avatarMediaId: null,
+        }),
+
+        update: jest.fn().mockImplementation(() => {
+          calls.push('update-user');
+
+          return Promise.resolve(profile);
+        }),
+      },
+
+      mediaAsset: {
+        findFirst: jest.fn().mockImplementation(() => {
+          calls.push('validate-media');
+
+          return Promise.resolve({
+            id: avatarMediaId,
+          });
+        }),
+      },
+
+      auditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const prisma = {
+      $transaction: jest.fn(
+        async (operation: (client: typeof transaction) => Promise<unknown>) =>
+          operation(transaction),
+      ),
+    };
+
+    const repository = new PrismaUserProfileRepository(prisma as never);
+
+    await repository.updateProfile({
+      userId,
+
+      avatarMediaId,
+
+      changedAt,
+
+      audit: {
+        requestId: 'request-avatar-lock',
+      },
+    });
+
+    expect(calls).toEqual(['lock-media', 'validate-media', 'update-user']);
+  });
 });

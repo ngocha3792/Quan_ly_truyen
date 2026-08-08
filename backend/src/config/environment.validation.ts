@@ -549,6 +549,11 @@ export class EnvironmentVariables {
   @Min(1)
   CLOUDINARY_UPLOAD_INTENT_TTL_SECONDS = 300;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 3600))
+  @IsInt()
+  @Min(60)
+  CLOUDINARY_READY_ORPHAN_GRACE_SECONDS = 3600;
+
   @Transform(({ value }) => parseIntegerValue(value ?? 300))
   @IsInt()
   @Min(1)

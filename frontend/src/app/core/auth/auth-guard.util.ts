@@ -1,62 +1,116 @@
-import { toObservable } from '@angular/core/rxjs-interop';
-
 import { Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 
-import { filter, map, Observable, of, take } from 'rxjs';
+import { map, Observable, of } from 'rxjs';
 
 import { CurrentUser } from './auth.models';
 
-import { AuthStore } from './auth.store';
+import { AuthBootstrapResult, AuthStore } from './auth.store';
+
+export type AuthGuardResolution =
+  | {
+      readonly kind: 'authenticated';
+
+      readonly user: CurrentUser;
+    }
+  | {
+      readonly kind: 'anonymous';
+
+      readonly user: null;
+    }
+  | {
+      readonly kind: 'unavailable';
+
+      readonly user: null;
+    };
 
 /**
- * Trả về CurrentUser sau khi AuthStore
- * đã xác định xong trạng thái đăng nhập.
+ * Resolve auth bootstrap thành một terminal state cho guard.
  *
- * Guard không được đọc user() ngay khi
- * status vẫn là idle/loading vì lúc đó app
- * có thể đang restore session bằng refresh token.
+ * authenticated:
+ *   session hợp lệ + có CurrentUser.
+ *
+ * anonymous:
+ *   đã xác định không còn session hợp lệ.
+ *
+ * unavailable:
+ *   chưa thể xác minh session do network / 5xx.
+ *
+ * Không còn filter AuthStatus idle/loading nữa.
  */
-export function resolveAuthenticatedUser(auth: AuthStore): Observable<CurrentUser | null> {
+export function resolveAuthGuardState(auth: AuthStore): Observable<AuthGuardResolution> {
   const currentStatus = auth.status();
 
   if (currentStatus === 'authenticated') {
-    return of(auth.user());
+    const currentUser = auth.user();
+
+    if (currentUser) {
+      return of({
+        kind: 'authenticated',
+
+        user: currentUser,
+      });
+    }
   }
 
   if (currentStatus === 'anonymous') {
-    return of(null);
+    return of({
+      kind: 'anonymous',
+
+      user: null,
+    });
   }
 
-  /**
-   * initialize() có cơ chế bootstrapped,
-   * nên gọi nhiều lần vẫn an toàn.
-   */
-  auth.initialize();
+  return auth.ensureInitialized().pipe(
+    map((result) =>
+      toGuardResolution(
+        result,
 
-  return toObservable(auth.status).pipe(
-    filter((status) => status !== 'idle' && status !== 'loading'),
-
-    take(1),
-
-    map((status) => {
-      if (status !== 'authenticated') {
-        return null;
-      }
-
-      return auth.user();
-    }),
+        auth.user(),
+      ),
+    ),
   );
 }
 
 /**
- * Anonymous user.
+ * Compatibility helper.
  *
- * Không redirect thẳng về home nữa.
- * Chuyển tới gateway login và giữ URL
- * mà user ban đầu muốn truy cập.
+ * Dùng khi caller chỉ cần CurrentUser | null.
+ *
+ * Quan trọng:
+ * unavailable vẫn emit null và COMPLETE.
+ * Nó không bao giờ treo.
  */
-export function createLoginRequiredUrlTree(router: Router, state: RouterStateSnapshot): UrlTree {
+export function resolveAuthenticatedUser(auth: AuthStore): Observable<CurrentUser | null> {
+  return resolveAuthGuardState(auth).pipe(map((resolution) => resolution.user));
+}
+
+/**
+ * User thật sự anonymous.
+ */
+export function createLoginRequiredUrlTree(
+  router: Router,
+
+  state: RouterStateSnapshot,
+): UrlTree {
   return router.createUrlTree(['/dang-nhap'], {
+    queryParams: {
+      returnUrl: state.url,
+    },
+  });
+}
+
+/**
+ * Session chưa được xác minh vì network/backend
+ * đang tạm thời không khả dụng.
+ *
+ * Không redirect login.
+ */
+export function createAuthTemporarilyUnavailableUrlTree(
+  router: Router,
+
+  state: RouterStateSnapshot,
+): UrlTree {
+  return router.createUrlTree(['/tam-thoi-khong-the-xac-thuc'], {
     queryParams: {
       returnUrl: state.url,
     },
@@ -66,11 +120,13 @@ export function createLoginRequiredUrlTree(router: Router, state: RouterStateSna
 export type AccessDeniedReason = 'role' | 'permission';
 
 /**
- * User đã login nhưng thiếu quyền.
+ * User đã authenticated nhưng thiếu authorization.
  */
 export function createAccessDeniedUrlTree(
   router: Router,
+
   state: RouterStateSnapshot,
+
   reason: AccessDeniedReason,
 ): UrlTree {
   return router.createUrlTree(['/khong-co-quyen'], {
@@ -80,4 +136,32 @@ export function createAccessDeniedUrlTree(
       from: state.url,
     },
   });
+}
+
+function toGuardResolution(
+  result: AuthBootstrapResult,
+
+  user: CurrentUser | null,
+): AuthGuardResolution {
+  if (result === 'authenticated' && user) {
+    return {
+      kind: 'authenticated',
+
+      user,
+    };
+  }
+
+  if (result === 'anonymous') {
+    return {
+      kind: 'anonymous',
+
+      user: null,
+    };
+  }
+
+  return {
+    kind: 'unavailable',
+
+    user: null,
+  };
 }

@@ -277,7 +277,7 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
             };
           }
 
-          const resetReview =
+          const reopenRejectedApplication =
             current.status === PrismaAuthorApplicationStatus.REJECTED;
 
           const application = await tx.authorApplication.update({
@@ -346,9 +346,25 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
                   }
                 : {}),
 
-              ...(resetReview
+              /**
+               * REJECTED -> DRAFT là một submission cycle mới.
+               *
+               * Không được để metadata của lần submit/review trước
+               * tiếp tục tồn tại trên state DRAFT hiện hành.
+               *
+               * sampleMediaId được detach:
+               *
+               * - sample cũ vẫn là MediaAsset READY
+               * - không còn relation AuthorApplicationSample
+               * - Phase 6 cleanup sẽ thu gom sau grace period
+               */
+              ...(reopenRejectedApplication
                 ? {
                     status: PrismaAuthorApplicationStatus.DRAFT,
+
+                    sampleMediaId: null,
+
+                    submittedAt: null,
 
                     reviewedAt: null,
 
@@ -394,13 +410,30 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
   async submit(
     input: SubmitAuthorApplicationInput,
   ): Promise<SubmitAuthorApplicationResult> {
+    /*
+     * Nếu transaction thua partial unique index,
+     * transaction sẽ rollback hoàn toàn.
+     *
+     * Giữ penName bên ngoài transaction để sau rollback
+     * có thể xác minh conflict và map về domain result.
+     */
+    let attemptedPenName: string | null = null;
+
     try {
       return await this.prisma.$transaction(async (tx) => {
         /*
-         * Lock trước khi đọc application.
+         * Lock application hiện tại trước khi đọc.
          *
-         * Điều này đảm bảo submit không validate trên một draft cũ
-         * trong lúc saveDraft đang thay đổi cùng record.
+         * Điều này bảo vệ race:
+         *
+         * saveDraft(application A)
+         * vs
+         * submit(application A)
+         *
+         * nhưng KHÔNG bảo vệ hai application khác nhau
+         * cùng penName.
+         *
+         * Việc đó giờ do partial unique index xử lý.
          */
         const locked = await lockAuthorApplicationRow(
           tx,
@@ -437,7 +470,8 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
         }
 
         /*
-         * Giữ tính idempotent hiện tại.
+         * Submit lại một application đã PENDING
+         * vẫn idempotent.
          */
         if (application.status === PrismaAuthorApplicationStatus.PENDING) {
           return {
@@ -458,11 +492,41 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
         }
 
         /*
-         * Không còn chấp nhận generic ATTACHMENT.
+         * Sample bắt buộc:
          *
-         * Sample bắt buộc phải được tạo qua policy
-         * AUTHOR_APPLICATION_SAMPLE.
+         * - đúng id
+         * - đúng uploader
+         * - đúng purpose
+         * - READY
+         * - chưa deleted
+         * - metadata.ownerId === application.id
          */
+        /**
+         * Serialize sample attachment với media cleanup.
+         *
+         * Nếu cleanup claim DELETING trước:
+         * -> lock này đợi
+         * -> sau đó status không còn READY
+         * -> invalid_sample.
+         *
+         * Nếu submit lock trước:
+         * -> cleanup đợi
+         * -> application attach sample + commit
+         * -> cleanup relation predicate fail
+         * -> không delete.
+         */
+        const sampleLocked = await lockMediaAssetRow(
+          tx,
+
+          input.sampleMediaId,
+        );
+
+        if (!sampleLocked) {
+          return {
+            status: 'invalid_sample',
+          };
+        }
+
         const sample = await tx.mediaAsset.findFirst({
           where: {
             id: input.sampleMediaId,
@@ -489,8 +553,25 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           };
         }
 
+        /*
+         * findMissingFields() đã đảm bảo penName tồn tại.
+         */
         const penName = application.penName!;
 
+        /*
+         * Lưu ra ngoài transaction để nếu UPDATE bị
+         * unique violation thì catch phía ngoài vẫn biết
+         * penName nào đang được submit.
+         */
+        attemptedPenName = penName;
+
+        /*
+         * Pre-check vẫn giữ.
+         *
+         * Nó không phải correctness guarantee,
+         * nhưng giúp case bình thường fail sớm
+         * trước khi đụng unique constraint.
+         */
         const [authorOwner, pendingOwner] = await Promise.all([
           tx.authorProfile.findFirst({
             where: {
@@ -540,9 +621,21 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
         }
 
         /*
-         * Row vẫn đang bị FOR UPDATE lock.
+         * Race quan trọng:
          *
-         * saveDraft không thể chen vào giữa validation và update này.
+         * Tx A:
+         * check Moon => none
+         *
+         * Tx B:
+         * check moon => none
+         *
+         * Cả hai có thể tới UPDATE này.
+         *
+         * Partial unique index PostgreSQL:
+         *
+         * author_applications_pending_pen_name_lower_unique
+         *
+         * sẽ chỉ cho một transaction commit.
          */
         const updated = await tx.authorApplication.update({
           where: {
@@ -566,6 +659,12 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
           select: APPLICATION_SELECT,
         });
 
+        /*
+         * Audit nằm cùng transaction.
+         *
+         * Nếu unique constraint fail ở UPDATE phía trên
+         * thì audit này không được tạo.
+         */
         await tx.auditLog.create({
           data: {
             actorId: input.userId,
@@ -597,11 +696,80 @@ export class PrismaAuthorApplicationPersistence implements AuthorApplicationPers
         };
       });
     } catch (error: unknown) {
-      throw mapPrismaError(error, {
-        operation: 'author-application-submit',
+      /*
+       * PostgreSQL unique violation aborts transaction.
+       *
+       * Không được catch P2002 bên trong callback
+       * rồi cố tiếp tục transaction, vì PostgreSQL
+       * transaction lúc đó đã ở aborted state.
+       *
+       * Ta xử lý SAU khi Prisma rollback transaction.
+       */
+      if (attemptedPenName && isUniqueConstraintViolation(error)) {
+        const hasPendingOwner = await this.hasConflictingPendingPenName(
+          input.applicationId,
 
-        resource: 'Hồ sơ đăng ký tác giả',
+          attemptedPenName,
+        );
+
+        if (hasPendingOwner) {
+          return {
+            status: 'pen_name_unavailable',
+
+            penName: attemptedPenName,
+          };
+        }
+      }
+
+      throw mapPrismaError(
+        error,
+
+        {
+          operation: 'author-application-submit',
+
+          resource: 'Hồ sơ đăng ký tác giả',
+        },
+      );
+    }
+  }
+
+  private async hasConflictingPendingPenName(
+    applicationId: string,
+
+    penName: string,
+  ): Promise<boolean> {
+    try {
+      const owner = await this.prisma.authorApplication.findFirst({
+        where: {
+          id: {
+            not: applicationId,
+          },
+
+          status: PrismaAuthorApplicationStatus.PENDING,
+
+          penName: {
+            equals: penName,
+
+            mode: 'insensitive',
+          },
+        },
+
+        select: {
+          id: true,
+        },
       });
+
+      return Boolean(owner);
+    } catch (error: unknown) {
+      throw mapPrismaError(
+        error,
+
+        {
+          operation: 'author-application-submit-conflict-verification',
+
+          resource: 'Hồ sơ đăng ký tác giả',
+        },
+      );
     }
   }
 
@@ -1090,6 +1258,25 @@ async function lockAuthorApplicationRow(
     WHERE "id" = ${applicationId}::uuid
     FOR UPDATE
   `);
+
+  return rows.length === 1;
+}
+
+async function lockMediaAssetRow(
+  tx: Prisma.TransactionClient,
+
+  mediaAssetId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<
+    Array<{
+      id: string;
+    }>
+  >(Prisma.sql`
+      SELECT "id"
+      FROM "media_assets"
+      WHERE "id" = ${mediaAssetId}::uuid
+      FOR UPDATE
+    `);
 
   return rows.length === 1;
 }

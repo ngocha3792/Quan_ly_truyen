@@ -33,6 +33,22 @@ export default registerAs('cloudinary', () => ({
     300,
   ),
 
+  /**
+   * READY không đồng nghĩa asset đã được domain attach.
+   *
+   * Flow thường là:
+   *
+   * confirm upload
+   * -> READY
+   * -> PATCH profile / submit application
+   *
+   * Cleanup chỉ được xóa READY orphan sau grace period này.
+   */
+  readyOrphanGraceSeconds: parsePositiveInteger(
+    process.env.CLOUDINARY_READY_ORPHAN_GRACE_SECONDS,
+    3600,
+  ),
+
   webhookSignatureTtlSeconds: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_SIGNATURE_TTL_SECONDS,
     300,

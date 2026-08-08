@@ -1,10 +1,30 @@
 export const MEDIA_ERROR_CODES = {
   STORAGE_DISABLED: 'MEDIA_STORAGE_DISABLED',
+
   INTENT_NOT_FOUND: 'MEDIA_UPLOAD_INTENT_NOT_FOUND',
+
   INTENT_EXPIRED: 'MEDIA_UPLOAD_INTENT_EXPIRED',
+
   CONFIRMATION_INVALID: 'MEDIA_UPLOAD_CONFIRMATION_INVALID',
+
   POLICY_VIOLATION: 'MEDIA_ASSET_POLICY_VIOLATION',
+
+  /**
+   * Asset vẫn đang được một domain entity sử dụng.
+   *
+   * Ví dụ:
+   *
+   * - User avatar
+   * - Author application sample
+   * - Author banner
+   * - Story/category cover
+   * - Chapter image
+   */
+  ASSET_IN_USE: 'MEDIA_ASSET_IN_USE',
+
   DELETE_FAILED: 'MEDIA_DELETE_FAILED',
+
   WEBHOOK_SIGNATURE_INVALID: 'CLOUDINARY_WEBHOOK_SIGNATURE_INVALID',
+
   WEBHOOK_PAYLOAD_INVALID: 'CLOUDINARY_WEBHOOK_PAYLOAD_INVALID',
 } as const;

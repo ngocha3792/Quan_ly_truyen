@@ -19,9 +19,10 @@ import { MEDIA_STORAGE } from './contracts/media-storage.port';
 import { ConfigService } from '@nestjs/config';
 import { MediaPublicIdService } from './policies/media-public-id.service';
 import { MediaController } from './media.controller';
+import { ObservabilityModule } from '@/infrastructure/observability';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ObservabilityModule],
   controllers: [MediaController, CloudinaryWebhookController],
   providers: [
     cloudinaryProvider,

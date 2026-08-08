@@ -12,6 +12,11 @@ CREATE UNIQUE INDEX users_username_lower_unique
 CREATE UNIQUE INDEX author_profiles_pen_name_lower_unique
   ON author_profiles (LOWER(pen_name));
 
+-- Only one pending author application may reserve a pen name.
+CREATE UNIQUE INDEX author_applications_pending_pen_name_lower_unique
+  ON author_applications (LOWER(pen_name))
+  WHERE status = 'pending' AND pen_name IS NOT NULL;
+
 CREATE UNIQUE INDEX stories_slug_lower_unique
   ON stories (LOWER(slug));
 

@@ -1,16 +1,26 @@
-import { HttpErrorResponse } from '@angular/common/http';
-
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  map,
+  Observable,
+  of,
+  shareReplay,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs';
 
 import { getApiErrorMessage } from '../http/api-error.util';
 
 import { AuthApiService } from './auth-api.service';
 
 import { AuthRefreshService } from './auth-refresh.service';
+
+import { isTerminalAuthSessionError } from './auth-session-error.util';
 
 import {
   AuthSessionLifecycleEvent,
@@ -35,6 +45,8 @@ import { TokenStore } from './token.store';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous';
 
+export type AuthBootstrapResult = 'authenticated' | 'anonymous' | 'unavailable';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +69,21 @@ export class AuthStore {
 
   private bootstrapped = false;
 
+  /**
+   * Single-flight cho bootstrap auth trong cùng tab.
+   *
+   * Ví dụ:
+   *
+   * AppShell gọi initialize()
+   * +
+   * route guard gọi ensureInitialized()
+   *
+   * trong cùng thời điểm
+   *
+   * => chỉ có một refresh request.
+   */
+  private bootstrapInFlight$: Observable<AuthBootstrapResult> | null = null;
+
   readonly user = this.userState.asReadonly();
 
   readonly status = this.statusState.asReadonly();
@@ -73,15 +100,50 @@ export class AuthStore {
     });
   }
 
+  /**
+   * Fire-and-forget bootstrap.
+   *
+   * Dùng cho AppShell hoặc component chỉ muốn
+   * khởi động auth nhưng không cần biết kết quả.
+   */
   initialize(): void {
-    if (this.bootstrapped) {
-      return;
+    this.ensureInitialized().subscribe();
+  }
+
+  /**
+   * Bootstrap auth có terminal result rõ ràng.
+   *
+   * Đây là API guard nên sử dụng.
+   *
+   * Observable luôn emit đúng một trong:
+   *
+   * authenticated
+   * anonymous
+   * unavailable
+   *
+   * rồi complete.
+   *
+   * Nhờ vậy guard không phải ngồi chờ AuthStatus
+   * thoát khỏi idle/loading nữa.
+   */
+  ensureInitialized(): Observable<AuthBootstrapResult> {
+    if (this.statusState() === 'authenticated' && this.userState()) {
+      return of('authenticated');
     }
 
-    this.bootstrapped = true;
+    if (this.statusState() === 'anonymous' && this.bootstrapped) {
+      return of('anonymous');
+    }
+
+    if (this.bootstrapInFlight$) {
+      return this.bootstrapInFlight$;
+    }
 
     this.errorState.set(null);
 
+    /**
+     * Browser đã biết chắc không có refresh session.
+     */
     if (!this.sessionHint.shouldAttemptRefresh()) {
       this.lifecycle.clearSession(
         'bootstrap-without-session',
@@ -89,43 +151,86 @@ export class AuthStore {
         false,
       );
 
-      return;
+      return of('anonymous');
     }
 
     this.statusState.set('loading');
 
-    this.refreshService
-      .refreshAccessToken()
-      .pipe(
-        switchMap(() => this.api.me()),
+    const bootstrap$ = this.refreshService.refreshAccessToken().pipe(
+      switchMap(() => this.api.me()),
 
-        catchError((error: unknown) => {
-          if (this.isRejectedSession(error)) {
-            if (this.statusState() !== 'anonymous') {
-              this.lifecycle.invalidateSession(
-                'bootstrap-session-rejected',
-
-                true,
-              );
-            }
-
-            return EMPTY;
-          }
-
-          if (this.statusState() !== 'idle') {
-            this.lifecycle.loseAccess('bootstrap-temporarily-unavailable');
-          }
-
-          this.applyRecoverableIdleState();
-
-          this.errorState.set(getApiErrorMessage(error));
-
-          return EMPTY;
-        }),
-      )
-      .subscribe((user: CurrentUser) => {
+      map((user: CurrentUser) => {
         this.setAuthenticated(user);
-      });
+
+        return 'authenticated' as const;
+      }),
+
+      catchError((error: unknown) => {
+        /**
+         * Phase 1 vẫn giữ semantics hiện tại:
+         *
+         * 401 / 403 => rejected session.
+         *
+         * Phase 2 mới thay bằng error-code taxonomy.
+         */
+        if (this.isRejectedSession(error)) {
+          if (this.statusState() !== 'anonymous') {
+            this.lifecycle.invalidateSession(
+              'bootstrap-session-rejected',
+
+              true,
+            );
+          }
+
+          return of('anonymous' as const);
+        }
+
+        /**
+         * Network / 5xx:
+         *
+         * chưa chứng minh refresh session chết.
+         */
+        if (this.statusState() !== 'idle') {
+          this.lifecycle.loseAccess('bootstrap-temporarily-unavailable');
+        }
+
+        this.applyRecoverableIdleState();
+
+        this.errorState.set(getApiErrorMessage(error));
+
+        /**
+         * Điểm quan trọng của Phase 1:
+         *
+         * không throw,
+         * không EMPTY,
+         * không chờ signal.
+         *
+         * Guard nhận terminal result này.
+         */
+        return of('unavailable' as const);
+      }),
+
+      tap(() => {
+        /**
+         * Bootstrap luôn emit đúng một terminal result.
+         *
+         * Clear single-flight trước khi downstream
+         * nhận kết quả để user có thể retry ngay
+         * khi result = unavailable.
+         */
+        this.bootstrapInFlight$ = null;
+      }),
+
+      shareReplay({
+        bufferSize: 1,
+
+        refCount: false,
+      }),
+    );
+
+    this.bootstrapInFlight$ = bootstrap$;
+
+    return bootstrap$;
   }
 
   login(payload: LoginRequest): Observable<CurrentUser> {
@@ -306,7 +411,7 @@ export class AuthStore {
   }
 
   private isRejectedSession(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
+    return isTerminalAuthSessionError(error);
   }
 
   private setAuthenticated(user: CurrentUser): void {

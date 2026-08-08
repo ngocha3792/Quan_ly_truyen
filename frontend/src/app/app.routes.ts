@@ -84,6 +84,33 @@ export const routes: Routes = [
     ],
   },
 
+  /**
+   * Auth bootstrap tạm thời không thể xác minh session.
+   *
+   * Route này cố ý nằm NGOÀI AppShell vì AppShell
+   * tự gọi auth.initialize().
+   *
+   * Nếu đặt bên trong AppShell:
+   *
+   * guard fail
+   * → redirect trang unavailable
+   * → AppShell mount
+   * → auth.initialize()
+   * → refresh lại ngay lập tức
+   *
+   * gây retry ngoài ý muốn.
+   */
+  {
+    path: 'tam-thoi-khong-the-xac-thuc',
+
+    title: 'Tạm thời chưa thể xác minh phiên - TruyenHub',
+
+    loadComponent: () =>
+      import('./features/account/auth/pages/auth-temporarily-unavailable-page/auth-temporarily-unavailable-page.component').then(
+        (module) => module.AuthTemporarilyUnavailablePageComponent,
+      ),
+  },
+
   {
     path: '',
 

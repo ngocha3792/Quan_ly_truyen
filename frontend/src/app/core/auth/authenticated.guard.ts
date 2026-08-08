@@ -4,7 +4,11 @@ import { CanActivateFn, Router } from '@angular/router';
 
 import { map } from 'rxjs';
 
-import { createLoginRequiredUrlTree, resolveAuthenticatedUser } from './auth-guard.util';
+import {
+  createAuthTemporarilyUnavailableUrlTree,
+  createLoginRequiredUrlTree,
+  resolveAuthGuardState,
+} from './auth-guard.util';
 
 import { AuthStore } from './auth.store';
 
@@ -13,13 +17,25 @@ export const authenticatedGuard: CanActivateFn = (_route, state) => {
 
   const router = inject(Router);
 
-  return resolveAuthenticatedUser(auth).pipe(
-    map((user) => {
-      if (user) {
+  return resolveAuthGuardState(auth).pipe(
+    map((resolution) => {
+      if (resolution.kind === 'authenticated') {
         return true;
       }
 
-      return createLoginRequiredUrlTree(router, state);
+      if (resolution.kind === 'unavailable') {
+        return createAuthTemporarilyUnavailableUrlTree(
+          router,
+
+          state,
+        );
+      }
+
+      return createLoginRequiredUrlTree(
+        router,
+
+        state,
+      );
     }),
   );
 };

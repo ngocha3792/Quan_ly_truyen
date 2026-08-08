@@ -4,7 +4,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { TestBed } from '@angular/core/testing';
 
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable } from 'rxjs';
+
+import { AuthRefreshCoordinatorService } from '../auth/auth-refresh-coordinator.service';
 
 import { TokenStore } from '../auth/token.store';
 
@@ -40,6 +42,14 @@ describe('apiInterceptor', () => {
           provide: APP_RUNTIME_CONFIG,
 
           useValue: config,
+        },
+
+        {
+          provide: AuthRefreshCoordinatorService,
+
+          useValue: {
+            runExclusive: <T>(operation: () => Observable<T>): Observable<T> => operation(),
+          },
         },
       ],
     });

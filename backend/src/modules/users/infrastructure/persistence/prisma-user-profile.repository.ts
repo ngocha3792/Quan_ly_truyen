@@ -98,6 +98,29 @@ export class PrismaUserProfileRepository
          * media purpose khác hoặc media chưa READY.
          */
         if (input.avatarMediaId !== undefined && input.avatarMediaId !== null) {
+          /**
+           * Cleanup cũng phải UPDATE chính MediaAsset row này
+           * để claim DELETING.
+           *
+           * FOR UPDATE biến:
+           *
+           * validate READY
+           * -> attach avatar
+           *
+           * thành một critical section.
+           */
+          const locked = await lockMediaAssetRow(
+            transaction,
+
+            input.avatarMediaId,
+          );
+
+          if (!locked) {
+            return {
+              status: 'invalid_avatar',
+            };
+          }
+
           const avatar = await transaction.mediaAsset.findFirst({
             where: {
               id: input.avatarMediaId,
@@ -448,4 +471,23 @@ export class PrismaUserProfileRepository
       showRecentActivity,
     };
   }
+}
+
+async function lockMediaAssetRow(
+  tx: Prisma.TransactionClient,
+
+  mediaAssetId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<
+    Array<{
+      id: string;
+    }>
+  >(Prisma.sql`
+      SELECT "id"
+      FROM "media_assets"
+      WHERE "id" = ${mediaAssetId}::uuid
+      FOR UPDATE
+    `);
+
+  return rows.length === 1;
 }

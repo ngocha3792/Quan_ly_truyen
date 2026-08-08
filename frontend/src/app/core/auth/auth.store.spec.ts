@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { TestBed } from '@angular/core/testing';
 
-import { firstValueFrom, of, throwError } from 'rxjs';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 
 import { AuthApiService } from './auth-api.service';
 
@@ -159,6 +159,26 @@ describe('AuthStore', () => {
         () =>
           new HttpErrorResponse({
             status: 401,
+
+            statusText: 'Unauthorized',
+
+            error: {
+              success: false,
+
+              error: {
+                code: 'AUTH_INVALID_REFRESH_TOKEN',
+
+                message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn',
+
+                retryable: false,
+              },
+
+              requestId: 'phase-2-bootstrap-invalid-refresh',
+
+              timestamp: '2026-08-08T00:00:00.000Z',
+
+              path: '/api/v1/auth/refresh',
+            },
           }),
       ),
     );
@@ -205,6 +225,72 @@ describe('AuthStore', () => {
     expect(refreshService.refreshAccessToken).toHaveBeenCalledTimes(2);
 
     expect(store.status()).toBe('authenticated');
+  });
+
+  it('ensureInitialized trả unavailable khi bootstrap lỗi tạm thời', async () => {
+    sessionHint.shouldAttemptRefresh.mockReturnValue(true);
+
+    refreshService.refreshAccessToken.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 503,
+
+            statusText: 'Service Unavailable',
+          }),
+      ),
+    );
+
+    const result = await firstValueFrom(store.ensureInitialized());
+
+    expect(result).toBe('unavailable');
+
+    expect(store.status()).toBe('idle');
+
+    expect(store.user()).toBeNull();
+
+    expect(sessionHint.markSessionAbsent).not.toHaveBeenCalled();
+  });
+
+  it('nhiều caller bootstrap đồng thời phải dùng chung một request', async () => {
+    const user = createCurrentUser();
+
+    const refreshResult$ = new Subject<string>();
+
+    sessionHint.shouldAttemptRefresh.mockReturnValue(true);
+
+    refreshService.refreshAccessToken.mockReturnValue(refreshResult$.asObservable());
+
+    api.me.mockReturnValue(of(user));
+
+    const bootstrapA$ = store.ensureInitialized();
+
+    const bootstrapB$ = store.ensureInitialized();
+
+    /**
+     * Chính xác cùng single-flight Observable.
+     */
+    expect(bootstrapA$).toBe(bootstrapB$);
+
+    expect(refreshService.refreshAccessToken).toHaveBeenCalledTimes(1);
+
+    const resultAPromise = firstValueFrom(bootstrapA$);
+
+    const resultBPromise = firstValueFrom(bootstrapB$);
+
+    refreshResult$.next('phase-1-access-token');
+
+    refreshResult$.complete();
+
+    await expect(resultAPromise).resolves.toBe('authenticated');
+
+    await expect(resultBPromise).resolves.toBe('authenticated');
+
+    expect(api.me).toHaveBeenCalledTimes(1);
+
+    expect(store.status()).toBe('authenticated');
+
+    expect(store.user()).toEqual(user);
   });
 
   it('bootstrap chỉ được chạy một lần', () => {
@@ -303,6 +389,24 @@ describe('AuthStore', () => {
             status: 401,
 
             statusText: 'Unauthorized',
+
+            error: {
+              success: false,
+
+              error: {
+                code: 'AUTH_INVALID_REFRESH_TOKEN',
+
+                message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn',
+
+                retryable: false,
+              },
+
+              requestId: 'phase-2-refresh-session-rejected',
+
+              timestamp: '2026-08-08T00:00:00.000Z',
+
+              path: '/api/v1/auth/refresh',
+            },
           }),
       ),
     );
