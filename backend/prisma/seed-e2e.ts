@@ -478,11 +478,10 @@ function sha256(
 main()
     .catch(
         (
-            error: unknown,
+            _error: unknown,
         ) => {
             console.error(
                 'Không thể chuẩn bị Playwright E2E user.',
-                error,
             );
 
             process.exitCode =
