@@ -222,6 +222,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   private computeRequestHash(request: Request): string {
     // Express deliberately types parsed body as any; it is serialized as opaque input here.
+    const fileFingerprints = this.computeFileFingerprints(request);
 
     const payload = {
       path: this.routeScope(request),
@@ -229,11 +230,75 @@ export class IdempotencyInterceptor implements NestInterceptor {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       body: request.body ?? {},
       query: request.query ?? {},
+      ...(fileFingerprints === undefined ? {} : { files: fileFingerprints }),
     };
 
     return createHash('sha256')
       .update(this.stableSerialize(payload))
       .digest('hex');
+  }
+
+  private computeFileFingerprints(
+    request: Request,
+  ): Record<string, unknown> | undefined {
+    const requestWithFiles = request as unknown as {
+      file?: unknown;
+      files?: unknown;
+    };
+    const fingerprints: Record<string, unknown> = {};
+
+    if (requestWithFiles.file !== undefined) {
+      fingerprints.file = this.computeFileFingerprint(requestWithFiles.file);
+    }
+
+    if (Array.isArray(requestWithFiles.files)) {
+      fingerprints.files = requestWithFiles.files.map((file) =>
+        this.computeFileFingerprint(file),
+      );
+    } else if (
+      requestWithFiles.files &&
+      typeof requestWithFiles.files === 'object'
+    ) {
+      fingerprints.files = Object.fromEntries(
+        Object.entries(requestWithFiles.files).map(([fieldName, files]) => [
+          fieldName,
+          Array.isArray(files)
+            ? files.map((file) => this.computeFileFingerprint(file))
+            : this.computeFileFingerprint(files),
+        ]),
+      );
+    }
+
+    return Object.keys(fingerprints).length > 0 ? fingerprints : undefined;
+  }
+
+  private computeFileFingerprint(value: unknown): unknown {
+    if (!value || typeof value !== 'object') return value;
+
+    const file = value as Record<string, unknown>;
+    const fingerprint: Record<string, unknown> = {};
+    const metadataFields = [
+      ['fieldName', 'fieldName', 'fieldname'],
+      ['originalName', 'originalName', 'originalname'],
+      ['mimeType', 'mimeType', 'mimetype'],
+      ['encoding', 'encoding', 'encoding'],
+      ['size', 'size', 'size'],
+    ] as const;
+
+    for (const [outputName, camelCaseName, multerName] of metadataFields) {
+      const metadata = file[camelCaseName] ?? file[multerName];
+      if (typeof metadata === 'string' || typeof metadata === 'number') {
+        fingerprint[outputName] = metadata;
+      }
+    }
+
+    if (file.buffer instanceof Uint8Array) {
+      fingerprint.contentSha256 = createHash('sha256')
+        .update(file.buffer)
+        .digest('hex');
+    }
+
+    return fingerprint;
   }
 
   private computeStorageKey(request: Request, rawKey: string): string {

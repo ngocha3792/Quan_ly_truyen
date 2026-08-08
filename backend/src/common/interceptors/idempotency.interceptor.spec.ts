@@ -151,6 +151,39 @@ describe('IdempotencyInterceptor', () => {
     );
   });
 
+  it('keeps file retry fingerprints stable and detects changed content', async () => {
+    request.file = {
+      fieldname: 'sample',
+      originalname: 'chapter.pdf',
+      mimetype: 'application/pdf',
+      encoding: '7bit',
+      size: 4,
+      path: '/tmp/upload-a',
+      buffer: Buffer.from('same'),
+    };
+
+    await execute();
+    const firstHash = store.acquire.mock.calls[0][1] as string;
+
+    request.file = {
+      ...request.file,
+      path: '/tmp/upload-b',
+      buffer: Buffer.from('same'),
+    };
+    await execute();
+    const retryHash = store.acquire.mock.calls[1][1] as string;
+
+    request.file = {
+      ...request.file,
+      buffer: Buffer.from('else'),
+    };
+    await execute();
+    const changedContentHash = store.acquire.mock.calls[2][1] as string;
+
+    expect(retryHash).toBe(firstHash);
+    expect(changedContentHash).not.toBe(firstHash);
+  });
+
   it('replays a completed response with status and headers', async () => {
     store.acquire.mockImplementation((_key: string, requestHash: string) =>
       Promise.resolve({
@@ -240,6 +273,36 @@ describe('IdempotencyInterceptor', () => {
         processingLeaseTtlSeconds: 120,
       }),
     );
+    errorLog.mockRestore();
+  });
+
+  it('keeps the processing lease after a post-commit store failure', async () => {
+    store.saveResult.mockRejectedValue(new Error('redis unavailable'));
+    const errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    let businessCommits = 0;
+    const next = {
+      handle: jest.fn().mockImplementation(() => {
+        businessCommits += 1;
+        return of({ businessCommits });
+      }),
+    };
+
+    const firstResult$ = await interceptor().intercept(context, next);
+    await expect(lastValueFrom(firstResult$)).resolves.toEqual({
+      businessCommits: 1,
+    });
+
+    store.acquire.mockResolvedValueOnce({
+      acquired: false,
+      existingRecord: { state: 'PROCESSING' },
+    });
+
+    await expect(interceptor().intercept(context, next)).rejects.toBeInstanceOf(
+      IdempotencyConflictException,
+    );
+    expect(businessCommits).toBe(1);
+    expect(next.handle).toHaveBeenCalledTimes(1);
+    expect(store.markFailed).not.toHaveBeenCalled();
     errorLog.mockRestore();
   });
 
