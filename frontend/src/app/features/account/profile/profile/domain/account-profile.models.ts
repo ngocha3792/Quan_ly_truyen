@@ -35,8 +35,7 @@ export interface UpdateAccountProfileRequest {
   readonly avatarMediaId: string | null;
 }
 
-export type UpdateAccountProfileResponse =
-  AccountProfile;
+export type UpdateAccountProfileResponse = AccountProfile;
 
 export interface AccountProfileFormValue {
   readonly displayName: string;
@@ -65,8 +64,7 @@ export interface ProfileCompletion {
 
   readonly message: string;
 
-  readonly items:
-  readonly ProfileCompletionItem[];
+  readonly items: readonly ProfileCompletionItem[];
 }
 
 export interface MediaUploadIntent {
@@ -82,10 +80,7 @@ export interface MediaUploadIntent {
 
   readonly timestamp: number;
 
-  readonly resourceType:
-  'image' |
-  'video' |
-  'raw';
+  readonly resourceType: 'image' | 'video' | 'raw';
 
   readonly confirmExpiresAt: string;
 
@@ -109,10 +104,7 @@ export interface CloudinaryUploadResponse {
 
   readonly signature: string;
 
-  readonly resource_type:
-  'image' |
-  'video' |
-  'raw';
+  readonly resource_type: 'image' | 'video' | 'raw';
 
   readonly secure_url: string;
 }
@@ -124,18 +116,13 @@ export interface ConfirmedMedia {
 
   readonly status: string;
 
-  readonly resourceType:
-  string | null;
+  readonly resourceType: string | null;
 
-  readonly deliveryUrl:
-  string | null;
+  readonly deliveryUrl: string | null;
 
-  readonly width:
-  number | null;
+  readonly width: number | null;
 
-  readonly height:
-  number | null;
+  readonly height: number | null;
 
-  readonly sizeBytes:
-  string | null;
+  readonly sizeBytes: string | null;
 }

@@ -357,15 +357,7 @@ function createDescription(
       'sign_in',
     ])
   ) {
-    return [
-      deviceName,
-
-      event.ipAddress
-        ? `IP ${event.ipAddress}`
-        : null,
-
-      location,
-    ]
+    return [deviceName, event.ipAddress ? `IP ${event.ipAddress}` : null, location]
       .filter(Boolean)
       .join(' • ');
   }

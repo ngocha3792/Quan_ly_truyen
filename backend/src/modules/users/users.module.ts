@@ -1,63 +1,47 @@
-import {
-    Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
+
+import { PrismaModule } from '@/infrastructure/database';
 
 import {
-    PrismaModule,
-} from '@/infrastructure/database';
-
-import {
-    GetCurrentUserPreferencesQueryHandler,
-    GetCurrentUserProfileQueryHandler,
-    USER_PROFILE_PERSISTENCE_PORT,
-    USER_PROFILE_READER_PORT,
-    UpdateCurrentUserPreferencesCommandHandler,
-    UpdateCurrentUserProfileCommandHandler,
+  GetCurrentUserPreferencesQueryHandler,
+  GetCurrentUserProfileQueryHandler,
+  USER_PROFILE_PERSISTENCE_PORT,
+  USER_PROFILE_READER_PORT,
+  UpdateCurrentUserPreferencesCommandHandler,
+  UpdateCurrentUserProfileCommandHandler,
 } from './application';
 
-import {
-    PrismaUserProfileRepository,
-} from './infrastructure';
+import { PrismaUserProfileRepository } from './infrastructure';
 
-import {
-    UsersController,
-} from './presentation/http';
+import { UsersController } from './presentation/http';
 
 @Module({
-    imports: [
-        PrismaModule,
-    ],
+  imports: [PrismaModule],
 
-    controllers: [
-        UsersController,
-    ],
+  controllers: [UsersController],
 
-    providers: [
-        GetCurrentUserProfileQueryHandler,
+  providers: [
+    GetCurrentUserProfileQueryHandler,
 
-        GetCurrentUserPreferencesQueryHandler,
+    GetCurrentUserPreferencesQueryHandler,
 
-        UpdateCurrentUserProfileCommandHandler,
+    UpdateCurrentUserProfileCommandHandler,
 
-        UpdateCurrentUserPreferencesCommandHandler,
+    UpdateCurrentUserPreferencesCommandHandler,
 
-        PrismaUserProfileRepository,
+    PrismaUserProfileRepository,
 
-        {
-            provide:
-                USER_PROFILE_READER_PORT,
+    {
+      provide: USER_PROFILE_READER_PORT,
 
-            useExisting:
-                PrismaUserProfileRepository,
-        },
+      useExisting: PrismaUserProfileRepository,
+    },
 
-        {
-            provide:
-                USER_PROFILE_PERSISTENCE_PORT,
+    {
+      provide: USER_PROFILE_PERSISTENCE_PORT,
 
-            useExisting:
-                PrismaUserProfileRepository,
-        },
-    ],
+      useExisting: PrismaUserProfileRepository,
+    },
+  ],
 })
-export class UsersModule { }
+export class UsersModule {}

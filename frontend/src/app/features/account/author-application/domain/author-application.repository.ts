@@ -4,13 +4,15 @@ import {
   AuthorApplicationConfig,
   AuthorApplicationDraft,
   AuthorApplicationPayload,
-  AuthorApplicationResult,
+  AuthorApplicationRecord,
 } from './author-application.models';
 
 export abstract class AuthorApplicationRepository {
   abstract getConfig(): Observable<AuthorApplicationConfig>;
 
-  abstract saveDraft(draft: AuthorApplicationDraft): Observable<void>;
+  abstract getMine(): Observable<AuthorApplicationRecord | null>;
 
-  abstract submit(payload: AuthorApplicationPayload): Observable<AuthorApplicationResult>;
+  abstract saveDraft(draft: AuthorApplicationDraft): Observable<AuthorApplicationRecord>;
+
+  abstract submit(payload: AuthorApplicationPayload): Observable<AuthorApplicationRecord>;
 }

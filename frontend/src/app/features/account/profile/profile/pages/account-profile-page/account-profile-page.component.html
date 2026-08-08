@@ -5,30 +5,37 @@
 </header>
 
 @if (store.error()) {
-<div class="alert error-alert">
-  {{ store.error() }}
-</div>
+  <div class="alert error-alert">
+    {{ store.error() }}
+  </div>
 }
 
 @if (store.success()) {
-<div class="alert success-alert">
-  {{ store.success() }}
-</div>
+  <div class="alert success-alert">
+    {{ store.success() }}
+  </div>
 }
 
 @if (preferencesStore.error()) {
-<div class="alert error-alert">
-  {{ preferencesStore.error() }}
-</div>
+  <div class="alert error-alert">
+    {{ preferencesStore.error() }}
+  </div>
 }
 
 @if (store.user(); as currentUser) {
-<div class="profile-layout">
-  <app-account-profile-form [user]="currentUser" [membershipLabel]="store.membershipLabel()" [saving]="store.saving()"
-    [avatarChanged]="avatarFileState() !== null" [preferences]="preferencesStore.preferences()"
-    (saveRequested)="save($event)" (avatarSelected)="setAvatar($event)"
-    (preferencesChanged)="preferencesStore.update($event)" (cancelRequested)="cancel()" />
+  <div class="profile-layout">
+    <app-account-profile-form
+      [user]="currentUser"
+      [membershipLabel]="store.membershipLabel()"
+      [saving]="store.saving()"
+      [avatarChanged]="avatarFileState() !== null"
+      [preferences]="preferencesStore.preferences()"
+      (saveRequested)="save($event)"
+      (avatarSelected)="setAvatar($event)"
+      (preferencesChanged)="preferencesStore.update($event)"
+      (cancelRequested)="cancel()"
+    />
 
-  <app-profile-completion-card [completion]="store.completion()" />
-</div>
+    <app-profile-completion-card [completion]="store.completion()" />
+  </div>
 }

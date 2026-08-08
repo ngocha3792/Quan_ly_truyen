@@ -6,6 +6,8 @@ import {
   Input,
   Output,
   signal,
+  OnChanges,
+  SimpleChanges,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -824,6 +826,9 @@ import {
 export class AuthorApplicationFormComponent {
   private readonly formBuilder = inject(FormBuilder);
 
+  @Input()
+  draft: AuthorApplicationDraft | null = null;
+
   @Input({ required: true })
   config!: AuthorApplicationConfig;
 
@@ -881,6 +886,42 @@ export class AuthorApplicationFormComponent {
     const control = this.form.controls[controlName];
 
     return control.touched && control.hasError(errorName);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['draft'] || !this.draft) {
+      return;
+    }
+
+    this.form.patchValue(
+      {
+        penName: this.draft.penName,
+
+        fullName: this.draft.fullName,
+
+        email: this.draft.email,
+
+        phone: this.draft.phone,
+
+        portfolioUrl: this.draft.portfolioUrl,
+
+        primaryGenre: this.draft.primaryGenre,
+
+        experience: this.draft.experience,
+
+        introduction: this.draft.introduction,
+
+        firstWorkSynopsis: this.draft.firstWorkSynopsis,
+
+        acceptedTerms: this.draft.acceptedTerms,
+      },
+
+      {
+        emitEvent: false,
+      },
+    );
+
+    this.form.markAsPristine();
   }
 
   protected handleFileInput(event: Event): void {

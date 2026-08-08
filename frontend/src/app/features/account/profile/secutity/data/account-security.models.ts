@@ -63,19 +63,10 @@ export interface DeleteAccountRequest {
   readonly confirmation: string;
 }
 
-export type SecurityLevel =
-  | 'excellent'
-  | 'good'
-  | 'medium'
-  | 'low';
+export type SecurityLevel = 'excellent' | 'good' | 'medium' | 'low';
 
 export interface SecurityScoreItem {
-  readonly id:
-  | 'password'
-  | 'mfa'
-  | 'recovery-email'
-  | 'security-questions'
-  | 'trusted-device';
+  readonly id: 'password' | 'mfa' | 'recovery-email' | 'security-questions' | 'trusted-device';
 
   readonly label: string;
 
@@ -96,8 +87,7 @@ export interface SecurityScore {
   readonly items: readonly SecurityScoreItem[];
 }
 
-export const EMPTY_SECURITY_OVERVIEW: AccountSecurityOverview =
-{
+export const EMPTY_SECURITY_OVERVIEW: AccountSecurityOverview = {
   passwordConfigured: true,
 
   passwordUpdatedAt: null,

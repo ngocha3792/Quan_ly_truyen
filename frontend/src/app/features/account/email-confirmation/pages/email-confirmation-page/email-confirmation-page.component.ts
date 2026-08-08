@@ -1,17 +1,8 @@
-import {
-  Location,
-} from '@angular/common';
+import { Location } from '@angular/common';
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
-import {
-  ActivatedRoute,
-} from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 import { AuthFlowPageShellComponent } from '../../../shared/ui/auth-flow-page-shell/auth-flow-page-shell.component';
 
@@ -22,45 +13,27 @@ import { EmailConfirmationStore } from '../../data-access/email-confirmation.sto
 import { EmailConfirmationCardComponent } from '../../ui/email-confirmation-card/email-confirmation-card.component';
 
 @Component({
-  selector:
-    'app-email-confirmation-page',
+  selector: 'app-email-confirmation-page',
 
   standalone: true,
 
-  imports: [
-    AuthFlowPageShellComponent,
+  imports: [AuthFlowPageShellComponent, EmailConfirmationCardComponent],
 
-    EmailConfirmationCardComponent,
-  ],
+  providers: [...provideEmailConfirmation(), EmailConfirmationStore],
 
-  providers: [
-    ...provideEmailConfirmation(),
+  templateUrl: './email-confirmation-page.component.html',
 
-    EmailConfirmationStore,
-  ],
-
-  templateUrl:
-    './email-confirmation-page.component.html',
-
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmailConfirmationPageComponent
-  implements OnInit {
-  private readonly route =
-    inject(ActivatedRoute);
+export class EmailConfirmationPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
 
-  private readonly location =
-    inject(Location);
+  private readonly location = inject(Location);
 
-  protected readonly store =
-    inject(EmailConfirmationStore);
+  protected readonly store = inject(EmailConfirmationStore);
 
   ngOnInit(): void {
-    const token =
-      this.route.snapshot.queryParamMap
-        .get('token')
-        ?.trim() ?? '';
+    const token = this.route.snapshot.queryParamMap.get('token')?.trim() ?? '';
 
     /**
      * Token đổi email là credential nhạy cảm.
@@ -71,9 +44,7 @@ export class EmailConfirmationPageComponent
      * - giảm nguy cơ lộ qua screenshot
      * - giảm nguy cơ copy URL chứa token
      */
-    this.location.replaceState(
-      '/change-email/confirm',
-    );
+    this.location.replaceState('/change-email/confirm');
 
     this.store.confirm(token);
   }

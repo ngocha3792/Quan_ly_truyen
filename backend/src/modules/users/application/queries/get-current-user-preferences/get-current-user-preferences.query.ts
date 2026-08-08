@@ -1,5 +1,3 @@
 export class GetCurrentUserPreferencesQuery {
-    constructor(
-        readonly userId: string | undefined,
-    ) { }
+  constructor(readonly userId: string | undefined) {}
 }

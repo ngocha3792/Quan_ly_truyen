@@ -28,6 +28,15 @@ enum AuthorVerificationStatus {
   @@map("author_verification_status")
 }
 
+enum AuthorApplicationStatus {
+  DRAFT    @map("draft")
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+
+  @@map("author_application_status")
+}
+
 enum TokenType {
   EMAIL_VERIFICATION @map("email_verification")
   PASSWORD_RESET     @map("password_reset")
@@ -262,57 +271,59 @@ enum InboundWebhookStatus {
 // ============================================================
 
 model User {
-  id              String        @id @default(uuid()) @db.Uuid
-  email           String        @unique @db.VarChar(320)
-  username        String        @unique @db.VarChar(50)
-  passwordHash    String?       @map("password_hash") @db.VarChar(255)
-  displayName     String        @map("display_name") @db.VarChar(120)
-  bio             String?       @db.Text
-  status          AccountStatus @default(ACTIVE)
-  emailVerifiedAt  DateTime?     @map("email_verified_at") @db.Timestamptz(3)
-  passwordUpdatedAt DateTime?    @map("password_updated_at") @db.Timestamptz(3)
-  lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz(3)
-  avatarMediaId   String?       @map("avatar_media_id") @db.Uuid
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  id                String        @id @default(uuid()) @db.Uuid
+  email             String        @unique @db.VarChar(320)
+  username          String        @unique @db.VarChar(50)
+  passwordHash      String?       @map("password_hash") @db.VarChar(255)
+  displayName       String        @map("display_name") @db.VarChar(120)
+  bio               String?       @db.Text
+  status            AccountStatus @default(ACTIVE)
+  emailVerifiedAt   DateTime?     @map("email_verified_at") @db.Timestamptz(3)
+  passwordUpdatedAt DateTime?     @map("password_updated_at") @db.Timestamptz(3)
+  lastLoginAt       DateTime?     @map("last_login_at") @db.Timestamptz(3)
+  avatarMediaId     String?       @map("avatar_media_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  avatarMedia            MediaAsset?             @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
-  authorProfile          AuthorProfile?
-  oauthAccounts          OAuthAccount[]
-  adminMfaCredential     AdminMfaCredential?
-  mfaCredentials         MfaCredential[]
-  recoveryEmail          RecoveryEmail?
-  securityQuestions      UserSecurityQuestion[]
-  trustedDevices         TrustedDevice[]
-  accountDeletionRequests AccountDeletionRequest[]
-  sessions               Session[]
-  tokens                 UserToken[]
-  userRoles              UserRole[]              @relation("UserRoles")
-  rolesAssigned          UserRole[]              @relation("AssignedUserRoles")
-  uploadedMedia          MediaAsset[]            @relation("MediaUploader")
-  storyContributions     StoryContributor[]
-  chaptersCreated        Chapter[]               @relation("ChapterCreatedBy")
-  chaptersUpdated        Chapter[]               @relation("ChapterUpdatedBy")
-  chapterVersions        ChapterVersion[]
-  comments               Comment[]
-  commentReactions       CommentReaction[]
-  ratings                Rating[]
-  libraryEntries         LibraryEntry[]
-  storyFollows           StoryFollow[]
-  readingProgresses      ReadingProgress[]
-  readingSessions        ReadingSession[]
-  readingBookmarks       ReadingBookmark[]
-  reportsFiled           Report[]                @relation("ReportsFiled")
-  reportsAssigned        Report[]                @relation("ReportsAssigned")
-  reportedInReports      Report[]                @relation("ReportedUserReports")
-  storySubmissions       StorySubmission[]       @relation("StorySubmittedBy")
-  storyReviews           StorySubmission[]       @relation("StoryReviewedBy")
-  moderationActions      ModerationAction[]      @relation("ModerationActor")
-  moderationTarget       ModerationAction[]      @relation("ModerationTargetUser")
-  notifications          Notification[]
-  notificationPreference NotificationPreference?
-  auditLogs              AuditLog[]
+  authorApplication          AuthorApplication?       @relation("AuthorApplicationOwner")
+  authorApplicationsReviewed AuthorApplication[]      @relation("AuthorApplicationReviewer")
+  avatarMedia                MediaAsset?              @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  authorProfile              AuthorProfile?
+  oauthAccounts              OAuthAccount[]
+  adminMfaCredential         AdminMfaCredential?
+  mfaCredentials             MfaCredential[]
+  recoveryEmail              RecoveryEmail?
+  securityQuestions          UserSecurityQuestion[]
+  trustedDevices             TrustedDevice[]
+  accountDeletionRequests    AccountDeletionRequest[]
+  sessions                   Session[]
+  tokens                     UserToken[]
+  userRoles                  UserRole[]               @relation("UserRoles")
+  rolesAssigned              UserRole[]               @relation("AssignedUserRoles")
+  uploadedMedia              MediaAsset[]             @relation("MediaUploader")
+  storyContributions         StoryContributor[]
+  chaptersCreated            Chapter[]                @relation("ChapterCreatedBy")
+  chaptersUpdated            Chapter[]                @relation("ChapterUpdatedBy")
+  chapterVersions            ChapterVersion[]
+  comments                   Comment[]
+  commentReactions           CommentReaction[]
+  ratings                    Rating[]
+  libraryEntries             LibraryEntry[]
+  storyFollows               StoryFollow[]
+  readingProgresses          ReadingProgress[]
+  readingSessions            ReadingSession[]
+  readingBookmarks           ReadingBookmark[]
+  reportsFiled               Report[]                 @relation("ReportsFiled")
+  reportsAssigned            Report[]                 @relation("ReportsAssigned")
+  reportedInReports          Report[]                 @relation("ReportedUserReports")
+  storySubmissions           StorySubmission[]        @relation("StorySubmittedBy")
+  storyReviews               StorySubmission[]        @relation("StoryReviewedBy")
+  moderationActions          ModerationAction[]       @relation("ModerationActor")
+  moderationTarget           ModerationAction[]       @relation("ModerationTargetUser")
+  notifications              Notification[]
+  notificationPreference     NotificationPreference?
+  auditLogs                  AuditLog[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -352,18 +363,18 @@ model AdminMfaCredential {
 }
 
 model MfaCredential {
-  id               String              @id @default(uuid()) @db.Uuid
-  userId           String              @map("user_id") @db.Uuid
-  method           MfaMethod           @default(TOTP)
-  status           MfaCredentialStatus @default(PENDING)
-  encryptedSecret  String              @map("encrypted_secret") @db.Text
-  enrollmentExpiresAt DateTime?         @map("enrollment_expires_at") @db.Timestamptz(3)
-  enrolledDeviceName String?            @map("enrolled_device_name") @db.VarChar(200)
-  lastUsedStep     BigInt?             @map("last_used_step")
-  enabledAt        DateTime?           @map("enabled_at") @db.Timestamptz(3)
-  disabledAt       DateTime?           @map("disabled_at") @db.Timestamptz(3)
-  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                  String              @id @default(uuid()) @db.Uuid
+  userId              String              @map("user_id") @db.Uuid
+  method              MfaMethod           @default(TOTP)
+  status              MfaCredentialStatus @default(PENDING)
+  encryptedSecret     String              @map("encrypted_secret") @db.Text
+  enrollmentExpiresAt DateTime?           @map("enrollment_expires_at") @db.Timestamptz(3)
+  enrolledDeviceName  String?             @map("enrolled_device_name") @db.VarChar(200)
+  lastUsedStep        BigInt?             @map("last_used_step")
+  enabledAt           DateTime?           @map("enabled_at") @db.Timestamptz(3)
+  disabledAt          DateTime?           @map("disabled_at") @db.Timestamptz(3)
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   recoveryCodes MfaRecoveryCode[]
@@ -423,14 +434,14 @@ model SecurityQuestion {
 }
 
 model UserSecurityQuestion {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  questionId   String   @map("question_id") @db.Uuid
-  answerHash   String   @map("answer_hash") @db.VarChar(255)
-  position     Int      @db.SmallInt
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  questionId     String    @map("question_id") @db.Uuid
+  answerHash     String    @map("answer_hash") @db.VarChar(255)
+  position       Int       @db.SmallInt
   lastVerifiedAt DateTime? @map("last_verified_at") @db.Timestamptz(3)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   question SecurityQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
@@ -465,18 +476,18 @@ model TrustedDevice {
 }
 
 model AccountDeletionRequest {
-  id             String                @id @default(uuid()) @db.Uuid
-  userId         String                @map("user_id") @db.Uuid
-  status         AccountDeletionStatus @default(REQUESTED)
-  reason         String?               @db.Text
-  requestedAt    DateTime              @default(now()) @map("requested_at") @db.Timestamptz(3)
-  scheduledFor   DateTime              @map("scheduled_for") @db.Timestamptz(3)
-  canceledAt     DateTime?             @map("canceled_at") @db.Timestamptz(3)
-  completedAt    DateTime?             @map("completed_at") @db.Timestamptz(3)
-  requestIp      String?               @map("request_ip") @db.VarChar(45)
-  requestUserAgent String?             @map("request_user_agent") @db.Text
-  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @map("user_id") @db.Uuid
+  status           AccountDeletionStatus @default(REQUESTED)
+  reason           String?               @db.Text
+  requestedAt      DateTime              @default(now()) @map("requested_at") @db.Timestamptz(3)
+  scheduledFor     DateTime              @map("scheduled_for") @db.Timestamptz(3)
+  canceledAt       DateTime?             @map("canceled_at") @db.Timestamptz(3)
+  completedAt      DateTime?             @map("completed_at") @db.Timestamptz(3)
+  requestIp        String?               @map("request_ip") @db.VarChar(45)
+  requestUserAgent String?               @map("request_user_agent") @db.Text
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -495,18 +506,18 @@ model Session {
   mfaVerifiedAt        DateTime? @map("mfa_verified_at") @db.Timestamptz(3)
   trustedDeviceId      String?   @map("trusted_device_id") @db.Uuid
 
-  deviceId             String?   @map("device_id") @db.VarChar(120)
-  deviceName           String?   @map("device_name") @db.VarChar(200)
-  ipAddress             String?   @map("ip_address") @db.VarChar(45)
-  userAgent             String?   @map("user_agent") @db.Text
+  deviceId   String? @map("device_id") @db.VarChar(120)
+  deviceName String? @map("device_name") @db.VarChar(200)
+  ipAddress  String? @map("ip_address") @db.VarChar(45)
+  userAgent  String? @map("user_agent") @db.Text
 
-  lastUsedAt            DateTime? @map("last_used_at") @db.Timestamptz(3)
-  expiresAt             DateTime  @map("expires_at") @db.Timestamptz(3)
-  revokedAt             DateTime? @map("revoked_at") @db.Timestamptz(3)
-  revokedReason         String?   @map("revoked_reason") @db.VarChar(120)
+  lastUsedAt    DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason String?   @map("revoked_reason") @db.VarChar(120)
 
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   trustedDevice TrustedDevice? @relation(fields: [trustedDeviceId], references: [id], onDelete: SetNull)
@@ -600,6 +611,58 @@ model RolePermission {
 // ============================================================
 // AUTHORS, MEDIA, STORIES, CHAPTERS
 // ============================================================
+model AuthorApplication {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @unique @map("user_id") @db.Uuid
+
+  status AuthorApplicationStatus @default(DRAFT)
+
+  penName String? @map("pen_name") @db.VarChar(40)
+
+  fullName String? @map("full_name") @db.VarChar(80)
+
+  email String? @db.VarChar(320)
+
+  phone String? @db.VarChar(30)
+
+  portfolioUrl String? @map("portfolio_url") @db.VarChar(500)
+
+  primaryGenre String? @map("primary_genre") @db.VarChar(80)
+
+  experience String? @db.VarChar(50)
+
+  introduction String? @db.Text
+
+  firstWorkSynopsis String? @map("first_work_synopsis") @db.Text
+
+  acceptedTerms Boolean @default(false) @map("accepted_terms")
+
+  sampleMediaId String? @unique @map("sample_media_id") @db.Uuid
+
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz(3)
+
+  reviewedAt DateTime? @map("reviewed_at") @db.Timestamptz(3)
+
+  reviewedById String? @map("reviewed_by_id") @db.Uuid
+
+  rejectionReason String? @map("rejection_reason") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation("AuthorApplicationOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  reviewedBy User? @relation("AuthorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  sampleMedia MediaAsset? @relation("AuthorApplicationSample", fields: [sampleMediaId], references: [id], onDelete: SetNull)
+
+  @@index([status, submittedAt])
+  @@index([reviewedById])
+  @@index([updatedAt])
+  @@map("author_applications")
+}
 
 model AuthorProfile {
   userId             String                   @id @map("user_id") @db.Uuid
@@ -630,47 +693,48 @@ model AuthorProfile {
 }
 
 model MediaAsset {
-  id                    String             @id @default(uuid()) @db.Uuid
-  uploaderId            String?            @map("uploader_id") @db.Uuid
-  purpose               MediaPurpose
-  status                MediaStatus        @default(PENDING)
-  storageProvider       String             @map("storage_provider") @db.VarChar(50)
-  bucket                String?            @db.VarChar(120)
-  storageKey            String?            @unique @map("storage_key") @db.VarChar(1024)
-  publicUrl             String?            @map("public_url") @db.VarChar(2048)
-  providerAssetId       String?            @unique @map("provider_asset_id") @db.VarChar(255)
-  publicId              String?            @unique @map("public_id") @db.VarChar(512)
-  version               Int?
-  resourceType          MediaResourceType? @map("resource_type")
-  deliveryType          String?            @map("delivery_type") @db.VarChar(50)
-  format                String?            @db.VarChar(30)
-  assetFolder           String?            @map("asset_folder") @db.VarChar(1024)
-  secureUrl             String?            @map("secure_url") @db.VarChar(2048)
-  originalName          String?            @map("original_name") @db.VarChar(255)
-  mimeType              String?            @map("mime_type") @db.VarChar(120)
-  sizeBytes             BigInt?            @map("size_bytes")
-  checksumSha256        String?            @map("checksum_sha256") @db.VarChar(64)
-  width                 Int?
-  height                Int?
-  duration              Decimal?           @db.Decimal(12, 3)
-  uploadExpiresAt       DateTime?          @map("upload_expires_at") @db.Timestamptz(3)
-  uploadedAt            DateTime?          @map("uploaded_at") @db.Timestamptz(3)
-  readyAt               DateTime?          @map("ready_at") @db.Timestamptz(3)
-  processingStartedAt   DateTime?          @map("processing_started_at") @db.Timestamptz(3)
-  deleteAttempts        Int                @default(0) @map("delete_attempts")
-  nextDeleteAttemptAt   DateTime?          @map("next_delete_attempt_at") @db.Timestamptz(3)
-  lastProviderErrorCode String?            @map("last_provider_error_code") @db.VarChar(120)
-  metadata              Json?
-  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  id                       String              @id @default(uuid()) @db.Uuid
+  uploaderId               String?             @map("uploader_id") @db.Uuid
+  purpose                  MediaPurpose
+  status                   MediaStatus         @default(PENDING)
+  storageProvider          String              @map("storage_provider") @db.VarChar(50)
+  bucket                   String?             @db.VarChar(120)
+  storageKey               String?             @unique @map("storage_key") @db.VarChar(1024)
+  publicUrl                String?             @map("public_url") @db.VarChar(2048)
+  providerAssetId          String?             @unique @map("provider_asset_id") @db.VarChar(255)
+  publicId                 String?             @unique @map("public_id") @db.VarChar(512)
+  version                  Int?
+  resourceType             MediaResourceType?  @map("resource_type")
+  deliveryType             String?             @map("delivery_type") @db.VarChar(50)
+  format                   String?             @db.VarChar(30)
+  assetFolder              String?             @map("asset_folder") @db.VarChar(1024)
+  secureUrl                String?             @map("secure_url") @db.VarChar(2048)
+  originalName             String?             @map("original_name") @db.VarChar(255)
+  mimeType                 String?             @map("mime_type") @db.VarChar(120)
+  sizeBytes                BigInt?             @map("size_bytes")
+  checksumSha256           String?             @map("checksum_sha256") @db.VarChar(64)
+  width                    Int?
+  height                   Int?
+  duration                 Decimal?            @db.Decimal(12, 3)
+  uploadExpiresAt          DateTime?           @map("upload_expires_at") @db.Timestamptz(3)
+  uploadedAt               DateTime?           @map("uploaded_at") @db.Timestamptz(3)
+  readyAt                  DateTime?           @map("ready_at") @db.Timestamptz(3)
+  processingStartedAt      DateTime?           @map("processing_started_at") @db.Timestamptz(3)
+  deleteAttempts           Int                 @default(0) @map("delete_attempts")
+  nextDeleteAttemptAt      DateTime?           @map("next_delete_attempt_at") @db.Timestamptz(3)
+  lastProviderErrorCode    String?             @map("last_provider_error_code") @db.VarChar(120)
+  metadata                 Json?
+  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  authorApplicationSamples AuthorApplication[] @relation("AuthorApplicationSample")
 
-  uploader        User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
-  avatarOfUsers   User[]          @relation("UserAvatar")
-  bannerOfAuthors AuthorProfile[] @relation("AuthorBanner")
-  coverOfStories  Story[]         @relation("StoryCover")
-  coverOfCategories Category[]     @relation("CategoryCover")
-  chapterLinks    ChapterMedia[]
+  uploader          User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  avatarOfUsers     User[]          @relation("UserAvatar")
+  bannerOfAuthors   AuthorProfile[] @relation("AuthorBanner")
+  coverOfStories    Story[]         @relation("StoryCover")
+  coverOfCategories Category[]      @relation("CategoryCover")
+  chapterLinks      ChapterMedia[]
 
   @@index([uploaderId, createdAt])
   @@index([purpose, status])
@@ -774,10 +838,10 @@ model StoryContributor {
 }
 
 model Category {
-  id          String   @id @default(uuid()) @db.Uuid
-  parentId    String?  @map("parent_id") @db.Uuid
-  name        String   @db.VarChar(100)
-  slug        String   @unique @db.VarChar(120)
+  id            String   @id @default(uuid()) @db.Uuid
+  parentId      String?  @map("parent_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  slug          String   @unique @db.VarChar(120)
   description   String?  @db.Text
   coverMediaId  String?  @map("cover_media_id") @db.Uuid
   visualKey     String?  @map("visual_key") @db.VarChar(50)
@@ -786,8 +850,8 @@ model Category {
   isActive      Boolean  @default(true) @map("is_active")
   isFeatured    Boolean  @default(false) @map("is_featured")
   featuredOrder Int?     @map("featured_order")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   parent     Category?       @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children   Category[]      @relation("CategoryTree")
@@ -1242,8 +1306,8 @@ model OutboxEvent {
   @@index([status, availableAt])
   @@index([status, processingStartedAt])
   @@index([aggregateType, aggregateId])
+  @@index([aggregateType, eventType, status, processedAt], map: "outbox_events_retention_idx")
   @@map("outbox_events")
-  @@index([aggregateType, eventType, status, processedAt],map: "outbox_events_retention_idx")
 }
 
 model InboundWebhookEvent {

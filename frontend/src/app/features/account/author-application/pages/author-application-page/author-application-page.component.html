@@ -10,16 +10,46 @@
 
     @if (store.config(); as config) {
       <app-content-layout class="application-layout" asideWidth="340px">
-        <app-author-application-form
-          main
-          [config]="config"
-          [submitting]="store.status() === 'submitting'"
-          [draftSaving]="store.status() === 'saving-draft'"
-          [successMessage]="store.message()"
-          [errorMessage]="store.errorMessage()"
-          (saveDraft)="handleSaveDraft($event)"
-          (submitApplication)="handleSubmit($event)"
-        />
+        @if (store.application(); as application) {
+          @if (application.status === 'PENDING' || application.status === 'APPROVED') {
+            <app-author-application-status main [application]="application" />
+          } @else {
+            <div main>
+              @if (application.status === 'REJECTED') {
+                <app-error-alert
+                  title="Hồ sơ chưa được duyệt"
+                  [message]="
+                    application.rejectionReason ||
+                    'Hồ sơ chưa đáp ứng yêu cầu. Bạn có thể chỉnh sửa và gửi lại.'
+                  "
+                />
+              }
+
+              <app-author-application-form
+                [config]="config"
+                [draft]="application"
+                [submitting]="store.status() === 'submitting'"
+                [draftSaving]="store.status() === 'saving-draft'"
+                [successMessage]="store.message()"
+                [errorMessage]="store.errorMessage()"
+                (saveDraft)="handleSaveDraft($event)"
+                (submitApplication)="handleSubmit($event)"
+              />
+            </div>
+          }
+        } @else {
+          <app-author-application-form
+            main
+            [config]="config"
+            [draft]="null"
+            [submitting]="store.status() === 'submitting'"
+            [draftSaving]="store.status() === 'saving-draft'"
+            [successMessage]="store.message()"
+            [errorMessage]="store.errorMessage()"
+            (saveDraft)="handleSaveDraft($event)"
+            (submitApplication)="handleSubmit($event)"
+          />
+        }
 
         <app-author-application-sidebar
           aside

@@ -1,107 +1,119 @@
 <header class="page-header">
   <h1>Bảo mật tài khoản</h1>
 
-  <p>
-    Quản lý mật khẩu, email đăng nhập và
-    các thiết lập bảo mật của tài khoản.
-  </p>
+  <p>Quản lý mật khẩu, email đăng nhập và các thiết lập bảo mật của tài khoản.</p>
 </header>
 
 @if (store.error()) {
-<div class="alert error-alert">
-  <div>
-    <strong>
-      Không thể thực hiện thao tác
-    </strong>
+  <div class="alert error-alert">
+    <div>
+      <strong> Không thể thực hiện thao tác </strong>
 
-    <span>
-      {{ store.error() }}
-    </span>
+      <span>
+        {{ store.error() }}
+      </span>
+    </div>
+
+    <button type="button" (click)="store.clearMessages()">Đóng</button>
   </div>
-
-  <button type="button" (click)="store.clearMessages()">
-    Đóng
-  </button>
-</div>
 }
 
 @if (store.success()) {
-<div class="alert success-alert">
-  <span>
-    {{ store.success() }}
-  </span>
+  <div class="alert success-alert">
+    <span>
+      {{ store.success() }}
+    </span>
 
-  <button type="button" (click)="store.clearMessages()">
-    Đóng
-  </button>
-</div>
+    <button type="button" (click)="store.clearMessages()">Đóng</button>
+  </div>
 }
 
 <div class="security-layout">
   <section class="settings-list" aria-label="Thiết lập bảo mật">
-    <app-security-setting-card title="Đổi mật khẩu" description="Cập nhật mật khẩu mới để bảo vệ tài khoản của bạn."
-      icon="lock" actionLabel="Đổi mật khẩu" (action)="openPasswordDialog()" />
+    <app-security-setting-card
+      title="Đổi mật khẩu"
+      description="Cập nhật mật khẩu mới để bảo vệ tài khoản của bạn."
+      icon="lock"
+      actionLabel="Đổi mật khẩu"
+      (action)="openPasswordDialog()"
+    />
 
-    <app-security-setting-card title="Email đăng nhập"
-      description="Thay đổi địa chỉ email dùng để đăng nhập và nhận thông báo bảo mật." icon="mail" [value]="
-        store.user()?.email ||
-        null
-      " actionLabel="Đổi email" (action)="openEmailDialog()" />
+    <app-security-setting-card
+      title="Email đăng nhập"
+      description="Thay đổi địa chỉ email dùng để đăng nhập và nhận thông báo bảo mật."
+      icon="mail"
+      [value]="store.user()?.email || null"
+      actionLabel="Đổi email"
+      (action)="openEmailDialog()"
+    />
 
-    <app-security-setting-card title="Xác thực 2 lớp (2FA)"
-      description="Tăng cường bảo mật tài khoản bằng xác thực 2 lớp." icon="shield" [badge]="
-        store.overview().mfaEnabled
-          ? 'Đã bật'
-          : 'Chưa bật'
-      " [badgeTone]="
-        store.overview().mfaEnabled
-          ? 'success'
-          : 'warning'
-      " (action)="openMfa()" />
+    <app-security-setting-card
+      title="Xác thực 2 lớp (2FA)"
+      description="Tăng cường bảo mật tài khoản bằng xác thực 2 lớp."
+      icon="shield"
+      [badge]="store.overview().mfaEnabled ? 'Đã bật' : 'Chưa bật'"
+      [badgeTone]="store.overview().mfaEnabled ? 'success' : 'warning'"
+      (action)="openMfa()"
+    />
 
-    <app-security-setting-card title="Email khôi phục"
-      description="Quản lý email dùng để khôi phục tài khoản khi cần thiết." icon="mail" [value]="
-        store.overview()
-          .recoveryEmail ||
-        store.user()?.email ||
-        null
-      " (action)="openRecoveryEmail()" />
+    <app-security-setting-card
+      title="Email khôi phục"
+      description="Quản lý email dùng để khôi phục tài khoản khi cần thiết."
+      icon="mail"
+      [value]="store.overview().recoveryEmail || store.user()?.email || null"
+      (action)="openRecoveryEmail()"
+    />
 
-    <app-security-setting-card title="Câu hỏi bảo mật"
-      description="Thiết lập câu hỏi bảo mật để hỗ trợ khôi phục tài khoản." icon="key" [actionLabel]="
-        store.overview()
-          .securityQuestionsConfigured
-          ? 'Cập nhật'
-          : 'Thiết lập'
-      " (action)="
-        openSecurityQuestions()
-      " />
+    <app-security-setting-card
+      title="Câu hỏi bảo mật"
+      description="Thiết lập câu hỏi bảo mật để hỗ trợ khôi phục tài khoản."
+      icon="key"
+      [actionLabel]="store.overview().securityQuestionsConfigured ? 'Cập nhật' : 'Thiết lập'"
+      (action)="openSecurityQuestions()"
+    />
 
-    <app-security-setting-card title="Phiên đăng nhập" description="Quản lý các phiên đăng nhập trên thiết bị khác."
-      icon="history" actionLabel="Xem phiên hoạt động" (action)="openSessions()" />
+    <app-security-setting-card
+      title="Phiên đăng nhập"
+      description="Quản lý các phiên đăng nhập trên thiết bị khác."
+      icon="history"
+      actionLabel="Xem phiên hoạt động"
+      (action)="openSessions()"
+    />
 
-    <app-security-setting-card title="Xóa tài khoản"
-      description="Xóa quyền truy cập tài khoản và ẩn danh thông tin cá nhân của bạn." icon="trash"
-      actionLabel="Xóa tài khoản" tone="danger" (action)="
-        deleteDialogOpen.set(true)
-      " />
+    <app-security-setting-card
+      title="Xóa tài khoản"
+      description="Xóa quyền truy cập tài khoản và ẩn danh thông tin cá nhân của bạn."
+      icon="trash"
+      actionLabel="Xóa tài khoản"
+      tone="danger"
+      (action)="deleteDialogOpen.set(true)"
+    />
   </section>
 
-  <app-security-score-card [score]="store.securityScore()" (suggestionsRequested)="
-      showSuggestions()
-    " />
+  <app-security-score-card
+    [score]="store.securityScore()"
+    (suggestionsRequested)="showSuggestions()"
+  />
 </div>
 
-<app-change-password-dialog [open]="passwordDialogOpen()" [submitting]="store.submitting()" (closed)="
-    passwordDialogOpen.set(false)
-  " (submitted)="changePassword($event)" />
+<app-change-password-dialog
+  [open]="passwordDialogOpen()"
+  [submitting]="store.submitting()"
+  (closed)="passwordDialogOpen.set(false)"
+  (submitted)="changePassword($event)"
+/>
 
-<app-change-email-dialog [open]="emailDialogOpen()" [submitting]="store.submitting()" [currentEmail]="
-    store.user()?.email || ''
-  " (closed)="
-    emailDialogOpen.set(false)
-  " (submitted)="changeEmail($event)" />
+<app-change-email-dialog
+  [open]="emailDialogOpen()"
+  [submitting]="store.submitting()"
+  [currentEmail]="store.user()?.email || ''"
+  (closed)="emailDialogOpen.set(false)"
+  (submitted)="changeEmail($event)"
+/>
 
-<app-delete-account-dialog [open]="deleteDialogOpen()" [submitting]="store.submitting()" (closed)="
-    deleteDialogOpen.set(false)
-  " (submitted)="deleteAccount($event)" />
+<app-delete-account-dialog
+  [open]="deleteDialogOpen()"
+  [submitting]="store.submitting()"
+  (closed)="deleteDialogOpen.set(false)"
+  (submitted)="deleteAccount($event)"
+/>

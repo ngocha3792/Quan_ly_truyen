@@ -1,17 +1,6 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    effect,
-    input,
-    output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
 
-import {
-    FormControl,
-    FormGroup,
-    ReactiveFormsModule,
-    Validators,
-} from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
@@ -24,29 +13,29 @@ import { AccountPasswordInputComponent } from '../../../../shared/ui/account-pas
 import { ChangeEmailRequest } from '../../data/account-security.models';
 
 interface ChangeEmailForm {
-    newEmail: FormControl<string>;
+  newEmail: FormControl<string>;
 
-    currentPassword: FormControl<string>;
+  currentPassword: FormControl<string>;
 }
 
 @Component({
-    selector: 'app-change-email-dialog',
+  selector: 'app-change-email-dialog',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        ReactiveFormsModule,
+  imports: [
+    ReactiveFormsModule,
 
-        IconComponent,
+    IconComponent,
 
-        AccountDialogShellComponent,
+    AccountDialogShellComponent,
 
-        AccountFormFieldComponent,
+    AccountFormFieldComponent,
 
-        AccountPasswordInputComponent,
-    ],
+    AccountPasswordInputComponent,
+  ],
 
-    template: `
+  template: `
     <app-account-dialog-shell
       [open]="open()"
       [busy]="submitting()"
@@ -54,34 +43,20 @@ interface ChangeEmailForm {
       dialogTitleId="change-email-title"
       (closed)="closed.emit()"
     >
-      <form
-        class="email-form"
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-      >
-        <p class="form-description">
-          Email hiện tại
-        </p>
+      <form class="email-form" [formGroup]="form" (ngSubmit)="submit()">
+        <p class="form-description">Email hiện tại</p>
 
         <div class="current-email">
-          <app-icon
-            name="mail"
-            [size]="17"
-          />
+          <app-icon name="mail" [size]="17" />
 
           <span>
-            {{
-              currentEmail() ||
-                'Không xác định'
-            }}
+            {{ currentEmail() || 'Không xác định' }}
           </span>
         </div>
 
         <p class="security-note">
-          Bạn sẽ phải xác nhận email mới
-          trước khi thay đổi có hiệu lực.
-          Sau khi xác nhận, toàn bộ phiên
-          đăng nhập hiện tại sẽ bị thu hồi.
+          Bạn sẽ phải xác nhận email mới trước khi thay đổi có hiệu lực. Sau khi xác nhận, toàn bộ
+          phiên đăng nhập hiện tại sẽ bị thu hồi.
         </p>
 
         <app-account-form-field
@@ -115,21 +90,11 @@ interface ChangeEmailForm {
             Hủy
           </button>
 
-          <button
-            class="submit-button"
-            type="submit"
-            [disabled]="
-              submitting() ||
-              form.invalid
-            "
-          >
+          <button class="submit-button" type="submit" [disabled]="submitting() || form.invalid">
             @if (submitting()) {
               <span class="spinner"></span>
             } @else {
-              <app-icon
-                name="mail"
-                [size]="16"
-              />
+              <app-icon name="mail" [size]="16" />
             }
 
             Gửi link xác nhận
@@ -139,168 +104,112 @@ interface ChangeEmailForm {
     </app-account-dialog-shell>
   `,
 
-    styleUrl:
-        './change-email-dialog.component.scss',
+  styleUrl: './change-email-dialog.component.scss',
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangeEmailDialogComponent {
-    readonly open =
-        input(false);
+  readonly open = input(false);
 
-    readonly submitting =
-        input(false);
+  readonly submitting = input(false);
 
-    readonly currentEmail =
-        input('');
+  readonly currentEmail = input('');
 
-    readonly closed =
-        output<void>();
+  readonly closed = output<void>();
 
-    readonly submitted =
-        output<ChangeEmailRequest>();
+  readonly submitted = output<ChangeEmailRequest>();
 
-    protected readonly form =
-        new FormGroup<ChangeEmailForm>({
-            newEmail:
-                new FormControl('', {
-                    nonNullable: true,
+  protected readonly form = new FormGroup<ChangeEmailForm>({
+    newEmail: new FormControl('', {
+      nonNullable: true,
 
-                    validators: [
-                        Validators.required,
+      validators: [Validators.required, Validators.email, Validators.maxLength(320)],
+    }),
 
-                        Validators.email,
+    currentPassword: new FormControl('', {
+      nonNullable: true,
 
-                        Validators.maxLength(
-                            320,
-                        ),
-                    ],
-                }),
+      validators: [Validators.required, Validators.maxLength(72)],
+    }),
+  });
 
-            currentPassword:
-                new FormControl('', {
-                    nonNullable: true,
+  constructor() {
+    effect(() => {
+      if (!this.open()) {
+        this.form.reset();
+      }
+    });
+  }
 
-                    validators: [
-                        Validators.required,
+  protected get newEmailError(): string {
+    const control = this.form.controls.newEmail;
 
-                        Validators.maxLength(
-                            72,
-                        ),
-                    ],
-                }),
-        });
-
-    constructor() {
-        effect(() => {
-            if (!this.open()) {
-                this.form.reset();
-            }
-        });
+    if (!control.touched) {
+      return '';
     }
 
-    protected get newEmailError(): string {
-        const control =
-            this.form.controls.newEmail;
-
-        if (!control.touched) {
-            return '';
-        }
-
-        if (
-            control.hasError('required')
-        ) {
-            return 'Vui lòng nhập email mới.';
-        }
-
-        if (
-            control.hasError('email')
-        ) {
-            return 'Email mới không hợp lệ.';
-        }
-
-        if (
-            control.hasError('maxlength')
-        ) {
-            return 'Email không được vượt quá 320 ký tự.';
-        }
-
-        const newEmail =
-            control.value
-                .trim()
-                .toLowerCase();
-
-        const currentEmail =
-            this.currentEmail()
-                .trim()
-                .toLowerCase();
-
-        if (
-            newEmail &&
-            currentEmail &&
-            newEmail === currentEmail
-        ) {
-            return 'Email mới phải khác email hiện tại.';
-        }
-
-        return '';
+    if (control.hasError('required')) {
+      return 'Vui lòng nhập email mới.';
     }
 
-    protected get currentPasswordError(): string {
-        const control =
-            this.form.controls.currentPassword;
-
-        if (!control.touched) {
-            return '';
-        }
-
-        if (
-            control.hasError('required')
-        ) {
-            return 'Vui lòng nhập mật khẩu hiện tại.';
-        }
-
-        if (
-            control.hasError('maxlength')
-        ) {
-            return 'Mật khẩu hiện tại không hợp lệ.';
-        }
-
-        return '';
+    if (control.hasError('email')) {
+      return 'Email mới không hợp lệ.';
     }
 
-    protected submit(): void {
-        this.form.markAllAsTouched();
-
-        if (
-            this.form.invalid ||
-            this.submitting()
-        ) {
-            return;
-        }
-
-        const value =
-            this.form.getRawValue();
-
-        const newEmail =
-            value.newEmail.trim();
-
-        const currentEmail =
-            this.currentEmail().trim();
-
-        if (
-            newEmail.toLowerCase() ===
-            currentEmail.toLowerCase()
-        ) {
-            return;
-        }
-
-        this.submitted.emit({
-            newEmail,
-
-            currentPassword:
-                value.currentPassword,
-        });
+    if (control.hasError('maxlength')) {
+      return 'Email không được vượt quá 320 ký tự.';
     }
+
+    const newEmail = control.value.trim().toLowerCase();
+
+    const currentEmail = this.currentEmail().trim().toLowerCase();
+
+    if (newEmail && currentEmail && newEmail === currentEmail) {
+      return 'Email mới phải khác email hiện tại.';
+    }
+
+    return '';
+  }
+
+  protected get currentPasswordError(): string {
+    const control = this.form.controls.currentPassword;
+
+    if (!control.touched) {
+      return '';
+    }
+
+    if (control.hasError('required')) {
+      return 'Vui lòng nhập mật khẩu hiện tại.';
+    }
+
+    if (control.hasError('maxlength')) {
+      return 'Mật khẩu hiện tại không hợp lệ.';
+    }
+
+    return '';
+  }
+
+  protected submit(): void {
+    this.form.markAllAsTouched();
+
+    if (this.form.invalid || this.submitting()) {
+      return;
+    }
+
+    const value = this.form.getRawValue();
+
+    const newEmail = value.newEmail.trim();
+
+    const currentEmail = this.currentEmail().trim();
+
+    if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+      return;
+    }
+
+    this.submitted.emit({
+      newEmail,
+
+      currentPassword: value.currentPassword,
+    });
+  }
 }

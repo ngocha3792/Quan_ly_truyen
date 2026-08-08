@@ -1,113 +1,57 @@
-import {
-    ChangeDetectionStrategy,
-    Component,
-    inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import {
-    ActivatedRoute,
-    RouterLink,
-} from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
-import {
-    IconComponent,
-} from '../../../../../shared/components/icon/icon.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
-type DeniedReason =
-    | 'role'
-    | 'permission';
+type DeniedReason = 'role' | 'permission';
 
 @Component({
-    selector:
-        'app-access-denied-page',
+  selector: 'app-access-denied-page',
 
-    standalone: true,
+  standalone: true,
 
-    imports: [
-        RouterLink,
-        IconComponent,
-    ],
+  imports: [RouterLink, IconComponent],
 
-    template: `
+  template: `
     <main class="denied-page">
-      <section
-        class="denied-card"
-        aria-labelledby="access-denied-title"
-      >
+      <section class="denied-card" aria-labelledby="access-denied-title">
         <div class="icon-shell">
-          <app-icon
-            name="shield"
-            [size]="34"
-          />
+          <app-icon name="shield" [size]="34" />
         </div>
 
-        <span class="status">
-          403
-        </span>
+        <span class="status"> 403 </span>
 
-        <h1 id="access-denied-title">
-          Bạn chưa có quyền truy cập
-        </h1>
+        <h1 id="access-denied-title">Bạn chưa có quyền truy cập</h1>
 
-        @if (
-          reason === 'role'
-        ) {
-          <p>
-            Tài khoản hiện tại chưa có
-            vai trò phù hợp để truy cập
-            khu vực này.
-          </p>
+        @if (reason === 'role') {
+          <p>Tài khoản hiện tại chưa có vai trò phù hợp để truy cập khu vực này.</p>
 
           <div class="actions">
-            <a
-              class="primary-button"
-              routerLink="/dang-ky-tac-gia"
-            >
-              Đăng ký trở thành tác giả
-            </a>
+            <a class="primary-button" routerLink="/dang-ky-tac-gia"> Đăng ký trở thành tác giả </a>
 
-            <a
-              class="secondary-button"
-              routerLink="/"
-            >
-              Về trang chủ
-            </a>
+            <a class="secondary-button" routerLink="/"> Về trang chủ </a>
           </div>
         } @else {
-          <p>
-            Tài khoản của bạn chưa được
-            cấp quyền cần thiết để sử dụng
-            chức năng này.
-          </p>
+          <p>Tài khoản của bạn chưa được cấp quyền cần thiết để sử dụng chức năng này.</p>
 
           <div class="actions">
-            <a
-              class="primary-button"
-              routerLink="/tai-khoan"
-            >
-              Về tài khoản
-            </a>
+            <a class="primary-button" routerLink="/tai-khoan"> Về tài khoản </a>
 
-            <a
-              class="secondary-button"
-              routerLink="/"
-            >
-              Về trang chủ
-            </a>
+            <a class="secondary-button" routerLink="/"> Về trang chủ </a>
           </div>
         }
       </section>
     </main>
   `,
 
-    styles: `
+  styles: `
     :host {
       display: block;
     }
 
     .denied-page {
-      min-height:
-        calc(100vh - 150px);
+      min-height: calc(100vh - 150px);
 
       padding: 80px 20px;
 
@@ -117,42 +61,19 @@ type DeniedReason =
     }
 
     .denied-card {
-      width: min(
-        100%,
-        520px
-      );
+      width: min(100%, 520px);
 
       padding: 42px 34px;
 
       text-align: center;
 
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.15
-        );
+      border: 1px solid rgba(148, 163, 184, 0.15);
 
       border-radius: 16px;
 
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          0.66
-        );
+      background: rgba(15, 23, 42, 0.66);
 
-      box-shadow:
-        0 30px 80px
-        rgba(
-          0,
-          0,
-          0,
-          0.2
-        );
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
     }
 
     .icon-shell {
@@ -160,9 +81,7 @@ type DeniedReason =
 
       height: 72px;
 
-      margin:
-        0 auto
-        20px;
+      margin: 0 auto 20px;
 
       display: grid;
 
@@ -172,13 +91,7 @@ type DeniedReason =
 
       color: #c4b5fd;
 
-      background:
-        rgba(
-          124,
-          58,
-          237,
-          0.13
-        );
+      background: rgba(124, 58, 237, 0.13);
     }
 
     .status {
@@ -192,23 +105,15 @@ type DeniedReason =
 
       font-weight: 800;
 
-      letter-spacing:
-        0.12em;
+      letter-spacing: 0.12em;
     }
 
     h1 {
-      margin:
-        0 0
-        14px;
+      margin: 0 0 14px;
 
       color: #f8fafc;
 
-      font-size:
-        clamp(
-          24px,
-          5vw,
-          32px
-        );
+      font-size: clamp(24px, 5vw, 32px);
 
       line-height: 1.2;
     }
@@ -216,9 +121,7 @@ type DeniedReason =
     p {
       max-width: 420px;
 
-      margin:
-        0 auto
-        28px;
+      margin: 0 auto 28px;
 
       color: #94a3b8;
 
@@ -241,11 +144,9 @@ type DeniedReason =
     .secondary-button {
       min-height: 44px;
 
-      padding:
-        0 18px;
+      padding: 0 18px;
 
-      display:
-        inline-flex;
+      display: inline-flex;
 
       align-items: center;
 
@@ -260,61 +161,36 @@ type DeniedReason =
       text-decoration: none;
 
       transition:
-        transform
-          150ms ease,
-        border-color
-          150ms ease;
+        transform 150ms ease,
+        border-color 150ms ease;
     }
 
     .primary-button {
       color: #fff;
 
-      background:
-        linear-gradient(
-          135deg,
-          #743cdd,
-          #a451eb
-        );
+      background: linear-gradient(135deg, #743cdd, #a451eb);
     }
 
     .secondary-button {
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          0.22
-        );
+      border: 1px solid rgba(148, 163, 184, 0.22);
 
       color: #cbd5e1;
 
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          0.3
-        );
+      background: rgba(15, 23, 42, 0.3);
     }
 
     .primary-button:hover,
     .secondary-button:hover {
-      transform:
-        translateY(-1px);
+      transform: translateY(-1px);
     }
 
-    @media (
-      max-width: 520px
-    ) {
+    @media (max-width: 520px) {
       .denied-page {
-        padding:
-          50px 16px;
+        padding: 50px 16px;
       }
 
       .denied-card {
-        padding:
-          34px 20px;
+        padding: 34px 20px;
       }
 
       .actions {
@@ -328,26 +204,16 @@ type DeniedReason =
     }
   `,
 
-    changeDetection:
-        ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessDeniedPageComponent {
-    private readonly route =
-        inject(ActivatedRoute);
+  private readonly route = inject(ActivatedRoute);
 
-    protected readonly reason:
-        DeniedReason =
-        readDeniedReason(
-            this.route.snapshot
-                .queryParamMap
-                .get('reason'),
-        );
+  protected readonly reason: DeniedReason = readDeniedReason(
+    this.route.snapshot.queryParamMap.get('reason'),
+  );
 }
 
-function readDeniedReason(
-    value: string | null,
-): DeniedReason {
-    return value === 'role'
-        ? 'role'
-        : 'permission';
+function readDeniedReason(value: string | null): DeniedReason {
+  return value === 'role' ? 'role' : 'permission';
 }

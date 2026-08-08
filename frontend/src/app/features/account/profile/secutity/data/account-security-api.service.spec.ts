@@ -1,159 +1,93 @@
-import {
-    provideHttpClient,
-} from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 
-import {
-    HttpTestingController,
-    provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import {
-    TestBed,
-} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {
-    firstValueFrom,
-} from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
-import {
-    APP_RUNTIME_CONFIG,
-} from '../../../../../core/config/app-config.token';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 
-import {
-    AccountSecurityApiService,
-} from './account-security-api.service';
+import { AccountSecurityApiService } from './account-security-api.service';
 
-describe(
-    'AccountSecurityApiService',
-    () => {
-        let service:
-            AccountSecurityApiService;
+describe('AccountSecurityApiService', () => {
+  let service: AccountSecurityApiService;
 
-        let http:
-            HttpTestingController;
+  let http: HttpTestingController;
 
-        beforeEach(() => {
-            TestBed.configureTestingModule({
-                providers: [
-                    provideHttpClient(),
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
 
-                    provideHttpClientTesting(),
+        provideHttpClientTesting(),
 
-                    {
-                        provide:
-                            APP_RUNTIME_CONFIG,
+        {
+          provide: APP_RUNTIME_CONFIG,
 
-                        useValue: {
-                            apiBaseUrl:
-                                '/api/v1',
+          useValue: {
+            apiBaseUrl: '/api/v1',
 
-                            appName:
-                                'TruyenHub',
+            appName: 'TruyenHub',
 
-                            production:
-                                false,
-                        },
-                    },
-                ],
-            });
+            production: false,
+          },
+        },
+      ],
+    });
 
-            service =
-                TestBed.inject(
-                    AccountSecurityApiService,
-                );
+    service = TestBed.inject(AccountSecurityApiService);
 
-            http =
-                TestBed.inject(
-                    HttpTestingController,
-                );
-        });
+    http = TestBed.inject(HttpTestingController);
+  });
 
-        afterEach(() => {
-            http.verify();
+  afterEach(() => {
+    http.verify();
 
-            TestBed.resetTestingModule();
-        });
+    TestBed.resetTestingModule();
+  });
 
-        it(
-            'change-email phải gửi idempotency key',
-            async () => {
-                const promise =
-                    firstValueFrom(
-                        service
-                            .requestEmailChange({
-                                newEmail:
-                                    'new@truyenhub.test',
+  it('change-email phải gửi idempotency key', async () => {
+    const promise = firstValueFrom(
+      service.requestEmailChange({
+        newEmail: 'new@truyenhub.test',
 
-                                currentPassword:
-                                    'Password@123',
-                            }),
-                    );
+        currentPassword: 'Password@123',
+      }),
+    );
 
-                const request =
-                    http.expectOne(
-                        '/api/v1/auth/change-email',
-                    );
+    const request = http.expectOne('/api/v1/auth/change-email');
 
-                expect(
-                    request.request
-                        .method,
-                ).toBe(
-                    'POST',
-                );
+    expect(request.request.method).toBe('POST');
 
-                expect(
-                    request.request
-                        .body,
-                ).toEqual({
-                    newEmail:
-                        'new@truyenhub.test',
+    expect(request.request.body).toEqual({
+      newEmail: 'new@truyenhub.test',
 
-                    currentPassword:
-                        'Password@123',
-                });
+      currentPassword: 'Password@123',
+    });
 
-                expect(
-                    request.request
-                        .headers
-                        .get(
-                            'x-idempotency-key',
-                        ),
-                ).toBeTruthy();
+    expect(request.request.headers.get('x-idempotency-key')).toBeTruthy();
 
-                request.flush({
-                    success:
-                        true,
+    request.flush({
+      success: true,
 
-                    data: {
-                        emailChangeRequested:
-                            true,
+      data: {
+        emailChangeRequested: true,
 
-                        pendingEmail:
-                            'new@truyenhub.test',
+        pendingEmail: 'new@truyenhub.test',
 
-                        verificationRequired:
-                            true,
+        verificationRequired: true,
 
-                        expiresAt:
-                            '2026-08-07T13:00:00.000Z',
-                    },
+        expiresAt: '2026-08-07T13:00:00.000Z',
+      },
 
-                    requestId:
-                        'request-test',
+      requestId: 'request-test',
 
-                    timestamp:
-                        '2026-08-07T12:00:00.000Z',
-                });
+      timestamp: '2026-08-07T12:00:00.000Z',
+    });
 
-                const result =
-                    await promise;
+    const result = await promise;
 
-                expect(
-                    result.pendingEmail,
-                ).toBe(
-                    'new@truyenhub.test',
-                );
-            },
-        );
-    },
-);
+    expect(result.pendingEmail).toBe('new@truyenhub.test');
+  });
+});

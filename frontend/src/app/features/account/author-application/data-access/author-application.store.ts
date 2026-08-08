@@ -1,29 +1,40 @@
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+
+import { catchError, finalize, forkJoin, of } from 'rxjs';
+
+import { AuthStore } from '../../../../core/auth/auth.store';
+
+import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 
 import {
   AuthorApplicationConfig,
   AuthorApplicationDraft,
   AuthorApplicationPayload,
-  AuthorApplicationResult,
+  AuthorApplicationRecord,
   AuthorApplicationStatus,
 } from '../domain/author-application.models';
+
 import { AuthorApplicationRepository } from '../domain/author-application.repository';
 
 @Injectable()
 export class AuthorApplicationStore {
   private readonly repository = inject(AuthorApplicationRepository);
 
+  private readonly auth = inject(AuthStore);
+
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly configState = signal<AuthorApplicationConfig | null>(null);
 
-  private readonly resultState = signal<AuthorApplicationResult | null>(null);
+  private readonly applicationState = signal<AuthorApplicationRecord | null>(null);
+
+  private authorAuthorizationSynced = false;
 
   readonly config = this.configState.asReadonly();
 
-  readonly result = this.resultState.asReadonly();
+  readonly application = this.applicationState.asReadonly();
 
   readonly status = signal<AuthorApplicationStatus>('idle');
 
@@ -31,23 +42,52 @@ export class AuthorApplicationStore {
 
   readonly errorMessage = signal('');
 
+  readonly editable = computed(() => {
+    const application = this.applicationState();
+
+    return !application || application.status === 'DRAFT' || application.status === 'REJECTED';
+  });
+
   load(): void {
+    if (this.status() === 'loading') {
+      return;
+    }
+
     this.status.set('loading');
+
     this.errorMessage.set('');
 
-    this.repository
-      .getConfig()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    forkJoin({
+      config: this.repository.getConfig(),
+
+      application: this.repository.getMine(),
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+
+        finalize(() => {
+          if (this.status() === 'loading') {
+            this.status.set('idle');
+          }
+        }),
+      )
       .subscribe({
-        next: (config) => {
+        next: ({
+          config,
+
+          application,
+        }) => {
           this.configState.set(config);
-          this.status.set('idle');
+
+          this.applicationState.set(application);
+
+          this.syncAuthorAuthorization(application);
         },
 
-        error: () => {
+        error: (error: unknown) => {
           this.status.set('error');
 
-          this.errorMessage.set('Không thể tải biểu mẫu đăng ký tác giả.');
+          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
@@ -58,7 +98,9 @@ export class AuthorApplicationStore {
     }
 
     this.status.set('saving-draft');
+
     this.message.set('');
+
     this.errorMessage.set('');
 
     this.repository
@@ -73,14 +115,16 @@ export class AuthorApplicationStore {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (application) => {
+          this.applicationState.set(application);
+
           this.message.set('Bản nháp đã được lưu.');
         },
 
-        error: () => {
+        error: (error: unknown) => {
           this.status.set('error');
 
-          this.errorMessage.set('Không thể lưu bản nháp. Vui lòng thử lại.');
+          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
@@ -91,34 +135,65 @@ export class AuthorApplicationStore {
     }
 
     this.status.set('submitting');
+
     this.message.set('');
+
     this.errorMessage.set('');
-    this.resultState.set(null);
 
     this.repository
       .submit(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (result) => {
-          this.resultState.set(result);
+        next: (application) => {
+          this.applicationState.set(application);
+
           this.status.set('success');
-          this.message.set(result.message);
+
+          this.message.set('Yêu cầu đã được gửi. Hồ sơ hiện đang chờ xét duyệt.');
         },
 
-        error: () => {
+        error: (error: unknown) => {
           this.status.set('error');
 
-          this.errorMessage.set('Không thể gửi yêu cầu. Vui lòng kiểm tra thông tin và thử lại.');
+          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
 
   clearMessages(): void {
     this.message.set('');
+
     this.errorMessage.set('');
 
     if (this.status() === 'success' || this.status() === 'error') {
       this.status.set('idle');
     }
+  }
+
+  private syncAuthorAuthorization(application: AuthorApplicationRecord | null): void {
+    if (
+      this.authorAuthorizationSynced ||
+      application?.status !== 'APPROVED' ||
+      this.auth.user()?.roles.includes('AUTHOR')
+    ) {
+      return;
+    }
+
+    this.authorAuthorizationSynced = true;
+
+    /*
+     * Approval đã invalidate backend cache.
+     *
+     * FE vẫn giữ CurrentUser cũ,
+     * nên refreshSession để nhận AUTHOR role.
+     */
+    this.auth
+      .refreshSession()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+
+        catchError(() => of(null)),
+      )
+      .subscribe();
   }
 }

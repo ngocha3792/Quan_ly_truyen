@@ -1,121 +1,85 @@
-import {
-    CurrentUser,
-    LoginResponse,
-    RefreshTokenResponse,
-} from '../auth.models';
+import { CurrentUser, LoginResponse, RefreshTokenResponse } from '../auth.models';
 
-export function createCurrentUser(
-    overrides: Partial<CurrentUser> = {},
-): CurrentUser {
-    return {
-        id: 'user-1',
+export function createCurrentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
+  return {
+    id: 'user-1',
 
-        sessionId: 'session-1',
+    sessionId: 'session-1',
 
-        email: 'user@truyenhub.test',
+    email: 'user@truyenhub.test',
 
-        username: 'test_user',
+    username: 'test_user',
 
-        displayName: 'Test User',
+    displayName: 'Test User',
 
-        emailVerified: true,
+    emailVerified: true,
 
-        roles: [
-            'USER',
-        ],
+    roles: ['USER'],
 
-        bio: null,
+    bio: null,
 
-        status: 'ACTIVE',
+    status: 'ACTIVE',
 
-        emailVerifiedAt:
-            '2026-08-01T00:00:00.000Z',
+    emailVerifiedAt: '2026-08-01T00:00:00.000Z',
 
-        lastLoginAt:
-            '2026-08-07T12:00:00.000Z',
+    lastLoginAt: '2026-08-07T12:00:00.000Z',
 
-        avatar: null,
+    avatar: null,
 
-        authorProfile: null,
+    authorProfile: null,
 
-        permissions: [
-            'library.manage.own',
+    permissions: ['library.manage.own', 'reading-history.manage.own', 'notification.manage.own'],
 
-            'reading-history.manage.own',
+    createdAt: '2026-01-01T00:00:00.000Z',
 
-            'notification.manage.own',
-        ],
+    updatedAt: '2026-08-07T12:00:00.000Z',
 
-        createdAt:
-            '2026-01-01T00:00:00.000Z',
-
-        updatedAt:
-            '2026-08-07T12:00:00.000Z',
-
-        ...overrides,
-    };
+    ...overrides,
+  };
 }
 
 export function createLoginResponse(
-    accessToken = 'access-token-v1',
+  accessToken = 'access-token-v1',
 
-    user:
-        CurrentUser =
-        createCurrentUser(),
+  user: CurrentUser = createCurrentUser(),
 ): LoginResponse {
-    return {
-        sessionId:
-            user.sessionId,
+  return {
+    sessionId: user.sessionId,
 
-        accessToken,
+    accessToken,
 
-        tokenType:
-            'Bearer',
+    tokenType: 'Bearer',
 
-        expiresIn:
-            900,
+    expiresIn: 900,
 
-        expiresAt:
-            '2026-08-07T13:00:00.000Z',
+    expiresAt: '2026-08-07T13:00:00.000Z',
 
-        user: {
-            id:
-                user.id,
+    user: {
+      id: user.id,
 
-            email:
-                user.email,
+      email: user.email,
 
-            username:
-                user.username,
+      username: user.username,
 
-            displayName:
-                user.displayName,
+      displayName: user.displayName,
 
-            emailVerified:
-                user.emailVerified,
+      emailVerified: user.emailVerified,
 
-            roles:
-                user.roles,
-        },
-    };
+      roles: user.roles,
+    },
+  };
 }
 
-export function createRefreshResponse(
-    accessToken = 'access-token-v2',
-): RefreshTokenResponse {
-    return {
-        sessionId:
-            'session-1',
+export function createRefreshResponse(accessToken = 'access-token-v2'): RefreshTokenResponse {
+  return {
+    sessionId: 'session-1',
 
-        accessToken,
+    accessToken,
 
-        tokenType:
-            'Bearer',
+    tokenType: 'Bearer',
 
-        expiresIn:
-            900,
+    expiresIn: 900,
 
-        expiresAt:
-            '2026-08-07T13:00:00.000Z',
-    };
+    expiresAt: '2026-08-07T13:00:00.000Z',
+  };
 }

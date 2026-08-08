@@ -4,7 +4,7 @@ import { AccessDeniedException } from '@/common/exceptions';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
 import { MediaPurpose } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma';
-
+import { AuthorApplicationStatus } from '@/generated/prisma/client';
 @Injectable()
 export class MediaOwnershipAuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
@@ -61,33 +61,95 @@ export class MediaOwnershipAuthorizationService {
         principal.permissions.includes(PermissionCode.CATEGORY_MANAGE) ||
         principal.permissions.includes(PermissionCode.MEDIA_MANAGE_ANY);
     } else if (purpose === MediaPurpose.ATTACHMENT) {
-      const [story, chapter] = await Promise.all([
+      const [story, chapter, authorApplication] = await Promise.all([
         this.prisma.story.findFirst({
           where: {
             id: ownerId,
+
             deletedAt: null,
+
             OR: [
-              { authorId: userId },
-              { contributors: { some: { userId, canEdit: true } } },
+              {
+                authorId: userId,
+              },
+
+              {
+                contributors: {
+                  some: {
+                    userId,
+
+                    canEdit: true,
+                  },
+                },
+              },
             ],
           },
-          select: { id: true },
+
+          select: {
+            id: true,
+          },
         }),
+
         this.prisma.chapter.findFirst({
           where: {
             id: ownerId,
+
             deletedAt: null,
+
             story: {
               OR: [
-                { authorId: userId },
-                { contributors: { some: { userId, canEdit: true } } },
+                {
+                  authorId: userId,
+                },
+
+                {
+                  contributors: {
+                    some: {
+                      userId,
+
+                      canEdit: true,
+                    },
+                  },
+                },
               ],
             },
           },
-          select: { id: true },
+
+          select: {
+            id: true,
+          },
+        }),
+
+        /*
+         * Author application sample.
+         *
+         * ownerId chính là application.id.
+         *
+         * Chỉ owner của hồ sơ DRAFT/REJECTED
+         * mới được tạo attachment.
+         */
+        this.prisma.authorApplication.findFirst({
+          where: {
+            id: ownerId,
+
+            userId,
+
+            status: {
+              in: [
+                AuthorApplicationStatus.DRAFT,
+
+                AuthorApplicationStatus.REJECTED,
+              ],
+            },
+          },
+
+          select: {
+            id: true,
+          },
         }),
       ]);
-      allowed = Boolean(story || chapter);
+
+      allowed = Boolean(story || chapter || authorApplication);
     }
     if (!allowed)
       throw new AccessDeniedException({

@@ -29,11 +29,7 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 import { MfaQrCodeComponent } from '../../../profile/secutity/ui/mfa-qr-code/mfa-qr-code.component';
 
 type AuthDialogStage =
-  | 'credentials'
-  | 'verify-email'
-  | 'mfa-enroll'
-  | 'mfa-verify'
-  | 'recovery-codes';
+  'credentials' | 'verify-email' | 'mfa-enroll' | 'mfa-verify' | 'recovery-codes';
 
 /**
  * Backend hiện dùng:
@@ -48,13 +44,7 @@ const RESEND_VERIFICATION_COOLDOWN_SECONDS = 60;
 @Component({
   selector: 'app-auth-dialog',
   standalone: true,
-  imports: [
-    FormsModule,
-    RouterLink,
-    BrandLogoComponent,
-    IconComponent,
-    MfaQrCodeComponent,
-  ],
+  imports: [FormsModule, RouterLink, BrandLogoComponent, IconComponent, MfaQrCodeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './auth-dialog.component.html',
   styleUrl: './auth-dialog.component.scss',
@@ -184,19 +174,14 @@ export class AuthDialogComponent implements OnDestroy {
   }
 
   protected resendVerification(): void {
-    if (
-      this.submitting() ||
-      this.resendCooldownSeconds() > 0
-    ) {
+    if (this.submitting() || this.resendCooldownSeconds() > 0) {
       return;
     }
 
     const email = this.verificationEmail.trim();
 
     if (!isValidEmail(email)) {
-      this.localError.set(
-        'Vui lòng nhập địa chỉ email hợp lệ.',
-      );
+      this.localError.set('Vui lòng nhập địa chỉ email hợp lệ.');
 
       return;
     }
@@ -232,9 +217,7 @@ export class AuthDialogComponent implements OnDestroy {
         },
 
         error: (error: unknown) => {
-          this.localError.set(
-            getApiErrorMessage(error),
-          );
+          this.localError.set(getApiErrorMessage(error));
         },
       });
   }
@@ -263,9 +246,7 @@ export class AuthDialogComponent implements OnDestroy {
     this.closed.emit();
   }
 
-  protected continueWithOAuth(
-    provider: OAuthProvider,
-  ): void {
+  protected continueWithOAuth(provider: OAuthProvider): void {
     if (this.submitting()) {
       return;
     }
@@ -283,9 +264,7 @@ export class AuthDialogComponent implements OnDestroy {
     const identifier = this.identifier.trim();
 
     if (!identifier || !this.password) {
-      this.localError.set(
-        'Vui lòng nhập tài khoản và mật khẩu.',
-      );
+      this.localError.set('Vui lòng nhập tài khoản và mật khẩu.');
 
       return;
     }
@@ -317,33 +296,25 @@ export class AuthDialogComponent implements OnDestroy {
            * trả email thật để tránh information leak.
            * Khi đó user tự nhập email vào form resend.
            */
-          if (
-            readApiErrorCode(error) ===
-            'AUTH_EMAIL_NOT_VERIFIED'
-          ) {
+          if (readApiErrorCode(error) === 'AUTH_EMAIL_NOT_VERIFIED') {
             this.submitting.set(false);
 
             this.password = '';
 
             this.openEmailVerificationStage(
-              isValidEmail(identifier)
-                ? identifier
-                : '',
+              isValidEmail(identifier) ? identifier : '',
               'Tài khoản này chưa xác minh email. Bạn có thể yêu cầu gửi lại email xác minh.',
             );
 
             return;
           }
 
-          const challenge =
-            readMfaChallenge(error);
+          const challenge = readMfaChallenge(error);
 
           if (!challenge) {
             this.submitting.set(false);
 
-            this.localError.set(
-              getApiErrorMessage(error),
-            );
+            this.localError.set(getApiErrorMessage(error));
 
             return;
           }
@@ -361,13 +332,10 @@ export class AuthDialogComponent implements OnDestroy {
       password: this.password,
     };
 
-    const validationMessage =
-      getRegisterValidationMessage(payload);
+    const validationMessage = getRegisterValidationMessage(payload);
 
     if (validationMessage) {
-      this.localError.set(
-        validationMessage,
-      );
+      this.localError.set(validationMessage);
 
       return;
     }
@@ -396,17 +364,12 @@ export class AuthDialogComponent implements OnDestroy {
         },
 
         error: (error: unknown) => {
-          this.localError.set(
-            getApiErrorMessage(error),
-          );
+          this.localError.set(getApiErrorMessage(error));
         },
       });
   }
 
-  private openEmailVerificationStage(
-    email: string,
-    message: string,
-  ): void {
+  private openEmailVerificationStage(email: string, message: string): void {
     this.resetChallenge();
 
     this.auth.clearError();
@@ -420,17 +383,14 @@ export class AuthDialogComponent implements OnDestroy {
     this.stage.set('verify-email');
   }
 
-  private startMfaChallenge(
-    challenge: MfaChallengeDetails,
-  ): void {
+  private startMfaChallenge(challenge: MfaChallengeDetails): void {
     this.auth.clearError();
 
     this.localError.set(null);
 
     this.message.set(null);
 
-    this.mfaTicket =
-      challenge.mfaTicket;
+    this.mfaTicket = challenge.mfaTicket;
 
     if (challenge.mode === 'verify') {
       this.submitting.set(false);
@@ -440,14 +400,10 @@ export class AuthDialogComponent implements OnDestroy {
       return;
     }
 
-    this.loadEnrollment(
-      challenge.mfaTicket,
-    );
+    this.loadEnrollment(challenge.mfaTicket);
   }
 
-  private loadEnrollment(
-    mfaTicket: string,
-  ): void {
+  private loadEnrollment(mfaTicket: string): void {
     this.submitting.set(true);
 
     this.auth
@@ -459,19 +415,13 @@ export class AuthDialogComponent implements OnDestroy {
       )
       .subscribe({
         next: (enrollment) => {
-          this.enrollment.set(
-            enrollment,
-          );
+          this.enrollment.set(enrollment);
 
-          this.stage.set(
-            'mfa-enroll',
-          );
+          this.stage.set('mfa-enroll');
         },
 
         error: (error: unknown) => {
-          this.localError.set(
-            getApiErrorMessage(error),
-          );
+          this.localError.set(getApiErrorMessage(error));
 
           this.resetChallenge();
         },
@@ -479,19 +429,12 @@ export class AuthDialogComponent implements OnDestroy {
   }
 
   private confirmEnrollment(): void {
-    const ticket =
-      this.mfaTicket;
+    const ticket = this.mfaTicket;
 
-    const totpCode =
-      this.totpCode.trim();
+    const totpCode = this.totpCode.trim();
 
-    if (
-      !ticket ||
-      !/^\d{6}$/.test(totpCode)
-    ) {
-      this.localError.set(
-        'Mã TOTP phải gồm đúng 6 chữ số.',
-      );
+    if (!ticket || !/^\d{6}$/.test(totpCode)) {
+      this.localError.set('Mã TOTP phải gồm đúng 6 chữ số.');
 
       return;
     }
@@ -517,17 +460,10 @@ export class AuthDialogComponent implements OnDestroy {
 
           this.totpCode = '';
 
-          this.recoveryCodes.set(
-            result.recoveryCodes,
-          );
+          this.recoveryCodes.set(result.recoveryCodes);
 
-          if (
-            result.recoveryCodes.length >
-            0
-          ) {
-            this.stage.set(
-              'recovery-codes',
-            );
+          if (result.recoveryCodes.length > 0) {
+            this.stage.set('recovery-codes');
 
             return;
           }
@@ -536,45 +472,32 @@ export class AuthDialogComponent implements OnDestroy {
         },
 
         error: (error: unknown) => {
-          this.localError.set(
-            getApiErrorMessage(error),
-          );
+          this.localError.set(getApiErrorMessage(error));
         },
       });
   }
 
   private verifyMfa(): void {
-    const ticket =
-      this.mfaTicket;
+    const ticket = this.mfaTicket;
 
     if (!ticket) {
-      this.localError.set(
-        'Phiên xác minh MFA không còn hợp lệ.',
-      );
+      this.localError.set('Phiên xác minh MFA không còn hợp lệ.');
 
       return;
     }
 
-    const totpCode =
-      this.totpCode.trim();
+    const totpCode = this.totpCode.trim();
 
-    const recoveryCode =
-      this.recoveryCode.trim();
+    const recoveryCode = this.recoveryCode.trim();
 
     if (this.useRecoveryCode()) {
       if (!recoveryCode) {
-        this.localError.set(
-          'Vui lòng nhập mã khôi phục.',
-        );
+        this.localError.set('Vui lòng nhập mã khôi phục.');
 
         return;
       }
-    } else if (
-      !/^\d{6}$/.test(totpCode)
-    ) {
-      this.localError.set(
-        'Mã TOTP phải gồm đúng 6 chữ số.',
-      );
+    } else if (!/^\d{6}$/.test(totpCode)) {
+      this.localError.set('Mã TOTP phải gồm đúng 6 chữ số.');
 
       return;
     }
@@ -589,11 +512,11 @@ export class AuthDialogComponent implements OnDestroy {
 
         ...(this.useRecoveryCode()
           ? {
-            recoveryCode,
-          }
+              recoveryCode,
+            }
           : {
-            totpCode,
-          }),
+              totpCode,
+            }),
 
         deviceName: 'TruyenHub Web',
       })
@@ -612,9 +535,7 @@ export class AuthDialogComponent implements OnDestroy {
         },
 
         error: (error: unknown) => {
-          this.localError.set(
-            getApiErrorMessage(error),
-          );
+          this.localError.set(getApiErrorMessage(error));
         },
       });
   }
@@ -622,38 +543,24 @@ export class AuthDialogComponent implements OnDestroy {
   private startResendCooldown(): void {
     this.stopResendCooldown();
 
-    this.resendCooldownSeconds.set(
-      RESEND_VERIFICATION_COOLDOWN_SECONDS,
-    );
+    this.resendCooldownSeconds.set(RESEND_VERIFICATION_COOLDOWN_SECONDS);
 
-    this.resendCooldownTimer =
-      setInterval(() => {
-        const current =
-          this.resendCooldownSeconds();
+    this.resendCooldownTimer = setInterval(() => {
+      const current = this.resendCooldownSeconds();
 
-        const next = Math.max(
-          0,
-          current - 1,
-        );
+      const next = Math.max(0, current - 1);
 
-        this.resendCooldownSeconds.set(
-          next,
-        );
+      this.resendCooldownSeconds.set(next);
 
-        if (next === 0) {
-          this.stopResendCooldown();
-        }
-      }, 1000);
+      if (next === 0) {
+        this.stopResendCooldown();
+      }
+    }, 1000);
   }
 
   private stopResendCooldown(): void {
-    if (
-      this.resendCooldownTimer !==
-      null
-    ) {
-      clearInterval(
-        this.resendCooldownTimer,
-      );
+    if (this.resendCooldownTimer !== null) {
+      clearInterval(this.resendCooldownTimer);
 
       this.resendCooldownTimer = null;
     }
@@ -682,44 +589,26 @@ export class AuthDialogComponent implements OnDestroy {
   }
 }
 
-function readApiErrorCode(
-  error: unknown,
-): string | null {
-  if (
-    !(error instanceof HttpErrorResponse)
-  ) {
+function readApiErrorCode(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse)) {
     return null;
   }
 
-  const body =
-    error.error as
-    | Partial<ApiErrorEnvelope>
-    | undefined;
+  const body = error.error as Partial<ApiErrorEnvelope> | undefined;
 
-  const code =
-    body?.error?.code;
+  const code = body?.error?.code;
 
-  return typeof code === 'string'
-    ? code
-    : null;
+  return typeof code === 'string' ? code : null;
 }
 
-function readMfaChallenge(
-  error: unknown,
-): MfaChallengeDetails | null {
-  if (
-    !(error instanceof HttpErrorResponse)
-  ) {
+function readMfaChallenge(error: unknown): MfaChallengeDetails | null {
+  if (!(error instanceof HttpErrorResponse)) {
     return null;
   }
 
-  const body =
-    error.error as
-    | Partial<ApiErrorEnvelope>
-    | undefined;
+  const body = error.error as Partial<ApiErrorEnvelope> | undefined;
 
-  const code =
-    body?.error?.code;
+  const code = body?.error?.code;
 
   /*
    * Hai code ADMIN cũ được giữ tạm
@@ -728,32 +617,24 @@ function readMfaChallenge(
    */
   if (
     code !== 'AUTH_MFA_REQUIRED' &&
-    code !==
-    'AUTH_MFA_ENROLLMENT_REQUIRED' &&
-    code !==
-    'AUTH_ADMIN_MFA_REQUIRED' &&
-    code !==
-    'AUTH_ADMIN_MFA_ENROLLMENT_REQUIRED'
+    code !== 'AUTH_MFA_ENROLLMENT_REQUIRED' &&
+    code !== 'AUTH_ADMIN_MFA_REQUIRED' &&
+    code !== 'AUTH_ADMIN_MFA_ENROLLMENT_REQUIRED'
   ) {
     return null;
   }
 
-  const details =
-    body?.error?.details;
+  const details = body?.error?.details;
 
-  const mfaTicket =
-    details?.['mfaTicket'];
+  const mfaTicket = details?.['mfaTicket'];
 
-  const mode =
-    details?.['mode'];
+  const mode = details?.['mode'];
 
-  const expiresAt =
-    details?.['expiresAt'];
+  const expiresAt = details?.['expiresAt'];
 
   if (
     typeof mfaTicket !== 'string' ||
-    (mode !== 'enroll' &&
-      mode !== 'verify') ||
+    (mode !== 'enroll' && mode !== 'verify') ||
     typeof expiresAt !== 'string'
   ) {
     return null;
@@ -766,19 +647,12 @@ function readMfaChallenge(
   };
 }
 
-function isValidEmail(
-  value: string,
-): boolean {
+function isValidEmail(value: string): boolean {
   const email = value.trim();
 
-  if (
-    !email ||
-    email.length > 320
-  ) {
+  if (!email || email.length > 320) {
     return false;
   }
 
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    email,
-  );
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

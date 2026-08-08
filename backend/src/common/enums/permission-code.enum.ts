@@ -45,4 +45,10 @@ export enum PermissionCode {
 
   AUDIT_LOG_READ = 'audit-log.read',
   ANALYTICS_READ = 'analytics.read',
+
+  AUTHOR_APPLICATION_CREATE = 'author-application.create',
+
+  AUTHOR_APPLICATION_READ_OWN = 'author-application.read.own',
+
+  AUTHOR_APPLICATION_REVIEW = 'author-application.review',
 }

@@ -1,77 +1,60 @@
-import type {
-    UserProfileResultDto,
-} from '../../../application';
+import type { UserProfileResultDto } from '../../../application';
 
 export interface UserProfileResponse {
+  readonly id: string;
+
+  readonly email: string;
+
+  readonly username: string;
+
+  readonly displayName: string;
+
+  readonly bio: string | null;
+
+  readonly status: string;
+
+  readonly emailVerified: boolean;
+
+  readonly emailVerifiedAt: string | null;
+
+  readonly lastLoginAt: string | null;
+
+  readonly avatar: {
     readonly id: string;
+    readonly url: string | null;
+  } | null;
 
-    readonly email: string;
+  readonly createdAt: string;
 
-    readonly username: string;
-
-    readonly displayName: string;
-
-    readonly bio: string | null;
-
-    readonly status: string;
-
-    readonly emailVerified: boolean;
-
-    readonly emailVerifiedAt: string | null;
-
-    readonly lastLoginAt: string | null;
-
-    readonly avatar: {
-        readonly id: string;
-        readonly url: string | null;
-    } | null;
-
-    readonly createdAt: string;
-
-    readonly updatedAt: string;
+  readonly updatedAt: string;
 }
 
 export function toUserProfileResponse(
-    result:
-        UserProfileResultDto,
+  result: UserProfileResultDto,
 ): UserProfileResponse {
-    return {
-        id:
-            result.id,
+  return {
+    id: result.id,
 
-        email:
-            result.email,
+    email: result.email,
 
-        username:
-            result.username,
+    username: result.username,
 
-        displayName:
-            result.displayName,
+    displayName: result.displayName,
 
-        bio:
-            result.bio,
+    bio: result.bio,
 
-        status:
-            result.status,
+    status: result.status,
 
-        emailVerified:
-            result.emailVerified,
+    emailVerified: result.emailVerified,
 
-        emailVerifiedAt:
-            result.emailVerifiedAt?.toISOString() ??
-            null,
+    emailVerifiedAt: result.emailVerifiedAt?.toISOString() ?? null,
 
-        lastLoginAt:
-            result.lastLoginAt?.toISOString() ??
-            null,
+    lastLoginAt: result.lastLoginAt?.toISOString() ?? null,
 
-        avatar:
-            result.avatar,
+    avatar: result.avatar,
 
-        createdAt:
-            result.createdAt.toISOString(),
+    createdAt: result.createdAt.toISOString(),
 
-        updatedAt:
-            result.updatedAt.toISOString(),
-    };
+    updatedAt: result.updatedAt.toISOString(),
+  };
 }

@@ -1,13 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import {
-  catchError,
-  finalize,
-  map,
-  Observable,
-  shareReplay,
-  tap,
-  throwError,
-} from 'rxjs';
+import { catchError, finalize, map, Observable, shareReplay, tap, throwError } from 'rxjs';
 
 import { AuthApiService } from './auth-api.service';
 import { TokenStore } from './token.store';

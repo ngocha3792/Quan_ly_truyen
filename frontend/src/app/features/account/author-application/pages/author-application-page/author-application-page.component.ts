@@ -4,7 +4,7 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
-
+import { AuthorApplicationStatusComponent } from '../../ui/author-application-status/author-application-status.component';
 import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
 
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
@@ -41,6 +41,7 @@ import { AuthorApplicationSidebarComponent } from '../../ui/author-application-s
 
     AuthorApplicationFormComponent,
     AuthorApplicationSidebarComponent,
+    AuthorApplicationStatusComponent,
   ],
 
   providers: [...provideAuthorApplication(), AuthorApplicationStore],

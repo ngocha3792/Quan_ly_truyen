@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 
 import { Router } from '@angular/router';
 
@@ -25,8 +19,7 @@ import {
 import { AccountSecurityStore } from '../../data/account-security.store';
 
 @Component({
-  selector:
-    'app-account-security-page',
+  selector: 'app-account-security-page',
 
   standalone: true,
 
@@ -42,34 +35,24 @@ import { AccountSecurityStore } from '../../data/account-security.store';
     DeleteAccountDialogComponent,
   ],
 
-  templateUrl:
-    './account-security-page.component.html',
+  templateUrl: './account-security-page.component.html',
 
-  styleUrl:
-    './account-security-page.component.scss',
+  styleUrl: './account-security-page.component.scss',
 
-  changeDetection:
-    ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountSecurityPageComponent
-  implements OnInit {
-  private readonly router =
-    inject(Router);
+export class AccountSecurityPageComponent implements OnInit {
+  private readonly router = inject(Router);
 
-  private readonly auth =
-    inject(AuthStore);
+  private readonly auth = inject(AuthStore);
 
-  protected readonly store =
-    inject(AccountSecurityStore);
+  protected readonly store = inject(AccountSecurityStore);
 
-  protected readonly passwordDialogOpen =
-    signal(false);
+  protected readonly passwordDialogOpen = signal(false);
 
-  protected readonly emailDialogOpen =
-    signal(false);
+  protected readonly emailDialogOpen = signal(false);
 
-  protected readonly deleteDialogOpen =
-    signal(false);
+  protected readonly deleteDialogOpen = signal(false);
 
   ngOnInit(): void {
     this.store.load();
@@ -78,112 +61,73 @@ export class AccountSecurityPageComponent
   protected openPasswordDialog(): void {
     this.store.clearMessages();
 
-    this.passwordDialogOpen.set(
-      true,
-    );
+    this.passwordDialogOpen.set(true);
   }
 
   protected openEmailDialog(): void {
     this.store.clearMessages();
 
-    this.emailDialogOpen.set(
-      true,
-    );
+    this.emailDialogOpen.set(true);
   }
 
-  protected changePassword(
-    request: ChangePasswordRequest,
-  ): void {
-    this.store
-      .changePassword(request)
-      .subscribe({
-        next: () => {
-          this.passwordDialogOpen.set(
-            false,
-          );
-        },
-      });
+  protected changePassword(request: ChangePasswordRequest): void {
+    this.store.changePassword(request).subscribe({
+      next: () => {
+        this.passwordDialogOpen.set(false);
+      },
+    });
   }
 
-  protected changeEmail(
-    request: ChangeEmailRequest,
-  ): void {
-    this.store
-      .requestEmailChange(request)
-      .subscribe({
-        next: () => {
-          /**
-           * Chỉ đóng dialog.
-           *
-           * KHÔNG sửa auth.user.email tại đây.
-           *
-           * Email thật chỉ thay đổi sau khi
-           * user click link confirm.
-           */
-          this.emailDialogOpen.set(
-            false,
-          );
-        },
-      });
+  protected changeEmail(request: ChangeEmailRequest): void {
+    this.store.requestEmailChange(request).subscribe({
+      next: () => {
+        /**
+         * Chỉ đóng dialog.
+         *
+         * KHÔNG sửa auth.user.email tại đây.
+         *
+         * Email thật chỉ thay đổi sau khi
+         * user click link confirm.
+         */
+        this.emailDialogOpen.set(false);
+      },
+    });
   }
 
-  protected deleteAccount(
-    request: DeleteAccountRequest,
-  ): void {
-    this.store
-      .deleteAccount(request)
-      .subscribe({
-        next: () => {
-          this.deleteDialogOpen.set(
-            false,
-          );
+  protected deleteAccount(request: DeleteAccountRequest): void {
+    this.store.deleteAccount(request).subscribe({
+      next: () => {
+        this.deleteDialogOpen.set(false);
 
-          this.auth.clearLocalSession();
+        this.auth.clearLocalSession();
 
-          void this.router.navigateByUrl(
-            '/',
-          );
-        },
-      });
+        void this.router.navigateByUrl('/');
+      },
+    });
   }
 
   protected openMfa(): void {
-    void this.router.navigateByUrl(
-      '/tai-khoan/bao-mat/xac-thuc-2-lop',
-    );
+    void this.router.navigateByUrl('/tai-khoan/bao-mat/xac-thuc-2-lop');
   }
 
   protected openRecoveryEmail(): void {
-    void this.router.navigateByUrl(
-      '/tai-khoan/bao-mat/email-khoi-phuc',
-    );
+    void this.router.navigateByUrl('/tai-khoan/bao-mat/email-khoi-phuc');
   }
 
   protected openSecurityQuestions(): void {
-    void this.router.navigateByUrl(
-      '/tai-khoan/bao-mat/cau-hoi-bao-mat',
-    );
+    void this.router.navigateByUrl('/tai-khoan/bao-mat/cau-hoi-bao-mat');
   }
 
   protected openSessions(): void {
-    void this.router.navigateByUrl(
-      '/tai-khoan/thiet-bi',
-    );
+    void this.router.navigateByUrl('/tai-khoan/thiet-bi');
   }
 
   protected showSuggestions(): void {
-    const score =
-      this.store.securityScore();
+    const score = this.store.securityScore();
 
-    const firstIncomplete =
-      score.items.find(
-        (item) =>
-          !item.completed,
-      );
+    const firstIncomplete = score.items.find((item) => !item.completed);
 
-    switch (
-    firstIncomplete?.id
-    ) {
+    switch (firstIncomplete?.id) {
       case 'mfa':
         this.openMfa();
 

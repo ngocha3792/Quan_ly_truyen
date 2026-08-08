@@ -1,304 +1,137 @@
-import {
-    TestBed,
-} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {
-    firstValueFrom,
-    of,
-    Subject,
-    throwError,
-} from 'rxjs';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 
-import {
-    AuthApiService,
-} from './auth-api.service';
+import { AuthApiService } from './auth-api.service';
 
-import {
-    AuthRefreshService,
-} from './auth-refresh.service';
+import { AuthRefreshService } from './auth-refresh.service';
 
-import {
-    RefreshTokenResponse,
-} from './auth.models';
+import { RefreshTokenResponse } from './auth.models';
 
-import {
-    TokenStore,
-} from './token.store';
+import { TokenStore } from './token.store';
 
-import {
-    createRefreshResponse,
-} from './testing/auth-test.fixtures';
+import { createRefreshResponse } from './testing/auth-test.fixtures';
 
-describe(
-    'AuthRefreshService',
-    () => {
-        let service:
-            AuthRefreshService;
+describe('AuthRefreshService', () => {
+  let service: AuthRefreshService;
 
-        let tokenStore:
-            TokenStore;
+  let tokenStore: TokenStore;
 
-        let api: {
-            refresh:
-            ReturnType<
-                typeof vi.fn
-            >;
-        };
+  let api: {
+    refresh: ReturnType<typeof vi.fn>;
+  };
 
-        beforeEach(() => {
-            api = {
-                refresh:
-                    vi.fn(),
-            };
+  beforeEach(() => {
+    api = {
+      refresh: vi.fn(),
+    };
 
-            TestBed.configureTestingModule({
-                providers: [
-                    AuthRefreshService,
+    TestBed.configureTestingModule({
+      providers: [
+        AuthRefreshService,
 
-                    TokenStore,
+        TokenStore,
 
-                    {
-                        provide:
-                            AuthApiService,
+        {
+          provide: AuthApiService,
 
-                        useValue:
-                            api,
-                    },
-                ],
-            });
+          useValue: api,
+        },
+      ],
+    });
 
-            service =
-                TestBed.inject(
-                    AuthRefreshService,
-                );
+    service = TestBed.inject(AuthRefreshService);
 
-            tokenStore =
-                TestBed.inject(
-                    TokenStore,
-                );
-        });
+    tokenStore = TestBed.inject(TokenStore);
+  });
 
-        afterEach(() => {
-            TestBed.resetTestingModule();
-        });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
 
-        it(
-            'chỉ gọi refresh một lần khi nhiều caller đồng thời',
-            () => {
-                const subject =
-                    new Subject<RefreshTokenResponse>();
+  it('chỉ gọi refresh một lần khi nhiều caller đồng thời', () => {
+    const subject = new Subject<RefreshTokenResponse>();
 
-                api.refresh.mockReturnValue(
-                    subject.asObservable(),
-                );
+    api.refresh.mockReturnValue(subject.asObservable());
 
-                const received:
-                    string[] = [];
+    const received: string[] = [];
 
-                service
-                    .refreshAccessToken()
-                    .subscribe(
-                        (token) => {
-                            received.push(
-                                token,
-                            );
-                        },
-                    );
+    service.refreshAccessToken().subscribe((token) => {
+      received.push(token);
+    });
 
-                service
-                    .refreshAccessToken()
-                    .subscribe(
-                        (token) => {
-                            received.push(
-                                token,
-                            );
-                        },
-                    );
+    service.refreshAccessToken().subscribe((token) => {
+      received.push(token);
+    });
 
-                service
-                    .refreshAccessToken()
-                    .subscribe(
-                        (token) => {
-                            received.push(
-                                token,
-                            );
-                        },
-                    );
+    service.refreshAccessToken().subscribe((token) => {
+      received.push(token);
+    });
 
-                service
-                    .refreshAccessToken()
-                    .subscribe(
-                        (token) => {
-                            received.push(
-                                token,
-                            );
-                        },
-                    );
+    service.refreshAccessToken().subscribe((token) => {
+      received.push(token);
+    });
 
-                service
-                    .refreshAccessToken()
-                    .subscribe(
-                        (token) => {
-                            received.push(
-                                token,
-                            );
-                        },
-                    );
+    service.refreshAccessToken().subscribe((token) => {
+      received.push(token);
+    });
 
-                expect(
-                    api.refresh,
-                ).toHaveBeenCalledTimes(
-                    1,
-                );
+    expect(api.refresh).toHaveBeenCalledTimes(1);
 
-                subject.next(
-                    createRefreshResponse(
-                        'access-token-v2',
-                    ),
-                );
+    subject.next(createRefreshResponse('access-token-v2'));
 
-                subject.complete();
+    subject.complete();
 
-                expect(
-                    received,
-                ).toEqual([
-                    'access-token-v2',
-                    'access-token-v2',
-                    'access-token-v2',
-                    'access-token-v2',
-                    'access-token-v2',
-                ]);
+    expect(received).toEqual([
+      'access-token-v2',
+      'access-token-v2',
+      'access-token-v2',
+      'access-token-v2',
+      'access-token-v2',
+    ]);
 
-                expect(
-                    tokenStore.accessToken(),
-                ).toBe(
-                    'access-token-v2',
-                );
-            },
-        );
+    expect(tokenStore.accessToken()).toBe('access-token-v2');
+  });
 
-        it(
-            'cho phép refresh mới sau khi request trước hoàn tất',
-            async () => {
-                api.refresh.mockReturnValueOnce(
-                    of(
-                        createRefreshResponse(
-                            'access-token-v2',
-                        ),
-                    ),
-                );
+  it('cho phép refresh mới sau khi request trước hoàn tất', async () => {
+    api.refresh.mockReturnValueOnce(of(createRefreshResponse('access-token-v2')));
 
-                const first =
-                    await firstValueFrom(
-                        service.refreshAccessToken(),
-                    );
+    const first = await firstValueFrom(service.refreshAccessToken());
 
-                expect(first).toBe(
-                    'access-token-v2',
-                );
+    expect(first).toBe('access-token-v2');
 
-                api.refresh.mockReturnValueOnce(
-                    of(
-                        createRefreshResponse(
-                            'access-token-v3',
-                        ),
-                    ),
-                );
+    api.refresh.mockReturnValueOnce(of(createRefreshResponse('access-token-v3')));
 
-                const second =
-                    await firstValueFrom(
-                        service.refreshAccessToken(),
-                    );
+    const second = await firstValueFrom(service.refreshAccessToken());
 
-                expect(second).toBe(
-                    'access-token-v3',
-                );
+    expect(second).toBe('access-token-v3');
 
-                expect(
-                    api.refresh,
-                ).toHaveBeenCalledTimes(
-                    2,
-                );
+    expect(api.refresh).toHaveBeenCalledTimes(2);
 
-                expect(
-                    tokenStore.accessToken(),
-                ).toBe(
-                    'access-token-v3',
-                );
-            },
-        );
+    expect(tokenStore.accessToken()).toBe('access-token-v3');
+  });
 
-        it(
-            'xóa access token nếu refresh thất bại',
-            async () => {
-                tokenStore.set(
-                    'expired-access-token',
-                );
+  it('xóa access token nếu refresh thất bại', async () => {
+    tokenStore.set('expired-access-token');
 
-                api.refresh.mockReturnValue(
-                    throwError(
-                        () =>
-                            new Error(
-                                'refresh failed',
-                            ),
-                    ),
-                );
+    api.refresh.mockReturnValue(throwError(() => new Error('refresh failed')));
 
-                await expect(
-                    firstValueFrom(
-                        service.refreshAccessToken(),
-                    ),
-                ).rejects.toThrow(
-                    'refresh failed',
-                );
+    await expect(firstValueFrom(service.refreshAccessToken())).rejects.toThrow('refresh failed');
 
-                expect(
-                    tokenStore.accessToken(),
-                ).toBeNull();
-            },
-        );
+    expect(tokenStore.accessToken()).toBeNull();
+  });
 
-        it(
-            'reset single-flight state sau khi refresh fail',
-            async () => {
-                api.refresh.mockReturnValueOnce(
-                    throwError(
-                        () =>
-                            new Error(
-                                'refresh failed',
-                            ),
-                    ),
-                );
+  it('reset single-flight state sau khi refresh fail', async () => {
+    api.refresh.mockReturnValueOnce(throwError(() => new Error('refresh failed')));
 
-                await expect(
-                    firstValueFrom(
-                        service.refreshAccessToken(),
-                    ),
-                ).rejects.toThrow();
+    await expect(firstValueFrom(service.refreshAccessToken())).rejects.toThrow();
 
-                api.refresh.mockReturnValueOnce(
-                    of(
-                        createRefreshResponse(
-                            'access-token-new',
-                        ),
-                    ),
-                );
+    api.refresh.mockReturnValueOnce(of(createRefreshResponse('access-token-new')));
 
-                const token =
-                    await firstValueFrom(
-                        service.refreshAccessToken(),
-                    );
+    const token = await firstValueFrom(service.refreshAccessToken());
 
-                expect(token).toBe(
-                    'access-token-new',
-                );
+    expect(token).toBe('access-token-new');
 
-                expect(
-                    api.refresh,
-                ).toHaveBeenCalledTimes(
-                    2,
-                );
-            },
-        );
-    },
-);
+    expect(api.refresh).toHaveBeenCalledTimes(2);
+  });
+});

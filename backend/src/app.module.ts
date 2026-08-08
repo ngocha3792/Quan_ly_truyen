@@ -5,9 +5,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  UsersModule,
-} from './modules/users';
+import { UsersModule } from './modules/users';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommonFiltersModule } from './common/filters';
@@ -26,12 +24,13 @@ import { HealthModule } from '@/infrastructure/health';
 import { InfrastructureModule } from './infrastructure';
 import { AuthModule } from './modules/auth';
 import { ObservabilityModule } from './infrastructure/observability';
-
+import { AuthorApplicationsModule } from './modules/author-applications';
 @Module({
   imports: [
     AppConfigModule,
     ObservabilityModule,
     AuthModule,
+    AuthorApplicationsModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

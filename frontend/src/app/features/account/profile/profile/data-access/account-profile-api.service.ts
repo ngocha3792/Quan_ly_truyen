@@ -1,24 +1,12 @@
-import {
-  HttpClient,
-} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
-import {
-  inject,
-  Injectable,
-} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 
-import {
-  map,
-  Observable,
-} from 'rxjs';
+import { map, Observable } from 'rxjs';
 
-import {
-  APP_RUNTIME_CONFIG,
-} from '../../../../../core/config/app-config.token';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 
-import {
-  ApiSuccessEnvelope,
-} from '../../../../../core/http/api-envelope.model';
+import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
 
 import {
   AccountProfile,
@@ -31,86 +19,41 @@ import {
   providedIn: 'root',
 })
 export class AccountProfileApiService {
-  private readonly http =
-    inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
-  private readonly config =
-    inject(
-      APP_RUNTIME_CONFIG,
-    );
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  private readonly usersUrl =
-    `${this.config.apiBaseUrl}/users`;
+  private readonly usersUrl = `${this.config.apiBaseUrl}/users`;
 
-  getProfile():
-    Observable<AccountProfile> {
+  getProfile(): Observable<AccountProfile> {
     return this.http
-      .get<
-        ApiSuccessEnvelope<AccountProfile>
-      >(
-        `${this.usersUrl}/me`,
-      )
-      .pipe(
-        map(
-          response =>
-            response.data,
-        ),
-      );
+      .get<ApiSuccessEnvelope<AccountProfile>>(`${this.usersUrl}/me`)
+      .pipe(map((response) => response.data));
   }
 
-  updateProfile(
-    request:
-      UpdateAccountProfileRequest,
-  ): Observable<UpdateAccountProfileResponse> {
+  updateProfile(request: UpdateAccountProfileRequest): Observable<UpdateAccountProfileResponse> {
     return this.http
-      .patch<
-        ApiSuccessEnvelope<UpdateAccountProfileResponse>
-      >(
+      .patch<ApiSuccessEnvelope<UpdateAccountProfileResponse>>(
         `${this.usersUrl}/me`,
 
         request,
       )
-      .pipe(
-        map(
-          response =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
-  getPreferences():
-    Observable<AccountUiPreferences> {
+  getPreferences(): Observable<AccountUiPreferences> {
     return this.http
-      .get<
-        ApiSuccessEnvelope<AccountUiPreferences>
-      >(
-        `${this.usersUrl}/me/preferences`,
-      )
-      .pipe(
-        map(
-          response =>
-            response.data,
-        ),
-      );
+      .get<ApiSuccessEnvelope<AccountUiPreferences>>(`${this.usersUrl}/me/preferences`)
+      .pipe(map((response) => response.data));
   }
 
-  updatePreferences(
-    request:
-      Partial<AccountUiPreferences>,
-  ): Observable<AccountUiPreferences> {
+  updatePreferences(request: Partial<AccountUiPreferences>): Observable<AccountUiPreferences> {
     return this.http
-      .patch<
-        ApiSuccessEnvelope<AccountUiPreferences>
-      >(
+      .patch<ApiSuccessEnvelope<AccountUiPreferences>>(
         `${this.usersUrl}/me/preferences`,
 
         request,
       )
-      .pipe(
-        map(
-          response =>
-            response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 }

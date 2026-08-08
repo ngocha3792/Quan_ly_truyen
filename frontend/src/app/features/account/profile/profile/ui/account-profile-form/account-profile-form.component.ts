@@ -36,8 +36,7 @@ export class AccountProfileFormComponent {
   readonly membershipLabel = input('Thành viên');
 
   readonly saving = input(false);
-  readonly avatarChanged =
-    input(false);
+  readonly avatarChanged = input(false);
 
   readonly preferences = input.required<AccountUiPreferences>();
 

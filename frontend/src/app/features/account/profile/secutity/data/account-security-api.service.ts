@@ -1,15 +1,6 @@
-import {
-  HttpClient,
-  HttpHeaders,
-} from '@angular/common/http';
-import {
-  inject,
-  Injectable,
-} from '@angular/core';
-import {
-  map,
-  Observable,
-} from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
@@ -26,94 +17,48 @@ import {
   providedIn: 'root',
 })
 export class AccountSecurityApiService {
-  private readonly http =
-    inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
-  private readonly config =
-    inject(APP_RUNTIME_CONFIG);
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  private readonly authUrl =
-    `${this.config.apiBaseUrl}/auth`;
+  private readonly authUrl = `${this.config.apiBaseUrl}/auth`;
 
   getOverview(): Observable<AccountSecurityOverview> {
     return this.http
-      .get<
-        ApiSuccessEnvelope<AccountSecurityOverview>
-      >(
-        `${this.authUrl}/security-overview`,
-      )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .get<ApiSuccessEnvelope<AccountSecurityOverview>>(`${this.authUrl}/security-overview`)
+      .pipe(map((response) => response.data));
   }
 
-  changePassword(
-    request: ChangePasswordRequest,
-  ): Observable<ChangePasswordResponse> {
+  changePassword(request: ChangePasswordRequest): Observable<ChangePasswordResponse> {
     return this.http
-      .post<
-        ApiSuccessEnvelope<ChangePasswordResponse>
-      >(
-        `${this.authUrl}/change-password`,
-        request,
-      )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .post<ApiSuccessEnvelope<ChangePasswordResponse>>(`${this.authUrl}/change-password`, request)
+      .pipe(map((response) => response.data));
   }
 
   /**
    * Backend @Idempotent({ required: true })
    * nên header này là bắt buộc.
    */
-  requestEmailChange(
-    request: ChangeEmailRequest,
-  ): Observable<ChangeEmailResponse> {
-    const headers =
-      new HttpHeaders({
-        'x-idempotency-key':
-          crypto.randomUUID(),
-      });
+  requestEmailChange(request: ChangeEmailRequest): Observable<ChangeEmailResponse> {
+    const headers = new HttpHeaders({
+      'x-idempotency-key': crypto.randomUUID(),
+    });
 
     return this.http
-      .post<
-        ApiSuccessEnvelope<ChangeEmailResponse>
-      >(
-        `${this.authUrl}/change-email`,
-        request,
-        {
-          headers,
-        },
-      )
-      .pipe(
-        map(
-          (response) =>
-            response.data,
-        ),
-      );
+      .post<ApiSuccessEnvelope<ChangeEmailResponse>>(`${this.authUrl}/change-email`, request, {
+        headers,
+      })
+      .pipe(map((response) => response.data));
   }
 
-  deleteAccount(
-    request: DeleteAccountRequest,
-  ): Observable<void> {
-    const headers =
-      new HttpHeaders({
-        'x-idempotency-key':
-          crypto.randomUUID(),
-      });
+  deleteAccount(request: DeleteAccountRequest): Observable<void> {
+    const headers = new HttpHeaders({
+      'x-idempotency-key': crypto.randomUUID(),
+    });
 
-    return this.http.delete<void>(
-      `${this.authUrl}/account`,
-      {
-        headers,
-        body: request,
-      },
-    );
+    return this.http.delete<void>(`${this.authUrl}/account`, {
+      headers,
+      body: request,
+    });
   }
 }

@@ -12,6 +12,26 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 const permissions = [
+    [
+        'author-application.create',
+        'Create own author application',
+        'author-application',
+        'create',
+    ],
+
+    [
+        'author-application.read.own',
+        'Read own author application',
+        'author-application',
+        'read.own',
+    ],
+
+    [
+        'author-application.review',
+        'Review author applications',
+        'author-application',
+        'review',
+    ],
     ["user.profile.read", "Read own profile", "user.profile", "read"],
     ["user.profile.update", "Update own profile", "user.profile", "update"],
     ["user.security.read", "Read own security settings", "user.security", "read"],
@@ -67,6 +87,8 @@ const userPermissionCodes: PermissionCode[] = [
     "user.profile.read",
     "user.profile.update",
     "user.security.read",
+    'author-application.create',
+    'author-application.read.own',
     "user.security.manage",
     "user.account.delete",
     "story.read",

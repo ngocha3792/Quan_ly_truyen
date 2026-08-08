@@ -1,8 +1,4 @@
-import {
-  HttpErrorResponse,
-  HttpInterceptorFn,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 
@@ -51,20 +47,11 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
    */
   const accessTokenUsedByRequest = tokenStore.accessToken();
 
-  const preparedRequest = prepareApiRequest(
-    request,
-    accessTokenUsedByRequest,
-  );
+  const preparedRequest = prepareApiRequest(request, accessTokenUsedByRequest);
 
   return next(preparedRequest).pipe(
     catchError((error: unknown) => {
-      if (
-        !shouldAttemptRefresh(
-          error,
-          request,
-          accessTokenUsedByRequest,
-        )
-      ) {
+      if (!shouldAttemptRefresh(error, request, accessTokenUsedByRequest)) {
         return throwError(() => error);
       }
 
@@ -89,16 +76,8 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
        */
       const latestAccessToken = tokenStore.accessToken();
 
-      if (
-        latestAccessToken &&
-        latestAccessToken !== accessTokenUsedByRequest
-      ) {
-        return next(
-          prepareApiRequest(
-            request,
-            latestAccessToken,
-          ),
-        );
+      if (latestAccessToken && latestAccessToken !== accessTokenUsedByRequest) {
+        return next(prepareApiRequest(request, latestAccessToken));
       }
 
       /**
@@ -109,12 +88,7 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
        */
       return refreshService.refreshAccessToken().pipe(
         switchMap((newAccessToken) => {
-          return next(
-            prepareApiRequest(
-              request,
-              newAccessToken,
-            ),
-          );
+          return next(prepareApiRequest(request, newAccessToken));
         }),
       );
     }),
@@ -169,14 +143,8 @@ function prepareApiRequest(
   /**
    * Chỉ tự thêm Authorization nếu caller chưa tự cung cấp.
    */
-  if (
-    accessToken &&
-    !headers.has('Authorization')
-  ) {
-    headers = headers.set(
-      'Authorization',
-      `Bearer ${accessToken}`,
-    );
+  if (accessToken && !headers.has('Authorization')) {
+    headers = headers.set('Authorization', `Bearer ${accessToken}`);
   }
 
   /**
@@ -185,22 +153,11 @@ function prepareApiRequest(
    * Backend refresh cookie là HttpOnly,
    * còn csrf_token cho phép frontend đọc và gửi lại qua header.
    */
-  if (
-    MUTATING_METHODS.has(
-      request.method.toUpperCase(),
-    )
-  ) {
-    const csrfToken =
-      readBrowserCookie('csrf_token');
+  if (MUTATING_METHODS.has(request.method.toUpperCase())) {
+    const csrfToken = readBrowserCookie('csrf_token');
 
-    if (
-      csrfToken &&
-      !headers.has('x-csrf-token')
-    ) {
-      headers = headers.set(
-        'x-csrf-token',
-        csrfToken,
-      );
+    if (csrfToken && !headers.has('x-csrf-token')) {
+      headers = headers.set('x-csrf-token', csrfToken);
     }
   }
 
