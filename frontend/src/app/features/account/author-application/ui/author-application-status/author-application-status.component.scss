@@ -1,0 +1,101 @@
+:host {
+  display: block;
+}
+
+.status-card {
+  padding: 32px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 14px;
+
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.status-badge {
+  display: inline-flex;
+
+  margin-bottom: 14px;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.pending {
+  color: #fde68a;
+
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.approved {
+  color: #86efac;
+
+  background: rgba(34, 197, 94, 0.15);
+}
+
+h2 {
+  margin: 0 0 10px;
+}
+
+p {
+  color: var(--text-secondary);
+
+  line-height: 1.6;
+}
+
+small {
+  display: block;
+
+  margin-top: 16px;
+
+  color: var(--text-secondary);
+}
+
+.refresh-button {
+  margin-top: 18px;
+
+  min-height: 38px;
+
+  padding: 0 16px;
+
+  border: 1px solid rgba(168, 85, 247, 0.32);
+
+  border-radius: 8px;
+
+  color: #e9d5ff;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+.studio-button {
+  display: inline-flex;
+
+  margin-top: 18px;
+
+  padding: 11px 18px;
+
+  border-radius: 8px;
+
+  color: #fff;
+
+  background: linear-gradient(135deg, #743cdd, #a451eb);
+
+  font-weight: 700;
+
+  text-decoration: none;
+}

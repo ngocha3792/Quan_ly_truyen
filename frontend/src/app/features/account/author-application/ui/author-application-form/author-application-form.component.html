@@ -1,0 +1,384 @@
+<section class="application-form-card">
+  <header class="form-heading">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="8" r="3"></circle>
+
+      <path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"></path>
+
+      <path d="M18 4h3"></path>
+      <path d="M19.5 2.5v3"></path>
+    </svg>
+
+    <h2>Thông tin đăng ký</h2>
+  </header>
+
+  @if (successMessage) {
+    <div class="form-message form-message--success">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+
+        <path d="m8 12 2.5 2.5L16 9"></path>
+      </svg>
+
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="form-message form-message--error">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+
+        <path d="M12 7v6"></path>
+        <path d="M12 17h.01"></path>
+      </svg>
+
+      <span>{{ errorMessage }}</span>
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="handleSubmit()">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="author-pen-name">
+          Bút danh
+          <span>*</span>
+        </label>
+
+        <input
+          id="author-pen-name"
+          type="text"
+          formControlName="penName"
+          maxlength="40"
+          autocomplete="nickname"
+          placeholder="Nhập bút danh bạn muốn sử dụng"
+        />
+
+        @if (hasError('penName', 'required')) {
+          <small class="field-error"> Vui lòng nhập bút danh. </small>
+        }
+
+        @if (hasError('penName', 'minlength')) {
+          <small class="field-error"> Bút danh cần ít nhất 2 ký tự. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-full-name">
+          Họ và tên
+          <span>*</span>
+        </label>
+
+        <input
+          id="author-full-name"
+          type="text"
+          formControlName="fullName"
+          maxlength="80"
+          autocomplete="name"
+          placeholder="Nhập họ và tên của bạn"
+        />
+
+        @if (hasError('fullName', 'required')) {
+          <small class="field-error"> Vui lòng nhập họ và tên. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-email">
+          Email liên hệ
+          <span>*</span>
+        </label>
+
+        <input
+          id="author-email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="example@email.com"
+        />
+
+        @if (hasError('email', 'required')) {
+          <small class="field-error"> Vui lòng nhập email. </small>
+        }
+
+        @if (hasError('email', 'email')) {
+          <small class="field-error"> Email không đúng định dạng. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-phone">
+          Số điện thoại
+          <span>*</span>
+        </label>
+
+        <input
+          id="author-phone"
+          type="tel"
+          formControlName="phone"
+          autocomplete="tel"
+          placeholder="Nhập số điện thoại liên hệ"
+        />
+
+        @if (hasError('phone', 'required')) {
+          <small class="field-error"> Vui lòng nhập số điện thoại. </small>
+        }
+
+        @if (hasError('phone', 'pattern')) {
+          <small class="field-error"> Số điện thoại không hợp lệ. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-portfolio"> Liên kết Facebook / Portfolio </label>
+
+        <input
+          id="author-portfolio"
+          type="url"
+          formControlName="portfolioUrl"
+          autocomplete="url"
+          placeholder="https://facebook.com/tenban hoặc link portfolio"
+        />
+
+        @if (hasError('portfolioUrl', 'pattern')) {
+          <small class="field-error"> Đường dẫn phải bắt đầu bằng http:// hoặc https://. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-genre">
+          Thể loại sáng tác chính
+          <span>*</span>
+        </label>
+
+        <div class="select-wrap">
+          <select id="author-genre" formControlName="primaryGenre">
+            <option value="">Chọn thể loại chính</option>
+
+            @for (option of config.genreOptions; track option.value) {
+              <option [value]="option.value">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+
+          <svg viewBox="0 0 24 24">
+            <path d="m8 10 4 4 4-4"></path>
+          </svg>
+        </div>
+
+        @if (hasError('primaryGenre', 'required')) {
+          <small class="field-error"> Vui lòng chọn thể loại. </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="author-experience">
+          Kinh nghiệm viết
+          <span>*</span>
+        </label>
+
+        <div class="select-wrap">
+          <select id="author-experience" formControlName="experience">
+            <option value="">Chọn mức kinh nghiệm</option>
+
+            @for (option of config.experienceOptions; track option.value) {
+              <option [value]="option.value">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+
+          <svg viewBox="0 0 24 24">
+            <path d="m8 10 4 4 4-4"></path>
+          </svg>
+        </div>
+
+        @if (hasError('experience', 'required')) {
+          <small class="field-error"> Vui lòng chọn kinh nghiệm. </small>
+        }
+      </div>
+    </div>
+
+    <div class="form-field form-field--full">
+      <label for="author-introduction">
+        Giới thiệu bản thân
+        <span>*</span>
+      </label>
+
+      <textarea
+        id="author-introduction"
+        rows="4"
+        formControlName="introduction"
+        [maxlength]="config.introductionMaximumLength"
+        placeholder="Giới thiệu ngắn gọn về bản thân, sở thích viết và hành trình sáng tác của bạn..."
+      ></textarea>
+
+      <span class="character-count">
+        {{ form.controls.introduction.value.length }}
+        /
+        {{ config.introductionMaximumLength }}
+      </span>
+
+      @if (hasError('introduction', 'required')) {
+        <small class="field-error"> Vui lòng giới thiệu bản thân. </small>
+      }
+    </div>
+
+    <div class="form-field form-field--full">
+      <label for="author-synopsis">
+        Ý tưởng hoặc tóm tắt tác phẩm đầu tay
+        <span>*</span>
+      </label>
+
+      <textarea
+        id="author-synopsis"
+        rows="5"
+        formControlName="firstWorkSynopsis"
+        [maxlength]="config.synopsisMaximumLength"
+        placeholder="Mô tả ý tưởng, nội dung hoặc tóm tắt ngắn gọn tác phẩm đầu tay bạn muốn đăng tải..."
+      ></textarea>
+
+      <span class="character-count">
+        {{ form.controls.firstWorkSynopsis.value.length }}
+        /
+        {{ config.synopsisMaximumLength }}
+      </span>
+
+      @if (hasError('firstWorkSynopsis', 'required')) {
+        <small class="field-error"> Vui lòng nhập ý tưởng hoặc tóm tắt tác phẩm. </small>
+      }
+    </div>
+
+    <div class="form-field form-field--full">
+      <label>
+        Mẫu chương truyện
+        <span>*</span>
+      </label>
+
+      <div
+        class="upload-zone"
+        [class.upload-zone--dragging]="dragging()"
+        [class.upload-zone--selected]="selectedFile()"
+        tabindex="0"
+        role="button"
+        (click)="fileInput.click()"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="fileInput.click()"
+        (dragover)="handleDragOver($event)"
+        (dragleave)="handleDragLeave()"
+        (drop)="handleDrop($event)"
+      >
+        <input
+          #fileInput
+          type="file"
+          hidden
+          [accept]="acceptedFileTypes"
+          (change)="handleFileInput($event)"
+        />
+
+        <svg viewBox="0 0 24 24">
+          <path d="M16 16l-4-4-4 4"></path>
+
+          <path d="M12 12v9"></path>
+
+          <path d="M20.4 17.5A5 5 0 0 0 18 8.2 7 7 0 0 0 4.3 10.7 4.5 4.5 0 0 0 5 19.5h3"></path>
+        </svg>
+
+        @if (selectedFile(); as file) {
+          <div>
+            <strong>{{ file.name }}</strong>
+
+            <small>
+              {{ formatFileSize(file.size) }}
+              · Nhấn để chọn file khác
+            </small>
+          </div>
+
+          <button
+            class="remove-file-button"
+            type="button"
+            aria-label="Xóa file"
+            (click)="removeFile($event)"
+          >
+            ×
+          </button>
+        } @else {
+          <div>
+            <strong> Kéo thả file vào đây hoặc nhấn để chọn file </strong>
+
+            <small>
+              Định dạng:
+              {{ config.acceptedFileExtensions.join(', ') }}
+              (Tối đa
+              {{ config.maximumFileSizeMb }}MB)
+            </small>
+          </div>
+        }
+      </div>
+
+      @if (fileError()) {
+        <small class="field-error">
+          {{ fileError() }}
+        </small>
+      }
+    </div>
+
+    <label class="terms-field">
+      <input type="checkbox" formControlName="acceptedTerms" />
+
+      <span class="custom-checkbox">
+        <svg viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6"></path>
+        </svg>
+      </span>
+
+      <span>
+        Tôi cam kết tuân thủ
+        <a routerLink="/dieu-khoan-su-dung" target="_blank"> Quy định nội dung </a>
+        và
+        <a routerLink="/quyen-rieng-tu" target="_blank"> Chính sách cộng đồng </a>
+        của TruyenHub.
+        <strong>*</strong>
+      </span>
+    </label>
+
+    @if (hasError('acceptedTerms', 'required')) {
+      <small class="field-error terms-error"> Bạn cần đồng ý với quy định trước khi gửi. </small>
+    }
+
+    <footer class="form-actions">
+      <button
+        class="draft-button"
+        type="button"
+        [disabled]="submitting || draftSaving"
+        (click)="handleSaveDraft()"
+      >
+        <svg viewBox="0 0 24 24">
+          <path d="M5 3h11l3 3v15H5V3Z"></path>
+
+          <path d="M8 3v6h8V3"></path>
+          <path d="M8 15h8v6H8z"></path>
+        </svg>
+
+        {{ draftSaving ? 'Đang lưu...' : 'Lưu nháp' }}
+      </button>
+
+      <button class="submit-button" type="submit" [disabled]="submitting || draftSaving">
+        @if (submitting) {
+          <span class="loading-spinner"></span>
+
+          Đang gửi yêu cầu...
+        } @else {
+          <svg viewBox="0 0 24 24">
+            <path d="m22 2-7 20-4-9-9-4 20-7Z"></path>
+
+            <path d="M22 2 11 13"></path>
+          </svg>
+
+          Gửi yêu cầu
+        }
+      </button>
+    </footer>
+  </form>
+</section>
