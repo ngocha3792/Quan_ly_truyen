@@ -142,17 +142,17 @@ jobs:
           test -s dist/worker.js
           test -s dist/healthcheck/worker-heartbeat.healthcheck.js
 
-      - name: Auth unit coverage gate
-        run: npm run test:auth:unit:cov
+      - name: Critical module unit coverage gates
+        run: npm run test:critical:unit:cov
 
       - name: All source unit tests
         run: npm test -- --runInBand
 
-      - name: Upload auth coverage
+      - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: backend-auth-coverage-${{ github.sha }}
+          name: backend-coverage-${{ github.sha }}
           path: backend/coverage
           if-no-files-found: ignore
           retention-days: 7
@@ -268,11 +268,19 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: npm audit --omit=dev --audit-level=high
 
-  container-build:
-    name: Containers / reproducible build and smoke
+    container-build:
+    name: Containers / reproducible build, vulnerability scan and smoke
+
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [frontend-quality, backend-quality]
+
+    timeout-minutes: 35
+
+    needs:
+      - frontend-quality
+      - backend-quality
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -281,58 +289,182 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ------------------------------------------------------------
+      # Frontend
+      # ------------------------------------------------------------
+
       - name: Build frontend image
         uses: docker/build-push-action@v6
+
         with:
           context: frontend
+
           file: frontend/Dockerfile
+
           load: true
+
           tags: quan-ly-truyen-frontend:ci
+
           cache-from: type=gha,scope=ci-frontend
+
           cache-to: type=gha,mode=max,scope=ci-frontend
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: quan-ly-truyen-frontend:ci
+
+          format: table
+
+          exit-code: "1"
+
+          ignore-unfixed: true
+
+          vuln-type: os,library
+
+          severity: CRITICAL,HIGH
 
       - name: Smoke test frontend image
         shell: bash
+
         run: |
-          container_id=$(docker run --detach --publish 8080:80 quan-ly-truyen-frontend:ci)
-          trap 'docker logs "$container_id" || true; docker rm --force "$container_id" >/dev/null 2>&1 || true' EXIT
+          set -euo pipefail
+
+          container_id="$(
+            docker run \
+              --detach \
+              --publish 8080:80 \
+              quan-ly-truyen-frontend:ci
+          )"
+
+          cleanup() {
+            docker logs "$container_id" || true
+
+            docker rm \
+              --force \
+              "$container_id" \
+              >/dev/null 2>&1 || true
+          }
+
+          trap cleanup EXIT
+
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+            if curl \
+              --fail \
+              --silent \
+              http://127.0.0.1:8080/health \
+              >/dev/null
+            then
               exit 0
             fi
+
             sleep 1
           done
-          echo 'Frontend container failed its health endpoint.'
+
+          echo "Frontend container failed its health endpoint."
+
           exit 1
+
+      # ------------------------------------------------------------
+      # Backend runtime
+      # ------------------------------------------------------------
 
       - name: Build backend runtime image
         uses: docker/build-push-action@v6
+
         with:
           context: backend
+
           file: backend/Dockerfile
+
           target: runtime
+
           load: true
+
           tags: quan-ly-truyen-backend:ci
+
           build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+
           cache-from: type=gha,scope=ci-backend-runtime
+
           cache-to: type=gha,mode=max,scope=ci-backend-runtime
 
+      - name: Scan backend runtime image
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: quan-ly-truyen-backend:ci
+
+          format: table
+
+          exit-code: "1"
+
+          ignore-unfixed: true
+
+          vuln-type: os,library
+
+          severity: CRITICAL,HIGH
+
+          skip-setup-trivy: true
+
       - name: Verify backend runtime image contents
-        run: >-
-          docker run --rm --entrypoint sh quan-ly-truyen-backend:ci -c
-          'test -s dist/main.js && test -s dist/worker.js && test -d prisma/migrations'
+        shell: bash
+
+        run: |
+          set -euo pipefail
+
+          docker run \
+            --rm \
+            --entrypoint sh \
+            quan-ly-truyen-backend:ci \
+            -c '
+              test -s dist/main.js &&
+              test -s dist/worker.js &&
+              test -d prisma/migrations
+            '
+
+      # ------------------------------------------------------------
+      # Backend migration
+      # ------------------------------------------------------------
 
       - name: Build backend migration image
         uses: docker/build-push-action@v6
+
         with:
           context: backend
+
           file: backend/Dockerfile
+
           target: migrate
-          load: false
+
+          load: true
+
+          tags: quan-ly-truyen-backend-migrate:ci
+
           build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+
           cache-from: type=gha,scope=ci-backend-migrate
+
           cache-to: type=gha,mode=max,scope=ci-backend-migrate
 
+      - name: Scan backend migration image
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: quan-ly-truyen-backend-migrate:ci
+
+          format: table
+
+          exit-code: "1"
+
+          ignore-unfixed: true
+
+          vuln-type: os,library
+
+          severity: CRITICAL,HIGH
+
+          skip-setup-trivy: true
   frontend-e2e:
     name: Full stack / Playwright E2E
     runs-on: ubuntu-latest

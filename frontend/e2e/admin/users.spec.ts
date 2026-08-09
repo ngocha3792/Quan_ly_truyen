@@ -2,6 +2,28 @@ import { expect, test } from '../fixtures/managed-admin-test';
 
 const TARGET_EMAIL = 'e2e.managed-user@truyenhub.test';
 
+test('manager mở được Quản lý người dùng từ menu hồ sơ', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /E2E Manager/ }).click();
+
+  const usersLink = page.getByRole('link', {
+    name: 'Quản lý người dùng',
+  });
+
+  await expect(usersLink).toBeVisible();
+
+  await usersLink.click();
+
+  await expect(page).toHaveURL(/\/admin\/users$/);
+
+  await expect(
+    page.getByRole('heading', {
+      name: 'Quản lý người dùng',
+    }),
+  ).toBeVisible();
+});
+
 test('manager suspend rồi activate user end-to-end', async ({ page }) => {
   await page.goto('/admin/users');
 
@@ -15,16 +37,17 @@ test('manager suspend rồi activate user end-to-end', async ({ page }) => {
     ),
   ).toBeVisible();
 
-  await page.getByPlaceholder('Email, username hoặc tên hiển thị...').fill(TARGET_EMAIL);
+  await page
+    .getByRole('searchbox', {
+      name: 'Tìm người dùng',
+    })
+    .fill(TARGET_EMAIL);
 
   await page
-    .getByRole(
-      'button',
-
-      {
-        name: 'Tìm',
-      },
-    )
+    .getByRole('button', {
+      name: 'Tìm',
+      exact: true,
+    })
     .click();
 
   const row = page.getByRole('row').filter({
@@ -99,16 +122,17 @@ test('manager suspend rồi activate user end-to-end', async ({ page }) => {
 test('manager cấp rồi gỡ ADMIN role end-to-end', async ({ page }) => {
   await page.goto('/admin/users');
 
-  await page.getByPlaceholder('Email, username hoặc tên hiển thị...').fill(TARGET_EMAIL);
+  await page
+    .getByRole('searchbox', {
+      name: 'Tìm người dùng',
+    })
+    .fill(TARGET_EMAIL);
 
   await page
-    .getByRole(
-      'button',
-
-      {
-        name: 'Tìm',
-      },
-    )
+    .getByRole('button', {
+      name: 'Tìm',
+      exact: true,
+    })
     .click();
 
   const row = page.getByRole('row').filter({

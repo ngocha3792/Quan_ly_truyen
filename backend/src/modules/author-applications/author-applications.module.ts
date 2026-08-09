@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { VerifiedEmailGuard } from '@/common/guards';
+
 import { PrismaModule } from '@/infrastructure/database';
 
 import { AuthAuthorizationModule } from '@/modules/auth';
@@ -43,6 +45,14 @@ import {
   ],
 
   providers: [
+    /*
+     * Route-level guard của applicant endpoints.
+     *
+     * Khai báo local provider thay vì import cả
+     * CommonGuardsModule vào feature module.
+     */
+    VerifiedEmailGuard,
+
     GetAuthorApplicationConfigQueryHandler,
 
     GetMyAuthorApplicationQueryHandler,

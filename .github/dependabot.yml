@@ -1,22 +1,71 @@
 version: 2
+
 updates:
+  # Backend npm dependencies.
   - package-ecosystem: npm
     directory: /backend
     schedule:
       interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Bangkok
+
     open-pull-requests-limit: 5
+
     groups:
       backend-production:
         dependency-type: production
+
       backend-development:
         dependency-type: development
 
+  # Frontend npm dependencies.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:30"
+      timezone: Asia/Bangkok
+
+    open-pull-requests-limit: 5
+
+    groups:
+      frontend-production:
+        dependency-type: production
+
+      frontend-development:
+        dependency-type: development
+
+  # Backend Docker base images.
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Bangkok
 
+    open-pull-requests-limit: 3
+
+  # Frontend Docker base images.
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:30"
+      timezone: Asia/Bangkok
+
+    open-pull-requests-limit: 3
+
+  # GitHub Actions used by every workflow.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Asia/Bangkok
+
+    open-pull-requests-limit: 5

@@ -4,12 +4,32 @@ import { authenticatedGuard } from '../core/auth/authenticated.guard';
 import { AUTH_PERMISSIONS } from '../core/auth/authorization.models';
 import { permissionGuard } from '../core/auth/permission.guard';
 
+const userManagementGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.USER_MANAGE)];
+
 const authorApplicationGuards = [
   authenticatedGuard,
   permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
 ];
 
 export const ADMIN_ROUTES: Routes = [
+  {
+    path: 'admin/users',
+    title: 'Quản lý người dùng - TruyenHub',
+    canActivate: userManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/users/pages/list/admin-users-list-page.component').then(
+        (module) => module.AdminUsersListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/users/:userId',
+    title: 'Chi tiết người dùng - TruyenHub',
+    canActivate: userManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/users/pages/detail/admin-user-detail-page.component').then(
+        (module) => module.AdminUserDetailPageComponent,
+      ),
+  },
   {
     path: 'admin/author-applications',
     title: 'Xét duyệt hồ sơ tác giả - TruyenHub',

@@ -17,6 +17,8 @@ import {
 
 import { AuthorApplicationRepository } from '../domain/author-application.repository';
 
+import { AuthorApplicationState } from './author-application.state';
+
 import { AuthorApplicationStore } from './author-application.store';
 
 describe('AuthorApplicationStore session lifecycle regression', () => {
@@ -56,6 +58,8 @@ describe('AuthorApplicationStore session lifecycle regression', () => {
     TestBed.configureTestingModule({
       providers: [
         AuthorApplicationStore,
+
+        AuthorApplicationState,
 
         AuthSessionLifecycleService,
 

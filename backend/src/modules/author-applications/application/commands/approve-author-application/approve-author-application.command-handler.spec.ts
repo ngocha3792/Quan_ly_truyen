@@ -1,121 +1,39 @@
-import { Logger } from '@nestjs/common';
+﻿import { Logger } from '@nestjs/common';
 
-import { AuthorApplicationStatus } from '../../../domain';
+import { AuthenticationRequiredException } from '@/common/exceptions';
 
-import type { AuthorApplicationRecord } from '../../ports';
+import {
+  AuthorAlreadyActiveException,
+  AuthorApplicationNotFoundException,
+  AuthorApplicationNotPendingException,
+  AuthorApplicationSelfReviewException,
+  AuthorApplicationStatus,
+  AuthorPenNameUnavailableException,
+  AuthorRoleUnavailableException,
+} from '../../../domain';
+
+import {
+  APPLICATION_ID,
+  createAuthorApplication,
+  OWNER_ID,
+  REVIEWER_ID,
+} from '../author-application-command-handler.spec.fixture';
 
 import { ApproveAuthorApplicationCommand } from './approve-author-application.command';
 
 import { ApproveAuthorApplicationCommandHandler } from './approve-author-application.command-handler';
 
 describe('ApproveAuthorApplicationCommandHandler', () => {
-  const applicationId = '11111111-1111-4111-8111-111111111111';
+  let persistence: {    approve: jest.Mock;  };
+  let authorizationInvalidation: {    invalidateUser: jest.Mock;  };
+  let handler: ApproveAuthorApplicationCommandHandler;
 
-  const ownerId = '22222222-2222-4222-8222-222222222222';
-
-  const reviewerId = '33333333-3333-4333-8333-333333333333';
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('vẫn trả approve thành công nếu cache invalidation fail sau DB commit', async () => {
-    const spyLoggerWarn = jest
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation(() => undefined);
-
-    const application = createApprovedApplication();
-
-    const persistence = {
-      approve: jest.fn().mockResolvedValue({
-        status: 'approved',
-
-        application,
-
-        userId: ownerId,
-      }),
-    };
-
-    const invalidateUser = jest
-      .fn()
-      .mockRejectedValue(new Error('Redis unavailable'));
-
-    const authorizationInvalidation = {
-      invalidateUser,
-    };
-
-    const handler = new ApproveAuthorApplicationCommandHandler(
-      persistence as never,
-
-      authorizationInvalidation,
-    );
-
-    const result = await handler.execute(
-      new ApproveAuthorApplicationCommand(
-        applicationId,
-
-        reviewerId,
-
-        '127.0.0.1',
-
-        'Jest',
-
-        'request-1',
-      ),
-    );
-
-    expect(result.status).toBe(AuthorApplicationStatus.APPROVED);
-
-    expect(result.applicationId).toBe(applicationId);
-
-    expect(invalidateUser).toHaveBeenCalledWith(ownerId);
-
-    expect(spyLoggerWarn).toHaveBeenCalled();
-  });
-
-  function createApprovedApplication(): AuthorApplicationRecord {
-    const now = new Date('2026-08-08T03:00:00.000Z');
-
-    return {
-      id: applicationId,
-
-      userId: ownerId,
-
-      status: AuthorApplicationStatus.APPROVED,
-
-      penName: 'Integration Author',
-
-      fullName: 'Author Name',
-
-      email: 'author@example.test',
-
-      phone: '0900000000',
-
-      portfolioUrl: null,
-
-      primaryGenre: 'Fantasy',
-
-      experience: '1-3-years',
-
-      introduction: 'Introduction',
-
-      firstWorkSynopsis: 'Synopsis',
-
-      acceptedTerms: true,
-
-      sample: null,
-
-      submittedAt: now,
-
-      reviewedAt: now,
-
-      reviewedById: reviewerId,
-
-      rejectionReason: null,
-
-      createdAt: now,
-
-      updatedAt: now,
-    };
-  }
-});
+  beforeEach(() => {    persistence = {      approve: jest.fn(),    };
+    authorizationInvalidation = {      invalidateUser: jest.fn().mockResolvedValue(undefined),    };
+    handler = new ApproveAuthorApplicationCommandHandler(      persistence as never,
+      authorizationInvalidation,    );  });
+  afterEach(() => {    jest.restoreAllMocks();  });
+  it('yêu cầu reviewer UUID hợp lệ', async () => {    await expect(      handler.execute(        new ApproveAuthorApplicationCommand(          APPLICATION_ID,          undefined,        ),      ),    ).rejects.toBeInstanceOf(AuthenticationRequiredException);    expect(persistence.approve).not.toHaveBeenCalled();  });
+  it('approve và invalidate authorization sau DB commit', async () => {    persistence.approve.mockResolvedValue({      status: 'approved',      application: createAuthorApplication(        AuthorApplicationStatus.APPROVED,      ),      userId: OWNER_ID,    });    const result = await handler.execute(      new ApproveAuthorApplicationCommand(        APPLICATION_ID,        REVIEWER_ID,        '127.0.0.1',        'Jest',        'approve-request',      ),    );    expect(persistence.approve).toHaveBeenCalledWith({      applicationId: APPLICATION_ID,      reviewerId: REVIEWER_ID,      reviewedAt: expect.any(Date) as unknown,      audit: {        ipAddress: '127.0.0.1',        userAgent: 'Jest',        requestId: 'approve-request',      },    });    expect(      authorizationInvalidation.invalidateUser,    ).toHaveBeenCalledWith(OWNER_ID);    expect(result.status).toBe(      AuthorApplicationStatus.APPROVED,    );  });
+  it('DB commit vẫn thành công nếu cache invalidation fail', async () => {    jest      .spyOn(Logger.prototype, 'warn')      .mockImplementation(() => undefined);    persistence.approve.mockResolvedValue({      status: 'approved',      application: createAuthorApplication(        AuthorApplicationStatus.APPROVED,      ),      userId: OWNER_ID,    });    authorizationInvalidation.invalidateUser.mockRejectedValue(      new Error('Redis unavailable'),    );    const result = await handler.execute(      new ApproveAuthorApplicationCommand(        APPLICATION_ID,        REVIEWER_ID,      ),    );    expect(result.status).toBe(      AuthorApplicationStatus.APPROVED,    );  });
+  it.each([    [      'not_found',      {        status: 'not_found',      },      AuthorApplicationNotFoundException,    ],    [      'not_pending',      {        status: 'not_pending',      },      AuthorApplicationNotPendingException,    ],    [      'self_review',      {        status: 'self_review',      },      AuthorApplicationSelfReviewException,    ],    [      'pen_name_unavailable',      {        status: 'pen_name_unavailable',        penName: 'Coverage Author',      },      AuthorPenNameUnavailableException,    ],    [      'role_missing',      {        status: 'role_missing',      },      AuthorRoleUnavailableException,    ],    [      'already_author',      {        status: 'already_author',      },      AuthorAlreadyActiveException,    ],  ])(    'map persistence status %s thành domain exception',    async (_status, persistenceResult, ExceptionType) => {      persistence.approve.mockResolvedValue(        persistenceResult,      );      await expect(        handler.execute(          new ApproveAuthorApplicationCommand(            APPLICATION_ID,            REVIEWER_ID,          ),        ),      ).rejects.toBeInstanceOf(ExceptionType);    },  );});

@@ -64,9 +64,13 @@ export class AdminAuthorApplicationsApiService {
       .pipe(map((response) => response.data));
   }
 
-  approve(applicationId: string): Observable<AdminAuthorApplicationRecord> {
+  approve(
+    applicationId: string,
+
+    idempotencyKey: string,
+  ): Observable<AdminAuthorApplicationRecord> {
     const headers = new HttpHeaders({
-      'x-idempotency-key': crypto.randomUUID(),
+      'x-idempotency-key': idempotencyKey,
     });
 
     return this.http
@@ -86,9 +90,11 @@ export class AdminAuthorApplicationsApiService {
     applicationId: string,
 
     reason: string,
+
+    idempotencyKey: string,
   ): Observable<AdminAuthorApplicationRecord> {
     const headers = new HttpHeaders({
-      'x-idempotency-key': crypto.randomUUID(),
+      'x-idempotency-key': idempotencyKey,
     });
 
     return this.http

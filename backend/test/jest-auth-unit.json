@@ -2,20 +2,22 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
   "testEnvironment": "node",
-  "testMatch": ["\u003crootDir\u003e/src/modules/auth/**/*.spec.ts"],
+  "testMatch": ["<rootDir>/src/modules/auth/**/*.spec.ts"],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "^@/(.*)$": "\u003crootDir\u003e/src/$1",
+    "^@/(.*)$": "<rootDir>/src/$1",
     "^(\\.\\.?/.*)\\.js$": "$1"
   },
   "collectCoverageFrom": [
-    "\u003crootDir\u003e/src/modules/auth/application/**/*.ts",
-    "!\u003crootDir\u003e/src/modules/auth/application/**/index.ts",
-    "!\u003crootDir\u003e/src/modules/auth/application/**/*.interface.ts",
-    "!\u003crootDir\u003e/src/modules/auth/application/**/*.type.ts"
+    "<rootDir>/src/modules/auth/application/**/*.ts",
+    "!<rootDir>/src/modules/auth/application/**/index.ts",
+    "!<rootDir>/src/modules/auth/application/**/*.interface.ts",
+    "!<rootDir>/src/modules/auth/application/**/*.type.ts"
   ],
+  "coverageDirectory": "<rootDir>/coverage/auth",
+  "coverageReporters": ["text", "json-summary", "lcov"],
   "coverageThreshold": {
     "global": {
       "branches": 47,

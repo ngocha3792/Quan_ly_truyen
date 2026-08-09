@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+
+import { AuthStore } from '../../../../../core/auth/auth.store';
 
 import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
-import { AuthorApplicationStatusComponent } from '../../ui/author-application-status/author-application-status.component';
+
 import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
 
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
@@ -25,6 +27,8 @@ import {
 import { AuthorApplicationFormComponent } from '../../ui/author-application-form/author-application-form.component';
 
 import { AuthorApplicationSidebarComponent } from '../../ui/author-application-sidebar/author-application-sidebar.component';
+
+import { AuthorApplicationStatusComponent } from '../../ui/author-application-status/author-application-status.component';
 
 @Component({
   selector: 'app-author-application-page',
@@ -53,7 +57,17 @@ import { AuthorApplicationSidebarComponent } from '../../ui/author-application-s
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorApplicationPageComponent implements OnInit {
+  private readonly auth = inject(AuthStore);
+
   protected readonly store = inject(AuthorApplicationStore);
+
+  /*
+   * Frontend check chỉ phục vụ UX.
+   *
+   * Backend VerifiedEmailGuard vẫn là
+   * authoritative enforcement.
+   */
+  protected readonly emailVerified = computed(() => this.auth.user()?.emailVerified === true);
 
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
     {

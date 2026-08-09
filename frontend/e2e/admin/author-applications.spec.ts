@@ -13,7 +13,11 @@ test('reviewer duyệt hồ sơ tác giả end-to-end', async ({ page }) => {
     ),
   ).toBeVisible();
 
-  await page.getByPlaceholder('Tìm theo họ tên, bút danh hoặc email...').fill('E2E Approve Pen');
+  await page
+    .getByRole('searchbox', {
+      name: 'Tìm hồ sơ tác giả',
+    })
+    .fill('E2E Approve Pen');
 
   await page
     .getByRole(
@@ -51,7 +55,12 @@ test('reviewer duyệt hồ sơ tác giả end-to-end', async ({ page }) => {
     ),
   ).toBeVisible();
 
-  await expect(page.getByText('E2E Approve Pen')).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: 'E2E Approve Pen',
+      level: 2,
+    }),
+  ).toBeVisible();
 
   await page
     .getByRole(
@@ -85,7 +94,11 @@ test('reviewer duyệt hồ sơ tác giả end-to-end', async ({ page }) => {
 test('reviewer từ chối hồ sơ và lưu rejection reason', async ({ page }) => {
   await page.goto('/admin/author-applications');
 
-  await page.getByPlaceholder('Tìm theo họ tên, bút danh hoặc email...').fill('E2E Reject Pen');
+  await page
+    .getByRole('searchbox', {
+      name: 'Tìm hồ sơ tác giả',
+    })
+    .fill('E2E Reject Pen');
 
   await page
     .getByRole(

@@ -4,8 +4,12 @@ import { AuthorApplicationRepository } from '../domain/author-application.reposi
 
 import { AuthorApplicationApiRepository } from './author-application-api.repository';
 
+import { AuthorApplicationState } from './author-application.state';
+
 export function provideAuthorApplication(): Provider[] {
   return [
+    AuthorApplicationState,
+
     {
       provide: AuthorApplicationRepository,
 

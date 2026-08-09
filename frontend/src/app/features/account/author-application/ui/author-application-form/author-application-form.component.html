@@ -286,11 +286,30 @@
       <small class="field-error terms-error"> Bạn cần đồng ý với quy định trước khi gửi. </small>
     }
 
+    @if (!emailVerified) {
+      <section class="email-verification-notice" role="status" aria-live="polite">
+        <div class="email-verification-notice__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 6h16v12H4z"></path>
+
+            <path d="m4 7 8 6 8-6"></path>
+          </svg>
+        </div>
+
+        <div>
+          <strong> Email chưa được xác minh </strong>
+
+          <p>Bạn cần xác minh email của tài khoản trước khi lưu hoặc gửi hồ sơ đăng ký tác giả.</p>
+        </div>
+      </section>
+    }
+
     <footer class="form-actions">
       <button
         class="draft-button"
         type="button"
-        [disabled]="submitting || draftSaving"
+        [disabled]="!emailVerified || submitting || draftSaving"
+        [attr.title]="emailVerified ? null : 'Xác minh email trước khi lưu hồ sơ'"
         (click)="handleSaveDraft()"
       >
         <svg viewBox="0 0 24 24">
@@ -303,8 +322,21 @@
         {{ draftSaving ? 'Đang lưu...' : 'Lưu nháp' }}
       </button>
 
-      <button class="submit-button" type="submit" [disabled]="submitting || draftSaving">
-        @if (submitting) {
+      <button
+        class="submit-button"
+        type="submit"
+        [disabled]="!emailVerified || submitting || draftSaving"
+        [attr.title]="emailVerified ? null : 'Xác minh email trước khi gửi hồ sơ'"
+      >
+        @if (!emailVerified) {
+          <svg viewBox="0 0 24 24">
+            <path d="M4 6h16v12H4z"></path>
+
+            <path d="m4 7 8 6 8-6"></path>
+          </svg>
+
+          Cần xác minh email
+        } @else if (submitting) {
           <span class="loading-spinner"></span>
 
           Đang gửi yêu cầu...

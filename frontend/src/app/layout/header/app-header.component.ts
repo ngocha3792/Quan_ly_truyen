@@ -5,7 +5,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../core/auth/auth.store';
-import { AUTH_PERMISSIONS } from '../../core/auth/authorization.models';
+import { AUTH_PERMISSIONS, type AuthPermission } from '../../core/auth/authorization.models';
 import { AuthDialogComponent } from '../../features/account/auth/ui/auth-dialog/auth-dialog.component';
 import { HomeRepository } from '../../features/public/home/data-access/home.repository';
 import { Story } from '../../features/public/home/domain/home.models';
@@ -42,17 +42,13 @@ export class AppHeaderComponent {
 
   protected readonly auth = inject(AuthStore);
 
-  protected readonly canReviewAuthorApplications = computed(() => {
-    const user = this.auth.user();
+  protected readonly canManageUsers = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.USER_MANAGE),
+  );
 
-    if (!user) {
-      return false;
-    }
-
-    const expected = AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW.trim().toLowerCase();
-
-    return user.permissions.some((permission) => permission.trim().toLowerCase() === expected);
-  });
+  protected readonly canReviewAuthorApplications = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
+  );
 
   protected readonly query = signal('');
 
@@ -71,6 +67,18 @@ export class AppHeaderComponent {
    * Sau này thay bằng giá trị từ notification store/API.
    */
   protected readonly notificationUnreadCount = signal(2);
+
+  private hasPermission(permission: AuthPermission): boolean {
+    const user = this.auth.user();
+
+    if (!user) {
+      return false;
+    }
+
+    const expected = permission.trim().toLowerCase();
+
+    return user.permissions.some((item) => item.trim().toLowerCase() === expected);
+  }
 
   protected readonly navItems: readonly NavItem[] = [
     {

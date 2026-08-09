@@ -37,6 +37,7 @@
                 [draftSaving]="store.status() === 'saving-draft'"
                 [successMessage]="store.message()"
                 [errorMessage]="store.errorMessage()"
+                [emailVerified]="emailVerified()"
                 (saveDraft)="handleSaveDraft($event)"
                 (submitApplication)="handleSubmit($event)"
               />
@@ -51,6 +52,7 @@
             [draftSaving]="store.status() === 'saving-draft'"
             [successMessage]="store.message()"
             [errorMessage]="store.errorMessage()"
+            [emailVerified]="emailVerified()"
             (saveDraft)="handleSaveDraft($event)"
             (submitApplication)="handleSubmit($event)"
           />

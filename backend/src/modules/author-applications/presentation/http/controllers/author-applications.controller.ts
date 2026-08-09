@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -19,6 +20,8 @@ import {
 import { Idempotent } from '@/common/decorators/interceptor';
 
 import { PermissionCode } from '@/common/enums';
+
+import { VerifiedEmailGuard } from '@/common/guards';
 
 import {
   GetAuthorApplicationConfigQuery,
@@ -73,6 +76,7 @@ export class AuthorApplicationsController {
   }
 
   @Put('me/draft')
+  @UseGuards(VerifiedEmailGuard)
   @RequirePermissions(PermissionCode.AUTHOR_APPLICATION_CREATE)
   async saveMyDraft(
     @CurrentUserId()
@@ -111,6 +115,7 @@ export class AuthorApplicationsController {
   }
 
   @Post('me/submit')
+  @UseGuards(VerifiedEmailGuard)
   @HttpCode(HttpStatus.OK)
   @Idempotent({
     required: true,

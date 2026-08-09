@@ -208,6 +208,45 @@ select option {
   padding-left: 28px;
 }
 
+.email-verification-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 9px;
+  background: rgba(146, 64, 14, 0.12);
+  color: #fde68a;
+}
+
+.email-verification-notice__icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.email-verification-notice__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.email-verification-notice strong {
+  display: block;
+  color: #fef3c7;
+  font-size: 13.5px;
+}
+
+.email-verification-notice p {
+  margin: 4px 0 0;
+  color: #fcd34d;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
 .form-actions {
   display: grid;
   grid-template-columns:

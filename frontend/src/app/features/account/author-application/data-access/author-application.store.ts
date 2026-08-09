@@ -1,99 +1,54 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { finalize, forkJoin, takeUntil } from 'rxjs';
-
-import { AuthAuthorizationSyncService } from '../../../../core/auth/auth-authorization-sync.service';
+import { finalize, forkJoin, MonoTypeOperatorFunction, takeUntil } from 'rxjs';
 
 import { AuthSessionLifecycleService } from '../../../../core/auth/auth-session-lifecycle.service';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 
 import {
-  AuthorApplicationConfig,
   AuthorApplicationDraft,
   AuthorApplicationPayload,
-  AuthorApplicationRecord,
-  AuthorApplicationStatus,
 } from '../domain/author-application.models';
 
 import { AuthorApplicationRepository } from '../domain/author-application.repository';
+
+import { AuthorApplicationState } from './author-application.state';
 
 @Injectable()
 export class AuthorApplicationStore {
   private readonly repository = inject(AuthorApplicationRepository);
 
-  private readonly authorizationSync = inject(AuthAuthorizationSyncService);
+  private readonly state = inject(AuthorApplicationState);
 
   private readonly lifecycle = inject(AuthSessionLifecycleService);
 
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly configState = signal<AuthorApplicationConfig | null>(null);
+  readonly config = this.state.config;
 
-  private readonly applicationState = signal<AuthorApplicationRecord | null>(null);
+  readonly application = this.state.application;
 
-  /**
-   * Flag này cũng là session-scoped.
-   *
-   * Alice APPROVED không được khiến Bob
-   * bỏ qua authorization sync sau này.
-   */
-  private authorAuthorizationSynced = false;
+  readonly status = this.state.status;
 
-  readonly config = this.configState.asReadonly();
+  readonly message = this.state.message;
 
-  readonly application = this.applicationState.asReadonly();
+  readonly errorMessage = this.state.errorMessage;
 
-  readonly status = signal<AuthorApplicationStatus>('idle');
+  readonly checkingStatus = this.state.checkingStatus;
 
-  readonly message = signal('');
-
-  readonly errorMessage = signal('');
-
-  readonly checkingStatus = signal(false);
-
-  readonly editable = computed(() => {
-    const application = this.applicationState();
-
-    return !application || application.status === 'DRAFT' || application.status === 'REJECTED';
-  });
-
-  constructor() {
-    /**
-     * Bất kỳ auth lifecycle transition nào:
-     *
-     * Alice -> Bob
-     * logout
-     * session invalidated
-     * access lost
-     * remote session established
-     *
-     * đều làm user-scoped state hiện tại
-     * không còn đáng tin cậy.
-     */
-    this.lifecycle.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.resetSessionState();
-    });
-  }
+  readonly editable = this.state.editable;
 
   load(): void {
     if (this.status() === 'loading') {
       return;
     }
 
-    /**
-     * Snapshot revision tại thời điểm
-     * request được tạo.
-     */
     const revision = this.lifecycle.revision();
 
-    this.status.set('loading');
-
-    this.message.set('');
-
-    this.errorMessage.set('');
+    this.state.begin('loading');
 
     forkJoin({
       config: this.repository.getConfig(),
@@ -101,126 +56,70 @@ export class AuthorApplicationStore {
       application: this.repository.getMine(),
     })
       .pipe(
-        /**
-         * Session đổi:
-         *
-         * hủy cả getConfig + getMine.
-         *
-         * Với HttpClient, unsubscribe cũng
-         * hủy request nếu request còn pending.
-         */
-        takeUntil(this.lifecycle.changes$),
-
-        takeUntilDestroyed(this.destroyRef),
+        this.untilSessionChanges(),
 
         finalize(() => {
-          /**
-           * Finalize của request cũ không được
-           * sửa status của session mới.
-           */
-          if (revision !== this.lifecycle.revision()) {
-            return;
-          }
-
-          if (this.status() === 'loading') {
-            this.status.set('idle');
+          if (this.isCurrentRevision(revision)) {
+            this.state.finishIf('loading');
           }
         }),
       )
       .subscribe({
-        next: ({
-          config,
-
-          application,
-        }) => {
-          /**
-           * Belt-and-suspenders:
-           *
-           * takeUntil đã ngăn stale emission,
-           * revision check là lớp bảo vệ thứ hai.
-           */
-          if (revision !== this.lifecycle.revision()) {
+        next: ({ config, application }) => {
+          if (!this.isCurrentRevision(revision)) {
             return;
           }
 
-          this.configState.set(config);
-
-          this.applicationState.set(application);
-
-          this.syncAuthorAuthorization(application);
+          this.state.setLoaded(config, application);
         },
 
         error: (error: unknown) => {
-          /**
-           * Error của Alice không được hiển thị
-           * dưới session Bob.
-           */
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            this.state.setError(getApiErrorMessage(error));
           }
-
-          this.status.set('error');
-
-          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
 
   refreshApplicationStatus(): void {
-    const current = this.applicationState();
+    const current = this.application();
 
-    /*
-     * Chỉ cần check tự động
-     * khi hồ sơ đang PENDING.
-     */
     if (!current || current.status !== 'PENDING' || this.checkingStatus()) {
       return;
     }
 
     const revision = this.lifecycle.revision();
 
-    this.checkingStatus.set(true);
+    this.state.setCheckingStatus(true);
 
     this.repository
       .getMine()
       .pipe(
-        takeUntil(this.lifecycle.changes$),
-
-        takeUntilDestroyed(this.destroyRef),
+        this.untilSessionChanges(),
 
         finalize(() => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            this.state.setCheckingStatus(false);
           }
-
-          this.checkingStatus.set(false);
         }),
       )
       .subscribe({
         next: (application) => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            this.state.setApplication(application);
           }
-
-          this.applicationState.set(application);
-
-          /*
-           * Nếu admin vừa approve:
-           *
-           * APPROVED
-           * → revalidate /auth/me
-           * → nhận role AUTHOR
-           * → nhận permission mới.
-           */
-          this.syncAuthorAuthorization(application);
         },
 
         error: (error: unknown) => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            /*
+             * refresh status lỗi không biến toàn page
+             * thành error state.
+             *
+             * Giữ semantics cũ.
+             */
+            this.state.setPassiveError(getApiErrorMessage(error));
           }
-
-          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
@@ -232,55 +131,34 @@ export class AuthorApplicationStore {
 
     const revision = this.lifecycle.revision();
 
-    this.status.set('saving-draft');
-
-    this.message.set('');
-
-    this.errorMessage.set('');
+    this.state.begin('saving-draft');
 
     this.repository
       .saveDraft(draft)
       .pipe(
-        /**
-         * Đây là phần sửa trực tiếp regression:
-         *
-         * Alice save đang pending
-         * -> Bob login
-         * -> subscription Alice bị cancel.
-         */
-        takeUntil(this.lifecycle.changes$),
-
-        takeUntilDestroyed(this.destroyRef),
+        this.untilSessionChanges(),
 
         finalize(() => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
-          }
-
-          if (this.status() === 'saving-draft') {
-            this.status.set('idle');
+          if (this.isCurrentRevision(revision)) {
+            this.state.finishIf('saving-draft');
           }
         }),
       )
       .subscribe({
         next: (application) => {
-          if (revision !== this.lifecycle.revision()) {
+          if (!this.isCurrentRevision(revision)) {
             return;
           }
 
-          this.applicationState.set(application);
+          this.state.setApplication(application);
 
-          this.message.set('Bản nháp đã được lưu.');
+          this.state.setMessage('Bản nháp đã được lưu.');
         },
 
         error: (error: unknown) => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            this.state.setError(getApiErrorMessage(error));
           }
-
-          this.status.set('error');
-
-          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
@@ -292,140 +170,52 @@ export class AuthorApplicationStore {
 
     const revision = this.lifecycle.revision();
 
-    this.status.set('submitting');
-
-    this.message.set('');
-
-    this.errorMessage.set('');
+    this.state.begin('submitting');
 
     this.repository
       .submit(payload)
       .pipe(
-        /**
-         * repository.submit() hiện gồm:
-         *
-         * save draft
-         * -> create upload intent
-         * -> Cloudinary upload
-         * -> confirm media
-         * -> submit application
-         *
-         * Session đổi ở bất kỳ bước nào
-         * đều unsubscribe toàn bộ chain.
-         */
-        takeUntil(this.lifecycle.changes$),
-
-        takeUntilDestroyed(this.destroyRef),
+        this.untilSessionChanges(),
 
         finalize(() => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
-          }
-
-          /**
-           * Bình thường success/error đã đổi status.
-           *
-           * Fallback này xử lý source complete
-           * mà không emit.
-           */
-          if (this.status() === 'submitting') {
-            this.status.set('idle');
+          if (this.isCurrentRevision(revision)) {
+            this.state.finishIf('submitting');
           }
         }),
       )
       .subscribe({
         next: (application) => {
-          if (revision !== this.lifecycle.revision()) {
+          if (!this.isCurrentRevision(revision)) {
             return;
           }
 
-          this.applicationState.set(application);
+          this.state.setApplication(application);
 
-          this.status.set('success');
-
-          this.message.set(['Yêu cầu đã được gửi.', 'Hồ sơ hiện đang chờ xét duyệt.'].join(' '));
+          this.state.setSuccess('Yêu cầu đã được gửi. Hồ sơ hiện đang chờ xét duyệt.');
         },
 
         error: (error: unknown) => {
-          if (revision !== this.lifecycle.revision()) {
-            return;
+          if (this.isCurrentRevision(revision)) {
+            this.state.setError(getApiErrorMessage(error));
           }
-
-          this.status.set('error');
-
-          this.errorMessage.set(getApiErrorMessage(error));
         },
       });
   }
 
   clearMessages(): void {
-    this.message.set('');
-
-    this.errorMessage.set('');
-
-    if (this.status() === 'success' || this.status() === 'error') {
-      this.status.set('idle');
-    }
+    this.state.clearMessages();
   }
 
-  private syncAuthorAuthorization(application: AuthorApplicationRecord | null): void {
-    if (this.authorAuthorizationSynced || application?.status !== 'APPROVED') {
-      return;
-    }
+  private untilSessionChanges<T>(): MonoTypeOperatorFunction<T> {
+    return (source) =>
+      source.pipe(
+        takeUntil(this.lifecycle.changes$),
 
-    this.authorAuthorizationSynced = true;
-
-    /*
-     * AuthorApplication chỉ phát tín hiệu:
-     *
-     * "authorization có thể đã thay đổi".
-     *
-     * Nó không biết:
-     *
-     * - refresh token thế nào
-     * - GET /auth/me ra sao
-     * - cross-tab synchronization
-     *
-     * Core Auth chịu trách nhiệm.
-     */
-    this.authorizationSync.notifyAuthorizationMayHaveChanged();
+        takeUntilDestroyed(this.destroyRef),
+      );
   }
 
-  private resetSessionState(): void {
-    /**
-     * Đây chỉ là LOCAL reset.
-     *
-     * Tuyệt đối không gọi API từ đây.
-     */
-
-    this.applicationState.set(null);
-
-    this.status.set('idle');
-
-    this.message.set('');
-
-    this.errorMessage.set('');
-
-    this.checkingStatus.set(false);
-
-    this.authorAuthorizationSynced = false;
-
-    /**
-     * configState cố ý KHÔNG reset.
-     *
-     * /author-applications/config là
-     * application policy/catalog chung:
-     *
-     * genreOptions
-     * experienceOptions
-     * requirements
-     * file limits
-     * review steps
-     *
-     * không chứa dữ liệu user.
-     *
-     * Nếu sau này config trở thành
-     * user-specific thì reset nó ở đây.
-     */
+  private isCurrentRevision(revision: number): boolean {
+    return revision === this.lifecycle.revision();
   }
 }

@@ -45,6 +45,7 @@ jobs:
 
           if ! [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Unable to resolve a full Git commit SHA from the release source."
+
             exit 1
           fi
 
@@ -59,6 +60,7 @@ jobs:
 
         env:
           GH_TOKEN: ${{ github.token }}
+
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
 
         run: |
@@ -105,7 +107,7 @@ jobs:
 
             echo
 
-            echo "Backend images will not be published until the exact commit has passed the full CI workflow on main."
+            echo "Backend images will not be published until the exact commit has passed full CI on main."
 
             exit 1
           fi
@@ -139,7 +141,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    name: Publish verified backend images
+    name: Scan and publish verified backend images
 
     needs:
       - verify
@@ -151,7 +153,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout verified source SHA
@@ -159,6 +161,7 @@ jobs:
 
         with:
           ref: ${{ needs.verify.outputs.source_sha }}
+
           fetch-depth: 1
 
       - name: Verify checkout did not drift
@@ -205,6 +208,88 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # ------------------------------------------------------------
+      # Security build + scan
+      # ------------------------------------------------------------
+
+      - name: Build runtime image for security scan
+        uses: docker/build-push-action@v6
+
+        with:
+          context: backend
+
+          file: backend/Dockerfile
+
+          target: runtime
+
+          load: true
+
+          tags: quan-ly-truyen-backend:release-scan
+
+          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+
+          cache-from: type=gha,scope=backend-runtime
+
+          cache-to: type=gha,mode=max,scope=backend-runtime
+
+      - name: Scan runtime image before publish
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: quan-ly-truyen-backend:release-scan
+
+          format: table
+
+          exit-code: "1"
+
+          ignore-unfixed: true
+
+          vuln-type: os,library
+
+          severity: CRITICAL,HIGH
+
+      - name: Build migration image for security scan
+        uses: docker/build-push-action@v6
+
+        with:
+          context: backend
+
+          file: backend/Dockerfile
+
+          target: migrate
+
+          load: true
+
+          tags: quan-ly-truyen-backend-migrate:release-scan
+
+          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+
+          cache-from: type=gha,scope=backend-migrate
+
+          cache-to: type=gha,mode=max,scope=backend-migrate
+
+      - name: Scan migration image before publish
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: quan-ly-truyen-backend-migrate:release-scan
+
+          format: table
+
+          exit-code: "1"
+
+          ignore-unfixed: true
+
+          vuln-type: os,library
+
+          severity: CRITICAL,HIGH
+
+          skip-setup-trivy: true
+
+      # ------------------------------------------------------------
+      # Nothing above this point can publish a package.
+      # ------------------------------------------------------------
 
       - name: Login to GHCR
         uses: docker/login-action@v3

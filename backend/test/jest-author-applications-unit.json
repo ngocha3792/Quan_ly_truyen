@@ -1,0 +1,31 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testMatch": [
+    "<rootDir>/src/modules/author-applications/application/commands/**/*.spec.ts",
+    "<rootDir>/src/modules/author-applications/domain/policies/author-application-lifecycle.policy.spec.ts"
+  ],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^(\\.\\.?/.*)\\.js$": "$1"
+  },
+  "collectCoverageFrom": [
+    "<rootDir>/src/modules/author-applications/application/commands/**/*.command-handler.ts",
+    "<rootDir>/src/modules/author-applications/domain/policies/author-application-lifecycle.policy.ts",
+    "!<rootDir>/src/modules/author-applications/**/index.ts"
+  ],
+  "coverageDirectory": "<rootDir>/coverage/author-applications",
+  "coverageReporters": ["text", "json-summary", "lcov"],
+  "coverageThreshold": {
+    "global": {
+      "branches": 75,
+      "functions": 85,
+      "lines": 85,
+      "statements": 85
+    }
+  }
+}

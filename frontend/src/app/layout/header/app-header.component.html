@@ -195,6 +195,14 @@
                 }
               </a>
 
+              @if (canManageUsers()) {
+                <a routerLink="/admin/users" (click)="closeProfile()">
+                  <app-icon name="user" [size]="18"></app-icon>
+
+                  <span>Quản lý người dùng</span>
+                </a>
+              }
+
               @if (canReviewAuthorApplications()) {
                 <a routerLink="/admin/author-applications" (click)="closeProfile()">
                   <app-icon name="shield" [size]="18"></app-icon>
@@ -244,6 +252,12 @@
       }
 
       @if (auth.isAuthenticated()) {
+        @if (canManageUsers()) {
+          <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMobileMenu()">
+            Quản lý người dùng
+          </a>
+        }
+
         @if (canReviewAuthorApplications()) {
           <a
             routerLink="/admin/author-applications"

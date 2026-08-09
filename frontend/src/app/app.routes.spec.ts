@@ -13,6 +13,7 @@ describe('application route composition', () => {
       '',
       '**',
     ]);
+
     expect(routes.at(-1)?.redirectTo).toBe('');
   });
 
@@ -45,6 +46,8 @@ describe('application route composition', () => {
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
+      'admin/users',
+      'admin/users/:userId',
       'admin/author-applications',
       'admin/author-applications/:applicationId',
       'tac-gia-studio',
@@ -53,12 +56,15 @@ describe('application route composition', () => {
 
   it('retains guards on every private shell route', () => {
     const children = shellRoute().children ?? [];
+
     const privatePaths = [
       'tai-khoan',
       'lich-su',
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
+      'admin/users',
+      'admin/users/:userId',
       'admin/author-applications',
       'admin/author-applications/:applicationId',
     ];
@@ -71,6 +77,7 @@ describe('application route composition', () => {
 
 function shellRoute(): Route {
   const route = routes.find((candidate) => candidate.component === AppShellComponent);
+
   if (!route) {
     throw new Error('AppShell route is missing');
   }

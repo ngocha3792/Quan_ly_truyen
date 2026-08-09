@@ -172,11 +172,11 @@ export class AuthStore {
 
       catchError((error: unknown) => {
         /**
-         * Phase 1 vẫn giữ semantics hiện tại:
+         * Chỉ terminal auth-session error code mới chứng minh
+         * session thực sự không còn hợp lệ.
          *
-         * 401 / 403 => rejected session.
-         *
-         * Phase 2 mới thay bằng error-code taxonomy.
+         * Không suy luận chỉ từ HTTP 401/403 vì cùng HTTP status
+         * có thể mang semantics khác nhau, ví dụ CSRF/origin failure.
          */
         if (this.isRejectedSession(error)) {
           if (this.statusState() !== 'anonymous') {
@@ -244,9 +244,17 @@ export class AuthStore {
     this.errorState.set(null);
 
     return this.api.login(payload).pipe(
-      switchMap((result) => this.acceptLogin(result)),
-
+      /*
+       * Chỉ lỗi của chính request authentication mới đi vào đây.
+       *
+       * Nếu POST /login đã 200 nhưng bước hydrate /auth/me phía sau
+       * thất bại thì acceptLogin() sẽ tự phân loại lỗi đó.
+       *
+       * Đặt catchError trước switchMap là chủ ý.
+       */
       catchError((error: unknown) => this.handleAuthenticationError(error)),
+
+      switchMap((result) => this.acceptLogin(result)),
     );
   }
 
@@ -288,6 +296,12 @@ export class AuthStore {
     this.errorState.set(null);
 
     return this.api.confirmMfaEnrollment(request).pipe(
+      /*
+       * MFA request bị backend từ chối trước khi session được thiết lập
+       * vẫn sử dụng authentication failure semantics cũ.
+       */
+      catchError((error: unknown) => this.handleAuthenticationError(error)),
+
       switchMap((result) =>
         this.acceptLogin(result).pipe(
           map((user) => ({
@@ -297,8 +311,6 @@ export class AuthStore {
           })),
         ),
       ),
-
-      catchError((error: unknown) => this.handleAuthenticationError(error)),
     );
   }
 
@@ -308,9 +320,13 @@ export class AuthStore {
     this.errorState.set(null);
 
     return this.api.verifyMfa(request).pipe(
-      switchMap((result) => this.acceptLogin(result)),
-
+      /*
+       * Chỉ lỗi verify MFA trước khi backend trả login result
+       * mới được xem là authentication failure.
+       */
       catchError((error: unknown) => this.handleAuthenticationError(error)),
+
+      switchMap((result) => this.acceptLogin(result)),
     );
   }
 
@@ -428,12 +444,36 @@ export class AuthStore {
   }
 
   private acceptLogin(result: LoginResponse): Observable<CurrentUser> {
+    /*
+     * Backend đã trả authentication success.
+     *
+     * Tại thời điểm này refresh cookie đã được thiết lập,
+     * vì vậy phải ghi session hint NGAY, không chờ /auth/me.
+     *
+     * Điều này cũng bảo vệ trường hợp:
+     *
+     * login 200
+     * → browser có refresh cookie
+     * → /me đang pending
+     * → page reload / request bị interrupt
+     *
+     * Lần bootstrap tiếp theo vẫn phải thử refresh.
+     */
     this.tokens.set(result.accessToken);
+
+    this.sessionHint.markSessionPresent();
 
     return this.api.me().pipe(
       tap((user) => {
         this.setAuthenticated(user);
       }),
+
+      /*
+       * Từ đây trở xuống login/MFA đã thành công.
+       *
+       * Lỗi /me không được đánh đồng với lỗi credential.
+       */
+      catchError((error: unknown) => this.handleSessionHydrationError(error)),
     );
   }
 
@@ -448,6 +488,57 @@ export class AuthStore {
 
       false,
     );
+
+    this.errorState.set(getApiErrorMessage(error));
+
+    return throwError(() => error);
+  }
+
+  private handleSessionHydrationError(error: unknown): Observable<never> {
+    /*
+     * /auth/me chạy sau khi backend đã authentication success.
+     *
+     * Không được dùng HTTP status đơn thuần để quyết định session chết.
+     * isRejectedSession() sử dụng stable backend error code taxonomy.
+     */
+    if (this.isRejectedSession(error)) {
+      /*
+       * Ví dụ:
+       *
+       * AUTHENTICATION_REQUIRED
+       * AUTH_CURRENT_USER_UNAVAILABLE
+       * AUTH_ACCESS_TOKEN_BLACKLISTED
+       * INVALID_TOKEN
+       * TOKEN_EXPIRED
+       *
+       * Những code này chứng minh authenticated session hiện tại
+       * không còn usable.
+       */
+      this.lifecycle.clearSession(
+        'authentication-session-hydration-rejected',
+
+        false,
+      );
+    } else {
+      /*
+       * Network / 5xx / unknown non-terminal error:
+       *
+       * login đã thành công,
+       * refresh cookie có thể vẫn hoàn toàn hợp lệ.
+       *
+       * Không được mark session absent.
+       */
+      if (this.statusState() !== 'idle') {
+        this.lifecycle.loseAccess('authentication-session-hydration-temporarily-unavailable');
+      }
+
+      /*
+       * AuthSessionLifecycleService emit synchronous,
+       * nhưng vẫn apply trực tiếp giống semantics hiện tại
+       * của bootstrap/refresh để state luôn deterministic.
+       */
+      this.applyRecoverableIdleState();
+    }
 
     this.errorState.set(getApiErrorMessage(error));
 
