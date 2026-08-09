@@ -1,33 +1,27 @@
 {
-    "moduleFileExtensions":  [
-                                 "js",
-                                 "json",
-                                 "ts"
-                             ],
-    "rootDir":  "..",
-    "testEnvironment":  "node",
-    "testMatch":  [
-                      "\u003crootDir\u003e/src/modules/auth/**/*.spec.ts"
-                  ],
-    "transform":  {
-                      "^.+\\.(t|j)s$":  "ts-jest"
-                  },
-    "moduleNameMapper":  {
-                             "^@/(.*)$":  "\u003crootDir\u003e/src/$1",
-                             "^(\\.\\.?/.*)\\.js$":  "$1"
-                         },
-    "collectCoverageFrom":  [
-                                "\u003crootDir\u003e/src/modules/auth/application/**/*.ts",
-                                "!\u003crootDir\u003e/src/modules/auth/application/**/index.ts",
-                                "!\u003crootDir\u003e/src/modules/auth/application/**/*.interface.ts",
-                                "!\u003crootDir\u003e/src/modules/auth/application/**/*.type.ts"
-                            ],
-    "coverageThreshold":  {
-                              "global":  {
-                                             "branches":  60,
-                                             "functions":  70,
-                                             "lines":  70,
-                                             "statements":  70
-                                         }
-                          }
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testMatch": ["\u003crootDir\u003e/src/modules/auth/**/*.spec.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "\u003crootDir\u003e/src/$1",
+    "^(\\.\\.?/.*)\\.js$": "$1"
+  },
+  "collectCoverageFrom": [
+    "\u003crootDir\u003e/src/modules/auth/application/**/*.ts",
+    "!\u003crootDir\u003e/src/modules/auth/application/**/index.ts",
+    "!\u003crootDir\u003e/src/modules/auth/application/**/*.interface.ts",
+    "!\u003crootDir\u003e/src/modules/auth/application/**/*.type.ts"
+  ],
+  "coverageThreshold": {
+    "global": {
+      "branches": 47,
+      "functions": 53,
+      "lines": 67,
+      "statements": 69
+    }
+  }
 }

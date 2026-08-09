@@ -271,14 +271,13 @@ export class AuthAccountController {
   ): Promise<RevokeOtherSessionsResponse> {
     this.authCookies.setNoStoreHeaders(response);
 
-    const revokedCount =
-      await this.revokeOtherSessionsCommandHandler.execute(
-        new RevokeOtherSessionsCommand(
-          userId,
+    const revokedCount = await this.revokeOtherSessionsCommandHandler.execute(
+      new RevokeOtherSessionsCommand(
+        userId,
 
-          currentSessionId,
-        ),
-      );
+        currentSessionId,
+      ),
+    );
 
     return {
       revokedCount,

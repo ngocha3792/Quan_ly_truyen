@@ -13,14 +13,39 @@ permissions:
   id-token: write
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install and verify source
+        run: |
+          npm install --global npm@11.12.1
+          npm ci --no-audit --no-fund
+          npm run ci
+
   publish:
+    needs: verify
     runs-on: ubuntu-latest
 
     timeout-minutes: 20
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set image coordinates
         id: image
@@ -57,17 +82,17 @@ jobs:
 
           file: frontend/Dockerfile
 
+          build-args: NODE_IMAGE=node:24.18.0-alpine
+
           push: true
 
           tags: |
             ${{ steps.image.outputs.name }}:${{ steps.image.outputs.sha }}
             ${{ steps.image.outputs.name }}:${{ steps.image.outputs.release }}
 
-          cache-from:
-            type=gha,scope=frontend-runtime
+          cache-from: type=gha,scope=frontend-runtime
 
-          cache-to:
-            type=gha,mode=max,scope=frontend-runtime
+          cache-to: type=gha,mode=max,scope=frontend-runtime
 
           provenance: mode=max
 

@@ -1,4 +1,5 @@
-FROM node:24.15.0-alpine AS dependencies
+ARG NODE_IMAGE=node:24.18.0-alpine
+FROM ${NODE_IMAGE} AS dependencies
 
 WORKDIR /app
 

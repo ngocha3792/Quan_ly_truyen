@@ -12,13 +12,48 @@ permissions:
   id-token: write
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm install --global npm@11.12.1
+          npm ci --no-audit --no-fund
+
+      - name: Verify release source
+        run: |
+          npm run format:check
+          npm run lint:check
+          npm run typecheck:scripts
+          npm run build
+          npm test -- --runInBand
+
   publish:
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set image coordinates
         id: image

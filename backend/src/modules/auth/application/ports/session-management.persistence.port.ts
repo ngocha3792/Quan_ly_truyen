@@ -58,11 +58,7 @@ export interface SessionManagementPersistencePort {
     now: Date,
   ): Promise<readonly ManagedSessionRecord[]>;
 
-  revokeUserSession(
-    input: RevokeUserSessionInput,
-  ): Promise<boolean>;
+  revokeUserSession(input: RevokeUserSessionInput): Promise<boolean>;
 
-  revokeOtherUserSessions(
-    input: RevokeOtherUserSessionsInput,
-  ): Promise<number>;
+  revokeOtherUserSessions(input: RevokeOtherUserSessionsInput): Promise<number>;
 }

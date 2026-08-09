@@ -2,39 +2,27 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
   pull_request:
-
   merge_group:
-
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
   CI: "true"
-
-  # Đồng bộ với frontend/package.json packageManager.
   NPM_VERSION: "11.12.1"
 
 jobs:
-  # ============================================================
-  # FRONTEND QUALITY
-  # ============================================================
-  frontend:
-    name: Frontend / quality
-
+  frontend-quality:
+    name: Frontend / quality, tests and build
     runs-on: ubuntu-latest
-
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -45,55 +33,73 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
-
         with:
           node-version-file: .nvmrc
-
           cache: npm
-
           cache-dependency-path: frontend/package-lock.json
 
       - name: Pin npm
         run: npm install --global npm@${NPM_VERSION}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: Check formatting
-        run: npm run format:check
+      - name: Format and architecture guardrails
+        run: npm run format:check && npm run architecture:check
 
-      - name: Typecheck Playwright tests
-        run: npm run typecheck:e2e
+      - name: Lint and strict typecheck
+        run: npm run lint:check && npm run typecheck && npm run typecheck:e2e
 
-      - name: Unit tests
+      - name: Unit and regression tests
         run: npm run test:ci
 
       - name: Production build
         run: npm run build:ci
 
-  # ============================================================
-  # BACKEND QUALITY
-  # ============================================================
-  backend:
-    name: Backend / quality
+      - name: Verify browser artifact
+        run: test -s dist/frontend/browser/index.html
 
+      - name: Upload browser artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-browser-${{ github.sha }}
+          path: frontend/dist/frontend/browser
+          if-no-files-found: error
+          retention-days: 3
+
+  backend-quality:
+    name: Backend / quality, unit coverage and build
     runs-on: ubuntu-latest
-
-    timeout-minutes: 20
-
-    env:
-      NODE_ENV: test
-
-      # prisma.config.ts đọc DATABASE_URL trong npm ci -> postinstall.
-      #
-      # Prisma generate không cần kết nối DB,
-      # nhưng config vẫn cần URL hợp lệ.
-      DATABASE_URL: >-
-        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
-
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://127.0.0.1:6379/0
+      TEST_REDIS_URL: redis://127.0.0.1:6379/1
+      QUEUE_ENABLED: "false"
+      MAIL_ENABLED: "false"
+      CLOUDINARY_ENABLED: "false"
+      OBSERVABILITY_ENABLED: "false"
+      METRICS_ENABLED: "false"
+      SWAGGER_ENABLED: "false"
+      JWT_ACCESS_SECRET: ci-access-secret-unique-at-least-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-secret-unique-at-least-32-characters
+      AUTH_CSRF_ENABLED: "true"
+      AUTH_CSRF_SECRET: ci-csrf-secret-unique-at-least-32-characters
+      AUTH_LOGIN_RATE_LIMIT_ENABLED: "true"
+      AUTH_JWT_BLACKLIST_ENABLED: "true"
+      AUTH_JWT_BLACKLIST_FAILURE_MODE: closed
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
+      MAIL_PAYLOAD_ENCRYPTION_KEY: CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk=
+      MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ: "false"
+      FRONTEND_PUBLIC_URL: http://localhost:4200
+      APP_PUBLIC_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
 
     steps:
       - name: Checkout
@@ -101,109 +107,148 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
-
         with:
           node-version-file: .nvmrc
-
           cache: npm
-
           cache-dependency-path: backend/package-lock.json
 
       - name: Pin npm
         run: npm install --global npm@${NPM_VERSION}
 
-      # Repo hiện tại từng có cloud DB credential ở file này.
-      # Đây là guard để lỗi tương tự không quay lại.
-      - name: Reject cloud credentials in committed Docker env
+      - name: Reject committed cloud database credentials
         working-directory: .
-
         shell: bash
-
         run: |
-          if grep -q 'db\.prisma\.io' backend/docker/.env.docker; then
-            echo 'backend/docker/.env.docker must use the local postgres service, not a cloud database URL.'
+          if grep -Eq 'db\.prisma\.io|postgres(?:ql)?://[^[:space:]]+@[^[:space:]]*(neon|supabase|render)' backend/docker/.env.docker; then
+            echo 'backend/docker/.env.docker must only reference local development services.'
             exit 1
           fi
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: Lint
-        run: npm run lint:check
+      - name: Validate CI environment
+        run: npm run ci:check-env
 
-      - name: Typecheck scripts
-        run: npm run typecheck:scripts
+      - name: Format, lint and typecheck
+        run: npm run format:check && npm run lint:check && npm run typecheck:scripts
 
-      - name: Build
+      - name: Build application and worker
         run: npm run build
 
-      - name: Unit tests
+      - name: Verify runtime artifacts
+        run: |
+          test -s dist/main.js
+          test -s dist/worker.js
+          test -s dist/healthcheck/worker-heartbeat.healthcheck.js
+
+      - name: Auth unit coverage gate
+        run: npm run test:auth:unit:cov
+
+      - name: All source unit tests
         run: npm test -- --runInBand
 
-  # ============================================================
-  # BACKEND INTEGRATION
-  # ============================================================
+      - name: Upload auth coverage
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-auth-coverage-${{ github.sha }}
+          path: backend/coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
   backend-integration:
-    name: Backend / PostgreSQL + Redis integration
-
+    name: Backend / PostgreSQL and Redis integration
     runs-on: ubuntu-latest
-
-    timeout-minutes: 30
-
-    needs:
-      - backend
-
+    timeout-minutes: 35
+    needs: backend-quality
+    defaults:
+      run:
+        working-directory: backend
     env:
       NODE_ENV: test
-
-      DATABASE_URL: >-
-        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
-
-      TEST_DATABASE_URL: >-
-        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
-
-      # Database Redis > 0 vì test safety guard của repo yêu cầu.
-      REDIS_URL: redis://127.0.0.1:6379/1
-
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://127.0.0.1:6379/0
       TEST_REDIS_URL: redis://127.0.0.1:6379/1
-
+      REDIS_KEY_PREFIX: qlt:ci:integration
       ALLOW_UNSAFE_TEST_DB: "false"
+      QUEUE_ENABLED: "false"
+      MAIL_ENABLED: "false"
+      CLOUDINARY_ENABLED: "false"
+      OBSERVABILITY_ENABLED: "false"
+      METRICS_ENABLED: "false"
+      SWAGGER_ENABLED: "false"
+      JWT_ACCESS_SECRET: ci-access-secret-unique-at-least-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-secret-unique-at-least-32-characters
+      AUTH_CSRF_ENABLED: "true"
+      AUTH_CSRF_SECRET: ci-csrf-secret-unique-at-least-32-characters
+      AUTH_JWT_BLACKLIST_ENABLED: "true"
+      AUTH_JWT_BLACKLIST_FAILURE_MODE: closed
+      AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
+      MAIL_PAYLOAD_ENCRYPTION_KEY: CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk=
+      MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ: "false"
+      FRONTEND_PUBLIC_URL: http://localhost:4200
+      APP_PUBLIC_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
 
     services:
       postgres:
         image: postgres:17-alpine
-
         env:
           POSTGRES_USER: postgres
-
           POSTGRES_PASSWORD: postgres
-
           POSTGRES_DB: quan_ly_truyen_test
-
-        ports:
-          - 5432:5432
-
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres -d quan_ly_truyen_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
-
       redis:
         image: redis:7-alpine
-
-        ports:
-          - 6379:6379
-
+        ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
 
-    defaults:
-      run:
-        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Wait for PostgreSQL
+        run: npm run ci:wait-db
+
+      - name: Apply migrations and verify database constraints
+        run: npm run db:migrate:deploy && npm run db:verify:constraints
+
+      - name: Run all integration and API E2E suites
+        run: npm run ci:integration
+
+  dependency-audit:
+    name: Dependencies / production audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [frontend, backend]
 
     steps:
       - name: Checkout
@@ -211,105 +256,126 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
-
         with:
           node-version-file: .nvmrc
-
           cache: npm
-
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
 
       - name: Pin npm
         run: npm install --global npm@${NPM_VERSION}
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Audit production dependency graph
+        working-directory: ${{ matrix.project }}
+        run: npm audit --omit=dev --audit-level=high
 
-      - name: Run integration and E2E suites
-        run: npm run ci:integration
-
-  # ============================================================
-  # FRONTEND REAL E2E
-  # ============================================================
-  frontend-e2e:
-    name: Frontend / Playwright E2E
-
+  container-build:
+    name: Containers / reproducible build and smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [frontend-quality, backend-quality]
 
-    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
-    needs:
-      - frontend
-      - backend
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          load: true
+          tags: quan-ly-truyen-frontend:ci
+          cache-from: type=gha,scope=ci-frontend
+          cache-to: type=gha,mode=max,scope=ci-frontend
+
+      - name: Smoke test frontend image
+        shell: bash
+        run: |
+          container_id=$(docker run --detach --publish 8080:80 quan-ly-truyen-frontend:ci)
+          trap 'docker logs "$container_id" || true; docker rm --force "$container_id" >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Frontend container failed its health endpoint.'
+          exit 1
+
+      - name: Build backend runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          target: runtime
+          load: true
+          tags: quan-ly-truyen-backend:ci
+          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          cache-from: type=gha,scope=ci-backend-runtime
+          cache-to: type=gha,mode=max,scope=ci-backend-runtime
+
+      - name: Verify backend runtime image contents
+        run: >-
+          docker run --rm --entrypoint sh quan-ly-truyen-backend:ci -c
+          'test -s dist/main.js && test -s dist/worker.js && test -d prisma/migrations'
+
+      - name: Build backend migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          target: migrate
+          load: false
+          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          cache-from: type=gha,scope=ci-backend-migrate
+          cache-to: type=gha,mode=max,scope=ci-backend-migrate
+
+  frontend-e2e:
+    name: Full stack / Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [frontend-quality, backend-quality]
     env:
       NODE_ENV: test
-
-      DATABASE_URL: >-
-        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
-
-      TEST_DATABASE_URL: >-
-        postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
-
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_test?schema=public
       REDIS_ENABLED: "true"
-
       REDIS_URL: redis://127.0.0.1:6379/0
-
       TEST_REDIS_URL: redis://127.0.0.1:6379/1
-
       REDIS_KEY_PREFIX: qlt:ci:e2e
-
-      # E2E frontend không cần worker/mail/cloudinary thật.
+      ALLOW_UNSAFE_TEST_DB: "false"
       QUEUE_ENABLED: "false"
-
       MAIL_ENABLED: "false"
-
       CLOUDINARY_ENABLED: "false"
-
       OBSERVABILITY_ENABLED: "false"
-
       METRICS_ENABLED: "false"
-
       OTEL_SDK_DISABLED: "true"
-
       SWAGGER_ENABLED: "false"
-
       LOG_LEVEL: warn
-
       LOG_PRETTY: "false"
-
       AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED: "true"
-
       AUTH_ACCESS_AUTHORIZATION_CACHE_TTL_SECONDS: "5"
-
       ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: "false"
 
     services:
       postgres:
         image: postgres:17-alpine
-
         env:
           POSTGRES_USER: postgres
-
           POSTGRES_PASSWORD: postgres
-
           POSTGRES_DB: quan_ly_truyen_test
-
-        ports:
-          - 5432:5432
-
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres -d quan_ly_truyen_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
-
       redis:
         image: redis:7-alpine
-
-        ports:
-          - 6379:6379
-
+        ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
@@ -322,12 +388,9 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
-
         with:
           node-version-file: .nvmrc
-
           cache: npm
-
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
@@ -335,88 +398,101 @@ jobs:
       - name: Pin npm
         run: npm install --global npm@${NPM_VERSION}
 
-      # Dùng default test/dev values đã có sẵn,
-      # còn DATABASE_URL / Redis / Mail... được
-      # workflow env phía trên override.
       - name: Prepare backend environment
         working-directory: backend
-
         run: cp .env.example .env
 
       - name: Install backend dependencies
         working-directory: backend
-
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Migrate and seed E2E database
         working-directory: backend
-
         run: |
+          npm run ci:wait-db
           npm run db:migrate:deploy
           npm run db:seed
           npm run db:seed:e2e
+          npm run db:seed:e2e:admin
 
-      - name: Build backend
+      - name: Build and start backend
         working-directory: backend
-
-        run: npm run build
-
-      - name: Start backend
-        working-directory: backend
-
         shell: bash
-
         run: |
+          npm run build
           nohup npm run start:prod > backend-ci.log 2>&1 &
           echo $! > backend-ci.pid
 
-      - name: Install frontend dependencies
+      - name: Install frontend dependencies and Chromium
         working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
 
-        run: npm ci
-
-      - name: Install Chromium
+      - name: Wait for backend readiness
         working-directory: frontend
-
-        run: npx playwright install --with-deps chromium
-
-      - name: Wait for backend
-        working-directory: frontend
-
         run: >-
           npx wait-on
           http://127.0.0.1:3000/api/v1/health/live
           --timeout 120000
 
-      # Gọi Playwright trực tiếp thay vì npm run e2e,
-      # vì database đã seed ở phía trên.
-      #
-      # Nếu gọi npm run e2e thì pree2e sẽ seed thêm lần nữa.
       - name: Run Playwright E2E
         working-directory: frontend
-
         run: npx playwright test
-
-      - name: Print backend log on failure
-        if: failure()
-
-        working-directory: backend
-
-        run: cat backend-ci.log || true
 
       - name: Upload E2E diagnostics
         if: failure()
-
         uses: actions/upload-artifact@v6
-
         with:
           name: frontend-e2e-diagnostics-${{ github.run_id }}
-
           if-no-files-found: ignore
-
           retention-days: 7
-
           path: |
             frontend/playwright-report/
             frontend/test-results/
             backend/backend-ci.log
+
+      - name: Stop backend
+        if: always()
+        working-directory: backend
+        shell: bash
+        run: |
+          if test -f backend-ci.pid; then
+            kill "$(cat backend-ci.pid)" 2>/dev/null || true
+          fi
+
+  ci-success:
+    name: CI / required
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - frontend-quality
+      - backend-quality
+      - backend-integration
+      - dependency-audit
+      - container-build
+      - frontend-e2e
+    steps:
+      - name: Verify all required jobs succeeded
+        env:
+          FRONTEND_QUALITY: ${{ needs.frontend-quality.result }}
+          BACKEND_QUALITY: ${{ needs.backend-quality.result }}
+          BACKEND_INTEGRATION: ${{ needs.backend-integration.result }}
+          DEPENDENCY_AUDIT: ${{ needs.dependency-audit.result }}
+          CONTAINER_BUILD: ${{ needs.container-build.result }}
+          FRONTEND_E2E: ${{ needs.frontend-e2e.result }}
+        shell: bash
+        run: |
+          for result in \
+            "$FRONTEND_QUALITY" \
+            "$BACKEND_QUALITY" \
+            "$BACKEND_INTEGRATION" \
+            "$DEPENDENCY_AUDIT" \
+            "$CONTAINER_BUILD" \
+            "$FRONTEND_E2E"
+          do
+            if test "$result" != success; then
+              echo "A required CI job finished with status: $result"
+              exit 1
+            fi
+          done

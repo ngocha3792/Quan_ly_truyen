@@ -1,4 +1,4 @@
-import type { RoleCode } from '@/common/enums';
+import { RoleCode } from '@/common/enums';
 
 import {
   BusinessRuleViolationException,
@@ -71,7 +71,7 @@ export class ManagedUserRoleProtectedException extends BusinessRuleViolationExce
       rule: 'protected-system-role',
 
       message:
-        roleCode === 'AUTHOR'
+        roleCode === RoleCode.AUTHOR
           ? 'Role AUTHOR phải được quản lý thông qua quy trình đăng ký tác giả'
           : 'Role này không được quản lý trực tiếp từ User Management',
 

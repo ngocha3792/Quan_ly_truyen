@@ -1,382 +1,241 @@
-import {
-  randomUUID,
-} from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
-import type {
-  TestingModule,
-} from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
 
-import {
-  Test,
-} from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 
-import {
-  RequestContextStore,
-} from '@/common/middlewares';
+import { RequestContextStore } from '@/common/middlewares';
 
-import {
-  AppConfigModule,
-} from '@/config';
+import { AppConfigModule } from '@/config';
 
-import {
-  PrismaModule,
-  PrismaService,
-} from '@/infrastructure/database';
+import { PrismaModule, PrismaService } from '@/infrastructure/database';
 
-import {
-  AuthAuditWriterService,
-} from '@/modules/auth/infrastructure/audit';
+import { AuthAuditWriterService } from '@/modules/auth/infrastructure/audit';
 
-import {
-  PrismaSessionManagementPersistence,
-} from '@/modules/auth/infrastructure/persistence/prisma/repositories';
+import { PrismaSessionManagementPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories';
 
-describe(
-  'Auth Session Management PostgreSQL',
+describe('Auth Session Management PostgreSQL', () => {
+  let moduleRef: TestingModule;
 
-  () => {
-    let moduleRef:
-      TestingModule;
+  let prisma: PrismaService;
 
-    let prisma:
-      PrismaService;
+  let persistence: PrismaSessionManagementPersistence;
 
-    let persistence:
-      PrismaSessionManagementPersistence;
+  const runId = randomUUID();
 
-    const runId =
-      randomUUID();
+  beforeAll(async () => {
+    moduleRef = await Test.createTestingModule({
+      imports: [AppConfigModule, PrismaModule],
 
-    beforeAll(
-      async () => {
-        moduleRef =
-          await Test.createTestingModule({
-            imports: [
-              AppConfigModule,
+      providers: [
+        RequestContextStore,
 
-              PrismaModule,
-            ],
+        AuthAuditWriterService,
 
-            providers: [
-              RequestContextStore,
+        PrismaSessionManagementPersistence,
+      ],
+    }).compile();
 
-              AuthAuditWriterService,
+    await moduleRef.init();
 
-              PrismaSessionManagementPersistence,
-            ],
-          }).compile();
+    prisma = moduleRef.get(PrismaService);
 
-        await moduleRef.init();
+    persistence = moduleRef.get(PrismaSessionManagementPersistence);
+  });
 
-        prisma =
-          moduleRef.get(
-            PrismaService,
-          );
+  afterEach(async () => {
+    await cleanup();
+  });
 
-        persistence =
-          moduleRef.get(
-            PrismaSessionManagementPersistence,
-          );
-      },
+  afterAll(async () => {
+    await cleanup();
+
+    await moduleRef.close();
+  });
+
+  it('revokeOtherUserSessions giữ current session và revoke mọi session khác atomically', async () => {
+    const user = await createUser('owner');
+
+    const otherUser = await createUser('other');
+
+    const current = await createSession(
+      user.id,
+
+      'current',
     );
 
-    afterEach(
-      async () => {
-        await cleanup();
-      },
+    const second = await createSession(
+      user.id,
+
+      'second',
     );
 
-    afterAll(
-      async () => {
-        await cleanup();
+    const third = await createSession(
+      user.id,
 
-        await moduleRef.close();
-      },
+      'third',
     );
 
-    it(
-      'revokeOtherUserSessions giữ current session và revoke mọi session khác atomically',
+    const unrelated = await createSession(
+      otherUser.id,
 
-      async () => {
-        const user =
-          await createUser(
-            'owner',
-          );
+      'unrelated',
+    );
 
-        const otherUser =
-          await createUser(
-            'other',
-          );
+    const revokedAt = new Date();
 
-        const current =
-          await createSession(
-            user.id,
+    const count = await persistence.revokeOtherUserSessions({
+      userId: user.id,
 
-            'current',
-          );
+      actorSessionId: current.id,
 
-        const second =
-          await createSession(
-            user.id,
+      revokedAt,
 
-            'second',
-          );
+      reason: 'user_revoked_other_sessions',
+    });
 
-        const third =
-          await createSession(
-            user.id,
+    expect(count).toBe(2);
 
-            'third',
-          );
+    const freshCurrent = await prisma.session.findUniqueOrThrow({
+      where: {
+        id: current.id,
+      },
+    });
 
-        const unrelated =
-          await createSession(
-            otherUser.id,
+    expect(freshCurrent.revokedAt).toBeNull();
 
-            'unrelated',
-          );
+    expect(freshCurrent.accessTokenVersion).toBe(0);
 
-        const revokedAt =
-          new Date();
+    const revokedSessions = await prisma.session.findMany({
+      where: {
+        id: {
+          in: [second.id, third.id],
+        },
+      },
+    });
 
-        const count =
-          await persistence.revokeOtherUserSessions({
-            userId:
-              user.id,
+    expect(revokedSessions.every((session) => session.revokedAt !== null)).toBe(
+      true,
+    );
 
-            actorSessionId:
-              current.id,
+    expect(
+      revokedSessions.every((session) => session.accessTokenVersion === 1),
+    ).toBe(true);
 
-            revokedAt,
+    expect(
+      revokedSessions.every((session) => session.refreshTokenVersion === 1),
+    ).toBe(true);
 
-            reason:
-              'user_revoked_other_sessions',
-          });
+    const unrelatedFresh = await prisma.session.findUniqueOrThrow({
+      where: {
+        id: unrelated.id,
+      },
+    });
 
-        expect(
-          count,
-        ).toBe(
-          2,
-        );
+    expect(unrelatedFresh.revokedAt).toBeNull();
 
-        const freshCurrent =
-          await prisma.session.findUniqueOrThrow({
-            where: {
-              id:
-                current.id,
-            },
-          });
+    const audits = await prisma.auditLog.findMany({
+      where: {
+        actorId: user.id,
 
-        expect(
-          freshCurrent.revokedAt,
-        ).toBeNull();
+        entityType: 'user',
 
-        expect(
-          freshCurrent.accessTokenVersion,
-        ).toBe(
-          0,
-        );
+        entityId: user.id,
+      },
+    });
 
-        const revokedSessions =
-          await prisma.session.findMany({
-            where: {
-              id: {
-                in: [
-                  second.id,
+    expect(audits.length).toBeGreaterThanOrEqual(1);
+  });
 
-                  third.id,
-                ],
+  async function createUser(label: string) {
+    return prisma.user.create({
+      data: {
+        email: `${label}.${runId}@example.test`,
+
+        username: `${label}_${runId
+          .replaceAll(
+            '-',
+
+            '',
+          )
+          .slice(
+            0,
+
+            16,
+          )}`,
+
+        passwordHash: 'password-hash',
+
+        displayName: `Session ${label}`,
+
+        emailVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  async function createSession(
+    userId: string,
+
+    label: string,
+  ) {
+    return prisma.session.create({
+      data: {
+        userId,
+
+        refreshTokenHash: `${label}-${randomUUID()}`,
+
+        refreshTokenFamilyId: randomUUID(),
+
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+  }
+
+  async function cleanup(): Promise<void> {
+    if (!prisma) {
+      return;
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        email: {
+          contains: runId,
+        },
+      },
+
+      select: {
+        id: true,
+      },
+    });
+
+    const ids = users.map((user) => user.id);
+
+    if (ids.length > 0) {
+      await prisma.auditLog.deleteMany({
+        where: {
+          OR: [
+            {
+              actorId: {
+                in: ids,
               },
             },
-          });
 
-        expect(
-          revokedSessions.every(
-            (
-              session,
-            ) =>
-              session.revokedAt !==
-              null,
-          ),
-        ).toBe(
-          true,
-        );
-
-        expect(
-          revokedSessions.every(
-            (
-              session,
-            ) =>
-              session.accessTokenVersion ===
-              1,
-          ),
-        ).toBe(
-          true,
-        );
-
-        expect(
-          revokedSessions.every(
-            (
-              session,
-            ) =>
-              session.refreshTokenVersion ===
-              1,
-          ),
-        ).toBe(
-          true,
-        );
-
-        const unrelatedFresh =
-          await prisma.session.findUniqueOrThrow({
-            where: {
-              id:
-                unrelated.id,
+            {
+              entityId: {
+                in: ids,
+              },
             },
-          });
+          ],
+        },
+      });
 
-        expect(
-          unrelatedFresh.revokedAt,
-        ).toBeNull();
-
-        const audits =
-          await prisma.auditLog.findMany({
-            where: {
-              actorId:
-                user.id,
-
-              entityType:
-                'user',
-
-              entityId:
-                user.id,
-            },
-          });
-
-        expect(
-          audits.length,
-        ).toBeGreaterThanOrEqual(
-          1,
-        );
-      },
-    );
-
-    async function createUser(
-      label: string,
-    ) {
-      return prisma.user.create({
-        data: {
-          email:
-            `${label}.${runId}@example.test`,
-
-          username:
-            `${label}_${runId
-              .replaceAll(
-                '-',
-
-                '',
-              )
-              .slice(
-                0,
-
-                16,
-              )}`,
-
-          passwordHash:
-            'password-hash',
-
-          displayName:
-            `Session ${label}`,
-
-          emailVerifiedAt:
-            new Date(),
+      await prisma.user.deleteMany({
+        where: {
+          id: {
+            in: ids,
+          },
         },
       });
     }
-
-    async function createSession(
-      userId: string,
-
-      label: string,
-    ) {
-      return prisma.session.create({
-        data: {
-          userId,
-
-          refreshTokenHash:
-            `${label}-${randomUUID()}`,
-
-          refreshTokenFamilyId:
-            randomUUID(),
-
-          expiresAt:
-            new Date(
-              Date.now() +
-                86_400_000,
-            ),
-        },
-      });
-    }
-
-    async function cleanup(): Promise<void> {
-      if (!prisma) {
-        return;
-      }
-
-      const users =
-        await prisma.user.findMany({
-          where: {
-            email: {
-              contains:
-                runId,
-            },
-          },
-
-          select: {
-            id: true,
-          },
-        });
-
-      const ids =
-        users.map(
-          (
-            user,
-          ) =>
-            user.id,
-        );
-
-      if (
-        ids.length >
-        0
-      ) {
-        await prisma.auditLog.deleteMany({
-          where: {
-            OR: [
-              {
-                actorId: {
-                  in:
-                    ids,
-                },
-              },
-
-              {
-                entityId: {
-                  in:
-                    ids,
-                },
-              },
-            ],
-          },
-        });
-
-        await prisma.user.deleteMany({
-          where: {
-            id: {
-              in:
-                ids,
-            },
-          },
-        });
-      }
-    }
-  },
-);
+  }
+});

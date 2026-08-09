@@ -37,7 +37,7 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
     handler = new UpdateManagedUserStatusCommandHandler(
       persistence as never,
 
-      authorizationInvalidation as never,
+      authorizationInvalidation,
     );
   });
 
@@ -105,7 +105,7 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
 
       status: ManagedUserStatus.SUSPENDED,
 
-      changedAt: expect.any(Date),
+      changedAt: expect.any(Date) as unknown,
 
       audit: {
         ipAddress: '127.0.0.1',

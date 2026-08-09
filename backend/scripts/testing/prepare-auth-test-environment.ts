@@ -74,7 +74,7 @@ void runScript({
       retryStrategy: () => null,
     });
 
-    redis.on('error', (err) => {
+    redis.on('error', () => {
       /* Suppress unhandled ioredis error events during test prep check */
     });
 

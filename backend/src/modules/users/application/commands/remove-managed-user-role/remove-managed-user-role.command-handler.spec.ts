@@ -38,7 +38,7 @@ describe('RemoveManagedUserRoleCommandHandler', () => {
     handler = new RemoveManagedUserRoleCommandHandler(
       persistence as never,
 
-      authorizationInvalidation as never,
+      authorizationInvalidation,
     );
   });
 

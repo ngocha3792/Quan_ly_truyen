@@ -20,13 +20,8 @@ export class RevokeOtherSessionsCommandHandler {
     private readonly sessionPersistence: SessionManagementPersistencePort,
   ) {}
 
-  async execute(
-    command: RevokeOtherSessionsCommand,
-  ): Promise<number> {
-    if (
-      !isUuidV4(command.userId) ||
-      !isUuidV4(command.actorSessionId)
-    ) {
+  async execute(command: RevokeOtherSessionsCommand): Promise<number> {
+    if (!isUuidV4(command.userId) || !isUuidV4(command.actorSessionId)) {
       throw new AuthenticationRequiredException({
         code: 'AUTH_SESSION_PRINCIPAL_REQUIRED',
 
