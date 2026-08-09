@@ -6,16 +6,26 @@ const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const sourceRoot = path.join(workspaceRoot, 'src', 'app');
 
 const debtBaseline = {
-  inlineTemplates: 109,
-  inlineStyles: 99,
-  excessLines: 3_999,
+  inlineTemplates: 48,
+  inlineStyles: 44,
+  scopedInlineTemplates: 0,
+  scopedInlineStyles: 0,
+  excessLines: 2_420,
+  componentExcessLines: 999,
+  storeExcessLines: 619,
 };
 
 const hardLineLimits = {
-  component: 1_100,
+  component: 500,
+  store: 600,
   stylesheet: 850,
   template: 550,
   typescript: 800,
+};
+
+const focusedTargetLineLimits = {
+  component: 250,
+  store: 300,
 };
 
 const targetLineLimits = {
@@ -51,6 +61,12 @@ const boundaryViolations = findBoundaryViolations(records);
 const current = {
   inlineTemplates: components.filter(({ content }) => /^\s*template\s*:/m.test(content)).length,
   inlineStyles: components.filter(({ content }) => /^\s*styles?\s*:/m.test(content)).length,
+  scopedInlineTemplates: components.filter(
+    ({ file, content }) => isExternalAssetScope(file) && /^\s*template\s*:/m.test(content),
+  ).length,
+  scopedInlineStyles: components.filter(
+    ({ file, content }) => isExternalAssetScope(file) && /^\s*styles?\s*:/m.test(content),
+  ).length,
   filesAtLeast200Lines: records.filter(({ lines }) => lines >= 200).length,
   filesAtLeast300Lines: records.filter(({ lines }) => lines >= 300).length,
   filesAtLeast500Lines: records.filter(({ lines }) => lines >= 500).length,
@@ -59,6 +75,16 @@ const current = {
     (total, record) => total + Math.max(0, record.lines - targetLineLimitFor(record)),
     0,
   ),
+  componentExcessLines: components.reduce(
+    (total, record) => total + Math.max(0, record.lines - focusedTargetLineLimits.component),
+    0,
+  ),
+  storeExcessLines: records
+    .filter(isStore)
+    .reduce(
+      (total, record) => total + Math.max(0, record.lines - focusedTargetLineLimits.store),
+      0,
+    ),
 };
 
 const errors = [];
@@ -85,6 +111,8 @@ for (const violation of boundaryViolations) {
 console.log(
   [
     `Architecture debt: ${current.inlineTemplates} inline templates, ${current.inlineStyles} inline styles`,
+    `External-asset scope debt: ${current.scopedInlineTemplates} inline templates, ${current.scopedInlineStyles} inline styles`,
+    `Focused budgets: ${current.componentExcessLines} component excess lines, ${current.storeExcessLines} store excess lines`,
     `Large files: ${current.filesAtLeast300Lines} >=300, ${current.filesAtLeast500Lines} >=500, ${current.filesAtLeast800Lines} >=800 lines`,
     `Line-budget debt: ${current.excessLines} excess lines`,
     `Feature boundary violations: ${boundaryViolations.length}`,
@@ -109,6 +137,7 @@ async function collectSourceFiles(directory) {
 }
 
 function lineLimitFor(record) {
+  if (isStore(record)) return hardLineLimits.store;
   if (isComponent(record)) return hardLineLimits.component;
   if (record.file.endsWith('.scss')) return hardLineLimits.stylesheet;
   if (record.file.endsWith('.html')) return hardLineLimits.template;
@@ -124,6 +153,19 @@ function targetLineLimitFor(record) {
 
 function isComponent(record) {
   return record.file.endsWith('.ts') && /@Component\s*\(/.test(record.content);
+}
+
+function isStore(record) {
+  return record.file.endsWith('.store.ts');
+}
+
+function isExternalAssetScope(file) {
+  const relative = path.relative(sourceRoot, file).split(path.sep).join('/');
+  return (
+    relative.startsWith('shared/') ||
+    relative.startsWith('layout/') ||
+    relative.startsWith('features/public/')
+  );
 }
 
 function findBoundaryViolations(sourceRecords) {

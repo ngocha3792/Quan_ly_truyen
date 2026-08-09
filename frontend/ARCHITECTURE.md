@@ -4,6 +4,8 @@
 
 Application components use co-located TypeScript, HTML, and SCSS files. Inline templates and styles are legacy debt and must not increase. A styleless component may omit its SCSS file.
 
+`shared`, `layout`, and `features/public` have completed this migration: inline templates and styles are forbidden there. The architecture check keeps both scoped counters at zero.
+
 Page components coordinate routes and stores. Reusable UI components receive inputs and emit outputs; they do not call HTTP APIs directly.
 
 ## Feature layout
@@ -31,6 +33,18 @@ Dependencies flow inward:
 `npm run architecture:check` records the current upper bound for inline templates, inline styles, and total lines exceeding the target budget for each file type. A change may reduce these values but must not increase them. The excess-line metric allows one large component to be split into several focused files without penalizing the extraction merely because the file count grows. Hard line limits prevent a single file from growing beyond the current worst cases.
 
 Update the baseline only after debt has been removed. Do not increase a baseline to make CI pass.
+
+Component classes have a 500-line hard cap and a 250-line target. Stores have a 600-line hard cap and a 300-line target. Their excess-line totals are tracked independently so splitting one large class cannot hide growth in another. New code should meet the target; legacy files above it may only shrink.
+
+## Strict compilation
+
+Application and test TypeScript compile with `strict`. Angular templates compile with `strictTemplates`, strict injection parameters, and strict input access modifiers. Redundant optional chaining in templates is promoted to an error through extended diagnostics.
+
+Do not suppress strict errors with broad casts or `any`. Narrow values at their boundary and keep template guards aligned with the types rendered inside each control-flow block.
+
+## Regression suite
+
+The unit suite protects cross-tab auth coordination, root route composition and private-route guards, and the shared icon registry. When changing one of these infrastructure contracts, extend the corresponding regression test before changing its implementation.
 
 ## Mechanical asset extraction
 
