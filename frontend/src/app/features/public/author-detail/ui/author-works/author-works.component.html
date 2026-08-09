@@ -1,0 +1,69 @@
+<section class="works-panel">
+  <header class="section-heading">
+    <div>
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M12 3c-4 2-6 5-6 8.5A6 6 0 0 0 12 18c3.3 0 6-2.5 6-6 0-2.5-1.5-5-4-7 .4 2.2-.3 3.7-2 5-1.2-1.8-1.2-4 0-7Z"
+        ></path>
+      </svg>
+
+      <h2>Tác phẩm nổi bật</h2>
+    </div>
+
+    <a routerLink="/danh-sach">
+      Xem tất cả
+
+      <svg viewBox="0 0 24 24">
+        <path d="M5 12h14"></path>
+        <path d="m13 6 6 6-6 6"></path>
+      </svg>
+    </a>
+  </header>
+
+  <div class="works-grid">
+    @for (work of works; track work.id) {
+      <a class="work-card" [routerLink]="['/truyen', work.slug]">
+        <div class="work-cover" [class]="'work-cover work-cover--' + work.tone">
+          <span>{{ work.title.slice(0, 1) }}</span>
+
+          <span class="cover-glow"></span>
+        </div>
+
+        <div class="work-content">
+          <h3>{{ work.title }}</h3>
+
+          <div class="genre-list">
+            @for (genre of work.genres; track genre) {
+              <span>{{ genre }}</span>
+            }
+          </div>
+
+          <p>{{ work.description }}</p>
+
+          <footer>
+            <span>
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+                ></path>
+                <path d="M8 8h8"></path>
+              </svg>
+
+              Ch. {{ work.chapters }}
+            </span>
+
+            <strong>
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9L12 3Z"
+                ></path>
+              </svg>
+
+              {{ work.rating }}
+            </strong>
+          </footer>
+        </div>
+      </a>
+    }
+  </div>
+</section>

@@ -1,0 +1,43 @@
+<a class="featured-card" [routerLink]="['/truyen', story().slug]">
+  <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" />
+
+  <span class="overlay"></span>
+
+  <div class="featured-content">
+    <span class="featured-badge">Nổi bật</span>
+
+    <h2>{{ story().title }}</h2>
+
+    <div class="genres">
+      @for (genre of story().genres; track genre.slug) {
+        <span>{{ genre.name }}</span>
+      }
+    </div>
+
+    @if (story().description) {
+      <p>{{ story().description }}</p>
+    }
+
+    <div class="footer-row">
+      <div>
+        <span class="chapter"> Ch.{{ story().latestChapter }} </span>
+
+        <span>
+          {{ story().updatedAt | relativeTime }}
+        </span>
+      </div>
+
+      <div>
+        <span>
+          <app-icon name="eye" [size]="14" />
+          {{ story().viewCount | compactNumber }}
+        </span>
+
+        <span>
+          <app-icon name="message-circle" [size]="14" />
+          {{ story().commentCount | compactNumber }}
+        </span>
+      </div>
+    </div>
+  </div>
+</a>

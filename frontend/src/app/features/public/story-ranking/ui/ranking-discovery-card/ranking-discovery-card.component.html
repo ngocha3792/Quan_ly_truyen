@@ -1,0 +1,22 @@
+<section class="discovery-card">
+  <div>
+    <h2>Khám phá truyện theo gu của bạn ✨</h2>
+
+    <p>Nhận đề xuất truyện phù hợp với sở thích đọc của bạn mỗi ngày.</p>
+
+    <a
+      routerLink="/danh-sach"
+      [queryParams]="{
+        sort: 'popular',
+      }"
+    >
+      Bắt đầu khám phá
+
+      <app-icon name="chevron-right" [size]="14" />
+    </a>
+  </div>
+
+  <span class="visual">
+    <app-icon name="sparkles" [size]="37" />
+  </span>
+</section>

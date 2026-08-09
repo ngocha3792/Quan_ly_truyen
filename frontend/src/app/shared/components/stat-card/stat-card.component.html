@@ -1,0 +1,23 @@
+<article class="stat-card" [attr.data-tone]="tone()">
+  <span class="stat-icon">
+    <app-icon [name]="icon()" [size]="iconSize()" />
+  </span>
+
+  <div class="stat-copy">
+    <span class="stat-label">
+      {{ label() }}
+    </span>
+
+    <strong class="stat-value">
+      {{ value() }}
+    </strong>
+
+    @if (description()) {
+      <small class="stat-description">
+        {{ description() }}
+      </small>
+    }
+
+    <ng-content select="[statMeta]" />
+  </div>
+</article>

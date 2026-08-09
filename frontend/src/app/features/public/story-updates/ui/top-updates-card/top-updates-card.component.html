@@ -1,0 +1,30 @@
+<section class="side-card">
+  <header>
+    <h2>Top cập nhật hôm nay</h2>
+
+    <a routerLink="/xep-hang" [queryParams]="{ metric: 'trending' }"> Xem tất cả </a>
+  </header>
+
+  <div class="ranking-list">
+    @for (story of stories(); track story.id; let rank = $index) {
+      <a class="ranking-item" [routerLink]="['/truyen', story.slug]">
+        <span class="rank" [class.top]="rank < 3">
+          {{ rank + 1 }}
+        </span>
+
+        <div class="img-box">
+          <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+        </div>
+
+        <div class="ranking-info">
+          <strong>{{ story.title }}</strong>
+          <span>Ch. {{ story.latestChapter }}</span>
+        </div>
+
+        <time>
+          {{ story.updatedAt | relativeTime }}
+        </time>
+      </a>
+    }
+  </div>
+</section>

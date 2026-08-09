@@ -1,0 +1,42 @@
+<a class="story-card" [routerLink]="['/truyen', story().slug]">
+  <div class="cover-wrapper">
+    <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
+
+    @if (story().badge) {
+      <span class="badge" [attr.data-badge]="story().badge">
+        {{ story().badge === 'hot' ? 'HOT' : story().badge === 'new' ? 'NEW' : 'NỔI BẬT' }}
+      </span>
+    }
+  </div>
+
+  <div class="story-content">
+    <div>
+      <h3>{{ story().title }}</h3>
+
+      <div class="genres">
+        @for (genre of story().genres.slice(0, 2); track genre.slug) {
+          <span>{{ genre.name }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="chapter-row">
+        <strong>Ch. {{ story().latestChapter }}</strong>
+        <span class="time">{{ story().updatedAt | relativeTime }}</span>
+      </div>
+
+      <div class="meta-row">
+        <span>
+          <app-icon name="eye" [size]="13" />
+          {{ story().viewCount | compactNumber }}
+        </span>
+
+        <span>
+          <app-icon name="message-circle" [size]="13" />
+          {{ story().commentCount | compactNumber }}
+        </span>
+      </div>
+    </div>
+  </div>
+</a>

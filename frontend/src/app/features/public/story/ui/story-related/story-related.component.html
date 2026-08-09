@@ -1,0 +1,18 @@
+<section class="side-card related-card">
+  <div class="card-heading">
+    <app-icon name="sparkles" [size]="18" />
+    <h3>Truyện cùng thể loại</h3>
+  </div>
+
+  <div class="related-list">
+    @for (rel of relatedStories(); track rel.slug) {
+      <a class="related-item" [routerLink]="['/truyen', rel.slug]">
+        <img [src]="rel.coverUrl" [alt]="rel.title" />
+        <div>
+          <strong>{{ rel.title }}</strong>
+          <small>Ch. {{ rel.latestChapter }}</small>
+        </div>
+      </a>
+    }
+  </div>
+</section>

@@ -1,0 +1,66 @@
+<section class="statistics">
+  <article class="stat-card">
+    <span class="stat-icon">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+        ></path>
+        <path d="M8 8h8"></path>
+        <path d="M8 12h8"></path>
+        <path d="M8 16h5"></path>
+      </svg>
+    </span>
+
+    <div>
+      <small>Tác phẩm</small>
+      <strong>{{ statistics.totalWorks }}</strong>
+      <p>Truyện đã xuất bản</p>
+    </div>
+  </article>
+
+  <article class="stat-card">
+    <span class="stat-icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="9" cy="8" r="3"></circle>
+        <path d="M3.5 19c.5-3.4 2.3-5 5.5-5s5 1.6 5.5 5"></path>
+        <path d="M16 6a3 3 0 0 1 0 5"></path>
+        <path d="M16.5 14c2.3.4 3.6 2 4 4.5"></path>
+      </svg>
+    </span>
+
+    <div>
+      <small>Người theo dõi</small>
+      <strong>{{ statistics.followers }}</strong>
+      <p>Đang theo dõi tác giả</p>
+    </div>
+  </article>
+
+  <article class="stat-card">
+    <span class="stat-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+        <circle cx="12" cy="12" r="2.5"></circle>
+      </svg>
+    </span>
+
+    <div>
+      <small>Lượt đọc</small>
+      <strong>{{ statistics.totalReads }}</strong>
+      <p>Tổng lượt đọc truyện</p>
+    </div>
+  </article>
+
+  <article class="stat-card">
+    <span class="stat-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9L12 3Z"></path>
+      </svg>
+    </span>
+
+    <div>
+      <small>Đánh giá</small>
+      <strong>{{ statistics.averageRating }}</strong>
+      <p>Điểm đánh giá trung bình</p>
+    </div>
+  </article>
+</section>

@@ -1,0 +1,189 @@
+<aside class="sidebar">
+  <section class="sidebar-card statistics-card">
+    <header class="card-header">
+      <div>
+        <svg viewBox="0 0 24 24">
+          <path d="M4 20V10"></path>
+          <path d="M10 20V4"></path>
+          <path d="M16 20v-7"></path>
+          <path d="M22 20V7"></path>
+        </svg>
+
+        <h2>Thống kê tác giả</h2>
+      </div>
+    </header>
+
+    <div class="statistics-grid">
+      <article>
+        <span class="stat-icon">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3"></circle>
+
+            <path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"></path>
+          </svg>
+        </span>
+
+        <div>
+          <strong>
+            {{ statistics.authors }}
+          </strong>
+
+          <small>Tác giả</small>
+        </div>
+      </article>
+
+      <article>
+        <span class="stat-icon">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+            ></path>
+
+            <path d="M8 8h8"></path>
+          </svg>
+        </span>
+
+        <div>
+          <strong>
+            {{ statistics.works }}
+          </strong>
+
+          <small>Tác phẩm</small>
+        </div>
+      </article>
+
+      <article>
+        <span class="stat-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+
+            <circle cx="12" cy="12" r="2.5"></circle>
+          </svg>
+        </span>
+
+        <div>
+          <strong>
+            {{ statistics.reads }}
+          </strong>
+
+          <small>Lượt đọc</small>
+        </div>
+      </article>
+
+      <article>
+        <span class="stat-icon">
+          <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3"></circle>
+
+            <path d="M3.5 19c.5-3.4 2.3-5 5.5-5s5 1.6 5.5 5"></path>
+
+            <path d="M16 6a3 3 0 0 1 0 5"></path>
+          </svg>
+        </span>
+
+        <div>
+          <strong>
+            {{ statistics.followers }}
+          </strong>
+
+          <small>Người theo dõi</small>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sidebar-card new-authors-card">
+    <header class="card-header">
+      <div>
+        <svg viewBox="0 0 24 24">
+          <circle cx="8" cy="8" r="3"></circle>
+
+          <path d="M2.5 19c.5-3.4 2.3-5 5.5-5s5 1.6 5.5 5"></path>
+
+          <path d="M17 8v6"></path>
+          <path d="M14 11h6"></path>
+        </svg>
+
+        <h2>Tác giả mới</h2>
+      </div>
+
+      <a routerLink="/tac-gia">
+        Xem tất cả
+
+        <svg viewBox="0 0 24 24">
+          <path d="m9 18 6-6-6-6"></path>
+        </svg>
+      </a>
+    </header>
+
+    <div class="new-author-list">
+      @for (author of newAuthors; track author.id) {
+        <a class="new-author" [routerLink]="['/tac-gia', author.slug]">
+          <div class="mini-avatar">
+            {{ author.initials }}
+
+            @if (author.verified) {
+              <span>
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="m12 2 2.1 2.2 3-.3.9 2.9 2.7 1.5-1.2 2.8 1.2 2.8-2.7 1.5-.9 2.9-3-.3L12 22l-2.1-2.2-3 .3-.9-2.9-2.7-1.5 1.2-2.8-1.2-2.8L6 8.6l.9-2.9 3 .3L12 2Z"
+                  ></path>
+
+                  <path d="m8.5 12 2.2 2.2 4.8-4.8"></path>
+                </svg>
+              </span>
+            }
+          </div>
+
+          <div class="new-author-info">
+            <strong>
+              {{ author.name }}
+            </strong>
+
+            <p>
+              <span>
+                {{ author.worksLabel }}
+              </span>
+
+              <span>
+                <svg viewBox="0 0 24 24">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                </svg>
+
+                {{ author.readsLabel }}
+              </span>
+            </p>
+          </div>
+
+          <svg class="author-chevron" viewBox="0 0 24 24">
+            <path d="m9 18 6-6-6-6"></path>
+          </svg>
+        </a>
+      }
+    </div>
+  </section>
+
+  <section class="author-cta">
+    <div class="cta-content">
+      <h2>Trở thành tác giả</h2>
+
+      <p>Chia sẻ câu chuyện của bạn với hàng triệu độc giả.</p>
+
+      <a routerLink="/dang-ky-tac-gia">
+        Bắt đầu ngay
+
+        <svg viewBox="0 0 24 24">
+          <path d="M5 12h14"></path>
+          <path d="m13 6 6 6-6 6"></path>
+        </svg>
+      </a>
+    </div>
+
+    <div class="quill" aria-hidden="true">
+      <span class="quill-feather"></span>
+      <span class="quill-base"></span>
+    </div>
+  </section>
+</aside>

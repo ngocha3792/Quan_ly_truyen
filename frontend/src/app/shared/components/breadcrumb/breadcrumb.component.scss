@@ -1,0 +1,27 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #727c90;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+a {
+  color: #a773ef;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-soft);
+}
+
+.separator {
+  color: #727c90;
+  font-weight: 400;
+}

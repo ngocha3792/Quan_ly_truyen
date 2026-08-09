@@ -1,0 +1,26 @@
+.toolbar {
+  display: grid;
+
+  grid-template-columns:
+    minmax(240px, 1fr)
+    178px
+    auto;
+
+  gap: 11px;
+
+  align-items: center;
+}
+
+.catalog-search {
+  --search-placeholder-color: #667084;
+}
+
+.catalog-view-mode {
+  width: max-content;
+}
+
+@media (max-width: 680px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

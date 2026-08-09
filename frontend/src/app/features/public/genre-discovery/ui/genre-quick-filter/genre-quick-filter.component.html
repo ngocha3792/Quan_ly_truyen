@@ -1,0 +1,23 @@
+<section class="filter-card">
+  <span class="filter-label"> Bộ lọc nhanh </span>
+
+  <div class="filter-list">
+    <button
+      type="button"
+      [class.active]="selectedSlug() === null"
+      (click)="selectedSlugChange.emit(null)"
+    >
+      Tất cả
+    </button>
+
+    @for (genre of genres(); track genre.id) {
+      <button
+        type="button"
+        [class.active]="selectedSlug() === genre.slug"
+        (click)="selectedSlugChange.emit(genre.slug)"
+      >
+        {{ genre.name }}
+      </button>
+    }
+  </div>
+</section>

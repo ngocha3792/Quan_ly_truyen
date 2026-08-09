@@ -1,0 +1,12 @@
+<label class="search-field">
+  <app-icon name="search" [size]="iconSize()" />
+
+  <input
+    type="search"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    (input)="handleInput($event)"
+  />
+</label>

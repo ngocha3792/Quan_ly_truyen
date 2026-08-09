@@ -1,0 +1,33 @@
+:root {
+  color-scheme: dark;
+
+  // Surfaces and borders
+  --page-bg: #060a14;
+  --surface-1: #0c1120;
+  --surface-2: #11182a;
+  --surface-3: #171e31;
+  --surface-header: rgba(5, 9, 20, 0.86);
+  --surface-overlay: rgba(2, 5, 14, 0.78);
+  --surface-popover: rgba(12, 17, 32, 0.98);
+  --border: rgba(132, 145, 179, 0.12);
+  --border-strong: rgba(139, 151, 190, 0.18);
+
+  // Content and accents
+  --text-strong: #f3f1fa;
+  --text-secondary: #b7bbca;
+  --text-muted: #747d91;
+  --text-on-accent: #fff;
+  --primary: #8c4de8;
+  --primary-soft: #c58fff;
+  --primary-gradient: linear-gradient(90deg, #d36cff, #7350ff);
+
+  // Shared layout and interaction
+  --container: 1490px;
+  --page-padding: clamp(0.9rem, 2vw, 1.45rem);
+  --header-height: 72px;
+  --header-height-compact: 64px;
+  --control-height: 42px;
+  --radius-panel: 14px;
+  --radius-pill: 999px;
+  --motion-fast: 0.2s ease;
+}

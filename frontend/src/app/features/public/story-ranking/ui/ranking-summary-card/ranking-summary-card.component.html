@@ -1,0 +1,23 @@
+<section class="summary-card">
+  @for (row of rows(); track row.label) {
+    <article class="summary-row">
+      <span class="summary-icon" [attr.data-tone]="row.tone">
+        <app-icon [name]="row.icon" [size]="18" />
+      </span>
+
+      <span class="label">
+        {{ row.label }}
+      </span>
+
+      <strong>
+        {{ row.value | compactNumber }}
+      </strong>
+
+      <small [class.negative]="row.change < 0">
+        {{ row.change >= 0 ? '↑' : '↓' }}
+
+        {{ row.change < 0 ? -row.change : row.change }}{{ row.suffix }}
+      </small>
+    </article>
+  }
+</section>

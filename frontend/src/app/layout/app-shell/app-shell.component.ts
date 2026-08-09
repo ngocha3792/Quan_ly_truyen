@@ -9,11 +9,7 @@ import { AppHeaderComponent } from '../header/app-header.component';
   standalone: true,
   imports: [RouterOutlet, AppHeaderComponent, AppFooterComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-header />
-    <router-outlet />
-    <app-footer />
-  `,
+  templateUrl: './app-shell.component.html',
 })
 export class AppShellComponent implements OnInit {
   private readonly auth = inject(AuthStore);

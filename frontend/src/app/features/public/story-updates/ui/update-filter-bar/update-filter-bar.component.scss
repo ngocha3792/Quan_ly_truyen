@@ -1,0 +1,26 @@
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
+  border-radius: 10px;
+  background: rgba(11, 17, 31, 0.8);
+}
+
+.sort-controls {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+@media (max-width: 680px) {
+  .filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sort-controls {
+    width: 100%;
+  }
+}

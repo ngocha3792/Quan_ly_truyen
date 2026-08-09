@@ -1,0 +1,11 @@
+<label class="sort-field">
+  <select [ngModel]="value()" (ngModelChange)="valueChange.emit($event)">
+    @for (option of options(); track option.value) {
+      <option [value]="option.value">
+        {{ option.label }}
+      </option>
+    }
+  </select>
+
+  <app-icon name="chevron-down" [size]="15" />
+</label>

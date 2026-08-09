@@ -20,59 +20,9 @@ import { StoryCatalogSort, StoryCatalogViewMode } from '../../domain/story-catal
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
-  template: `
-    <div class="toolbar">
-      <app-search-field
-        class="catalog-search"
-        [value]="query()"
-        placeholder="Tìm kiếm truyện, tác giả..."
-        ariaLabel="Tìm kiếm truyện hoặc tác giả"
-        (valueChange)="queryChange.emit($event)"
-      />
+  templateUrl: './catalog-toolbar.component.html',
 
-      <app-sort-select
-        class="catalog-sort"
-        [options]="sortOptions"
-        [value]="sort()"
-        (valueChange)="sortChange.emit($event)"
-      />
-
-      <app-view-mode-toggle
-        class="catalog-view-mode"
-        [value]="viewMode()"
-        (valueChange)="viewModeChange.emit($event)"
-      />
-    </div>
-  `,
-
-  styles: `
-    .toolbar {
-      display: grid;
-
-      grid-template-columns:
-        minmax(240px, 1fr)
-        178px
-        auto;
-
-      gap: 11px;
-
-      align-items: center;
-    }
-
-    .catalog-search {
-      --search-placeholder-color: #667084;
-    }
-
-    .catalog-view-mode {
-      width: max-content;
-    }
-
-    @media (max-width: 680px) {
-      .toolbar {
-        grid-template-columns: 1fr;
-      }
-    }
-  `,
+  styleUrl: './catalog-toolbar.component.scss',
 })
 export class CatalogToolbarComponent {
   protected readonly sortOptions: readonly SortOption<StoryCatalogSort>[] = [

@@ -16,52 +16,8 @@ import { StoryUpdatesSort, StoryUpdatesTab } from '../../domain/story-updates.mo
   standalone: true,
   imports: [TabFilterComponent, SortSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <section class="filter-bar">
-      <app-tab-filter
-        [options]="$any(tabs)"
-        [selected]="tab()"
-        ariaLabel="Lọc truyện cập nhật"
-        (selectedChange)="tabChange.emit($event)"
-      />
-
-      <div class="sort-controls">
-        <app-sort-select
-          [options]="$any(sortOptions)"
-          [value]="sort()"
-          (valueChange)="sortChange.emit($event)"
-        />
-      </div>
-    </section>
-  `,
-  styles: `
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 6px 8px;
-      border: 1px solid var(--border, rgba(132, 145, 177, 0.16));
-      border-radius: 10px;
-      background: rgba(11, 17, 31, 0.8);
-    }
-
-    .sort-controls {
-      flex: 0 0 auto;
-      min-width: 150px;
-    }
-
-    @media (max-width: 680px) {
-      .filter-bar {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .sort-controls {
-        width: 100%;
-      }
-    }
-  `,
+  templateUrl: './update-filter-bar.component.html',
+  styleUrl: './update-filter-bar.component.scss',
 })
 export class UpdateFilterBarComponent {
   readonly tab = input.required<StoryUpdatesTab>();

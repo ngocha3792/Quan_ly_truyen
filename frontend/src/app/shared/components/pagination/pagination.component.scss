@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(132, 145, 177, 0.17);
+  border-radius: 7px;
+  color: #939caf;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(19, 27, 46, 0.78);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+button:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(163, 99, 242, 0.4);
+}
+
+button.active {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #743bde, #a153eb);
+  box-shadow: 0 8px 22px rgba(114, 55, 216, 0.28);
+}
+
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+span {
+  color: #646e82;
+  font-size: 11px;
+}

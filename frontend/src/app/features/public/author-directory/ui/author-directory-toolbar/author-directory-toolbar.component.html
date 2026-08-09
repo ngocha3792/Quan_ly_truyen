@@ -1,0 +1,8 @@
+<app-search-field
+  class="author-search"
+  [value]="query"
+  placeholder="Tìm kiếm tác giả..."
+  ariaLabel="Tìm kiếm tác giả"
+  [iconSize]="18"
+  (valueChange)="queryChange.emit($event)"
+/>

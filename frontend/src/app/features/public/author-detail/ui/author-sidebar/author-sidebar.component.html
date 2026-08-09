@@ -1,0 +1,114 @@
+<aside class="sidebar">
+  <section class="sidebar-card quick-info">
+    <header>
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 11v5"></path>
+        <path d="M12 8h.01"></path>
+      </svg>
+
+      <h2>Thông tin nhanh</h2>
+    </header>
+
+    <div class="quick-row">
+      <span>Gia nhập</span>
+      <strong>{{ joinedAt }}</strong>
+    </div>
+
+    <div class="quick-row">
+      <span>Tổng lượt đọc</span>
+      <strong>{{ statistics.totalReads }}</strong>
+    </div>
+
+    <div class="quick-row">
+      <span>Người theo dõi</span>
+      <strong>{{ statistics.followers }}</strong>
+    </div>
+
+    <div class="quick-row">
+      <span>Tác phẩm</span>
+      <strong>{{ statistics.totalWorks }} truyện</strong>
+    </div>
+
+    <div class="quick-row">
+      <span>Đánh giá trung bình</span>
+
+      <strong class="rating"> ★ {{ statistics.averageRating }} </strong>
+    </div>
+  </section>
+
+  <section class="sidebar-card updates-card">
+    <header>
+      <div>
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 7v5l3 2"></path>
+        </svg>
+
+        <h2>Lịch cập nhật gần đây</h2>
+      </div>
+
+      <a routerLink="/cap-nhat"> Xem tất cả </a>
+    </header>
+
+    <div class="update-list">
+      @for (update of recentUpdates; track update.id) {
+        <article>
+          <span class="update-dot"></span>
+
+          <p>
+            {{ update.workTitle }} -
+            {{ update.chapterTitle }}
+          </p>
+
+          <time>{{ update.updatedAt }}</time>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="sidebar-card hot-card">
+    <header>
+      <div>
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 3c-4 2-6 5-6 8.5A6 6 0 0 0 12 18c3.3 0 6-2.5 6-6 0-2.5-1.5-5-4-7 .4 2.2-.3 3.7-2 5-1.2-1.8-1.2-4 0-7Z"
+          ></path>
+        </svg>
+
+        <h2>Tác phẩm đang hot</h2>
+      </div>
+
+      <a routerLink="/xep-hang"> Xem tất cả </a>
+    </header>
+
+    <div class="hot-list">
+      @for (work of hotWorks; track work.rank) {
+        <article>
+          <strong class="rank">
+            {{ work.rank }}
+          </strong>
+
+          <span class="mini-cover" [class]="'mini-cover mini-cover--' + work.tone">
+            {{ work.title.slice(0, 1) }}
+          </span>
+
+          <div>
+            <h3>{{ work.title }}</h3>
+            <small>{{ work.genre }}</small>
+          </div>
+
+          <span class="hot-reads">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12 3c-4 2-6 5-6 8.5A6 6 0 0 0 12 18c3.3 0 6-2.5 6-6 0-2.5-1.5-5-4-7 .4 2.2-.3 3.7-2 5-1.2-1.8-1.2-4 0-7Z"
+              ></path>
+            </svg>
+
+            {{ work.reads }}
+          </span>
+        </article>
+      }
+    </div>
+  </section>
+</aside>

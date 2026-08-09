@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { BrandLogoComponent } from '../../../../../shared/components/brand-logo/brand-logo.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
-import { MfaQrCodeComponent } from '../../../profile/secutity/ui/mfa-qr-code/mfa-qr-code.component';
+import { MfaQrCodeComponent } from '../../../profile/security/ui/mfa-qr-code/mfa-qr-code.component';
 import { AuthDialogController } from './auth-dialog.controller';
 
 @Component({

@@ -1,0 +1,9 @@
+<div class="heading">
+  <div class="title-wrap">
+    <span class="bar"></span>
+    <h2>{{ title() }}</h2>
+  </div>
+  @if (link()) {
+    <a [routerLink]="link()">Xem tất cả <app-icon name="chevron-right" [size]="16" /></a>
+  }
+</div>

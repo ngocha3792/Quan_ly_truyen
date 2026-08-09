@@ -1,0 +1,21 @@
+<section class="trend-card">
+  <h2>Xu hướng tuần này</h2>
+
+  <div class="trend-list">
+    @for (item of trends(); track item.id) {
+      <a class="trend-row" [routerLink]="['/truyen', item.slug]">
+        <strong>
+          {{ item.title }}
+        </strong>
+
+        <span class="progress">
+          <span [style.width.%]="getWidth(item)"></span>
+        </span>
+
+        <small>
+          {{ item.value | compactNumber }}
+        </small>
+      </a>
+    }
+  </div>
+</section>

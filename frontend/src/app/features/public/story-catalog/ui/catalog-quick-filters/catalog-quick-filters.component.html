@@ -1,0 +1,39 @@
+<div class="quick-filters">
+  <div class="genre-list">
+    <button
+      type="button"
+      [class.active]="selectedGenre() === null"
+      (click)="genreChange.emit(null)"
+    >
+      Tất cả
+    </button>
+
+    @for (genre of genres(); track genre.id) {
+      <button
+        type="button"
+        [class.active]="selectedGenre() === genre.slug"
+        (click)="genreChange.emit(genre.slug)"
+      >
+        {{ genre.name }}
+      </button>
+    }
+  </div>
+
+  <div class="status-list">
+    <button
+      type="button"
+      [class.active]="status() === 'ongoing'"
+      (click)="statusChange.emit(status() === 'ongoing' ? 'all' : 'ongoing')"
+    >
+      Đang tiến hành
+    </button>
+
+    <button
+      type="button"
+      [class.active]="status() === 'completed'"
+      (click)="statusChange.emit(status() === 'completed' ? 'all' : 'completed')"
+    >
+      Hoàn thành
+    </button>
+  </div>
+</div>

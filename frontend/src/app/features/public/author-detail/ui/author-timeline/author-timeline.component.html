@@ -1,0 +1,25 @@
+<section class="timeline-panel">
+  <header>
+    <svg viewBox="0 0 24 24">
+      <path d="M8 21h8"></path>
+      <path d="M12 17v4"></path>
+      <path d="M7 4h10v3a5 5 0 0 1-10 0V4Z"></path>
+      <path d="M7 6H4v1a4 4 0 0 0 4 4"></path>
+      <path d="M17 6h3v1a4 4 0 0 1-4 4"></path>
+    </svg>
+
+    <h2>Dấu ấn sự nghiệp</h2>
+  </header>
+
+  <div class="timeline">
+    @for (item of timeline; track item.year) {
+      <article>
+        <span class="timeline-dot"></span>
+
+        <strong>{{ item.year }}</strong>
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.description }}</p>
+      </article>
+    }
+  </div>
+</section>

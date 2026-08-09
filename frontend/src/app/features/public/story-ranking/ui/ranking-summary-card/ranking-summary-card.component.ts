@@ -26,95 +26,9 @@ interface SummaryRow {
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
-  template: `
-    <section class="summary-card">
-      @for (row of rows(); track row.label) {
-        <article class="summary-row">
-          <span class="summary-icon" [attr.data-tone]="row.tone">
-            <app-icon [name]="row.icon" [size]="18" />
-          </span>
+  templateUrl: './ranking-summary-card.component.html',
 
-          <span class="label">
-            {{ row.label }}
-          </span>
-
-          <strong>
-            {{ row.value | compactNumber }}
-          </strong>
-
-          <small [class.negative]="row.change < 0">
-            {{ row.change >= 0 ? '↑' : '↓' }}
-
-            {{ row.change < 0 ? -row.change : row.change }}{{ row.suffix }}
-          </small>
-        </article>
-      }
-    </section>
-  `,
-
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-
-    .summary-card {
-      padding: 1.25rem;
-      display: grid;
-      gap: 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: linear-gradient(145deg, rgba(16, 24, 42, 0.96), rgba(9, 15, 29, 0.96));
-    }
-
-    .summary-row {
-      min-height: 48px;
-      display: grid;
-      grid-template-columns: 34px minmax(0, 1fr) auto auto;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .summary-icon {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 7px;
-      color: #bb7df8;
-      background: rgba(121, 58, 195, 0.18);
-    }
-
-    .summary-icon[data-tone='orange'] {
-      color: #fb923c;
-      background: rgba(234, 88, 12, 0.15);
-    }
-
-    .summary-icon[data-tone='blue'] {
-      color: #62adff;
-      background: rgba(37, 99, 235, 0.16);
-    }
-
-    .label {
-      color: #9aa3b4;
-      font-size: 0.85rem;
-    }
-
-    strong {
-      color: #e8e5ec;
-      font-size: 1.05rem;
-    }
-
-    small {
-      color: #4fd778;
-      font-size: 0.8rem;
-      white-space: nowrap;
-    }
-
-    small.negative {
-      color: #fb7185;
-    }
-  `,
+  styleUrl: './ranking-summary-card.component.scss',
 })
 export class RankingSummaryCardComponent {
   readonly summary = input.required<StoryRankingSummary>();

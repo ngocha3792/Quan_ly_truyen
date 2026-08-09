@@ -1,17 +1,6 @@
+@use './styles/tokens';
+
 :root {
-  color-scheme: dark;
-  --page-bg: #060a14;
-  --surface-1: #0c1120;
-  --surface-2: #11182a;
-  --surface-3: #171e31;
-  --border: rgba(132, 145, 179, 0.12);
-  --text-strong: #f3f1fa;
-  --text-secondary: #b7bbca;
-  --text-muted: #747d91;
-  --primary: #8c4de8;
-  --primary-soft: #c58fff;
-  --container: 1490px;
-  --page-padding: clamp(0.9rem, 2vw, 1.45rem);
   font-family:
     Inter,
     ui-sans-serif,

@@ -1,0 +1,28 @@
+@if (loading()) {
+  <div class="story-grid" [class.list-mode]="viewMode() === 'list'">
+    @for (item of skeletonItems; track item) {
+      <div class="skeleton-card">
+        <span></span>
+        <div>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (stories().length === 0) {
+  <app-empty-state
+    class="catalog-empty"
+    icon="book"
+    [iconSize]="34"
+    title="Không tìm thấy truyện"
+    description="Hãy thử thay đổi từ khóa hoặc bộ lọc."
+  />
+} @else {
+  <div class="story-grid" [class.list-mode]="viewMode() === 'list'">
+    @for (story of stories(); track story.id) {
+      <app-story-catalog-card [story]="story" [viewMode]="viewMode()" />
+    }
+  </div>
+}

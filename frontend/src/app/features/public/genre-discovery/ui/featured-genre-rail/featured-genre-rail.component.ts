@@ -13,39 +13,7 @@ import { FeaturedGenreCardComponent } from '../featured-genre-card/featured-genr
 
   imports: [IconComponent, FeaturedGenreCardComponent],
 
-  template: `
-    <section class="featured-section">
-      <header>
-        <h2>Thể loại nổi bật</h2>
-      </header>
-
-      <div class="rail-wrapper">
-        <button
-          class="rail-button previous"
-          type="button"
-          aria-label="Cuộn sang trái"
-          (click)="scroll(-1)"
-        >
-          <app-icon name="chevron-left" [size]="17" />
-        </button>
-
-        <div #rail class="featured-rail">
-          @for (genre of genres(); track genre.id) {
-            <app-featured-genre-card [genre]="genre" />
-          }
-        </div>
-
-        <button
-          class="rail-button next"
-          type="button"
-          aria-label="Cuộn sang phải"
-          (click)="scroll(1)"
-        >
-          <app-icon name="chevron-right" [size]="17" />
-        </button>
-      </div>
-    </section>
-  `,
+  templateUrl: './featured-genre-rail.component.html',
 
   styleUrl: './featured-genre-rail.component.scss',
 

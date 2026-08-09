@@ -1,0 +1,32 @@
+<section class="distribution-card">
+  <header>
+    <h2>Thể loại nổi bật</h2>
+
+    <a routerLink="/the-loai"> Xem tất cả </a>
+  </header>
+
+  <div class="genre-list">
+    @for (genre of genres(); track genre.slug) {
+      <a
+        class="genre-row"
+        routerLink="/danh-sach"
+        [queryParams]="{
+          genre: genre.slug,
+          sort: 'popular',
+        }"
+      >
+        <span class="genre-dot" [attr.data-tone]="genre.tone"></span>
+
+        <strong>
+          {{ genre.name }}
+        </strong>
+
+        <span class="progress">
+          <span [attr.data-tone]="genre.tone" [style.width.%]="genre.percentage"></span>
+        </span>
+
+        <small> {{ genre.percentage }}% </small>
+      </a>
+    }
+  </div>
+</section>

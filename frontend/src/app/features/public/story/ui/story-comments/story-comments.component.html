@@ -1,0 +1,26 @@
+<section class="side-card comments-card">
+  <div class="card-heading">
+    <app-icon name="message-circle" [size]="18" />
+    <h3>Bình luận mới nhất</h3>
+  </div>
+
+  <div class="comment-input-box">
+    <textarea placeholder="Viết bình luận của bạn..." rows="2"></textarea>
+    <button type="button">Gửi</button>
+  </div>
+
+  <div class="comment-list">
+    @for (comment of comments(); track comment.id) {
+      <div class="comment-item">
+        <div class="user-avatar">{{ comment.user[0] }}</div>
+        <div class="comment-body">
+          <div class="comment-meta">
+            <strong>{{ comment.user }}</strong>
+            <small>{{ comment.time }}</small>
+          </div>
+          <p>{{ comment.content }}</p>
+        </div>
+      </div>
+    }
+  </div>
+</section>

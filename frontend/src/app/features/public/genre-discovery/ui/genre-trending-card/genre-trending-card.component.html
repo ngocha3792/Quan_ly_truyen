@@ -1,0 +1,34 @@
+<section class="trending-card">
+  <h2>Thể loại được đọc nhiều tuần này</h2>
+
+  <div class="trending-list">
+    @for (item of items(); track item.id) {
+      <a
+        class="trending-item"
+        [routerLink]="['/danh-sach']"
+        [queryParams]="{
+          genre: item.slug,
+          sort: 'popular',
+        }"
+      >
+        <img
+          [src]="item.coverUrl || '/assets/mock/genres/default.webp'"
+          [alt]="item.name"
+          loading="lazy"
+        />
+
+        <div>
+          <strong>{{ item.name }}</strong>
+
+          <span class="progress">
+            <span [attr.data-tone]="item.tone" [style.width.%]="item.percent"></span>
+          </span>
+        </div>
+
+        <small> {{ item.percent | number: '1.1-1' }}% </small>
+      </a>
+    }
+  </div>
+
+  <a class="statistics-link" routerLink="/xep-hang"> Xem chi tiết thống kê </a>
+</section>

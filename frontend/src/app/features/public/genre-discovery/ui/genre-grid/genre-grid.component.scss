@@ -1,0 +1,85 @@
+.genre-section {
+  /* Uses parent container padding and background */
+}
+
+header {
+  margin-bottom: 10px;
+}
+
+h2 {
+  margin: 0;
+  color: #f0edf4;
+  font-size: 0.9375rem;
+}
+
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.skeleton-card {
+  min-height: 78px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 39px minmax(0, 1fr);
+  gap: 11px;
+  border-radius: 10px;
+  background: #10182a;
+}
+
+.skeleton-card > span {
+  width: 39px;
+  height: 39px;
+  border-radius: 10px;
+  background: #1a243a;
+}
+
+.skeleton-card > div {
+  display: grid;
+  gap: 6px;
+}
+
+.skeleton-card > div span {
+  height: 7px;
+  border-radius: 20px;
+  background: #1a243a;
+}
+
+.skeleton-card > div span:nth-child(2) {
+  width: 85%;
+}
+
+.skeleton-card > div span:nth-child(3) {
+  width: 45%;
+}
+
+.genre-empty {
+  --empty-min-height: 220px;
+
+  --empty-padding: 0;
+
+  --empty-icon-color: #a76def;
+
+  --empty-title-color: #dbd8e1;
+
+  --empty-title-size: 0.875rem;
+}
+
+@media (max-width: 1050px) {
+  .genre-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .genre-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 470px) {
+  .genre-grid {
+    grid-template-columns: 1fr;
+  }
+}

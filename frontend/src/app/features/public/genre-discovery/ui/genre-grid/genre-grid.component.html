@@ -1,0 +1,36 @@
+<section class="genre-section">
+  <header>
+    <h2>
+      {{ selected() ? 'Thể loại đã chọn' : 'Tất cả thể loại' }}
+    </h2>
+  </header>
+
+  @if (loading()) {
+    <div class="genre-grid">
+      @for (item of skeletons; track item) {
+        <div class="skeleton-card">
+          <span></span>
+
+          <div>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (genres().length === 0) {
+    <app-empty-state
+      class="genre-empty"
+      icon="book"
+      [iconSize]="31"
+      title="Không tìm thấy thể loại"
+    />
+  } @else {
+    <div class="genre-grid">
+      @for (genre of genres(); track genre.id) {
+        <app-genre-grid-card [genre]="genre" [rank]="findRank(genre.slug)" />
+      }
+    </div>
+  }
+</section>

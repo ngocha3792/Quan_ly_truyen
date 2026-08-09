@@ -1,0 +1,16 @@
+<section class="biography panel">
+  <header class="section-heading">
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="7" r="3"></circle>
+      <path d="M5 21c.5-5 2.8-7.5 7-7.5s6.5 2.5 7 7.5"></path>
+      <path d="M18 4h3"></path>
+      <path d="M19.5 2.5v3"></path>
+    </svg>
+
+    <h2>Giới thiệu tác giả</h2>
+  </header>
+
+  @for (paragraph of biography; track $index) {
+    <p>{{ paragraph }}</p>
+  }
+</section>

@@ -1,0 +1,153 @@
+.popover {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  width: 330px;
+  padding: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-popover);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.46);
+  animation: pop 0.16s ease;
+}
+
+.popover-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.65rem 0.8rem;
+  color: white;
+}
+
+.popover-title span {
+  color: var(--primary-soft);
+  font-size: 0.85rem;
+}
+
+.notifications a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem;
+  border-radius: 9px;
+  color: white;
+  text-decoration: none;
+}
+
+.notifications a:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notifications a div {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.notifications b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.05rem;
+}
+
+.notifications small {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.notice-icon {
+  width: var(--control-height);
+  height: var(--control-height);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  color: #ffc2a4;
+  background: rgba(219, 92, 42, 0.16);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.notice-icon.blue {
+  color: #abd4ff;
+  background: rgba(67, 128, 218, 0.16);
+}
+
+.user-summary {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.55rem 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.user-summary div {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.user-summary strong {
+  color: white;
+  font-size: 1.05rem;
+}
+
+.user-summary small {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu {
+  width: 260px;
+}
+
+.profile-menu a,
+.profile-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.profile-menu a:hover,
+.profile-menu button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mobile-menu {
+  display: none;
+}
+
+.mobile-nav {
+  display: none;
+  padding-bottom: 0.8rem;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+
+.mobile-nav a {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.mobile-nav a.active {
+  color: white;
+  background: rgba(134, 78, 231, 0.16);
+}

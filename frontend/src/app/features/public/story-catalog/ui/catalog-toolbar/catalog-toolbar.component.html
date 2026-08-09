@@ -1,0 +1,22 @@
+<div class="toolbar">
+  <app-search-field
+    class="catalog-search"
+    [value]="query()"
+    placeholder="Tìm kiếm truyện, tác giả..."
+    ariaLabel="Tìm kiếm truyện hoặc tác giả"
+    (valueChange)="queryChange.emit($event)"
+  />
+
+  <app-sort-select
+    class="catalog-sort"
+    [options]="sortOptions"
+    [value]="sort()"
+    (valueChange)="sortChange.emit($event)"
+  />
+
+  <app-view-mode-toggle
+    class="catalog-view-mode"
+    [value]="viewMode()"
+    (valueChange)="viewModeChange.emit($event)"
+  />
+</div>

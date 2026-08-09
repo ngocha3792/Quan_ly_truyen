@@ -1,0 +1,36 @@
+<header class="chapter-heading">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a routerLink="/">Trang chủ</a>
+
+    <span>/</span>
+
+    <a [routerLink]="['/truyen', data.story.slug]">
+      {{ data.story.title }}
+    </a>
+
+    <span>/</span>
+
+    <strong> Chương {{ data.chapter.number }} </strong>
+  </nav>
+
+  <h1>
+    {{ data.story.title }}
+  </h1>
+
+  <div class="chapter-title">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+      ></path>
+
+      <path d="M8 8h8"></path>
+      <path d="M8 12h8"></path>
+      <path d="M8 16h5"></path>
+    </svg>
+
+    <h2>
+      Chương {{ data.chapter.number }}:
+      {{ data.chapter.title }}
+    </h2>
+  </div>
+</header>

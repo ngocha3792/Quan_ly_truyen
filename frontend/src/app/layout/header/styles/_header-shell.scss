@@ -1,0 +1,216 @@
+app-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-header);
+  backdrop-filter: blur(18px);
+}
+
+.header-inner {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2.2rem);
+}
+
+.desktop-nav {
+  align-self: stretch;
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.desktop-nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.95rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 550;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--motion-fast);
+}
+
+.desktop-nav a::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0.75rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary-gradient);
+  transform: scaleX(0);
+  transition: transform var(--motion-fast);
+  box-shadow: 0 0 10px rgba(154, 84, 255, 0.6);
+}
+
+.desktop-nav a:hover,
+.desktop-nav a.active {
+  color: white;
+}
+
+.desktop-nav a.active::after {
+  transform: scaleX(1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.search-trigger {
+  width: min(280px, 100%);
+  height: var(--control-height);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: #70798d;
+  background: rgba(5, 9, 21, 0.72);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: text;
+  flex-shrink: 1;
+  min-width: 160px;
+}
+
+.search-trigger span {
+  flex: 1;
+  text-align: left;
+}
+
+kbd {
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: #646d82;
+  background: rgba(255, 255, 255, 0.03);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.icon-button {
+  position: relative;
+  width: var(--control-height);
+  height: var(--control-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--motion-fast);
+}
+
+.icon-button:hover {
+  color: white;
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #070b17;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
+  box-sizing: content-box;
+}
+
+.login-button,
+.profile-button {
+  height: var(--control-height);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(146, 90, 246, 0.25);
+  border-radius: 21px;
+  color: white;
+  background: rgba(118, 70, 210, 0.12);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: all var(--motion-fast);
+}
+
+.login-button:hover {
+  background: rgba(118, 70, 210, 0.22);
+}
+
+.profile-button {
+  padding: 0 0.85rem 0 0.35rem;
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.profile-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(146, 90, 246, 0.35);
+}
+
+.profile-name {
+  display: inline-block;
+  line-height: 1;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: white;
+  background: radial-gradient(circle at 35% 30%, #e28ef9, #6841c8 58%, #1d2243);
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(161, 105, 246, 0.18);
+  line-height: 1;
+}
+
+.avatar.large {
+  width: 48px;
+  height: 48px;
+  font-size: 1.15rem;
+}
+
+.popover-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}

@@ -1,0 +1,54 @@
+@if (totalPages() > 1) {
+  <nav class="pagination" aria-label="Phân trang">
+    <button
+      type="button"
+      aria-label="Trang trước"
+      [disabled]="page() <= 1"
+      (click)="pageChange.emit(page() - 1)"
+    >
+      <app-icon name="chevron-left" [size]="16" />
+    </button>
+
+    @if (showFirstPage()) {
+      <button type="button" [class.active]="page() === 1" (click)="pageChange.emit(1)">1</button>
+
+      @if (visiblePages()[0] > 2) {
+        <span>…</span>
+      }
+    }
+
+    @for (item of visiblePages(); track item) {
+      <button
+        type="button"
+        [class.active]="item === page()"
+        [attr.aria-current]="item === page() ? 'page' : null"
+        (click)="pageChange.emit(item)"
+      >
+        {{ item }}
+      </button>
+    }
+
+    @if (showLastPage()) {
+      @if (visiblePages()[visiblePages().length - 1] < totalPages() - 1) {
+        <span>…</span>
+      }
+
+      <button
+        type="button"
+        [class.active]="page() === totalPages()"
+        (click)="pageChange.emit(totalPages())"
+      >
+        {{ totalPages() }}
+      </button>
+    }
+
+    <button
+      type="button"
+      aria-label="Trang sau"
+      [disabled]="page() >= totalPages()"
+      (click)="pageChange.emit(page() + 1)"
+    >
+      <app-icon name="chevron-right" [size]="16" />
+    </button>
+  </nav>
+}

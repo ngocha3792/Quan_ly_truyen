@@ -1,0 +1,14 @@
+<section class="side-card">
+  <header>
+    <h2>Thể loại nổi bật</h2>
+    <a routerLink="/the-loai">Xem tất cả</a>
+  </header>
+
+  <div class="genre-list">
+    @for (genre of genres(); track genre.slug) {
+      <a routerLink="/danh-sach" [queryParams]="{ genre: genre.slug, sort: 'latest' }">
+        {{ genre.name }}
+      </a>
+    }
+  </div>
+</section>

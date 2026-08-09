@@ -1,0 +1,12 @@
+<section class="error-alert" role="alert">
+  <div class="error-body">
+    <strong>{{ title() }}</strong>
+    @if (message()) {
+      <span>{{ message() }}</span>
+    }
+  </div>
+
+  <button type="button" (click)="retry.emit()">
+    {{ retryLabel() }}
+  </button>
+</section>

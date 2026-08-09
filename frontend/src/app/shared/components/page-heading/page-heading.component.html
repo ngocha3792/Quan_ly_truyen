@@ -1,0 +1,15 @@
+<header class="page-heading">
+  <div>
+    <h1>
+      {{ title() }}
+      @if (icon()) {
+        <app-icon [name]="$any(icon())" [size]="18" />
+      }
+    </h1>
+
+    @if (description()) {
+      <p>{{ description() }}</p>
+    }
+  </div>
+  <ng-content />
+</header>

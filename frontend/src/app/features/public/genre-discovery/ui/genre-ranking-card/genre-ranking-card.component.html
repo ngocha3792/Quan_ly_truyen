@@ -1,0 +1,35 @@
+<section class="ranking-card">
+  <header>
+    <div>
+      <app-icon name="fire" [size]="16" />
+
+      <h2>Top thể loại</h2>
+    </div>
+  </header>
+
+  <div class="ranking-list">
+    @for (item of items(); track item.id) {
+      <a
+        class="ranking-item"
+        [routerLink]="['/danh-sach']"
+        [queryParams]="{
+          genre: item.slug,
+          sort: 'popular',
+        }"
+      >
+        <span class="rank" [attr.data-rank]="item.rank">
+          {{ item.rank }}
+        </span>
+
+        <strong>{{ item.name }}</strong>
+
+        <small>
+          {{ item.storyCount | compactNumber }}
+          truyện
+        </small>
+      </a>
+    }
+  </div>
+
+  <a class="ranking-link" routerLink="/xep-hang"> Xem tất cả bảng xếp hạng </a>
+</section>

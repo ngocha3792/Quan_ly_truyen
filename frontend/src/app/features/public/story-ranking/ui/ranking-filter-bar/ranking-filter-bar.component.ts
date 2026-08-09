@@ -16,44 +16,9 @@ import { StoryRankingMetric, StoryRankingPeriod } from '../../domain/story-ranki
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
-  template: `
-    <section class="filter-bar">
-      <app-tab-filter
-        [options]="$any(periods)"
-        [selected]="period()"
-        ariaLabel="Khoảng thời gian"
-        (selectedChange)="periodChange.emit($event)"
-      />
+  templateUrl: './ranking-filter-bar.component.html',
 
-      <app-tab-filter
-        [options]="$any(metrics)"
-        [selected]="metric()"
-        ariaLabel="Tiêu chí xếp hạng"
-        (selectedChange)="metricChange.emit($event)"
-      />
-    </section>
-  `,
-
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-    }
-
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    @media (max-width: 760px) {
-      .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-    }
-  `,
+  styleUrl: './ranking-filter-bar.component.scss',
 })
 export class RankingFilterBarComponent {
   readonly period = input.required<StoryRankingPeriod>();

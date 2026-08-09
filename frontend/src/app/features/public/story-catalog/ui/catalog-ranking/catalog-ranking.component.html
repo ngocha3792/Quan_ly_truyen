@@ -1,0 +1,51 @@
+<section class="ranking-card">
+  <header>
+    <div>
+      <app-icon name="trophy" [size]="18" />
+
+      <h2>Top truyện nổi bật</h2>
+    </div>
+
+    <a routerLink="/xep-hang">
+      Xem tất cả
+
+      <app-icon name="chevron-right" [size]="13" />
+    </a>
+  </header>
+
+  <div class="ranking-list">
+    @for (story of stories(); track story.id; let rank = $index) {
+      <a class="ranking-item" [routerLink]="['/truyen', story.slug]">
+        <span class="rank" [class.top]="rank < 3">
+          {{ rank + 1 }}
+        </span>
+
+        <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+
+        <div class="ranking-copy">
+          <strong>
+            {{ story.title }}
+          </strong>
+
+          <small>
+            {{ story.genres[0]?.name }}
+          </small>
+
+          <div>
+            <span>
+              <app-icon name="star" [size]="12" />
+
+              {{ story.rating }}
+            </span>
+
+            <span>
+              <app-icon name="eye" [size]="12" />
+
+              {{ story.views | compactNumber }}
+            </span>
+          </div>
+        </div>
+      </a>
+    }
+  </div>
+</section>

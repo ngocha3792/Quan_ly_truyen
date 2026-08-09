@@ -1,0 +1,9 @@
+<div class="layout" [style.--aside-width]="asideWidth()">
+  <section class="main-panel">
+    <ng-content select="[main]" />
+  </section>
+
+  <aside class="aside-panel">
+    <ng-content select="[aside]" />
+  </aside>
+</div>

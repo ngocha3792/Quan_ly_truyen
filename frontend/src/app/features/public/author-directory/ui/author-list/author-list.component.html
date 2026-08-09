@@ -1,0 +1,111 @@
+<section class="author-list">
+  @for (author of authors; track author.id) {
+    <article class="author-row">
+      <a class="author-main" [routerLink]="['/tac-gia', author.slug]">
+        <div class="author-avatar">
+          {{ author.initials }}
+
+          @if (author.verified) {
+            <span class="verified" title="Tác giả đã xác minh">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="m12 2 2.1 2.2 3-.3.9 2.9 2.7 1.5-1.2 2.8 1.2 2.8-2.7 1.5-.9 2.9-3-.3L12 22l-2.1-2.2-3 .3-.9-2.9-2.7-1.5 1.2-2.8-1.2-2.8L6 8.6l.9-2.9 3 .3L12 2Z"
+                ></path>
+
+                <path d="m8.5 12 2.2 2.2 4.8-4.8"></path>
+              </svg>
+            </span>
+          }
+        </div>
+
+        <div class="author-information">
+          <h2>{{ author.name }}</h2>
+
+          <strong>
+            {{ author.genre }}
+          </strong>
+
+          <p>
+            {{ author.description }}
+          </p>
+        </div>
+      </a>
+
+      <div class="metric">
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+          ></path>
+
+          <path d="M8 8h8"></path>
+        </svg>
+
+        <strong>
+          {{ author.worksLabel }}
+        </strong>
+
+        <small>Tác phẩm</small>
+      </div>
+
+      <div class="metric">
+        <svg viewBox="0 0 24 24">
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+
+          <circle cx="12" cy="12" r="2.5"></circle>
+        </svg>
+
+        <strong>
+          {{ author.readsLabel }}
+        </strong>
+
+        <small>Lượt đọc</small>
+      </div>
+
+      <div class="metric">
+        <svg viewBox="0 0 24 24">
+          <circle cx="9" cy="8" r="3"></circle>
+
+          <path d="M3.5 19c.5-3.4 2.3-5 5.5-5s5 1.6 5.5 5"></path>
+
+          <path d="M16 6a3 3 0 0 1 0 5"></path>
+        </svg>
+
+        <strong>
+          {{ author.followersLabel }}
+        </strong>
+
+        <small>Theo dõi</small>
+      </div>
+
+      <button
+        class="follow-button"
+        type="button"
+        [class.follow-button--active]="followedAuthorIds.includes(author.id)"
+        (click)="followToggle.emit(author.id)"
+      >
+        @if (followedAuthorIds.includes(author.id)) {
+          <svg viewBox="0 0 24 24">
+            <path d="m5 12 4 4L19 6"></path>
+          </svg>
+
+          Đang theo dõi
+        } @else {
+          <svg viewBox="0 0 24 24">
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
+          </svg>
+
+          Theo dõi
+        }
+      </button>
+    </article>
+  } @empty {
+    <app-empty-state
+      class="author-empty"
+      icon="search"
+      [iconSize]="28"
+      title="Không tìm thấy tác giả"
+      description="Hãy thử tìm kiếm bằng tên hoặc thể loại khác."
+    />
+  }
+</section>

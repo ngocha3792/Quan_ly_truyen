@@ -1,0 +1,9 @@
+<span class="movement" [attr.data-direction]="direction()" [attr.aria-label]="ariaLabel()">
+  @if (delta() > 0) {
+    ↑ {{ delta() }}
+  } @else if (delta() < 0) {
+    ↓ {{ absoluteDelta() }}
+  } @else {
+    —
+  }
+</span>

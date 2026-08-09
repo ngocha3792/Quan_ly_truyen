@@ -1,0 +1,28 @@
+@if (loading()) {
+  <div class="story-grid">
+    @for (item of skeletons; track item) {
+      <article class="skeleton">
+        <span></span>
+        <div>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </article>
+    }
+  </div>
+} @else if (stories().length === 0) {
+  <app-empty-state
+    class="updates-empty"
+    icon="book-open"
+    [iconSize]="32"
+    title="Không có truyện phù hợp"
+    description="Thử chọn bộ lọc hoặc cách sắp xếp khác."
+  />
+} @else {
+  <div class="story-grid">
+    @for (story of stories(); track story.id) {
+      <app-update-story-card [story]="story" />
+    }
+  </div>
+}

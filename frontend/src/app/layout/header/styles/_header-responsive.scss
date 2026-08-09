@@ -1,0 +1,82 @@
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+}
+
+@media (max-width: 1120px) {
+  .header-inner {
+    gap: 1.4rem;
+  }
+
+  .desktop-nav {
+    gap: 0;
+  }
+
+  .desktop-nav a {
+    padding: 0 0.55rem;
+  }
+
+  .search-trigger {
+    display: none;
+  }
+
+  .desktop-only {
+    display: grid;
+  }
+}
+
+@media (max-width: 800px) {
+  .header-inner {
+    height: var(--header-height-compact);
+    gap: 0.8rem;
+  }
+
+  .desktop-nav {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: grid;
+  }
+
+  .mobile-nav {
+    display: flex;
+  }
+
+  .profile-name,
+  .profile-button app-icon,
+  .login-button span {
+    display: none;
+  }
+
+  .login-button {
+    width: var(--control-height);
+    padding: 0;
+    justify-content: center;
+  }
+
+  .profile-button {
+    width: var(--control-height);
+    padding: 0.2rem;
+  }
+
+  .actions {
+    gap: 0.1rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .actions > .icon-button:nth-of-type(3) {
+    display: none;
+  }
+
+  .popover {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: var(--header-height);
+    width: auto;
+  }
+}

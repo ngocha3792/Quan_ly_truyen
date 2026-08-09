@@ -15,33 +15,7 @@ import { GenreIconComponent } from '../genre-icon/genre-icon.component';
 
   imports: [RouterLink, CompactNumberPipe, GenreIconComponent],
 
-  template: `
-    <a
-      class="genre-card"
-      [routerLink]="['/danh-sach']"
-      [queryParams]="{
-        genre: genre().slug,
-        sort: 'popular',
-      }"
-    >
-      <app-genre-icon [visual]="genre().visual" [tone]="genre().tone" [compact]="true" />
-
-      <div class="genre-copy">
-        <strong>{{ genre().name }}</strong>
-
-        <p>{{ genre().description }}</p>
-
-        <span>
-          {{ genre().storyCount | compactNumber }}
-          truyện
-        </span>
-      </div>
-
-      @if (rank()) {
-        <span class="rank-badge"> Top {{ rank() }} </span>
-      }
-    </a>
-  `,
+  templateUrl: './genre-grid-card.component.html',
 
   styleUrl: './genre-grid-card.component.scss',
 

@@ -1,0 +1,21 @@
+<div class="view-mode-toggle" role="group" [attr.aria-label]="ariaLabel()">
+  <button
+    type="button"
+    aria-label="Hiển thị dạng lưới"
+    [class.active]="value() === 'grid'"
+    [attr.aria-pressed]="value() === 'grid'"
+    (click)="select('grid')"
+  >
+    <app-icon name="grid" [size]="iconSize()" />
+  </button>
+
+  <button
+    type="button"
+    aria-label="Hiển thị dạng danh sách"
+    [class.active]="value() === 'list'"
+    [attr.aria-pressed]="value() === 'list'"
+    (click)="select('list')"
+  >
+    <app-icon name="menu" [size]="iconSize()" />
+  </button>
+</div>

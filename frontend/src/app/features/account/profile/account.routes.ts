@@ -28,7 +28,7 @@ export const ACCOUNT_ROUTES: Routes = [
         path: 'bao-mat',
         title: 'Bảo mật tài khoản - TruyenHub',
         loadComponent: () =>
-          import('./secutity/pages/account-security-page/account-security-page.component').then(
+          import('./security/pages/account-security-page/account-security-page.component').then(
             (module) => module.AccountSecurityPageComponent,
           ),
       },
@@ -37,7 +37,7 @@ export const ACCOUNT_ROUTES: Routes = [
         title: 'Xác thực hai lớp - TruyenHub',
 
         loadComponent: () =>
-          import('./secutity/features/mfa/mfa-settings-page.component').then(
+          import('./security/features/mfa/mfa-settings-page.component').then(
             (module) => module.MfaSettingsPageComponent,
           ),
       },
@@ -46,7 +46,7 @@ export const ACCOUNT_ROUTES: Routes = [
         title: 'Email khôi phục - TruyenHub',
 
         loadComponent: () =>
-          import('./secutity/features/recovery-email/recovery-email-page.component').then(
+          import('./security/features/recovery-email/recovery-email-page.component').then(
             (module) => module.RecoveryEmailPageComponent,
           ),
       },
@@ -55,7 +55,7 @@ export const ACCOUNT_ROUTES: Routes = [
         title: 'Câu hỏi bảo mật - TruyenHub',
 
         loadComponent: () =>
-          import('./secutity/features/security-questions/security-questions-page.component').then(
+          import('./security/features/security-questions/security-questions-page.component').then(
             (module) => module.SecurityQuestionsPageComponent,
           ),
       },

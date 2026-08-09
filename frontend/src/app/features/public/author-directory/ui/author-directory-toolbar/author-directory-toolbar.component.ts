@@ -13,54 +13,9 @@ import { AuthorDirectorySort } from '../../domain/author-directory.models';
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
-  template: `
-    <app-search-field
-      class="author-search"
-      [value]="query"
-      placeholder="Tìm kiếm tác giả..."
-      ariaLabel="Tìm kiếm tác giả"
-      [iconSize]="18"
-      (valueChange)="queryChange.emit($event)"
-    />
-  `,
+  templateUrl: './author-directory-toolbar.component.html',
 
-  styles: [
-    `
-      .author-search {
-        --search-min-height: 43px;
-
-        --search-input-height: 41px;
-
-        --search-radius: 8px;
-
-        --search-border: 1px solid rgba(132, 145, 177, 0.18);
-
-        --search-background: rgba(5, 10, 21, 0.46);
-
-        --search-padding: 0 14px;
-
-        --search-gap: 10px;
-
-        --search-color: var(--text-strong);
-
-        --search-font-size: 13.5px;
-
-        --search-icon-color: var(--text-muted);
-
-        --search-placeholder-color: var(--text-muted);
-      }
-
-      @media (max-width: 480px) {
-        .toolbar {
-          grid-template-columns: 1fr;
-        }
-
-        .search-box {
-          grid-column: auto;
-        }
-      }
-    `,
-  ],
+  styleUrl: './author-directory-toolbar.component.scss',
 })
 export class AuthorDirectoryToolbarComponent {
   protected readonly sortOptions: readonly SortOption<AuthorDirectorySort>[] = [

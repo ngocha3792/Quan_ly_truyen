@@ -1,0 +1,16 @@
+<section class="filter-bar">
+  <app-tab-filter
+    [options]="$any(tabs)"
+    [selected]="tab()"
+    ariaLabel="Lọc truyện cập nhật"
+    (selectedChange)="tabChange.emit($event)"
+  />
+
+  <div class="sort-controls">
+    <app-sort-select
+      [options]="$any(sortOptions)"
+      [value]="sort()"
+      (valueChange)="sortChange.emit($event)"
+    />
+  </div>
+</section>

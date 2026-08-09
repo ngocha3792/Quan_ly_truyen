@@ -1,0 +1,78 @@
+:host {
+  display: block;
+}
+
+.chapter-heading {
+  margin-bottom: 18px;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 18px;
+  color: #7f89a5;
+  font-size: 13px;
+}
+
+.breadcrumb a {
+  color: #a991d4;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  color: #c084fc;
+}
+
+.breadcrumb strong {
+  color: #c7ccda;
+  font-weight: 500;
+}
+
+h1 {
+  margin: 0 0 17px;
+  color: #f7f5ff;
+  font-size: clamp(25px, 2.2vw, 34px);
+  line-height: 1.25;
+  letter-spacing: -0.7px;
+}
+
+.chapter-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chapter-title svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: #b967ff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chapter-title h2 {
+  margin: 0;
+  color: #f3f1fa;
+  font-size: clamp(19px, 1.7vw, 25px);
+  line-height: 1.4;
+  letter-spacing: -0.35px;
+}
+
+@media (max-width: 640px) {
+  .breadcrumb {
+    font-size: 12px;
+  }
+
+  h1 {
+    margin-bottom: 12px;
+  }
+
+  .chapter-title {
+    align-items: flex-start;
+  }
+}

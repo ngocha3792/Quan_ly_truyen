@@ -1,0 +1,17 @@
+.movement {
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #697388;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.movement[data-direction='up'] {
+  color: #48d875;
+}
+
+.movement[data-direction='down'] {
+  color: #fb7185;
+}

@@ -1,0 +1,66 @@
+:host {
+  display: block;
+  min-width: 0;
+
+  grid-column: var(--empty-grid-column, auto);
+}
+
+.empty-state {
+  min-height: var(--empty-min-height, 240px);
+
+  padding: var(--empty-padding, 24px);
+
+  display: grid;
+
+  place-items: center;
+
+  align-content: center;
+
+  gap: var(--empty-gap, 10px);
+
+  color: var(--empty-icon-color, #a76def);
+
+  text-align: center;
+}
+
+.empty-icon {
+  width: var(--empty-icon-box-size, auto);
+
+  height: var(--empty-icon-box-size, auto);
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: var(--empty-icon-radius, 50%);
+
+  color: var(--empty-icon-color, #a76def);
+
+  background: var(--empty-icon-background, transparent);
+}
+
+.empty-copy {
+  display: grid;
+
+  gap: var(--empty-copy-gap, 6px);
+}
+
+strong {
+  color: var(--empty-title-color, #e2dfe8);
+
+  font-size: var(--empty-title-size, 1rem);
+
+  font-weight: var(--empty-title-weight, 700);
+}
+
+p {
+  max-width: var(--empty-description-max-width, 380px);
+
+  margin: 0;
+
+  color: var(--empty-description-color, #717b90);
+
+  font-size: var(--empty-description-size, 0.85rem);
+
+  line-height: var(--empty-description-line-height, 1.6);
+}

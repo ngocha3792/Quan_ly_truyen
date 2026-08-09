@@ -1,0 +1,21 @@
+<section class="empty-state">
+  @if (icon(); as iconName) {
+    <span class="empty-icon">
+      <app-icon [name]="iconName" [size]="iconSize()" />
+    </span>
+  }
+
+  <div class="empty-copy">
+    <strong>
+      {{ title() }}
+    </strong>
+
+    @if (description()) {
+      <p>
+        {{ description() }}
+      </p>
+    }
+  </div>
+
+  <ng-content select="[emptyAction]" />
+</section>

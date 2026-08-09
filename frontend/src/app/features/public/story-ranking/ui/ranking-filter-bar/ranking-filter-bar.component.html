@@ -1,0 +1,15 @@
+<section class="filter-bar">
+  <app-tab-filter
+    [options]="$any(periods)"
+    [selected]="period()"
+    ariaLabel="Khoảng thời gian"
+    (selectedChange)="periodChange.emit($event)"
+  />
+
+  <app-tab-filter
+    [options]="$any(metrics)"
+    [selected]="metric()"
+    ariaLabel="Tiêu chí xếp hạng"
+    (selectedChange)="metricChange.emit($event)"
+  />
+</section>

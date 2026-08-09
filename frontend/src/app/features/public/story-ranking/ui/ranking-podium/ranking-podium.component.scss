@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+@media (max-width: 1050px) {
+  .podium {
+    grid-template-columns: 1fr;
+  }
+
+  app-top-ranking-card:nth-child(2) {
+    grid-row: 1;
+  }
+}

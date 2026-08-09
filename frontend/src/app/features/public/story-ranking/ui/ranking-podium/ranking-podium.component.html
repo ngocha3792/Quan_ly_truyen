@@ -1,0 +1,13 @@
+<section class="podium">
+  @if (stories()[1]; as second) {
+    <app-top-ranking-card [story]="second" variant="second" />
+  }
+
+  @if (stories()[0]; as first) {
+    <app-top-ranking-card [story]="first" variant="first" />
+  }
+
+  @if (stories()[2]; as third) {
+    <app-top-ranking-card [story]="third" variant="third" />
+  }
+</section>
