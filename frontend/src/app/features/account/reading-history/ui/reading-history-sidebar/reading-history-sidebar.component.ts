@@ -2,14 +2,13 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { RouterLink } from '@angular/router';
 
 import { ContinueReadingItem, ReadingHistoryStatistics } from '../../domain/reading-history.models';
-import { ReadingHistorySyncState } from '../../data-access/reading-history.store';
+import type { ReadingHistorySyncState } from '../../domain/reading-history.models';
 
 @Component({
   selector: 'app-reading-history-sidebar',
   standalone: true,
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-
   template: `
     <aside class="sidebar">
       <section class="sidebar-card statistics-card">

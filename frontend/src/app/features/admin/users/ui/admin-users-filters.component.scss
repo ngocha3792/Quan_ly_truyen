@@ -1,0 +1,57 @@
+.toolbar {
+  padding: 18px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.search {
+  width: min(620px, 100%);
+  display: flex;
+  gap: 9px;
+}
+
+.search app-search-field {
+  flex: 1;
+}
+
+button,
+select {
+  min-height: 42px;
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  padding: 0 18px;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #743bde, #a153eb);
+}
+
+select {
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  outline: none;
+  color: #cbd5e1;
+  background: #0b1220;
+}
+
+.status-tabs {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+  .toolbar,
+  .search {
+    flex-direction: column;
+  }
+
+  select {
+    width: 100%;
+  }
+}

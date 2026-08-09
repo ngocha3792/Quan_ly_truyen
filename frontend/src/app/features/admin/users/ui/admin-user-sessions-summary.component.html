@@ -1,0 +1,11 @@
+<section class="card">
+  <h3>Phiên đăng nhập</h3>
+  <div class="stats">
+    <div>
+      <span>Đang hoạt động</span><strong>{{ user.activeSessionCount }}</strong>
+    </div>
+    <div>
+      <span>Đăng nhập cuối</span><strong>{{ formatDate(user.lastLoginAt) }}</strong>
+    </div>
+  </div>
+</section>

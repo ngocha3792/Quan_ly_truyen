@@ -1,255 +1,48 @@
 <main class="admin-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs()" />
-
     <app-page-heading
       title="Chi tiết người dùng"
       description="Quản lý trạng thái tài khoản, phiên đăng nhập và quyền quản trị."
       icon="users"
+      ><a routerLink="/admin/users" class="back">← Danh sách người dùng</a></app-page-heading
     >
-      <a routerLink="/admin/users" class="back"> ← Danh sách người dùng </a>
-    </app-page-heading>
-
-    @if (store.detailLoading()) {
+    @if (detailStore.loading()) {
       <app-loading-state message="Đang tải thông tin người dùng..." />
-    } @else if (store.detailError()) {
+    } @else if (detailStore.error()) {
       <app-error-alert
         title="Không thể tải người dùng"
-        [message]="store.detailError()"
-        (retry)="store.loadDetail(userId)"
+        [message]="detailStore.error()"
+        (retry)="detailStore.load(userId)"
       />
-    } @else if (store.detail(); as user) {
-      @if (store.actionMessage()) {
-        <div class="success">
-          {{ store.actionMessage() }}
-        </div>
+    } @else if (detailStore.detail(); as user) {
+      @if (actionsStore.message()) {
+        <div class="success">{{ actionsStore.message() }}</div>
       }
-
-      @if (store.actionError()) {
-        <div class="error">
-          {{ store.actionError() }}
-        </div>
+      @if (actionsStore.error()) {
+        <div class="error">{{ actionsStore.error() }}</div>
       }
-
-      <section class="hero">
-        <div class="user-heading">
-          @if (user.avatar?.url) {
-            <img [src]="user.avatar!.url!" [alt]="user.displayName" />
-          } @else {
-            <div class="avatar">
-              {{ user.displayName.charAt(0).toUpperCase() }}
-            </div>
-          }
-
-          <div>
-            <h2>
-              {{ user.displayName }}
-            </h2>
-
-            <p>
-              &#64;{{ user.username }}
-              ·
-              {{ user.email }}
-            </p>
-
-            <div class="badges">
-              <span
-                class="status"
-                [class.active]="user.status === 'ACTIVE'"
-                [class.warning]="user.status === 'SUSPENDED'"
-                [class.danger]="user.status === 'BANNED' || user.status === 'DELETED'"
-              >
-                {{ statusLabel(user.status) }}
-              </span>
-
-              @for (role of user.roles; track role.code) {
-                <span class="role">
-                  {{ role.code }}
-                </span>
-              }
-            </div>
-          </div>
-        </div>
-
-        @if (!isSelf() && user.status !== 'DELETED') {
-          <div class="status-actions">
-            @if (user.status !== 'ACTIVE') {
-              <button
-                type="button"
-                class="activate"
-                [disabled]="store.actionLoading()"
-                (click)="changeStatus('ACTIVE')"
-              >
-                Kích hoạt
-              </button>
-            }
-
-            @if (user.status === 'ACTIVE') {
-              <button
-                type="button"
-                class="suspend"
-                [disabled]="store.actionLoading()"
-                (click)="changeStatus('SUSPENDED')"
-              >
-                Tạm khóa
-              </button>
-
-              <button
-                type="button"
-                class="ban"
-                [disabled]="store.actionLoading()"
-                (click)="changeStatus('BANNED')"
-              >
-                Cấm tài khoản
-              </button>
-            }
-          </div>
-        }
-      </section>
-
+      <app-admin-user-header
+        [user]="user"
+        [isSelf]="isSelf()"
+        [actionLoading]="actionsStore.loading()"
+        (statusChange)="changeStatus($event)"
+      />
       @if (isSelf()) {
         <div class="notice">
           Đây là tài khoản của bạn. Hệ thống không cho phép tự khóa/ban hoặc tự gỡ quyền ADMIN.
         </div>
       }
-
-      <div class="grid">
-        <section class="card">
-          <h3>Thông tin tài khoản</h3>
-
-          <dl>
-            <div>
-              <dt>User ID</dt>
-
-              <dd>
-                {{ user.id }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Email</dt>
-
-              <dd>
-                {{ user.email }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Xác minh email</dt>
-
-              <dd>
-                {{ user.emailVerified ? 'Đã xác minh' : 'Chưa xác minh' }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Tạo tài khoản</dt>
-
-              <dd>
-                {{ formatDate(user.createdAt) }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Đăng nhập cuối</dt>
-
-              <dd>
-                {{ formatDate(user.lastLoginAt) }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Session đang hoạt động</dt>
-
-              <dd>
-                {{ user.activeSessionCount }}
-              </dd>
-            </div>
-          </dl>
-        </section>
-
-        <section class="card">
-          <h3>Hồ sơ</h3>
-
-          <p class="bio">
-            {{ user.bio || 'Người dùng chưa có tiểu sử.' }}
-          </p>
-
-          @if (user.authorProfile) {
-            <div class="author-box">
-              <span> Author profile </span>
-
-              <strong>
-                {{ user.authorProfile.penName }}
-              </strong>
-
-              <small>
-                {{ user.authorProfile.verificationStatus }}
-              </small>
-            </div>
-          }
-        </section>
-      </div>
-
-      <section class="card roles-card">
-        <div class="section-heading">
-          <div>
-            <h3>Roles</h3>
-
-            <p>
-              USER là role nền. AUTHOR được quản lý bởi Author Application. Chỉ ADMIN được cấp/gỡ
-              tại đây.
-            </p>
-          </div>
-        </div>
-
-        <div class="role-list">
-          @for (role of user.roles; track role.code) {
-            <article>
-              <div>
-                <strong>
-                  {{ role.code }}
-                </strong>
-
-                <span>
-                  {{ role.name }}
-                </span>
-              </div>
-
-              <small>
-                Cấp:
-                {{ formatDate(role.assignedAt) }}
-              </small>
-            </article>
-          }
-        </div>
-
-        @if (canManageRoles()) {
-          <footer class="role-actions">
-            @if (hasRole('ADMIN')) {
-              <button
-                type="button"
-                class="remove-admin"
-                [disabled]="store.actionLoading() || isSelf()"
-                (click)="removeAdmin()"
-              >
-                Gỡ quyền ADMIN
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="grant-admin"
-                [disabled]="store.actionLoading() || user.status === 'DELETED'"
-                (click)="grantAdmin()"
-              >
-                Cấp quyền ADMIN
-              </button>
-            }
-          </footer>
-        } @else {
-          <div class="notice">Tài khoản quản trị hiện tại không có permission role.manage.</div>
-        }
-      </section>
+      <app-admin-user-summary [user]="user" />
+      <app-admin-user-sessions-summary [user]="user" />
+      <app-admin-user-roles
+        [user]="user"
+        [canManage]="canManageRoles()"
+        [isSelf]="isSelf()"
+        [actionLoading]="actionsStore.loading()"
+        (grantAdmin)="grantAdmin()"
+        (removeAdmin)="removeAdmin()"
+      />
     }
   </div>
 </main>

@@ -1,0 +1,48 @@
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Người dùng</th>
+        <th>Role</th>
+        <th>Email</th>
+        <th>Trạng thái</th>
+        <th>Đăng nhập gần nhất</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (user of users; track user.id) {
+        <tr>
+          <td>
+            <div class="identity">
+              <strong>{{ user.displayName }}</strong
+              ><small>&#64;{{ user.username }}</small>
+            </div>
+          </td>
+          <td>
+            <div class="roles">
+              @for (role of user.roles; track role.code) {
+                <span>{{ role.code }}</span>
+              }
+            </div>
+          </td>
+          <td>
+            <div class="email">
+              {{ user.email }}
+              @if (user.emailVerified) {
+                <small>✓ đã xác minh</small>
+              }
+            </div>
+          </td>
+          <td><app-admin-user-status-badge [status]="user.status" /></td>
+          <td>{{ formatDate(user.lastLoginAt) }}</td>
+          <td><a class="detail-link" [routerLink]="['/admin/users', user.id]">Chi tiết</a></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+<footer class="pagination">
+  <span>Tổng {{ total }} người dùng</span>
+  <app-pagination [page]="page" [totalPages]="totalPages" (pageChange)="pageChange.emit($event)" />
+</footer>

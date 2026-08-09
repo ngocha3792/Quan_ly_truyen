@@ -3,11 +3,10 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   ReadingHistoryPeriod,
   ReadingHistorySort,
+  ReadingHistorySyncState,
   ReadingHistoryView,
 } from '../domain/reading-history.models';
 import { ReadingHistoryRepository } from '../domain/reading-history.repository';
-
-export type ReadingHistorySyncState = 'idle' | 'success';
 
 @Injectable()
 export class ReadingHistoryStore {

@@ -1,0 +1,91 @@
+.hero {
+  margin-bottom: 18px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+.user-heading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+img,
+.avatar {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+img {
+  object-fit: cover;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #743bde, #a153eb);
+}
+h2 {
+  margin: 0;
+  color: #f8fafc;
+}
+p {
+  margin: 5px 0 0;
+  color: #64748b;
+}
+.badges,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.badges {
+  margin-top: 9px;
+}
+.role {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #c4b5fd;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.13);
+}
+button {
+  min-height: 39px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.activate {
+  border: 0;
+  color: #fff;
+  background: #16a34a;
+}
+.suspend {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.08);
+}
+.ban {
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.08);
+}
+@media (max-width: 760px) {
+  .hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

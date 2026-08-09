@@ -8,7 +8,7 @@ const sourceRoot = path.join(workspaceRoot, 'src', 'app');
 const debtBaseline = {
   inlineTemplates: 119,
   inlineStyles: 109,
-  excessLines: 5_970,
+  excessLines: 5_948,
 };
 
 const hardLineLimits = {
@@ -23,6 +23,12 @@ const targetLineLimits = {
   stylesheet: 400,
   template: 300,
   typescript: 400,
+};
+
+const forbiddenLayerDependencies = {
+  domain: new Set(['data-access', 'pages', 'ui']),
+  'data-access': new Set(['pages', 'ui']),
+  ui: new Set(['data-access', 'pages']),
 };
 
 const files = await collectSourceFiles(sourceRoot);
@@ -40,6 +46,7 @@ const records = await Promise.all(
   }),
 );
 const components = records.filter(isComponent);
+const boundaryViolations = findBoundaryViolations(records);
 
 const current = {
   inlineTemplates: components.filter(({ content }) => /^\s*template\s*:/m.test(content)).length,
@@ -69,11 +76,18 @@ for (const record of records) {
   }
 }
 
+for (const violation of boundaryViolations) {
+  errors.push(
+    `${relativePath(violation.file)}:${violation.line} ${violation.sourceLayer} cannot depend on ${violation.target}`,
+  );
+}
+
 console.log(
   [
     `Architecture debt: ${current.inlineTemplates} inline templates, ${current.inlineStyles} inline styles`,
     `Large files: ${current.filesAtLeast300Lines} >=300, ${current.filesAtLeast500Lines} >=500, ${current.filesAtLeast800Lines} >=800 lines`,
     `Line-budget debt: ${current.excessLines} excess lines`,
+    `Feature boundary violations: ${boundaryViolations.length}`,
   ].join('\n'),
 );
 
@@ -110,6 +124,49 @@ function targetLineLimitFor(record) {
 
 function isComponent(record) {
   return record.file.endsWith('.ts') && /@Component\s*\(/.test(record.content);
+}
+
+function findBoundaryViolations(sourceRecords) {
+  const violations = [];
+  const importPattern = /\b(?:from\s+|import\s*(?:\(\s*)?)['"]([^'"]+)['"]/g;
+
+  for (const record of sourceRecords) {
+    if (!record.file.endsWith('.ts')) continue;
+
+    const sourceLayer = featureLayerFor(record.file);
+    if (!sourceLayer || !(sourceLayer in forbiddenLayerDependencies)) continue;
+
+    for (const match of record.content.matchAll(importPattern)) {
+      const specifier = match[1];
+      const line = record.content.slice(0, match.index).split(/\r?\n/).length;
+
+      if (sourceLayer === 'domain' && specifier.startsWith('@angular/')) {
+        violations.push({ file: record.file, line, sourceLayer, target: 'Angular' });
+        continue;
+      }
+
+      if (!specifier.startsWith('.')) continue;
+
+      const targetLayer = featureLayerFor(path.resolve(path.dirname(record.file), specifier));
+      if (!targetLayer || !forbiddenLayerDependencies[sourceLayer].has(targetLayer)) continue;
+
+      violations.push({ file: record.file, line, sourceLayer, target: targetLayer });
+    }
+  }
+
+  return violations;
+}
+
+function featureLayerFor(file) {
+  const parts = path.relative(sourceRoot, file).split(path.sep);
+  const featuresIndex = parts.indexOf('features');
+  if (featuresIndex === -1) return null;
+
+  return (
+    parts
+      .slice(featuresIndex + 1)
+      .find((part) => ['domain', 'data-access', 'pages', 'ui'].includes(part)) ?? null
+  );
 }
 
 function relativePath(file) {

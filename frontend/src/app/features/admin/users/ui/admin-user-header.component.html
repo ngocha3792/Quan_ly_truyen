@@ -1,0 +1,36 @@
+<section class="hero">
+  <div class="user-heading">
+    @if (user.avatar?.url) {
+      <img [src]="user.avatar!.url!" [alt]="user.displayName" />
+    } @else {
+      <div class="avatar">{{ user.displayName.charAt(0).toUpperCase() }}</div>
+    }
+    <div>
+      <h2>{{ user.displayName }}</h2>
+      <p>&#64;{{ user.username }} · {{ user.email }}</p>
+      <div class="badges">
+        <app-admin-user-status-badge [status]="user.status" />
+        @for (role of user.roles; track role.code) {
+          <span class="role">{{ role.code }}</span>
+        }
+      </div>
+    </div>
+  </div>
+  @if (!isSelf && user.status !== 'DELETED') {
+    <div class="actions">
+      @if (user.status !== 'ACTIVE') {
+        <button class="activate" [disabled]="actionLoading" (click)="statusChange.emit('ACTIVE')">
+          Kích hoạt
+        </button>
+      }
+      @if (user.status === 'ACTIVE') {
+        <button class="suspend" [disabled]="actionLoading" (click)="statusChange.emit('SUSPENDED')">
+          Tạm khóa
+        </button>
+        <button class="ban" [disabled]="actionLoading" (click)="statusChange.emit('BANNED')">
+          Cấm tài khoản
+        </button>
+      }
+    </div>
+  }
+</section>

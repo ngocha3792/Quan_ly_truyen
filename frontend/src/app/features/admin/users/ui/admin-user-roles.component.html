@@ -1,0 +1,38 @@
+<section class="card">
+  <div>
+    <h3>Roles</h3>
+    <p>
+      USER là role nền. AUTHOR được quản lý bởi Author Application. Chỉ ADMIN được cấp/gỡ tại đây.
+    </p>
+  </div>
+  <div class="role-list">
+    @for (role of user.roles; track role.code) {
+      <article>
+        <div>
+          <strong>{{ role.code }}</strong
+          ><span>{{ role.name }}</span>
+        </div>
+        <small>Cấp: {{ formatDate(role.assignedAt) }}</small>
+      </article>
+    }
+  </div>
+  @if (canManage) {
+    <footer>
+      @if (hasAdmin()) {
+        <button class="remove" [disabled]="actionLoading || isSelf" (click)="removeAdmin.emit()">
+          Gỡ quyền ADMIN
+        </button>
+      } @else {
+        <button
+          class="grant"
+          [disabled]="actionLoading || user.status === 'DELETED'"
+          (click)="grantAdmin.emit()"
+        >
+          Cấp quyền ADMIN
+        </button>
+      }
+    </footer>
+  } @else {
+    <div class="notice">Tài khoản quản trị hiện tại không có permission role.manage.</div>
+  }
+</section>

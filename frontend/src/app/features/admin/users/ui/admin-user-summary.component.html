@@ -1,0 +1,33 @@
+<div class="grid">
+  <section class="card">
+    <h3>Thông tin tài khoản</h3>
+    <dl>
+      <div>
+        <dt>User ID</dt>
+        <dd>{{ user.id }}</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd>{{ user.email }}</dd>
+      </div>
+      <div>
+        <dt>Xác minh email</dt>
+        <dd>{{ user.emailVerified ? 'Đã xác minh' : 'Chưa xác minh' }}</dd>
+      </div>
+      <div>
+        <dt>Tạo tài khoản</dt>
+        <dd>{{ formatDate(user.createdAt) }}</dd>
+      </div>
+    </dl>
+  </section>
+  <section class="card">
+    <h3>Hồ sơ</h3>
+    <p>{{ user.bio || 'Người dùng chưa có tiểu sử.' }}</p>
+    @if (user.authorProfile) {
+      <div class="author-box">
+        <span>Author profile</span><strong>{{ user.authorProfile.penName }}</strong
+        ><small>{{ user.authorProfile.verificationStatus }}</small>
+      </div>
+    }
+  </section>
+</div>

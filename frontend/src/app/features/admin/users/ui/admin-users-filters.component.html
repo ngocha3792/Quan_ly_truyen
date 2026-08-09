@@ -1,0 +1,26 @@
+<header class="toolbar">
+  <form class="search" (submit)="submit($event)">
+    <app-search-field
+      [value]="keyword"
+      placeholder="Email, username hoặc tên hiển thị..."
+      ariaLabel="Tìm người dùng"
+      (valueChange)="keywordChange.emit($event)"
+    />
+    <button type="submit">Tìm</button>
+  </form>
+
+  <select [value]="role" (change)="changeRole($event)">
+    <option value="ALL">Tất cả role</option>
+    <option value="USER">User</option>
+    <option value="AUTHOR">Author</option>
+    <option value="ADMIN">Admin</option>
+  </select>
+</header>
+
+<app-tab-filter
+  class="status-tabs"
+  ariaLabel="Trạng thái tài khoản"
+  [options]="statusOptions"
+  [selected]="status"
+  (selectedChange)="statusChange.emit($event)"
+/>

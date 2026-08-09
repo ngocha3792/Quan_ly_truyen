@@ -1,0 +1,8 @@
+<span
+  class="status"
+  [class.active]="status === 'ACTIVE'"
+  [class.warning]="status === 'SUSPENDED'"
+  [class.danger]="status === 'BANNED' || status === 'DELETED'"
+>
+  {{ label }}
+</span>

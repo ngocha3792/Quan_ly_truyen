@@ -1,0 +1,21 @@
+<header class="toolbar">
+  <form class="search-group" (submit)="submit($event)">
+    <app-search-field
+      class="search-field"
+      [value]="keyword"
+      placeholder="Tìm theo họ tên, bút danh hoặc email..."
+      ariaLabel="Tìm hồ sơ tác giả"
+      (valueChange)="keywordChange.emit($event)"
+    /><button type="submit">Tìm kiếm</button>
+  </form>
+  <div class="summary">
+    Tổng: <strong>{{ total }}</strong> hồ sơ
+  </div>
+</header>
+<app-tab-filter
+  class="status-tabs"
+  ariaLabel="Trạng thái hồ sơ"
+  [options]="statusOptions"
+  [selected]="status"
+  (selectedChange)="statusChange.emit($event)"
+/>

@@ -1,0 +1,72 @@
+.card {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+h3 {
+  margin: 0;
+  color: #f8fafc;
+}
+p {
+  margin: 6px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 12px;
+}
+.role-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 8px;
+}
+article {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.35);
+}
+article div {
+  display: grid;
+  gap: 3px;
+}
+article strong {
+  color: #e9d5ff;
+}
+article span,
+article small {
+  color: #64748b;
+  font-size: 11px;
+}
+footer {
+  margin-top: 18px;
+  display: flex;
+  gap: 9px;
+}
+button {
+  min-height: 39px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.grant {
+  border: 0;
+  color: #fff;
+  background: #16a34a;
+}
+.remove {
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.08);
+}
+.notice {
+  margin-top: 16px;
+  padding: 12px 15px;
+  border-radius: 8px;
+  color: #fde68a;
+  font-size: 13px;
+  background: rgba(245, 158, 11, 0.08);
+}

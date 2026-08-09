@@ -17,6 +17,15 @@ Features converge on these boundaries:
 
 Cross-feature code belongs in `core` only when it is application-wide infrastructure, or in `shared` when it is presentation-only and reusable.
 
+Dependencies flow inward:
+
+- `pages` may compose `ui`, coordinate `data-access`, and consume `domain` types.
+- `ui` may depend on `domain` and shared presentation code, but not on `pages` or `data-access`.
+- `data-access` may implement and consume `domain`, but not depend on `pages` or `ui`.
+- `domain` must not depend on `pages`, `ui`, `data-access`, or Angular.
+
+`npm run architecture:check` enforces these directions for relative imports inside `src/app/features`.
+
 ## Debt ratchet
 
 `npm run architecture:check` records the current upper bound for inline templates, inline styles, and total lines exceeding the target budget for each file type. A change may reduce these values but must not increase them. The excess-line metric allows one large component to be split into several focused files without penalizing the extraction merely because the file count grows. Hard line limits prevent a single file from growing beyond the current worst cases.

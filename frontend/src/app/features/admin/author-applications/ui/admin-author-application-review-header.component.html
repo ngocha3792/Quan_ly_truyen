@@ -1,0 +1,15 @@
+<section class="review-header">
+  <div>
+    <div class="heading">
+      <h2>{{ application.penName || 'Chưa có bút danh' }}</h2>
+      <app-admin-author-application-status-badge [status]="application.status" />
+    </div>
+    <p>Mã hồ sơ: {{ application.applicationId }}</p>
+  </div>
+  @if (application.status === 'PENDING') {
+    <div class="actions">
+      <button class="reject" [disabled]="reviewing" (click)="reject.emit()">Từ chối</button
+      ><button class="approve" [disabled]="reviewing" (click)="approve.emit()">Duyệt hồ sơ</button>
+    </div>
+  }
+</section>

@@ -1,0 +1,66 @@
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+th {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+td {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+.identity,
+.email {
+  display: grid;
+  gap: 4px;
+}
+.identity strong {
+  color: #f8fafc;
+}
+small {
+  color: #64748b;
+}
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.roles span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #c4b5fd;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.13);
+}
+.detail-link {
+  color: #c4b5fd;
+  font-weight: 700;
+  text-decoration: none;
+}
+.pagination {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

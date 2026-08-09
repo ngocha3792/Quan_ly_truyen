@@ -1,57 +1,32 @@
 <main class="admin-page">
   <div class="page-container">
-    <app-breadcrumb [items]="breadcrumbs" />
-
-    <app-page-heading
+    <app-breadcrumb [items]="breadcrumbs" /><app-page-heading
       title="Xét duyệt hồ sơ tác giả"
       description="Quản lý và xét duyệt các yêu cầu trở thành tác giả trên hệ thống."
       icon="shield"
     />
-
     <section class="admin-card">
-      <header class="toolbar">
-        <form class="search-group" (submit)="handleSearchSubmit($event)">
-          <app-search-field
-            class="search-field"
-            [value]="store.keyword()"
-            placeholder="Tìm theo họ tên, bút danh hoặc email..."
-            ariaLabel="Tìm hồ sơ tác giả"
-            (valueChange)="store.setKeyword($event)"
-          />
-
-          <button type="submit" class="search-button">Tìm kiếm</button>
-        </form>
-
-        <div class="summary">
-          Tổng:
-          <strong>
-            {{ store.total() }}
-          </strong>
-          hồ sơ
-        </div>
-      </header>
-
-      <app-tab-filter
-        class="status-tabs"
-        ariaLabel="Trạng thái hồ sơ"
-        [options]="statusOptions"
-        [selected]="store.statusFilter()"
-        (selectedChange)="handleStatusChange($event)"
+      <app-admin-author-application-filters
+        [keyword]="store.keyword()"
+        [status]="store.statusFilter()"
+        [total]="store.total()"
+        [statusOptions]="statusOptions"
+        (keywordChange)="store.setKeyword($event)"
+        (statusChange)="store.setStatusFilter($event)"
+        (searchRequested)="store.search()"
       />
-
-      @if (store.listError()) {
+      @if (store.error()) {
         <div class="state-padding">
           <app-error-alert
             title="Không thể tải danh sách hồ sơ"
-            [message]="store.listError()"
-            (retry)="store.loadList()"
+            [message]="store.error()"
+            (retry)="store.load()"
           />
         </div>
       }
-
-      @if (store.listStatus() === 'loading' && store.applications().length === 0) {
+      @if (store.status() === 'loading' && store.applications().length === 0) {
         <app-loading-state message="Đang tải danh sách hồ sơ..." />
-      } @else if (store.applications().length === 0 && store.listStatus() !== 'error') {
+      } @else if (store.applications().length === 0 && store.status() !== 'error') {
         <app-empty-state
           icon="users"
           title="Không có hồ sơ phù hợp"
@@ -59,16 +34,9 @@
         />
       } @else if (store.applications().length > 0) {
         <app-admin-author-application-table [applications]="store.applications()" />
-
         <footer class="list-footer">
-          <span>
-            Trang
-            {{ store.page() }}
-            /
-            {{ store.totalPages() }}
-          </span>
-
-          <app-pagination
+          <span>Trang {{ store.page() }} / {{ store.totalPages() }}</span
+          ><app-pagination
             [page]="store.page()"
             [totalPages]="store.totalPages()"
             (pageChange)="store.setPage($event)"

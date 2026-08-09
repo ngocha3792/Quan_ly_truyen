@@ -1,0 +1,28 @@
+.card {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+h3 {
+  margin: 0 0 16px;
+  color: #f8fafc;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.stats div {
+  display: grid;
+  gap: 5px;
+}
+span {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+strong {
+  color: #e2e8f0;
+}

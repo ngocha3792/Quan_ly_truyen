@@ -1,0 +1,94 @@
+<div class="grid">
+  <section class="card">
+    <h3>Thông tin người đăng ký</h3>
+    <div class="fields">
+      <div>
+        <span>Họ và tên</span><strong>{{ text(application.fullName) }}</strong>
+      </div>
+      <div>
+        <span>Bút danh</span><strong>{{ text(application.penName) }}</strong>
+      </div>
+      <div>
+        <span>Email</span><strong>{{ text(application.email) }}</strong>
+      </div>
+      <div>
+        <span>Số điện thoại</span><strong>{{ text(application.phone) }}</strong>
+      </div>
+      <div>
+        <span>Thể loại chính</span><strong>{{ text(application.primaryGenre) }}</strong>
+      </div>
+      <div>
+        <span>Kinh nghiệm</span><strong>{{ text(application.experience) }}</strong>
+      </div>
+      <div class="full">
+        <span>Portfolio</span>
+        @if (application.portfolioUrl) {
+          <a [href]="application.portfolioUrl" target="_blank" rel="noopener noreferrer">{{
+            application.portfolioUrl
+          }}</a>
+        } @else {
+          <strong>—</strong>
+        }
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <h3>Thời gian xử lý</h3>
+    <div class="fields">
+      <div>
+        <span>Tạo hồ sơ</span><strong>{{ date(application.createdAt) }}</strong>
+      </div>
+      <div>
+        <span>Gửi hồ sơ</span><strong>{{ date(application.submittedAt) }}</strong>
+      </div>
+      <div>
+        <span>Xét duyệt</span><strong>{{ date(application.reviewedAt) }}</strong>
+      </div>
+      <div>
+        <span>Reviewer ID</span><strong>{{ text(application.reviewedById) }}</strong>
+      </div>
+    </div>
+  </section>
+</div>
+<section class="card content">
+  <h3>Giới thiệu bản thân</h3>
+  <p>{{ text(application.introduction) }}</p>
+</section>
+<section class="card content">
+  <h3>Ý tưởng / tóm tắt tác phẩm</h3>
+  <p>{{ text(application.firstWorkSynopsis) }}</p>
+</section>
+<section class="card">
+  <h3>Mẫu chương truyện</h3>
+  @if (application.sample; as sample) {
+    <div class="sample">
+      <div>
+        <strong>{{ sample.fileName || 'File mẫu' }}</strong
+        ><small
+          >{{ sample.mimeType || 'Không rõ định dạng' }} · {{ fileSize(sample.sizeBytes) }}</small
+        >
+      </div>
+      @if (sample.url) {
+        <a [href]="sample.url" target="_blank" rel="noopener noreferrer">Mở file mẫu</a>
+      }
+    </div>
+  } @else {
+    <p>Hồ sơ chưa có file mẫu.</p>
+  }
+</section>
+@if (application.status === 'REJECTED' && application.rejectionReason) {
+  <section class="card rejection">
+    <h3>Lý do từ chối</h3>
+    <p>{{ application.rejectionReason }}</p>
+  </section>
+}
+<section class="card">
+  <h3>Cam kết</h3>
+  <p>
+    {{
+      application.acceptedTerms
+        ? 'Người đăng ký đã đồng ý với quy định nội dung và chính sách cộng đồng.'
+        : 'Người đăng ký chưa xác nhận điều khoản.'
+    }}
+  </p>
+</section>
