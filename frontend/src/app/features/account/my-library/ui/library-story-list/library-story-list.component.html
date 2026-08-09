@@ -1,0 +1,116 @@
+<section class="story-collection" [class.story-collection--list]="viewMode === 'list'">
+  @for (story of stories; track story.id) {
+    <article class="story-card">
+      <a
+        class="story-cover"
+        [attr.data-tone]="story.coverTone"
+        [routerLink]="['/truyen', story.slug]"
+      >
+        <span class="cover-initials">
+          {{ story.coverInitials }}
+        </span>
+
+        <span class="status-badge" [attr.data-status]="getStatusKey(story)">
+          {{ getStatusLabel(story) }}
+        </span>
+      </a>
+
+      <div class="story-information">
+        <a class="story-title" [routerLink]="['/truyen', story.slug]">
+          {{ story.title }}
+        </a>
+
+        <p class="story-author">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3"></circle>
+
+            <path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"></path>
+          </svg>
+
+          {{ story.author }}
+        </p>
+
+        <div class="genre-list">
+          @for (genre of story.genres; track genre) {
+            <span>{{ genre }}</span>
+          }
+        </div>
+
+        <div class="chapter-row">
+          <strong> Chương {{ story.currentChapter }} </strong>
+
+          <span> {{ story.progress }}% </span>
+        </div>
+
+        <div class="progress-track">
+          <span [style.width.%]="story.progress"></span>
+        </div>
+
+        <p class="last-read">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"></circle>
+
+            <path d="M12 7v5l3 2"></path>
+          </svg>
+
+          @if (story.isCompleted) {
+            Đã hoàn thành:
+          } @else {
+            Đọc lần cuối:
+          }
+
+          {{ story.lastReadLabel }}
+        </p>
+
+        <div class="story-actions">
+          <a
+            class="continue-button"
+            [routerLink]="['/truyen', story.slug, 'chuong', story.currentChapter]"
+          >
+            @if (story.isCompleted) {
+              <svg viewBox="0 0 24 24">
+                <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+
+                <path d="M3 4v6h6"></path>
+              </svg>
+
+              Xem lại
+            } @else if (story.isReading) {
+              <svg viewBox="0 0 24 24">
+                <path d="m8 5 11 7-11 7V5Z"></path>
+              </svg>
+
+              Đọc tiếp
+            } @else {
+              <svg viewBox="0 0 24 24">
+                <path d="m8 5 11 7-11 7V5Z"></path>
+              </svg>
+
+              Đọc ngay
+            }
+          </a>
+
+          <button
+            class="favorite-button"
+            type="button"
+            [class.favorite-button--active]="story.isFavorite"
+            [attr.aria-label]="story.isFavorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'"
+            (click)="favoriteToggle.emit(story.id)"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M12 21s-7-4.4-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.6-7 11-7 11Z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </article>
+  } @empty {
+    <app-empty-state
+      class="library-empty"
+      icon="book"
+      [iconSize]="30"
+      title="Không tìm thấy truyện"
+      description="Thư viện không có truyện phù hợp với bộ lọc hiện tại."
+    />
+  }
+</section>

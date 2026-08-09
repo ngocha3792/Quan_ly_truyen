@@ -1,0 +1,25 @@
+<section class="history-toolbar">
+  <app-search-field
+    class="history-search"
+    [value]="query"
+    placeholder="Tìm trong lịch sử đọc..."
+    ariaLabel="Tìm trong lịch sử đọc"
+    [iconSize]="18"
+    (valueChange)="queryChange.emit($event)"
+  />
+
+  <app-tab-filter
+    class="period-filter"
+    ariaLabel="Lọc lịch sử theo thời gian"
+    [options]="periodOptions"
+    [selected]="period"
+    (selectedChange)="periodChange.emit($event)"
+  />
+
+  <app-sort-select
+    class="history-sort"
+    [options]="sortOptions"
+    [value]="sort"
+    (valueChange)="sortChange.emit($event)"
+  />
+</section>

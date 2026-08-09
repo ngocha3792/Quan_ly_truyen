@@ -1,0 +1,63 @@
+.upload-zone {
+  position: relative;
+  min-height: 80px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px dashed rgba(139, 151, 190, 0.3);
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: rgba(7, 13, 27, 0.45);
+  cursor: pointer;
+}
+.upload-zone:hover,
+.dragging {
+  border-color: rgba(192, 132, 252, 0.65);
+  background: rgba(126, 34, 206, 0.08);
+}
+.selected {
+  justify-content: flex-start;
+  border-style: solid;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+svg {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  color: #b967ff;
+  fill: none;
+  stroke: currentColor;
+}
+.upload-zone div {
+  display: grid;
+  gap: 4px;
+}
+strong {
+  color: var(--text-strong);
+  font-size: 13.5px;
+}
+small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+button {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  border-radius: 50%;
+  color: #fb7185;
+  background: rgba(159, 18, 57, 0.12);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.error {
+  display: block;
+  margin-top: 6px;
+  color: #fb7185;
+  line-height: 1.4;
+}

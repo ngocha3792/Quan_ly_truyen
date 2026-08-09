@@ -1,0 +1,95 @@
+<section class="library-toolbar">
+  <app-search-field
+    class="library-search"
+    [value]="query"
+    placeholder="Tìm trong thư viện..."
+    ariaLabel="Tìm trong thư viện"
+    [iconSize]="19"
+    (valueChange)="queryChange.emit($event)"
+  />
+
+  <div class="filter-list" aria-label="Lọc thư viện">
+    <button type="button" [class.active]="filter === 'all'" (click)="filterChange.emit('all')">
+      <svg viewBox="0 0 24 24">
+        <rect x="4" y="4" width="6" height="6" rx="1"></rect>
+
+        <rect x="14" y="4" width="6" height="6" rx="1"></rect>
+
+        <rect x="4" y="14" width="6" height="6" rx="1"></rect>
+
+        <rect x="14" y="14" width="6" height="6" rx="1"></rect>
+      </svg>
+
+      Tất cả
+    </button>
+
+    <button
+      type="button"
+      [class.active]="filter === 'reading'"
+      (click)="filterChange.emit('reading')"
+    >
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5v-13Z"
+        ></path>
+
+        <path d="M8 8h8"></path>
+      </svg>
+
+      Đang đọc
+    </button>
+
+    <button
+      type="button"
+      [class.active]="filter === 'following'"
+      (click)="filterChange.emit('following')"
+    >
+      <svg viewBox="0 0 24 24">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+
+        <circle cx="12" cy="12" r="2.5"></circle>
+      </svg>
+
+      Theo dõi
+    </button>
+
+    <button
+      type="button"
+      [class.active]="filter === 'favorite'"
+      (click)="filterChange.emit('favorite')"
+    >
+      <svg viewBox="0 0 24 24">
+        <path d="M12 21s-7-4.4-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.6-7 11-7 11Z"></path>
+      </svg>
+
+      Yêu thích
+    </button>
+
+    <button
+      type="button"
+      [class.active]="filter === 'completed'"
+      (click)="filterChange.emit('completed')"
+    >
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+
+        <path d="m8 12 2.5 2.5L16 9"></path>
+      </svg>
+
+      Đã hoàn thành
+    </button>
+  </div>
+
+  <app-sort-select
+    class="library-sort"
+    [options]="sortOptions"
+    [value]="sort"
+    (valueChange)="sortChange.emit($event)"
+  />
+
+  <app-view-mode-toggle
+    class="library-view-mode"
+    [value]="viewMode"
+    (valueChange)="viewModeChange.emit($event)"
+  />
+</section>

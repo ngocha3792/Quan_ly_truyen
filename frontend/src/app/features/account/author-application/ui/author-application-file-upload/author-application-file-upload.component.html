@@ -1,0 +1,44 @@
+<div
+  class="upload-zone"
+  [class.dragging]="dragging()"
+  [class.selected]="selectedFile()"
+  tabindex="0"
+  role="button"
+  (click)="fileInput.click()"
+  (keydown.enter)="fileInput.click()"
+  (keydown.space)="fileInput.click()"
+  (dragover)="dragOver($event)"
+  (dragleave)="dragging.set(false)"
+  (drop)="drop($event)"
+>
+  <input
+    #fileInput
+    type="file"
+    hidden
+    [accept]="acceptedFileTypes"
+    (change)="selectFromInput($event)"
+  />
+  <svg viewBox="0 0 24 24">
+    <path d="M16 16l-4-4-4 4"></path>
+    <path d="M12 12v9"></path>
+    <path d="M20.4 17.5A5 5 0 0 0 18 8.2 7 7 0 0 0 4.3 10.7 4.5 4.5 0 0 0 5 19.5h3"></path>
+  </svg>
+  @if (selectedFile(); as file) {
+    <div>
+      <strong>{{ file.name }}</strong
+      ><small>{{ formatSize(file.size) }} · Nhấn để chọn file khác</small>
+    </div>
+    <button type="button" aria-label="Xóa file" (click)="remove($event)">×</button>
+  } @else {
+    <div>
+      <strong>Kéo thả file vào đây hoặc nhấn để chọn file</strong
+      ><small
+        >Định dạng: {{ config.acceptedFileExtensions.join(', ') }} (Tối đa
+        {{ config.maximumFileSizeMb }}MB)</small
+      >
+    </div>
+  }
+</div>
+@if (validationError() || requiredError) {
+  <small class="error">{{ validationError() || requiredError }}</small>
+}

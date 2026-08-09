@@ -1,0 +1,72 @@
+<section class="toolbar">
+  <app-search-field
+    class="notification-search"
+    [value]="query"
+    placeholder="Tìm trong thông báo..."
+    ariaLabel="Tìm trong thông báo"
+    [iconSize]="19"
+    (valueChange)="queryChange.emit($event)"
+  />
+
+  <div class="category-list">
+    <button type="button" [class.active]="category === 'all'" (click)="categoryChange.emit('all')">
+      Tất cả
+    </button>
+
+    <button
+      type="button"
+      [class.active]="category === 'unread'"
+      (click)="categoryChange.emit('unread')"
+    >
+      Chưa đọc
+
+      @if (unreadCount > 0) {
+        <span>
+          {{ unreadCount }}
+        </span>
+      }
+    </button>
+
+    <button
+      type="button"
+      [class.active]="category === 'system'"
+      (click)="categoryChange.emit('system')"
+    >
+      Hệ thống
+    </button>
+
+    <button
+      type="button"
+      [class.active]="category === 'story'"
+      (click)="categoryChange.emit('story')"
+    >
+      Cập nhật truyện
+    </button>
+
+    <button
+      type="button"
+      [class.active]="category === 'account'"
+      (click)="categoryChange.emit('account')"
+    >
+      Tài khoản
+    </button>
+  </div>
+
+  <button class="mark-read-button" type="button" (click)="markAllAsRead.emit()">
+    <svg viewBox="0 0 24 24">
+      <path d="m5 12 4 4L19 6"></path>
+    </svg>
+
+    Đánh dấu tất cả đã đọc
+  </button>
+
+  <button class="filter-button" type="button" aria-label="Lọc thông báo">
+    <svg viewBox="0 0 24 24">
+      <path d="M4 5h16"></path>
+      <path d="M7 12h10"></path>
+      <path d="M10 19h4"></path>
+    </svg>
+
+    Lọc
+  </button>
+</section>

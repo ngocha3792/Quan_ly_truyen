@@ -1,0 +1,155 @@
+<aside class="sidebar">
+  <section class="sidebar-card overview-card">
+    <header>
+      <svg viewBox="0 0 24 24">
+        <path d="M4 20V10"></path>
+        <path d="M10 20V4"></path>
+        <path d="M16 20v-7"></path>
+        <path d="M22 20V7"></path>
+      </svg>
+
+      <h2>Tổng quan</h2>
+    </header>
+
+    <div class="overview-list">
+      <article>
+        <span>🔔</span>
+        <p>Tổng thông báo</p>
+        <strong>{{ statistics.total }}</strong>
+      </article>
+
+      <article>
+        <span>◷</span>
+        <p>Chưa đọc</p>
+        <strong class="purple">
+          {{ unreadCount }}
+        </strong>
+      </article>
+
+      <article>
+        <span>▱</span>
+        <p>Đã lưu</p>
+        <strong>{{ savedCount }}</strong>
+      </article>
+
+      <article>
+        <span class="green">●</span>
+        <p>Cập nhật hôm nay</p>
+        <strong class="green">
+          {{ statistics.receivedToday }}
+        </strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="sidebar-card settings-card">
+    <header>
+      <svg viewBox="0 0 24 24">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+
+        <path d="M10 21h4"></path>
+      </svg>
+
+      <h2>Thiết lập thông báo</h2>
+    </header>
+
+    <div class="settings-list">
+      <label>
+        <span>
+          <strong>Cập nhật chương mới</strong>
+          <small>Thông báo khi có chương mới</small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.newChapters"
+          (change)="settingToggle.emit('newChapters')"
+        />
+
+        <span class="toggle"></span>
+      </label>
+
+      <label>
+        <span>
+          <strong>Bình luận &amp; phản hồi</strong>
+          <small> Thông báo về bình luận và phản hồi </small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.comments"
+          (change)="settingToggle.emit('comments')"
+        />
+
+        <span class="toggle"></span>
+      </label>
+
+      <label>
+        <span>
+          <strong>Thông báo hệ thống</strong>
+          <small> Cập nhật hệ thống, bảo mật </small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.system"
+          (change)="settingToggle.emit('system')"
+        />
+
+        <span class="toggle"></span>
+      </label>
+
+      <label>
+        <span>
+          <strong>Ưu đãi &amp; sự kiện</strong>
+          <small> Khuyến mãi và sự kiện đặc biệt </small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.promotions"
+          (change)="settingToggle.emit('promotions')"
+        />
+
+        <span class="toggle"></span>
+      </label>
+    </div>
+  </section>
+
+  <section class="sidebar-card activities-card">
+    <header>
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"></circle>
+
+        <path d="M12 7v5l3 2"></path>
+      </svg>
+
+      <h2>Hoạt động gần đây</h2>
+    </header>
+
+    <div class="activity-list">
+      @for (activity of activities; track activity.id) {
+        <article>
+          <span class="activity-dot"></span>
+
+          <time>
+            {{ activity.time }}
+          </time>
+
+          <p>
+            {{ activity.description }}
+          </p>
+        </article>
+      }
+    </div>
+
+    <button class="view-activity-button" type="button">
+      Xem tất cả hoạt động
+
+      <svg viewBox="0 0 24 24">
+        <path d="M5 12h14"></path>
+        <path d="m13 6 6 6-6 6"></path>
+      </svg>
+    </button>
+  </section>
+</aside>

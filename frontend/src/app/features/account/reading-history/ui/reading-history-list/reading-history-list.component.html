@@ -1,0 +1,94 @@
+<section class="history-list">
+  @for (item of items; track item.id) {
+    <article class="history-row">
+      <a
+        class="story-cover"
+        [attr.data-tone]="item.coverTone"
+        [routerLink]="['/truyen', item.storySlug]"
+      >
+        <span>
+          {{ item.coverInitials }}
+        </span>
+      </a>
+
+      <div class="story-information">
+        <a class="story-title" [routerLink]="['/truyen', item.storySlug]">
+          {{ item.title }}
+        </a>
+
+        <p class="story-author">
+          {{ item.author }}
+        </p>
+
+        <div class="genre-list">
+          @for (genre of item.genres; track genre) {
+            <span>
+              {{ genre }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="chapter-information">
+        <strong> Chương {{ item.chapterNumber }} </strong>
+
+        <span>
+          {{ item.chapterTitle }}
+        </span>
+      </div>
+
+      <div class="progress-information">
+        <div class="progress-row">
+          <div class="progress-track">
+            <span [style.width.%]="item.progress"></span>
+          </div>
+
+          <strong> {{ item.progress }}% </strong>
+        </div>
+      </div>
+
+      <div class="last-read">
+        <strong>
+          {{ item.lastReadLabel }}
+        </strong>
+
+        <span>Đọc lần cuối</span>
+      </div>
+
+      <a
+        class="continue-button"
+        [routerLink]="['/truyen', item.storySlug, 'chuong', item.chapterNumber]"
+      >
+        <svg viewBox="0 0 24 24">
+          <path d="m8 5 11 7-11 7V5Z"></path>
+        </svg>
+
+        Đọc tiếp
+      </a>
+
+      <button
+        class="bookmark-button"
+        type="button"
+        [class.bookmark-button--active]="bookmarkedIds.includes(item.id)"
+        [attr.aria-label]="
+          bookmarkedIds.includes(item.id) ? 'Bỏ đánh dấu truyện' : 'Đánh dấu truyện'
+        "
+        (click)="bookmarkToggle.emit(item.id)"
+      >
+        <svg viewBox="0 0 24 24">
+          <path d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18l-6-4-6 4V4Z"></path>
+        </svg>
+      </button>
+    </article>
+  } @empty {
+    <app-empty-state
+      class="history-empty"
+      icon="history"
+      [iconSize]="30"
+      title="Chưa có lịch sử đọc"
+      description="Các truyện bạn đã đọc sẽ xuất hiện tại đây."
+    >
+      <a emptyAction routerLink="/danh-sach"> Khám phá truyện </a>
+    </app-empty-state>
+  }
+</section>
