@@ -1,0 +1,174 @@
+:host {
+  display: block;
+}
+
+.admin-page {
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  background: #060b16;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+
+.toolbar {
+  padding: 18px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.search {
+  width: min(620px, 100%);
+  display: flex;
+  gap: 9px;
+}
+
+.search app-search-field {
+  flex: 1;
+}
+
+button,
+select {
+  min-height: 42px;
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  padding: 0 18px;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #743bde, #a153eb);
+}
+
+select {
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  outline: none;
+  color: #cbd5e1;
+  background: #0b1220;
+}
+
+.status-tabs {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.state {
+  padding: 18px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+th {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+td {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.identity,
+.email {
+  display: grid;
+  gap: 4px;
+}
+
+.identity strong {
+  color: #f8fafc;
+}
+
+small {
+  color: #64748b;
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.roles span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #c4b5fd;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.13);
+}
+
+.status {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status.active {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.13);
+}
+
+.status.suspended {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.13);
+}
+
+.status.banned,
+.status.deleted {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.13);
+}
+
+.detail-link {
+  color: #c4b5fd;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pagination {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .toolbar,
+  .search,
+  .pagination {
+    flex-direction: column;
+  }
+
+  select {
+    width: 100%;
+  }
+}

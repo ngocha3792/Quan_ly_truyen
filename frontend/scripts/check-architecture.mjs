@@ -6,9 +6,9 @@ const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const sourceRoot = path.join(workspaceRoot, 'src', 'app');
 
 const debtBaseline = {
-  inlineTemplates: 130,
-  inlineStyles: 120,
-  excessLines: 7_933,
+  inlineTemplates: 122,
+  inlineStyles: 112,
+  excessLines: 6_797,
 };
 
 const hardLineLimits = {

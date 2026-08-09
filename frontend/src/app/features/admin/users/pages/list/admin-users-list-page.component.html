@@ -1,0 +1,154 @@
+<main class="admin-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
+
+    <app-page-heading
+      title="Quản lý người dùng"
+      description="Tìm kiếm, kiểm tra trạng thái tài khoản và quản lý quyền quản trị."
+      icon="users"
+    />
+
+    <section class="card">
+      <header class="toolbar">
+        <form class="search" (submit)="search($event)">
+          <app-search-field
+            [value]="store.keyword()"
+            placeholder="Email, username hoặc tên hiển thị..."
+            ariaLabel="Tìm người dùng"
+            (valueChange)="store.setKeyword($event)"
+          />
+
+          <button type="submit">Tìm</button>
+        </form>
+
+        <select [value]="store.roleFilter()" (change)="changeRole($event)">
+          <option value="ALL">Tất cả role</option>
+
+          <option value="USER">User</option>
+
+          <option value="AUTHOR">Author</option>
+
+          <option value="ADMIN">Admin</option>
+        </select>
+      </header>
+
+      <app-tab-filter
+        class="status-tabs"
+        ariaLabel="Trạng thái tài khoản"
+        [options]="statusOptions"
+        [selected]="store.statusFilter()"
+        (selectedChange)="store.setStatusFilter($event)"
+      />
+
+      @if (store.listError()) {
+        <div class="state">
+          <app-error-alert
+            title="Không thể tải người dùng"
+            [message]="store.listError()"
+            (retry)="store.loadList()"
+          />
+        </div>
+      }
+
+      @if (store.listLoading() && store.users().length === 0) {
+        <app-loading-state message="Đang tải người dùng..." />
+      } @else if (store.users().length === 0 && !store.listError()) {
+        <app-empty-state
+          icon="users"
+          title="Không tìm thấy người dùng"
+          description="Không có tài khoản phù hợp với bộ lọc hiện tại."
+        />
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Người dùng</th>
+
+                <th>Role</th>
+
+                <th>Email</th>
+
+                <th>Trạng thái</th>
+
+                <th>Đăng nhập gần nhất</th>
+
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (user of store.users(); track user.id) {
+                <tr>
+                  <td>
+                    <div class="identity">
+                      <strong>
+                        {{ user.displayName }}
+                      </strong>
+
+                      <small> &#64;{{ user.username }} </small>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="roles">
+                      @for (role of user.roles; track role.code) {
+                        <span>
+                          {{ role.code }}
+                        </span>
+                      }
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="email">
+                      {{ user.email }}
+
+                      @if (user.emailVerified) {
+                        <small> ✓ đã xác minh </small>
+                      }
+                    </div>
+                  </td>
+
+                  <td>
+                    <span
+                      class="status"
+                      [class.active]="user.status === 'ACTIVE'"
+                      [class.suspended]="user.status === 'SUSPENDED'"
+                      [class.banned]="user.status === 'BANNED'"
+                      [class.deleted]="user.status === 'DELETED'"
+                    >
+                      {{ statusLabel(user.status) }}
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ formatDate(user.lastLoginAt) }}
+                  </td>
+
+                  <td>
+                    <a class="detail-link" [routerLink]="['/admin/users', user.id]"> Chi tiết </a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="pagination">
+          <span>
+            Tổng
+            {{ store.total() }}
+            người dùng
+          </span>
+
+          <app-pagination
+            [page]="store.page()"
+            [totalPages]="store.totalPages()"
+            (pageChange)="store.setPage($event)"
+          />
+        </footer>
+      }
+    </section>
+  </div>
+</main>

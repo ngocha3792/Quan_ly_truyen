@@ -1,0 +1,65 @@
+<div class="dialog-backdrop" role="presentation" (click)="handleCancel()">
+  <section
+    class="dialog-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="reject-dialog-title"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 id="reject-dialog-title">Từ chối hồ sơ</h2>
+
+    <p>Hãy ghi rõ lý do để người đăng ký biết phần nào cần chỉnh sửa trước khi gửi lại.</p>
+
+    <form [formGroup]="form" (ngSubmit)="handleSubmit()">
+      <label for="author-rejection-reason"> Lý do từ chối </label>
+
+      <textarea
+        id="author-rejection-reason"
+        rows="6"
+        formControlName="reason"
+        [attr.maxlength]="maximumLength"
+        placeholder="Ví dụ: Mẫu chương truyện còn quá ngắn và chưa thể hiện rõ chất lượng nội dung..."
+      ></textarea>
+
+      <div class="field-footer">
+        <div>
+          @if (form.controls.reason.touched && form.controls.reason.hasError('required')) {
+            <small class="error"> Vui lòng nhập lý do từ chối. </small>
+          }
+
+          @if (form.controls.reason.touched && form.controls.reason.hasError('minlength')) {
+            <small class="error">
+              Lý do cần ít nhất
+              {{ minimumLength }}
+              ký tự.
+            </small>
+          }
+
+          @if (form.controls.reason.touched && form.controls.reason.hasError('maxlength')) {
+            <small class="error">
+              Lý do không được vượt quá
+              {{ maximumLength }}
+              ký tự.
+            </small>
+          }
+        </div>
+
+        <small class="counter">
+          {{ form.controls.reason.value.length }}
+          /
+          {{ maximumLength }}
+        </small>
+      </div>
+
+      <footer>
+        <button type="button" class="cancel-button" [disabled]="loading()" (click)="cancel.emit()">
+          Hủy
+        </button>
+
+        <button type="submit" class="reject-button" [disabled]="loading()">
+          {{ loading() ? 'Đang từ chối...' : 'Xác nhận từ chối' }}
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>

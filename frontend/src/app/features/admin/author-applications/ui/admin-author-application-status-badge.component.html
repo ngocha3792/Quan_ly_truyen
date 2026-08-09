@@ -1,0 +1,9 @@
+<span
+  class="status-badge"
+  [class.status-badge--draft]="status() === 'DRAFT'"
+  [class.status-badge--pending]="status() === 'PENDING'"
+  [class.status-badge--approved]="status() === 'APPROVED'"
+  [class.status-badge--rejected]="status() === 'REJECTED'"
+>
+  {{ label() }}
+</span>

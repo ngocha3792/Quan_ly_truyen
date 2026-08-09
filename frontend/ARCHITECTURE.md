@@ -23,6 +23,13 @@ Cross-feature code belongs in `core` only when it is application-wide infrastruc
 
 Update the baseline only after debt has been removed. Do not increase a baseline to make CI pass.
 
+## Mechanical asset extraction
+
+Use `node scripts/extract-inline-component-assets.mjs <feature-path>` for a dry run, then add
+`--write` to extract static inline templates and styles into co-located `.html` and `.scss` files.
+The script refuses to overwrite existing assets and rejects interpolated TypeScript template
+literals, so those cases must be reviewed manually.
+
 ## Change discipline
 
 Keep mechanical template/style extraction separate from behavior changes. Preserve selectors, inputs, outputs, route URLs, and API contracts during extraction. Every refactoring wave must pass formatting, architecture, lint, unit tests, E2E type checking, and the production build.

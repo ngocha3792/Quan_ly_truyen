@@ -1,0 +1,34 @@
+<div class="dialog-backdrop" role="presentation" (click)="handleCancel()">
+  <section
+    class="dialog-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="approve-dialog-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="dialog-icon">✓</div>
+
+    <h2 id="approve-dialog-title">Duyệt hồ sơ tác giả?</h2>
+
+    <p>Tài khoản này sẽ nhận quyền tác giả và có thể truy cập Author Studio.</p>
+
+    @if (penName()) {
+      <div class="pen-name">
+        Bút danh:
+        <strong>
+          {{ penName() }}
+        </strong>
+      </div>
+    }
+
+    <footer>
+      <button type="button" class="cancel-button" [disabled]="loading()" (click)="cancel.emit()">
+        Hủy
+      </button>
+
+      <button type="button" class="approve-button" [disabled]="loading()" (click)="confirm.emit()">
+        {{ loading() ? 'Đang duyệt...' : 'Duyệt hồ sơ' }}
+      </button>
+    </footer>
+  </section>
+</div>
