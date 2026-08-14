@@ -1,6 +1,8 @@
 {
   email {$ACME_EMAIL:local@example.invalid}
+
   admin off
+
   servers {
     protocols h1 h2 h3
   }
@@ -19,16 +21,36 @@
     X-Frame-Options "DENY"
     Referrer-Policy "strict-origin-when-cross-origin"
     Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
     -Server
   }
 
-  reverse_proxy api:3000 {
-    health_uri /api/v1/health/ready
-    health_interval 15s
-    health_timeout 5s
+  # Shared-origin production deployment:
+  #
+  # /api/* -> NestJS
+  # /*      -> Angular nginx
+  @api path /api /api/*
 
-    header_up X-Forwarded-Proto {scheme}
-    header_up X-Forwarded-Host {host}
+  handle @api {
+    reverse_proxy api:3000 {
+      health_uri /api/v1/health/ready
+      health_interval 15s
+      health_timeout 5s
+
+      header_up X-Forwarded-Proto {scheme}
+      header_up X-Forwarded-Host {host}
+    }
+  }
+
+  handle {
+    reverse_proxy frontend:80 {
+      health_uri /health
+      health_interval 15s
+      health_timeout 5s
+
+      header_up X-Forwarded-Proto {scheme}
+      header_up X-Forwarded-Host {host}
+    }
   }
 
   log {

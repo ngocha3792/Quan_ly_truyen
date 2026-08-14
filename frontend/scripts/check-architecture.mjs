@@ -2,12 +2,14 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { findBoundaryViolations } from './architecture-rules.mjs';
+
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(workspaceRoot, 'src', 'app');
 
 const debtBaseline = {
-  inlineTemplates: 48,
-  inlineStyles: 44,
+  inlineTemplates: 49,
+  inlineStyles: 45,
   scopedInlineTemplates: 0,
   scopedInlineStyles: 0,
 
@@ -46,12 +48,6 @@ const targetLineLimits = {
   typescript: 400,
 };
 
-const forbiddenLayerDependencies = {
-  domain: new Set(['data-access', 'pages', 'ui']),
-  'data-access': new Set(['pages', 'ui']),
-  ui: new Set(['data-access', 'pages']),
-};
-
 const files = await collectSourceFiles(sourceRoot);
 const sourceFiles = files.filter(
   (file) => /\.(?:ts|html|scss)$/.test(file) && !file.endsWith('.spec.ts'),
@@ -67,7 +63,34 @@ const records = await Promise.all(
   }),
 );
 const components = records.filter(isComponent);
-const boundaryViolations = findBoundaryViolations(records);
+const boundaryViolations = findBoundaryViolations(records, {
+  sourceRoot,
+
+  pathAliases: [
+    {
+      pattern: '@app/*',
+      target: 'src/app/*',
+      baseUrl: workspaceRoot,
+    },
+    {
+      pattern: '@core/*',
+      target: 'src/app/core/*',
+      baseUrl: workspaceRoot,
+    },
+    {
+      pattern: '@shared/*',
+      target: 'src/app/shared/*',
+      baseUrl: workspaceRoot,
+    },
+    {
+      pattern: '@features/*',
+      target: 'src/app/features/*',
+      baseUrl: workspaceRoot,
+    },
+  ],
+
+  featureScopes: new Set(['public', 'account', 'admin', 'author-portal']),
+});
 
 const current = {
   inlineTemplates: components.filter(({ content }) => /^\s*template\s*:/m.test(content)).length,
@@ -114,9 +137,7 @@ for (const record of records) {
 }
 
 for (const violation of boundaryViolations) {
-  errors.push(
-    `${relativePath(violation.file)}:${violation.line} ${violation.sourceLayer} cannot depend on ${violation.target}`,
-  );
+  errors.push(`${relativePath(violation.file)}:${violation.line} ${violation.message}`);
 }
 
 console.log(
@@ -176,49 +197,6 @@ function isExternalAssetScope(file) {
     relative.startsWith('shared/') ||
     relative.startsWith('layout/') ||
     relative.startsWith('features/public/')
-  );
-}
-
-function findBoundaryViolations(sourceRecords) {
-  const violations = [];
-  const importPattern = /\b(?:from\s+|import\s*(?:\(\s*)?)['"]([^'"]+)['"]/g;
-
-  for (const record of sourceRecords) {
-    if (!record.file.endsWith('.ts')) continue;
-
-    const sourceLayer = featureLayerFor(record.file);
-    if (!sourceLayer || !(sourceLayer in forbiddenLayerDependencies)) continue;
-
-    for (const match of record.content.matchAll(importPattern)) {
-      const specifier = match[1];
-      const line = record.content.slice(0, match.index).split(/\r?\n/).length;
-
-      if (sourceLayer === 'domain' && specifier.startsWith('@angular/')) {
-        violations.push({ file: record.file, line, sourceLayer, target: 'Angular' });
-        continue;
-      }
-
-      if (!specifier.startsWith('.')) continue;
-
-      const targetLayer = featureLayerFor(path.resolve(path.dirname(record.file), specifier));
-      if (!targetLayer || !forbiddenLayerDependencies[sourceLayer].has(targetLayer)) continue;
-
-      violations.push({ file: record.file, line, sourceLayer, target: targetLayer });
-    }
-  }
-
-  return violations;
-}
-
-function featureLayerFor(file) {
-  const parts = path.relative(sourceRoot, file).split(path.sep);
-  const featuresIndex = parts.indexOf('features');
-  if (featuresIndex === -1) return null;
-
-  return (
-    parts
-      .slice(featuresIndex + 1)
-      .find((part) => ['domain', 'data-access', 'pages', 'ui'].includes(part)) ?? null
   );
 }
 

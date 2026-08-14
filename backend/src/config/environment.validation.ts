@@ -11,6 +11,7 @@ import {
   MinLength,
   Max,
   Min,
+  Matches,
   validateSync,
 } from 'class-validator';
 
@@ -221,6 +222,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/)
   AUTH_CSRF_COOKIE_NAME = 'csrf_token';
 
   @IsOptional()

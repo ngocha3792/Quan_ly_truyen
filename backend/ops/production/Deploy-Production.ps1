@@ -60,12 +60,28 @@ $BackendImageTag = Get-DotEnvValue `
   -Path $EnvironmentFile `
   -Name 'BACKEND_IMAGE_TAG'
 
+$FrontendImageName = Get-DotEnvValue `
+  -Path $EnvironmentFile `
+  -Name 'FRONTEND_IMAGE_NAME'
+
+$FrontendImageTag = Get-DotEnvValue `
+  -Path $EnvironmentFile `
+  -Name 'FRONTEND_IMAGE_TAG'
+
 if ([string]::IsNullOrWhiteSpace($BackendImageName)) {
   throw 'BACKEND_IMAGE_NAME is missing from .env.production.'
 }
 
 if ([string]::IsNullOrWhiteSpace($BackendImageTag)) {
   throw 'BACKEND_IMAGE_TAG is missing from .env.production.'
+}
+
+if ([string]::IsNullOrWhiteSpace($FrontendImageName)) {
+  throw 'FRONTEND_IMAGE_NAME is missing from .env.production.'
+}
+
+if ([string]::IsNullOrWhiteSpace($FrontendImageTag)) {
+  throw 'FRONTEND_IMAGE_TAG is missing from .env.production.'
 }
 
 $UseLocalBuild = switch ($DeploymentMode) {
@@ -79,7 +95,9 @@ $UseLocalBuild = switch ($DeploymentMode) {
 
   default {
     $BackendImageTag -eq 'local' -or
-    $BackendImageName -notmatch '^[a-z0-9.-]+\.[a-z]{2,}/'
+    $FrontendImageTag -eq 'local' -or
+    $BackendImageName -notmatch '^[a-z0-9.-]+\.[a-z]{2,}/' -or
+    $FrontendImageName -notmatch '^[a-z0-9.-]+\.[a-z]{2,}/'
   }
 }
 
@@ -118,19 +136,34 @@ Write-Host '[1/8] Validating Docker Compose configuration...' `
 Invoke-DockerCompose config --quiet
 
 if ($UseLocalBuild) {
-  Write-Host ("[2/8] Building local images: {0}:{1}" -f $BackendImageName, $BackendImageTag) -ForegroundColor Cyan
+  Write-Host (
+    "[2/8] Building local images: backend={0}:{1}, frontend={2}:{3}" `
+      -f `
+        $BackendImageName,
+        $BackendImageTag,
+        $FrontendImageName,
+        $FrontendImageTag
+  ) -ForegroundColor Cyan
 
-  Invoke-DockerCompose build api migrate
+  Invoke-DockerCompose build api migrate frontend
 
   if (-not $SkipPull) {
-    Write-Host '[2b/8] Pulling infrastructure images...' `
+    Write-Host `
+      '[2b/8] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
     Invoke-DockerCompose pull postgres redis caddy
   }
 }
 elseif (-not $SkipPull) {
-  Write-Host ("[2/8] Pulling registry images: {0}:{1}" -f $BackendImageName, $BackendImageTag) -ForegroundColor Cyan
+  Write-Host (
+    "[2/8] Pulling registry images: backend={0}:{1}, frontend={2}:{3}" `
+      -f `
+        $BackendImageName,
+        $BackendImageTag,
+        $FrontendImageName,
+        $FrontendImageTag
+  ) -ForegroundColor Cyan
 
   Invoke-DockerCompose pull
 }
@@ -170,10 +203,17 @@ foreach (
   Invoke-DockerCompose --profile maintenance run --rm $Service
 }
 
-Write-Host '[7/8] Starting API, worker and HTTPS edge...' `
+Write-Host `
+  '[7/8] Starting API, worker, frontend and HTTPS edge...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose up -d --wait api worker caddy
+Invoke-DockerCompose up `
+  -d `
+  --wait `
+  api `
+  worker `
+  frontend `
+  caddy
 
 if (-not $SkipObservability) {
   Write-Host '[7b/8] Starting observability stack...' `

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PermissionCode, RoleCode } from '@/common/enums';
 
 import { PrismaService } from '@/infrastructure/database';
+import { MetricsService } from '@/infrastructure/observability';
 import { MfaCredentialStatus, MfaMethod } from '@/generated/prisma/client';
 import type {
   AccessSessionReaderPort,
@@ -22,19 +23,72 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
     private readonly prisma: PrismaService,
 
     private readonly authorizationCache: AccessAuthorizationCacheService,
+
+    private readonly metrics: MetricsService,
   ) {}
 
   async findBySessionId(
     sessionId: string,
   ): Promise<AccessSessionSnapshot | null> {
-    /*
-     * Phần security-sensitive luôn đọc trực tiếp
-     * PostgreSQL.
-     *
-     * Logout/change-password/revoke-session vì vậy
-     * vẫn có hiệu lực ngay.
-     */
-    const session = await this.prisma.session.findUnique({
+    const lookupStartedAt = process.hrtime.bigint();
+
+    let session: Awaited<ReturnType<typeof this.readSecuritySession>>;
+
+    try {
+      session = await this.readSecuritySession(sessionId);
+
+      this.metrics.recordAuthAccessSessionDbLookup(
+        session ? 'found' : 'not_found',
+        elapsedSeconds(lookupStartedAt),
+      );
+    } catch (error: unknown) {
+      this.metrics.recordAuthAccessSessionDbLookup(
+        'failed',
+        elapsedSeconds(lookupStartedAt),
+      );
+
+      throw error;
+    }
+
+    if (!session) {
+      return null;
+    }
+
+    const authorization = await this.readAuthorization(session.userId);
+
+    return {
+      sessionId: session.id,
+
+      userId: session.userId,
+
+      accessTokenVersion: session.accessTokenVersion,
+
+      expiresAt: session.expiresAt,
+
+      revokedAt: session.revokedAt,
+      mfaVerifiedAt: session.mfaVerifiedAt,
+      mfaEnabled:
+        session.user.mfaCredentials.length > 0 ||
+        session.user.adminMfaCredential !== null,
+
+      email: session.user.email,
+
+      emailVerifiedAt: session.user.emailVerifiedAt,
+
+      accountStatus: session.user.status as AuthAccountStatus,
+
+      userDeletedAt: session.user.deletedAt,
+
+      roles: authorization.roles,
+
+      permissions: authorization.permissions,
+
+      authorProfileId: authorization.authorProfileId,
+    };
+  }
+
+  private readSecuritySession(sessionId: string) {
+    return this.prisma.session.findUnique({
       where: {
         id: sessionId,
       },
@@ -85,42 +139,6 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
         },
       },
     });
-
-    if (!session) {
-      return null;
-    }
-
-    const authorization = await this.readAuthorization(session.userId);
-
-    return {
-      sessionId: session.id,
-
-      userId: session.userId,
-
-      accessTokenVersion: session.accessTokenVersion,
-
-      expiresAt: session.expiresAt,
-
-      revokedAt: session.revokedAt,
-      mfaVerifiedAt: session.mfaVerifiedAt,
-      mfaEnabled:
-        session.user.mfaCredentials.length > 0 ||
-        session.user.adminMfaCredential !== null,
-
-      email: session.user.email,
-
-      emailVerifiedAt: session.user.emailVerifiedAt,
-
-      accountStatus: session.user.status as AuthAccountStatus,
-
-      userDeletedAt: session.user.deletedAt,
-
-      roles: authorization.roles,
-
-      permissions: authorization.permissions,
-
-      authorProfileId: authorization.authorProfileId,
-    };
   }
 
   private async readAuthorization(
@@ -249,4 +267,8 @@ function secondsUntilNearestRoleExpiry(
     .map((value) => Math.ceil((value.getTime() - now.getTime()) / 1000))
     .filter((seconds) => seconds > 0)
     .sort((left, right) => left - right)[0];
+}
+
+function elapsedSeconds(startedAt: bigint): number {
+  return Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
 }

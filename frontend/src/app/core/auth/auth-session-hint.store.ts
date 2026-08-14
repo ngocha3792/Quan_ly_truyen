@@ -1,16 +1,17 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+
+import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
+
+import { readBrowserCookie } from '../http/browser-cookie.util';
 
 const SESSION_HINT_KEY = 'truyenhub.auth.has-refresh-session';
-const CSRF_COOKIE_NAME = 'csrf_token';
 
-/**
- * Chỉ là dấu hiệu để frontend biết có nên gọi refresh hay không.
- *
- * Không sử dụng giá trị này để xác thực người dùng.
- * Backend, refresh cookie và access token vẫn là nguồn xác thực chính.
- */
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class AuthSessionHintStore {
+  private readonly config = inject(APP_RUNTIME_CONFIG);
+
   shouldAttemptRefresh(): boolean {
     if (typeof window === 'undefined') {
       return false;
@@ -22,14 +23,15 @@ export class AuthSessionHintStore {
       return storedHint === 'true';
     }
 
-    /**
-     * csrf_token là cookie frontend có thể đọc.
-     * Nó thường được backend tạo cùng refresh_token HttpOnly.
-     *
-     * Trường hợp localStorage chưa có hint nhưng csrf_token tồn tại,
-     * frontend vẫn thử khôi phục phiên.
+    /*
+     * Tên CSRF cookie đến trực tiếp
+     * từ backend runtime config.
      */
-    return readCookie(CSRF_COOKIE_NAME) !== null;
+    if (!this.config.csrf.enabled) {
+      return false;
+    }
+
+    return readBrowserCookie(this.config.csrf.cookieName) !== null;
   }
 
   markSessionPresent(): void {
@@ -47,19 +49,4 @@ export class AuthSessionHintStore {
 
     window.localStorage.setItem(SESSION_HINT_KEY, 'false');
   }
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  const prefix = `${encodeURIComponent(name)}=`;
-
-  const entry = document.cookie
-    .split(';')
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(prefix));
-
-  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
 }

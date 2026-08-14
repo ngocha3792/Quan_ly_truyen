@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of } from 'rxjs';
-import { STORIES } from '../../home/mock/home.mock';
+import { STORIES } from '../../../../shared/testing/story.fixtures';
 import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
 import { MOCK_RELATED_STORIES, MOCK_STORY_COMMENTS } from '../mock/story.mock';
 import { StoryDetailRepository } from './story.repository';

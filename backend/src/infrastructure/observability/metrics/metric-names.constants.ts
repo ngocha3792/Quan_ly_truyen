@@ -2,6 +2,8 @@ export const METRIC_NAMES = {
   HTTP_REQUESTS: 'qlt_http_server_requests_total',
   HTTP_DURATION: 'qlt_http_server_request_duration_seconds',
   HTTP_ACTIVE: 'qlt_http_server_active_requests',
+  AUTH_ACCESS_SESSION_DB_LOOKUP_DURATION:
+    'qlt_auth_access_session_db_lookup_duration_seconds',
   OUTBOX_EVENTS: 'qlt_outbox_events_total',
   OUTBOX_DURATION: 'qlt_outbox_dispatch_duration_seconds',
   OUTBOX_STALE_RECOVERED: 'qlt_outbox_stale_recovered_total',

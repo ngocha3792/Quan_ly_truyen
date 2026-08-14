@@ -14,7 +14,7 @@ import { IconComponent } from '../../../../../../shared/components/icon/icon.com
 
 import { MfaSettingsStore } from '../../data-access/mfa-settings.store';
 
-import { MfaQrCodeComponent } from '../../ui/mfa-qr-code/mfa-qr-code.component';
+import { MfaQrCodeComponent } from '../../../../shared/ui/mfa-qr-code/mfa-qr-code.component';
 import { OtpCodeInputComponent } from '../../ui/otp-code-input/otp-code-input.component';
 import { RecoveryCodesComponent } from '../../ui/recovery-codes/recovery-codes.component';
 import { SecurityFeatureShellComponent } from '../../ui/security-feature-shell/security-feature-shell.component';

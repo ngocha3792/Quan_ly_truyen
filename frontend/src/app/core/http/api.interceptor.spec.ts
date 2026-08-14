@@ -29,6 +29,14 @@ describe('apiInterceptor', () => {
     appName: 'TruyenHub',
 
     production: false,
+
+    csrf: {
+      enabled: true,
+
+      cookieName: 'custom_csrf',
+
+      headerName: 'x-custom-csrf',
+    },
   };
 
   beforeEach(() => {
@@ -81,6 +89,24 @@ describe('apiInterceptor', () => {
     request.flush({
       ok: true,
     });
+  });
+
+  it('đọc CSRF cookie/header name từ runtime config thay vì hard-code', () => {
+    document.cookie = 'custom_csrf=csrf-value; path=/';
+
+    http.post('/api/v1/private', {}).subscribe();
+
+    const request = httpTesting.expectOne('/api/v1/private');
+
+    expect(request.request.headers.get('x-custom-csrf')).toBe('csrf-value');
+
+    expect(request.request.headers.has('x-csrf-token')).toBe(false);
+
+    request.flush({
+      ok: true,
+    });
+
+    document.cookie = 'custom_csrf=; Max-Age=0; path=/';
   });
 
   it('chỉ gọi refresh một lần khi 5 request cùng trả 401', async () => {

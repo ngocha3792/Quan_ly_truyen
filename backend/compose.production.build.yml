@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
+
       args:
         NODE_IMAGE: ${NODE_IMAGE:-node:24.18.0-bookworm-slim}
 
@@ -12,5 +13,15 @@ services:
       context: .
       dockerfile: Dockerfile
       target: migrate
+
       args:
         NODE_IMAGE: ${NODE_IMAGE:-node:24.18.0-bookworm-slim}
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: runtime
+
+      args:
+        NODE_IMAGE: ${FRONTEND_NODE_IMAGE:-node:24.18.0-alpine}

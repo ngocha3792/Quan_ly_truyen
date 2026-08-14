@@ -8,7 +8,7 @@ import { AuthRefreshService } from '../auth/auth-refresh.service';
 
 import { TokenStore } from '../auth/token.store';
 
-import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
+import { AppRuntimeConfig, APP_RUNTIME_CONFIG } from '../config/app-config.token';
 
 import { SKIP_AUTH_REFRESH } from './auth-http.context';
 
@@ -45,6 +45,8 @@ export const apiInterceptor: HttpInterceptorFn = (
     request,
 
     accessTokenUsedByRequest,
+
+    config.csrf,
   );
 
   return next(preparedRequest).pipe(
@@ -83,6 +85,8 @@ export const apiInterceptor: HttpInterceptorFn = (
             request,
 
             latestAccessToken,
+
+            config.csrf,
           ),
         );
       }
@@ -125,6 +129,8 @@ export const apiInterceptor: HttpInterceptorFn = (
               request,
 
               newAccessToken,
+
+              config.csrf,
             ),
           ),
         ),
@@ -170,6 +176,8 @@ function prepareApiRequest(
   request: HttpRequest<unknown>,
 
   accessToken: string | null,
+
+  csrfConfig: AppRuntimeConfig['csrf'],
 ): HttpRequest<unknown> {
   let headers = request.headers;
 
@@ -181,12 +189,12 @@ function prepareApiRequest(
     );
   }
 
-  if (MUTATING_METHODS.has(request.method.toUpperCase())) {
-    const csrfToken = readBrowserCookie('csrf_token');
+  if (csrfConfig.enabled && MUTATING_METHODS.has(request.method.toUpperCase())) {
+    const csrfToken = readBrowserCookie(csrfConfig.cookieName);
 
-    if (csrfToken && !headers.has('x-csrf-token')) {
+    if (csrfToken && !headers.has(csrfConfig.headerName)) {
       headers = headers.set(
-        'x-csrf-token',
+        csrfConfig.headerName,
 
         csrfToken,
       );

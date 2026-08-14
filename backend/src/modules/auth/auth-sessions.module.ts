@@ -8,6 +8,7 @@ import {
   RevokeAccessTokenCommandHandler,
 } from './application';
 import {
+  AuthClientConfigController,
   AuthTokenController,
   RefreshCookieCsrfGuard,
 } from './presentation/http';
@@ -16,7 +17,7 @@ import { AuthCoreModule } from './auth-core.module';
 
 @Module({
   imports: [AuthCoreModule],
-  controllers: [AuthTokenController],
+  controllers: [AuthClientConfigController, AuthTokenController],
   providers: [
     LoginCommandHandler,
     LogoutCommandHandler,

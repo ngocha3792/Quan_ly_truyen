@@ -46,4 +46,26 @@ describe('MetricsService', () => {
     expect(() => new MetricsService(config)).not.toThrow();
     expect(() => new MetricsService(config)).not.toThrow();
   });
+
+  it('records auth access session database lookup latency', async () => {
+    const service = new MetricsService(config);
+
+    service.recordAuthAccessSessionDbLookup('found', 0.012);
+
+    service.recordAuthAccessSessionDbLookup('not_found', 0.004);
+
+    const rendered = await service.render();
+
+    expect(rendered).toContain(
+      'qlt_auth_access_session_db_lookup_duration_seconds',
+    );
+
+    expect(rendered).toContain('result="found"');
+
+    expect(rendered).toContain('result="not_found"');
+
+    expect(rendered).toContain(
+      'qlt_auth_access_session_db_lookup_duration_seconds_count',
+    );
+  });
 });

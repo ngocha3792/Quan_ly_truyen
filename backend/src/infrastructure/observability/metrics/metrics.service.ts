@@ -17,6 +17,7 @@ import {
 import { METRIC_NAMES } from './metric-names.constants';
 
 type HttpStatusCode = `${number}` | 'unknown';
+type AuthAccessSessionLookupResult = 'found' | 'not_found' | 'failed';
 type OperationResult =
   | 'success'
   | 'failed'
@@ -68,6 +69,13 @@ export class MetricsService implements OnModuleDestroy {
     name: METRIC_NAMES.HTTP_ACTIVE,
     help: 'Current active HTTP server requests',
     labelNames: ['method'] as const,
+    registers: [this.registry],
+  });
+  private readonly authAccessSessionDbLookupDuration = new Histogram({
+    name: METRIC_NAMES.AUTH_ACCESS_SESSION_DB_LOOKUP_DURATION,
+    help: 'PostgreSQL lookup duration for security-sensitive authenticated session state',
+    labelNames: ['result'] as const,
+    buckets: [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
     registers: [this.registry],
   });
   private readonly outboxEvents = new Counter({
@@ -240,6 +248,19 @@ export class MetricsService implements OnModuleDestroy {
     this.activeHttp.dec({ method: labels.method });
     this.httpRequests.inc(labels);
     this.httpDuration.observe(labels, Math.max(0, input.durationSeconds));
+  }
+
+  recordAuthAccessSessionDbLookup(
+    result: AuthAccessSessionLookupResult,
+    durationSeconds: number,
+  ): void {
+    if (!this.enabled) {
+      return;
+    }
+    this.authAccessSessionDbLookupDuration.observe(
+      { result },
+      Math.max(0, durationSeconds),
+    );
   }
 
   recordOutbox(

@@ -1,12 +1,9 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'SmtpPassword')]
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
   [ValidatePattern('^[A-Za-z0-9.-]+$')]
-  [string]$ApiDomain,
-
-  [Parameter(Mandatory = $true)]
-  [ValidatePattern('^[A-Za-z0-9.-]+$')]
-  [string]$FrontendDomain,
+  [string]$PublicDomain,
 
   [Parameter(Mandatory = $true)]
   [ValidatePattern('^[^@\s]+@[^@\s]+\.[^@\s]+$')]
@@ -35,6 +32,27 @@ param(
   [Parameter(Mandatory = $true)]
   [ValidatePattern('^[A-Za-z0-9._-]+$')]
   [string]$BackendImageTag,
+
+  [Parameter(Mandatory = $true)]
+  [string]$FrontendImageName,
+
+  [Parameter(Mandatory = $true)]
+  [ValidatePattern('^[A-Za-z0-9._-]+$')]
+  [string]$FrontendImageTag,
+
+  [Parameter(Mandatory = $true)]
+  [string]$ResticImage,
+
+  [Parameter(Mandatory = $true)]
+  [string]$ResticRepository,
+
+  [Parameter(Mandatory = $true)]
+  [string]$BackupS3AccessKeyId,
+
+  [Parameter(Mandatory = $true)]
+  [string]$BackupS3SecretAccessKey,
+
+  [string]$BackupS3Region = 'auto',
 
   [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')]
   [string]$PostgresDatabase = 'quan_ly_truyen',
@@ -105,7 +123,7 @@ function Assert-SingleLineValue {
   return $Value
 }
 
-function Quote-EnvValue {
+function Get-QuotedEnvValue {
   param([AllowEmptyString()][string]$Value)
 
   $Checked = Assert-SingleLineValue -Value $Value
@@ -122,6 +140,9 @@ $GrafanaPassword = New-UrlSafeSecret -Bytes 36
 $MaintenanceBypassToken = New-UrlSafeSecret -Bytes 36
 $MailEncryptionKey = [Convert]::ToBase64String((New-RandomBytes -Count 32))
 $MfaEncryptionKey = [Convert]::ToBase64String((New-RandomBytes -Count 32))
+$ResticRepositoryPassword = New-UrlSafeSecret -Bytes 64
+$RestoreDrillPostgresPassword = New-UrlSafeSecret -Bytes 48
+$ResticPasswordFile = Join-Path $SecretsDirectory 'restic_repository_password'
 
 $EncodedPostgresPassword = [Uri]::EscapeDataString($PostgresPassword)
 $EncodedRedisPassword = [Uri]::EscapeDataString($RedisPassword)
@@ -138,31 +159,49 @@ $DkimKeyBase64 = if ($EnableDkim) {
 
 $Content = @"
 PRODUCTION_ENV_FILE=.env.production
+
 NODE_IMAGE=node:24.18.0-bookworm-slim
+FRONTEND_NODE_IMAGE=node:24.18.0-alpine
+
 POSTGRES_IMAGE=postgres:17.10-alpine3.23
 REDIS_IMAGE=redis:7.4.10-alpine3.21
 CADDY_IMAGE=caddy:2.11.4-alpine
-BACKEND_IMAGE_NAME=$(Quote-EnvValue $BackendImageName)
-BACKEND_IMAGE_TAG=$(Quote-EnvValue $BackendImageTag)
-APP_DOMAIN=$(Quote-EnvValue $ApiDomain)
-ACME_EMAIL=$(Quote-EnvValue $AcmeEmail)
+
+BACKEND_IMAGE_NAME=$(Get-QuotedEnvValue $BackendImageName)
+BACKEND_IMAGE_TAG=$(Get-QuotedEnvValue $BackendImageTag)
+
+FRONTEND_IMAGE_NAME=$(Get-QuotedEnvValue $FrontendImageName)
+FRONTEND_IMAGE_TAG=$(Get-QuotedEnvValue $FrontendImageTag)
+
+APP_DOMAIN=$(Get-QuotedEnvValue $PublicDomain)
+
+ACME_EMAIL=$(Get-QuotedEnvValue $AcmeEmail)
+
 POSTGRES_MEMORY_LIMIT=1536m
 POSTGRES_CPU_LIMIT=1.50
 POSTGRES_SHM_SIZE=256m
+
 REDIS_MEMORY_LIMIT=512m
 REDIS_CPU_LIMIT=0.75
+
 API_MEMORY_LIMIT=768m
 API_CPU_LIMIT=1.00
+
 WORKER_MEMORY_LIMIT=768m
 WORKER_CPU_LIMIT=1.00
+
+FRONTEND_MEMORY_LIMIT=256m
+FRONTEND_CPU_LIMIT=0.50
+
 CADDY_MEMORY_LIMIT=256m
 CADDY_CPU_LIMIT=0.50
+
 BACKUP_MEMORY_LIMIT=512m
 BACKUP_CPU_LIMIT=0.75
 POSTGRES_BACKUP_DIRECTORY=./backups
 BACKUP_RETENTION_DAYS=14
-POSTGRES_DB=$(Quote-EnvValue $PostgresDatabase)
-POSTGRES_USER=$(Quote-EnvValue $PostgresUser)
+POSTGRES_DB=$(Get-QuotedEnvValue $PostgresDatabase)
+POSTGRES_USER=$(Get-QuotedEnvValue $PostgresUser)
 POSTGRES_PASSWORD=$PostgresPassword
 REDIS_PASSWORD=$RedisPassword
 DATABASE_URL=postgresql://$(Assert-SingleLineValue $PostgresUser):$EncodedPostgresPassword@postgres:5432/$(Assert-SingleLineValue $PostgresDatabase)?schema=public
@@ -170,7 +209,7 @@ REDIS_URL=redis://:$EncodedRedisPassword@redis:6379/0
 NODE_ENV=production
 HOST=0.0.0.0
 PORT=3000
-APP_PUBLIC_URL=https://$(Assert-SingleLineValue $ApiDomain)
+APP_PUBLIC_URL=https://$(Assert-SingleLineValue $PublicDomain)
 TRUST_PROXY=true
 HTTP_REQUEST_TIMEOUT_MS=15000
 JSON_BODY_LIMIT=2mb
@@ -200,7 +239,7 @@ OTEL_BSP_MAX_EXPORT_BATCH_SIZE=512
 OTEL_BSP_SCHEDULE_DELAY=5000
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=$GrafanaPassword
-CORS_ALLOWED_ORIGINS=https://$(Assert-SingleLineValue $FrontendDomain)
+CORS_ALLOWED_ORIGINS=https://$(Assert-SingleLineValue $PublicDomain)
 CORS_CREDENTIALS=true
 CORS_MAX_AGE_SECONDS=86400
 JWT_ACCESS_SECRET=$JwtAccessSecret
@@ -235,11 +274,11 @@ AUTH_OAUTH_STATE_COOKIE_NAME=oauth_state
 AUTH_OAUTH_GOOGLE_ENABLED=false
 AUTH_OAUTH_GOOGLE_CLIENT_ID=
 AUTH_OAUTH_GOOGLE_CLIENT_SECRET=
-AUTH_OAUTH_GOOGLE_CALLBACK_URL=https://$(Assert-SingleLineValue $ApiDomain)/api/v1/auth/oauth/google/callback
+AUTH_OAUTH_GOOGLE_CALLBACK_URL=https://$(Assert-SingleLineValue $PublicDomain)/api/v1/auth/oauth/google/callback
 AUTH_OAUTH_GITHUB_ENABLED=false
 AUTH_OAUTH_GITHUB_CLIENT_ID=
 AUTH_OAUTH_GITHUB_CLIENT_SECRET=
-AUTH_OAUTH_GITHUB_CALLBACK_URL=https://$(Assert-SingleLineValue $ApiDomain)/api/v1/auth/oauth/github/callback
+AUTH_OAUTH_GITHUB_CALLBACK_URL=https://$(Assert-SingleLineValue $PublicDomain)/api/v1/auth/oauth/github/callback
 AUTH_CSRF_ENABLED=true
 AUTH_CSRF_SECRET=$CsrfSecret
 AUTH_CSRF_COOKIE_NAME=csrf_token
@@ -276,17 +315,17 @@ IN_MEMORY_STORE_SWEEP_INTERVAL_MS=60000
 MAIL_PAYLOAD_ENCRYPTION_KEY=$MailEncryptionKey
 MAIL_PAYLOAD_ALLOW_LEGACY_PLAINTEXT_READ=false
 MAIL_ENABLED=true
-MAIL_FROM_NAME=$(Quote-EnvValue $MailFromName)
-MAIL_FROM_ADDRESS=$(Quote-EnvValue $MailFromAddress)
-MAIL_REPLY_TO=$(Quote-EnvValue $ReplyTo)
-FRONTEND_PUBLIC_URL=https://$(Assert-SingleLineValue $FrontendDomain)
-MAIL_MESSAGE_ID_DOMAIN=$(Quote-EnvValue $MailDomain)
-SMTP_HOST=$(Quote-EnvValue $SmtpHost)
+MAIL_FROM_NAME=$(Get-QuotedEnvValue $MailFromName)
+MAIL_FROM_ADDRESS=$(Get-QuotedEnvValue $MailFromAddress)
+MAIL_REPLY_TO=$(Get-QuotedEnvValue $ReplyTo)
+FRONTEND_PUBLIC_URL=https://$(Assert-SingleLineValue $PublicDomain)
+MAIL_MESSAGE_ID_DOMAIN=$(Get-QuotedEnvValue $MailDomain)
+SMTP_HOST=$(Get-QuotedEnvValue $SmtpHost)
 SMTP_PORT=$SmtpPort
 SMTP_SECURE=$SmtpSecureValue
 SMTP_REQUIRE_TLS=$SmtpRequireTlsValue
-SMTP_USERNAME=$(Quote-EnvValue $SmtpUsername)
-SMTP_PASSWORD=$(Quote-EnvValue $SmtpPassword)
+SMTP_USERNAME=$(Get-QuotedEnvValue $SmtpUsername)
+SMTP_PASSWORD=$(Get-QuotedEnvValue $SmtpPassword)
 SMTP_POOL_ENABLED=true
 SMTP_MAX_CONNECTIONS=3
 SMTP_MAX_MESSAGES=100
@@ -296,8 +335,8 @@ SMTP_GREETING_TIMEOUT_MS=10000
 SMTP_SOCKET_TIMEOUT_MS=30000
 SMTP_VERIFY_ON_STARTUP=true
 MAIL_DKIM_ENABLED=$DkimEnabledValue
-MAIL_DKIM_DOMAIN=$(Quote-EnvValue $DkimDomain)
-MAIL_DKIM_SELECTOR=$(Quote-EnvValue $DkimSelector)
+MAIL_DKIM_DOMAIN=$(Get-QuotedEnvValue $DkimDomain)
+MAIL_DKIM_SELECTOR=$(Get-QuotedEnvValue $DkimSelector)
 MAIL_DKIM_PRIVATE_KEY_BASE64=$DkimKeyBase64
 MAIL_QUEUE_COMPLETED_RETENTION_SECONDS=3600
 MAIL_QUEUE_COMPLETED_RETENTION_COUNT=100
@@ -329,13 +368,39 @@ CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET=
 CLOUDINARY_STORY_COVER_UPLOAD_PRESET=
 CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET=
 CLOUDINARY_ATTACHMENT_UPLOAD_PRESET=
+
+RESTIC_IMAGE=$(Get-QuotedEnvValue $ResticImage)
+OFFSITE_BACKUP_ENABLED=true
+BACKUP_HOST_ID=quan-ly-truyen-production
+RESTIC_REPOSITORY=$(Get-QuotedEnvValue $ResticRepository)
+BACKUP_S3_ACCESS_KEY_ID=$(Get-QuotedEnvValue $BackupS3AccessKeyId)
+BACKUP_S3_SECRET_ACCESS_KEY=$(Get-QuotedEnvValue $BackupS3SecretAccessKey)
+BACKUP_S3_REGION=$(Get-QuotedEnvValue $BackupS3Region)
+RESTIC_KEEP_DAILY=14
+RESTIC_KEEP_WEEKLY=8
+RESTIC_KEEP_MONTHLY=12
+BACKUP_OFFSITE_MEMORY_LIMIT=512m
+BACKUP_OFFSITE_CPU_LIMIT=0.50
+RESTORE_DRILL_POSTGRES_DB=qlt_restore_drill
+RESTORE_DRILL_POSTGRES_USER=qlt_restore
+RESTORE_DRILL_POSTGRES_PASSWORD=$RestoreDrillPostgresPassword
+RESTORE_DRILL_TMPFS_SIZE=2g
+RESTORE_DRILL_MEMORY_LIMIT=1024m
+RESTORE_DRILL_CPU_LIMIT=1.00
 "@
 
 New-Item -ItemType Directory -Path $SecretsDirectory -Force | Out-Null
 [IO.File]::WriteAllText($OutputPath, $Content.Trim() + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText($MetricsTokenFile, $MetricsToken + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText(
+  $ResticPasswordFile,
+  $ResticRepositoryPassword + [Environment]::NewLine,
+  [Text.UTF8Encoding]::new($false)
+)
 
 Write-Host "Created: $OutputPath" -ForegroundColor Green
 Write-Host "Created: $MetricsTokenFile" -ForegroundColor Green
+Write-Host "Created: $ResticPasswordFile" -ForegroundColor Green
+Write-Host 'Store the Restic password separately from object-storage credentials. Losing it makes encrypted backups unrecoverable.' -ForegroundColor Yellow
 Write-Host 'Store both files securely. Never commit them.' -ForegroundColor Yellow
 Write-Host 'Next: npm run ci:check-env' -ForegroundColor Cyan

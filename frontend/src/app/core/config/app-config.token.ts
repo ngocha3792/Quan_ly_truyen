@@ -1,12 +1,15 @@
 import { InjectionToken } from '@angular/core';
-import { environment } from '../../../environments/environment';
 
 export interface AppRuntimeConfig {
   readonly apiBaseUrl: string;
   readonly appName: string;
   readonly production: boolean;
+
+  readonly csrf: {
+    readonly enabled: boolean;
+    readonly cookieName: string;
+    readonly headerName: string;
+  };
 }
 
-export const APP_RUNTIME_CONFIG = new InjectionToken<AppRuntimeConfig>('APP_RUNTIME_CONFIG', {
-  factory: () => environment,
-});
+export const APP_RUNTIME_CONFIG = new InjectionToken<AppRuntimeConfig>('APP_RUNTIME_CONFIG');

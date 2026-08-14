@@ -3,8 +3,8 @@ name: quan-ly-truyen-observability
 x-default-logging: &default-logging
   driver: json-file
   options:
-    max-size: "10m"
-    max-file: "5"
+    max-size: '10m'
+    max-file: '5'
 
 services:
   prometheus:
@@ -18,7 +18,7 @@ services:
       - ../production/secrets/metrics_bearer_token:/run/secrets/metrics_bearer_token:ro
       - prometheus-data:/prometheus
     ports:
-      - "127.0.0.1:9090:9090"
+      - '127.0.0.1:9090:9090'
     networks:
       - observability
       - backend
@@ -36,7 +36,7 @@ services:
       - ./loki/config.yml:/etc/loki/config.yml:ro
       - loki-data:/loki
     ports:
-      - "127.0.0.1:3100:3100"
+      - '127.0.0.1:3100:3100'
     networks:
       - observability
     restart: unless-stopped
@@ -53,7 +53,7 @@ services:
       - ./tempo/config.yml:/etc/tempo/config.yml:ro
       - tempo-data:/var/tempo
     ports:
-      - "127.0.0.1:3200:3200"
+      - '127.0.0.1:3200:3200'
     networks:
       - observability
     restart: unless-stopped
@@ -72,7 +72,7 @@ services:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "127.0.0.1:12345:12345"
+      - '127.0.0.1:12345:12345'
     networks:
       - observability
       - backend
@@ -90,14 +90,14 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "127.0.0.1:3001:3000"
+      - '127.0.0.1:3001:3000'
     networks:
       - observability
     depends_on:

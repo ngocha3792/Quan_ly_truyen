@@ -1,1 +1,46 @@
-{"uid":"qlt-api","title":"API Overview","schemaVersion":41,"refresh":"15s","panels":[{"type":"timeseries","title":"Requests / second","targets":[{"expr":"sum(rate(qlt_http_server_requests_total[5m]))"}]},{"type":"timeseries","title":"5xx ratio","targets":[{"expr":"sum(rate(qlt_http_server_requests_total{status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(qlt_http_server_requests_total[5m])), 0.001)"}]},{"type":"timeseries","title":"Latency P50/P95/P99","targets":[{"expr":"histogram_quantile(0.95, sum by (le, route) (rate(qlt_http_server_request_duration_seconds_bucket[5m])))"}]},{"type":"stat","title":"Active requests","targets":[{"expr":"sum(qlt_http_server_active_requests)"}]},{"type":"timeseries","title":"Node heap","targets":[{"expr":"qlt_nodejs_nodejs_heap_size_used_bytes"}]},{"type":"timeseries","title":"Process CPU","targets":[{"expr":"rate(qlt_nodejs_process_cpu_seconds_total[5m])"}]}]}
+{
+  "uid": "qlt-api",
+  "title": "API Overview",
+  "schemaVersion": 41,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests / second",
+      "targets": [{ "expr": "sum(rate(qlt_http_server_requests_total[5m]))" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx ratio",
+      "targets": [
+        {
+          "expr": "sum(rate(qlt_http_server_requests_total{status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(qlt_http_server_requests_total[5m])), 0.001)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency P50/P95/P99",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(qlt_http_server_request_duration_seconds_bucket[5m])))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Active requests",
+      "targets": [{ "expr": "sum(qlt_http_server_active_requests)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Node heap",
+      "targets": [{ "expr": "qlt_nodejs_nodejs_heap_size_used_bytes" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Process CPU",
+      "targets": [{ "expr": "rate(qlt_nodejs_process_cpu_seconds_total[5m])" }]
+    }
+  ]
+}

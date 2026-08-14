@@ -72,9 +72,7 @@ describe('UpdateCurrentUserProfileCommandHandler', () => {
   });
 
   it('PATCH rỗng đọc profile hiện tại mà không tạo update/audit', async () => {
-    reader.findProfileByUserId.mockResolvedValue(
-      createProfile(),
-    );
+    reader.findProfileByUserId.mockResolvedValue(createProfile());
 
     const result = await handler.execute(
       new UpdateCurrentUserProfileCommand(
@@ -179,24 +177,30 @@ describe('UpdateCurrentUserProfileCommandHandler', () => {
 
       profile: createProfile({
         bio: null,
-        avatar: null,
+
+        avatar: null,
       }),
     });
 
     await handler.execute(
       new UpdateCurrentUserProfileCommand(
         userId,
-        undefined,
-        null,
-        null,
+
+        undefined,
+
+        null,
+
+        null,
       ),
     );
 
     expect(persistence.updateProfile).toHaveBeenCalledWith(
       expect.objectContaining({
         userId,
-        bio: null,
-        avatarMediaId: null,
+
+        bio: null,
+
+        avatarMediaId: null,
       }),
     );
   });
@@ -210,9 +214,12 @@ describe('UpdateCurrentUserProfileCommandHandler', () => {
       handler.execute(
         new UpdateCurrentUserProfileCommand(
           userId,
-          undefined,
-          undefined,
-          avatarMediaId,
+
+          undefined,
+
+          undefined,
+
+          avatarMediaId,
         ),
       ),
     ).rejects.toBeInstanceOf(InvalidUserAvatarException);
@@ -227,9 +234,12 @@ describe('UpdateCurrentUserProfileCommandHandler', () => {
       handler.execute(
         new UpdateCurrentUserProfileCommand(
           userId,
-          'Updated User',
-          undefined,
-          undefined,
+
+          'Updated User',
+
+          undefined,
+
+          undefined,
         ),
       ),
     ).rejects.toBeInstanceOf(UserProfileUnavailableException);
@@ -239,29 +249,39 @@ describe('UpdateCurrentUserProfileCommandHandler', () => {
 function createProfile(
   overrides: {
     displayName?: string;
-    bio?: string | null;
-    avatar?: {
+
+    bio?: string | null;
+
+    avatar?: {
       id: string;
-      url: string | null;
+
+      url: string | null;
     } | null;
   } = {},
 ): UserProfileEntity {
   const now = new Date('2026-08-09T00:00:00.000Z');
-  return new UserProfileEntity(
+
+  return new UserProfileEntity(
     '11111111-1111-4111-8111-111111111111',
-    'current@example.test',
-    'current_user',
-    overrides.displayName ?? 'Current User',
-    overrides.bio === undefined
-      ? 'Current biography'
-      : overrides.bio,
-    'ACTIVE',
-    now,
-    now,
-    overrides.avatar === undefined
-      ? null
-      : overrides.avatar,
-    now,
-    now,
+
+    'current@example.test',
+
+    'current_user',
+
+    overrides.displayName ?? 'Current User',
+
+    overrides.bio === undefined ? 'Current biography' : overrides.bio,
+
+    'ACTIVE',
+
+    now,
+
+    now,
+
+    overrides.avatar === undefined ? null : overrides.avatar,
+
+    now,
+
+    now,
   );
 }

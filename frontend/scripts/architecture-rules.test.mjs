@@ -2,33 +2,27 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
 
-import {
-  findBoundaryViolations,
-  resolveImportTarget,
-} from './architecture-rules.mjs';
+import { findBoundaryViolations, resolveImportTarget } from './architecture-rules.mjs';
 
-const workspaceRoot =
-  path.join(
-    process.cwd(),
+const workspaceRoot = path.join(
+  process.cwd(),
 
-    '__architecture_test__',
-  );
+  '__architecture_test__',
+);
 
-const sourceRoot =
-  path.join(
-    workspaceRoot,
+const sourceRoot = path.join(
+  workspaceRoot,
 
-    'src',
+  'src',
 
-    'app',
-  );
+  'app',
+);
 
 const aliases = [
   {
     pattern: '@features/*',
 
-    target:
-      'src/app/features/*',
+    target: 'src/app/features/*',
 
     baseUrl: workspaceRoot,
   },
@@ -36,20 +30,13 @@ const aliases = [
   {
     pattern: '@shared/*',
 
-    target:
-      'src/app/shared/*',
+    target: 'src/app/shared/*',
 
     baseUrl: workspaceRoot,
   },
 ];
 
-const featureScopes =
-  new Set([
-    'public',
-    'account',
-    'admin',
-    'author-portal',
-  ]);
+const featureScopes = new Set(['public', 'account', 'admin', 'author-portal']);
 
 const file = (...parts) =>
   path.join(
@@ -58,10 +45,7 @@ const file = (...parts) =>
     ...parts,
   );
 
-const violationsFor = (
-  recordFile,
-  content,
-) =>
+const violationsFor = (recordFile, content) =>
   findBoundaryViolations(
     [
       {
@@ -80,190 +64,119 @@ const violationsFor = (
     },
   );
 
-test(
-  'resolve configured wildcard alias',
+test('resolve configured wildcard alias', () => {
+  assert.equal(
+    resolveImportTarget(
+      file('features', 'public', 'story', 'domain', 'story.ts'),
 
-  () => {
-    assert.equal(
-      resolveImportTarget(
-        file(
-          'features',
-          'public',
-          'story',
-          'domain',
-          'story.ts',
-        ),
+      '@features/public/story/data-access/story.repository',
 
-        '@features/public/story/data-access/story.repository',
+      aliases,
+    ),
 
-        aliases,
-      ),
+    file('features', 'public', 'story', 'data-access', 'story.repository'),
+  );
+});
 
-      file(
-        'features',
-        'public',
-        'story',
-        'data-access',
-        'story.repository',
-      ),
-    );
-  },
-);
+test('catch forbidden layer dependency through alias', () => {
+  const violations = violationsFor(
+    file('features', 'public', 'story', 'domain', 'story.ts'),
 
-test(
-  'catch forbidden layer dependency through alias',
-
-  () => {
-    const violations =
-      violationsFor(
-        file(
-          'features',
-          'public',
-          'story',
-          'domain',
-          'story.ts',
-        ),
-
-        `
+    `
           import { repository }
             from '@features/public/story/data-access/story.repository';
         `,
-      );
+  );
 
-    assert.equal(
-      violations.length,
+  assert.equal(
+    violations.length,
 
-      1,
-    );
+    1,
+  );
 
-    assert.match(
-      violations[0].message,
+  assert.match(
+    violations[0].message,
 
-      /domain cannot depend on data-access/,
-    );
-  },
-);
+    /domain cannot depend on data-access/,
+  );
+});
 
-test(
-  'catch cross-feature internal import through alias',
+test('catch cross-feature internal import through alias', () => {
+  const violations = violationsFor(
+    file('features', 'public', 'story', 'data-access', 'story.ts'),
 
-  () => {
-    const violations =
-      violationsFor(
-        file(
-          'features',
-          'public',
-          'story',
-          'data-access',
-          'story.ts',
-        ),
-
-        `
+    `
           import { HOME_DATA }
             from '@features/public/home/mock/home.mock';
         `,
-      );
+  );
 
-    assert.equal(
-      violations.length,
+  assert.equal(
+    violations.length,
 
-      1,
-    );
+    1,
+  );
 
-    assert.match(
-      violations[0].message,
+  assert.match(
+    violations[0].message,
 
-      /public\/story cannot import internals of public\/home/,
-    );
-  },
-);
+    /public\/story cannot import internals of public\/home/,
+  );
+});
 
-test(
-  'allow scoped shared feature import',
+test('allow scoped shared feature import', () => {
+  const violations = violationsFor(
+    file('features', 'account', 'auth', 'ui', 'auth.ts'),
 
-  () => {
-    const violations =
-      violationsFor(
-        file(
-          'features',
-          'account',
-          'auth',
-          'ui',
-          'auth.ts',
-        ),
-
-        `
+    `
           import { Dialog }
             from '@features/account/shared/ui/dialog';
         `,
-      );
+  );
 
-    assert.deepEqual(
-      violations,
+  assert.deepEqual(
+    violations,
 
-      [],
-    );
-  },
-);
+    [],
+  );
+});
 
-test(
-  'allow explicit feature public API',
+test('allow explicit feature public API', () => {
+  const violations = violationsFor(
+    file('features', 'public', 'story', 'pages', 'page.ts'),
 
-  () => {
-    const violations =
-      violationsFor(
-        file(
-          'features',
-          'public',
-          'story',
-          'pages',
-          'page.ts',
-        ),
-
-        `
+    `
           import { homeApi }
             from '@features/public/home';
         `,
-      );
+  );
 
-    assert.deepEqual(
-      violations,
+  assert.deepEqual(
+    violations,
 
-      [],
-    );
-  },
-);
+    [],
+  );
+});
 
-test(
-  'domain still cannot import Angular',
+test('domain still cannot import Angular', () => {
+  const violations = violationsFor(
+    file('features', 'public', 'story', 'domain', 'story.ts'),
 
-  () => {
-    const violations =
-      violationsFor(
-        file(
-          'features',
-          'public',
-          'story',
-          'domain',
-          'story.ts',
-        ),
-
-        `
+    `
           import { signal }
             from '@angular/core';
         `,
-      );
+  );
 
-    assert.equal(
-      violations.length,
+  assert.equal(
+    violations.length,
 
-      1,
-    );
+    1,
+  );
 
-    assert.match(
-      violations[0].message,
+  assert.match(
+    violations[0].message,
 
-      /domain cannot depend on Angular/,
-    );
-  },
-);
+    /domain cannot depend on Angular/,
+  );
+});

@@ -1,11 +1,145 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
-import {  AuthorAlreadyActiveException,  AuthorApplicationPendingException,  AuthorApplicationStatus,} from '../../../domain';
+import {
+  AuthorAlreadyActiveException,
+  AuthorApplicationPendingException,
+  AuthorApplicationStatus,
+} from '../../../domain';
 
-import {  createAuthorApplication,  OWNER_ID,} from '../author-application-command-handler.spec.fixture';
+import {
+  createAuthorApplication,
+  OWNER_ID,
+} from '../author-application-command-handler.spec.fixture';
 
 import { SaveAuthorApplicationDraftCommand } from './save-author-application-draft.command';
 
 import { SaveAuthorApplicationDraftCommandHandler } from './save-author-application-draft.command-handler';
 
-describe('SaveAuthorApplicationDraftCommandHandler', () => {  let persistence: {    saveDraft: jest.Mock;  };  let handler: SaveAuthorApplicationDraftCommandHandler;  beforeEach(() => {    persistence = {      saveDraft: jest.fn(),    };    handler =      new SaveAuthorApplicationDraftCommandHandler(        persistence as never,      );  });  it('yêu cầu authenticated user UUID hợp lệ', async () => {    await expect(      handler.execute(        createCommand(undefined),      ),    ).rejects.toBeInstanceOf(AuthenticationRequiredException);    expect(persistence.saveDraft).not.toHaveBeenCalled();  });  it('normalize draft trước khi persistence', async () => {    persistence.saveDraft.mockResolvedValue({      status: 'saved',      application: createAuthorApplication(        AuthorApplicationStatus.DRAFT,      ),    });    const result = await handler.execute(      new SaveAuthorApplicationDraftCommand(        OWNER_ID,        '   Coverage    Author   ',        '   Coverage Applicant   ',        '   COVERAGE@EXAMPLE.TEST   ',        '0900000000',        'https://example.test/portfolio',        'tien-hiep',        '1-3-years',        '   Tôi muốn trở thành tác giả.   ',        '   Tóm tắt tác phẩm đầu tiên.   ',        true,      ),    );    expect(persistence.saveDraft).toHaveBeenCalledWith({      userId: OWNER_ID,      penName: 'Coverage Author',      fullName: 'Coverage Applicant',      email: 'coverage@example.test',      phone: '0900000000',      portfolioUrl:        'https://example.test/portfolio',      primaryGenre: 'tien-hiep',      experience: '1-3-years',      introduction:        'Tôi muốn trở thành tác giả.',      firstWorkSynopsis:        'Tóm tắt tác phẩm đầu tiên.',      acceptedTerms: true,    });    expect(result.status).toBe(      AuthorApplicationStatus.DRAFT,    );  });  it('map pending thành AuthorApplicationPendingException', async () => {    persistence.saveDraft.mockResolvedValue({      status: 'pending',    });    await expect(      handler.execute(        createCommand(OWNER_ID),      ),    ).rejects.toBeInstanceOf(      AuthorApplicationPendingException,    );  });  it('map already_author thành AuthorAlreadyActiveException', async () => {    persistence.saveDraft.mockResolvedValue({      status: 'already_author',    });    await expect(      handler.execute(        createCommand(OWNER_ID),      ),    ).rejects.toBeInstanceOf(      AuthorAlreadyActiveException,    );  });});function createCommand(  userId: string | undefined,): SaveAuthorApplicationDraftCommand {  return new SaveAuthorApplicationDraftCommand(    userId,    'Coverage Author',    'Coverage Applicant',    'coverage@example.test',    '0900000000',    null,    'tien-hiep',    '1-3-years',    'Tôi muốn trở thành tác giả.',    'Tóm tắt tác phẩm đầu tiên.',    true,  );}
+describe('SaveAuthorApplicationDraftCommandHandler', () => {
+  let persistence: {
+    saveDraft: jest.Mock;
+  };
+
+  let handler: SaveAuthorApplicationDraftCommandHandler;
+
+  beforeEach(() => {
+    persistence = {
+      saveDraft: jest.fn(),
+    };
+
+    handler = new SaveAuthorApplicationDraftCommandHandler(
+      persistence as never,
+    );
+  });
+
+  it('yêu cầu authenticated user UUID hợp lệ', async () => {
+    await expect(
+      handler.execute(createCommand(undefined)),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
+
+    expect(persistence.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('normalize draft trước khi persistence', async () => {
+    persistence.saveDraft.mockResolvedValue({
+      status: 'saved',
+
+      application: createAuthorApplication(AuthorApplicationStatus.DRAFT),
+    });
+
+    const result = await handler.execute(
+      new SaveAuthorApplicationDraftCommand(
+        OWNER_ID,
+
+        '   Coverage    Author   ',
+
+        '   Coverage Applicant   ',
+
+        '   COVERAGE@EXAMPLE.TEST   ',
+
+        '0900000000',
+
+        'https://example.test/portfolio',
+
+        'tien-hiep',
+
+        '1-3-years',
+
+        '   Tôi muốn trở thành tác giả.   ',
+
+        '   Tóm tắt tác phẩm đầu tiên.   ',
+
+        true,
+      ),
+    );
+
+    expect(persistence.saveDraft).toHaveBeenCalledWith({
+      userId: OWNER_ID,
+
+      penName: 'Coverage Author',
+
+      fullName: 'Coverage Applicant',
+
+      email: 'coverage@example.test',
+
+      phone: '0900000000',
+
+      portfolioUrl: 'https://example.test/portfolio',
+      primaryGenre: 'tien-hiep',
+      experience: '1-3-years',
+      introduction: 'Tôi muốn trở thành tác giả.',
+      firstWorkSynopsis: 'Tóm tắt tác phẩm đầu tiên.',
+      acceptedTerms: true,
+    });
+
+    expect(result.status).toBe(AuthorApplicationStatus.DRAFT);
+  });
+
+  it('map pending thành AuthorApplicationPendingException', async () => {
+    persistence.saveDraft.mockResolvedValue({
+      status: 'pending',
+    });
+
+    await expect(
+      handler.execute(createCommand(OWNER_ID)),
+    ).rejects.toBeInstanceOf(AuthorApplicationPendingException);
+  });
+
+  it('map already_author thành AuthorAlreadyActiveException', async () => {
+    persistence.saveDraft.mockResolvedValue({
+      status: 'already_author',
+    });
+
+    await expect(
+      handler.execute(createCommand(OWNER_ID)),
+    ).rejects.toBeInstanceOf(AuthorAlreadyActiveException);
+  });
+});
+
+function createCommand(
+  userId: string | undefined,
+): SaveAuthorApplicationDraftCommand {
+  return new SaveAuthorApplicationDraftCommand(
+    userId,
+
+    'Coverage Author',
+
+    'Coverage Applicant',
+
+    'coverage@example.test',
+
+    '0900000000',
+
+    null,
+
+    'tien-hiep',
+
+    '1-3-years',
+
+    'Tôi muốn trở thành tác giả.',
+
+    'Tóm tắt tác phẩm đầu tiên.',
+
+    true,
+  );
+}

@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, ErrorHandler, inject, Injectable, signal } from '@angular/core';
 
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ErrorHandler, inject, Injectable, signal } from '@angular/core';
 
 import {
   catchError,
@@ -25,10 +24,13 @@ import { AuthRefreshService } from './auth-refresh.service';
 
 import { isTerminalAuthSessionError } from './auth-session-error.util';
 
-import {
-  AuthSessionLifecycleEvent,
-  AuthSessionLifecycleService,
-} from './auth-session-lifecycle.service';
+import { AuthSessionLifecycleService } from './auth-session-lifecycle.service';
+
+import { AuthSessionStateService } from './auth-session-state.service';
+
+import type { AuthBootstrapResult } from './auth.store.types';
+
+export type { AuthBootstrapResult, AuthStatus } from './auth.store.types';
 
 import { AuthSessionHintStore } from './auth-session-hint.store';
 
@@ -46,10 +48,6 @@ import {
 
 import { TokenStore } from './token.store';
 
-export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous';
-
-export type AuthBootstrapResult = 'authenticated' | 'anonymous' | 'unavailable';
-
 @Injectable({
   providedIn: 'root',
 })
@@ -66,13 +64,9 @@ export class AuthStore {
 
   private readonly errorHandler = inject(ErrorHandler);
 
-  private readonly userState = signal<CurrentUser | null>(null);
-
-  private readonly statusState = signal<AuthStatus>('idle');
+  private readonly sessionState = inject(AuthSessionStateService);
 
   private readonly errorState = signal<string | null>(null);
-
-  private bootstrapped = false;
 
   /**
    * Single-flight cho bootstrap auth trong cùng tab.
@@ -89,21 +83,13 @@ export class AuthStore {
    */
   private bootstrapInFlight$: Observable<AuthBootstrapResult> | null = null;
 
-  readonly user = this.userState.asReadonly();
+  readonly user = this.sessionState.user;
 
-  readonly status = this.statusState.asReadonly();
+  readonly status = this.sessionState.status;
 
   readonly error = this.errorState.asReadonly();
 
-  readonly isAuthenticated = computed(
-    () => this.statusState() === 'authenticated' && Boolean(this.userState()),
-  );
-
-  constructor() {
-    this.lifecycle.changes$.pipe(takeUntilDestroyed()).subscribe((event) => {
-      this.handleLifecycleEvent(event);
-    });
-  }
+  readonly isAuthenticated = this.sessionState.isAuthenticated;
 
   /**
    * Fire-and-forget bootstrap.
@@ -132,11 +118,11 @@ export class AuthStore {
    * thoát khỏi idle/loading nữa.
    */
   ensureInitialized(): Observable<AuthBootstrapResult> {
-    if (this.statusState() === 'authenticated' && this.userState()) {
+    if (this.sessionState.status() === 'authenticated' && this.sessionState.user()) {
       return of('authenticated');
     }
 
-    if (this.statusState() === 'anonymous' && this.bootstrapped) {
+    if (this.sessionState.status() === 'anonymous' && this.sessionState.isBootstrapped()) {
       return of('anonymous');
     }
 
@@ -159,13 +145,13 @@ export class AuthStore {
       return of('anonymous');
     }
 
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     const bootstrap$ = this.refreshService.refreshAccessToken().pipe(
       switchMap(() => this.api.me()),
 
       map((user: CurrentUser) => {
-        this.setAuthenticated(user);
+        this.sessionState.setAuthenticated(user);
 
         return 'authenticated' as const;
       }),
@@ -179,7 +165,7 @@ export class AuthStore {
          * có thể mang semantics khác nhau, ví dụ CSRF/origin failure.
          */
         if (this.isRejectedSession(error)) {
-          if (this.statusState() !== 'anonymous') {
+          if (this.sessionState.status() !== 'anonymous') {
             this.lifecycle.invalidateSession(
               'bootstrap-session-rejected',
 
@@ -195,11 +181,11 @@ export class AuthStore {
          *
          * chưa chứng minh refresh session chết.
          */
-        if (this.statusState() !== 'idle') {
+        if (this.sessionState.status() !== 'idle') {
           this.lifecycle.loseAccess('bootstrap-temporarily-unavailable');
         }
 
-        this.applyRecoverableIdleState();
+        this.sessionState.applyRecoverableIdleState();
 
         this.errorState.set(getApiErrorMessage(error));
 
@@ -239,7 +225,7 @@ export class AuthStore {
   }
 
   login(payload: LoginRequest): Observable<CurrentUser> {
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     this.errorState.set(null);
 
@@ -259,7 +245,7 @@ export class AuthStore {
   }
 
   register(payload: RegisterRequest): Observable<RegisterResponse> {
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     this.errorState.set(null);
 
@@ -271,8 +257,8 @@ export class AuthStore {
       }),
 
       finalize(() => {
-        if (!this.userState()) {
-          this.statusState.set('anonymous');
+        if (!this.sessionState.user()) {
+          this.sessionState.setAnonymousStatus();
         }
       }),
     );
@@ -291,7 +277,7 @@ export class AuthStore {
   }
 
   confirmMfaEnrollment(request: ConfirmMfaEnrollmentRequest): Observable<MfaAuthenticationResult> {
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     this.errorState.set(null);
 
@@ -315,7 +301,7 @@ export class AuthStore {
   }
 
   verifyMfa(request: VerifyMfaRequest): Observable<CurrentUser> {
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     this.errorState.set(null);
 
@@ -331,7 +317,7 @@ export class AuthStore {
   }
 
   refreshSession(): Observable<CurrentUser> {
-    this.statusState.set('loading');
+    this.sessionState.setLoading();
 
     this.errorState.set(null);
 
@@ -339,12 +325,12 @@ export class AuthStore {
       switchMap(() => this.api.me()),
 
       tap((user: CurrentUser) => {
-        this.setAuthenticated(user);
+        this.sessionState.setAuthenticated(user);
       }),
 
       catchError((error: unknown) => {
         if (this.isRejectedSession(error)) {
-          if (this.statusState() !== 'anonymous') {
+          if (this.sessionState.status() !== 'anonymous') {
             this.lifecycle.invalidateSession(
               'session-refresh-rejected',
 
@@ -352,11 +338,11 @@ export class AuthStore {
             );
           }
         } else {
-          if (this.statusState() !== 'idle') {
+          if (this.sessionState.status() !== 'idle') {
             this.lifecycle.loseAccess('session-refresh-temporarily-unavailable');
           }
 
-          this.applyRecoverableIdleState();
+          this.sessionState.applyRecoverableIdleState();
         }
 
         this.errorState.set(getApiErrorMessage(error));
@@ -436,7 +422,7 @@ export class AuthStore {
   }
 
   replaceCurrentUser(user: CurrentUser): void {
-    this.setAuthenticated(user);
+    this.sessionState.setAuthenticated(user);
   }
 
   clearError(): void {
@@ -465,7 +451,7 @@ export class AuthStore {
 
     return this.api.me().pipe(
       tap((user) => {
-        this.setAuthenticated(user);
+        this.sessionState.setAuthenticated(user);
       }),
 
       /*
@@ -528,7 +514,7 @@ export class AuthStore {
        *
        * Không được mark session absent.
        */
-      if (this.statusState() !== 'idle') {
+      if (this.sessionState.status() !== 'idle') {
         this.lifecycle.loseAccess('authentication-session-hydration-temporarily-unavailable');
       }
 
@@ -537,7 +523,7 @@ export class AuthStore {
        * nhưng vẫn apply trực tiếp giống semantics hiện tại
        * của bootstrap/refresh để state luôn deterministic.
        */
-      this.applyRecoverableIdleState();
+      this.sessionState.applyRecoverableIdleState();
     }
 
     this.errorState.set(getApiErrorMessage(error));
@@ -551,104 +537,5 @@ export class AuthStore {
 
   private isRetryableLogoutError(error: unknown): boolean {
     return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
-  }
-
-  private setAuthenticated(user: CurrentUser): void {
-    this.sessionHint.markSessionPresent();
-
-    this.userState.set(user);
-
-    this.statusState.set('authenticated');
-
-    this.bootstrapped = true;
-
-    /*
-     * Scope gồm cả userId + sessionId.
-     *
-     * Alice logout → Bob login
-     * hoặc user login tạo session mới:
-     * tất cả user-scoped state sẽ reset.
-     */
-    this.lifecycle.establishSession(
-      user.id,
-
-      user.sessionId,
-
-      true,
-    );
-  }
-
-  private applyAnonymousState(): void {
-    this.tokens.clear();
-
-    this.sessionHint.markSessionAbsent();
-
-    this.userState.set(null);
-
-    this.statusState.set('anonymous');
-
-    this.bootstrapped = true;
-  }
-
-  private applyRecoverableIdleState(): void {
-    /*
-     * Không có access token đáng tin cậy nữa.
-     */
-    this.tokens.clear();
-
-    /*
-     * Không được giữ Alice/Bob trên UI trong lúc
-     * chưa xác minh lại được phiên.
-     */
-    this.userState.set(null);
-
-    /*
-     * Giữ hint vì network/5xx không chứng minh
-     * refresh cookie hết hạn.
-     */
-    this.sessionHint.markSessionPresent();
-
-    this.statusState.set('idle');
-
-    this.bootstrapped = false;
-  }
-
-  private handleLifecycleEvent(event: AuthSessionLifecycleEvent): void {
-    if (event.kind === 'session-invalidated' || event.kind === 'session-cleared') {
-      /*
-       * Bao gồm:
-       * - refresh rejected ở tab hiện tại
-       * - logout tab khác
-       * - refresh rejected ở tab khác
-       */
-      this.applyAnonymousState();
-
-      return;
-    }
-
-    if (event.kind === 'access-lost') {
-      this.applyRecoverableIdleState();
-
-      return;
-    }
-
-    if (event.kind === 'session-established' && event.remote) {
-      /*
-       * Ví dụ:
-       *
-       * Tab A đang Alice.
-       * Tab B login Bob.
-       *
-       * Refresh cookie của origin giờ thuộc
-       * session Bob.
-       *
-       * Tab A không được tiếp tục hiển thị Alice
-       * như authenticated.
-       *
-       * Đưa về idle để lần guard tiếp theo
-       * bootstrap lại identity Bob.
-       */
-      this.applyRecoverableIdleState();
-    }
   }
 }

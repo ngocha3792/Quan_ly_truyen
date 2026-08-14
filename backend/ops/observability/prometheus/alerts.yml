@@ -12,34 +12,62 @@ groups:
         expr: (sum(rate(qlt_http_server_requests_total{status_code=~"5.."}[5m])) / clamp_min(sum(rate(qlt_http_server_requests_total[5m])), 0.001)) > 0.05 and sum(rate(qlt_http_server_requests_total[5m])) > 0.1
         for: 10m
         labels: { severity: warning }
-        annotations: { summary: API 5xx ratio exceeds 5%, runbook_url: 'http://localhost:3001/d/qlt-api/api-overview' }
+        annotations:
+          {
+            summary: API 5xx ratio exceeds 5%,
+            runbook_url: 'http://localhost:3001/d/qlt-api/api-overview',
+          }
       - alert: QuanLyTruyenHighP95Latency
         expr: histogram_quantile(0.95, sum by (le) (rate(qlt_http_server_request_duration_seconds_bucket[5m]))) > 1
         for: 10m
         labels: { severity: warning }
-        annotations: { summary: API P95 latency exceeds one second, runbook_url: 'http://localhost:3001/d/qlt-api/api-overview' }
+        annotations:
+          {
+            summary: API P95 latency exceeds one second,
+            runbook_url: 'http://localhost:3001/d/qlt-api/api-overview',
+          }
       - alert: QuanLyTruyenOutboxStuck
         expr: qlt_outbox_oldest_pending_age_seconds > 300
         for: 5m
         labels: { severity: critical }
-        annotations: { summary: Oldest outbox event is over five minutes old, runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox' }
+        annotations:
+          {
+            summary: Oldest outbox event is over five minutes old,
+            runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox',
+          }
       - alert: QuanLyTruyenOutboxFailed
         expr: qlt_outbox_backlog_events{status="failed"} > 0
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: Failed outbox events require review, runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox' }
+        annotations:
+          {
+            summary: Failed outbox events require review,
+            runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox',
+          }
       - alert: QuanLyTruyenMailFailures
         expr: sum(rate(qlt_mail_deliveries_total{result="failed"}[10m])) > 0
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: SMTP deliveries are failing, runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox' }
+        annotations:
+          {
+            summary: SMTP deliveries are failing,
+            runbook_url: 'http://localhost:3001/d/qlt-queue/queue-outbox',
+          }
       - alert: QuanLyTruyenWebhookStuck
         expr: qlt_cloudinary_webhook_oldest_pending_age_seconds > 300
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: Cloudinary webhook inbox is delayed, runbook_url: 'http://localhost:3001/d/qlt-infra/infrastructure' }
+        annotations:
+          {
+            summary: Cloudinary webhook inbox is delayed,
+            runbook_url: 'http://localhost:3001/d/qlt-infra/infrastructure',
+          }
       - alert: QuanLyTruyenRedisErrors
         expr: sum(rate(qlt_redis_errors_total[5m])) > 0
         for: 5m
         labels: { severity: warning }
-        annotations: { summary: Redis operations are failing, runbook_url: 'http://localhost:3001/d/qlt-infra/infrastructure' }
+        annotations:
+          {
+            summary: Redis operations are failing,
+            runbook_url: 'http://localhost:3001/d/qlt-infra/infrastructure',
+          }

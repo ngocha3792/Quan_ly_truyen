@@ -1,6 +1,11 @@
 # Run from the backend directory. Replace /srv/quan-ly-truyen/backend.
 # Use flock so jobs never overlap.
 
-0 2 * * * cd /srv/quan-ly-truyen/backend && flock -n /var/lock/qlt-maintenance.lock docker compose --env-file .env.production -f compose.production.yml --profile maintenance run --rm auth-cleanup && docker compose --env-file .env.production -f compose.production.yml --profile maintenance run --rm outbox-cleanup && docker compose --env-file .env.production -f compose.production.yml --profile maintenance run --rm mail-queue-cleanup >> /var/log/qlt-maintenance.log 2>&1
+# Daily maintenance
+0 2 * * * cd /srv/quan-ly-truyen/backend && flock -n /var/lock/qlt-maintenance.lock pwsh -NoProfile -File ./ops/production/Invoke-Maintenance.ps1 >> /var/log/qlt-maintenance.log 2>&1
 
-0 3 * * * cd /srv/quan-ly-truyen/backend && flock -n /var/lock/qlt-backup.lock docker compose --env-file .env.production -f compose.production.yml --profile maintenance run --rm backup-postgres >> /var/log/qlt-backup.log 2>&1
+# Daily local + encrypted off-host backup
+0 3 * * * cd /srv/quan-ly-truyen/backend && flock -n /var/lock/qlt-backup.lock pwsh -NoProfile -File ./ops/production/Backup-Postgres.ps1 >> /var/log/qlt-backup.log 2>&1
+
+# Full off-host restore drill on the first day of every month
+0 4 1 * * cd /srv/quan-ly-truyen/backend && flock -n /var/lock/qlt-restore-drill.lock pwsh -NoProfile -File ./ops/production/Test-PostgresRestoreDrill.ps1 >> /var/log/qlt-restore-drill.log 2>&1
