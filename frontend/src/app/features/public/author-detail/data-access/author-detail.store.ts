@@ -1,4 +1,5 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthorDetailView } from '../domain/author-detail.models';
 import { AuthorDetailRepository } from '../domain/author-detail.repository';
@@ -6,6 +7,7 @@ import { AuthorDetailRepository } from '../domain/author-detail.repository';
 @Injectable()
 export class AuthorDetailStore {
   private readonly repository = inject(AuthorDetailRepository);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly viewState = signal<AuthorDetailView | null>(null);
 
@@ -26,7 +28,10 @@ export class AuthorDetailStore {
   });
 
   load(slug: string): void {
-    this.viewState.set(this.repository.getBySlug(slug));
+    this.repository
+      .getBySlug(slug)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((view) => this.viewState.set(view));
   }
 
   toggleFollow(): void {

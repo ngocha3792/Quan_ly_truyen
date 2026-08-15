@@ -25,6 +25,8 @@ import { InfrastructureModule } from './infrastructure';
 import { AuthModule } from './modules/auth';
 import { ObservabilityModule } from './infrastructure/observability';
 import { AuthorApplicationsModule } from './modules/author-applications';
+import { AuthorsModule } from './modules/authors';
+import { NotificationsModule } from './modules/notifications';
 import { StoriesModule } from './modules/stories';
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { StoriesModule } from './modules/stories';
     ObservabilityModule,
     AuthModule,
     AuthorApplicationsModule,
+    AuthorsModule,
+    NotificationsModule,
     StoriesModule,
     CommonGuardsModule,
     InfrastructureModule,

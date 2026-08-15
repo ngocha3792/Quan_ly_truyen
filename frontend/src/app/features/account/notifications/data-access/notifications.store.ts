@@ -1,4 +1,5 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   NotificationCategory,
@@ -12,6 +13,7 @@ import { NotificationsRepository } from '../domain/notifications.repository';
 @Injectable()
 export class NotificationsStore {
   private readonly repository = inject(NotificationsRepository);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly viewState = signal<NotificationsView | null>(null);
 
@@ -93,10 +95,13 @@ export class NotificationsStore {
   });
 
   load(): void {
-    const view = this.repository.getNotifications();
-
-    this.viewState.set(view);
-    this.settings.set(view.settings);
+    this.repository
+      .getNotifications()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((view) => {
+        this.viewState.set(view);
+        this.settings.set(view.settings);
+      });
   }
 
   setQuery(query: string): void {
@@ -122,40 +127,87 @@ export class NotificationsStore {
   }
 
   toggleRead(notificationId: string): void {
-    this.updateNotification(notificationId, (notification) => ({
-      ...notification,
-      isRead: !notification.isRead,
-    }));
+    const notification = this.findNotification(notificationId);
+
+    if (!notification) {
+      return;
+    }
+
+    const isRead = !notification.isRead;
+
+    this.repository
+      .setRead(notificationId, isRead)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.updateNotification(notificationId, (current) => ({
+          ...current,
+          isRead,
+        }));
+      });
   }
 
   toggleSaved(notificationId: string): void {
-    this.updateNotification(notificationId, (notification) => ({
-      ...notification,
-      isSaved: !notification.isSaved,
-    }));
+    const notification = this.findNotification(notificationId);
+
+    if (!notification) {
+      return;
+    }
+
+    const isSaved = !notification.isSaved;
+
+    this.repository
+      .setSaved(notificationId, isSaved)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.updateNotification(notificationId, (current) => ({
+          ...current,
+          isSaved,
+        }));
+      });
   }
 
   markAllAsRead(): void {
     const view = this.viewState();
 
-    if (!view) {
+    if (!view || this.unreadCount() === 0) {
       return;
     }
 
-    this.viewState.set({
-      ...view,
-      notifications: view.notifications.map((notification) => ({
-        ...notification,
-        isRead: true,
-      })),
-    });
+    this.repository
+      .markAllAsRead()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.viewState.update((current) =>
+          current
+            ? {
+                ...current,
+                notifications: current.notifications.map((notification) => ({
+                  ...notification,
+                  isRead: true,
+                })),
+                statistics: {
+                  ...current.statistics,
+                  unread: 0,
+                },
+              }
+            : current,
+        );
+      });
   }
 
   toggleSetting(settingKey: NotificationSettingKey): void {
-    this.settings.update((current) => ({
-      ...current,
-      [settingKey]: !current[settingKey],
-    }));
+    const value = !this.settings()[settingKey];
+
+    this.repository
+      .updateSettings({ [settingKey]: value })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((settings) => this.settings.set(settings));
+  }
+
+  private findNotification(notificationId: string): UserNotification | undefined {
+    return this.viewState()?.notifications.find(
+      (notification) => notification.id === notificationId,
+    );
   }
 
   private updateNotification(
@@ -168,12 +220,18 @@ export class NotificationsStore {
       return;
     }
 
+    const notifications = view.notifications.map((notification) =>
+      notification.id === notificationId ? updater(notification) : notification,
+    );
+
     this.viewState.set({
       ...view,
-
-      notifications: view.notifications.map((notification) =>
-        notification.id === notificationId ? updater(notification) : notification,
-      ),
+      notifications,
+      statistics: {
+        ...view.statistics,
+        unread: notifications.filter((notification) => !notification.isRead).length,
+        saved: notifications.filter((notification) => notification.isSaved).length,
+      },
     });
   }
 

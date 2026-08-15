@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 480" role="img" aria-label="Bìa truyện mặc định">
+  <rect width="320" height="480" fill="#151b2c"/>
+  <path d="M80 110h160v260H80z" fill="#252f49"/>
+  <path d="M112 160h96M112 205h96M112 250h72" stroke="#8793ad" stroke-width="12" stroke-linecap="round"/>
+</svg>

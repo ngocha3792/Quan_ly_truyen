@@ -1,4 +1,5 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthorDirectorySort, AuthorDirectoryView } from '../domain/author-directory.models';
 import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
@@ -6,6 +7,7 @@ import { AuthorDirectoryRepository } from '../domain/author-directory.repository
 @Injectable()
 export class AuthorDirectoryStore {
   private readonly repository = inject(AuthorDirectoryRepository);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly viewState = signal<AuthorDirectoryView | null>(null);
 
@@ -81,7 +83,10 @@ export class AuthorDirectoryStore {
   readonly resultCount = computed(() => this.filteredAuthors().length);
 
   load(): void {
-    this.viewState.set(this.repository.getDirectory());
+    this.repository
+      .getDirectory()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((view) => this.viewState.set(view));
   }
 
   setQuery(query: string): void {

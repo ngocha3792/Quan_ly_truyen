@@ -1,13 +1,13 @@
 import { Provider } from '@angular/core';
 
 import { NotificationsRepository } from '../domain/notifications.repository';
-import { NotificationsMockRepository } from './notifications-mock.repository';
+import { NotificationsHttpRepository } from './notifications-http.repository';
 
 export function provideNotifications(): Provider[] {
   return [
     {
       provide: NotificationsRepository,
-      useClass: NotificationsMockRepository,
+      useClass: NotificationsHttpRepository,
     },
   ];
 }

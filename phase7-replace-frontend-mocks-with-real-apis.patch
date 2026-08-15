@@ -1,0 +1,3607 @@
+diff --git a/backend/src/app.module.ts b/backend/src/app.module.ts
+index a2e7f81..d2a9d6e 100644
+--- a/backend/src/app.module.ts
++++ b/backend/src/app.module.ts
+@@ -25,6 +25,8 @@ import { InfrastructureModule } from './infrastructure';
+ import { AuthModule } from './modules/auth';
+ import { ObservabilityModule } from './infrastructure/observability';
+ import { AuthorApplicationsModule } from './modules/author-applications';
++import { AuthorsModule } from './modules/authors';
++import { NotificationsModule } from './modules/notifications';
+ import { StoriesModule } from './modules/stories';
+ @Module({
+   imports: [
+@@ -32,6 +34,8 @@ import { StoriesModule } from './modules/stories';
+     ObservabilityModule,
+     AuthModule,
+     AuthorApplicationsModule,
++    AuthorsModule,
++    NotificationsModule,
+     StoriesModule,
+     CommonGuardsModule,
+     InfrastructureModule,
+diff --git a/backend/src/modules/authors/authors.controller.ts b/backend/src/modules/authors/authors.controller.ts
+new file mode 100644
+index 0000000..d0d0473
+--- /dev/null
++++ b/backend/src/modules/authors/authors.controller.ts
+@@ -0,0 +1,40 @@
++import { Controller, Get, Param } from '@nestjs/common';
++
++import { CurrentUserId, Public, RequirePermissions } from '@/common/decorators';
++import { PermissionCode } from '@/common/enums';
++
++import {
++  type AuthorDetailViewResponse,
++  type AuthorDirectoryViewResponse,
++  type AuthorStudioDashboardResponse,
++  AuthorsService,
++} from './authors.service';
++
++@Controller('authors')
++@Public()
++export class PublicAuthorsController {
++  constructor(private readonly authors: AuthorsService) {}
++
++  @Get()
++  directory(): Promise<AuthorDirectoryViewResponse> {
++    return this.authors.getDirectory();
++  }
++
++  @Get(':slug')
++  detail(@Param('slug') slug: string): Promise<AuthorDetailViewResponse> {
++    return this.authors.getDetail(slug);
++  }
++}
++
++@Controller('author/dashboard')
++@RequirePermissions(PermissionCode.STORY_CREATE)
++export class AuthorDashboardController {
++  constructor(private readonly authors: AuthorsService) {}
++
++  @Get()
++  dashboard(
++    @CurrentUserId() userId: string | undefined,
++  ): Promise<AuthorStudioDashboardResponse> {
++    return this.authors.getDashboard(userId);
++  }
++}
+diff --git a/backend/src/modules/authors/authors.module.ts b/backend/src/modules/authors/authors.module.ts
+new file mode 100644
+index 0000000..b5433a8
+--- /dev/null
++++ b/backend/src/modules/authors/authors.module.ts
+@@ -0,0 +1,14 @@
++import { Module } from '@nestjs/common';
++
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++
++import { AuthorDashboardController, PublicAuthorsController } from './authors.controller';
++import { AuthorsService } from './authors.service';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [PublicAuthorsController, AuthorDashboardController],
++  providers: [AuthorsService],
++})
++export class AuthorsModule {}
+diff --git a/backend/src/modules/authors/authors.service.ts b/backend/src/modules/authors/authors.service.ts
+new file mode 100644
+index 0000000..64a791c
+--- /dev/null
++++ b/backend/src/modules/authors/authors.service.ts
+@@ -0,0 +1,1063 @@
++import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
++
++import { PrismaService } from '@/infrastructure/database';
++
++export interface AuthorDirectoryViewResponse {
++  readonly authors: readonly AuthorDirectoryItemResponse[];
++  readonly statistics: {
++    readonly authors: string;
++    readonly works: string;
++    readonly reads: string;
++    readonly followers: string;
++  };
++  readonly newAuthors: readonly NewAuthorItemResponse[];
++}
++
++interface AuthorDirectoryItemResponse {
++  readonly id: string;
++  readonly slug: string;
++  readonly name: string;
++  readonly initials: string;
++  readonly genre: string;
++  readonly description: string;
++  readonly verified: boolean;
++  readonly worksLabel: string;
++  readonly readsLabel: string;
++  readonly followersLabel: string;
++  readonly works: number;
++  readonly reads: number;
++  readonly followers: number;
++  readonly featuredRank: number;
++}
++
++interface NewAuthorItemResponse {
++  readonly id: string;
++  readonly slug: string;
++  readonly name: string;
++  readonly initials: string;
++  readonly worksLabel: string;
++  readonly readsLabel: string;
++  readonly verified: boolean;
++}
++
++export interface AuthorDetailViewResponse {
++  readonly profile: {
++    readonly id: string;
++    readonly slug: string;
++    readonly name: string;
++    readonly initials: string;
++    readonly headline: string;
++    readonly country: string;
++    readonly penName: string;
++    readonly joinedAt: string;
++    readonly verified: boolean;
++    readonly biography: readonly string[];
++  };
++  readonly statistics: {
++    readonly totalWorks: number;
++    readonly followers: string;
++    readonly totalReads: string;
++    readonly averageRating: string;
++  };
++  readonly featuredWorks: readonly AuthorWorkResponse[];
++  readonly timeline: readonly {
++    readonly year: string;
++    readonly title: string;
++    readonly description: string;
++  }[];
++  readonly recentUpdates: readonly {
++    readonly id: string;
++    readonly workTitle: string;
++    readonly chapterTitle: string;
++    readonly updatedAt: string;
++  }[];
++  readonly hotWorks: readonly {
++    readonly rank: number;
++    readonly title: string;
++    readonly genre: string;
++    readonly reads: string;
++    readonly tone: AuthorWorkTone;
++  }[];
++}
++
++type AuthorWorkTone = 'blue' | 'gold' | 'violet' | 'crimson' | 'cyan';
++
++interface AuthorWorkResponse {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++  readonly description: string;
++  readonly genres: readonly string[];
++  readonly chapters: number;
++  readonly rating: string;
++  readonly reads: string;
++  readonly tone: AuthorWorkTone;
++}
++
++export interface AuthorStudioDashboardResponse {
++  readonly profile: {
++    readonly displayName: string;
++    readonly penName: string;
++    readonly avatarUrl: string;
++    readonly level: number;
++    readonly currentExperience: number;
++    readonly requiredExperience: number;
++    readonly verified: boolean;
++  };
++  readonly unreadNotifications: number;
++  readonly metrics: readonly {
++    readonly id: string;
++    readonly title: string;
++    readonly value: string;
++    readonly trendValue: string;
++    readonly trendLabel: string;
++    readonly trendDirection: 'up' | 'down';
++    readonly icon: 'book' | 'draft' | 'clock' | 'eye' | 'users';
++    readonly tone: 'purple' | 'blue' | 'orange' | 'indigo' | 'pink';
++  }[];
++  readonly readership: Readonly<
++    Record<'7d' | '30d' | '90d', readonly ReadershipChartPointResponse[]>
++  >;
++  readonly schedule: readonly PublicationScheduleItemResponse[];
++  readonly stories: readonly AuthorStudioStoryResponse[];
++  readonly drafts: readonly AuthorStudioDraftResponse[];
++  readonly comments: readonly AuthorReaderCommentResponse[];
++  readonly topStories: readonly AuthorTopStoryResponse[];
++  readonly monthlyGoals: readonly AuthorMonthlyGoalResponse[];
++}
++
++interface ReadershipChartPointResponse {
++  readonly id: string;
++  readonly label: string;
++  readonly value: number;
++}
++
++interface PublicationScheduleItemResponse {
++  readonly id: string;
++  readonly weekday: string;
++  readonly date: string;
++  readonly storyTitle: string;
++  readonly chapterTitle: string;
++  readonly time: string;
++  readonly status: 'scheduled' | 'published' | 'pending' | 'draft';
++  readonly statusLabel: string;
++  readonly coverUrl: string;
++}
++
++interface AuthorStudioStoryResponse {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++  readonly coverUrl: string;
++  readonly genres: readonly string[];
++  readonly status: 'publishing' | 'paused' | 'completed';
++  readonly statusLabel: string;
++  readonly latestChapter: number;
++  readonly updatedAt: string;
++}
++
++interface AuthorStudioDraftResponse {
++  readonly id: string;
++  readonly storyTitle: string;
++  readonly chapterTitle: string;
++  readonly updatedAt: string;
++  readonly completionPercent: number;
++}
++
++interface AuthorReaderCommentResponse {
++  readonly id: string;
++  readonly readerName: string;
++  readonly avatarUrl: string;
++  readonly storyTitle: string;
++  readonly content: string;
++  readonly createdAt: string;
++  readonly unread: boolean;
++}
++
++interface AuthorTopStoryResponse {
++  readonly id: string;
++  readonly rank: number;
++  readonly title: string;
++  readonly coverUrl: string;
++  readonly views: string;
++}
++
++interface AuthorMonthlyGoalResponse {
++  readonly id: string;
++  readonly label: string;
++  readonly currentValue: string;
++  readonly targetValue: string;
++  readonly progress: number;
++  readonly icon: 'book' | 'eye';
++  readonly tone: 'purple' | 'indigo';
++}
++
++const PUBLIC_STORY_STATUSES = ['PUBLISHED', 'HIATUS', 'COMPLETED'] as const;
++const WORK_TONES: readonly AuthorWorkTone[] = ['blue', 'gold', 'cyan', 'violet', 'crimson'];
++const EMPTY_COVER_URL = '/assets/images/story-cover-placeholder.svg';
++const EMPTY_AVATAR_URL = '/assets/images/avatar-placeholder.svg';
++
++@Injectable()
++export class AuthorsService {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async getDirectory(): Promise<AuthorDirectoryViewResponse> {
++    const publicAuthorWhere = {
++      verificationStatus: 'VERIFIED' as const,
++      user: {
++        is: {
++          status: 'ACTIVE' as const,
++          deletedAt: null,
++        },
++      },
++    };
++
++    const [authors, newAuthors, aggregate] = await Promise.all([
++      this.prisma.authorProfile.findMany({
++        where: publicAuthorWhere,
++        select: {
++          userId: true,
++          penName: true,
++          slug: true,
++          biography: true,
++          verificationStatus: true,
++          featuredRank: true,
++          followerCount: true,
++          totalReadCount: true,
++          storyCount: true,
++          stories: {
++            where: {
++              status: { in: [...PUBLIC_STORY_STATUSES] },
++              visibility: 'PUBLIC',
++              deletedAt: null,
++            },
++            orderBy: { viewCount: 'desc' },
++            take: 1,
++            select: {
++              categories: {
++                orderBy: { isPrimary: 'desc' },
++                take: 1,
++                select: {
++                  category: {
++                    select: { name: true },
++                  },
++                },
++              },
++            },
++          },
++        },
++        orderBy: [{ followerCount: 'desc' }, { createdAt: 'asc' }],
++        take: 200,
++      }),
++      this.prisma.authorProfile.findMany({
++        where: publicAuthorWhere,
++        select: {
++          userId: true,
++          penName: true,
++          slug: true,
++          verificationStatus: true,
++          storyCount: true,
++          totalReadCount: true,
++        },
++        orderBy: { createdAt: 'desc' },
++        take: 5,
++      }),
++      this.prisma.authorProfile.aggregate({
++        where: publicAuthorWhere,
++        _count: { _all: true },
++        _sum: {
++          storyCount: true,
++          totalReadCount: true,
++          followerCount: true,
++        },
++      }),
++    ]);
++
++    const sortedAuthors = [...authors].sort((first, second) => {
++      const firstRank = first.featuredRank ?? Number.MAX_SAFE_INTEGER;
++      const secondRank = second.featuredRank ?? Number.MAX_SAFE_INTEGER;
++
++      return firstRank - secondRank || second.followerCount - first.followerCount;
++    });
++
++    return {
++      authors: sortedAuthors.map((author, index) => {
++        const genre = author.stories[0]?.categories[0]?.category.name ?? 'Đa thể loại';
++        const reads = this.safeNumber(author.totalReadCount);
++
++        return {
++          id: author.userId,
++          slug: author.slug,
++          name: author.penName,
++          initials: this.initials(author.penName),
++          genre,
++          description: this.summary(author.biography),
++          verified: author.verificationStatus === 'VERIFIED',
++          worksLabel: this.formatCompact(author.storyCount),
++          readsLabel: this.formatCompact(author.totalReadCount),
++          followersLabel: this.formatCompact(author.followerCount),
++          works: author.storyCount,
++          reads,
++          followers: author.followerCount,
++          featuredRank: author.featuredRank ?? 10_000 + index,
++        };
++      }),
++      statistics: {
++        authors: this.formatCompact(aggregate._count._all),
++        works: this.formatCompact(aggregate._sum.storyCount ?? 0),
++        reads: this.formatCompact(aggregate._sum.totalReadCount ?? 0n),
++        followers: this.formatCompact(aggregate._sum.followerCount ?? 0),
++      },
++      newAuthors: newAuthors.map((author) => ({
++        id: author.userId,
++        slug: author.slug,
++        name: author.penName,
++        initials: this.initials(author.penName),
++        worksLabel: this.formatCompact(author.storyCount),
++        readsLabel: this.formatCompact(author.totalReadCount),
++        verified: author.verificationStatus === 'VERIFIED',
++      })),
++    };
++  }
++
++  async getDetail(slug: string): Promise<AuthorDetailViewResponse> {
++    const author = await this.prisma.authorProfile.findFirst({
++      where: {
++        slug,
++        verificationStatus: 'VERIFIED',
++        user: {
++          is: {
++            status: 'ACTIVE',
++            deletedAt: null,
++          },
++        },
++      },
++      select: {
++        userId: true,
++        penName: true,
++        slug: true,
++        biography: true,
++        socialLinks: true,
++        verificationStatus: true,
++        verifiedAt: true,
++        followerCount: true,
++        totalReadCount: true,
++        storyCount: true,
++        createdAt: true,
++        user: {
++          select: {
++            displayName: true,
++          },
++        },
++        stories: {
++          where: {
++            status: { in: [...PUBLIC_STORY_STATUSES] },
++            visibility: 'PUBLIC',
++            deletedAt: null,
++          },
++          orderBy: { viewCount: 'desc' },
++          take: 20,
++          select: {
++            id: true,
++            slug: true,
++            title: true,
++            synopsis: true,
++            viewCount: true,
++            chapterCount: true,
++            ratingAverage: true,
++            ratingCount: true,
++            publishedAt: true,
++            categories: {
++              orderBy: { isPrimary: 'desc' },
++              select: {
++                category: {
++                  select: { name: true },
++                },
++              },
++            },
++          },
++        },
++      },
++    });
++
++    if (!author) {
++      throw new NotFoundException('Author not found');
++    }
++
++    const recentChapters = await this.prisma.chapter.findMany({
++      where: {
++        status: 'PUBLISHED',
++        deletedAt: null,
++        story: {
++          is: {
++            authorId: author.userId,
++            status: { in: [...PUBLIC_STORY_STATUSES] },
++            visibility: 'PUBLIC',
++            deletedAt: null,
++          },
++        },
++      },
++      orderBy: { publishedAt: 'desc' },
++      take: 5,
++      select: {
++        id: true,
++        number: true,
++        title: true,
++        publishedAt: true,
++        updatedAt: true,
++        story: {
++          select: { title: true },
++        },
++      },
++    });
++
++    const mainGenre = author.stories[0]?.categories[0]?.category.name ?? 'TruyenHub';
++    const weightedRating = this.weightedAverageRating(author.stories);
++    const socialLinks = this.asRecord(author.socialLinks);
++    const firstPublishedStory = [...author.stories]
++      .filter((story) => story.publishedAt !== null)
++      .sort(
++        (first, second) =>
++          first.publishedAt!.getTime() - second.publishedAt!.getTime(),
++      )[0];
++
++    const timeline = [
++      {
++        year: String(author.createdAt.getFullYear()),
++        title: 'Gia nhập TruyenHub',
++        description: `${author.penName} bắt đầu hoạt động trên nền tảng.`,
++      },
++      ...(firstPublishedStory?.publishedAt
++        ? [
++            {
++              year: String(firstPublishedStory.publishedAt.getFullYear()),
++              title: firstPublishedStory.title,
++              description: 'Tác phẩm công khai đầu tiên trên TruyenHub.',
++            },
++          ]
++        : []),
++      ...(author.verifiedAt
++        ? [
++            {
++              year: String(author.verifiedAt.getFullYear()),
++              title: 'Tác giả đã xác minh',
++              description: 'Hồ sơ tác giả được TruyenHub xác minh.',
++            },
++          ]
++        : []),
++    ];
++
++    return {
++      profile: {
++        id: author.userId,
++        slug: author.slug,
++        name: author.penName,
++        initials: this.initials(author.penName),
++        headline: `Tác giả ${mainGenre.toLocaleLowerCase('vi')} trên TruyenHub`,
++        country: this.stringValue(socialLinks['country']) ?? 'Không công khai',
++        penName: author.penName,
++        joinedAt: String(author.createdAt.getFullYear()),
++        verified: author.verificationStatus === 'VERIFIED',
++        biography: this.biography(author.biography),
++      },
++      statistics: {
++        totalWorks: author.storyCount,
++        followers: this.formatCompact(author.followerCount),
++        totalReads: this.formatCompact(author.totalReadCount),
++        averageRating: `${weightedRating.toFixed(1)}/10`,
++      },
++      featuredWorks: author.stories.slice(0, 4).map((story, index) => ({
++        id: story.id,
++        slug: story.slug,
++        title: story.title,
++        description: story.synopsis,
++        genres: story.categories.map((category) => category.category.name),
++        chapters: story.chapterCount,
++        rating: Number(story.ratingAverage.toString()).toFixed(1),
++        reads: this.formatCompact(story.viewCount),
++        tone: WORK_TONES[index % WORK_TONES.length]!,
++      })),
++      timeline,
++      recentUpdates: recentChapters.map((chapter) => ({
++        id: chapter.id,
++        workTitle: chapter.story.title,
++        chapterTitle: `Chương ${this.chapterNumber(chapter.number)}: ${chapter.title}`,
++        updatedAt: this.formatDate(chapter.publishedAt ?? chapter.updatedAt),
++      })),
++      hotWorks: author.stories.slice(0, 5).map((story, index) => ({
++        rank: index + 1,
++        title: story.title,
++        genre: story.categories[0]?.category.name ?? 'Đa thể loại',
++        reads: this.formatCompact(story.viewCount),
++        tone: WORK_TONES[index % WORK_TONES.length]!,
++      })),
++    };
++  }
++
++  async getDashboard(userId: string | undefined): Promise<AuthorStudioDashboardResponse> {
++    const authenticatedUserId = this.requireUserId(userId);
++    const now = new Date();
++    const start90Days = this.startOfDay(this.addDays(now, -89));
++    const start30Days = this.startOfDay(this.addDays(now, -29));
++    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
++
++    const [profile, stories, draftChapters, scheduledChapters, comments, dailyStats, unreadNotifications, publishedThisMonth] =
++      await Promise.all([
++        this.prisma.authorProfile.findUnique({
++          where: { userId: authenticatedUserId },
++          select: {
++            penName: true,
++            verificationStatus: true,
++            followerCount: true,
++            user: {
++              select: {
++                displayName: true,
++                avatarMedia: {
++                  select: {
++                    secureUrl: true,
++                    publicUrl: true,
++                  },
++                },
++              },
++            },
++          },
++        }),
++        this.prisma.story.findMany({
++          where: {
++            authorId: authenticatedUserId,
++            deletedAt: null,
++          },
++          orderBy: { updatedAt: 'desc' },
++          take: 100,
++          select: {
++            id: true,
++            slug: true,
++            title: true,
++            status: true,
++            viewCount: true,
++            chapterCount: true,
++            updatedAt: true,
++            coverMedia: {
++              select: {
++                secureUrl: true,
++                publicUrl: true,
++              },
++            },
++            categories: {
++              orderBy: { isPrimary: 'desc' },
++              select: {
++                category: {
++                  select: { name: true },
++                },
++              },
++            },
++          },
++        }),
++        this.prisma.chapter.findMany({
++          where: {
++            status: 'DRAFT',
++            deletedAt: null,
++            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
++          },
++          orderBy: { updatedAt: 'desc' },
++          take: 4,
++          select: {
++            id: true,
++            title: true,
++            wordCount: true,
++            updatedAt: true,
++            story: { select: { title: true } },
++          },
++        }),
++        this.prisma.chapter.findMany({
++          where: {
++            scheduledAt: { not: null },
++            deletedAt: null,
++            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
++          },
++          orderBy: { scheduledAt: 'asc' },
++          take: 4,
++          select: {
++            id: true,
++            number: true,
++            title: true,
++            status: true,
++            scheduledAt: true,
++            story: {
++              select: {
++                title: true,
++                coverMedia: {
++                  select: {
++                    secureUrl: true,
++                    publicUrl: true,
++                  },
++                },
++              },
++            },
++          },
++        }),
++        this.prisma.comment.findMany({
++          where: {
++            moderationStatus: 'VISIBLE',
++            deletedAt: null,
++            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
++          },
++          orderBy: { createdAt: 'desc' },
++          take: 3,
++          select: {
++            id: true,
++            body: true,
++            createdAt: true,
++            user: {
++              select: {
++                displayName: true,
++                avatarMedia: {
++                  select: {
++                    secureUrl: true,
++                    publicUrl: true,
++                  },
++                },
++              },
++            },
++            story: { select: { title: true } },
++          },
++        }),
++        this.prisma.storyDailyStat.findMany({
++          where: {
++            date: { gte: start90Days },
++            story: { is: { authorId: authenticatedUserId } },
++          },
++          orderBy: { date: 'asc' },
++          select: {
++            date: true,
++            viewCount: true,
++          },
++        }),
++        this.prisma.notification.count({
++          where: {
++            userId: authenticatedUserId,
++            readAt: null,
++            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
++          },
++        }),
++        this.prisma.chapter.count({
++          where: {
++            status: 'PUBLISHED',
++            publishedAt: { gte: monthStart },
++            deletedAt: null,
++            story: { is: { authorId: authenticatedUserId } },
++          },
++        }),
++      ]);
++
++    if (!profile) {
++      throw new NotFoundException('Author profile not found');
++    }
++
++    const publishedStories = stories.filter((story) =>
++      PUBLIC_STORY_STATUSES.includes(
++        story.status as (typeof PUBLIC_STORY_STATUSES)[number],
++      ),
++    );
++    const currentDrafts = stories.filter((story) => story.status === 'DRAFT').length;
++    const totalChapters = stories.reduce((sum, story) => sum + story.chapterCount, 0);
++    const pendingChapters = scheduledChapters.filter(
++      (chapter) => chapter.status === 'SCHEDULED',
++    ).length;
++    const views30Days = dailyStats
++      .filter((stat) => stat.date >= start30Days)
++      .reduce((sum, stat) => sum + this.safeNumber(stat.viewCount), 0);
++
++    const directTrend = {
++      trendValue: 'Trực tiếp',
++      trendLabel: 'từ hệ thống',
++      trendDirection: 'up' as const,
++    };
++
++    return {
++      profile: {
++        displayName: profile.user.displayName,
++        penName: profile.penName,
++        avatarUrl: this.mediaUrl(profile.user.avatarMedia) ?? EMPTY_AVATAR_URL,
++        level: Math.floor(totalChapters / 50) + 1,
++        currentExperience: totalChapters % 50,
++        requiredExperience: 50,
++        verified: profile.verificationStatus === 'VERIFIED',
++      },
++      unreadNotifications,
++      metrics: [
++        {
++          id: 'published-stories',
++          title: 'Truyện đang xuất bản',
++          value: this.formatCompact(publishedStories.length),
++          ...directTrend,
++          icon: 'book',
++          tone: 'purple',
++        },
++        {
++          id: 'drafts',
++          title: 'Bản nháp',
++          value: this.formatCompact(currentDrafts + draftChapters.length),
++          ...directTrend,
++          icon: 'draft',
++          tone: 'blue',
++        },
++        {
++          id: 'pending-chapters',
++          title: 'Chương đã lên lịch',
++          value: this.formatCompact(pendingChapters),
++          ...directTrend,
++          icon: 'clock',
++          tone: 'orange',
++        },
++        {
++          id: 'views',
++          title: 'Lượt xem 30 ngày',
++          value: this.formatCompact(views30Days),
++          ...directTrend,
++          icon: 'eye',
++          tone: 'indigo',
++        },
++        {
++          id: 'followers',
++          title: 'Người theo dõi',
++          value: this.formatCompact(profile.followerCount),
++          ...directTrend,
++          icon: 'users',
++          tone: 'pink',
++        },
++      ],
++      readership: {
++        '7d': this.buildReadershipPoints(dailyStats, now, 7),
++        '30d': this.buildReadershipPoints(dailyStats, now, 30),
++        '90d': this.buildReadershipPoints(dailyStats, now, 90),
++      },
++      schedule: scheduledChapters.map((chapter) => {
++        const scheduledAt = chapter.scheduledAt!;
++        const status = this.scheduleStatus(chapter.status);
++
++        return {
++          id: chapter.id,
++          weekday: this.weekdayLabel(scheduledAt),
++          date: this.formatShortDate(scheduledAt),
++          storyTitle: chapter.story.title,
++          chapterTitle: `Chương ${this.chapterNumber(chapter.number)}: ${chapter.title}`,
++          time: this.formatTime(scheduledAt),
++          status: status.value,
++          statusLabel: status.label,
++          coverUrl: this.mediaUrl(chapter.story.coverMedia) ?? EMPTY_COVER_URL,
++        };
++      }),
++      stories: stories.slice(0, 8).map((story) => {
++        const status = this.studioStoryStatus(story.status);
++
++        return {
++          id: story.id,
++          slug: story.slug,
++          title: story.title,
++          coverUrl: this.mediaUrl(story.coverMedia) ?? EMPTY_COVER_URL,
++          genres: story.categories.map((category) => category.category.name),
++          status: status.value,
++          statusLabel: status.label,
++          latestChapter: story.chapterCount,
++          updatedAt: this.formatDate(story.updatedAt),
++        };
++      }),
++      drafts: draftChapters.map((chapter) => ({
++        id: chapter.id,
++        storyTitle: chapter.story.title,
++        chapterTitle: chapter.title,
++        updatedAt: this.formatDateTime(chapter.updatedAt),
++        completionPercent: this.draftCompletion(chapter.wordCount),
++      })),
++      comments: comments.map((comment) => ({
++        id: comment.id,
++        readerName: comment.user.displayName,
++        avatarUrl: this.mediaUrl(comment.user.avatarMedia) ?? EMPTY_AVATAR_URL,
++        storyTitle: comment.story.title,
++        content: comment.body,
++        createdAt: this.formatRelativeDate(comment.createdAt, now),
++        unread: false,
++      })),
++      topStories: [...stories]
++        .sort((first, second) => this.compareBigInt(second.viewCount, first.viewCount))
++        .slice(0, 3)
++        .map((story, index) => ({
++          id: story.id,
++          rank: index + 1,
++          title: story.title,
++          coverUrl: this.mediaUrl(story.coverMedia) ?? EMPTY_COVER_URL,
++          views: this.formatCompact(story.viewCount),
++        })),
++      monthlyGoals: [
++        {
++          id: 'goal-chapters',
++          label: 'Chương xuất bản',
++          currentValue: String(publishedThisMonth),
++          targetValue: String(this.nextGoalTarget(publishedThisMonth, 10)),
++          progress: this.progress(
++            publishedThisMonth,
++            this.nextGoalTarget(publishedThisMonth, 10),
++          ),
++          icon: 'book',
++          tone: 'purple',
++        },
++        {
++          id: 'goal-views',
++          label: 'Lượt xem',
++          currentValue: this.formatCompact(views30Days),
++          targetValue: this.formatCompact(this.nextGoalTarget(views30Days, 10_000)),
++          progress: this.progress(
++            views30Days,
++            this.nextGoalTarget(views30Days, 10_000),
++          ),
++          icon: 'eye',
++          tone: 'indigo',
++        },
++      ],
++    };
++  }
++
++  private buildReadershipPoints(
++    stats: readonly { readonly date: Date; readonly viewCount: bigint }[],
++    now: Date,
++    days: number,
++  ): readonly ReadershipChartPointResponse[] {
++    const byDate = new Map<string, number>();
++
++    for (const stat of stats) {
++      const key = this.dateKey(stat.date);
++      byDate.set(key, (byDate.get(key) ?? 0) + this.safeNumber(stat.viewCount));
++    }
++
++    return Array.from({ length: days }, (_, index) => {
++      const date = this.startOfDay(this.addDays(now, index - days + 1));
++      const key = this.dateKey(date);
++
++      return {
++        id: `${days}d-${key}`,
++        label: this.formatShortDate(date),
++        value: byDate.get(key) ?? 0,
++      };
++    });
++  }
++
++  private weightedAverageRating(
++    stories: readonly {
++      readonly ratingAverage: { toString(): string };
++      readonly ratingCount: number;
++    }[],
++  ): number {
++    const totalRatings = stories.reduce((sum, story) => sum + story.ratingCount, 0);
++
++    if (totalRatings === 0) return 0;
++
++    return (
++      stories.reduce(
++        (sum, story) =>
++          sum + Number(story.ratingAverage.toString()) * story.ratingCount,
++        0,
++      ) / totalRatings
++    );
++  }
++
++  private scheduleStatus(status: string): {
++    readonly value: PublicationScheduleItemResponse['status'];
++    readonly label: string;
++  } {
++    switch (status) {
++      case 'PUBLISHED':
++        return { value: 'published', label: 'Đã xuất bản' };
++      case 'SCHEDULED':
++        return { value: 'scheduled', label: 'Đã lên lịch' };
++      case 'PENDING_REVIEW':
++        return { value: 'pending', label: 'Chờ duyệt' };
++      default:
++        return { value: 'draft', label: 'Bản nháp' };
++    }
++  }
++
++  private studioStoryStatus(status: string): {
++    readonly value: AuthorStudioStoryResponse['status'];
++    readonly label: string;
++  } {
++    switch (status) {
++      case 'COMPLETED':
++        return { value: 'completed', label: 'Hoàn thành' };
++      case 'PUBLISHED':
++        return { value: 'publishing', label: 'Đang cập nhật' };
++      default:
++        return { value: 'paused', label: 'Chưa xuất bản' };
++    }
++  }
++
++  private draftCompletion(wordCount: number): number {
++    return Math.min(100, Math.max(5, Math.round((wordCount / 2_000) * 100)));
++  }
++
++  private nextGoalTarget(current: number, step: number): number {
++    return Math.max(step, (Math.floor(current / step) + 1) * step);
++  }
++
++  private progress(current: number, target: number): number {
++    if (target <= 0) return 0;
++    return Math.min(100, Math.max(0, Math.round((current / target) * 100)));
++  }
++
++  private mediaUrl(
++    media:
++      | {
++          readonly secureUrl: string | null;
++          readonly publicUrl: string | null;
++        }
++      | null,
++  ): string | null {
++    return media?.secureUrl ?? media?.publicUrl ?? null;
++  }
++
++  private summary(value: string | null): string {
++    if (!value?.trim()) {
++      return 'Tác giả chưa cập nhật phần giới thiệu.';
++    }
++
++    const normalized = value.replace(/\s+/g, ' ').trim();
++    return normalized.length <= 180 ? normalized : `${normalized.slice(0, 177)}...`;
++  }
++
++  private biography(value: string | null): readonly string[] {
++    if (!value?.trim()) {
++      return ['Tác giả chưa cập nhật tiểu sử.'];
++    }
++
++    const paragraphs = value
++      .split(/\n{2,}/)
++      .map((paragraph) => paragraph.trim())
++      .filter(Boolean);
++
++    return paragraphs.length > 0 ? paragraphs : [value.trim()];
++  }
++
++  private initials(name: string): string {
++    const words = name.trim().split(/\s+/).filter(Boolean);
++
++    if (words.length === 0) return '?';
++    if (words.length === 1) return words[0]!.slice(0, 2).toLocaleUpperCase('vi');
++
++    return `${words[0]![0] ?? ''}${words[words.length - 1]![0] ?? ''}`.toLocaleUpperCase('vi');
++  }
++
++  private formatCompact(value: bigint | number): string {
++    const numericValue = typeof value === 'bigint' ? Number(value) : value;
++
++    return new Intl.NumberFormat('vi-VN', {
++      notation: 'compact',
++      maximumFractionDigits: 1,
++    }).format(numericValue);
++  }
++
++  private safeNumber(value: bigint): number {
++    const max = BigInt(Number.MAX_SAFE_INTEGER);
++    return Number(value > max ? max : value);
++  }
++
++  private compareBigInt(first: bigint, second: bigint): number {
++    if (first === second) return 0;
++    return first > second ? 1 : -1;
++  }
++
++  private chapterNumber(value: { toString(): string }): string {
++    return value.toString().replace(/\.00$/, '');
++  }
++
++  private formatDate(date: Date): string {
++    return new Intl.DateTimeFormat('vi-VN', {
++      day: '2-digit',
++      month: '2-digit',
++      year: 'numeric',
++      timeZone: 'Asia/Ho_Chi_Minh',
++    }).format(date);
++  }
++
++  private formatDateTime(date: Date): string {
++    return new Intl.DateTimeFormat('vi-VN', {
++      day: '2-digit',
++      month: '2-digit',
++      year: 'numeric',
++      hour: '2-digit',
++      minute: '2-digit',
++      hour12: false,
++      timeZone: 'Asia/Ho_Chi_Minh',
++    }).format(date);
++  }
++
++  private formatShortDate(date: Date): string {
++    return new Intl.DateTimeFormat('vi-VN', {
++      day: '2-digit',
++      month: '2-digit',
++      timeZone: 'Asia/Ho_Chi_Minh',
++    }).format(date);
++  }
++
++  private formatTime(date: Date): string {
++    return new Intl.DateTimeFormat('vi-VN', {
++      hour: '2-digit',
++      minute: '2-digit',
++      hour12: false,
++      timeZone: 'Asia/Ho_Chi_Minh',
++    }).format(date);
++  }
++
++  private weekdayLabel(date: Date): string {
++    const labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
++    return labels[date.getDay()] ?? '';
++  }
++
++  private formatRelativeDate(date: Date, now: Date): string {
++    const minutes = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 60_000));
++
++    if (minutes < 1) return 'Vừa xong';
++    if (minutes < 60) return `${minutes} phút trước`;
++
++    const hours = Math.floor(minutes / 60);
++    if (hours < 24) return `${hours} giờ trước`;
++
++    const days = Math.floor(hours / 24);
++    return `${days} ngày trước`;
++  }
++
++  private startOfDay(date: Date): Date {
++    const result = new Date(date);
++    result.setHours(0, 0, 0, 0);
++    return result;
++  }
++
++  private addDays(date: Date, days: number): Date {
++    const result = new Date(date);
++    result.setDate(result.getDate() + days);
++    return result;
++  }
++
++  private dateKey(date: Date): string {
++    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
++  }
++
++  private asRecord(value: unknown): Record<string, unknown> {
++    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++      return {};
++    }
++
++    return value as Record<string, unknown>;
++  }
++
++  private stringValue(value: unknown): string | null {
++    return typeof value === 'string' && value.trim() ? value : null;
++  }
++
++  private requireUserId(userId: string | undefined): string {
++    if (!userId) {
++      throw new UnauthorizedException('Authentication required');
++    }
++
++    return userId;
++  }
++}
+diff --git a/backend/src/modules/authors/index.ts b/backend/src/modules/authors/index.ts
+new file mode 100644
+index 0000000..b4378ed
+--- /dev/null
++++ b/backend/src/modules/authors/index.ts
+@@ -0,0 +1 @@
++export * from './authors.module';
+diff --git a/backend/src/modules/notifications/index.ts b/backend/src/modules/notifications/index.ts
+new file mode 100644
+index 0000000..d0ec9fd
+--- /dev/null
++++ b/backend/src/modules/notifications/index.ts
+@@ -0,0 +1 @@
++export * from './notifications.module';
+diff --git a/backend/src/modules/notifications/notifications.controller.ts b/backend/src/modules/notifications/notifications.controller.ts
+new file mode 100644
+index 0000000..52dab01
+--- /dev/null
++++ b/backend/src/modules/notifications/notifications.controller.ts
+@@ -0,0 +1,81 @@
++import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
++import { IsBoolean, IsOptional } from 'class-validator';
++
++import { CurrentUserId, RequirePermissions } from '@/common/decorators';
++import { PermissionCode } from '@/common/enums';
++
++import {
++  type NotificationSettingsResponse,
++  NotificationsService,
++  type NotificationsViewResponse,
++} from './notifications.service';
++
++class SetNotificationFlagRequest {
++  @IsBoolean()
++  readonly value!: boolean;
++}
++
++class UpdateNotificationSettingsRequest {
++  @IsOptional()
++  @IsBoolean()
++  readonly newChapters?: boolean;
++
++  @IsOptional()
++  @IsBoolean()
++  readonly comments?: boolean;
++
++  @IsOptional()
++  @IsBoolean()
++  readonly system?: boolean;
++
++  @IsOptional()
++  @IsBoolean()
++  readonly promotions?: boolean;
++}
++
++@Controller('notifications')
++@RequirePermissions(PermissionCode.NOTIFICATION_MANAGE_OWN)
++export class NotificationsController {
++  constructor(private readonly notifications: NotificationsService) {}
++
++  @Get()
++  getView(
++    @CurrentUserId() userId: string | undefined,
++  ): Promise<NotificationsViewResponse> {
++    return this.notifications.getView(userId);
++  }
++
++  @Patch(':notificationId/read')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  async setRead(
++    @CurrentUserId() userId: string | undefined,
++    @Param('notificationId', new ParseUUIDPipe({ version: '4' })) notificationId: string,
++    @Body() request: SetNotificationFlagRequest,
++  ): Promise<void> {
++    await this.notifications.setRead(userId, notificationId, request.value);
++  }
++
++  @Patch(':notificationId/saved')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  async setSaved(
++    @CurrentUserId() userId: string | undefined,
++    @Param('notificationId', new ParseUUIDPipe({ version: '4' })) notificationId: string,
++    @Body() request: SetNotificationFlagRequest,
++  ): Promise<void> {
++    await this.notifications.setSaved(userId, notificationId, request.value);
++  }
++
++  @Patch('read-all')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  async markAllAsRead(@CurrentUserId() userId: string | undefined): Promise<void> {
++    await this.notifications.markAllAsRead(userId);
++  }
++
++  @Patch('settings')
++  updateSettings(
++    @CurrentUserId() userId: string | undefined,
++    @Body() request: UpdateNotificationSettingsRequest,
++  ): Promise<NotificationSettingsResponse> {
++    return this.notifications.updateSettings(userId, request);
++  }
++}
+diff --git a/backend/src/modules/notifications/notifications.module.ts b/backend/src/modules/notifications/notifications.module.ts
+new file mode 100644
+index 0000000..9cbedbb
+--- /dev/null
++++ b/backend/src/modules/notifications/notifications.module.ts
+@@ -0,0 +1,14 @@
++import { Module } from '@nestjs/common';
++
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++
++import { NotificationsController } from './notifications.controller';
++import { NotificationsService } from './notifications.service';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [NotificationsController],
++  providers: [NotificationsService],
++})
++export class NotificationsModule {}
+diff --git a/backend/src/modules/notifications/notifications.service.ts b/backend/src/modules/notifications/notifications.service.ts
+new file mode 100644
+index 0000000..e79c73c
+--- /dev/null
++++ b/backend/src/modules/notifications/notifications.service.ts
+@@ -0,0 +1,393 @@
++import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
++
++import { Prisma } from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
++
++export interface NotificationsViewResponse {
++  readonly notifications: readonly NotificationItemResponse[];
++  readonly statistics: {
++    readonly total: number;
++    readonly unread: number;
++    readonly saved: number;
++    readonly receivedToday: number;
++  };
++  readonly settings: NotificationSettingsResponse;
++  readonly recentActivities: readonly {
++    readonly id: string;
++    readonly time: string;
++    readonly description: string;
++  }[];
++}
++
++export interface NotificationSettingsResponse {
++  readonly newChapters: boolean;
++  readonly comments: boolean;
++  readonly system: boolean;
++  readonly promotions: boolean;
++}
++
++interface NotificationItemResponse {
++  readonly id: string;
++  readonly type:
++    | 'chapter'
++    | 'comment'
++    | 'author'
++    | 'promotion'
++    | 'security'
++    | 'following'
++    | 'community'
++    | 'achievement';
++  readonly category: 'story' | 'account' | 'system' | 'promotion';
++  readonly title: string;
++  readonly message: string;
++  readonly createdAt: string;
++  readonly createdAtMinutes: number;
++  readonly tag: string;
++  readonly route: readonly (string | number)[];
++  readonly isRead: boolean;
++  readonly isSaved: boolean;
++}
++
++export interface UpdateNotificationSettingsInput {
++  readonly newChapters?: boolean;
++  readonly comments?: boolean;
++  readonly system?: boolean;
++  readonly promotions?: boolean;
++}
++
++@Injectable()
++export class NotificationsService {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async getView(userId: string | undefined): Promise<NotificationsViewResponse> {
++    const authenticatedUserId = this.requireUserId(userId);
++    const now = new Date();
++    const startOfToday = new Date(now);
++    startOfToday.setHours(0, 0, 0, 0);
++
++    const [notifications, total, unread, receivedToday, preference] = await Promise.all([
++      this.prisma.notification.findMany({
++        where: {
++          userId: authenticatedUserId,
++          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
++        },
++        orderBy: { createdAt: 'desc' },
++        take: 200,
++      }),
++      this.prisma.notification.count({
++        where: {
++          userId: authenticatedUserId,
++          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
++        },
++      }),
++      this.prisma.notification.count({
++        where: {
++          userId: authenticatedUserId,
++          readAt: null,
++          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
++        },
++      }),
++      this.prisma.notification.count({
++        where: {
++          userId: authenticatedUserId,
++          createdAt: { gte: startOfToday },
++          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
++        },
++      }),
++      this.prisma.notificationPreference.findUnique({
++        where: { userId: authenticatedUserId },
++      }),
++    ]);
++
++    const items = notifications.map((notification) => this.toItem(notification, now));
++
++    return {
++      notifications: items,
++      statistics: {
++        total,
++        unread,
++        saved: items.filter((item) => item.isSaved).length,
++        receivedToday,
++      },
++      settings: this.toSettings(preference),
++      recentActivities: items.slice(0, 3).map((item) => ({
++        id: `activity-${item.id}`,
++        time: item.createdAt,
++        description: item.title,
++      })),
++    };
++  }
++
++  async setRead(
++    userId: string | undefined,
++    notificationId: string,
++    isRead: boolean,
++  ): Promise<void> {
++    const authenticatedUserId = this.requireUserId(userId);
++    await this.ensureOwnedNotification(authenticatedUserId, notificationId);
++
++    await this.prisma.notification.update({
++      where: { id: notificationId },
++      data: { readAt: isRead ? new Date() : null },
++    });
++  }
++
++  async setSaved(
++    userId: string | undefined,
++    notificationId: string,
++    isSaved: boolean,
++  ): Promise<void> {
++    const authenticatedUserId = this.requireUserId(userId);
++    const notification = await this.ensureOwnedNotification(authenticatedUserId, notificationId);
++    const data = this.toInputJsonObject(notification.data);
++
++    await this.prisma.notification.update({
++      where: { id: notificationId },
++      data: {
++        data: {
++          ...data,
++          saved: isSaved,
++        },
++      },
++    });
++  }
++
++  async markAllAsRead(userId: string | undefined): Promise<void> {
++    const authenticatedUserId = this.requireUserId(userId);
++
++    await this.prisma.notification.updateMany({
++      where: {
++        userId: authenticatedUserId,
++        readAt: null,
++        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
++      },
++      data: { readAt: new Date() },
++    });
++  }
++
++  async updateSettings(
++    userId: string | undefined,
++    input: UpdateNotificationSettingsInput,
++  ): Promise<NotificationSettingsResponse> {
++    const authenticatedUserId = this.requireUserId(userId);
++    const existing = await this.prisma.notificationPreference.findUnique({
++      where: { userId: authenticatedUserId },
++    });
++    const existingPreferences = this.toInputJsonObject(existing?.preferences);
++
++    const preference = await this.prisma.notificationPreference.upsert({
++      where: { userId: authenticatedUserId },
++      create: {
++        userId: authenticatedUserId,
++        newChapterEnabled: input.newChapters ?? true,
++        commentReplyEnabled: input.comments ?? true,
++        moderationEnabled: input.system ?? true,
++        preferences: {
++          ...existingPreferences,
++          promotionsEnabled: input.promotions ?? true,
++        },
++      },
++      update: {
++        ...(input.newChapters === undefined
++          ? {}
++          : { newChapterEnabled: input.newChapters }),
++        ...(input.comments === undefined
++          ? {}
++          : { commentReplyEnabled: input.comments }),
++        ...(input.system === undefined ? {} : { moderationEnabled: input.system }),
++        ...(input.promotions === undefined
++          ? {}
++          : {
++              preferences: {
++                ...existingPreferences,
++                promotionsEnabled: input.promotions,
++              },
++            }),
++      },
++    });
++
++    return this.toSettings(preference);
++  }
++
++  private async ensureOwnedNotification(userId: string, notificationId: string) {
++    const notification = await this.prisma.notification.findFirst({
++      where: {
++        id: notificationId,
++        userId,
++      },
++    });
++
++    if (!notification) {
++      throw new NotFoundException('Notification not found');
++    }
++
++    return notification;
++  }
++
++  private toItem(
++    notification: {
++      readonly id: string;
++      readonly type: string;
++      readonly title: string;
++      readonly body: string;
++      readonly data: unknown;
++      readonly readAt: Date | null;
++      readonly createdAt: Date;
++    },
++    now: Date,
++  ): NotificationItemResponse {
++    const data = this.asRecord(notification.data);
++    const type = this.normalizeType(notification.type);
++    const category = this.normalizeCategory(data['category'], type);
++    const createdAtMinutes = Math.max(
++      0,
++      Math.floor((now.getTime() - notification.createdAt.getTime()) / 60_000),
++    );
++
++    return {
++      id: notification.id,
++      type,
++      category,
++      title: notification.title,
++      message: notification.body,
++      createdAt: this.formatRelativeTime(createdAtMinutes),
++      createdAtMinutes,
++      tag: this.stringValue(data['tag']) ?? this.defaultTag(category),
++      route: this.routeValue(data['route']),
++      isRead: notification.readAt !== null,
++      isSaved: data['saved'] === true,
++    };
++  }
++
++  private toSettings(
++    preference:
++      | {
++          readonly newChapterEnabled: boolean;
++          readonly commentReplyEnabled: boolean;
++          readonly moderationEnabled: boolean;
++          readonly preferences: unknown;
++        }
++      | null,
++  ): NotificationSettingsResponse {
++    const preferences = this.asRecord(preference?.preferences);
++
++    return {
++      newChapters: preference?.newChapterEnabled ?? true,
++      comments: preference?.commentReplyEnabled ?? true,
++      system: preference?.moderationEnabled ?? true,
++      promotions:
++        typeof preferences['promotionsEnabled'] === 'boolean'
++          ? preferences['promotionsEnabled']
++          : true,
++    };
++  }
++
++  private normalizeType(type: string): NotificationItemResponse['type'] {
++    const normalized = type.toLocaleLowerCase('en');
++
++    if (normalized.includes('chapter')) return 'chapter';
++    if (normalized.includes('comment') || normalized.includes('reply')) return 'comment';
++    if (normalized.includes('author')) return 'author';
++    if (normalized.includes('promotion')) return 'promotion';
++    if (
++      normalized.includes('security') ||
++      normalized.includes('login') ||
++      normalized.includes('password') ||
++      normalized.includes('mfa')
++    ) {
++      return 'security';
++    }
++    if (normalized.includes('follow')) return 'following';
++    if (normalized.includes('achievement')) return 'achievement';
++
++    return 'community';
++  }
++
++  private normalizeCategory(
++    value: unknown,
++    type: NotificationItemResponse['type'],
++  ): NotificationItemResponse['category'] {
++    if (value === 'story' || value === 'account' || value === 'system' || value === 'promotion') {
++      return value;
++    }
++
++    if (type === 'chapter' || type === 'following') return 'story';
++    if (type === 'comment' || type === 'achievement') return 'account';
++    if (type === 'promotion') return 'promotion';
++
++    return 'system';
++  }
++
++  private defaultTag(category: NotificationItemResponse['category']): string {
++    switch (category) {
++      case 'story':
++        return 'Cập nhật truyện';
++      case 'account':
++        return 'Tài khoản';
++      case 'promotion':
++        return 'Ưu đãi';
++      case 'system':
++      default:
++        return 'Hệ thống';
++    }
++  }
++
++  private routeValue(value: unknown): readonly (string | number)[] {
++    if (!Array.isArray(value)) {
++      return ['/thong-bao'];
++    }
++
++    const route = value.filter(
++      (segment): segment is string | number =>
++        typeof segment === 'string' || typeof segment === 'number',
++    );
++
++    return route.length > 0 ? route : ['/thong-bao'];
++  }
++
++  private formatRelativeTime(minutes: number): string {
++    if (minutes < 1) return 'Vừa xong';
++    if (minutes < 60) return `${minutes} phút trước`;
++
++    const hours = Math.floor(minutes / 60);
++    if (hours < 24) return `${hours} giờ trước`;
++
++    const days = Math.floor(hours / 24);
++    if (days === 1) return 'Hôm qua';
++    if (days < 7) return `${days} ngày trước`;
++
++    const weeks = Math.floor(days / 7);
++    if (weeks < 5) return `${weeks} tuần trước`;
++
++    const months = Math.floor(days / 30);
++    return `${Math.max(1, months)} tháng trước`;
++  }
++
++  private toInputJsonObject(value: unknown): Prisma.InputJsonObject {
++    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++      return {};
++    }
++
++    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonObject;
++  }
++
++  private asRecord(value: unknown): Record<string, unknown> {
++    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
++      return {};
++    }
++
++    return value as Record<string, unknown>;
++  }
++
++  private stringValue(value: unknown): string | null {
++    return typeof value === 'string' && value.trim() ? value : null;
++  }
++
++  private requireUserId(userId: string | undefined): string {
++    if (!userId) {
++      throw new UnauthorizedException('Authentication required');
++    }
++
++    return userId;
++  }
++}
+diff --git a/frontend/public/assets/images/avatar-placeholder.svg b/frontend/public/assets/images/avatar-placeholder.svg
+new file mode 100644
+index 0000000..81837d9
+--- /dev/null
++++ b/frontend/public/assets/images/avatar-placeholder.svg
+@@ -0,0 +1,5 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Ảnh đại diện mặc định">
++  <rect width="200" height="200" rx="100" fill="#1b2338"/>
++  <circle cx="100" cy="76" r="38" fill="#66738f"/>
++  <path d="M42 176c8-40 29-60 58-60s50 20 58 60" fill="#66738f"/>
++</svg>
+diff --git a/frontend/public/assets/images/story-cover-placeholder.svg b/frontend/public/assets/images/story-cover-placeholder.svg
+new file mode 100644
+index 0000000..5350ce5
+--- /dev/null
++++ b/frontend/public/assets/images/story-cover-placeholder.svg
+@@ -0,0 +1,5 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 480" role="img" aria-label="Bìa truyện mặc định">
++  <rect width="320" height="480" fill="#151b2c"/>
++  <path d="M80 110h160v260H80z" fill="#252f49"/>
++  <path d="M112 160h96M112 205h96M112 250h72" stroke="#8793ad" stroke-width="12" stroke-linecap="round"/>
++</svg>
+diff --git a/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.spec.ts b/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.spec.ts
+new file mode 100644
+index 0000000..dabf5dd
+--- /dev/null
++++ b/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.spec.ts
+@@ -0,0 +1,90 @@
++import { provideHttpClient } from '@angular/common/http';
++import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
++import { TestBed } from '@angular/core/testing';
++import { firstValueFrom } from 'rxjs';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { NotificationsView } from '../domain/notifications.models';
++import { NotificationsHttpRepository } from './notifications-http.repository';
++
++describe('NotificationsHttpRepository', () => {
++  let repository: NotificationsHttpRepository;
++  let http: HttpTestingController;
++
++  beforeEach(() => {
++    TestBed.configureTestingModule({
++      providers: [
++        provideHttpClient(),
++        provideHttpClientTesting(),
++        NotificationsHttpRepository,
++        {
++          provide: APP_RUNTIME_CONFIG,
++          useValue: {
++            apiBaseUrl: '/api/v1',
++            appName: 'TruyenHub',
++            production: false,
++          },
++        },
++      ],
++    });
++
++    repository = TestBed.inject(NotificationsHttpRepository);
++    http = TestBed.inject(HttpTestingController);
++  });
++
++  afterEach(() => {
++    http.verify();
++    TestBed.resetTestingModule();
++  });
++
++  it('loads notification view from the authenticated API', async () => {
++    const view = notificationView();
++    const resultPromise = firstValueFrom(repository.getNotifications());
++    const request = http.expectOne('/api/v1/notifications');
++
++    expect(request.request.method).toBe('GET');
++    request.flush(successEnvelope(view));
++
++    await expect(resultPromise).resolves.toEqual(view);
++  });
++
++  it('persists read state instead of mutating mock data', async () => {
++    const resultPromise = firstValueFrom(repository.setRead('notification-id', true));
++    const request = http.expectOne('/api/v1/notifications/notification-id/read');
++
++    expect(request.request.method).toBe('PATCH');
++    expect(request.request.body).toEqual({ value: true });
++    request.flush(null);
++
++    await resultPromise;
++  });
++});
++
++function successEnvelope<T>(data: T) {
++  return {
++    success: true as const,
++    data,
++    requestId: 'phase-7-request',
++    timestamp: '2026-08-15T00:00:00.000Z',
++  };
++}
++
++function notificationView(): NotificationsView {
++  return {
++    notifications: [],
++    statistics: {
++      total: 0,
++      unread: 0,
++      saved: 0,
++      receivedToday: 0,
++    },
++    settings: {
++      newChapters: true,
++      comments: true,
++      system: true,
++      promotions: true,
++    },
++    recentActivities: [],
++  };
++}
+diff --git a/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts b/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts
+new file mode 100644
+index 0000000..991fc17
+--- /dev/null
++++ b/frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts
+@@ -0,0 +1,45 @@
++import { HttpClient } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import { NotificationSettings, NotificationsView } from '../domain/notifications.models';
++import { NotificationsRepository } from '../domain/notifications.repository';
++
++@Injectable()
++export class NotificationsHttpRepository implements NotificationsRepository {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++  private readonly baseUrl = `${this.config.apiBaseUrl}/notifications`;
++
++  getNotifications(): Observable<NotificationsView> {
++    return this.http
++      .get<ApiSuccessEnvelope<NotificationsView>>(this.baseUrl)
++      .pipe(map((response) => response.data));
++  }
++
++  setRead(notificationId: string, isRead: boolean): Observable<void> {
++    return this.http.patch<void>(`${this.baseUrl}/${notificationId}/read`, {
++      value: isRead,
++    });
++  }
++
++  setSaved(notificationId: string, isSaved: boolean): Observable<void> {
++    return this.http.patch<void>(`${this.baseUrl}/${notificationId}/saved`, {
++      value: isSaved,
++    });
++  }
++
++  markAllAsRead(): Observable<void> {
++    return this.http.patch<void>(`${this.baseUrl}/read-all`, {});
++  }
++
++  updateSettings(
++    settings: Partial<NotificationSettings>,
++  ): Observable<NotificationSettings> {
++    return this.http
++      .patch<ApiSuccessEnvelope<NotificationSettings>>(`${this.baseUrl}/settings`, settings)
++      .pipe(map((response) => response.data));
++  }
++}
+diff --git a/frontend/src/app/features/account/notifications/data-access/notifications-mock.repository.ts b/frontend/src/app/features/account/notifications/data-access/notifications-mock.repository.ts
+deleted file mode 100644
+index 311310e..0000000
+--- a/frontend/src/app/features/account/notifications/data-access/notifications-mock.repository.ts
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { NotificationsView } from '../domain/notifications.models';
+-import { NotificationsRepository } from '../domain/notifications.repository';
+-import { NOTIFICATIONS_MOCK } from '../mock/notifications.mock';
+-
+-@Injectable()
+-export class NotificationsMockRepository implements NotificationsRepository {
+-  getNotifications(): NotificationsView {
+-    return NOTIFICATIONS_MOCK;
+-  }
+-}
+diff --git a/frontend/src/app/features/account/notifications/data-access/notifications.providers.ts b/frontend/src/app/features/account/notifications/data-access/notifications.providers.ts
+index 1c4f3ad..8fb35cb 100644
+--- a/frontend/src/app/features/account/notifications/data-access/notifications.providers.ts
++++ b/frontend/src/app/features/account/notifications/data-access/notifications.providers.ts
+@@ -1,13 +1,13 @@
+ import { Provider } from '@angular/core';
+ 
+ import { NotificationsRepository } from '../domain/notifications.repository';
+-import { NotificationsMockRepository } from './notifications-mock.repository';
++import { NotificationsHttpRepository } from './notifications-http.repository';
+ 
+ export function provideNotifications(): Provider[] {
+   return [
+     {
+       provide: NotificationsRepository,
+-      useClass: NotificationsMockRepository,
++      useClass: NotificationsHttpRepository,
+     },
+   ];
+ }
+diff --git a/frontend/src/app/features/account/notifications/data-access/notifications.store.ts b/frontend/src/app/features/account/notifications/data-access/notifications.store.ts
+index c4e951c..2931dcf 100644
+--- a/frontend/src/app/features/account/notifications/data-access/notifications.store.ts
++++ b/frontend/src/app/features/account/notifications/data-access/notifications.store.ts
+@@ -1,4 +1,5 @@
+-import { computed, inject, Injectable, signal } from '@angular/core';
++import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ 
+ import {
+   NotificationCategory,
+@@ -12,6 +13,7 @@ import { NotificationsRepository } from '../domain/notifications.repository';
+ @Injectable()
+ export class NotificationsStore {
+   private readonly repository = inject(NotificationsRepository);
++  private readonly destroyRef = inject(DestroyRef);
+ 
+   private readonly viewState = signal<NotificationsView | null>(null);
+ 
+@@ -93,10 +95,13 @@ export class NotificationsStore {
+   });
+ 
+   load(): void {
+-    const view = this.repository.getNotifications();
+-
+-    this.viewState.set(view);
+-    this.settings.set(view.settings);
++    this.repository
++      .getNotifications()
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe((view) => {
++        this.viewState.set(view);
++        this.settings.set(view.settings);
++      });
+   }
+ 
+   setQuery(query: string): void {
+@@ -122,40 +127,87 @@ export class NotificationsStore {
+   }
+ 
+   toggleRead(notificationId: string): void {
+-    this.updateNotification(notificationId, (notification) => ({
+-      ...notification,
+-      isRead: !notification.isRead,
+-    }));
++    const notification = this.findNotification(notificationId);
++
++    if (!notification) {
++      return;
++    }
++
++    const isRead = !notification.isRead;
++
++    this.repository
++      .setRead(notificationId, isRead)
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe(() => {
++        this.updateNotification(notificationId, (current) => ({
++          ...current,
++          isRead,
++        }));
++      });
+   }
+ 
+   toggleSaved(notificationId: string): void {
+-    this.updateNotification(notificationId, (notification) => ({
+-      ...notification,
+-      isSaved: !notification.isSaved,
+-    }));
++    const notification = this.findNotification(notificationId);
++
++    if (!notification) {
++      return;
++    }
++
++    const isSaved = !notification.isSaved;
++
++    this.repository
++      .setSaved(notificationId, isSaved)
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe(() => {
++        this.updateNotification(notificationId, (current) => ({
++          ...current,
++          isSaved,
++        }));
++      });
+   }
+ 
+   markAllAsRead(): void {
+     const view = this.viewState();
+ 
+-    if (!view) {
++    if (!view || this.unreadCount() === 0) {
+       return;
+     }
+ 
+-    this.viewState.set({
+-      ...view,
+-      notifications: view.notifications.map((notification) => ({
+-        ...notification,
+-        isRead: true,
+-      })),
+-    });
++    this.repository
++      .markAllAsRead()
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe(() => {
++        this.viewState.update((current) =>
++          current
++            ? {
++                ...current,
++                notifications: current.notifications.map((notification) => ({
++                  ...notification,
++                  isRead: true,
++                })),
++                statistics: {
++                  ...current.statistics,
++                  unread: 0,
++                },
++              }
++            : current,
++        );
++      });
+   }
+ 
+   toggleSetting(settingKey: NotificationSettingKey): void {
+-    this.settings.update((current) => ({
+-      ...current,
+-      [settingKey]: !current[settingKey],
+-    }));
++    const value = !this.settings()[settingKey];
++
++    this.repository
++      .updateSettings({ [settingKey]: value })
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe((settings) => this.settings.set(settings));
++  }
++
++  private findNotification(notificationId: string): UserNotification | undefined {
++    return this.viewState()?.notifications.find(
++      (notification) => notification.id === notificationId,
++    );
+   }
+ 
+   private updateNotification(
+@@ -168,12 +220,18 @@ export class NotificationsStore {
+       return;
+     }
+ 
++    const notifications = view.notifications.map((notification) =>
++      notification.id === notificationId ? updater(notification) : notification,
++    );
++
+     this.viewState.set({
+       ...view,
+-
+-      notifications: view.notifications.map((notification) =>
+-        notification.id === notificationId ? updater(notification) : notification,
+-      ),
++      notifications,
++      statistics: {
++        ...view.statistics,
++        unread: notifications.filter((notification) => !notification.isRead).length,
++        saved: notifications.filter((notification) => notification.isSaved).length,
++      },
+     });
+   }
+ 
+diff --git a/frontend/src/app/features/account/notifications/domain/notifications.repository.ts b/frontend/src/app/features/account/notifications/domain/notifications.repository.ts
+index 5e9bebf..978a8cb 100644
+--- a/frontend/src/app/features/account/notifications/domain/notifications.repository.ts
++++ b/frontend/src/app/features/account/notifications/domain/notifications.repository.ts
+@@ -1,5 +1,13 @@
+-import { NotificationsView } from './notifications.models';
++import { Observable } from 'rxjs';
++
++import { NotificationSettings, NotificationsView } from './notifications.models';
+ 
+ export abstract class NotificationsRepository {
+-  abstract getNotifications(): NotificationsView;
++  abstract getNotifications(): Observable<NotificationsView>;
++  abstract setRead(notificationId: string, isRead: boolean): Observable<void>;
++  abstract setSaved(notificationId: string, isSaved: boolean): Observable<void>;
++  abstract markAllAsRead(): Observable<void>;
++  abstract updateSettings(
++    settings: Partial<NotificationSettings>,
++  ): Observable<NotificationSettings>;
+ }
+diff --git a/frontend/src/app/features/account/notifications/mock/notifications.mock.ts b/frontend/src/app/features/account/notifications/mock/notifications.mock.ts
+deleted file mode 100644
+index 7cddafe..0000000
+--- a/frontend/src/app/features/account/notifications/mock/notifications.mock.ts
++++ /dev/null
+@@ -1,194 +0,0 @@
+-import { NotificationsView } from '../domain/notifications.models';
+-
+-export const NOTIFICATIONS_MOCK: NotificationsView = {
+-  statistics: {
+-    total: 128,
+-    unread: 12,
+-    saved: 8,
+-    receivedToday: 5,
+-  },
+-
+-  settings: {
+-    newChapters: true,
+-    comments: true,
+-    system: true,
+-    promotions: true,
+-  },
+-
+-  notifications: [
+-    {
+-      id: 'notification-1',
+-      type: 'chapter',
+-      category: 'story',
+-      title: 'Chương mới: Đấu Phá Thương Khung',
+-      message: 'Chương 257: Dị hỏa thức tỉnh vừa được cập nhật.',
+-      createdAt: '5 phút trước',
+-      createdAtMinutes: 5,
+-      tag: 'Cập nhật truyện',
+-      route: ['/truyen', 'dau-pha-thuong-khung', 'chuong', 257],
+-      isRead: false,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-2',
+-      type: 'comment',
+-      category: 'account',
+-      title: 'Bạn có phản hồi mới',
+-      message: 'Bình luận của bạn trong Tiên Nghịch đã có 3 lượt trả lời.',
+-      createdAt: '22 phút trước',
+-      createdAtMinutes: 22,
+-      tag: 'Tài khoản',
+-      route: ['/truyen', 'tien-nghich', 'chuong', 128],
+-      isRead: false,
+-      isSaved: true,
+-    },
+-    {
+-      id: 'notification-3',
+-      type: 'author',
+-      category: 'system',
+-      title: 'Theo dõi tác giả',
+-      message: 'Nhĩ Căn vừa đăng một thông báo mới cho người theo dõi.',
+-      createdAt: '1 giờ trước',
+-      createdAtMinutes: 60,
+-      tag: 'Hệ thống',
+-      route: ['/tac-gia', 'nhi-can'],
+-      isRead: false,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-4',
+-      type: 'promotion',
+-      category: 'promotion',
+-      title: 'Ưu đãi thành viên',
+-      message: 'Gói Premium tháng này đang giảm 20% cho người dùng mới.',
+-      createdAt: 'Hôm nay',
+-      createdAtMinutes: 420,
+-      tag: 'Ưu đãi',
+-      route: ['/tai-khoan', 'nang-cap'],
+-      isRead: false,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-5',
+-      type: 'security',
+-      category: 'system',
+-      title: 'Bảo mật tài khoản',
+-      message: 'Tài khoản của bạn vừa đăng nhập trên một thiết bị mới.',
+-      createdAt: 'Hôm qua',
+-      createdAtMinutes: 1_540,
+-      tag: 'Hệ thống',
+-      route: ['/tai-khoan', 'thiet-bi-dang-nhap'],
+-      isRead: true,
+-      isSaved: true,
+-    },
+-    {
+-      id: 'notification-6',
+-      type: 'following',
+-      category: 'story',
+-      title: 'Danh sách truyện theo dõi',
+-      message: 'Solo Leveling có 2 chương mới bạn chưa đọc.',
+-      createdAt: '2 ngày trước',
+-      createdAtMinutes: 2_880,
+-      tag: 'Cập nhật truyện',
+-      route: ['/truyen', 'solo-leveling'],
+-      isRead: true,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-7',
+-      type: 'community',
+-      category: 'system',
+-      title: 'Sự kiện cộng đồng',
+-      message: 'Tham gia bình chọn truyện nổi bật tuần này.',
+-      createdAt: '3 ngày trước',
+-      createdAtMinutes: 4_320,
+-      tag: 'Hệ thống',
+-      route: ['/su-kien'],
+-      isRead: true,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-8',
+-      type: 'achievement',
+-      category: 'account',
+-      title: 'Hoàn thành thành tích',
+-      message: 'Chúc mừng! Bạn đã đạt thành tích “Độc giả trung thành”.',
+-      createdAt: '5 ngày trước',
+-      createdAtMinutes: 7_200,
+-      tag: 'Tài khoản',
+-      route: ['/tai-khoan', 'thanh-tich'],
+-      isRead: true,
+-      isSaved: true,
+-    },
+-    {
+-      id: 'notification-9',
+-      type: 'chapter',
+-      category: 'story',
+-      title: 'Chương mới: Ngã Dục Phong Thiên',
+-      message: 'Chương 1633 vừa được phát hành.',
+-      createdAt: '6 ngày trước',
+-      createdAtMinutes: 8_640,
+-      tag: 'Cập nhật truyện',
+-      route: ['/truyen', 'nga-duc-phong-thien', 'chuong', 1633],
+-      isRead: true,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-10',
+-      type: 'comment',
+-      category: 'account',
+-      title: 'Bình luận được yêu thích',
+-      message: 'Bình luận của bạn đã nhận được 50 lượt thích.',
+-      createdAt: '1 tuần trước',
+-      createdAtMinutes: 10_080,
+-      tag: 'Tài khoản',
+-      route: ['/tai-khoan', 'binh-luan'],
+-      isRead: true,
+-      isSaved: false,
+-    },
+-    {
+-      id: 'notification-11',
+-      type: 'security',
+-      category: 'system',
+-      title: 'Cập nhật chính sách bảo mật',
+-      message: 'Chính sách bảo mật của TruyenHub vừa được cập nhật.',
+-      createdAt: '2 tuần trước',
+-      createdAtMinutes: 20_160,
+-      tag: 'Hệ thống',
+-      route: ['/quyen-rieng-tu'],
+-      isRead: true,
+-      isSaved: true,
+-    },
+-    {
+-      id: 'notification-12',
+-      type: 'promotion',
+-      category: 'promotion',
+-      title: 'Sự kiện đọc truyện tháng mới',
+-      message: 'Đọc đủ 20 chương để nhận huy hiệu giới hạn.',
+-      createdAt: '3 tuần trước',
+-      createdAtMinutes: 30_240,
+-      tag: 'Ưu đãi',
+-      route: ['/su-kien'],
+-      isRead: true,
+-      isSaved: false,
+-    },
+-  ],
+-
+-  recentActivities: [
+-    {
+-      id: 'activity-1',
+-      time: '5 phút trước',
+-      description: 'Đấu Phá Thương Khung có chương mới',
+-    },
+-    {
+-      id: 'activity-2',
+-      time: '22 phút trước',
+-      description: 'Bạn nhận được phản hồi mới trong Tiên Nghịch',
+-    },
+-    {
+-      id: 'activity-3',
+-      time: '1 giờ trước',
+-      description: 'Nhĩ Căn đăng thông báo mới cho người theo dõi',
+-    },
+-  ],
+-};
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts
+new file mode 100644
+index 0000000..38d8f6e
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts
+@@ -0,0 +1,87 @@
++import { provideHttpClient } from '@angular/common/http';
++import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
++import { TestBed } from '@angular/core/testing';
++import { firstValueFrom } from 'rxjs';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { AuthorStudioDashboard } from '../domain/author-studio.models';
++import { AuthorStudioHttpRepository } from './author-studio-http.repository';
++
++describe('AuthorStudioHttpRepository', () => {
++  let repository: AuthorStudioHttpRepository;
++  let http: HttpTestingController;
++
++  beforeEach(() => {
++    TestBed.configureTestingModule({
++      providers: [
++        provideHttpClient(),
++        provideHttpClientTesting(),
++        AuthorStudioHttpRepository,
++        {
++          provide: APP_RUNTIME_CONFIG,
++          useValue: {
++            apiBaseUrl: '/api/v1',
++            appName: 'TruyenHub',
++            production: false,
++          },
++        },
++      ],
++    });
++
++    repository = TestBed.inject(AuthorStudioHttpRepository);
++    http = TestBed.inject(HttpTestingController);
++  });
++
++  afterEach(() => {
++    http.verify();
++    TestBed.resetTestingModule();
++  });
++
++  it('loads dashboard data from the authenticated author endpoint', async () => {
++    const dashboard = dashboardView();
++    const resultPromise = firstValueFrom(repository.getDashboard());
++    const request = http.expectOne('/api/v1/author/dashboard');
++
++    expect(request.request.method).toBe('GET');
++    request.flush(successEnvelope(dashboard));
++
++    await expect(resultPromise).resolves.toEqual(dashboard);
++  });
++});
++
++function successEnvelope<T>(data: T) {
++  return {
++    success: true as const,
++    data,
++    requestId: 'phase-7-request',
++    timestamp: '2026-08-15T00:00:00.000Z',
++  };
++}
++
++function dashboardView(): AuthorStudioDashboard {
++  return {
++    profile: {
++      displayName: 'Author',
++      penName: 'Pen',
++      avatarUrl: '/assets/images/avatar-placeholder.svg',
++      level: 1,
++      currentExperience: 0,
++      requiredExperience: 50,
++      verified: true,
++    },
++    unreadNotifications: 0,
++    metrics: [],
++    readership: {
++      '7d': [],
++      '30d': [],
++      '90d': [],
++    },
++    schedule: [],
++    stories: [],
++    drafts: [],
++    comments: [],
++    topStories: [],
++    monthlyGoals: [],
++  };
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts
+new file mode 100644
+index 0000000..5c31437
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts
+@@ -0,0 +1,22 @@
++import { HttpClient } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import { AuthorStudioDashboard } from '../domain/author-studio.models';
++import { AuthorStudioRepository } from '../domain/author-studio.repository';
++
++@Injectable()
++export class AuthorStudioHttpRepository implements AuthorStudioRepository {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++
++  getDashboard(): Observable<AuthorStudioDashboard> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorStudioDashboard>>(
++        `${this.config.apiBaseUrl}/author/dashboard`,
++      )
++      .pipe(map((response) => response.data));
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-mock.repository.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-mock.repository.ts
+deleted file mode 100644
+index 83b0dda..0000000
+--- a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-mock.repository.ts
++++ /dev/null
+@@ -1,13 +0,0 @@
+-import { Injectable } from '@angular/core';
+-import { delay, Observable, of } from 'rxjs';
+-
+-import { AuthorStudioDashboard } from '../domain/author-studio.models';
+-import { AuthorStudioRepository } from '../domain/author-studio.repository';
+-import { AUTHOR_STUDIO_MOCK } from '../mock/author-studio.mock';
+-
+-@Injectable()
+-export class AuthorStudioMockRepository implements AuthorStudioRepository {
+-  getDashboard(): Observable<AuthorStudioDashboard> {
+-    return of(AUTHOR_STUDIO_MOCK).pipe(delay(250));
+-  }
+-}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio.providers.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio.providers.ts
+index b081eab..33342a2 100644
+--- a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio.providers.ts
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio.providers.ts
+@@ -1,13 +1,13 @@
+ import { Provider } from '@angular/core';
+ 
+ import { AuthorStudioRepository } from '../domain/author-studio.repository';
+-import { AuthorStudioMockRepository } from './author-studio-mock.repository';
++import { AuthorStudioHttpRepository } from './author-studio-http.repository';
+ 
+ export function provideAuthorStudio(): Provider[] {
+   return [
+     {
+       provide: AuthorStudioRepository,
+-      useClass: AuthorStudioMockRepository,
++      useClass: AuthorStudioHttpRepository,
+     },
+   ];
+ }
+diff --git a/frontend/src/app/features/author-portal/author-studio/mock/author-studio.mock.ts b/frontend/src/app/features/author-portal/author-studio/mock/author-studio.mock.ts
+deleted file mode 100644
+index 3ed7ebe..0000000
+--- a/frontend/src/app/features/author-portal/author-studio/mock/author-studio.mock.ts
++++ /dev/null
+@@ -1,346 +0,0 @@
+-import { AuthorStudioDashboard, ReadershipChartPoint } from '../domain/author-studio.models';
+-
+-const createChartPoints = (
+-  prefix: string,
+-  values: readonly number[],
+-): readonly ReadershipChartPoint[] =>
+-  values.map((value, index) => ({
+-    id: `${prefix}-${index}`,
+-    label: `${index + 1}/05`,
+-    value,
+-  }));
+-
+-export const AUTHOR_STUDIO_MOCK: AuthorStudioDashboard = {
+-  profile: {
+-    displayName: 'Lục Dạ Phong',
+-    penName: 'Tác giả',
+-    avatarUrl:
+-      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop',
+-    level: 8,
+-    currentExperience: 2450,
+-    requiredExperience: 3000,
+-    verified: true,
+-  },
+-
+-  unreadNotifications: 3,
+-
+-  metrics: [
+-    {
+-      id: 'published-stories',
+-      title: 'Truyện đang xuất bản',
+-      value: '6',
+-      trendValue: '20%',
+-      trendLabel: 'so với tháng trước',
+-      trendDirection: 'up',
+-      icon: 'book',
+-      tone: 'purple',
+-    },
+-    {
+-      id: 'drafts',
+-      title: 'Bản nháp',
+-      value: '12',
+-      trendValue: '9%',
+-      trendLabel: 'so với tháng trước',
+-      trendDirection: 'up',
+-      icon: 'draft',
+-      tone: 'blue',
+-    },
+-    {
+-      id: 'pending-chapters',
+-      title: 'Chương chờ duyệt',
+-      value: '5',
+-      trendValue: '16%',
+-      trendLabel: 'so với tuần trước',
+-      trendDirection: 'down',
+-      icon: 'clock',
+-      tone: 'orange',
+-    },
+-    {
+-      id: 'views',
+-      title: 'Lượt xem 30 ngày',
+-      value: '128.6K',
+-      trendValue: '28.5%',
+-      trendLabel: 'so với 30 ngày trước',
+-      trendDirection: 'up',
+-      icon: 'eye',
+-      tone: 'indigo',
+-    },
+-    {
+-      id: 'followers',
+-      title: 'Người theo dõi',
+-      value: '23.4K',
+-      trendValue: '18.3%',
+-      trendLabel: 'so với tháng trước',
+-      trendDirection: 'up',
+-      icon: 'users',
+-      tone: 'pink',
+-    },
+-    {
+-      id: 'revenue',
+-      title: 'Doanh thu tháng',
+-      value: '18.750.000 ₫',
+-      trendValue: '32.1%',
+-      trendLabel: 'so với tháng trước',
+-      trendDirection: 'up',
+-      icon: 'wallet',
+-      tone: 'green',
+-    },
+-  ],
+-
+-  readership: {
+-    '7d': createChartPoints('7d', [9200, 11500, 10800, 14260, 12200, 13400, 9800]),
+-
+-    '30d': createChartPoints(
+-      '30d',
+-      [
+-        5200, 8400, 9200, 8800, 11800, 9000, 12100, 13200, 13800, 9200, 10100, 9500, 7800, 6200,
+-        11000, 11600, 14800, 15800, 17000, 17500, 12300, 10800, 9200, 7600, 9400, 9800, 14260,
+-        11800, 8600, 7200,
+-      ],
+-    ),
+-
+-    '90d': createChartPoints(
+-      '90d',
+-      [
+-        4800, 5200, 6100, 5800, 7200, 8100, 7600, 9400, 8800, 10200, 9800, 11500, 10800, 12400,
+-        11800, 13200, 12100, 14400, 13800, 15200, 14800, 16200, 15600, 17000, 16400, 17800, 17200,
+-        18500, 17600, 19200,
+-      ],
+-    ),
+-  },
+-
+-  schedule: [
+-    {
+-      id: 'schedule-1',
+-      weekday: 'T2',
+-      date: '26/05',
+-      storyTitle: 'Đại Đạo Chí Tôn',
+-      chapterTitle: 'Chương 326: Quyết Chiến Thiên Ma',
+-      time: '20:00',
+-      status: 'scheduled',
+-      statusLabel: 'Đã lên lịch',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=120&auto=format&fit=crop',
+-    },
+-    {
+-      id: 'schedule-2',
+-      weekday: 'T4',
+-      date: '28/05',
+-      storyTitle: 'Vạn Cổ Thần Đế',
+-      chapterTitle: 'Chương 584: Truyền Thừa Cổ Thần',
+-      time: '20:00',
+-      status: 'published',
+-      statusLabel: 'Đã lên lịch',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=120&auto=format&fit=crop',
+-    },
+-    {
+-      id: 'schedule-3',
+-      weekday: 'T6',
+-      date: '30/05',
+-      storyTitle: 'Kiếm Vực Độc Tôn',
+-      chapterTitle: 'Chương 157: Kiếm Ý Thức Tỉnh',
+-      time: '20:00',
+-      status: 'pending',
+-      statusLabel: 'Chờ duyệt',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=120&auto=format&fit=crop',
+-    },
+-    {
+-      id: 'schedule-4',
+-      weekday: 'CN',
+-      date: '01/06',
+-      storyTitle: 'Thần Cấp Phản Phái Hệ Thống',
+-      chapterTitle: 'Chương 221: Phản Công',
+-      time: '20:00',
+-      status: 'draft',
+-      statusLabel: 'Bản nháp',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709594023-6eab9bab7b23?w=120&auto=format&fit=crop',
+-    },
+-  ],
+-
+-  stories: [
+-    {
+-      id: 'story-1',
+-      slug: 'dai-dao-chi-ton',
+-      title: 'Đại Đạo Chí Tôn',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&auto=format&fit=crop',
+-      genres: ['Tiên Hiệp', 'Huyền Huyễn'],
+-      status: 'publishing',
+-      statusLabel: 'Đang cập nhật',
+-      latestChapter: 325,
+-      updatedAt: '23/05/2026',
+-    },
+-    {
+-      id: 'story-2',
+-      slug: 'van-co-than-de',
+-      title: 'Vạn Cổ Thần Đế',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=100&auto=format&fit=crop',
+-      genres: ['Tiên Hiệp', 'Huyền Huyễn'],
+-      status: 'publishing',
+-      statusLabel: 'Đang cập nhật',
+-      latestChapter: 583,
+-      updatedAt: '22/05/2026',
+-    },
+-    {
+-      id: 'story-3',
+-      slug: 'kiem-vuc-doc-ton',
+-      title: 'Kiếm Vực Độc Tôn',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=100&auto=format&fit=crop',
+-      genres: ['Huyền Huyễn', 'Kiếm Hiệp'],
+-      status: 'publishing',
+-      statusLabel: 'Đang cập nhật',
+-      latestChapter: 156,
+-      updatedAt: '21/05/2026',
+-    },
+-    {
+-      id: 'story-4',
+-      slug: 'than-cap-phan-phai-he-thong',
+-      title: 'Thần Cấp Phản Phái Hệ Thống',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709594023-6eab9bab7b23?w=100&auto=format&fit=crop',
+-      genres: ['Đô Thị', 'Hệ Thống'],
+-      status: 'publishing',
+-      statusLabel: 'Đang cập nhật',
+-      latestChapter: 220,
+-      updatedAt: '20/05/2026',
+-    },
+-    {
+-      id: 'story-5',
+-      slug: 'ta-co-mot-toa-luyen-dan-lau',
+-      title: 'Ta Có Một Tòa Luyện Đan Lâu',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709779341-56cf4535e94b?w=100&auto=format&fit=crop',
+-      genres: ['Tiên Hiệp', 'Luyện Đan'],
+-      status: 'paused',
+-      statusLabel: 'Tạm dừng',
+-      latestChapter: 112,
+-      updatedAt: '19/05/2026',
+-    },
+-  ],
+-
+-  drafts: [
+-    {
+-      id: 'draft-1',
+-      storyTitle: 'Đại Đạo Chí Tôn',
+-      chapterTitle: 'Chương 327: Bí Cảnh Mở Ra',
+-      updatedAt: '23/05/2026 14:30',
+-      completionPercent: 78,
+-    },
+-    {
+-      id: 'draft-2',
+-      storyTitle: 'Vạn Cổ Thần Đế',
+-      chapterTitle: 'Chương 585: Bí Mật Thần Vực',
+-      updatedAt: '22/05/2026 09:12',
+-      completionPercent: 45,
+-    },
+-    {
+-      id: 'draft-3',
+-      storyTitle: 'Ta Có Một Tòa Luyện Đan Lâu',
+-      chapterTitle: 'Chương 113: Đan Phương Mới',
+-      updatedAt: '21/05/2026 18:45',
+-      completionPercent: 20,
+-    },
+-    {
+-      id: 'draft-4',
+-      storyTitle: 'Kiếm Vực Độc Tôn',
+-      chapterTitle: 'Chương 158: Tông Môn Đại Hội',
+-      updatedAt: '20/05/2026 11:05',
+-      completionPercent: 10,
+-    },
+-  ],
+-
+-  comments: [
+-    {
+-      id: 'comment-1',
+-      readerName: 'Thiên Vũ',
+-      avatarUrl:
+-        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop',
+-      storyTitle: 'Đại Đạo Chí Tôn',
+-      content: 'Truyện càng ngày càng hay, mong tác giả ra chương đều nhé! 💪',
+-      createdAt: '30 phút trước',
+-      unread: true,
+-    },
+-    {
+-      id: 'comment-2',
+-      readerName: 'Huyền Lạc',
+-      avatarUrl:
+-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop',
+-      storyTitle: 'Vạn Cổ Thần Đế',
+-      content: 'Chương này quá đỉnh! Có thể giải thích thêm về bí cảnh không?',
+-      createdAt: '1 giờ trước',
+-      unread: true,
+-    },
+-    {
+-      id: 'comment-3',
+-      readerName: 'Minh Tâm',
+-      avatarUrl:
+-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop',
+-      storyTitle: 'Kiếm Vực Độc Tôn',
+-      content: 'Kiếm ý của nhân vật chính thật sự quá ngầu!',
+-      createdAt: '3 giờ trước',
+-      unread: true,
+-    },
+-  ],
+-
+-  topStories: [
+-    {
+-      id: 'top-story-1',
+-      rank: 1,
+-      title: 'Đại Đạo Chí Tôn',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&auto=format&fit=crop',
+-      views: '68.2K',
+-    },
+-    {
+-      id: 'top-story-2',
+-      rank: 2,
+-      title: 'Vạn Cổ Thần Đế',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=100&auto=format&fit=crop',
+-      views: '42.7K',
+-    },
+-    {
+-      id: 'top-story-3',
+-      rank: 3,
+-      title: 'Kiếm Vực Độc Tôn',
+-      coverUrl:
+-        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=100&auto=format&fit=crop',
+-      views: '24.1K',
+-    },
+-  ],
+-
+-  monthlyGoals: [
+-    {
+-      id: 'goal-chapters',
+-      label: 'Số chương viết',
+-      currentValue: '28',
+-      targetValue: '40',
+-      progress: 70,
+-      icon: 'book',
+-      tone: 'purple',
+-    },
+-    {
+-      id: 'goal-views',
+-      label: 'Lượt xem',
+-      currentValue: '128.6K',
+-      targetValue: '150K',
+-      progress: 86,
+-      icon: 'eye',
+-      tone: 'indigo',
+-    },
+-    {
+-      id: 'goal-revenue',
+-      label: 'Doanh thu',
+-      currentValue: '18.75M',
+-      targetValue: '25M',
+-      progress: 75,
+-      icon: 'wallet',
+-      tone: 'green',
+-    },
+-  ],
+-};
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.spec.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.spec.ts
+new file mode 100644
+index 0000000..16f4b03
+--- /dev/null
++++ b/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.spec.ts
+@@ -0,0 +1,87 @@
++import { provideHttpClient } from '@angular/common/http';
++import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
++import { TestBed } from '@angular/core/testing';
++import { firstValueFrom } from 'rxjs';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { AuthorDetailView } from '../domain/author-detail.models';
++import { AuthorDetailHttpRepository } from './author-detail-http.repository';
++
++describe('AuthorDetailHttpRepository', () => {
++  let repository: AuthorDetailHttpRepository;
++  let http: HttpTestingController;
++
++  beforeEach(() => {
++    TestBed.configureTestingModule({
++      providers: [
++        provideHttpClient(),
++        provideHttpClientTesting(),
++        AuthorDetailHttpRepository,
++        {
++          provide: APP_RUNTIME_CONFIG,
++          useValue: {
++            apiBaseUrl: '/api/v1',
++            appName: 'TruyenHub',
++            production: false,
++          },
++        },
++      ],
++    });
++
++    repository = TestBed.inject(AuthorDetailHttpRepository);
++    http = TestBed.inject(HttpTestingController);
++  });
++
++  afterEach(() => {
++    http.verify();
++    TestBed.resetTestingModule();
++  });
++
++  it('loads the requested author slug from the API', async () => {
++    const view = detailView();
++    const resultPromise = firstValueFrom(repository.getBySlug('but danh'));
++    const request = http.expectOne('/api/v1/authors/but%20danh');
++
++    expect(request.request.method).toBe('GET');
++    request.flush(successEnvelope(view));
++
++    await expect(resultPromise).resolves.toEqual(view);
++  });
++});
++
++function successEnvelope<T>(data: T) {
++  return {
++    success: true as const,
++    data,
++    requestId: 'phase-7-request',
++    timestamp: '2026-08-15T00:00:00.000Z',
++  };
++}
++
++function detailView(): AuthorDetailView {
++  return {
++    profile: {
++      id: 'author-id',
++      slug: 'but-danh',
++      name: 'Bút Danh',
++      initials: 'BD',
++      headline: 'Tác giả TruyenHub',
++      country: 'Không công khai',
++      penName: 'Bút Danh',
++      joinedAt: '2026',
++      verified: true,
++      biography: ['Tiểu sử'],
++    },
++    statistics: {
++      totalWorks: 0,
++      followers: '0',
++      totalReads: '0',
++      averageRating: '0.0/10',
++    },
++    featuredWorks: [],
++    timeline: [],
++    recentUpdates: [],
++    hotWorks: [],
++  };
++}
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.ts
+new file mode 100644
+index 0000000..5e83314
+--- /dev/null
++++ b/frontend/src/app/features/public/author-detail/data-access/author-detail-http.repository.ts
+@@ -0,0 +1,22 @@
++import { HttpClient } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import { AuthorDetailView } from '../domain/author-detail.models';
++import { AuthorDetailRepository } from '../domain/author-detail.repository';
++
++@Injectable()
++export class AuthorDetailHttpRepository implements AuthorDetailRepository {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++
++  getBySlug(slug: string): Observable<AuthorDetailView> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorDetailView>>(
++        `${this.config.apiBaseUrl}/authors/${encodeURIComponent(slug)}`,
++      )
++      .pipe(map((response) => response.data));
++  }
++}
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail-mock.repository.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail-mock.repository.ts
+deleted file mode 100644
+index aae05f0..0000000
+--- a/frontend/src/app/features/public/author-detail/data-access/author-detail-mock.repository.ts
++++ /dev/null
+@@ -1,18 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { AuthorDetailRepository } from '../domain/author-detail.repository';
+-import { AuthorDetailView } from '../domain/author-detail.models';
+-import { AUTHOR_DETAIL_MOCK } from '../mock/author-detail.mock';
+-
+-@Injectable()
+-export class AuthorDetailMockRepository implements AuthorDetailRepository {
+-  getBySlug(slug: string): AuthorDetailView {
+-    return {
+-      ...AUTHOR_DETAIL_MOCK,
+-      profile: {
+-        ...AUTHOR_DETAIL_MOCK.profile,
+-        slug,
+-      },
+-    };
+-  }
+-}
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail.providers.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail.providers.ts
+index 1d0ae84..94aad2a 100644
+--- a/frontend/src/app/features/public/author-detail/data-access/author-detail.providers.ts
++++ b/frontend/src/app/features/public/author-detail/data-access/author-detail.providers.ts
+@@ -1,13 +1,13 @@
+ import { Provider } from '@angular/core';
+ 
+ import { AuthorDetailRepository } from '../domain/author-detail.repository';
+-import { AuthorDetailMockRepository } from './author-detail-mock.repository';
++import { AuthorDetailHttpRepository } from './author-detail-http.repository';
+ 
+ export function provideAuthorDetail(): Provider[] {
+   return [
+     {
+       provide: AuthorDetailRepository,
+-      useClass: AuthorDetailMockRepository,
++      useClass: AuthorDetailHttpRepository,
+     },
+   ];
+ }
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
+index c98437d..e788ccd 100644
+--- a/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
++++ b/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
+@@ -1,4 +1,5 @@
+-import { computed, inject, Injectable, signal } from '@angular/core';
++import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ 
+ import { AuthorDetailView } from '../domain/author-detail.models';
+ import { AuthorDetailRepository } from '../domain/author-detail.repository';
+@@ -6,6 +7,7 @@ import { AuthorDetailRepository } from '../domain/author-detail.repository';
+ @Injectable()
+ export class AuthorDetailStore {
+   private readonly repository = inject(AuthorDetailRepository);
++  private readonly destroyRef = inject(DestroyRef);
+ 
+   private readonly viewState = signal<AuthorDetailView | null>(null);
+ 
+@@ -26,7 +28,10 @@ export class AuthorDetailStore {
+   });
+ 
+   load(slug: string): void {
+-    this.viewState.set(this.repository.getBySlug(slug));
++    this.repository
++      .getBySlug(slug)
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe((view) => this.viewState.set(view));
+   }
+ 
+   toggleFollow(): void {
+diff --git a/frontend/src/app/features/public/author-detail/domain/author-detail.repository.ts b/frontend/src/app/features/public/author-detail/domain/author-detail.repository.ts
+index df065fb..048149f 100644
+--- a/frontend/src/app/features/public/author-detail/domain/author-detail.repository.ts
++++ b/frontend/src/app/features/public/author-detail/domain/author-detail.repository.ts
+@@ -1,5 +1,7 @@
++import { Observable } from 'rxjs';
++
+ import { AuthorDetailView } from './author-detail.models';
+ 
+ export abstract class AuthorDetailRepository {
+-  abstract getBySlug(slug: string): AuthorDetailView;
++  abstract getBySlug(slug: string): Observable<AuthorDetailView>;
+ }
+diff --git a/frontend/src/app/features/public/author-detail/mock/author-detail.mock.ts b/frontend/src/app/features/public/author-detail/mock/author-detail.mock.ts
+deleted file mode 100644
+index e38cf16..0000000
+--- a/frontend/src/app/features/public/author-detail/mock/author-detail.mock.ts
++++ /dev/null
+@@ -1,178 +0,0 @@
+-import { AuthorDetailView } from '../domain/author-detail.models';
+-
+-export const AUTHOR_DETAIL_MOCK: AuthorDetailView = {
+-  profile: {
+-    id: 'author-nhi-can',
+-    slug: 'nhi-can',
+-    name: 'Nhĩ Căn',
+-    initials: 'NC',
+-    headline: 'Tác giả tiên hiệp nổi bật',
+-    country: 'Trung Quốc',
+-    penName: 'Nhĩ Căn',
+-    joinedAt: '2009',
+-    verified: true,
+-
+-    biography: [
+-      'Nhĩ Căn là một trong những tác giả tiên hiệp hàng đầu Trung Quốc, nổi tiếng với phong cách viết mạch lạc, thế giới quan rộng lớn và hệ thống nhân vật có chiều sâu.',
+-
+-      'Các tác phẩm của ông thường mang màu sắc triết lý, khắc họa con đường tu luyện đầy gian nan và khát vọng vượt lên số phận.',
+-
+-      'Văn phong của Nhĩ Căn kết hợp giữa hào hùng và trầm mặc, xây dựng nên những thế giới huyền ảo nhưng vẫn giữ được chiều sâu cảm xúc.',
+-
+-      'Ông được độc giả yêu mến qua hàng loạt bộ truyện kinh điển, đóng góp lớn cho dòng truyện tiên hiệp hiện đại.',
+-    ],
+-  },
+-
+-  statistics: {
+-    totalWorks: 9,
+-    followers: '128,6K',
+-    totalReads: '1,25B',
+-    averageRating: '9,3/10',
+-  },
+-
+-  featuredWorks: [
+-    {
+-      id: 'work-pham-nhan-tu-tien',
+-      slug: 'pham-nhan-tu-tien',
+-      title: 'Phàm Nhân Tu Tiên',
+-      description: 'Từ một phàm nhân bình thường, bước lên con đường tu tiên đầy gian nan.',
+-      genres: ['Tiên hiệp', 'Tu chân'],
+-      chapters: 2437,
+-      rating: '9.4',
+-      reads: '286,4K',
+-      tone: 'blue',
+-    },
+-    {
+-      id: 'work-tien-nghich',
+-      slug: 'tien-nghich',
+-      title: 'Tiên Nghịch',
+-      description: 'Nghịch thiên cải mệnh, chỉ vì một niềm bất khuất.',
+-      genres: ['Tiên hiệp', 'Huyền huyễn'],
+-      chapters: 2088,
+-      rating: '9.3',
+-      reads: '254,8K',
+-      tone: 'gold',
+-    },
+-    {
+-      id: 'work-nga-duc-phong-thien',
+-      slug: 'nga-duc-phong-thien',
+-      title: 'Ngã Dục Phong Thiên',
+-      description: 'Một đời tranh đấu, chỉ để phong thiên lập địa.',
+-      genres: ['Tiên hiệp', 'Huyền huyễn'],
+-      chapters: 1632,
+-      rating: '9.2',
+-      reads: '198,7K',
+-      tone: 'cyan',
+-    },
+-    {
+-      id: 'work-cau-ma',
+-      slug: 'cau-ma',
+-      title: 'Cầu Ma',
+-      description: 'Ma đạo tranh chấp, ai mới là chân chính cứu thiên?',
+-      genres: ['Tiên hiệp', 'Huyền huyễn'],
+-      chapters: 1452,
+-      rating: '9.1',
+-      reads: '162,3K',
+-      tone: 'violet',
+-    },
+-  ],
+-
+-  timeline: [
+-    {
+-      year: '2009',
+-      title: 'Bắt đầu sự nghiệp',
+-      description: 'Bắt đầu sáng tác tiểu thuyết mạng.',
+-    },
+-    {
+-      year: '2011',
+-      title: 'Phàm Nhân Tu Tiên',
+-      description: 'Tác phẩm đầu tiên đạt thành công lớn.',
+-    },
+-    {
+-      year: '2013',
+-      title: 'Tác giả được yêu thích',
+-      description: 'Trở thành tên tuổi nổi bật của dòng tiên hiệp.',
+-    },
+-    {
+-      year: '2017',
+-      title: 'Tiên Nghịch đạt hàng tỷ lượt đọc',
+-      description: 'Được chuyển thể và phát hành tại nhiều thị trường.',
+-    },
+-    {
+-      year: '2022',
+-      title: 'Tiếp tục sáng tác',
+-      description: 'Gắn bó cùng cộng đồng độc giả.',
+-    },
+-  ],
+-
+-  recentUpdates: [
+-    {
+-      id: 'update-1',
+-      workTitle: 'Tiên Nghịch',
+-      chapterTitle: 'Chương 2088',
+-      updatedAt: '10/05/2024',
+-    },
+-    {
+-      id: 'update-2',
+-      workTitle: 'Phàm Nhân Tu Tiên',
+-      chapterTitle: 'Chương 2437',
+-      updatedAt: '08/05/2024',
+-    },
+-    {
+-      id: 'update-3',
+-      workTitle: 'Ngã Dục Phong Thiên',
+-      chapterTitle: 'Chương 1632',
+-      updatedAt: '05/05/2024',
+-    },
+-    {
+-      id: 'update-4',
+-      workTitle: 'Cầu Ma',
+-      chapterTitle: 'Chương 1457',
+-      updatedAt: '02/05/2024',
+-    },
+-    {
+-      id: 'update-5',
+-      workTitle: 'Vũ Động Càn Khôn',
+-      chapterTitle: 'Chương 3521',
+-      updatedAt: '30/04/2024',
+-    },
+-  ],
+-
+-  hotWorks: [
+-    {
+-      rank: 1,
+-      title: 'Phàm Nhân Tu Tiên',
+-      genre: 'Tiên hiệp',
+-      reads: '286,4K',
+-      tone: 'blue',
+-    },
+-    {
+-      rank: 2,
+-      title: 'Tiên Nghịch',
+-      genre: 'Tiên hiệp',
+-      reads: '254,8K',
+-      tone: 'gold',
+-    },
+-    {
+-      rank: 3,
+-      title: 'Ngã Dục Phong Thiên',
+-      genre: 'Tiên hiệp',
+-      reads: '198,7K',
+-      tone: 'cyan',
+-    },
+-    {
+-      rank: 4,
+-      title: 'Cầu Ma',
+-      genre: 'Tiên hiệp',
+-      reads: '162,3K',
+-      tone: 'violet',
+-    },
+-    {
+-      rank: 5,
+-      title: 'Vũ Động Càn Khôn',
+-      genre: 'Tiên hiệp',
+-      reads: '155,6K',
+-      tone: 'crimson',
+-    },
+-  ],
+-};
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.spec.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.spec.ts
+new file mode 100644
+index 0000000..c797b79
+--- /dev/null
++++ b/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.spec.ts
+@@ -0,0 +1,69 @@
++import { provideHttpClient } from '@angular/common/http';
++import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
++import { TestBed } from '@angular/core/testing';
++import { firstValueFrom } from 'rxjs';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { AuthorDirectoryView } from '../domain/author-directory.models';
++import { AuthorDirectoryHttpRepository } from './author-directory-http.repository';
++
++describe('AuthorDirectoryHttpRepository', () => {
++  let repository: AuthorDirectoryHttpRepository;
++  let http: HttpTestingController;
++
++  beforeEach(() => {
++    TestBed.configureTestingModule({
++      providers: [
++        provideHttpClient(),
++        provideHttpClientTesting(),
++        AuthorDirectoryHttpRepository,
++        {
++          provide: APP_RUNTIME_CONFIG,
++          useValue: {
++            apiBaseUrl: '/api/v1',
++            appName: 'TruyenHub',
++            production: false,
++          },
++        },
++      ],
++    });
++
++    repository = TestBed.inject(AuthorDirectoryHttpRepository);
++    http = TestBed.inject(HttpTestingController);
++  });
++
++  afterEach(() => {
++    http.verify();
++    TestBed.resetTestingModule();
++  });
++
++  it('loads authors from the public authors endpoint', async () => {
++    const view: AuthorDirectoryView = {
++      authors: [],
++      statistics: {
++        authors: '0',
++        works: '0',
++        reads: '0',
++        followers: '0',
++      },
++      newAuthors: [],
++    };
++    const resultPromise = firstValueFrom(repository.getDirectory());
++    const request = http.expectOne('/api/v1/authors');
++
++    expect(request.request.method).toBe('GET');
++    request.flush(successEnvelope(view));
++
++    await expect(resultPromise).resolves.toEqual(view);
++  });
++});
++
++function successEnvelope<T>(data: T) {
++  return {
++    success: true as const,
++    data,
++    requestId: 'phase-7-request',
++    timestamp: '2026-08-15T00:00:00.000Z',
++  };
++}
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.ts
+new file mode 100644
+index 0000000..9578ed7
+--- /dev/null
++++ b/frontend/src/app/features/public/author-directory/data-access/author-directory-http.repository.ts
+@@ -0,0 +1,20 @@
++import { HttpClient } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import { AuthorDirectoryView } from '../domain/author-directory.models';
++import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
++
++@Injectable()
++export class AuthorDirectoryHttpRepository implements AuthorDirectoryRepository {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++
++  getDirectory(): Observable<AuthorDirectoryView> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorDirectoryView>>(`${this.config.apiBaseUrl}/authors`)
++      .pipe(map((response) => response.data));
++  }
++}
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory-mock.repository.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory-mock.repository.ts
+deleted file mode 100644
+index 77d0363..0000000
+--- a/frontend/src/app/features/public/author-directory/data-access/author-directory-mock.repository.ts
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { AuthorDirectoryView } from '../domain/author-directory.models';
+-import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
+-import { AUTHOR_DIRECTORY_MOCK } from '../mock/author-directory.mock';
+-
+-@Injectable()
+-export class AuthorDirectoryMockRepository implements AuthorDirectoryRepository {
+-  getDirectory(): AuthorDirectoryView {
+-    return AUTHOR_DIRECTORY_MOCK;
+-  }
+-}
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory.providers.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory.providers.ts
+index 7467bdb..2cc317d 100644
+--- a/frontend/src/app/features/public/author-directory/data-access/author-directory.providers.ts
++++ b/frontend/src/app/features/public/author-directory/data-access/author-directory.providers.ts
+@@ -1,13 +1,13 @@
+ import { Provider } from '@angular/core';
+ 
+ import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
+-import { AuthorDirectoryMockRepository } from './author-directory-mock.repository';
++import { AuthorDirectoryHttpRepository } from './author-directory-http.repository';
+ 
+ export function provideAuthorDirectory(): Provider[] {
+   return [
+     {
+       provide: AuthorDirectoryRepository,
+-      useClass: AuthorDirectoryMockRepository,
++      useClass: AuthorDirectoryHttpRepository,
+     },
+   ];
+ }
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
+index d4069a0..67316d1 100644
+--- a/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
++++ b/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
+@@ -1,4 +1,5 @@
+-import { computed, inject, Injectable, signal } from '@angular/core';
++import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ 
+ import { AuthorDirectorySort, AuthorDirectoryView } from '../domain/author-directory.models';
+ import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
+@@ -6,6 +7,7 @@ import { AuthorDirectoryRepository } from '../domain/author-directory.repository
+ @Injectable()
+ export class AuthorDirectoryStore {
+   private readonly repository = inject(AuthorDirectoryRepository);
++  private readonly destroyRef = inject(DestroyRef);
+ 
+   private readonly viewState = signal<AuthorDirectoryView | null>(null);
+ 
+@@ -81,7 +83,10 @@ export class AuthorDirectoryStore {
+   readonly resultCount = computed(() => this.filteredAuthors().length);
+ 
+   load(): void {
+-    this.viewState.set(this.repository.getDirectory());
++    this.repository
++      .getDirectory()
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe((view) => this.viewState.set(view));
+   }
+ 
+   setQuery(query: string): void {
+diff --git a/frontend/src/app/features/public/author-directory/domain/author-directory.repository.ts b/frontend/src/app/features/public/author-directory/domain/author-directory.repository.ts
+index 8ab3f23..85273b5 100644
+--- a/frontend/src/app/features/public/author-directory/domain/author-directory.repository.ts
++++ b/frontend/src/app/features/public/author-directory/domain/author-directory.repository.ts
+@@ -1,5 +1,7 @@
++import { Observable } from 'rxjs';
++
+ import { AuthorDirectoryView } from './author-directory.models';
+ 
+ export abstract class AuthorDirectoryRepository {
+-  abstract getDirectory(): AuthorDirectoryView;
++  abstract getDirectory(): Observable<AuthorDirectoryView>;
+ }
+diff --git a/frontend/src/app/features/public/author-directory/mock/author-directory.mock.ts b/frontend/src/app/features/public/author-directory/mock/author-directory.mock.ts
+deleted file mode 100644
+index 627c00b..0000000
+--- a/frontend/src/app/features/public/author-directory/mock/author-directory.mock.ts
++++ /dev/null
+@@ -1,241 +0,0 @@
+-import { AuthorDirectoryView } from '../domain/author-directory.models';
+-
+-export const AUTHOR_DIRECTORY_MOCK: AuthorDirectoryView = {
+-  statistics: {
+-    authors: '1,248',
+-    works: '8,752',
+-    reads: '24.6B',
+-    followers: '3.2M',
+-  },
+-
+-  authors: [
+-    {
+-      id: 'author-nhi-can',
+-      slug: 'nhi-can',
+-      name: 'Nhĩ Căn',
+-      initials: 'NC',
+-      genre: 'Tiên hiệp',
+-      description: 'Tác giả nổi tiếng với phong cách viết chắc tay, logic và chiều sâu triết lý.',
+-      verified: true,
+-
+-      worksLabel: '9',
+-      readsLabel: '1.25B',
+-      followersLabel: '128.6K',
+-
+-      works: 9,
+-      reads: 1_250_000_000,
+-      followers: 128_600,
+-      featuredRank: 1,
+-    },
+-    {
+-      id: 'author-thien-tam-tho-dau',
+-      slug: 'thien-tam-tho-dau',
+-      name: 'Thiên Tằm Thổ Đậu',
+-      initials: 'TK',
+-      genre: 'Huyền huyễn',
+-      description: 'Bậc thầy trong việc xây dựng thế giới rộng lớn và hệ thống tu luyện đặc sắc.',
+-      verified: true,
+-
+-      worksLabel: '8',
+-      readsLabel: '952M',
+-      followersLabel: '96.3K',
+-
+-      works: 8,
+-      reads: 952_000_000,
+-      followers: 96_300,
+-      featuredRank: 2,
+-    },
+-    {
+-      id: 'author-da-vu',
+-      slug: 'da-vu',
+-      name: 'Dạ Vũ',
+-      initials: 'DV',
+-      genre: 'Đô thị',
+-      description: 'Chuyên viết truyện đô thị, hệ thống và hành động kịch tính.',
+-      verified: true,
+-
+-      worksLabel: '7',
+-      readsLabel: '785M',
+-      followersLabel: '88.7K',
+-
+-      works: 7,
+-      reads: 785_000_000,
+-      followers: 88_700,
+-      featuredRank: 3,
+-    },
+-    {
+-      id: 'author-mong-nhap-than-co',
+-      slug: 'mong-nhap-than-co',
+-      name: 'Mộng Nhập Thần Cơ',
+-      initials: 'MN',
+-      genre: 'Lịch sử',
+-      description: 'Kết hợp lịch sử và huyền huyễn tạo nên những câu chuyện độc đáo.',
+-      verified: true,
+-
+-      worksLabel: '6',
+-      readsLabel: '632M',
+-      followersLabel: '75.2K',
+-
+-      works: 6,
+-      reads: 632_000_000,
+-      followers: 75_200,
+-      featuredRank: 4,
+-    },
+-    {
+-      id: 'author-huyen-huyen-vu',
+-      slug: 'huyen-huyen-vu',
+-      name: 'Huyền Huyễn Vũ',
+-      initials: 'HV',
+-      genre: 'Huyền huyễn',
+-      description: 'Tác giả của những bộ truyện có cốt truyện lôi cuốn và nhân vật ấn tượng.',
+-      verified: true,
+-
+-      worksLabel: '5',
+-      readsLabel: '521M',
+-      followersLabel: '68.9K',
+-
+-      works: 5,
+-      reads: 521_000_000,
+-      followers: 68_900,
+-      featuredRank: 5,
+-    },
+-    {
+-      id: 'author-ech-ngoi-day-gieng',
+-      slug: 'ech-ngoi-day-gieng',
+-      name: 'Ếch Ngồi Đáy Giếng',
+-      initials: 'EG',
+-      genre: 'Tiên hiệp',
+-      description: 'Văn phong hài hước, sáng tạo, mang đến những trải nghiệm mới lạ.',
+-      verified: true,
+-
+-      worksLabel: '6',
+-      readsLabel: '498M',
+-      followersLabel: '64.1K',
+-
+-      works: 6,
+-      reads: 498_000_000,
+-      followers: 64_100,
+-      featuredRank: 6,
+-    },
+-    {
+-      id: 'author-ha-ngon',
+-      slug: 'ha-ngon',
+-      name: 'Hạ Ngôn',
+-      initials: 'HN',
+-      genre: 'Ngôn tình',
+-      description: 'Ngòi bút tinh tế trong việc khắc họa cảm xúc, tình yêu và các mối quan hệ.',
+-      verified: true,
+-
+-      worksLabel: '12',
+-      readsLabel: '412M',
+-      followersLabel: '59.8K',
+-
+-      works: 12,
+-      reads: 412_000_000,
+-      followers: 59_800,
+-      featuredRank: 7,
+-    },
+-    {
+-      id: 'author-co-mac',
+-      slug: 'co-mac',
+-      name: 'Cổ Mặc',
+-      initials: 'CM',
+-      genre: 'Kiếm hiệp',
+-      description: 'Những câu chuyện giang hồ giàu cảm xúc, đậm tinh thần hiệp nghĩa.',
+-      verified: true,
+-
+-      worksLabel: '7',
+-      readsLabel: '401M',
+-      followersLabel: '58.3K',
+-
+-      works: 7,
+-      reads: 401_000_000,
+-      followers: 58_300,
+-      featuredRank: 8,
+-    },
+-    {
+-      id: 'author-phong-lang-thien-ha',
+-      slug: 'phong-lang-thien-ha',
+-      name: 'Phong Lăng Thiên Hạ',
+-      initials: 'PL',
+-      genre: 'Võng du',
+-      description: 'Nổi bật với thế giới trò chơi rộng lớn và những trận chiến hấp dẫn.',
+-      verified: true,
+-
+-      worksLabel: '5',
+-      readsLabel: '364M',
+-      followersLabel: '52.6K',
+-
+-      works: 5,
+-      reads: 364_000_000,
+-      followers: 52_600,
+-      featuredRank: 9,
+-    },
+-    {
+-      id: 'author-phat-tieu-dich-oa-nguu',
+-      slug: 'phat-tieu-dich-oa-nguu',
+-      name: 'Phát Tiêu Đích Oa Ngưu',
+-      initials: 'PT',
+-      genre: 'Khoa huyễn',
+-      description: 'Tác giả chuyên khai thác công nghệ, tương lai và những thế giới giả tưởng.',
+-      verified: true,
+-
+-      worksLabel: '6',
+-      readsLabel: '320M',
+-      followersLabel: '49.7K',
+-
+-      works: 6,
+-      reads: 320_000_000,
+-      followers: 49_700,
+-      featuredRank: 10,
+-    },
+-  ],
+-
+-  newAuthors: [
+-    {
+-      id: 'new-author-luc-tieu-phung',
+-      slug: 'luc-tieu-phung',
+-      name: 'Lục Tiêu Phụng',
+-      initials: 'LT',
+-      worksLabel: '2 tác phẩm',
+-      readsLabel: '12.4K',
+-      verified: true,
+-    },
+-    {
+-      id: 'new-author-van-hi',
+-      slug: 'van-hi',
+-      name: 'Vân Hi',
+-      initials: 'VH',
+-      worksLabel: '1 tác phẩm',
+-      readsLabel: '8.7K',
+-      verified: true,
+-    },
+-    {
+-      id: 'new-author-mac-thien',
+-      slug: 'mac-thien',
+-      name: 'Mặc Thiên',
+-      initials: 'MT',
+-      worksLabel: '3 tác phẩm',
+-      readsLabel: '15.2K',
+-      verified: true,
+-    },
+-    {
+-      id: 'new-author-am-tich',
+-      slug: 'am-tich',
+-      name: 'Âm Tịch',
+-      initials: 'AT',
+-      worksLabel: '2 tác phẩm',
+-      readsLabel: '9.1K',
+-      verified: true,
+-    },
+-    {
+-      id: 'new-author-diep-giai',
+-      slug: 'diep-giai',
+-      name: 'Diệp Giai',
+-      initials: 'DG',
+-      worksLabel: '1 tác phẩm',
+-      readsLabel: '6.3K',
+-      verified: true,
+-    },
+-  ],
+-};
