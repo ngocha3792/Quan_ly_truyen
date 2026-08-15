@@ -180,12 +180,12 @@ export class OAuthFlowService {
 
     if (providerError?.trim()) {
       throw new OAuthFlowInvalidException(
-        'ÄÄƒng nháº­p OAuth Ä‘Ã£ bá»‹ tá»« chá»‘i hoáº·c há»§y bá»',
+        'Đăng nhập OAuth đã bị từ chối hoặc hủy bỏ',
       );
     }
 
     if (!code?.trim()) {
-      throw new OAuthFlowInvalidException('Thiáº¿u authorization code');
+      throw new OAuthFlowInvalidException('Thiếu authorization code');
     }
     const profile =
       normalized === 'google'
@@ -252,7 +252,7 @@ export class OAuthFlowService {
         settings.clientId,
       );
       if (payload.nonce !== flow.nonce) {
-        throw new OAuthFlowInvalidException('OAuth nonce khÃ´ng há»£p lá»‡');
+        throw new OAuthFlowInvalidException('OAuth nonce không hợp lệ');
       }
       return {
         provider: OAuthProvider.GOOGLE,
@@ -338,19 +338,19 @@ export class OAuthFlowService {
   ): Promise<JwtPayload> {
     const decoded = decode(token, { complete: true });
     if (!decoded || typeof decoded === 'string') {
-      throw new OAuthFlowInvalidException('Google ID token khÃ´ng há»£p lá»‡');
+      throw new OAuthFlowInvalidException('Google ID token không hợp lệ');
     }
     const header = decoded.header;
     if (!header.kid || header.alg !== 'RS256') {
       throw new OAuthFlowInvalidException(
-        'Google ID token header khÃ´ng há»£p lá»‡',
+        'Google ID token header không hợp lệ',
       );
     }
     const keys = await this.getGoogleJwks();
     const jwk = keys.find((item) => item.kid === header.kid);
     if (!jwk)
       throw new OAuthFlowInvalidException(
-        'KhÃ´ng tÃ¬m tháº¥y khÃ³a kÃ½ Google',
+        'Không tìm thấy khóa ký Google',
       );
     const key = createPublicKey({ key: jwk, format: 'jwk' });
     const payload = verify(token, key, {
@@ -583,7 +583,7 @@ export class OAuthFlowService {
       if (!exists) return candidate;
     }
     throw new OAuthFlowInvalidException(
-      'KhÃ´ng thá»ƒ táº¡o username cho tÃ i khoáº£n OAuth',
+      'Không thể tạo username cho tài khoản OAuth',
     );
   }
 
@@ -676,7 +676,7 @@ export class OAuthFlowService {
     if (!this.redis) {
       throw new ServiceUnavailableException({
         code: 'AUTH_OAUTH_STATE_STORE_UNAVAILABLE',
-        message: 'Dá»‹ch vá»¥ OAuth táº¡m thá»i khÃ´ng kháº£ dá»¥ng',
+        message: 'Dịch vụ OAuth tạm thời không khả dụng',
         service: 'redis',
       });
     }
@@ -689,7 +689,7 @@ function parseProvider(value: string): 'google' | 'github' {
   if (normalized !== 'google' && normalized !== 'github') {
     throw new InvalidInputException({
       code: 'AUTH_OAUTH_PROVIDER_UNSUPPORTED',
-      message: 'OAuth provider khÃ´ng Ä‘Æ°á»£c há»— trá»£',
+      message: 'OAuth provider không được hỗ trợ',
       details: { provider: value },
     });
   }
@@ -782,7 +782,7 @@ function numberOrStringField(value: unknown, field: string): number | string {
 function requiredClaim(payload: JwtPayload, field: string): string {
   const value: unknown = payload[field];
   if (typeof value !== 'string' || !value) {
-    throw new OAuthFlowInvalidException(`Thiáº¿u claim ${field}`);
+    throw new OAuthFlowInvalidException(`Thiếu claim ${field}`);
   }
   return value;
 }
