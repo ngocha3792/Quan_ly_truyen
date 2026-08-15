@@ -119,8 +119,13 @@ jobs:
         working-directory: .
         shell: bash
         run: |
-          if grep -Eq 'db\.prisma\.io|postgres(?:ql)?://[^[:space:]]+@[^[:space:]]*(neon|supabase|render)' backend/docker/.env.docker; then
-            echo 'backend/docker/.env.docker must only reference local development services.'
+          if git grep -nEi 'db\.prisma\.io|postgres(ql)?://[^[:space:]]+@[^[:space:]]*(neon|supabase|render)' -- .; then
+            echo 'Tracked files must not contain cloud database credentials.'
+            exit 1
+          fi
+
+          if git ls-files --error-unmatch backend/docker/.env.docker >/dev/null 2>&1; then
+            echo 'backend/docker/.env.docker is a local secret file and must not be tracked.'
             exit 1
           fi
 

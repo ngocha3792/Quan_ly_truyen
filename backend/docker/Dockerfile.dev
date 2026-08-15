@@ -12,7 +12,7 @@ ENV NPM_CONFIG_AUDIT=false
 
 # Prisma config đọc DATABASE_URL trong lúc chạy postinstall.
 # Đây chỉ là URL build-time; prisma generate không kết nối database.
-# .env.docker sẽ ghi đè biến này khi container thực sự chạy.
+# Docker development env file will override this when the container starts.
 ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/quan_ly_truyen?schema=public&sslmode=disable"
 
 RUN apt-get update \

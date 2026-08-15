@@ -23,7 +23,7 @@ This review covered the Auth unit tests, PostgreSQL and Redis integration tests,
 - Made database and Redis safety guards fail closed unless `ALLOW_UNSAFE_TEST_DB=true` is explicitly set.
 - Added deterministic session limits to both integration and E2E setup.
 - Reworked the session-limit integration fixture to use relative future expiration dates and explicit ordered `createdAt` values.
-- Added tracked Docker-only defaults in `docker/.env.docker` and simplified Compose to load that file.
+- Added tracked Docker-only defaults in `docker/.env.docker.example` and simplified Compose to load that file.
 - Aligned host PostgreSQL example URLs with port `5433`.
 - Removed the BOM from the PostgreSQL initialization SQL.
 - Consolidated Auth example variables and supplied a valid 32-byte Base64 mail encryption key.
@@ -35,7 +35,7 @@ This review covered the Auth unit tests, PostgreSQL and Redis integration tests,
 - Parsed `package.json` and `package-lock.json`: valid JSON.
 - Confirmed dependency declarations match the root metadata in `package-lock.json`.
 - Parsed both Docker Compose files as YAML.
-- Confirmed `.env.example` and `docker/.env.docker` have no duplicate keys.
+- Confirmed `.env.example` and `docker/.env.docker.example` have no duplicate keys.
 - Confirmed the PostgreSQL init SQL no longer begins with a UTF-8 BOM.
 
 Full Jest execution could not be completed in the review container because its internal npm registry returned HTTP 404 for the locked `zeptomatch@2.1.0` tarball during `npm ci`. Docker, PostgreSQL, and Redis were also unavailable in that container. This limitation is external to the submitted source, so no passing test claim is made here.

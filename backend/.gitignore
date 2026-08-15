@@ -1,8 +1,8 @@
 # Root .gitignore ignores migration SQL. This scoped override keeps real Prisma migrations versioned.
 !prisma/migrations/**/*.sql
 
-# Production secrets
+# Local and production secrets must never be committed.
 .env.production
+docker/.env.docker
 backups/
 ops/production/secrets/
-.env.production
