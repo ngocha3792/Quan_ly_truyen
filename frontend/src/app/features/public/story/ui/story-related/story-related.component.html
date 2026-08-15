@@ -7,7 +7,7 @@
   <div class="related-list">
     @for (rel of relatedStories(); track rel.slug) {
       <a class="related-item" [routerLink]="['/truyen', rel.slug]">
-        <img [src]="rel.coverUrl" [alt]="rel.title" />
+        <img [src]="rel.coverUrl" [alt]="rel.title" loading="lazy" decoding="async" />
         <div>
           <strong>{{ rel.title }}</strong>
           <small>{{ rel.latestChapter !== null ? 'Ch. ' + rel.latestChapter : 'Chưa có chương' }}</small>
