@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build:ci
 
 
-FROM nginx:1.29-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 
 COPY nginx/nginx.conf \
     /etc/nginx/nginx.conf
