@@ -1,6 +1,8 @@
 ARG NODE_IMAGE=node:24.18.0-bookworm-slim
 FROM ${NODE_IMAGE} AS base
 
+ARG NPM_VERSION=11.12.1
+
 WORKDIR /app
 
 ENV CI=true
@@ -8,7 +10,8 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_FUND=false
 ENV NPM_CONFIG_AUDIT=false
 
-RUN apt-get update \
+RUN npm install --global "npm@${NPM_VERSION}" \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
     dumb-init \
@@ -24,7 +27,7 @@ ENV NODE_ENV=development
 # nhưng không kết nối đến database này.
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 

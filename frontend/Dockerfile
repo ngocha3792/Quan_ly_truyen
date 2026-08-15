@@ -1,9 +1,13 @@
 ARG NODE_IMAGE=node:24.18.0-alpine
 FROM ${NODE_IMAGE} AS dependencies
 
+ARG NPM_VERSION=11.12.1
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+RUN npm install --global "npm@${NPM_VERSION}"
+
+COPY package.json package-lock.json .npmrc ./
 
 RUN npm ci
 

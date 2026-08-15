@@ -1,0 +1,302 @@
+diff --git a/.node-version b/.node-version
+new file mode 100644
+index 0000000..ca5c350
+--- /dev/null
++++ b/.node-version
+@@ -0,0 +1 @@
++24.18.0
+diff --git a/DEVELOPMENT.md b/DEVELOPMENT.md
+new file mode 100644
+index 0000000..3feef88
+--- /dev/null
++++ b/DEVELOPMENT.md
+@@ -0,0 +1,45 @@
++# Development environment
++
++The repository uses one pinned JavaScript toolchain for local development, CI, and Docker builds.
++
++## Required toolchain
++
++- Node.js `24.18.0`
++- npm `11.12.1`
++- Docker Desktop / Docker Engine with Compose v2 for database, Redis, and container workflows
++
++Node.js is pinned in both `.nvmrc` and `.node-version`. Frontend and backend package manifests enforce the supported Node/npm line through `engines`, while their `.npmrc` files enable `engine-strict`.
++
++## Windows setup
++
++From the repository root, select Node.js `24.18.0` with your Node version manager, then pin npm:
++
++```powershell
++npm install --global npm@11.12.1
++```
++
++Verify both applications see the expected runtime:
++
++```powershell
++npm --prefix frontend run env:check
++npm --prefix backend run env:check
++```
++
++Install dependencies reproducibly:
++
++```powershell
++npm --prefix frontend ci
++npm --prefix backend ci
++```
++
++Do not use `npm install` for routine setup when a committed `package-lock.json` is present. `npm ci` must remain the default for clean local setup and CI.
++
++## Docker development
++
++The backend development image is pinned to the same Node.js patch release as local development and CI. Start the backend development stack with:
++
++```powershell
++npm --prefix backend run docker:dev
++```
++
++Use `backend/docker/.env.docker.example` as the safe committed default. Keep any local secret override untracked.
+diff --git a/backend/.npmrc b/backend/.npmrc
+new file mode 100644
+index 0000000..13aa640
+--- /dev/null
++++ b/backend/.npmrc
+@@ -0,0 +1,3 @@
++engine-strict=true
++package-lock=true
++save-exact=true
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index 9372180..efb0354 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -1,6 +1,8 @@
+ ARG NODE_IMAGE=node:24.18.0-bookworm-slim
+ FROM ${NODE_IMAGE} AS base
+ 
++ARG NPM_VERSION=11.12.1
++
+ WORKDIR /app
+ 
+ ENV CI=true
+@@ -8,7 +10,8 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ ENV NPM_CONFIG_FUND=false
+ ENV NPM_CONFIG_AUDIT=false
+ 
+-RUN apt-get update \
++RUN npm install --global "npm@${NPM_VERSION}" \
++    && apt-get update \
+     && apt-get install -y --no-install-recommends \
+     ca-certificates \
+     dumb-init \
+@@ -24,7 +27,7 @@ ENV NODE_ENV=development
+ # nhưng không kết nối đến database này.
+ ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public
+ 
+-COPY package.json package-lock.json ./
++COPY package.json package-lock.json .npmrc ./
+ COPY prisma.config.ts ./
+ COPY prisma ./prisma
+ 
+diff --git a/backend/docker/Dockerfile.dev b/backend/docker/Dockerfile.dev
+index e87a1e4..34f9472 100644
+--- a/backend/docker/Dockerfile.dev
++++ b/backend/docker/Dockerfile.dev
+@@ -1,6 +1,8 @@
+ # syntax=docker/dockerfile:1.7
+ 
+-FROM node:24-bookworm-slim
++FROM node:24.18.0-bookworm-slim
++
++ARG NPM_VERSION=11.12.1
+ 
+ WORKDIR /app
+ 
+@@ -15,7 +17,8 @@ ENV NPM_CONFIG_AUDIT=false
+ # Docker development env file will override this when the container starts.
+ ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/quan_ly_truyen?schema=public&sslmode=disable"
+ 
+-RUN apt-get update \
++RUN npm install --global "npm@${NPM_VERSION}" \
++    && apt-get update \
+     && apt-get install -y --no-install-recommends \
+     ca-certificates \
+     curl \
+@@ -25,7 +28,7 @@ RUN apt-get update \
+ 
+ 
+ 
+-COPY package.json package-lock.json ./
++COPY package.json package-lock.json .npmrc ./
+ 
+ COPY prisma.config.ts ./
+ COPY prisma ./prisma
+diff --git a/backend/package-lock.json b/backend/package-lock.json
+index 73f3c9e..c841511 100644
+--- a/backend/package-lock.json
++++ b/backend/package-lock.json
+@@ -80,6 +80,10 @@
+         "tsx": "^4.23.1",
+         "typescript": "^5.7.3",
+         "typescript-eslint": "^8.20.0"
++      },
++      "engines": {
++        "node": "24.18.x",
++        "npm": "11.12.x"
+       }
+     },
+     "node_modules/@angular-devkit/core": {
+diff --git a/backend/package.json b/backend/package.json
+index c2b63b6..b1516a0 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -6,6 +6,7 @@
+   "private": true,
+   "license": "UNLICENSED",
+   "scripts": {
++    "env:check": "node ../scripts/check-development-environment.mjs",
+     "build": "nest build && tsc-alias -p tsconfig.build.json",
+     "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
+     "format:check": "prettier --check \"src/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
+@@ -195,5 +196,10 @@
+     "@nestjs/swagger": {
+       "js-yaml": "5.2.2"
+     }
++  },
++  "packageManager": "npm@11.12.1",
++  "engines": {
++    "node": "24.18.x",
++    "npm": "11.12.x"
+   }
+ }
+diff --git a/frontend/.npmrc b/frontend/.npmrc
+new file mode 100644
+index 0000000..13aa640
+--- /dev/null
++++ b/frontend/.npmrc
+@@ -0,0 +1,3 @@
++engine-strict=true
++package-lock=true
++save-exact=true
+diff --git a/frontend/Dockerfile b/frontend/Dockerfile
+index 53f5c71..32afed1 100644
+--- a/frontend/Dockerfile
++++ b/frontend/Dockerfile
+@@ -1,9 +1,13 @@
+ ARG NODE_IMAGE=node:24.18.0-alpine
+ FROM ${NODE_IMAGE} AS dependencies
+ 
++ARG NPM_VERSION=11.12.1
++
+ WORKDIR /app
+ 
+-COPY package.json package-lock.json ./
++RUN npm install --global "npm@${NPM_VERSION}"
++
++COPY package.json package-lock.json .npmrc ./
+ 
+ RUN npm ci
+ 
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 4a6c545..4109bf8 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -34,6 +34,10 @@
+         "typescript-eslint": "^8.66.0",
+         "vitest": "^4.1.10",
+         "wait-on": "^9.1.0"
++      },
++      "engines": {
++        "node": "24.18.x",
++        "npm": "11.12.x"
+       }
+     },
+     "node_modules/@ampproject/remapping": {
+diff --git a/frontend/package.json b/frontend/package.json
+index 2e5e859..d140bf5 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -2,6 +2,7 @@
+   "name": "frontend",
+   "version": "0.0.0",
+   "scripts": {
++    "env:check": "node ../scripts/check-development-environment.mjs",
+     "start": "ng serve --proxy-config proxy.conf.json",
+     "lint": "ng lint",
+     "lint:check": "ng lint --max-warnings=0",
+@@ -52,5 +53,9 @@
+     "typescript-eslint": "^8.66.0",
+     "vitest": "^4.1.10",
+     "wait-on": "^9.1.0"
++  },
++  "engines": {
++    "node": "24.18.x",
++    "npm": "11.12.x"
+   }
+ }
+diff --git a/scripts/check-development-environment.mjs b/scripts/check-development-environment.mjs
+new file mode 100644
+index 0000000..2534612
+--- /dev/null
++++ b/scripts/check-development-environment.mjs
+@@ -0,0 +1,61 @@
++import { execFileSync } from 'node:child_process';
++import { readFileSync } from 'node:fs';
++import { dirname, resolve } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const scriptDirectory = dirname(fileURLToPath(import.meta.url));
++const repositoryRoot = resolve(scriptDirectory, '..');
++const requiredNode = readFileSync(resolve(repositoryRoot, '.nvmrc'), 'utf8').trim();
++const requiredNpm = '11.12.1';
++
++function normalizeVersion(version) {
++  return version.trim().replace(/^v/, '');
++}
++
++function readNpmVersion() {
++  const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
++
++  try {
++    return normalizeVersion(
++      execFileSync(npmExecutable, ['--version'], {
++        encoding: 'utf8',
++        stdio: ['ignore', 'pipe', 'pipe'],
++      }),
++    );
++  } catch {
++    return null;
++  }
++}
++
++const actualNode = normalizeVersion(process.version);
++const actualNpm = readNpmVersion();
++const errors = [];
++
++if (actualNode !== requiredNode) {
++  errors.push(`Node.js ${requiredNode} is required; found ${actualNode}.`);
++}
++
++if (actualNpm !== requiredNpm) {
++  errors.push(
++    actualNpm
++      ? `npm ${requiredNpm} is required; found ${actualNpm}.`
++      : `npm ${requiredNpm} is required; npm was not found on PATH.`,
++  );
++}
++
++if (errors.length > 0) {
++  console.error('Development environment check failed:');
++  for (const error of errors) {
++    console.error(`- ${error}`);
++  }
++  console.error('');
++  console.error('Expected toolchain:');
++  console.error(`- Node.js ${requiredNode} (see .nvmrc / .node-version)`);
++  console.error(`- npm ${requiredNpm}`);
++  console.error('');
++  console.error('After selecting the required Node.js version, run:');
++  console.error(`npm install --global npm@${requiredNpm}`);
++  process.exit(1);
++}
++
++console.log(`Development environment OK: Node.js ${actualNode}, npm ${actualNpm}`);

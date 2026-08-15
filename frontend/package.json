@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.0.0",
   "scripts": {
+    "env:check": "node ../scripts/check-development-environment.mjs",
     "start": "ng serve --proxy-config proxy.conf.json",
     "lint": "ng lint",
     "lint:check": "ng lint --max-warnings=0",
@@ -52,5 +53,9 @@
     "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10",
     "wait-on": "^9.1.0"
+  },
+  "engines": {
+    "node": "24.18.x",
+    "npm": "11.12.x"
   }
 }

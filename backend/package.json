@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "env:check": "node ../scripts/check-development-environment.mjs",
     "build": "nest build && tsc-alias -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
@@ -195,5 +196,10 @@
     "@nestjs/swagger": {
       "js-yaml": "5.2.2"
     }
+  },
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": "24.18.x",
+    "npm": "11.12.x"
   }
 }
