@@ -15,6 +15,7 @@ jobs:
     name: Verify frontend release source
 
     permissions:
+      actions: read
       contents: read
 
     runs-on: ubuntu-latest
@@ -27,6 +28,7 @@ jobs:
 
     outputs:
       source_sha: ${{ steps.source.outputs.sha }}
+      ci_run_url: ${{ steps.required-ci.outputs.run_url }}
 
     steps:
       - name: Checkout release source
@@ -56,6 +58,61 @@ jobs:
           echo "sha=${source_sha}" >> "$GITHUB_OUTPUT"
 
           echo "Frontend release SHA: ${source_sha}"
+
+      - name: Require successful CI for exact SHA on main
+        id: required-ci
+        working-directory: .
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          runs_json="$(
+            gh api \
+              --method GET \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+              -f head_sha="${SOURCE_SHA}" \
+              -f per_page=100
+          )"
+
+          successful_run="$(
+            jq -c \
+              --arg sha "${SOURCE_SHA}" \
+              '[
+                .workflow_runs[]
+                | select(.head_sha == $sha)
+                | select(.event == "push")
+                | select(.head_branch == "main")
+                | select(.status == "completed")
+                | select(.conclusion == "success")
+              ]
+              | sort_by(.run_number)
+              | reverse
+              | .[0] // empty' \
+              <<<"${runs_json}"
+          )"
+
+          if test -z "${successful_run}"; then
+            echo "No successful CI workflow run was found for exact SHA ${SOURCE_SHA} on main."
+            echo "Frontend images will not be published until the exact commit has passed full CI on main."
+            exit 1
+          fi
+
+          run_url="$(jq -r '.html_url' <<<"${successful_run}")"
+          run_number="$(jq -r '.run_number' <<<"${successful_run}")"
+
+          echo "Verified CI run #${run_number}: ${run_url}"
+          echo "run_url=${run_url}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Frontend release verification"
+            echo
+            echo "- Source SHA: \`${SOURCE_SHA}\`"
+            echo "- Required CI run: [#${run_number}](${run_url})"
+            echo "- Result: successful full CI on \`main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

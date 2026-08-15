@@ -273,7 +273,7 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: npm audit --omit=dev --audit-level=high
 
-    container-build:
+  container-build:
     name: Containers / reproducible build, vulnerability scan and smoke
 
     runs-on: ubuntu-latest
