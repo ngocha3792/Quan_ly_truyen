@@ -7,7 +7,7 @@ x-default-logging: &default-logging
     max-file: '5'
 
 x-runtime-common: &runtime-common
-  image: ${BACKEND_IMAGE_NAME:?BACKEND_IMAGE_NAME is required}:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG must be an immutable Git SHA or release tag}
+  image: ${BACKEND_IMAGE_NAME:?BACKEND_IMAGE_NAME is required}:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG must be the full source Git SHA}
   env_file:
     - ${PRODUCTION_ENV_FILE:-.env.production}
   restart: unless-stopped
@@ -46,7 +46,7 @@ x-tool-common: &tool-common
 
 services:
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:17.10-alpine3.23}
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
@@ -71,7 +71,7 @@ services:
     logging: *default-logging
 
   redis:
-    image: ${REDIS_IMAGE:-redis:7.4.10-alpine3.21}
+    image: ${REDIS_IMAGE:?REDIS_IMAGE is required}
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -182,11 +182,11 @@ services:
     cpus: ${WORKER_CPU_LIMIT:-1.00}
 
   frontend:
-    image: ${FRONTEND_IMAGE_NAME:-quan-ly-truyen-frontend}:${FRONTEND_IMAGE_TAG:-latest}
+    image: ${FRONTEND_IMAGE_NAME:?FRONTEND_IMAGE_NAME is required}:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG must be an immutable Git SHA}
     restart: unless-stopped
 
     expose:
-      - '80'
+      - '8080'
 
     networks:
       - backend
@@ -194,9 +194,10 @@ services:
     read_only: true
 
     tmpfs:
-      - /var/cache/nginx:size=32m,mode=0755
-      - /var/run:size=8m,mode=0755
-      - /tmp:size=16m,mode=1777
+      - /tmp:size=32m,mode=1777
+
+    cap_drop:
+      - ALL
 
     security_opt:
       - no-new-privileges:true
@@ -208,8 +209,21 @@ services:
 
     logging: *default-logging
 
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+    stop_grace_period: 15s
+
   caddy:
-    image: ${CADDY_IMAGE:-caddy:2.11.4-alpine}
+    image: ${CADDY_IMAGE:?CADDY_IMAGE is required}
 
     restart: unless-stopped
 
@@ -340,7 +354,7 @@ services:
         condition: service_healthy
 
   backup-postgres:
-    image: ${POSTGRES_IMAGE:-postgres:17.10-alpine3.23}
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}
     profiles:
       - maintenance
     restart: 'no'
@@ -414,7 +428,7 @@ services:
     logging: *default-logging
 
   backup-offsite:
-    image: ${RESTIC_IMAGE:-restic/restic:latest}
+    image: ${RESTIC_IMAGE:?RESTIC_IMAGE is required}
     profiles:
       - maintenance
 
@@ -457,7 +471,7 @@ services:
     logging: *default-logging
 
   postgres-restore-drill:
-    image: ${POSTGRES_IMAGE:-postgres:17.10-alpine3.23}
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}
 
     profiles:
       - restore-drill

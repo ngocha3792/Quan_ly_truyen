@@ -3,7 +3,7 @@
 ## Release gate
 
 1. CI phải xanh: lint, build, typecheck, unit, integration, E2E và dependency audit.
-2. Image runtime và migrate phải được build cùng một commit, push bằng Git SHA bất biến.
+2. Backend và frontend production phải dùng full 40-character Git SHA; không dùng `latest`, branch tag hoặc tag mutable. Runtime và migrate backend phải cùng source SHA.
 3. Tạo `.env.production` bằng `New-ProductionEnv.ps1`; không dùng file example.
 4. Chạy `Deploy-Production.ps1` và không bỏ qua predeploy/postdeploy gate khi release thật.
 5. Kiểm tra `/api/v1/health/live`, `/api/v1/health/ready`, worker heartbeat, mail delivery và dashboard.
@@ -25,7 +25,15 @@ Các mục sau không thể được tự động hóa chỉ bằng repository:
 ./ops/production/Deploy-Production.ps1
 ```
 
-Server chỉ pull image đã được CI publish. Build trực tiếp trên server chỉ dùng cho staging/local qua `compose.production.build.yml`.
+Server chỉ pull image đã được CI publish. `Deploy-Production.ps1` từ chối tag application không phải full Git SHA trong registry mode. Build trực tiếp trên server chỉ dùng cho staging/local qua `compose.production.build.yml`.
+
+Kiểm tra Compose trước deploy mà không cần secret thật:
+
+```powershell
+npm run docker:prod:config:example
+```
+
+Frontend container chạy non-root trên cổng nội bộ `8080`, filesystem read-only và drop toàn bộ Linux capabilities trong production Compose.
 
 ## Maintenance
 

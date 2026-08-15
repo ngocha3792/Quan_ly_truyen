@@ -104,7 +104,8 @@
     "observability:down": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml down",
     "observability:config": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml config",
     "db:seed:e2e:all": "npm run db:seed && npm run db:seed:e2e && npm run db:seed:e2e:admin && npm run db:seed:e2e:stories",
-    "test:e2e:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts"
+    "test:e2e:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "docker:prod:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f compose.production.yml -f compose.production.build.yml config --quiet"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

@@ -80,6 +80,43 @@ if ((Test-Path -LiteralPath $OutputPath) -and -not $Force) {
   throw ".env.production already exists. Use -Force to overwrite it."
 }
 
+function Assert-ApplicationImageTag {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Value
+  )
+
+  if ($Value -eq 'local') {
+    return
+  }
+
+  if ($Value -notmatch '^[0-9a-fA-F]{40}$') {
+    throw "$Name must be a full 40-character Git SHA or 'local'. Received: $Value"
+  }
+}
+
+function Assert-PinnedContainerImage {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Value
+  )
+
+  if ($Value -notmatch '(@sha256:[0-9a-fA-F]{64}|:[^/:]+)$' -or
+      $Value -match ':latest$') {
+    throw "$Name must use an explicit non-latest tag or sha256 digest. Received: $Value"
+  }
+}
+
+Assert-ApplicationImageTag -Name 'BackendImageTag' -Value $BackendImageTag
+Assert-ApplicationImageTag -Name 'FrontendImageTag' -Value $FrontendImageTag
+Assert-PinnedContainerImage -Name 'ResticImage' -Value $ResticImage
+
 if ($EnableDkim) {
   if ([string]::IsNullOrWhiteSpace($DkimDomain) -or
       [string]::IsNullOrWhiteSpace($DkimSelector) -or

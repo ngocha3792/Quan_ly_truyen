@@ -84,6 +84,32 @@ if ([string]::IsNullOrWhiteSpace($FrontendImageTag)) {
   throw 'FRONTEND_IMAGE_TAG is missing from .env.production.'
 }
 
+function Assert-ImmutableApplicationImageTag {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Value
+  )
+
+  if ($Value -eq 'local') {
+    return
+  }
+
+  if ($Value -notmatch '^[0-9a-fA-F]{40}$') {
+    throw "$Name must be the full 40-character source Git SHA. Received: $Value"
+  }
+}
+
+Assert-ImmutableApplicationImageTag `
+  -Name 'BACKEND_IMAGE_TAG' `
+  -Value $BackendImageTag
+
+Assert-ImmutableApplicationImageTag `
+  -Name 'FRONTEND_IMAGE_TAG' `
+  -Value $FrontendImageTag
+
 $UseLocalBuild = switch ($DeploymentMode) {
   'Local' {
     $true
@@ -99,6 +125,11 @@ $UseLocalBuild = switch ($DeploymentMode) {
     $BackendImageName -notmatch '^[a-z0-9.-]+\.[a-z]{2,}/' -or
     $FrontendImageName -notmatch '^[a-z0-9.-]+\.[a-z]{2,}/'
   }
+}
+
+if (-not $UseLocalBuild -and
+    ($BackendImageTag -eq 'local' -or $FrontendImageTag -eq 'local')) {
+  throw "Registry deployment cannot use the 'local' image tag."
 }
 
 $Compose = @(

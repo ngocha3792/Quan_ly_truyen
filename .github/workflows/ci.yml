@@ -300,6 +300,26 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Validate hardened production Compose configuration
+        working-directory: backend
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker compose \
+            --env-file ops/production/compose.validation.env.example \
+            -f compose.production.yml \
+            -f compose.production.build.yml \
+            config --quiet
+
+          if grep -RInE '(^|[[:space:]])image:[[:space:]].*:latest([[:space:]]|$|[}])' \
+            compose.production.yml \
+            compose.production.build.yml
+          then
+            echo 'Production Compose files must not contain :latest image fallbacks.'
+            exit 1
+          fi
+
       # ------------------------------------------------------------
       # Frontend
       # ------------------------------------------------------------
@@ -345,7 +365,11 @@ jobs:
           container_id="$(
             docker run \
               --detach \
-              --publish 8080:80 \
+              --read-only \
+              --cap-drop ALL \
+              --security-opt no-new-privileges \
+              --tmpfs /tmp:size=32m,mode=1777 \
+              --publish 8080:8080 \
               quan-ly-truyen-frontend:ci
           )"
 
@@ -359,6 +383,13 @@ jobs:
           }
 
           trap cleanup EXIT
+
+          configured_user="$(docker inspect --format '{{.Config.User}}' quan-ly-truyen-frontend:ci)"
+
+          if test -z "${configured_user}" -o "${configured_user}" = "root" -o "${configured_user}" = "0"; then
+            echo "Frontend image must declare a non-root runtime user."
+            exit 1
+          fi
 
           for attempt in $(seq 1 30); do
             if curl \
