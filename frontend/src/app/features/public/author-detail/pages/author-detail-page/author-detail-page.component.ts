@@ -1,7 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-
-import { SeoService } from '../../../../../core/seo/seo.service';
 
 import { provideAuthorDetail } from '../../data-access/author-detail.providers';
 import { AuthorDetailStore } from '../../data-access/author-detail.store';
@@ -35,42 +33,10 @@ import { AuthorWorksComponent } from '../../ui/author-works/author-works.compone
 })
 export class AuthorDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly store = inject(AuthorDetailStore);
-  private readonly seo = inject(SeoService);
-
-  private readonly seoEffect = effect(() => {
-    const view = this.store.view();
-
-    if (!view) return;
-
-    const profile = view.profile;
-    const description = (profile.biography[0] || profile.headline ||
-      `Tác giả ${profile.name} trên TruyenHub.`).trim().slice(0, 160);
-    const canonicalPath = `/tac-gia/${encodeURIComponent(profile.slug)}`;
-
-    this.seo.apply({
-      title: `${profile.name} - Tác giả | TruyenHub`,
-      description,
-      canonicalPath,
-      type: 'profile',
-    });
-
-    this.seo.setStructuredData('author', {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: profile.name,
-      alternateName: profile.penName,
-      description,
-      url: canonicalPath,
-      knowsAbout: view.featuredWorks.flatMap((work) => work.genres),
-    });
-  });
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('author'));
-
     const slug = this.route.snapshot.paramMap.get('authorSlug') ?? 'nhi-can';
 
     this.store.load(slug);

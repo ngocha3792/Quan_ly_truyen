@@ -1,7 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 import {
   provideRouter,
@@ -27,8 +26,6 @@ export function createAppConfig(runtimeConfig: AppRuntimeConfig): ApplicationCon
       },
 
       provideHttpClient(withInterceptors([apiInterceptor])),
-
-      provideClientHydration(withEventReplay()),
 
       provideRouter(
         routes,

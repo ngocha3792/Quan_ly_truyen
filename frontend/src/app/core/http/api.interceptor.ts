@@ -201,12 +201,9 @@ function prepareApiRequest(
     }
   }
 
-  const method = request.method.toUpperCase();
-  const withCredentials = Boolean(accessToken) || MUTATING_METHODS.has(method);
-
   return request.clone({
     headers,
 
-    withCredentials,
+    withCredentials: true,
   });
 }

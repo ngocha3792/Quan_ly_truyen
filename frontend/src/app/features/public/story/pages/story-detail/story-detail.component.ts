@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { LibraryStore } from '../../../../../core/storage/library.store';
-import { SeoService } from '../../../../../core/seo/seo.service';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
@@ -33,40 +32,8 @@ export class StoryDetailComponent implements OnInit {
   private readonly auth = inject(AuthStore);
   protected readonly store = inject(StoryDetailStore);
   protected readonly library = inject(LibraryStore);
-  private readonly seo = inject(SeoService);
-
-  private readonly seoEffect = effect(() => {
-    const story = this.store.story();
-
-    if (!story) return;
-
-    const description = story.description.trim().slice(0, 160) ||
-      `Đọc ${story.title} của ${story.author} trên TruyenHub.`;
-    const canonicalPath = `/truyen/${encodeURIComponent(story.slug)}`;
-
-    this.seo.apply({
-      title: `${story.title} - ${story.author} | TruyenHub`,
-      description,
-      canonicalPath,
-      imageUrl: story.coverUrl,
-      type: 'book',
-    });
-
-    this.seo.setStructuredData('story', {
-      '@context': 'https://schema.org',
-      '@type': 'Book',
-      name: story.title,
-      description,
-      image: story.coverUrl,
-      genre: story.categories,
-      author: { '@type': 'Person', name: story.author },
-      url: canonicalPath,
-    });
-  });
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('story'));
-
     const sub = this.route.paramMap.subscribe((params) => {
       const slug = params.get('slug') ?? '';
       if (slug) this.store.loadStory(slug);

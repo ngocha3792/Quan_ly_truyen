@@ -12,7 +12,7 @@
         [style.background-image]="'url(' + item.coverUrl + ')'"
         aria-hidden="true"
       ></div>
-      <img class="cover" [src]="item.coverUrl" [alt]="item.title" fetchpriority="high" decoding="async" />
+      <img class="cover" [src]="item.coverUrl" [alt]="item.title" />
       <div class="story-copy">
         <span class="status">{{
           item.status === 'COMPLETED' ? 'ĐÃ HOÀN THÀNH' : 'ĐANG CẬP NHẬT'
