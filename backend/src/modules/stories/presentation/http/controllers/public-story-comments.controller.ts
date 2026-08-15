@@ -34,7 +34,12 @@ export class PublicStoryCommentsController {
     @Query() request: ListStoryCommentsRequest,
   ): Promise<StoryCommentPageResultDto> {
     return this.listChapterComments.execute(
-      new ListChapterCommentsQuery(storySlug, chapterNumber, request.page, request.pageSize),
+      new ListChapterCommentsQuery(
+        storySlug,
+        chapterNumber,
+        request.page,
+        request.pageSize,
+      ),
     );
   }
 }

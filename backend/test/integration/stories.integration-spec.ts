@@ -329,7 +329,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         updatedAt: new Date(),
       }),
     ]);
-    expect(libraryResults.every((result) => result.status === 'updated')).toBe(true);
+    expect(
+      libraryResults.every((result) => result.status === 'updated'),
+    ).toBe(true);
     await expect(
       prisma.libraryEntry.count({ where: { userId: reader.id, storyId: story.id } }),
     ).resolves.toBe(1);
@@ -355,7 +357,12 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(progressResults.every((result) => result.status === 'saved')).toBe(true);
     const savedProgress = await prisma.readingProgress.findUniqueOrThrow({
       where: { userId_storyId: { userId: reader.id, storyId: story.id } },
-      select: { currentChapterId: true, position: true, lastReadAt: true, progressPercent: true },
+      select: {
+        currentChapterId: true,
+        position: true,
+        lastReadAt: true,
+        progressPercent: true,
+      },
     });
     expect(savedProgress.currentChapterId).toBe(nextChapter.id);
     expect(savedProgress.position).toBe(200);
@@ -375,7 +382,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     });
     expect(progressAfterStaleSameChapter.currentChapterId).toBe(nextChapter.id);
     expect(progressAfterStaleSameChapter.position).toBe(200);
-    expect(progressAfterStaleSameChapter.lastReadAt.getTime()).toBe(newerReadAt.getTime());
+    expect(progressAfterStaleSameChapter.lastReadAt.getTime()).toBe(
+      newerReadAt.getTime(),
+    );
     const progressLibrary = await prisma.libraryEntry.findUniqueOrThrow({
       where: { userId_storyId: { userId: reader.id, storyId: story.id } },
       select: { lastReadChapterId: true, progressPercent: true, completedAt: true },
@@ -384,7 +393,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(Number(progressLibrary.progressPercent)).toBe(100);
     expect(progressLibrary.completedAt?.getTime()).toBe(newerReadAt.getTime());
     await expect(
-      prisma.readingProgress.count({ where: { userId: reader.id, storyId: story.id } }),
+      prisma.readingProgress.count({
+        where: { userId: reader.id, storyId: story.id },
+      }),
     ).resolves.toBe(1);
 
     const ratings = await Promise.all([
@@ -432,7 +443,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       select: { ratingCount: true, ratingAverage: true },
     });
     expect(reconciledStory.ratingCount).toBe(activeRatings._count._all);
-    expect(Number(reconciledStory.ratingAverage)).toBe(activeRatings._avg.score ?? 0);
+    expect(Number(reconciledStory.ratingAverage)).toBe(
+      activeRatings._avg.score ?? 0,
+    );
 
     const createdComment = await engagement.createComment({
       userId: reader.id,
@@ -470,8 +483,14 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ]);
 
     const counters = await Promise.all([
-      prisma.story.findUniqueOrThrow({ where: { id: story.id }, select: { commentCount: true } }),
-      prisma.chapter.findUniqueOrThrow({ where: { id: chapter.id }, select: { commentCount: true } }),
+      prisma.story.findUniqueOrThrow({
+        where: { id: story.id },
+        select: { commentCount: true },
+      }),
+      prisma.chapter.findUniqueOrThrow({
+        where: { id: chapter.id },
+        select: { commentCount: true },
+      }),
     ]);
     expect(counters[0].commentCount).toBe(0);
     expect(counters[1].commentCount).toBe(0);

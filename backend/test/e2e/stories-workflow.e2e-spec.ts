@@ -236,7 +236,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .set('Authorization', `Bearer ${readerToken}`)
       .send({ isFavorite: true })
       .expect(200);
-    expect(unwrap<{ isFavorite: boolean }>(libraryResponse.body as unknown).isFavorite).toBe(true);
+    expect(
+      unwrap<{ isFavorite: boolean }>(libraryResponse.body as unknown).isFavorite,
+    ).toBe(true);
 
     await request(httpServer())
       .put(`/api/v1/reading-progress/${storyId}`)
@@ -248,8 +250,13 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .get('/api/v1/reading-history')
       .set('Authorization', `Bearer ${readerToken}`)
       .expect(200);
-    expect(unwrap<Array<{ story: { id: string } }>>(historyResponse.body as unknown))
-      .toEqual([expect.objectContaining({ story: expect.objectContaining({ id: storyId }) })]);
+    expect(
+      unwrap<Array<{ story: { id: string } }>>(historyResponse.body as unknown),
+    ).toEqual([
+      expect.objectContaining({
+        story: expect.objectContaining({ id: storyId }),
+      }),
+    ]);
 
     await request(httpServer())
       .put(`/api/v1/stories/${storyId}/rating`)
@@ -269,7 +276,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .set('x-idempotency-key', commentKey)
       .send({ body: 'M10 reader comment' })
       .expect(201);
-    const comment = unwrap<{ id: string; body: string }>(commentResponse.body as unknown);
+    const comment = unwrap<{ id: string; body: string }>(
+      commentResponse.body as unknown,
+    );
     expect(comment.body).toBe('M10 reader comment');
 
     const replayCommentResponse = await request(httpServer())
@@ -279,9 +288,13 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .send({ body: 'M10 reader comment' })
       .expect(201);
     expect(replayCommentResponse.headers['x-idempotent-replayed']).toBe('true');
-    expect(unwrap<{ id: string }>(replayCommentResponse.body as unknown).id).toBe(comment.id);
+    expect(
+      unwrap<{ id: string }>(replayCommentResponse.body as unknown).id,
+    ).toBe(comment.id);
     await expect(
-      prisma.comment.count({ where: { storyId, userId: intruderId, deletedAt: null } }),
+      prisma.comment.count({
+        where: { storyId, userId: intruderId, deletedAt: null },
+      }),
     ).resolves.toBe(1);
 
     await request(httpServer())
@@ -299,8 +312,16 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     const commentsResponse = await request(httpServer())
       .get(`/api/v1/stories/${createdStory.slug}/comments`)
       .expect(200);
-    expect(unwrap<{ items: Array<{ id: string; body: string }> }>(commentsResponse.body as unknown).items)
-      .toEqual([expect.objectContaining({ id: comment.id, body: 'M10 edited reader comment' })]);
+    expect(
+      unwrap<{ items: Array<{ id: string; body: string }> }>(
+        commentsResponse.body as unknown,
+      ).items,
+    ).toEqual([
+      expect.objectContaining({
+        id: comment.id,
+        body: 'M10 edited reader comment',
+      }),
+    ]);
 
     await request(httpServer())
       .delete(`/api/v1/comments/${comment.id}`)
@@ -310,8 +331,12 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     const commentsAfterDelete = await request(httpServer())
       .get(`/api/v1/stories/${createdStory.slug}/comments`)
       .expect(200);
-    expect(unwrap<{ items: Array<{ id: string }> }>(commentsAfterDelete.body as unknown).items)
-      .not.toEqual(expect.arrayContaining([expect.objectContaining({ id: comment.id })]));
+    expect(
+      unwrap<{ items: Array<{ id: string }> }>(commentsAfterDelete.body as unknown)
+        .items,
+    ).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: comment.id })]),
+    );
 
     const chapterCommentResponse = await request(httpServer())
       .post(`/api/v1/stories/${storyId}/chapters/${chapter.id}/comments`)
@@ -328,7 +353,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .get(`/api/v1/stories/${createdStory.slug}/chapters/1/comments`)
       .expect(200);
     expect(
-      unwrap<{ items: Array<{ id: string }> }>(chapterCommentsResponse.body as unknown).items,
+      unwrap<{ items: Array<{ id: string }> }>(
+        chapterCommentsResponse.body as unknown,
+      ).items,
     ).toEqual(expect.arrayContaining([expect.objectContaining({ id: chapterComment.id })]));
   });
 

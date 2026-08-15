@@ -29,7 +29,9 @@ describe('ListAuthorStoriesQueryHandler', () => {
 
     expect(persistence.listOwned).toHaveBeenCalledWith(USER_ID);
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual(expect.objectContaining({ id: STORY_ID, authorId: USER_ID }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({ id: STORY_ID, authorId: USER_ID }),
+    );
   });
 });
 

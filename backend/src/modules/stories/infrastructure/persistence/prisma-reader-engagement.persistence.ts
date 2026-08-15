@@ -91,7 +91,9 @@ const READER_STORY_SELECT = {
   },
 } satisfies Prisma.StorySelect;
 
-type ReaderStoryRow = Prisma.StoryGetPayload<{ select: typeof READER_STORY_SELECT }>;
+type ReaderStoryRow = Prisma.StoryGetPayload<{
+  select: typeof READER_STORY_SELECT;
+}>;
 
 const LIBRARY_ENTRY_SELECT = {
   status: true,
@@ -208,10 +210,17 @@ export class PrismaReaderEngagementPersistence
           where: {
             userId_storyId: { userId: input.userId, storyId: input.storyId },
           },
-          select: { status: true, isFavorite: true, startedAt: true, completedAt: true },
+          select: {
+            status: true,
+            isFavorite: true,
+            startedAt: true,
+            completedAt: true,
+          },
         });
 
-        const status = toLibraryStatus(input.status ?? current?.status ?? 'PLAN_TO_READ');
+        const status = toLibraryStatus(
+          input.status ?? current?.status ?? 'PLAN_TO_READ',
+        );
         const startedAt =
           status === LibraryStatus.READING && !current?.startedAt
             ? input.updatedAt
@@ -324,9 +333,13 @@ export class PrismaReaderEngagementPersistence
             number: { lte: chapter.number },
           },
         });
-        const computedPercent = totalChapters > 0
-          ? Math.min(100, Math.round((readThrough / totalChapters) * 10000) / 100)
-          : 0;
+        const computedPercent =
+          totalChapters > 0
+            ? Math.min(
+                100,
+                Math.round((readThrough / totalChapters) * 10000) / 100,
+              )
+            : 0;
 
         await tx.libraryEntry.upsert({
           where: {
@@ -335,7 +348,10 @@ export class PrismaReaderEngagementPersistence
           create: {
             userId: input.userId,
             storyId: input.storyId,
-            status: computedPercent >= 100 ? LibraryStatus.COMPLETED : LibraryStatus.READING,
+            status:
+              computedPercent >= 100
+                ? LibraryStatus.COMPLETED
+                : LibraryStatus.READING,
             lastReadChapterId: chapter.id,
             progressPercent: computedPercent,
             startedAt: input.readAt,
@@ -408,7 +424,9 @@ export class PrismaReaderEngagementPersistence
           },
           update: {
             currentChapterId,
-            position: shouldUseIncomingPosition ? input.position : existing?.position ?? input.position,
+            position: shouldUseIncomingPosition
+              ? input.position
+              : (existing?.position ?? input.position),
             progressPercent,
             lastReadAt: effectiveReadAt,
             updatedAt: effectiveReadAt,
@@ -420,7 +438,10 @@ export class PrismaReaderEngagementPersistence
             userId_storyId: { userId: input.userId, storyId: input.storyId },
           },
           data: {
-            status: progressPercent >= 100 ? LibraryStatus.COMPLETED : LibraryStatus.READING,
+            status:
+              progressPercent >= 100
+                ? LibraryStatus.COMPLETED
+                : LibraryStatus.READING,
             lastReadChapterId: currentChapterId,
             progressPercent,
             startedAt: library?.startedAt ?? input.readAt,
@@ -491,7 +512,10 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async findMyRating(userId: string, storyId: string): Promise<StoryRatingResultDto | null> {
+  async findMyRating(
+    userId: string,
+    storyId: string,
+  ): Promise<StoryRatingResultDto | null> {
     try {
       const rating = await this.prisma.rating.findFirst({
         where: {
@@ -633,7 +657,9 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async createComment(input: CreateStoryCommentInput): Promise<CreateStoryCommentResult> {
+  async createComment(
+    input: CreateStoryCommentInput,
+  ): Promise<CreateStoryCommentResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const story = await tx.story.findFirst({
@@ -691,7 +717,9 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async updateComment(input: UpdateStoryCommentInput): Promise<UpdateStoryCommentResult> {
+  async updateComment(
+    input: UpdateStoryCommentInput,
+  ): Promise<UpdateStoryCommentResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         if (!(await lockOwnedComment(tx, input.commentId, input.userId))) {
@@ -716,7 +744,9 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async deleteComment(input: DeleteStoryCommentInput): Promise<DeleteStoryCommentResult> {
+  async deleteComment(
+    input: DeleteStoryCommentInput,
+  ): Promise<DeleteStoryCommentResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         if (!(await lockOwnedComment(tx, input.commentId, input.userId))) {
@@ -767,12 +797,17 @@ export class PrismaReaderEngagementPersistence
 
 function toLibraryStatus(status: string): LibraryStatus {
   switch (status) {
-    case 'READING': return LibraryStatus.READING;
-    case 'COMPLETED': return LibraryStatus.COMPLETED;
-    case 'ON_HOLD': return LibraryStatus.ON_HOLD;
-    case 'DROPPED': return LibraryStatus.DROPPED;
+    case 'READING':
+      return LibraryStatus.READING;
+    case 'COMPLETED':
+      return LibraryStatus.COMPLETED;
+    case 'ON_HOLD':
+      return LibraryStatus.ON_HOLD;
+    case 'DROPPED':
+      return LibraryStatus.DROPPED;
     case 'PLAN_TO_READ':
-    default: return LibraryStatus.PLAN_TO_READ;
+    default:
+      return LibraryStatus.PLAN_TO_READ;
   }
 }
 
@@ -834,7 +869,11 @@ function toReadingHistoryDto(row: ReadingHistoryRow): ReadingHistoryEntryResultD
   };
 }
 
-function toRatingDto(row: { storyId: string; score: number; updatedAt: Date }): StoryRatingResultDto {
+function toRatingDto(row: {
+  storyId: string;
+  score: number;
+  updatedAt: Date;
+}): StoryRatingResultDto {
   return {
     storyId: row.storyId,
     score: row.score,

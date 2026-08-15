@@ -66,7 +66,9 @@ export class AuthorStoriesController {
   async list(
     @CurrentUserId() userId: string | undefined,
   ): Promise<readonly StoryResponse[]> {
-    const results = await this.listStories.execute(new ListAuthorStoriesQuery(userId));
+    const results = await this.listStories.execute(
+      new ListAuthorStoriesQuery(userId),
+    );
 
     return results.map((result) => toStoryResponse(result));
   }
@@ -77,7 +79,9 @@ export class AuthorStoriesController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
   ): Promise<StoryResponse> {
-    const result = await this.getStory.execute(new GetAuthorStoryQuery(userId, storyId));
+    const result = await this.getStory.execute(
+      new GetAuthorStoryQuery(userId, storyId),
+    );
 
     return toStoryResponse(result);
   }

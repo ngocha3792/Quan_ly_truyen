@@ -45,7 +45,15 @@ export class AuthorStoryEditorStore {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: ({ story, categories, tags }: { story: AuthorManagedStory | null; categories: readonly AuthorStoryMetadataCategory[]; tags: readonly AuthorStoryMetadataTag[] }) => {
+        next: ({
+          story,
+          categories,
+          tags,
+        }: {
+          story: AuthorManagedStory | null;
+          categories: readonly AuthorStoryMetadataCategory[];
+          tags: readonly AuthorStoryMetadataTag[];
+        }) => {
           this.story.set(story);
           this.categories.set(categories);
           this.tags.set(tags);
@@ -80,13 +88,17 @@ export class AuthorStoryEditorStore {
 
   submit(storyId: string, authorNote: string): Observable<AuthorManagedStory> {
     return this.runWorkflow(
-      this.repository.submitStory(storyId, authorNote).pipe(map((publication: AuthorStoryPublication) => publication.story)),
+      this.repository
+        .submitStory(storyId, authorNote)
+        .pipe(map((publication: AuthorStoryPublication) => publication.story)),
     );
   }
 
   cancelSubmission(storyId: string): Observable<AuthorManagedStory> {
     return this.runWorkflow(
-      this.repository.cancelSubmission(storyId).pipe(map((publication: AuthorStoryPublication) => publication.story)),
+      this.repository
+        .cancelSubmission(storyId)
+        .pipe(map((publication: AuthorStoryPublication) => publication.story)),
     );
   }
 
@@ -161,10 +173,14 @@ export class AuthorStoryEditorStore {
         catchError(() => of(null)),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((media: AuthorStoryMedia | null) => this.coverUrl.set(media?.deliveryUrl ?? null));
+      .subscribe((media: AuthorStoryMedia | null) =>
+        this.coverUrl.set(media?.deliveryUrl ?? null),
+      );
   }
 
-  private runWorkflow(request$: Observable<AuthorManagedStory>): Observable<AuthorManagedStory> {
+  private runWorkflow(
+    request$: Observable<AuthorManagedStory>,
+  ): Observable<AuthorManagedStory> {
     this.workflowBusy.set(true);
     this.error.set(null);
 

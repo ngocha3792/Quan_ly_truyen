@@ -50,9 +50,13 @@ describe('ListAuthorChaptersQueryHandler', () => {
       },
     ]);
 
-    const result = await handler.execute(new ListAuthorChaptersQuery(USER_ID, STORY_ID));
+    const result = await handler.execute(
+      new ListAuthorChaptersQuery(USER_ID, STORY_ID),
+    );
 
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual(expect.objectContaining({ number: 1, wordCount: 120 }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({ number: 1, wordCount: 120 }),
+    );
   });
 });

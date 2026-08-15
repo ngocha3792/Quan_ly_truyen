@@ -43,21 +43,39 @@ describe('PublishAuthorChapterCommandHandler', () => {
     });
 
     const result = await handler.execute(command());
-    expect(persistence.publish).toHaveBeenCalledWith(expect.objectContaining({ userId: USER_ID, storyId: STORY_ID, chapterId: CHAPTER_ID, publishedAt: expect.any(Date) as unknown }));
+    expect(persistence.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        storyId: STORY_ID,
+        chapterId: CHAPTER_ID,
+        publishedAt: expect.any(Date) as unknown,
+      }),
+    );
     expect(result.status).toBe('PUBLISHED');
   });
 
   it('không publish chapter trước khi story published', async () => {
     persistence.publish.mockResolvedValue({ status: 'story_not_published' });
-    await expect(handler.execute(command())).rejects.toBeInstanceOf(ChapterStoryNotPublishedException);
+    await expect(handler.execute(command())).rejects.toBeInstanceOf(
+      ChapterStoryNotPublishedException,
+    );
   });
 
   it('không publish chapter rỗng', async () => {
     persistence.publish.mockResolvedValue({ status: 'empty_content' });
-    await expect(handler.execute(command())).rejects.toBeInstanceOf(ChapterEmptyContentException);
+    await expect(handler.execute(command())).rejects.toBeInstanceOf(
+      ChapterEmptyContentException,
+    );
   });
 });
 
 function command() {
-  return new PublishAuthorChapterCommand(USER_ID, STORY_ID, CHAPTER_ID, undefined, undefined, undefined);
+  return new PublishAuthorChapterCommand(
+    USER_ID,
+    STORY_ID,
+    CHAPTER_ID,
+    undefined,
+    undefined,
+    undefined,
+  );
 }

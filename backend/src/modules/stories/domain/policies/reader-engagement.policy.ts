@@ -13,6 +13,10 @@ export class ReaderEngagementPolicy {
   }
 
   static isValidRating(score: number): boolean {
-    return Number.isInteger(score) && score >= this.RATING_MIN && score <= this.RATING_MAX;
+    return (
+      Number.isInteger(score) &&
+      score >= this.RATING_MIN &&
+      score <= this.RATING_MAX
+    );
   }
 }

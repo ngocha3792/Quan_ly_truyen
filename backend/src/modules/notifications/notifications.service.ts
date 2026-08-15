@@ -99,7 +99,9 @@ export class NotificationsService {
       }),
     ]);
 
-    const items = notifications.map((notification) => this.toItem(notification, now));
+    const items = notifications.map((notification) =>
+      this.toItem(notification, now),
+    );
 
     return {
       notifications: items,
@@ -138,7 +140,10 @@ export class NotificationsService {
     isSaved: boolean,
   ): Promise<void> {
     const authenticatedUserId = this.requireUserId(userId);
-    const notification = await this.ensureOwnedNotification(authenticatedUserId, notificationId);
+    const notification = await this.ensureOwnedNotification(
+      authenticatedUserId,
+      notificationId,
+    );
     const data = this.toInputJsonObject(notification.data);
 
     await this.prisma.notification.update({
@@ -307,7 +312,12 @@ export class NotificationsService {
     value: unknown,
     type: NotificationItemResponse['type'],
   ): NotificationItemResponse['category'] {
-    if (value === 'story' || value === 'account' || value === 'system' || value === 'promotion') {
+    if (
+      value === 'story' ||
+      value === 'account' ||
+      value === 'system' ||
+      value === 'promotion'
+    ) {
       return value;
     }
 

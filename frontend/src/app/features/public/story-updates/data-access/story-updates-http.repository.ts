@@ -38,7 +38,9 @@ function buildOverview(
   const totalPages = Math.max(1, Math.ceil(totalItems / query.pageSize));
   const page = Math.min(Math.max(query.page, 1), totalPages);
   const start = (page - 1) * query.pageSize;
-  const topUpdates = [...allItems].sort((left, right) => right.viewCount - left.viewCount).slice(0, 5);
+  const topUpdates = [...allItems]
+    .sort((left, right) => right.viewCount - left.viewCount)
+    .slice(0, 5);
 
   return {
     featured,

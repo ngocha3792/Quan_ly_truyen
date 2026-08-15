@@ -30,6 +30,10 @@ describe('GetAuthorChapterQueryHandler', () => {
     await expect(
       handler.execute(new GetAuthorChapterQuery(USER_ID, STORY_ID, CHAPTER_ID)),
     ).rejects.toBeInstanceOf(ChapterNotFoundException);
-    expect(persistence.findOwnedById).toHaveBeenCalledWith(USER_ID, STORY_ID, CHAPTER_ID);
+    expect(persistence.findOwnedById).toHaveBeenCalledWith(
+      USER_ID,
+      STORY_ID,
+      CHAPTER_ID,
+    );
   });
 });

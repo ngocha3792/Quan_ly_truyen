@@ -193,7 +193,13 @@ interface AuthorMonthlyGoalResponse {
 }
 
 const PUBLIC_STORY_STATUSES = ['PUBLISHED', 'HIATUS', 'COMPLETED'] as const;
-const WORK_TONES: readonly AuthorWorkTone[] = ['blue', 'gold', 'cyan', 'violet', 'crimson'];
+const WORK_TONES: readonly AuthorWorkTone[] = [
+  'blue',
+  'gold',
+  'cyan',
+  'violet',
+  'crimson',
+];
 const EMPTY_COVER_URL = '/assets/images/story-cover-placeholder.svg';
 const EMPTY_AVATAR_URL = '/assets/images/avatar-placeholder.svg';
 
@@ -411,7 +417,8 @@ export class AuthorsService {
       },
     });
 
-    const mainGenre = author.stories[0]?.categories[0]?.category.name ?? 'TruyenHub';
+    const mainGenre =
+      author.stories[0]?.categories[0]?.category.name ?? 'TruyenHub';
     const weightedRating = this.weightedAverageRating(author.stories);
     const socialLinks = this.asRecord(author.socialLinks);
     const firstPublishedStory = [...author.stories]
@@ -659,8 +666,13 @@ export class AuthorsService {
         story.status as (typeof PUBLIC_STORY_STATUSES)[number],
       ),
     );
-    const currentDrafts = stories.filter((story) => story.status === 'DRAFT').length;
-    const totalChapters = stories.reduce((sum, story) => sum + story.chapterCount, 0);
+    const currentDrafts = stories.filter(
+      (story) => story.status === 'DRAFT',
+    ).length;
+    const totalChapters = stories.reduce(
+      (sum, story) => sum + story.chapterCount,
+      0,
+    );
     const pendingChapters = scheduledChapters.filter(
       (chapter) => chapter.status === 'SCHEDULED',
     ).length;
@@ -1013,7 +1025,10 @@ export class AuthorsService {
   }
 
   private formatRelativeDate(date: Date, now: Date): string {
-    const minutes = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 60_000));
+    const minutes = Math.max(
+      0,
+      Math.floor((now.getTime() - date.getTime()) / 60_000),
+    );
 
     if (minutes < 1) return 'Vừa xong';
     if (minutes < 60) return `${minutes} phút trước`;
@@ -1038,7 +1053,11 @@ export class AuthorsService {
   }
 
   private dateKey(date: Date): string {
-    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
   }
 
   private asRecord(value: unknown): Record<string, unknown> {

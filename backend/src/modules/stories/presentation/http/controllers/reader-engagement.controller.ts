@@ -76,7 +76,9 @@ export class ReaderEngagementController {
 
   @Get('library')
   @RequirePermissions(PermissionCode.LIBRARY_MANAGE_OWN)
-  listLibrary(@CurrentUserId() userId: string | undefined): Promise<readonly LibraryEntryResultDto[]> {
+  listLibrary(
+    @CurrentUserId() userId: string | undefined,
+  ): Promise<readonly LibraryEntryResultDto[]> {
     return this.listLibraryQuery.execute(new ListLibraryQuery(userId));
   }
 
@@ -88,7 +90,12 @@ export class ReaderEngagementController {
     @Body() request: UpsertLibraryEntryRequest,
   ): Promise<LibraryEntryResultDto> {
     return this.upsertLibraryCommand.execute(
-      new UpsertLibraryEntryCommand(userId, storyId, request.status, request.isFavorite),
+      new UpsertLibraryEntryCommand(
+        userId,
+        storyId,
+        request.status,
+        request.isFavorite,
+      ),
     );
   }
 
@@ -99,7 +106,9 @@ export class ReaderEngagementController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
   ): Promise<void> {
-    await this.removeLibraryCommand.execute(new RemoveLibraryEntryCommand(userId, storyId));
+    await this.removeLibraryCommand.execute(
+      new RemoveLibraryEntryCommand(userId, storyId),
+    );
   }
 
   @Get('reading-history')
@@ -118,7 +127,12 @@ export class ReaderEngagementController {
     @Body() request: SaveReadingProgressRequest,
   ): Promise<ReadingHistoryEntryResultDto> {
     return this.saveProgressCommand.execute(
-      new SaveReadingProgressCommand(userId, storyId, request.chapterId, request.position),
+      new SaveReadingProgressCommand(
+        userId,
+        storyId,
+        request.chapterId,
+        request.position,
+      ),
     );
   }
 
@@ -129,7 +143,9 @@ export class ReaderEngagementController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
   ): Promise<void> {
-    await this.removeHistoryCommand.execute(new RemoveReadingHistoryEntryCommand(userId, storyId));
+    await this.removeHistoryCommand.execute(
+      new RemoveReadingHistoryEntryCommand(userId, storyId),
+    );
   }
 
   @Delete('reading-history')
@@ -149,7 +165,10 @@ export class ReaderEngagementController {
   }
 
   @Put('stories/:storyId/rating')
-  @RequirePermissions(PermissionCode.RATING_CREATE, PermissionCode.RATING_UPDATE_OWN)
+  @RequirePermissions(
+    PermissionCode.RATING_CREATE,
+    PermissionCode.RATING_UPDATE_OWN,
+  )
   upsertRating(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -167,7 +186,9 @@ export class ReaderEngagementController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
   ): Promise<void> {
-    await this.deleteRatingCommand.execute(new DeleteStoryRatingCommand(userId, storyId));
+    await this.deleteRatingCommand.execute(
+      new DeleteStoryRatingCommand(userId, storyId),
+    );
   }
 
   @Post('stories/:storyId/comments')
@@ -216,6 +237,8 @@ export class ReaderEngagementController {
     @CurrentUserId() userId: string | undefined,
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
   ): Promise<void> {
-    await this.deleteCommentCommand.execute(new DeleteStoryCommentCommand(userId, commentId));
+    await this.deleteCommentCommand.execute(
+      new DeleteStoryCommentCommand(userId, commentId),
+    );
   }
 }

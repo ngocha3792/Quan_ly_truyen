@@ -38,17 +38,25 @@ export class MyLibraryStore {
   readonly filteredStories = computed(() => {
     const normalizedQuery = this.query().trim().toLocaleLowerCase('vi');
     const filtered = this.storiesWithFavorites().filter((story) => {
-      const matchesSearch = normalizedQuery.length === 0 ||
-        [story.title, story.author, ...story.genres].join(' ').toLocaleLowerCase('vi').includes(normalizedQuery);
+      const matchesSearch =
+        normalizedQuery.length === 0 ||
+        [story.title, story.author, ...story.genres]
+          .join(' ')
+          .toLocaleLowerCase('vi')
+          .includes(normalizedQuery);
       return matchesSearch && this.matchesFilter(story);
     });
     return [...filtered].sort((first, second) => {
       switch (this.sort()) {
-        case 'progress': return second.progress - first.progress;
-        case 'title': return first.title.localeCompare(second.title, 'vi');
-        case 'chapter': return second.currentChapter - first.currentChapter;
+        case 'progress':
+          return second.progress - first.progress;
+        case 'title':
+          return first.title.localeCompare(second.title, 'vi');
+        case 'chapter':
+          return second.currentChapter - first.currentChapter;
         case 'recent':
-        default: return first.lastReadMinutes - second.lastReadMinutes;
+        default:
+          return first.lastReadMinutes - second.lastReadMinutes;
       }
     });
   });
@@ -68,23 +76,36 @@ export class MyLibraryStore {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.repository.getLibrary().pipe(
-      tap((view) => {
-        this.viewState.set(view);
-        this.favoriteIds.set(view.stories.filter((story) => story.isFavorite).map((story) => story.id));
-      }),
-      catchError(() => {
-        this.error.set('Không thể tải thư viện.');
-        return EMPTY;
-      }),
-      finalize(() => this.loading.set(false)),
-    ).subscribe();
+    this.repository
+      .getLibrary()
+      .pipe(
+        tap((view) => {
+          this.viewState.set(view);
+          this.favoriteIds.set(
+            view.stories.filter((story) => story.isFavorite).map((story) => story.id),
+          );
+        }),
+        catchError(() => {
+          this.error.set('Không thể tải thư viện.');
+          return EMPTY;
+        }),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe();
   }
 
-  setQuery(query: string): void { this.query.set(query); }
-  setFilter(filter: LibraryFilter): void { this.filter.set(filter); }
-  setSort(sort: LibrarySort): void { this.sort.set(sort); }
-  setViewMode(viewMode: LibraryViewMode): void { this.viewMode.set(viewMode); }
+  setQuery(query: string): void {
+    this.query.set(query);
+  }
+  setFilter(filter: LibraryFilter): void {
+    this.filter.set(filter);
+  }
+  setSort(sort: LibrarySort): void {
+    this.sort.set(sort);
+  }
+  setViewMode(viewMode: LibraryViewMode): void {
+    this.viewMode.set(viewMode);
+  }
 
   toggleFavorite(storyId: string): void {
     const previous = this.favoriteIds();
@@ -92,23 +113,31 @@ export class MyLibraryStore {
     this.favoriteIds.set(
       isFavorite ? [...previous, storyId] : previous.filter((id) => id !== storyId),
     );
-    this.repository.setFavorite(storyId, isFavorite).pipe(
-      catchError(() => {
-        this.favoriteIds.set(previous);
-        this.error.set('Không thể cập nhật mục yêu thích.');
-        return EMPTY;
-      }),
-    ).subscribe();
+    this.repository
+      .setFavorite(storyId, isFavorite)
+      .pipe(
+        catchError(() => {
+          this.favoriteIds.set(previous);
+          this.error.set('Không thể cập nhật mục yêu thích.');
+          return EMPTY;
+        }),
+      )
+      .subscribe();
   }
 
   private matchesFilter(story: LibraryStory): boolean {
     switch (this.filter()) {
-      case 'reading': return story.isReading;
-      case 'following': return story.isFollowing;
-      case 'favorite': return story.isFavorite;
-      case 'completed': return story.isCompleted;
+      case 'reading':
+        return story.isReading;
+      case 'following':
+        return story.isFollowing;
+      case 'favorite':
+        return story.isFavorite;
+      case 'completed':
+        return story.isCompleted;
       case 'all':
-      default: return true;
+      default:
+        return true;
     }
   }
 }

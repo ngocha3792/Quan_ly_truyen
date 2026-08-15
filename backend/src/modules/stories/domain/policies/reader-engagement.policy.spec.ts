@@ -10,7 +10,9 @@ describe('ReaderEngagementPolicy', () => {
   });
 
   it('normalizes comment whitespace and enforces the configured limit', () => {
-    expect(ReaderEngagementPolicy.normalizeCommentBody('  nội dung  ')).toBe('nội dung');
+    expect(ReaderEngagementPolicy.normalizeCommentBody('  nội dung  ')).toBe(
+      'nội dung',
+    );
     expect(ReaderEngagementPolicy.isValidCommentBody('   ')).toBe(false);
     expect(
       ReaderEngagementPolicy.isValidCommentBody(
