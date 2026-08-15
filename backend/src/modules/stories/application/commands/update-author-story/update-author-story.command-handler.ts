@@ -4,6 +4,9 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
 
 import {
+  InvalidStoryCategoriesException,
+  InvalidStoryCoverException,
+  InvalidStoryTagsException,
   StoryDraftOnlyMutationException,
   StoryNotFoundException,
   StorySynopsisValueObject,
@@ -42,6 +45,9 @@ export class UpdateAuthorStoryCommandHandler {
       storyId: command.storyId,
       title,
       synopsis,
+      categoryIds: normalizeOptionalIds(command.categoryIds),
+      tagIds: normalizeOptionalIds(command.tagIds),
+      coverMediaId: command.coverMediaId,
       updatedAt: new Date(),
       audit: {
         ipAddress: command.ipAddress,
@@ -55,6 +61,12 @@ export class UpdateAuthorStoryCommandHandler {
         return StoryResultMapper.toDto(result.story);
       case 'not_draft':
         throw new StoryDraftOnlyMutationException();
+      case 'invalid_categories':
+        throw new InvalidStoryCategoriesException(result.invalidIds);
+      case 'invalid_tags':
+        throw new InvalidStoryTagsException(result.invalidIds);
+      case 'invalid_cover':
+        throw new InvalidStoryCoverException();
       case 'not_found':
       default:
         throw new StoryNotFoundException(command.storyId);
@@ -71,4 +83,10 @@ function requireAuthorUserId(userId: string | undefined): string {
   }
 
   return userId;
+}
+
+function normalizeOptionalIds(
+  ids: readonly string[] | undefined,
+): readonly string[] | undefined {
+  return ids === undefined ? undefined : [...new Set(ids)];
 }

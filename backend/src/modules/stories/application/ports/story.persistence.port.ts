@@ -1,5 +1,23 @@
 export const STORY_PERSISTENCE_PORT = Symbol('STORY_PERSISTENCE_PORT');
 
+export interface StoryCategoryRecord {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+
+  readonly isPrimary: boolean;
+}
+
+export interface StoryTagRecord {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+}
+
 export interface StoryRecord {
   readonly id: string;
 
@@ -19,11 +37,37 @@ export interface StoryRecord {
 
   readonly contentRating: string;
 
+  readonly coverMediaId: string | null;
+
+  readonly categories: readonly StoryCategoryRecord[];
+
+  readonly tags: readonly StoryTagRecord[];
+
   readonly version: number;
 
   readonly createdAt: Date;
 
   readonly updatedAt: Date;
+}
+
+export interface StoryTaxonomyCategoryRecord {
+  readonly id: string;
+
+  readonly parentId: string | null;
+
+  readonly name: string;
+
+  readonly slug: string;
+
+  readonly sortOrder: number;
+}
+
+export interface StoryTaxonomyTagRecord {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
 }
 
 export interface StoryAuditContext {
@@ -41,6 +85,10 @@ export interface CreateAuthorStoryInput {
 
   readonly synopsis: string;
 
+  readonly categoryIds: readonly string[];
+
+  readonly tagIds: readonly string[];
+
   readonly createdAt: Date;
 
   readonly audit: StoryAuditContext;
@@ -54,6 +102,16 @@ export type CreateAuthorStoryResult =
     }
   | {
       readonly status: 'author_not_found';
+    }
+  | {
+      readonly status: 'invalid_categories';
+
+      readonly invalidIds: readonly string[];
+    }
+  | {
+      readonly status: 'invalid_tags';
+
+      readonly invalidIds: readonly string[];
     };
 
 export interface UpdateAuthorStoryInput {
@@ -64,6 +122,12 @@ export interface UpdateAuthorStoryInput {
   readonly title?: string;
 
   readonly synopsis?: string;
+
+  readonly categoryIds?: readonly string[];
+
+  readonly tagIds?: readonly string[];
+
+  readonly coverMediaId?: string | null;
 
   readonly updatedAt: Date;
 
@@ -81,6 +145,19 @@ export type UpdateAuthorStoryResult =
     }
   | {
       readonly status: 'not_draft';
+    }
+  | {
+      readonly status: 'invalid_categories';
+
+      readonly invalidIds: readonly string[];
+    }
+  | {
+      readonly status: 'invalid_tags';
+
+      readonly invalidIds: readonly string[];
+    }
+  | {
+      readonly status: 'invalid_cover';
     };
 
 export interface DeleteAuthorStoryInput {
@@ -110,4 +187,8 @@ export interface StoryPersistencePort {
   updateDraft(input: UpdateAuthorStoryInput): Promise<UpdateAuthorStoryResult>;
 
   deleteDraft(input: DeleteAuthorStoryInput): Promise<DeleteAuthorStoryResult>;
+
+  listActiveCategories(): Promise<readonly StoryTaxonomyCategoryRecord[]>;
+
+  listTags(): Promise<readonly StoryTaxonomyTagRecord[]>;
 }

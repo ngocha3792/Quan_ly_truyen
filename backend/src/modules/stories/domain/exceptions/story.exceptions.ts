@@ -16,6 +16,45 @@ export class InvalidStoryFieldException extends InvalidInputException {
   }
 }
 
+export class InvalidStoryCategoriesException extends InvalidInputException {
+  constructor(invalidIds: readonly string[]) {
+    super({
+      code: 'STORY_INVALID_CATEGORIES',
+      message: 'Một hoặc nhiều thể loại không tồn tại hoặc đã bị vô hiệu hóa',
+      details: {
+        invalidCategoryIds: [...invalidIds],
+      },
+    });
+  }
+}
+
+export class InvalidStoryTagsException extends InvalidInputException {
+  constructor(invalidIds: readonly string[]) {
+    super({
+      code: 'STORY_INVALID_TAGS',
+      message: 'Một hoặc nhiều tag không tồn tại',
+      details: {
+        invalidTagIds: [...invalidIds],
+      },
+    });
+  }
+}
+
+export class InvalidStoryCoverException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'STORY_INVALID_COVER',
+      message: [
+        'Ảnh bìa không hợp lệ, chưa sẵn sàng',
+        'hoặc không thuộc truyện hiện tại',
+      ].join(' '),
+      details: {
+        field: 'coverMediaId',
+      },
+    });
+  }
+}
+
 export class AuthorProfileUnavailableException extends ResourceNotFoundException {
   constructor() {
     super({

@@ -1,0 +1,2042 @@
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+new file mode 100644
+index 0000000..a129a3f
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+@@ -0,0 +1,148 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import { StoryNotFoundException } from '../../../domain';
++import { CreateAuthorChapterCommand } from './create-author-chapter.command';
++import { CreateAuthorChapterCommandHandler } from './create-author-chapter.command-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
++
++describe('CreateAuthorChapterCommandHandler', () => {
++  let persistence: {
++    createDraft: jest.Mock;
++  };
++
++  let handler: CreateAuthorChapterCommandHandler;
++
++  beforeEach(() => {
++    persistence = {
++      createDraft: jest.fn(),
++    };
++
++    handler = new CreateAuthorChapterCommandHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(handler.execute(createCommand(undefined))).rejects.toBeInstanceOf(
++      AuthenticationRequiredException,
++    );
++
++    expect(persistence.createDraft).not.toHaveBeenCalled();
++  });
++
++  it('normalize title, line endings và tính word count trước persistence', async () => {
++    persistence.createDraft.mockResolvedValue({
++      status: 'created',
++      chapter: createChapterRecord(),
++    });
++
++    const result = await handler.execute(
++      new CreateAuthorChapterCommand(
++        USER_ID,
++        STORY_ID,
++        '   Chương    Một   ',
++        'Xin chào\r\nthế giới',
++        '127.0.0.1',
++        'Jest',
++        'chapter-create-request',
++      ),
++    );
++
++    expect(persistence.createDraft).toHaveBeenCalledWith({
++      userId: USER_ID,
++      storyId: STORY_ID,
++      title: 'Chương Một',
++      content: 'Xin chào\nthế giới',
++      wordCount: 4,
++      createdAt: expect.any(Date) as unknown,
++      audit: {
++        ipAddress: '127.0.0.1',
++        userAgent: 'Jest',
++        requestId: 'chapter-create-request',
++      },
++    });
++
++    expect(result.id).toBe(CHAPTER_ID);
++  });
++
++  it('cho phép tạo draft chưa có nội dung', async () => {
++    persistence.createDraft.mockResolvedValue({
++      status: 'created',
++      chapter: createChapterRecord({ content: '', wordCount: 0 }),
++    });
++
++    await handler.execute(
++      new CreateAuthorChapterCommand(
++        USER_ID,
++        STORY_ID,
++        'Chương Một',
++        undefined,
++        undefined,
++        undefined,
++        undefined,
++      ),
++    );
++
++    expect(persistence.createDraft).toHaveBeenCalledWith(
++      expect.objectContaining({
++        content: '',
++        wordCount: 0,
++      }),
++    );
++  });
++
++  it('ẩn story không tồn tại hoặc không thuộc author bằng not found', async () => {
++    persistence.createDraft.mockResolvedValue({
++      status: 'story_not_found',
++    });
++
++    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
++      StoryNotFoundException,
++    );
++  });
++});
++
++function createCommand(userId: string | undefined): CreateAuthorChapterCommand {
++  return new CreateAuthorChapterCommand(
++    userId,
++    STORY_ID,
++    'Chương Một',
++    'Nội dung',
++    undefined,
++    undefined,
++    undefined,
++  );
++}
++
++function createChapterRecord(
++  overrides: Partial<ReturnType<typeof baseChapterRecord>> = {},
++) {
++  return {
++    ...baseChapterRecord(),
++    ...overrides,
++  };
++}
++
++function baseChapterRecord() {
++  const now = new Date('2026-08-15T00:00:00.000Z');
++
++  return {
++    id: CHAPTER_ID,
++    storyId: STORY_ID,
++    createdById: USER_ID,
++    updatedById: USER_ID,
++    number: 1,
++    title: 'Chương Một',
++    slug: 'chuong-1-chuong-mot',
++    content: 'Nội dung',
++    contentFormat: 'MARKDOWN',
++    status: 'DRAFT',
++    wordCount: 2,
++    version: 1,
++    scheduledAt: null,
++    publishedAt: null,
++    createdAt: now,
++    updatedAt: now,
++  };
++}
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+new file mode 100644
+index 0000000..9d9f1a4
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+@@ -0,0 +1,65 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import {
++  ChapterContentValueObject,
++  ChapterTitleValueObject,
++  countChapterWords,
++  StoryNotFoundException,
++} from '../../../domain';
++import type { ChapterResultDto } from '../../dto';
++import { ChapterResultMapper } from '../../mappers';
++import {
++  CHAPTER_PERSISTENCE_PORT,
++  type ChapterPersistencePort,
++} from '../../ports';
++import { CreateAuthorChapterCommand } from './create-author-chapter.command';
++
++@Injectable()
++export class CreateAuthorChapterCommandHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(command: CreateAuthorChapterCommand): Promise<ChapterResultDto> {
++    const userId = requireAuthorUserId(command.userId);
++    const title = ChapterTitleValueObject.create(command.title).value;
++    const content = ChapterContentValueObject.create(command.content).value;
++
++    const result = await this.persistence.createDraft({
++      userId,
++      storyId: command.storyId,
++      title,
++      content,
++      wordCount: countChapterWords(content),
++      createdAt: new Date(),
++      audit: {
++        ipAddress: command.ipAddress,
++        userAgent: command.userAgent,
++        requestId: command.requestId,
++      },
++    });
++
++    switch (result.status) {
++      case 'created':
++        return ChapterResultMapper.toDto(result.chapter);
++      case 'story_not_found':
++      default:
++        throw new StoryNotFoundException(command.storyId);
++    }
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'CHAPTER_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để quản lý chương',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command.ts b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command.ts
+new file mode 100644
+index 0000000..33d40a7
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command.ts
+@@ -0,0 +1,17 @@
++export class CreateAuthorChapterCommand {
++  constructor(
++    readonly userId: string | undefined,
++
++    readonly storyId: string,
++
++    readonly title: string,
++
++    readonly content: string | null | undefined,
++
++    readonly ipAddress: string | undefined,
++
++    readonly userAgent: string | undefined,
++
++    readonly requestId: string | undefined,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/index.ts b/backend/src/modules/stories/application/commands/create-author-chapter/index.ts
+new file mode 100644
+index 0000000..da23782
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/create-author-chapter/index.ts
+@@ -0,0 +1,2 @@
++export * from './create-author-chapter.command';
++export * from './create-author-chapter.command-handler';
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts
+new file mode 100644
+index 0000000..1d529b5
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts
+@@ -0,0 +1,96 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import {
++  ChapterDraftOnlyMutationException,
++  ChapterNotFoundException,
++} from '../../../domain';
++import { DeleteAuthorChapterCommand } from './delete-author-chapter.command';
++import { DeleteAuthorChapterCommandHandler } from './delete-author-chapter.command-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
++
++describe('DeleteAuthorChapterCommandHandler', () => {
++  let persistence: {
++    deleteDraft: jest.Mock;
++  };
++
++  let handler: DeleteAuthorChapterCommandHandler;
++
++  beforeEach(() => {
++    persistence = {
++      deleteDraft: jest.fn(),
++    };
++
++    handler = new DeleteAuthorChapterCommandHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(handler.execute(createCommand(undefined))).rejects.toBeInstanceOf(
++      AuthenticationRequiredException,
++    );
++
++    expect(persistence.deleteDraft).not.toHaveBeenCalled();
++  });
++
++  it('gửi ownership scope, audit context và thời điểm soft delete', async () => {
++    persistence.deleteDraft.mockResolvedValue({
++      status: 'deleted',
++    });
++
++    await handler.execute(
++      new DeleteAuthorChapterCommand(
++        USER_ID,
++        STORY_ID,
++        CHAPTER_ID,
++        '127.0.0.1',
++        'Jest',
++        'chapter-delete-request',
++      ),
++    );
++
++    expect(persistence.deleteDraft).toHaveBeenCalledWith({
++      userId: USER_ID,
++      storyId: STORY_ID,
++      chapterId: CHAPTER_ID,
++      deletedAt: expect.any(Date) as unknown,
++      audit: {
++        ipAddress: '127.0.0.1',
++        userAgent: 'Jest',
++        requestId: 'chapter-delete-request',
++      },
++    });
++  });
++
++  it('không cho xóa chapter không còn là draft', async () => {
++    persistence.deleteDraft.mockResolvedValue({
++      status: 'not_draft',
++    });
++
++    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
++      ChapterDraftOnlyMutationException,
++    );
++  });
++
++  it('ẩn chapter không tồn tại, story sai hoặc không thuộc author bằng not found', async () => {
++    persistence.deleteDraft.mockResolvedValue({
++      status: 'not_found',
++    });
++
++    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
++      ChapterNotFoundException,
++    );
++  });
++});
++
++function createCommand(userId: string | undefined): DeleteAuthorChapterCommand {
++  return new DeleteAuthorChapterCommand(
++    userId,
++    STORY_ID,
++    CHAPTER_ID,
++    undefined,
++    undefined,
++    undefined,
++  );
++}
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts
+new file mode 100644
+index 0000000..63f883f
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts
+@@ -0,0 +1,59 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import {
++  ChapterDraftOnlyMutationException,
++  ChapterNotFoundException,
++} from '../../../domain';
++import {
++  CHAPTER_PERSISTENCE_PORT,
++  type ChapterPersistencePort,
++} from '../../ports';
++import { DeleteAuthorChapterCommand } from './delete-author-chapter.command';
++
++@Injectable()
++export class DeleteAuthorChapterCommandHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(command: DeleteAuthorChapterCommand): Promise<void> {
++    const userId = requireAuthorUserId(command.userId);
++
++    const result = await this.persistence.deleteDraft({
++      userId,
++      storyId: command.storyId,
++      chapterId: command.chapterId,
++      deletedAt: new Date(),
++      audit: {
++        ipAddress: command.ipAddress,
++        userAgent: command.userAgent,
++        requestId: command.requestId,
++      },
++    });
++
++    switch (result.status) {
++      case 'deleted':
++        return;
++      case 'not_draft':
++        throw new ChapterDraftOnlyMutationException();
++      case 'not_found':
++      default:
++        throw new ChapterNotFoundException(command.chapterId);
++    }
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'CHAPTER_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để quản lý chương',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command.ts b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command.ts
+new file mode 100644
+index 0000000..4b36c8f
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command.ts
+@@ -0,0 +1,15 @@
++export class DeleteAuthorChapterCommand {
++  constructor(
++    readonly userId: string | undefined,
++
++    readonly storyId: string,
++
++    readonly chapterId: string,
++
++    readonly ipAddress: string | undefined,
++
++    readonly userAgent: string | undefined,
++
++    readonly requestId: string | undefined,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/index.ts b/backend/src/modules/stories/application/commands/delete-author-chapter/index.ts
+new file mode 100644
+index 0000000..b470aa3
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/delete-author-chapter/index.ts
+@@ -0,0 +1,2 @@
++export * from './delete-author-chapter.command';
++export * from './delete-author-chapter.command-handler';
+diff --git a/backend/src/modules/stories/application/commands/index.ts b/backend/src/modules/stories/application/commands/index.ts
+index 4f7931f..2a29a3e 100644
+--- a/backend/src/modules/stories/application/commands/index.ts
++++ b/backend/src/modules/stories/application/commands/index.ts
+@@ -1,3 +1,6 @@
++export * from './create-author-chapter';
+ export * from './create-author-story';
++export * from './delete-author-chapter';
+ export * from './delete-author-story';
++export * from './update-author-chapter';
+ export * from './update-author-story';
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/index.ts b/backend/src/modules/stories/application/commands/update-author-chapter/index.ts
+new file mode 100644
+index 0000000..e5e5717
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/update-author-chapter/index.ts
+@@ -0,0 +1,2 @@
++export * from './update-author-chapter.command';
++export * from './update-author-chapter.command-handler';
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts
+new file mode 100644
+index 0000000..196884e
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts
+@@ -0,0 +1,169 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import {
++  ChapterDraftOnlyMutationException,
++  ChapterNotFoundException,
++} from '../../../domain';
++import { UpdateAuthorChapterCommand } from './update-author-chapter.command';
++import { UpdateAuthorChapterCommandHandler } from './update-author-chapter.command-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
++
++describe('UpdateAuthorChapterCommandHandler', () => {
++  let persistence: {
++    updateDraft: jest.Mock;
++  };
++
++  let handler: UpdateAuthorChapterCommandHandler;
++
++  beforeEach(() => {
++    persistence = {
++      updateDraft: jest.fn(),
++    };
++
++    handler = new UpdateAuthorChapterCommandHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(handler.execute(createCommand(undefined))).rejects.toBeInstanceOf(
++      AuthenticationRequiredException,
++    );
++
++    expect(persistence.updateDraft).not.toHaveBeenCalled();
++  });
++
++  it('normalize field thay đổi và tính lại word count', async () => {
++    persistence.updateDraft.mockResolvedValue({
++      status: 'updated',
++      chapter: createChapterRecord({
++        title: 'Tiêu đề mới',
++        content: 'Một hai ba',
++        wordCount: 3,
++        version: 2,
++      }),
++    });
++
++    await handler.execute(
++      new UpdateAuthorChapterCommand(
++        USER_ID,
++        STORY_ID,
++        CHAPTER_ID,
++        '  Tiêu đề    mới  ',
++        'Một hai ba',
++        '127.0.0.1',
++        'Jest',
++        'chapter-update-request',
++      ),
++    );
++
++    expect(persistence.updateDraft).toHaveBeenCalledWith({
++      userId: USER_ID,
++      storyId: STORY_ID,
++      chapterId: CHAPTER_ID,
++      title: 'Tiêu đề mới',
++      content: 'Một hai ba',
++      wordCount: 3,
++      updatedAt: expect.any(Date) as unknown,
++      audit: {
++        ipAddress: '127.0.0.1',
++        userAgent: 'Jest',
++        requestId: 'chapter-update-request',
++      },
++    });
++  });
++
++  it('không tính lại word count khi content không được gửi', async () => {
++    persistence.updateDraft.mockResolvedValue({
++      status: 'updated',
++      chapter: createChapterRecord(),
++    });
++
++    await handler.execute(
++      new UpdateAuthorChapterCommand(
++        USER_ID,
++        STORY_ID,
++        CHAPTER_ID,
++        'Tên khác',
++        undefined,
++        undefined,
++        undefined,
++        undefined,
++      ),
++    );
++
++    expect(persistence.updateDraft).toHaveBeenCalledWith(
++      expect.objectContaining({
++        title: 'Tên khác',
++        content: undefined,
++        wordCount: undefined,
++      }),
++    );
++  });
++
++  it('không cho sửa chapter không còn là draft', async () => {
++    persistence.updateDraft.mockResolvedValue({
++      status: 'not_draft',
++    });
++
++    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
++      ChapterDraftOnlyMutationException,
++    );
++  });
++
++  it('ẩn chapter không tồn tại, story sai hoặc không thuộc author bằng not found', async () => {
++    persistence.updateDraft.mockResolvedValue({
++      status: 'not_found',
++    });
++
++    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
++      ChapterNotFoundException,
++    );
++  });
++});
++
++function createCommand(userId: string | undefined): UpdateAuthorChapterCommand {
++  return new UpdateAuthorChapterCommand(
++    userId,
++    STORY_ID,
++    CHAPTER_ID,
++    'Chương Một',
++    'Nội dung mới',
++    undefined,
++    undefined,
++    undefined,
++  );
++}
++
++function createChapterRecord(
++  overrides: Partial<ReturnType<typeof baseChapterRecord>> = {},
++) {
++  return {
++    ...baseChapterRecord(),
++    ...overrides,
++  };
++}
++
++function baseChapterRecord() {
++  const now = new Date('2026-08-15T00:00:00.000Z');
++
++  return {
++    id: CHAPTER_ID,
++    storyId: STORY_ID,
++    createdById: USER_ID,
++    updatedById: USER_ID,
++    number: 1,
++    title: 'Chương Một',
++    slug: 'chuong-1-chuong-mot',
++    content: 'Nội dung',
++    contentFormat: 'MARKDOWN',
++    status: 'DRAFT',
++    wordCount: 2,
++    version: 1,
++    scheduledAt: null,
++    publishedAt: null,
++    createdAt: now,
++    updatedAt: now,
++  };
++}
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.ts b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.ts
+new file mode 100644
+index 0000000..e7aa055
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.ts
+@@ -0,0 +1,75 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import {
++  ChapterContentValueObject,
++  ChapterDraftOnlyMutationException,
++  ChapterNotFoundException,
++  ChapterTitleValueObject,
++  countChapterWords,
++} from '../../../domain';
++import type { ChapterResultDto } from '../../dto';
++import { ChapterResultMapper } from '../../mappers';
++import {
++  CHAPTER_PERSISTENCE_PORT,
++  type ChapterPersistencePort,
++} from '../../ports';
++import { UpdateAuthorChapterCommand } from './update-author-chapter.command';
++
++@Injectable()
++export class UpdateAuthorChapterCommandHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(command: UpdateAuthorChapterCommand): Promise<ChapterResultDto> {
++    const userId = requireAuthorUserId(command.userId);
++    const title =
++      command.title === undefined
++        ? undefined
++        : ChapterTitleValueObject.create(command.title).value;
++    const content =
++      command.content === undefined
++        ? undefined
++        : ChapterContentValueObject.create(command.content).value;
++
++    const result = await this.persistence.updateDraft({
++      userId,
++      storyId: command.storyId,
++      chapterId: command.chapterId,
++      title,
++      content,
++      wordCount: content === undefined ? undefined : countChapterWords(content),
++      updatedAt: new Date(),
++      audit: {
++        ipAddress: command.ipAddress,
++        userAgent: command.userAgent,
++        requestId: command.requestId,
++      },
++    });
++
++    switch (result.status) {
++      case 'updated':
++        return ChapterResultMapper.toDto(result.chapter);
++      case 'not_draft':
++        throw new ChapterDraftOnlyMutationException();
++      case 'not_found':
++      default:
++        throw new ChapterNotFoundException(command.chapterId);
++    }
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'CHAPTER_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để quản lý chương',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command.ts b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command.ts
+new file mode 100644
+index 0000000..cac371e
+--- /dev/null
++++ b/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command.ts
+@@ -0,0 +1,19 @@
++export class UpdateAuthorChapterCommand {
++  constructor(
++    readonly userId: string | undefined,
++
++    readonly storyId: string,
++
++    readonly chapterId: string,
++
++    readonly title: string | undefined,
++
++    readonly content: string | null | undefined,
++
++    readonly ipAddress: string | undefined,
++
++    readonly userAgent: string | undefined,
++
++    readonly requestId: string | undefined,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/dto/chapter-result.dto.ts b/backend/src/modules/stories/application/dto/chapter-result.dto.ts
+new file mode 100644
+index 0000000..7e15ea7
+--- /dev/null
++++ b/backend/src/modules/stories/application/dto/chapter-result.dto.ts
+@@ -0,0 +1,33 @@
++export interface ChapterResultDto {
++  readonly id: string;
++
++  readonly storyId: string;
++
++  readonly createdById: string;
++
++  readonly updatedById: string;
++
++  readonly number: number;
++
++  readonly title: string;
++
++  readonly slug: string;
++
++  readonly content: string;
++
++  readonly contentFormat: string;
++
++  readonly status: string;
++
++  readonly wordCount: number;
++
++  readonly version: number;
++
++  readonly scheduledAt: Date | null;
++
++  readonly publishedAt: Date | null;
++
++  readonly createdAt: Date;
++
++  readonly updatedAt: Date;
++}
+diff --git a/backend/src/modules/stories/application/dto/index.ts b/backend/src/modules/stories/application/dto/index.ts
+index 2f9d42d..7741bc6 100644
+--- a/backend/src/modules/stories/application/dto/index.ts
++++ b/backend/src/modules/stories/application/dto/index.ts
+@@ -1,2 +1,3 @@
++export * from './chapter-result.dto';
+ export * from './story-result.dto';
+ export * from './story-taxonomy-result.dto';
+diff --git a/backend/src/modules/stories/application/mappers/chapter-result.mapper.ts b/backend/src/modules/stories/application/mappers/chapter-result.mapper.ts
+new file mode 100644
+index 0000000..b3f8fce
+--- /dev/null
++++ b/backend/src/modules/stories/application/mappers/chapter-result.mapper.ts
+@@ -0,0 +1,25 @@
++import type { ChapterResultDto } from '../dto';
++import type { ChapterRecord } from '../ports';
++
++export class ChapterResultMapper {
++  static toDto(chapter: ChapterRecord): ChapterResultDto {
++    return {
++      id: chapter.id,
++      storyId: chapter.storyId,
++      createdById: chapter.createdById,
++      updatedById: chapter.updatedById,
++      number: chapter.number,
++      title: chapter.title,
++      slug: chapter.slug,
++      content: chapter.content,
++      contentFormat: chapter.contentFormat,
++      status: chapter.status,
++      wordCount: chapter.wordCount,
++      version: chapter.version,
++      scheduledAt: chapter.scheduledAt,
++      publishedAt: chapter.publishedAt,
++      createdAt: chapter.createdAt,
++      updatedAt: chapter.updatedAt,
++    };
++  }
++}
+diff --git a/backend/src/modules/stories/application/mappers/index.ts b/backend/src/modules/stories/application/mappers/index.ts
+index 5755cfb..46ac3aa 100644
+--- a/backend/src/modules/stories/application/mappers/index.ts
++++ b/backend/src/modules/stories/application/mappers/index.ts
+@@ -1 +1,2 @@
++export * from './chapter-result.mapper';
+ export * from './story-result.mapper';
+diff --git a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+new file mode 100644
+index 0000000..bcc8613
+--- /dev/null
++++ b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+@@ -0,0 +1,131 @@
++import type { StoryAuditContext } from './story.persistence.port';
++
++export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
++
++export interface ChapterRecord {
++  readonly id: string;
++
++  readonly storyId: string;
++
++  readonly createdById: string;
++
++  readonly updatedById: string;
++
++  readonly number: number;
++
++  readonly title: string;
++
++  readonly slug: string;
++
++  readonly content: string;
++
++  readonly contentFormat: string;
++
++  readonly status: string;
++
++  readonly wordCount: number;
++
++  readonly version: number;
++
++  readonly scheduledAt: Date | null;
++
++  readonly publishedAt: Date | null;
++
++  readonly createdAt: Date;
++
++  readonly updatedAt: Date;
++}
++
++export interface CreateAuthorChapterInput {
++  readonly userId: string;
++
++  readonly storyId: string;
++
++  readonly title: string;
++
++  readonly content: string;
++
++  readonly wordCount: number;
++
++  readonly createdAt: Date;
++
++  readonly audit: StoryAuditContext;
++}
++
++export type CreateAuthorChapterResult =
++  | {
++      readonly status: 'created';
++
++      readonly chapter: ChapterRecord;
++    }
++  | {
++      readonly status: 'story_not_found';
++    };
++
++export interface UpdateAuthorChapterInput {
++  readonly userId: string;
++
++  readonly storyId: string;
++
++  readonly chapterId: string;
++
++  readonly title?: string;
++
++  readonly content?: string;
++
++  readonly wordCount?: number;
++
++  readonly updatedAt: Date;
++
++  readonly audit: StoryAuditContext;
++}
++
++export type UpdateAuthorChapterResult =
++  | {
++      readonly status: 'updated';
++
++      readonly chapter: ChapterRecord;
++    }
++  | {
++      readonly status: 'not_found';
++    }
++  | {
++      readonly status: 'not_draft';
++    };
++
++export interface DeleteAuthorChapterInput {
++  readonly userId: string;
++
++  readonly storyId: string;
++
++  readonly chapterId: string;
++
++  readonly deletedAt: Date;
++
++  readonly audit: StoryAuditContext;
++}
++
++export type DeleteAuthorChapterResult =
++  | {
++      readonly status: 'deleted';
++    }
++  | {
++      readonly status: 'not_found';
++    }
++  | {
++      readonly status: 'not_draft';
++    };
++
++export interface ChapterPersistencePort {
++  createDraft(
++    input: CreateAuthorChapterInput,
++  ): Promise<CreateAuthorChapterResult>;
++
++  updateDraft(
++    input: UpdateAuthorChapterInput,
++  ): Promise<UpdateAuthorChapterResult>;
++
++  deleteDraft(
++    input: DeleteAuthorChapterInput,
++  ): Promise<DeleteAuthorChapterResult>;
++}
+diff --git a/backend/src/modules/stories/application/ports/index.ts b/backend/src/modules/stories/application/ports/index.ts
+index 5ec10a2..5eba0a4 100644
+--- a/backend/src/modules/stories/application/ports/index.ts
++++ b/backend/src/modules/stories/application/ports/index.ts
+@@ -1 +1,2 @@
++export * from './chapter.persistence.port';
+ export * from './story.persistence.port';
+diff --git a/backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts b/backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts
+new file mode 100644
+index 0000000..b1cff2a
+--- /dev/null
++++ b/backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts
+@@ -0,0 +1,42 @@
++import {
++  InvalidInputException,
++  ResourceConflictException,
++  ResourceNotFoundException,
++} from '@/common/exceptions';
++
++export class InvalidChapterFieldException extends InvalidInputException {
++  constructor(field: string, message: string) {
++    super({
++      code: 'CHAPTER_INVALID_FIELD',
++      message,
++      details: {
++        field,
++      },
++    });
++  }
++}
++
++export class ChapterNotFoundException extends ResourceNotFoundException {
++  constructor(chapterId?: string) {
++    super({
++      code: 'CHAPTER_NOT_FOUND',
++      resource: 'chương',
++      ...(chapterId
++        ? {
++            identifier: chapterId,
++          }
++        : {}),
++      message: 'Không tìm thấy chương',
++    });
++  }
++}
++
++export class ChapterDraftOnlyMutationException extends ResourceConflictException {
++  constructor() {
++    super({
++      code: 'CHAPTER_DRAFT_ONLY_MUTATION',
++      resource: 'chương',
++      message: 'Chỉ chương ở trạng thái bản nháp mới có thể chỉnh sửa hoặc xóa',
++    });
++  }
++}
+diff --git a/backend/src/modules/stories/domain/exceptions/index.ts b/backend/src/modules/stories/domain/exceptions/index.ts
+index d96aae8..ae4a523 100644
+--- a/backend/src/modules/stories/domain/exceptions/index.ts
++++ b/backend/src/modules/stories/domain/exceptions/index.ts
+@@ -1 +1,2 @@
++export * from './chapter.exceptions';
+ export * from './story.exceptions';
+diff --git a/backend/src/modules/stories/domain/policies/chapter-draft.policy.ts b/backend/src/modules/stories/domain/policies/chapter-draft.policy.ts
+new file mode 100644
+index 0000000..eb9fd72
+--- /dev/null
++++ b/backend/src/modules/stories/domain/policies/chapter-draft.policy.ts
+@@ -0,0 +1,5 @@
++export class ChapterDraftPolicy {
++  static readonly TITLE_MAX_LENGTH = 255;
++
++  static readonly SLUG_MAX_LENGTH = 255;
++}
+diff --git a/backend/src/modules/stories/domain/policies/index.ts b/backend/src/modules/stories/domain/policies/index.ts
+index 5fb01f4..6b6fc00 100644
+--- a/backend/src/modules/stories/domain/policies/index.ts
++++ b/backend/src/modules/stories/domain/policies/index.ts
+@@ -1 +1,2 @@
++export * from './chapter-draft.policy';
+ export * from './story-draft.policy';
+diff --git a/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.spec.ts b/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.spec.ts
+new file mode 100644
+index 0000000..41707e8
+--- /dev/null
++++ b/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.spec.ts
+@@ -0,0 +1,36 @@
++import { InvalidChapterFieldException } from '../exceptions';
++import {
++  ChapterContentValueObject,
++  ChapterTitleValueObject,
++  countChapterWords,
++} from './chapter-fields.value-object';
++
++describe('Chapter field value objects', () => {
++  it('normalize whitespace của title', () => {
++    expect(ChapterTitleValueObject.create('  Chương   Một  ').value).toBe(
++      'Chương Một',
++    );
++  });
++
++  it('không cho title rỗng', () => {
++    expect(() => ChapterTitleValueObject.create('   ')).toThrow(
++      InvalidChapterFieldException,
++    );
++  });
++
++  it('normalize CRLF nhưng không phá whitespace nội dung', () => {
++    expect(
++      ChapterContentValueObject.create('Dòng 1\r\n  Dòng 2\rDòng 3').value,
++    ).toBe('Dòng 1\n  Dòng 2\nDòng 3');
++  });
++
++  it('cho phép draft content rỗng', () => {
++    expect(ChapterContentValueObject.create(undefined).value).toBe('');
++    expect(ChapterContentValueObject.create(null).value).toBe('');
++  });
++
++  it('đếm token có chữ hoặc số và bỏ token chỉ có markdown symbol', () => {
++    expect(countChapterWords('Xin chào **thế giới** --- 123')).toBe(5);
++    expect(countChapterWords('   ')).toBe(0);
++  });
++});
+diff --git a/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.ts b/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.ts
+new file mode 100644
+index 0000000..60777e8
+--- /dev/null
++++ b/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.ts
+@@ -0,0 +1,66 @@
++import { normalizeWhitespace } from '@/common/utils';
++
++import { InvalidChapterFieldException } from '../exceptions';
++import { ChapterDraftPolicy } from '../policies';
++
++export class ChapterTitleValueObject {
++  private constructor(readonly value: string) {}
++
++  static create(raw: string): ChapterTitleValueObject {
++    if (typeof raw !== 'string') {
++      throw new InvalidChapterFieldException(
++        'title',
++        'Tiêu đề chương không hợp lệ',
++      );
++    }
++
++    const value = normalizeWhitespace(raw);
++
++    if (!value) {
++      throw new InvalidChapterFieldException(
++        'title',
++        'Tiêu đề chương không được để trống',
++      );
++    }
++
++    if (value.length > ChapterDraftPolicy.TITLE_MAX_LENGTH) {
++      throw new InvalidChapterFieldException(
++        'title',
++        `Tiêu đề chương không được vượt quá ${ChapterDraftPolicy.TITLE_MAX_LENGTH} ký tự`,
++      );
++    }
++
++    return new ChapterTitleValueObject(value);
++  }
++}
++
++export class ChapterContentValueObject {
++  private constructor(readonly value: string) {}
++
++  static create(
++    raw: string | null | undefined,
++  ): ChapterContentValueObject {
++    if (raw === null || raw === undefined) {
++      return new ChapterContentValueObject('');
++    }
++
++    if (typeof raw !== 'string') {
++      throw new InvalidChapterFieldException(
++        'content',
++        'Nội dung chương không hợp lệ',
++      );
++    }
++
++    return new ChapterContentValueObject(raw.replace(/\r\n?/g, '\n'));
++  }
++}
++
++export function countChapterWords(content: string): number {
++  const tokens = content.trim().split(/\s+/u);
++
++  if (tokens.length === 1 && tokens[0] === '') {
++    return 0;
++  }
++
++  return tokens.filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
++}
+diff --git a/backend/src/modules/stories/domain/value-objects/index.ts b/backend/src/modules/stories/domain/value-objects/index.ts
+index a55d0be..d2798a1 100644
+--- a/backend/src/modules/stories/domain/value-objects/index.ts
++++ b/backend/src/modules/stories/domain/value-objects/index.ts
+@@ -1 +1,2 @@
++export * from './chapter-fields.value-object';
+ export * from './story-fields.value-object';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/index.ts b/backend/src/modules/stories/infrastructure/persistence/index.ts
+index 6f6206c..694ec08 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/index.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/index.ts
+@@ -1 +1,2 @@
++export * from './prisma-chapter.persistence';
+ export * from './prisma-story.persistence';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+new file mode 100644
+index 0000000..f0a9313
+--- /dev/null
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+@@ -0,0 +1,502 @@
++import { randomUUID } from 'node:crypto';
++
++import { Injectable } from '@nestjs/common';
++
++import {
++  ChapterStatus,
++  ContentFormat,
++  Prisma,
++} from '@/generated/prisma/client';
++import { slugify } from '@/common/utils';
++import { mapPrismaError, PrismaService } from '@/infrastructure/database';
++
++import type {
++  ChapterPersistencePort,
++  ChapterRecord,
++  CreateAuthorChapterInput,
++  CreateAuthorChapterResult,
++  DeleteAuthorChapterInput,
++  DeleteAuthorChapterResult,
++  UpdateAuthorChapterInput,
++  UpdateAuthorChapterResult,
++} from '../../application';
++import { ChapterDraftPolicy } from '../../domain';
++
++const CHAPTER_SELECT = {
++  id: true,
++  storyId: true,
++  createdById: true,
++  updatedById: true,
++  number: true,
++  title: true,
++  slug: true,
++  content: true,
++  contentFormat: true,
++  status: true,
++  wordCount: true,
++  version: true,
++  scheduledAt: true,
++  publishedAt: true,
++  createdAt: true,
++  updatedAt: true,
++} satisfies Prisma.ChapterSelect;
++
++type ChapterRow = Prisma.ChapterGetPayload<{
++  select: typeof CHAPTER_SELECT;
++}>;
++
++@Injectable()
++export class PrismaChapterPersistence implements ChapterPersistencePort {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async createDraft(
++    input: CreateAuthorChapterInput,
++  ): Promise<CreateAuthorChapterResult> {
++    try {
++      return await this.prisma.$transaction(async (tx) => {
++        const storyLocked = await lockStoryRow(tx, input.storyId);
++
++        if (!storyLocked) {
++          return {
++            status: 'story_not_found',
++          };
++        }
++
++        const story = await tx.story.findFirst({
++          where: {
++            id: input.storyId,
++            authorId: input.userId,
++            deletedAt: null,
++          },
++          select: {
++            id: true,
++          },
++        });
++
++        if (!story) {
++          return {
++            status: 'story_not_found',
++          };
++        }
++
++        const lastChapter = await tx.chapter.findFirst({
++          where: {
++            storyId: story.id,
++          },
++          orderBy: {
++            number: 'desc',
++          },
++          select: {
++            number: true,
++          },
++        });
++        const number = Math.floor(lastChapter?.number.toNumber() ?? 0) + 1;
++        const chapterId = randomUUID();
++        const slug = createChapterSlug(number, input.title);
++
++        const chapter = await tx.chapter.create({
++          data: {
++            id: chapterId,
++            storyId: story.id,
++            createdById: input.userId,
++            updatedById: input.userId,
++            number,
++            title: input.title,
++            slug,
++            content: input.content,
++            contentFormat: ContentFormat.MARKDOWN,
++            status: ChapterStatus.DRAFT,
++            wordCount: input.wordCount,
++            version: 1,
++            createdAt: input.createdAt,
++            updatedAt: input.createdAt,
++            versions: {
++              create: {
++                createdById: input.userId,
++                version: 1,
++                title: input.title,
++                content: input.content,
++                contentFormat: ContentFormat.MARKDOWN,
++                wordCount: input.wordCount,
++                createdAt: input.createdAt,
++              },
++            },
++          },
++          select: CHAPTER_SELECT,
++        });
++
++        await tx.auditLog.create({
++          data: {
++            actorId: input.userId,
++            action: 'chapter.draft.created',
++            entityType: 'chapter',
++            entityId: chapter.id,
++            newValues: {
++              storyId: chapter.storyId,
++              number: chapter.number.toString(),
++              title: chapter.title,
++              slug: chapter.slug,
++              contentFormat: chapter.contentFormat,
++              contentLength: chapter.content.length,
++              wordCount: chapter.wordCount,
++              status: chapter.status,
++              version: chapter.version,
++            },
++            ipAddress: input.audit.ipAddress,
++            userAgent: input.audit.userAgent,
++            requestId: input.audit.requestId,
++            createdAt: input.createdAt,
++          },
++        });
++
++        return {
++          status: 'created',
++          chapter: this.toRecord(chapter),
++        };
++      });
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'chapter-draft-create',
++        resource: 'Chương',
++      });
++    }
++  }
++
++  async updateDraft(
++    input: UpdateAuthorChapterInput,
++  ): Promise<UpdateAuthorChapterResult> {
++    try {
++      return await this.prisma.$transaction(async (tx) => {
++        const story = await lockAndFindOwnedStory(
++          tx,
++          input.storyId,
++          input.userId,
++        );
++
++        if (!story) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        const chapterLocked = await lockChapterRow(tx, input.chapterId);
++
++        if (!chapterLocked) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        const current = await tx.chapter.findFirst({
++          where: {
++            id: input.chapterId,
++            storyId: story.id,
++            deletedAt: null,
++          },
++          select: CHAPTER_SELECT,
++        });
++
++        if (!current) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        if (current.status !== ChapterStatus.DRAFT) {
++          return {
++            status: 'not_draft',
++          };
++        }
++
++        const titleChanged =
++          input.title !== undefined && input.title !== current.title;
++        const contentChanged =
++          input.content !== undefined && input.content !== current.content;
++
++        if (!titleChanged && !contentChanged) {
++          return {
++            status: 'updated',
++            chapter: this.toRecord(current),
++          };
++        }
++
++        const nextTitle =
++          titleChanged && input.title !== undefined
++            ? input.title
++            : current.title;
++        const nextContent =
++          contentChanged && input.content !== undefined
++            ? input.content
++            : current.content;
++        const nextWordCount = contentChanged
++          ? (input.wordCount ?? current.wordCount)
++          : current.wordCount;
++        const nextSlug = titleChanged
++          ? createChapterSlug(current.number.toNumber(), nextTitle)
++          : current.slug;
++        const nextVersion = current.version + 1;
++
++        const updated = await tx.chapter.update({
++          where: {
++            id: current.id,
++          },
++          data: {
++            ...(titleChanged
++              ? {
++                  title: nextTitle,
++                  slug: nextSlug,
++                }
++              : {}),
++            ...(contentChanged
++              ? {
++                  content: nextContent,
++                  wordCount: nextWordCount,
++                }
++              : {}),
++            updatedById: input.userId,
++            updatedAt: input.updatedAt,
++            version: nextVersion,
++            versions: {
++              create: {
++                createdById: input.userId,
++                version: nextVersion,
++                title: nextTitle,
++                content: nextContent,
++                contentFormat: current.contentFormat,
++                wordCount: nextWordCount,
++                createdAt: input.updatedAt,
++              },
++            },
++          },
++          select: CHAPTER_SELECT,
++        });
++
++        await tx.auditLog.create({
++          data: {
++            actorId: input.userId,
++            action: 'chapter.draft.updated',
++            entityType: 'chapter',
++            entityId: current.id,
++            oldValues: {
++              storyId: current.storyId,
++              number: current.number.toString(),
++              title: current.title,
++              slug: current.slug,
++              contentLength: current.content.length,
++              wordCount: current.wordCount,
++              version: current.version,
++            },
++            newValues: {
++              storyId: updated.storyId,
++              number: updated.number.toString(),
++              title: updated.title,
++              slug: updated.slug,
++              contentLength: updated.content.length,
++              contentChanged,
++              wordCount: updated.wordCount,
++              version: updated.version,
++            },
++            ipAddress: input.audit.ipAddress,
++            userAgent: input.audit.userAgent,
++            requestId: input.audit.requestId,
++            createdAt: input.updatedAt,
++          },
++        });
++
++        return {
++          status: 'updated',
++          chapter: this.toRecord(updated),
++        };
++      });
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'chapter-draft-update',
++        resource: 'Chương',
++      });
++    }
++  }
++
++  async deleteDraft(
++    input: DeleteAuthorChapterInput,
++  ): Promise<DeleteAuthorChapterResult> {
++    try {
++      return await this.prisma.$transaction(async (tx) => {
++        const story = await lockAndFindOwnedStory(
++          tx,
++          input.storyId,
++          input.userId,
++        );
++
++        if (!story) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        const chapterLocked = await lockChapterRow(tx, input.chapterId);
++
++        if (!chapterLocked) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        const current = await tx.chapter.findFirst({
++          where: {
++            id: input.chapterId,
++            storyId: story.id,
++            deletedAt: null,
++          },
++          select: CHAPTER_SELECT,
++        });
++
++        if (!current) {
++          return {
++            status: 'not_found',
++          };
++        }
++
++        if (current.status !== ChapterStatus.DRAFT) {
++          return {
++            status: 'not_draft',
++          };
++        }
++
++        await tx.chapter.update({
++          where: {
++            id: current.id,
++          },
++          data: {
++            deletedAt: input.deletedAt,
++            updatedById: input.userId,
++            updatedAt: input.deletedAt,
++          },
++        });
++
++        await tx.auditLog.create({
++          data: {
++            actorId: input.userId,
++            action: 'chapter.draft.deleted',
++            entityType: 'chapter',
++            entityId: current.id,
++            oldValues: {
++              storyId: current.storyId,
++              number: current.number.toString(),
++              title: current.title,
++              slug: current.slug,
++              status: current.status,
++              version: current.version,
++            },
++            newValues: {
++              deletedAt: input.deletedAt.toISOString(),
++              version: current.version,
++            },
++            ipAddress: input.audit.ipAddress,
++            userAgent: input.audit.userAgent,
++            requestId: input.audit.requestId,
++            createdAt: input.deletedAt,
++          },
++        });
++
++        return {
++          status: 'deleted',
++        };
++      });
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'chapter-draft-delete',
++        resource: 'Chương',
++      });
++    }
++  }
++
++  private toRecord(chapter: ChapterRow): ChapterRecord {
++    return {
++      id: chapter.id,
++      storyId: chapter.storyId,
++      createdById: chapter.createdById,
++      updatedById: chapter.updatedById,
++      number: chapter.number.toNumber(),
++      title: chapter.title,
++      slug: chapter.slug,
++      content: chapter.content,
++      contentFormat: chapter.contentFormat,
++      status: chapter.status,
++      wordCount: chapter.wordCount,
++      version: chapter.version,
++      scheduledAt: chapter.scheduledAt,
++      publishedAt: chapter.publishedAt,
++      createdAt: chapter.createdAt,
++      updatedAt: chapter.updatedAt,
++    };
++  }
++}
++
++async function lockAndFindOwnedStory(
++  tx: Prisma.TransactionClient,
++  storyId: string,
++  userId: string,
++): Promise<{ readonly id: string } | null> {
++  const locked = await lockStoryRow(tx, storyId);
++
++  if (!locked) {
++    return null;
++  }
++
++  return tx.story.findFirst({
++    where: {
++      id: storyId,
++      authorId: userId,
++      deletedAt: null,
++    },
++    select: {
++      id: true,
++    },
++  });
++}
++
++async function lockStoryRow(
++  tx: Prisma.TransactionClient,
++  storyId: string,
++): Promise<boolean> {
++  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++    SELECT "id"
++    FROM "stories"
++    WHERE "id" = ${storyId}::uuid
++    FOR UPDATE
++  `);
++
++  return rows.length === 1;
++}
++
++async function lockChapterRow(
++  tx: Prisma.TransactionClient,
++  chapterId: string,
++): Promise<boolean> {
++  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++    SELECT "id"
++    FROM "chapters"
++    WHERE "id" = ${chapterId}::uuid
++    FOR UPDATE
++  `);
++
++  return rows.length === 1;
++}
++
++function createChapterSlug(number: number, title: string): string {
++  const numberPart = formatChapterNumber(number);
++  const titlePart = slugify(title, {
++    maxLength: ChapterDraftPolicy.SLUG_MAX_LENGTH,
++  });
++  const prefix = `chuong-${numberPart}`;
++  const maxTitleLength = Math.max(
++    0,
++    ChapterDraftPolicy.SLUG_MAX_LENGTH - prefix.length - 1,
++  );
++  const trimmedTitle = titlePart.slice(0, maxTitleLength).replace(/-+$/g, '');
++  return [prefix, trimmedTitle].filter(Boolean).join('-');
++}
++
++function formatChapterNumber(number: number): string {
++  return String(number).replace('.', '-');
++}
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+index 5ab6d65..eea3552 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+@@ -462,6 +462,18 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+           };
+         }
+ 
++        const deletedChapters = await tx.chapter.updateMany({
++          where: {
++            storyId: current.id,
++            deletedAt: null,
++          },
++          data: {
++            deletedAt: input.deletedAt,
++            updatedAt: input.deletedAt,
++            updatedById: input.userId,
++          },
++        });
++
+         await tx.story.update({
+           where: {
+             id: current.id,
+@@ -506,6 +518,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+             newValues: {
+               deletedAt: input.deletedAt.toISOString(),
+               coverMediaId: null,
++              deletedChapterCount: deletedChapters.count,
+               version: current.version + 1,
+             },
+             ipAddress: input.audit.ipAddress,
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+new file mode 100644
+index 0000000..b1f1c0f
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+@@ -0,0 +1,118 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Patch,
++  Post,
++} from '@nestjs/common';
++
++import {
++  ClientIp,
++  CurrentUserId,
++  RequestId,
++  RequirePermissions,
++  UserAgent,
++} from '@/common/decorators';
++import { PermissionCode } from '@/common/enums';
++
++import {
++  CreateAuthorChapterCommand,
++  CreateAuthorChapterCommandHandler,
++  DeleteAuthorChapterCommand,
++  DeleteAuthorChapterCommandHandler,
++  UpdateAuthorChapterCommand,
++  UpdateAuthorChapterCommandHandler,
++} from '../../../application';
++import {
++  CreateAuthorChapterRequest,
++  UpdateAuthorChapterRequest,
++} from '../requests';
++import { type ChapterResponse, toChapterResponse } from '../responses';
++
++@Controller('author/stories/:storyId/chapters')
++export class AuthorChaptersController {
++  constructor(
++    private readonly createChapter: CreateAuthorChapterCommandHandler,
++    private readonly updateChapter: UpdateAuthorChapterCommandHandler,
++    private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
++  ) {}
++
++  @Post()
++  @RequirePermissions(PermissionCode.CHAPTER_CREATE)
++  async create(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++    @Body() request: CreateAuthorChapterRequest,
++    @ClientIp() ipAddress: string | undefined,
++    @UserAgent() userAgent: string | undefined,
++    @RequestId() requestId: string | undefined,
++  ): Promise<ChapterResponse> {
++    const result = await this.createChapter.execute(
++      new CreateAuthorChapterCommand(
++        userId,
++        storyId,
++        request.title,
++        request.content,
++        ipAddress,
++        userAgent,
++        requestId,
++      ),
++    );
++
++    return toChapterResponse(result);
++  }
++
++  @Patch(':chapterId')
++  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
++  async update(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++    @Body() request: UpdateAuthorChapterRequest,
++    @ClientIp() ipAddress: string | undefined,
++    @UserAgent() userAgent: string | undefined,
++    @RequestId() requestId: string | undefined,
++  ): Promise<ChapterResponse> {
++    const result = await this.updateChapter.execute(
++      new UpdateAuthorChapterCommand(
++        userId,
++        storyId,
++        chapterId,
++        request.title,
++        request.content,
++        ipAddress,
++        userAgent,
++        requestId,
++      ),
++    );
++
++    return toChapterResponse(result);
++  }
++
++  @Delete(':chapterId')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  @RequirePermissions(PermissionCode.CHAPTER_DELETE_OWN)
++  async remove(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++    @ClientIp() ipAddress: string | undefined,
++    @UserAgent() userAgent: string | undefined,
++    @RequestId() requestId: string | undefined,
++  ): Promise<void> {
++    await this.deleteChapter.execute(
++      new DeleteAuthorChapterCommand(
++        userId,
++        storyId,
++        chapterId,
++        ipAddress,
++        userAgent,
++        requestId,
++      ),
++    );
++  }
++}
+diff --git a/backend/src/modules/stories/presentation/http/controllers/index.ts b/backend/src/modules/stories/presentation/http/controllers/index.ts
+index f84dfea..1bc5e2b 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/index.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/index.ts
+@@ -1,2 +1,3 @@
++export * from './author-chapters.controller';
+ export * from './author-stories.controller';
+ export * from './story-metadata.controller';
+diff --git a/backend/src/modules/stories/presentation/http/requests/create-author-chapter.request.ts b/backend/src/modules/stories/presentation/http/requests/create-author-chapter.request.ts
+new file mode 100644
+index 0000000..dd9bec7
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/requests/create-author-chapter.request.ts
+@@ -0,0 +1,19 @@
++import {
++  IsOptional,
++  IsString,
++  MaxLength,
++  MinLength,
++} from 'class-validator';
++
++import { ChapterDraftPolicy } from '../../../domain';
++
++export class CreateAuthorChapterRequest {
++  @IsString()
++  @MinLength(1)
++  @MaxLength(ChapterDraftPolicy.TITLE_MAX_LENGTH)
++  title!: string;
++
++  @IsOptional()
++  @IsString()
++  content?: string | null;
++}
+diff --git a/backend/src/modules/stories/presentation/http/requests/index.ts b/backend/src/modules/stories/presentation/http/requests/index.ts
+index 6adcb62..58185f3 100644
+--- a/backend/src/modules/stories/presentation/http/requests/index.ts
++++ b/backend/src/modules/stories/presentation/http/requests/index.ts
+@@ -1,2 +1,4 @@
++export * from './create-author-chapter.request';
+ export * from './create-author-story.request';
++export * from './update-author-chapter.request';
+ export * from './update-author-story.request';
+diff --git a/backend/src/modules/stories/presentation/http/requests/update-author-chapter.request.ts b/backend/src/modules/stories/presentation/http/requests/update-author-chapter.request.ts
+new file mode 100644
+index 0000000..eff9dd7
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/requests/update-author-chapter.request.ts
+@@ -0,0 +1,20 @@
++import {
++  IsOptional,
++  IsString,
++  MaxLength,
++  MinLength,
++} from 'class-validator';
++
++import { ChapterDraftPolicy } from '../../../domain';
++
++export class UpdateAuthorChapterRequest {
++  @IsOptional()
++  @IsString()
++  @MinLength(1)
++  @MaxLength(ChapterDraftPolicy.TITLE_MAX_LENGTH)
++  title?: string;
++
++  @IsOptional()
++  @IsString()
++  content?: string | null;
++}
+diff --git a/backend/src/modules/stories/presentation/http/responses/chapter.response.ts b/backend/src/modules/stories/presentation/http/responses/chapter.response.ts
+new file mode 100644
+index 0000000..461ed04
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/responses/chapter.response.ts
+@@ -0,0 +1,56 @@
++import type { ChapterResultDto } from '../../../application';
++
++export interface ChapterResponse {
++  readonly id: string;
++
++  readonly storyId: string;
++
++  readonly createdById: string;
++
++  readonly updatedById: string;
++
++  readonly number: number;
++
++  readonly title: string;
++
++  readonly slug: string;
++
++  readonly content: string;
++
++  readonly contentFormat: string;
++
++  readonly status: string;
++
++  readonly wordCount: number;
++
++  readonly version: number;
++
++  readonly scheduledAt: string | null;
++
++  readonly publishedAt: string | null;
++
++  readonly createdAt: string;
++
++  readonly updatedAt: string;
++}
++
++export function toChapterResponse(result: ChapterResultDto): ChapterResponse {
++  return {
++    id: result.id,
++    storyId: result.storyId,
++    createdById: result.createdById,
++    updatedById: result.updatedById,
++    number: result.number,
++    title: result.title,
++    slug: result.slug,
++    content: result.content,
++    contentFormat: result.contentFormat,
++    status: result.status,
++    wordCount: result.wordCount,
++    version: result.version,
++    scheduledAt: result.scheduledAt?.toISOString() ?? null,
++    publishedAt: result.publishedAt?.toISOString() ?? null,
++    createdAt: result.createdAt.toISOString(),
++    updatedAt: result.updatedAt.toISOString(),
++  };
++}
+diff --git a/backend/src/modules/stories/presentation/http/responses/index.ts b/backend/src/modules/stories/presentation/http/responses/index.ts
+index fffd53f..19e7589 100644
+--- a/backend/src/modules/stories/presentation/http/responses/index.ts
++++ b/backend/src/modules/stories/presentation/http/responses/index.ts
+@@ -1 +1,2 @@
++export * from './chapter.response';
+ export * from './story.response';
+diff --git a/backend/src/modules/stories/stories.module.ts b/backend/src/modules/stories/stories.module.ts
+index 385222b..59b3c2c 100644
+--- a/backend/src/modules/stories/stories.module.ts
++++ b/backend/src/modules/stories/stories.module.ts
+@@ -4,33 +4,53 @@ import { PrismaModule } from '@/infrastructure/database';
+ import { AuthAuthorizationModule } from '@/modules/auth';
+ 
+ import {
++  CHAPTER_PERSISTENCE_PORT,
++  CreateAuthorChapterCommandHandler,
+   CreateAuthorStoryCommandHandler,
++  DeleteAuthorChapterCommandHandler,
+   DeleteAuthorStoryCommandHandler,
+   ListStoryCategoriesQueryHandler,
+   ListStoryTagsQueryHandler,
+   STORY_PERSISTENCE_PORT,
++  UpdateAuthorChapterCommandHandler,
+   UpdateAuthorStoryCommandHandler,
+ } from './application';
+-import { PrismaStoryPersistence } from './infrastructure';
+ import {
++  PrismaChapterPersistence,
++  PrismaStoryPersistence,
++} from './infrastructure';
++import {
++  AuthorChaptersController,
+   AuthorStoriesController,
+   StoryMetadataController,
+ } from './presentation/http';
+ 
+ @Module({
+   imports: [PrismaModule, AuthAuthorizationModule],
+-  controllers: [AuthorStoriesController, StoryMetadataController],
++  controllers: [
++    AuthorStoriesController,
++    AuthorChaptersController,
++    StoryMetadataController,
++  ],
+   providers: [
+     CreateAuthorStoryCommandHandler,
+     UpdateAuthorStoryCommandHandler,
+     DeleteAuthorStoryCommandHandler,
++    CreateAuthorChapterCommandHandler,
++    UpdateAuthorChapterCommandHandler,
++    DeleteAuthorChapterCommandHandler,
+     ListStoryCategoriesQueryHandler,
+     ListStoryTagsQueryHandler,
+     PrismaStoryPersistence,
++    PrismaChapterPersistence,
+     {
+       provide: STORY_PERSISTENCE_PORT,
+       useExisting: PrismaStoryPersistence,
+     },
++    {
++      provide: CHAPTER_PERSISTENCE_PORT,
++      useExisting: PrismaChapterPersistence,
++    },
+   ],
+ })
+ export class StoriesModule {}

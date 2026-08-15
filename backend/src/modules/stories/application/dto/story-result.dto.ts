@@ -1,3 +1,21 @@
+export interface StoryCategoryResultDto {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+
+  readonly isPrimary: boolean;
+}
+
+export interface StoryTagResultDto {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+}
+
 export interface StoryResultDto {
   readonly id: string;
 
@@ -16,6 +34,12 @@ export interface StoryResultDto {
   readonly visibility: string;
 
   readonly contentRating: string;
+
+  readonly coverMediaId: string | null;
+
+  readonly categories: readonly StoryCategoryResultDto[];
+
+  readonly tags: readonly StoryTagResultDto[];
 
   readonly version: number;
 

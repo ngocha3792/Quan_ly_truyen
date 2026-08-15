@@ -1,13 +1,18 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
-import { AuthorProfileUnavailableException } from '../../../domain';
+import {
+  AuthorProfileUnavailableException,
+  InvalidStoryCategoriesException,
+  InvalidStoryTagsException,
+} from '../../../domain';
 
 import { CreateAuthorStoryCommand } from './create-author-story.command';
 import { CreateAuthorStoryCommandHandler } from './create-author-story.command-handler';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
-
 const STORY_ID = '22222222-2222-4222-8222-222222222222';
+const CATEGORY_ID = '33333333-3333-4333-8333-333333333333';
+const TAG_ID = '44444444-4444-4444-8444-444444444444';
 
 describe('CreateAuthorStoryCommandHandler', () => {
   let persistence: {
@@ -32,7 +37,7 @@ describe('CreateAuthorStoryCommandHandler', () => {
     expect(persistence.createDraft).not.toHaveBeenCalled();
   });
 
-  it('normalize title và synopsis trước khi persistence', async () => {
+  it('normalize title, synopsis và taxonomy trước khi persistence', async () => {
     persistence.createDraft.mockResolvedValue({
       status: 'created',
       story: createStoryRecord(),
@@ -43,6 +48,8 @@ describe('CreateAuthorStoryCommandHandler', () => {
         USER_ID,
         '   Truyện    Mới   ',
         '   Giới thiệu truyện.   ',
+        [CATEGORY_ID, CATEGORY_ID],
+        [TAG_ID, TAG_ID],
         '127.0.0.1',
         'Jest',
         'story-create-request',
@@ -53,6 +60,8 @@ describe('CreateAuthorStoryCommandHandler', () => {
       userId: USER_ID,
       title: 'Truyện Mới',
       synopsis: 'Giới thiệu truyện.',
+      categoryIds: [CATEGORY_ID],
+      tagIds: [TAG_ID],
       createdAt: expect.any(Date) as unknown,
       audit: {
         ipAddress: '127.0.0.1',
@@ -64,10 +73,10 @@ describe('CreateAuthorStoryCommandHandler', () => {
     expect(result.id).toBe(STORY_ID);
   });
 
-  it('cho phép tạo draft chưa có synopsis', async () => {
+  it('cho phép tạo draft chưa có synopsis hoặc taxonomy', async () => {
     persistence.createDraft.mockResolvedValue({
       status: 'created',
-      story: createStoryRecord({ synopsis: '' }),
+      story: createStoryRecord({ synopsis: '', categories: [], tags: [] }),
     });
 
     await handler.execute(
@@ -78,13 +87,39 @@ describe('CreateAuthorStoryCommandHandler', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
+        undefined,
       ),
     );
 
     expect(persistence.createDraft).toHaveBeenCalledWith(
       expect.objectContaining({
         synopsis: '',
+        categoryIds: [],
+        tagIds: [],
       }),
+    );
+  });
+
+  it('map category không hợp lệ thành domain exception', async () => {
+    persistence.createDraft.mockResolvedValue({
+      status: 'invalid_categories',
+      invalidIds: [CATEGORY_ID],
+    });
+
+    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
+      InvalidStoryCategoriesException,
+    );
+  });
+
+  it('map tag không hợp lệ thành domain exception', async () => {
+    persistence.createDraft.mockResolvedValue({
+      status: 'invalid_tags',
+      invalidIds: [TAG_ID],
+    });
+
+    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
+      InvalidStoryTagsException,
     );
   });
 
@@ -104,13 +139,15 @@ function createCommand(userId: string | undefined): CreateAuthorStoryCommand {
     userId,
     'Truyện Mới',
     'Giới thiệu truyện.',
+    [CATEGORY_ID],
+    [TAG_ID],
     undefined,
     undefined,
     undefined,
   );
 }
 
-function createStoryRecord(overrides: Partial<ReturnType<typeof storyRecord>> = {}) {
+function createStoryRecord(overrides: Record<string, unknown> = {}) {
   return {
     ...storyRecord(),
     ...overrides,
@@ -130,6 +167,22 @@ function storyRecord() {
     status: 'DRAFT',
     visibility: 'PRIVATE',
     contentRating: 'TEEN',
+    coverMediaId: null,
+    categories: [
+      {
+        id: CATEGORY_ID,
+        name: 'Tiên hiệp',
+        slug: 'tien-hiep',
+        isPrimary: true,
+      },
+    ],
+    tags: [
+      {
+        id: TAG_ID,
+        name: 'Tu tiên',
+        slug: 'tu-tien',
+      },
+    ],
     version: 1,
     createdAt: now,
     updatedAt: now,

@@ -1,5 +1,23 @@
 import type { StoryResultDto } from '../../../application';
 
+export interface StoryCategoryResponse {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+
+  readonly isPrimary: boolean;
+}
+
+export interface StoryTagResponse {
+  readonly id: string;
+
+  readonly name: string;
+
+  readonly slug: string;
+}
+
 export interface StoryResponse {
   readonly id: string;
 
@@ -19,6 +37,12 @@ export interface StoryResponse {
 
   readonly contentRating: string;
 
+  readonly coverMediaId: string | null;
+
+  readonly categories: readonly StoryCategoryResponse[];
+
+  readonly tags: readonly StoryTagResponse[];
+
   readonly version: number;
 
   readonly createdAt: string;
@@ -37,6 +61,9 @@ export function toStoryResponse(result: StoryResultDto): StoryResponse {
     status: result.status,
     visibility: result.visibility,
     contentRating: result.contentRating,
+    coverMediaId: result.coverMediaId,
+    categories: result.categories.map((category) => ({ ...category })),
+    tags: result.tags.map((tag) => ({ ...tag })),
     version: result.version,
     createdAt: result.createdAt.toISOString(),
     updatedAt: result.updatedAt.toISOString(),

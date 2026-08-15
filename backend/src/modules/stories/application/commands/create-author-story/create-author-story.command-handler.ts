@@ -5,6 +5,8 @@ import { isUuidV4 } from '@/common/utils';
 
 import {
   AuthorProfileUnavailableException,
+  InvalidStoryCategoriesException,
+  InvalidStoryTagsException,
   StorySynopsisValueObject,
   StoryTitleValueObject,
 } from '../../../domain';
@@ -32,6 +34,8 @@ export class CreateAuthorStoryCommandHandler {
       userId,
       title,
       synopsis,
+      categoryIds: normalizeIds(command.categoryIds),
+      tagIds: normalizeIds(command.tagIds),
       createdAt: new Date(),
       audit: {
         ipAddress: command.ipAddress,
@@ -40,11 +44,17 @@ export class CreateAuthorStoryCommandHandler {
       },
     });
 
-    if (result.status === 'author_not_found') {
-      throw new AuthorProfileUnavailableException();
+    switch (result.status) {
+      case 'created':
+        return StoryResultMapper.toDto(result.story);
+      case 'invalid_categories':
+        throw new InvalidStoryCategoriesException(result.invalidIds);
+      case 'invalid_tags':
+        throw new InvalidStoryTagsException(result.invalidIds);
+      case 'author_not_found':
+      default:
+        throw new AuthorProfileUnavailableException();
     }
-
-    return StoryResultMapper.toDto(result.story);
   }
 }
 
@@ -57,4 +67,8 @@ function requireAuthorUserId(userId: string | undefined): string {
   }
 
   return userId;
+}
+
+function normalizeIds(ids: readonly string[] | undefined): readonly string[] {
+  return ids ? [...new Set(ids)] : [];
 }

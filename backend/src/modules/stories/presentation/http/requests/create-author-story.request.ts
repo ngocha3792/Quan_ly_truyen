@@ -1,4 +1,12 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 import { StoryDraftPolicy } from '../../../domain';
 
@@ -11,4 +19,16 @@ export class CreateAuthorStoryRequest {
   @IsOptional()
   @IsString()
   synopsis?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  categoryIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  tagIds?: string[];
 }
