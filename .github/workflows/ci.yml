@@ -549,14 +549,11 @@ jobs:
         working-directory: backend
         run: npm ci --no-audit --no-fund
 
-      - name: Migrate and seed E2E database
+      - name: Migrate E2E database
         working-directory: backend
         run: |
           npm run ci:wait-db
           npm run db:migrate:deploy
-          npm run db:seed
-          npm run db:seed:e2e
-          npm run db:seed:e2e:admin
 
       - name: Build and start backend
         working-directory: backend
@@ -581,7 +578,7 @@ jobs:
 
       - name: Run Playwright E2E
         working-directory: frontend
-        run: npx playwright test
+        run: npm run e2e:ci
 
       - name: Upload E2E diagnostics
         if: failure()

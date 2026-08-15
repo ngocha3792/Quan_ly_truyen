@@ -114,6 +114,8 @@ test('reviewer từ chối hồ sơ và lưu rejection reason', async ({ page })
     hasText: 'E2E Reject Pen',
   });
 
+  await expect(row).toBeVisible();
+
   await row
     .getByRole(
       'link',

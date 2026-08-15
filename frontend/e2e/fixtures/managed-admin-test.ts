@@ -1,6 +1,7 @@
 import { expect, test as base } from '@playwright/test';
 
 import { E2E_MANAGER_EMAIL, E2E_MANAGER_PASSWORD } from './e2e-manager';
+import { runBackendScript } from '../support/backend-script';
 
 const SESSION_HINT_KEY = 'truyenhub.auth.has-refresh-session';
 
@@ -12,6 +13,11 @@ export const test = base.extend({
 
     testInfo,
   ) => {
+    // Admin scenarios mutate users/applications; reset before every local test/retry.
+    if (process.env['E2E_EXTERNAL'] !== 'true') {
+      runBackendScript('db:seed:e2e:admin');
+    }
+
     const response = await page.request.post(
       '/api/v1/auth/login',
 

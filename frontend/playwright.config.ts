@@ -11,6 +11,8 @@ const baseURL = isExternalServer
 export default defineConfig({
   testDir: './e2e',
 
+  globalSetup: './e2e/global-setup.ts',
+
   /**
    * Auth E2E hiện dùng chung một account:
    *

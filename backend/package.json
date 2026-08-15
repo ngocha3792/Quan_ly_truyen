@@ -32,7 +32,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "npm run test:e2e:prepare && jest --config ./test/jest-e2e.json --runInBand",
     "test:auth:unit": "jest --config ./test/jest-auth-unit.json --runInBand",
     "test:auth:prepare": "tsx scripts/testing/prepare-auth-test-environment.ts",
     "test:auth:integration": "npm run test:auth:prepare && jest --config ./test/jest-auth-integration.json --runInBand",
@@ -102,7 +102,9 @@
     "docker:prod:gate:postdeploy": "docker compose --env-file .env.production -f compose.production.yml --profile tools run --rm gate-postdeploy",
     "observability:up": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml up -d",
     "observability:down": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml down",
-    "observability:config": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml config"
+    "observability:config": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml config",
+    "db:seed:e2e:all": "npm run db:seed && npm run db:seed:e2e && npm run db:seed:e2e:admin && npm run db:seed:e2e:stories",
+    "test:e2e:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

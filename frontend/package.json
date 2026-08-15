@@ -20,10 +20,10 @@
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
-    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e && npm --prefix ../backend run db:seed:e2e:admin && npm --prefix ../backend run db:seed:e2e:stories",
-    "pree2e": "npm run e2e:prepare",
+    "e2e:prepare": "npm --prefix ../backend run db:seed:e2e:all",
     "quality:check": "npm run format:check && npm run architecture:check && npm run lint:check && npm run typecheck && npm run typecheck:e2e",
-    "ci": "npm run env:check && npm run quality:check && npm run test:ci && npm run build:ci"
+    "ci": "npm run env:check && npm run quality:check && npm run test:ci && npm run build:ci",
+    "e2e:ci": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

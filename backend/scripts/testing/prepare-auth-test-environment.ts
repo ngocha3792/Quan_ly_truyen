@@ -81,8 +81,9 @@ void runScript({
     try {
       await redis.connect();
       await redis.ping();
+      await redis.flushdb();
 
-      logger.info('Redis test database is reachable', {
+      logger.info('Redis test database is reachable and clean', {
         database: redisDatabase,
       });
 
