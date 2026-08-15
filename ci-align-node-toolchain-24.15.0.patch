@@ -1,0 +1,83 @@
+--- a/.node-version
++++ b/.node-version
+@@ -1 +1 @@
+-24.18.0
++24.15.0
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -432,7 +432,7 @@
+ 
+           tags: quan-ly-truyen-backend:ci
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=ci-backend-runtime
+ 
+@@ -490,7 +490,7 @@
+ 
+           tags: quan-ly-truyen-backend-migrate:ci
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=ci-backend-migrate
+ 
+--- a/.github/workflows/backend-images.yml
++++ b/.github/workflows/backend-images.yml
+@@ -227,7 +227,7 @@
+ 
+           tags: quan-ly-truyen-backend:release-scan
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=backend-runtime
+ 
+@@ -263,7 +263,7 @@
+ 
+           tags: quan-ly-truyen-backend-migrate:release-scan
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=backend-migrate
+ 
+@@ -315,7 +315,7 @@
+ 
+           tags: ${{ steps.image.outputs.runtime }}:${{ steps.image.outputs.tag }}
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=backend-runtime
+ 
+@@ -339,7 +339,7 @@
+ 
+           tags: ${{ steps.image.outputs.migrate }}:${{ steps.image.outputs.tag }}
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
++          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
+ 
+           cache-from: type=gha,scope=backend-migrate
+ 
+--- a/.github/workflows/frontend-images.yml
++++ b/.github/workflows/frontend-images.yml
+@@ -219,7 +219,7 @@
+ 
+           file: frontend/Dockerfile
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-alpine
++          build-args: NODE_IMAGE=node:24.15.0-alpine
+ 
+           load: true
+ 
+@@ -267,7 +267,7 @@
+ 
+           file: frontend/Dockerfile
+ 
+-          build-args: NODE_IMAGE=node:24.18.0-alpine
++          build-args: NODE_IMAGE=node:24.15.0-alpine
+ 
+           push: true
+ 

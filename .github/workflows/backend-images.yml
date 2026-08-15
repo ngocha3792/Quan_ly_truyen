@@ -227,7 +227,7 @@ jobs:
 
           tags: quan-ly-truyen-backend:release-scan
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=backend-runtime
 
@@ -263,7 +263,7 @@ jobs:
 
           tags: quan-ly-truyen-backend-migrate:release-scan
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=backend-migrate
 
@@ -315,7 +315,7 @@ jobs:
 
           tags: ${{ steps.image.outputs.runtime }}:${{ steps.image.outputs.tag }}
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=backend-runtime
 
@@ -339,7 +339,7 @@ jobs:
 
           tags: ${{ steps.image.outputs.migrate }}:${{ steps.image.outputs.tag }}
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=backend-migrate
 

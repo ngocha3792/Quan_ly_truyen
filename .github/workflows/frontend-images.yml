@@ -219,7 +219,7 @@ jobs:
 
           file: frontend/Dockerfile
 
-          build-args: NODE_IMAGE=node:24.18.0-alpine
+          build-args: NODE_IMAGE=node:24.15.0-alpine
 
           load: true
 
@@ -267,7 +267,7 @@ jobs:
 
           file: frontend/Dockerfile
 
-          build-args: NODE_IMAGE=node:24.18.0-alpine
+          build-args: NODE_IMAGE=node:24.15.0-alpine
 
           push: true
 

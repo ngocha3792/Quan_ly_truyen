@@ -432,7 +432,7 @@ jobs:
 
           tags: quan-ly-truyen-backend:ci
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=ci-backend-runtime
 
@@ -490,7 +490,7 @@ jobs:
 
           tags: quan-ly-truyen-backend-migrate:ci
 
-          build-args: NODE_IMAGE=node:24.18.0-bookworm-slim
+          build-args: NODE_IMAGE=node:24.15.0-bookworm-slim
 
           cache-from: type=gha,scope=ci-backend-migrate
 
