@@ -138,6 +138,9 @@ jobs:
       - name: Format, lint and typecheck
         run: npm run format:check && npm run lint:check && npm run typecheck:scripts
 
+      - name: Validate Prisma schema and migration layout
+        run: npm run db:validate
+
       - name: Build application and worker
         run: npm run build
 
@@ -240,8 +243,11 @@ jobs:
       - name: Wait for PostgreSQL
         run: npm run ci:wait-db
 
-      - name: Apply migrations and verify database constraints
-        run: npm run db:migrate:deploy && npm run db:verify:constraints
+      - name: Apply migrations to the fresh database
+        run: npm run db:migrate:deploy
+
+      - name: Verify migration status and database constraints
+        run: npm run db:migrate:status && npm run db:verify:constraints
 
       - name: Run all integration and API E2E suites
         run: npm run ci:integration

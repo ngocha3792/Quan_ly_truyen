@@ -43,7 +43,6 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-frontend/playwright/.auth/
-frontend/playwright-report/
-frontend/test-results/
-frontend/coverage/
+/playwright/.auth/
+/playwright-report/
+/test-results/

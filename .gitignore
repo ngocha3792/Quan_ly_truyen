@@ -124,6 +124,8 @@ coverage/
 *.lcov
 junit.xml
 test-results/
+frontend/playwright/.auth/
+frontend/playwright-report/
 
 # =============================================================================
 # MISC
