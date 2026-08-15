@@ -610,7 +610,7 @@ jobs:
         working-directory: frontend
         run: >-
           npx wait-on
-          http://127.0.0.1:3000/api/v1/health/live
+          http://127.0.0.1:3000/api/v1/health/ready
           --timeout 120000
 
       - name: Run Playwright E2E

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures/public-auth-test';
 
 import { E2E_USER_DISPLAY_NAME, E2E_USER_EMAIL, E2E_USER_PASSWORD } from '../fixtures/e2e-user';
 

@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/managed-admin-test';
+import { clickAndAcceptDialog } from '../support/native-dialog';
 
 const TARGET_EMAIL = 'e2e.managed-user@truyenhub.test';
 
@@ -76,45 +77,30 @@ test('manager suspend rồi activate user end-to-end', async ({ page }) => {
     ),
   ).toBeVisible();
 
-  page.once(
-    'dialog',
-
-    async (dialog) => {
-      expect(dialog.message()).toContain('Tạm khóa');
-
-      await dialog.accept();
-    },
-  );
-
-  await page
-    .getByRole(
+  await clickAndAcceptDialog(
+    page,
+    page.getByRole(
       'button',
 
       {
         name: 'Tạm khóa',
       },
-    )
-    .click();
+    ),
+    'Tạm khóa',
+  );
 
   await expect(page.getByText(/Tài khoản đã bị tạm khóa/)).toBeVisible();
 
-  page.once(
-    'dialog',
-
-    async (dialog) => {
-      await dialog.accept();
-    },
-  );
-
-  await page
-    .getByRole(
+  await clickAndAcceptDialog(
+    page,
+    page.getByRole(
       'button',
 
       {
         name: 'Kích hoạt',
       },
-    )
-    .click();
+    ),
+  );
 
   await expect(page.getByText(/Tài khoản đã được kích hoạt/)).toBeVisible();
 });
@@ -149,23 +135,16 @@ test('manager cấp rồi gỡ ADMIN role end-to-end', async ({ page }) => {
     )
     .click();
 
-  page.once(
-    'dialog',
-
-    async (dialog) => {
-      await dialog.accept();
-    },
-  );
-
-  await page
-    .getByRole(
+  await clickAndAcceptDialog(
+    page,
+    page.getByRole(
       'button',
 
       {
         name: 'Cấp quyền ADMIN',
       },
-    )
-    .click();
+    ),
+  );
 
   await expect(page.getByText(/Đã cấp quyền ADMIN/)).toBeVisible();
 
@@ -179,23 +158,16 @@ test('manager cấp rồi gỡ ADMIN role end-to-end', async ({ page }) => {
     ),
   ).toBeVisible();
 
-  page.once(
-    'dialog',
-
-    async (dialog) => {
-      await dialog.accept();
-    },
-  );
-
-  await page
-    .getByRole(
+  await clickAndAcceptDialog(
+    page,
+    page.getByRole(
       'button',
 
       {
         name: 'Gỡ quyền ADMIN',
       },
-    )
-    .click();
+    ),
+  );
 
   await expect(page.getByText(/Đã gỡ quyền ADMIN/)).toBeVisible();
 

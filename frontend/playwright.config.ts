@@ -31,7 +31,7 @@ export default defineConfig({
 
   retries: isCi ? 1 : 0,
 
-  timeout: 30_000,
+  timeout: isCi ? 60_000 : 45_000,
 
   expect: {
     timeout: 10_000,

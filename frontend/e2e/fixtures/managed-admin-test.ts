@@ -2,6 +2,7 @@ import { expect, test as base } from '@playwright/test';
 
 import { E2E_MANAGER_EMAIL, E2E_MANAGER_PASSWORD } from './e2e-manager';
 import { runBackendScript } from '../support/backend-script';
+import { createDeterministicDeviceId } from '../support/device-id';
 
 const SESSION_HINT_KEY = 'truyenhub.auth.has-refresh-session';
 
@@ -31,15 +32,7 @@ export const test = base.extend({
 
           deviceName: `Playwright Manager - ${testInfo.title}`,
 
-          deviceId: [
-            'playwright-manager',
-
-            testInfo.workerIndex,
-
-            Date.now(),
-
-            Math.random().toString(36).slice(2),
-          ].join('-'),
+          deviceId: createDeterministicDeviceId('playwright-manager', testInfo),
         },
       },
     );

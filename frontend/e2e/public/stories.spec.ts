@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures/public-story-test';
 
 test.describe('Public stories real API', () => {
   test('story detail và chapter reader render dữ liệu seed thật @smoke', async ({ page }) => {
