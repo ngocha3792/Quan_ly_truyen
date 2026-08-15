@@ -86,7 +86,7 @@ import { ForgotPasswordResult, ForgotPasswordStatus } from '../../domain/forgot-
         <div authFooter class="auth-footer">
           Không tìm thấy email? Hãy kiểm tra thư mục spam hoặc
 
-          <a routerLink="/lien-he-ho-tro"> liên hệ hỗ trợ </a>.
+          <a routerLink="/cong-dong"> liên hệ hỗ trợ </a>.
         </div>
       </app-auth-flow-card>
     } @else {
@@ -166,7 +166,7 @@ import { ForgotPasswordResult, ForgotPasswordStatus } from '../../domain/forgot-
           <span>
             Không nhận được email? Kiểm tra thư rác hoặc
 
-            <a routerLink="/lien-he-ho-tro"> liên hệ hỗ trợ </a>.
+            <a routerLink="/cong-dong"> liên hệ hỗ trợ </a>.
           </span>
 
           <span> Liên kết đặt lại sẽ hết hạn sau 15 phút. </span>

@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { PublicationScheduleItem } from '../../domain/author-studio.models';
 import { StudioIconComponent } from '../studio-icon/studio-icon.component';
@@ -8,7 +7,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
   selector: 'app-publication-schedule',
   standalone: true,
 
-  imports: [RouterLink, StudioIconComponent],
+  imports: [StudioIconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -21,7 +20,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
           Lịch xuất bản tuần này
         </h2>
 
-        <a routerLink="/author-studio/lich-xuat-ban"> Xem tất cả </a>
       </header>
 
       <div class="schedule-list">

@@ -29,7 +29,7 @@ export class ResetPasswordPageComponent implements OnInit {
   protected readonly store = inject(ResetPasswordStore);
 
   ngOnInit(): void {
-    const token = this.route.snapshot.queryParamMap.get('token') ?? 'demo-reset-token';
+    const token = this.route.snapshot.queryParamMap.get('token') ?? '';
 
     this.store.initialize(token);
   }

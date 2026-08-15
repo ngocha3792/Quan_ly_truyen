@@ -1,308 +1,86 @@
 <main class="support-page">
   <section class="support-container">
-    <!-- PAGE HEADER -->
     <header class="page-header">
       <div class="page-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
           <path d="M4 13v-1a8 8 0 0 1 16 0v1"></path>
-
           <path d="M5 12h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-2a2 2 0 0 1 1-2Z"></path>
-
           <path d="M19 12h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"></path>
-
           <path d="M18 18c0 2-1.5 3-4 3h-1"></path>
         </svg>
       </div>
 
       <span class="page-badge">HỖ TRỢ</span>
-
-      <h1>Liên hệ hỗ trợ</h1>
-
-      <p>Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn trong quá trình sử dụng TruyenHub.</p>
+      <h1>Trung tâm hỗ trợ</h1>
+      <p>Chọn đúng khu vực bên dưới để xử lý vấn đề bằng các chức năng hiện có của TruyenHub.</p>
     </header>
 
     <div class="support-layout">
-      <!-- FORM -->
-      <section id="support-form" class="support-form-card">
-        <div class="card-heading">
-          <span class="heading-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+      <section class="contact-card">
+        <h2>Tài khoản &amp; bảo mật</h2>
 
-              <path d="m4 7 8 6 8-6"></path>
+        <article class="contact-item">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="8" r="3"></circle>
+              <path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"></path>
             </svg>
           </span>
-
           <div>
-            <h2>Gửi yêu cầu hỗ trợ</h2>
-
-            <p>
-              Vui lòng điền đầy đủ thông tin để chúng tôi có thể hỗ trợ bạn nhanh chóng và hiệu quả
-              nhất.
-            </p>
+            <h3>Khôi phục mật khẩu</h3>
+            <a routerLink="/forgot-password">Mở trang khôi phục mật khẩu</a>
+            <p>Yêu cầu liên kết đặt lại mật khẩu qua email đã đăng ký.</p>
           </div>
-        </div>
+        </article>
 
-        <form class="support-form">
-          <div class="form-field">
-            <label for="support-name"> Họ và tên </label>
-
-            <input
-              id="support-name"
-              name="name"
-              type="text"
-              placeholder="Nhập họ và tên của bạn"
-              autocomplete="name"
-            />
-          </div>
-
-          <div class="form-field">
-            <label for="support-email"> Email </label>
-
-            <input
-              id="support-email"
-              name="email"
-              type="email"
-              placeholder="Nhập email của bạn"
-              autocomplete="email"
-            />
-          </div>
-
-          <div class="form-field">
-            <label for="support-subject"> Chủ đề </label>
-
-            <div class="select-wrapper">
-              <select id="support-subject" name="subject">
-                <option value="" selected disabled>Chọn chủ đề hỗ trợ</option>
-
-                <option value="account">Tài khoản và đăng nhập</option>
-
-                <option value="system">Báo lỗi hệ thống</option>
-
-                <option value="story">Truyện và chương truyện</option>
-
-                <option value="feedback">Góp ý và phản hồi</option>
-
-                <option value="other">Vấn đề khác</option>
-              </select>
-
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m8 10 4 4 4-4"></path>
-              </svg>
-            </div>
-          </div>
-
-          <div class="form-field">
-            <div class="field-label-row">
-              <label for="support-content"> Nội dung hỗ trợ </label>
-            </div>
-
-            <textarea
-              id="support-content"
-              name="content"
-              rows="6"
-              maxlength="1000"
-              placeholder="Vui lòng mô tả chi tiết vấn đề hoặc yêu cầu hỗ trợ của bạn..."
-            ></textarea>
-
-            <span class="character-count"> 0/1000 </span>
-          </div>
-
-          <!-- Trang tĩnh nên nút không gọi API -->
-          <button class="submit-button" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m22 2-7 20-4-9-9-4 20-7Z"></path>
-              <path d="M22 2 11 13"></path>
-            </svg>
-
-            Gửi yêu cầu
-          </button>
-
-          <p class="privacy-note">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
+        <article class="contact-item">
+          <span class="contact-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
               <rect x="5" y="10" width="14" height="10" rx="2"></rect>
-
               <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
             </svg>
-
-            Thông tin của bạn được bảo mật và chỉ sử dụng để hỗ trợ.
-          </p>
-        </form>
+          </span>
+          <div>
+            <h3>Bảo mật tài khoản</h3>
+            <a routerLink="/tai-khoan/bao-mat">Mở cài đặt bảo mật</a>
+            <p>Quản lý mật khẩu, MFA, email khôi phục và câu hỏi bảo mật.</p>
+          </div>
+        </article>
       </section>
 
-      <!-- SIDEBAR -->
-      <aside class="support-sidebar">
-        <section class="contact-card">
-          <h2>Thông tin hỗ trợ</h2>
+      <section class="support-topics">
+        <h2>Thông tin cần biết</h2>
 
-          <article class="contact-item">
-            <span class="contact-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <rect x="3" y="5" width="18" height="14" rx="2"></rect>
-
-                <path d="m4 7 8 6 8-6"></path>
-              </svg>
-            </span>
-
-            <div>
-              <h3>Email hỗ trợ</h3>
-
-              <a href="mailto:hotro@truyenhub.com"> hotro&#64;truyenhub.com </a>
-
-              <p>Gửi email cho chúng tôi bất cứ lúc nào.</p>
-            </div>
-          </article>
-
-          <article class="contact-item">
-            <span class="contact-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path
-                  d="M22 16.9v3a2 2 0 0 1-2.2 2A19.7 19.7 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L9.1 11a16 16 0 0 0 3.9 3.9l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"
-                ></path>
-              </svg>
-            </span>
-
-            <div>
-              <h3>Hotline</h3>
-
-              <a href="tel:19001234"> 1900 1234 </a>
-
-              <p>Hỗ trợ từ 8:00 – 22:00 hàng ngày.</p>
-            </div>
-          </article>
-
-          <article class="contact-item">
-            <span class="contact-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9"></circle>
-
-                <path d="M12 7v5l3 2"></path>
-              </svg>
-            </span>
-
-            <div>
-              <h3>Thời gian phản hồi</h3>
-
-              <strong>Trong vòng 24 giờ</strong>
-
-              <p>Chúng tôi sẽ phản hồi sớm nhất có thể.</p>
-            </div>
-          </article>
-
-          <article class="contact-item">
-            <span class="contact-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9"></circle>
-
-                <path d="M9.7 9a2.4 2.4 0 1 1 3.7 2c-.9.6-1.4 1.1-1.4 2"></path>
-
-                <path d="M12 17h.01"></path>
-              </svg>
-            </span>
-
-            <div>
-              <h3>Trung tâm trợ giúp</h3>
-
-              <p>Khám phá các bài viết hướng dẫn và câu hỏi thường gặp.</p>
-            </div>
-          </article>
-        </section>
-
-        <section class="support-topics">
-          <h2>Bạn cần hỗ trợ về?</h2>
-
-          <a class="topic-item" href="#support-form">
-            <span class="topic-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="8" r="3"></circle>
-
-                <path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6"></path>
-              </svg>
-            </span>
-
-            <span class="topic-content">
-              <strong>Tài khoản &amp; đăng nhập</strong>
-              <small> Hướng dẫn đăng ký, đăng nhập và bảo mật tài khoản. </small>
-            </span>
-
-            <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m9 18 6-6-6-6"></path>
-            </svg>
-          </a>
-
-          <a class="topic-item" href="#support-form">
-            <span class="topic-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M8 4h8"></path>
-                <path d="M9 4v3"></path>
-                <path d="M15 4v3"></path>
-                <rect x="5" y="7" width="14" height="13" rx="5"></rect>
-                <path d="M8 11h8"></path>
-                <path d="M8 15h8"></path>
-              </svg>
-            </span>
-
-            <span class="topic-content">
-              <strong>Báo lỗi hệ thống</strong>
-              <small> Gặp sự cố khi sử dụng? Báo lỗi cho chúng tôi. </small>
-            </span>
-
-            <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m9 18 6-6-6-6"></path>
-            </svg>
-          </a>
-
-          <a class="topic-item" href="#support-form">
-            <span class="topic-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"></path>
-
-                <path d="M8 9h8"></path>
-                <path d="M8 13h5"></path>
-              </svg>
-            </span>
-
-            <span class="topic-content">
-              <strong>Góp ý &amp; phản hồi</strong>
-              <small> Chia sẻ ý kiến để TruyenHub ngày càng tốt hơn. </small>
-            </span>
-
-            <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m9 18 6-6-6-6"></path>
-            </svg>
-          </a>
-        </section>
-      </aside>
-    </div>
-
-    <!-- FAQ CTA -->
-    <aside class="faq-card">
-      <div class="faq-content">
-        <span class="faq-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9"></circle>
-
-            <path d="M9.7 9a2.4 2.4 0 1 1 3.7 2c-.9.6-1.4 1.1-1.4 2"></path>
-
-            <path d="M12 17h.01"></path>
+        <a class="topic-item" routerLink="/gioi-thieu">
+          <span class="topic-content">
+            <strong>Giới thiệu TruyenHub</strong>
+            <small>Tìm hiểu mục tiêu và cách sử dụng nền tảng.</small>
+          </span>
+          <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"></path>
           </svg>
-        </span>
+        </a>
 
-        <div>
-          <h2>Trước khi gửi yêu cầu, hãy xem câu hỏi thường gặp</h2>
+        <a class="topic-item" routerLink="/dieu-khoan">
+          <span class="topic-content">
+            <strong>Điều khoản sử dụng</strong>
+            <small>Quy định về tài khoản, nội dung và trách nhiệm người dùng.</small>
+          </span>
+          <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"></path>
+          </svg>
+        </a>
 
-          <p>Bạn có thể tìm thấy câu trả lời nhanh chóng cho các vấn đề phổ biến.</p>
-        </div>
-      </div>
-
-      <a class="faq-button" routerLink="/cau-hoi-thuong-gap">
-        Xem câu hỏi thường gặp
-
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 12h14"></path>
-          <path d="m13 6 6 6-6 6"></path>
-        </svg>
-      </a>
-    </aside>
+        <a class="topic-item" routerLink="/quyen-rieng-tu">
+          <span class="topic-content">
+            <strong>Quyền riêng tư</strong>
+            <small>Xem cách dữ liệu và thông tin tài khoản được xử lý.</small>
+          </span>
+          <svg class="topic-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"></path>
+          </svg>
+        </a>
+      </section>
+    </div>
   </section>
 </main>

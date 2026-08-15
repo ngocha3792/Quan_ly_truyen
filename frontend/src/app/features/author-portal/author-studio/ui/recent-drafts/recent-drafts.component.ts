@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { AuthorStudioDraft } from '../../domain/author-studio.models';
 import { StudioIconComponent } from '../studio-icon/studio-icon.component';
@@ -8,7 +7,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
   selector: 'app-recent-drafts',
   standalone: true,
 
-  imports: [RouterLink, StudioIconComponent],
+  imports: [StudioIconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -17,7 +16,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
       <header>
         <h2>Bản nháp gần đây</h2>
 
-        <a routerLink="/author-studio/ban-nhap"> Xem tất cả </a>
       </header>
 
       <div class="draft-list">
@@ -50,9 +48,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
               <strong> {{ draft.completionPercent }}% </strong>
             </div>
 
-            <button type="button" aria-label="Tùy chọn">
-              <app-studio-icon name="more" [size]="14"></app-studio-icon>
-            </button>
           </article>
         }
       </div>
@@ -112,8 +107,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         grid-template-columns:
           36px
           minmax(100px, 1fr)
-          minmax(85px, 0.6fr)
-          32px;
+          minmax(85px, 0.6fr);
         align-items: center;
         gap: 12px;
         border-bottom: 1px solid var(--border);

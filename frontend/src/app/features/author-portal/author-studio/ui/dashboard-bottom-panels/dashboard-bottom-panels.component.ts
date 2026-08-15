@@ -31,17 +31,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
           <span>Quản lý bìa truyện</span>
         </a>
 
-        <a class="action-card action-card--green" routerLink="/author-studio/thong-ke">
-          <app-studio-icon name="chart" [size]="28"></app-studio-icon>
 
-          <span>Xem thống kê</span>
-        </a>
-
-        <a class="action-card action-card--orange" routerLink="/author-studio/ho-so">
-          <app-studio-icon name="user" [size]="28"></app-studio-icon>
-
-          <span>Chỉnh hồ sơ</span>
-        </a>
       </div>
     </section>
 
@@ -49,7 +39,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
       <header>
         <h2>Top truyện nổi bật của tôi</h2>
 
-        <a routerLink="/author-studio/thong-ke"> Xem tất cả </a>
       </header>
 
       <div class="top-story-list">
@@ -76,8 +65,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
     <section class="monthly-goals dashboard-card">
       <header>
         <h2>Mục tiêu tháng này</h2>
-
-        <span>Còn 8 ngày</span>
       </header>
 
       <div class="goal-list">

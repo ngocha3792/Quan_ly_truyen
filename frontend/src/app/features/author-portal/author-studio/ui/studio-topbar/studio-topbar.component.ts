@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
 @Component({
   selector: 'app-studio-topbar',
   standalone: true,
 
-  imports: [RouterLink, SearchFieldComponent, StudioIconComponent],
+  imports: [RouterLink, StudioIconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -22,14 +21,8 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         <app-studio-icon name="menu" [size]="20"></app-studio-icon>
       </button>
 
-      <app-search-field
-        class="studio-search"
-        placeholder="Tìm kiếm truyện, chương..."
-        ariaLabel="Tìm kiếm truyện hoặc chương"
-        [iconSize]="18"
-      />
 
-      <a class="notification-button" routerLink="/author-studio/thong-bao" aria-label="Thông báo">
+      <a class="notification-button" routerLink="/thong-bao" aria-label="Thông báo">
         <app-studio-icon name="bell" [size]="21"></app-studio-icon>
 
         @if (unreadNotifications > 0) {

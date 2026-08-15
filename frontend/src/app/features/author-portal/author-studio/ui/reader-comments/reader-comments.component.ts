@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { AuthorReaderComment } from '../../domain/author-studio.models';
 
@@ -7,7 +6,7 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
   selector: 'app-reader-comments',
   standalone: true,
 
-  imports: [RouterLink],
+  imports: [],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -16,7 +15,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
       <header>
         <h2>Bình luận cần phản hồi</h2>
 
-        <a routerLink="/author-studio/binh-luan"> Xem tất cả </a>
       </header>
 
       <div class="comment-list">

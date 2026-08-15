@@ -74,37 +74,27 @@
               </div>
             </div>
 
-            <a
-              class="notification-item notification-item--unread"
-              routerLink="/truyen/van-co-than-de/chuong/233"
-              (click)="closeNotifications()"
-            >
-              <span class="notice-icon"> 233 </span>
+            @for (notification of notificationPreview(); track notification.id) {
+              <a
+                class="notification-item"
+                [class.notification-item--unread]="!notification.isRead"
+                [routerLink]="notification.route"
+                (click)="closeNotifications()"
+              >
+                <span class="notice-icon"> {{ notification.tag }} </span>
 
-              <div class="notification-item__content">
-                <b>Vạn Cổ Thần Đế</b>
+                <div class="notification-item__content">
+                  <b>{{ notification.title }}</b>
+                  <small>{{ notification.message }}</small>
+                </div>
 
-                <small> Đã cập nhật Chương 233 </small>
-              </div>
-
-              <span class="notification-unread-dot" aria-label="Chưa đọc"></span>
-            </a>
-
-            <a
-              class="notification-item notification-item--unread"
-              routerLink="/truyen/so-huu-nguyen-thuy-chi-luc/chuong/89"
-              (click)="closeNotifications()"
-            >
-              <span class="notice-icon notice-icon--blue"> 89 </span>
-
-              <div class="notification-item__content">
-                <b>Sở Hữu Nguyên Thủy Chi Lực</b>
-
-                <small> Đã cập nhật Chương 89 </small>
-              </div>
-
-              <span class="notification-unread-dot" aria-label="Chưa đọc"></span>
-            </a>
+                @if (!notification.isRead) {
+                  <span class="notification-unread-dot" aria-label="Chưa đọc"></span>
+                }
+              </a>
+            } @empty {
+              <div class="notifications-empty">Chưa có thông báo.</div>
+            }
 
             <a class="notifications-footer" routerLink="/thong-bao" (click)="closeNotifications()">
               Xem tất cả thông báo
@@ -176,7 +166,7 @@
               </a>
 
               <!-- LỊCH SỬ ĐỌC -->
-              <a routerLink="/lich-su-doc" (click)="closeProfile()">
+              <a routerLink="/lich-su" (click)="closeProfile()">
                 <app-icon name="history" [size]="18"></app-icon>
 
                 <span>Lịch sử đọc</span>
@@ -268,11 +258,11 @@
           </a>
         }
 
-        <a routerLink="/thu-vien-cua-toi" routerLinkActive="active" (click)="closeMobileMenu()">
+        <a routerLink="/thu-vien" routerLinkActive="active" (click)="closeMobileMenu()">
           Thư viện của tôi
         </a>
 
-        <a routerLink="/lich-su-doc" routerLinkActive="active" (click)="closeMobileMenu()">
+        <a routerLink="/lich-su" routerLinkActive="active" (click)="closeMobileMenu()">
           Lịch sử đọc
         </a>
 

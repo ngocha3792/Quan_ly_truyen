@@ -89,7 +89,7 @@ interface StudioNavigationItem {
           <span [style.width.%]="experiencePercent"></span>
         </div>
 
-        <a routerLink="/author-studio/ho-so" (click)="navigated.emit()">
+        <a routerLink="/tai-khoan/thong-tin-ca-nhan" (click)="navigated.emit()">
           <app-studio-icon name="user" [size]="16"></app-studio-icon>
 
           Xem hồ sơ
@@ -341,52 +341,6 @@ export class StudioSidebarComponent {
       label: 'Truyện của tôi',
       route: '/author-studio/truyen',
       icon: 'book',
-    },
-    {
-      label: 'Chương truyện',
-      route: '/author-studio/chuong',
-      icon: 'chapter',
-    },
-    {
-      label: 'Bản nháp',
-      route: '/author-studio/ban-nhap',
-      icon: 'draft',
-    },
-    {
-      label: 'Lịch xuất bản',
-      route: '/author-studio/lich-xuat-ban',
-      icon: 'calendar',
-    },
-    {
-      label: 'Bình luận độc giả',
-      route: '/author-studio/binh-luan',
-      icon: 'comment',
-    },
-    {
-      label: 'Thống kê',
-      route: '/author-studio/thong-ke',
-      icon: 'chart',
-    },
-    {
-      label: 'Nhuận bút',
-      route: '/author-studio/nhuan-but',
-      icon: 'wallet',
-    },
-    {
-      label: 'Hồ sơ tác giả',
-      route: '/author-studio/ho-so',
-      icon: 'user',
-    },
-    {
-      label: 'Thông báo',
-      route: '/author-studio/thong-bao',
-      icon: 'bell',
-      badge: this.unreadNotifications,
-    },
-    {
-      label: 'Cài đặt',
-      route: '/author-studio/cai-dat',
-      icon: 'settings',
     },
   ];
 

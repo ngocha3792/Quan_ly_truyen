@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { of, switchMap } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { AUTH_PERMISSIONS, type AuthPermission } from '../../core/auth/authorization.models';
 import { AuthDialogComponent } from '../../features/account/auth/ui/auth-dialog/auth-dialog.component';
+import { NotificationsRepository } from '../../features/account/notifications/domain/notifications.repository';
+import { provideNotifications } from '../../features/account/notifications/data-access/notifications.providers';
 import { HomeRepository } from '../../features/public/home/data-access/home.repository';
 import { Story } from '../../features/public/home/domain/home.models';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
@@ -30,6 +32,8 @@ interface NavItem {
     AuthDialogComponent,
   ],
 
+  providers: [...provideNotifications()],
+
   changeDetection: ChangeDetectionStrategy.OnPush,
 
   templateUrl: './app-header.component.html',
@@ -39,6 +43,8 @@ export class AppHeaderComponent {
   private readonly repository = inject(HomeRepository);
 
   private readonly router = inject(Router);
+
+  private readonly notificationsRepository = inject(NotificationsRepository);
 
   protected readonly auth = inject(AuthStore);
 
@@ -62,11 +68,24 @@ export class AppHeaderComponent {
 
   protected readonly authOpen = signal(false);
 
-  /**
-   * Tạm thời dùng mock.
-   * Sau này thay bằng giá trị từ notification store/API.
-   */
-  protected readonly notificationUnreadCount = signal(2);
+  private readonly notificationsView = toSignal(
+    toObservable(this.auth.isAuthenticated).pipe(
+      switchMap((isAuthenticated) =>
+        isAuthenticated
+          ? this.notificationsRepository.getNotifications().pipe(catchError(() => of(null)))
+          : of(null),
+      ),
+    ),
+    { initialValue: null },
+  );
+
+  protected readonly notificationUnreadCount = computed(
+    () => this.notificationsView()?.statistics.unread ?? 0,
+  );
+
+  protected readonly notificationPreview = computed(
+    () => this.notificationsView()?.notifications.slice(0, 2) ?? [],
+  );
 
   private hasPermission(permission: AuthPermission): boolean {
     const user = this.auth.user();

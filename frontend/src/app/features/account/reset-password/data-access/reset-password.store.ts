@@ -40,6 +40,14 @@ export class ResetPasswordStore {
 
     this.currentToken.set(normalizedToken);
 
+    if (!normalizedToken) {
+      this.tokenValidation.set(null);
+      this.result.set(null);
+      this.status.set('invalid');
+      this.errorMessage.set('Liên kết không chứa mã đặt lại mật khẩu.');
+      return;
+    }
+
     this.status.set('validating');
 
     this.errorMessage.set('');

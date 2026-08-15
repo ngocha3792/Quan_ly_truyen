@@ -83,7 +83,7 @@ import {
         <div authFooter class="auth-footer">
           Cần hỗ trợ?
 
-          <a routerLink="/lien-he-ho-tro"> Liên hệ đội ngũ TruyenHub </a>.
+          <a routerLink="/cong-dong"> Liên hệ đội ngũ TruyenHub </a>.
         </div>
       </app-auth-flow-card>
     }
@@ -134,7 +134,7 @@ import {
         <div authFooter class="auth-footer">
           Cần hỗ trợ?
 
-          <a routerLink="/lien-he-ho-tro"> Liên hệ đội ngũ TruyenHub </a>.
+          <a routerLink="/cong-dong"> Liên hệ đội ngũ TruyenHub </a>.
         </div>
       </app-auth-flow-card>
     }
