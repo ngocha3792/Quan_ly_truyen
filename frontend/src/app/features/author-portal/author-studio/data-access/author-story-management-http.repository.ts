@@ -195,6 +195,6 @@ function reuseCreateKey(
   return { identity, key: crypto.randomUUID() };
 }
 
-function idempotencyHeaders(key = crypto.randomUUID()): HttpHeaders {
+function idempotencyHeaders(key: string = crypto.randomUUID()): HttpHeaders {
   return new HttpHeaders({ 'x-idempotency-key': key });
 }
