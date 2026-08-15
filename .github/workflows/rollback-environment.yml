@@ -1,0 +1,192 @@
+name: Rollback Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment target
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      target_sha:
+        description: Full 40-character SHA to restore; images must already exist in GHCR
+        required: true
+        type: string
+      confirm_database_backward_compatible:
+        description: Confirm current DB schema/data are compatible with target application SHA
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Roll back ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    environment:
+      name: ${{ inputs.environment }}
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Validate rollback request
+        id: target
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          CONFIRM_DB: ${{ inputs.confirm_database_backward_compatible }}
+        run: |
+          set -euo pipefail
+
+          if ! [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo 'target_sha must be a full 40-character Git SHA.'
+            exit 1
+          fi
+
+          if [[ "${DEPLOY_ENVIRONMENT}" == "production" && "${CONFIRM_DB}" != "true" ]]; then
+            echo 'Production rollback requires explicit database backward-compatibility confirmation.'
+            exit 1
+          fi
+
+          echo "sha=${TARGET_SHA,,}" >> "${GITHUB_OUTPUT}"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR for manifest verification
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify rollback images exist
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          images=(
+            "ghcr.io/${owner}/quan-ly-truyen-backend:${TARGET_SHA}"
+            "ghcr.io/${owner}/quan-ly-truyen-backend-migrate:${TARGET_SHA}"
+            "ghcr.io/${owner}/quan-ly-truyen-frontend:${TARGET_SHA}"
+          )
+
+          for image in "${images[@]}"; do
+            echo "Verifying ${image}"
+            docker buildx imagetools inspect "${image}" >/dev/null
+          done
+
+      - name: Configure pinned SSH host
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          test -n "${DEPLOY_SSH_PRIVATE_KEY}"
+          test -n "${DEPLOY_KNOWN_HOSTS}"
+
+          install -d -m 0700 "${HOME}/.ssh"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/deploy_key"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 0600 "${HOME}/.ssh/deploy_key" "${HOME}/.ssh/known_hosts"
+
+      - name: Authenticate deployment host to GHCR
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          GHCR_TOKEN: ${{ github.token }}
+          GHCR_USERNAME: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          test -n "${DEPLOY_HOST}"
+          test -n "${DEPLOY_USER}"
+
+          port="${DEPLOY_PORT:-22}"
+
+          printf '%s' "${GHCR_TOKEN}" | ssh \
+            -i "${HOME}/.ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
+            -p "${port}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
+
+      - name: Execute rollback
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          CONFIRM_DB: ${{ inputs.confirm_database_backward_compatible }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          test -n "${DEPLOY_PATH}"
+
+          if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
+            echo 'DEPLOY_PATH must be an absolute Linux path without whitespace.'
+            exit 1
+          fi
+
+          port="${DEPLOY_PORT:-22}"
+
+          args=(
+            pwsh -NoProfile
+            -File "${DEPLOY_PATH}/backend/ops/production/Invoke-Rollback.ps1"
+            -EnvironmentName "${DEPLOY_ENVIRONMENT}"
+            -TargetSha "${TARGET_SHA}"
+          )
+
+          if [[ "${CONFIRM_DB}" == "true" ]]; then
+            args+=( -ConfirmDatabaseIsBackwardCompatible )
+          fi
+
+          printf -v remote_command '%q ' "${args[@]}"
+
+          ssh \
+            -i "${HOME}/.ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
+            -p "${port}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "${remote_command}"
+
+      - name: Record rollback summary
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          {
+            echo "## Rollback complete"
+            echo
+            echo "- Environment: \`${DEPLOY_ENVIRONMENT}\`"
+            echo "- Target SHA: \`${TARGET_SHA}\`"
+            echo '- Database rollback: not performed by this workflow'
+          } >> "${GITHUB_STEP_SUMMARY}"

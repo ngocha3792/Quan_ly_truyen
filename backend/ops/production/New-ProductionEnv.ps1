@@ -72,6 +72,14 @@ param(
   [string]$DkimDomain,
   [string]$DkimSelector,
   [string]$DkimPrivateKeyPath,
+
+  [ValidateSet('production', 'staging')]
+  [string]$EnvironmentName = 'production',
+
+  [string]$OutputFile,
+
+  [string]$ComposeProjectName,
+
   [switch]$Force
 )
 
@@ -79,12 +87,35 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$OutputPath = Join-Path $BackendRoot '.env.production'
+$ResolvedOutputFile = if ([string]::IsNullOrWhiteSpace($OutputFile)) {
+  if ($EnvironmentName -eq 'production') { '.env.production' } else { '.env.staging' }
+}
+else {
+  $OutputFile
+}
+$OutputPath = if ([IO.Path]::IsPathRooted($ResolvedOutputFile)) {
+  $ResolvedOutputFile
+}
+else {
+  Join-Path $BackendRoot $ResolvedOutputFile
+}
+$ResolvedComposeProjectName = if ([string]::IsNullOrWhiteSpace($ComposeProjectName)) {
+  "quan-ly-truyen-$EnvironmentName"
+}
+else {
+  $ComposeProjectName
+}
+$ComposeEnvironmentFile = if ([IO.Path]::IsPathRooted($ResolvedOutputFile)) {
+  $OutputPath
+}
+else {
+  $ResolvedOutputFile
+}
 $SecretsDirectory = Join-Path $PSScriptRoot 'secrets'
 $MetricsTokenFile = Join-Path $SecretsDirectory 'metrics_bearer_token'
 
 if ((Test-Path -LiteralPath $OutputPath) -and -not $Force) {
-  throw ".env.production already exists. Use -Force to overwrite it."
+  throw "$OutputPath already exists. Use -Force to overwrite it."
 }
 
 function Assert-ApplicationImageTag {
@@ -115,7 +146,7 @@ function Assert-PinnedContainerImage {
   )
 
   if ($Value -notmatch '(@sha256:[0-9a-fA-F]{64}|:[^/:]+)$' -or
-      $Value -match ':latest$') {
+    $Value -match ':latest$') {
     throw "$Name must use an explicit non-latest tag or sha256 digest. Received: $Value"
   }
 }
@@ -127,8 +158,8 @@ Assert-PinnedContainerImage -Name 'AlertmanagerImage' -Value $AlertmanagerImage
 
 if ($EnableDkim) {
   if ([string]::IsNullOrWhiteSpace($DkimDomain) -or
-      [string]::IsNullOrWhiteSpace($DkimSelector) -or
-      [string]::IsNullOrWhiteSpace($DkimPrivateKeyPath)) {
+    [string]::IsNullOrWhiteSpace($DkimSelector) -or
+    [string]::IsNullOrWhiteSpace($DkimPrivateKeyPath)) {
     throw 'DkimDomain, DkimSelector and DkimPrivateKeyPath are required with -EnableDkim.'
   }
 
@@ -145,7 +176,8 @@ function New-RandomBytes {
 
   try {
     $Generator.GetBytes($bytes)
-  } finally {
+  }
+  finally {
     $Generator.Dispose()
   }
 
@@ -199,15 +231,19 @@ $SmtpRequireTlsValue = if ($SmtpPort -eq 465) { 'false' } else { 'true' }
 $DkimEnabledValue = if ($EnableDkim) { 'true' } else { 'false' }
 $DkimKeyBase64 = if ($EnableDkim) {
   [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $DkimPrivateKeyPath)))
-} else {
+}
+else {
   ''
 }
 
 $Content = @"
-PRODUCTION_ENV_FILE=.env.production
+PRODUCTION_ENV_FILE=$(Get-QuotedEnvValue $ComposeEnvironmentFile)
+COMPOSE_PROJECT_NAME=$(Get-QuotedEnvValue $ResolvedComposeProjectName)
+DEPLOYMENT_ENVIRONMENT=$EnvironmentName
+RELEASE_SHA=$(Get-QuotedEnvValue $BackendImageTag)
 
-NODE_IMAGE=node:24.18.0-bookworm-slim
-FRONTEND_NODE_IMAGE=node:24.18.0-alpine
+NODE_IMAGE=node:24.15.0-bookworm-slim
+FRONTEND_NODE_IMAGE=node:24.15.0-alpine
 
 POSTGRES_IMAGE=postgres:17.10-alpine3.23
 REDIS_IMAGE=redis:7.4.10-alpine3.21
@@ -426,7 +462,7 @@ CLOUDINARY_ATTACHMENT_UPLOAD_PRESET=
 
 RESTIC_IMAGE=$(Get-QuotedEnvValue $ResticImage)
 OFFSITE_BACKUP_ENABLED=true
-BACKUP_HOST_ID=quan-ly-truyen-production
+BACKUP_HOST_ID=quan-ly-truyen-$EnvironmentName
 RESTIC_REPOSITORY=$(Get-QuotedEnvValue $ResticRepository)
 BACKUP_S3_ACCESS_KEY_ID=$(Get-QuotedEnvValue $BackupS3AccessKeyId)
 BACKUP_S3_SECRET_ACCESS_KEY=$(Get-QuotedEnvValue $BackupS3SecretAccessKey)

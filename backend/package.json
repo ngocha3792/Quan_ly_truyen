@@ -109,7 +109,12 @@
     "docker:prod:backup:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-PostgresBackupArtifact.ps1",
     "docker:prod:recovery-check": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-RecoveryReadiness.ps1",
     "observability:logs": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml logs -f prometheus alertmanager loki tempo alloy grafana",
-    "observability:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f ops/observability/docker-compose.observability.yml config --quiet"
+    "observability:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f ops/observability/docker-compose.observability.yml config --quiet",
+    "deployment:release:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Release.ps1 -EnvironmentName staging",
+    "deployment:release:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Release.ps1 -EnvironmentName production -DeploymentMode Registry",
+    "deployment:rollback:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Rollback.ps1 -EnvironmentName production",
+    "deployment:smoke:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName staging",
+    "deployment:smoke:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName production"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
@@ -212,7 +217,7 @@
   },
   "packageManager": "npm@11.12.1",
   "engines": {
-    "node": "24.18.x",
+    "node": "24.15.x",
     "npm": "11.12.x"
   }
 }

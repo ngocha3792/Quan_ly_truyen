@@ -284,7 +284,7 @@ index b30e74e..d2fe8d0 100644
 +    "@types/express": "^5.0.6"
    },
    "engines": {
-     "node": "24.18.x",
+     "node": "24.15.x",
 diff --git a/frontend/src/app/app.config.ts b/frontend/src/app/app.config.ts
 index 89331ca..17bb278 100644
 --- a/frontend/src/app/app.config.ts

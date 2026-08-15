@@ -1,4 +1,4 @@
-name: quan-ly-truyen-production
+name: ${COMPOSE_PROJECT_NAME:-quan-ly-truyen-production}
 
 x-default-logging: &default-logging
   driver: json-file
@@ -562,7 +562,7 @@ services:
 
 networks:
   backend:
-    name: quan-ly-truyen-production-backend
+    name: ${COMPOSE_PROJECT_NAME:-quan-ly-truyen-production}-backend
     driver: bridge
 
 volumes:

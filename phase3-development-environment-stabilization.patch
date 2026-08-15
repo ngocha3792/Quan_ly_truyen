@@ -4,7 +4,7 @@ index 0000000..ca5c350
 --- /dev/null
 +++ b/.node-version
 @@ -0,0 +1 @@
-+24.18.0
++24.15.0
 diff --git a/DEVELOPMENT.md b/DEVELOPMENT.md
 new file mode 100644
 index 0000000..3feef88
@@ -17,7 +17,7 @@ index 0000000..3feef88
 +
 +## Required toolchain
 +
-+- Node.js `24.18.0`
++- Node.js `24.15.0`
 +- npm `11.12.1`
 +- Docker Desktop / Docker Engine with Compose v2 for database, Redis, and container workflows
 +
@@ -25,7 +25,7 @@ index 0000000..3feef88
 +
 +## Windows setup
 +
-+From the repository root, select Node.js `24.18.0` with your Node version manager, then pin npm:
++From the repository root, select Node.js `24.15.0` with your Node version manager, then pin npm:
 +
 +```powershell
 +npm install --global npm@11.12.1
@@ -70,7 +70,8 @@ index 9372180..efb0354 100644
 --- a/backend/Dockerfile
 +++ b/backend/Dockerfile
 @@ -1,6 +1,8 @@
- ARG NODE_IMAGE=node:24.18.0-bookworm-slim
+-ARG NODE_IMAGE=node:24.18.0-bookworm-slim
++ARG NODE_IMAGE=node:24.15.0-bookworm-slim
  FROM ${NODE_IMAGE} AS base
  
 +ARG NPM_VERSION=11.12.1
@@ -105,7 +106,7 @@ index e87a1e4..34f9472 100644
  # syntax=docker/dockerfile:1.7
  
 -FROM node:24-bookworm-slim
-+FROM node:24.18.0-bookworm-slim
++FROM node:24.15.0-bookworm-slim
 +
 +ARG NPM_VERSION=11.12.1
  
@@ -140,7 +141,7 @@ index 73f3c9e..c841511 100644
          "typescript-eslint": "^8.20.0"
 +      },
 +      "engines": {
-+        "node": "24.18.x",
++        "node": "24.15.x",
 +        "npm": "11.12.x"
        }
      },
@@ -164,7 +165,7 @@ index c2b63b6..b1516a0 100644
 +  },
 +  "packageManager": "npm@11.12.1",
 +  "engines": {
-+    "node": "24.18.x",
++    "node": "24.15.x",
 +    "npm": "11.12.x"
    }
  }
@@ -182,7 +183,8 @@ index 53f5c71..32afed1 100644
 --- a/frontend/Dockerfile
 +++ b/frontend/Dockerfile
 @@ -1,9 +1,13 @@
- ARG NODE_IMAGE=node:24.18.0-alpine
+-ARG NODE_IMAGE=node:24.18.0-alpine
++ARG NODE_IMAGE=node:24.15.0-alpine
  FROM ${NODE_IMAGE} AS dependencies
  
 +ARG NPM_VERSION=11.12.1
@@ -206,7 +208,7 @@ index 4a6c545..4109bf8 100644
          "wait-on": "^9.1.0"
 +      },
 +      "engines": {
-+        "node": "24.18.x",
++        "node": "24.15.x",
 +        "npm": "11.12.x"
        }
      },
@@ -229,7 +231,7 @@ index 2e5e859..d140bf5 100644
      "wait-on": "^9.1.0"
 +  },
 +  "engines": {
-+    "node": "24.18.x",
++    "node": "24.15.x",
 +    "npm": "11.12.x"
    }
  }

@@ -4,7 +4,7 @@ The repository uses one pinned JavaScript toolchain for local development, CI, a
 
 ## Required toolchain
 
-- Node.js `24.18.0`
+- Node.js `24.15.0`
 - npm `11.12.1`
 - Docker Desktop / Docker Engine with Compose v2 for database, Redis, and container workflows
 
@@ -12,7 +12,7 @@ Node.js is pinned in both `.nvmrc` and `.node-version`. Frontend and backend pac
 
 ## Windows setup
 
-From the repository root, select Node.js `24.18.0` with your Node version manager, then pin npm:
+From the repository root, select Node.js `24.15.0` with your Node version manager, then pin npm:
 
 ```powershell
 npm install --global npm@11.12.1

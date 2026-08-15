@@ -6,3 +6,5 @@
 docker/.env.docker
 backups/
 ops/production/secrets/
+.env.staging
+ops/production/.deployment-state/

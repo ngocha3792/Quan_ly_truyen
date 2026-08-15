@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24.18.0-bookworm-slim
+FROM node:24.15.0-bookworm-slim
 
 ARG NPM_VERSION=11.12.1
 

@@ -1,4 +1,4 @@
-ARG NODE_IMAGE=node:24.18.0-bookworm-slim
+ARG NODE_IMAGE=node:24.15.0-bookworm-slim
 FROM ${NODE_IMAGE} AS base
 
 ARG NPM_VERSION=11.12.1

@@ -1,0 +1,1752 @@
+diff --git a/.github/workflows/deploy-environment.yml b/.github/workflows/deploy-environment.yml
+new file mode 100644
+index 0000000..34c86d6
+--- /dev/null
++++ b/.github/workflows/deploy-environment.yml
+@@ -0,0 +1,432 @@
++name: Deploy Environment
++
++on:
++  workflow_dispatch:
++    inputs:
++      environment:
++        description: GitHub Environment and deployment target
++        required: true
++        type: choice
++        options:
++          - staging
++          - production
++      source_sha:
++        description: Full 40-character Git SHA from main
++        required: true
++        type: string
++      deployment_mode:
++        description: Registry for immutable release images; Local is staging-only
++        required: true
++        default: Registry
++        type: choice
++        options:
++          - Registry
++          - Local
++
++permissions:
++  contents: read
++
++concurrency:
++  group: deploy-${{ inputs.environment }}
++  cancel-in-progress: false
++
++jobs:
++  verify:
++    name: Verify release candidate
++    runs-on: ubuntu-latest
++    timeout-minutes: 15
++
++    permissions:
++      actions: read
++      contents: read
++      packages: read
++
++    outputs:
++      source_sha: ${{ steps.source.outputs.sha }}
++
++    steps:
++      - name: Validate deployment policy
++        shell: bash
++        env:
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
++        run: |
++          set -euo pipefail
++
++          if [[ "${DEPLOY_ENVIRONMENT}" == "production" && "${DEPLOYMENT_MODE}" != "Registry" ]]; then
++            echo 'Production deployments must use Registry mode.'
++            exit 1
++          fi
++
++      - name: Checkout release candidate
++        uses: actions/checkout@v6
++        with:
++          ref: ${{ inputs.source_sha }}
++          fetch-depth: 0
++
++      - name: Verify immutable SHA belongs to main
++        id: source
++        shell: bash
++        env:
++          REQUESTED_SHA: ${{ inputs.source_sha }}
++        run: |
++          set -euo pipefail
++
++          if ! [[ "${REQUESTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
++            echo 'source_sha must be a full 40-character Git SHA.'
++            exit 1
++          fi
++
++          actual_sha="$(git rev-parse HEAD)"
++          requested_sha="${REQUESTED_SHA,,}"
++
++          if [[ "${actual_sha}" != "${requested_sha}" ]]; then
++            echo "Checkout drift detected: expected ${requested_sha}, got ${actual_sha}."
++            exit 1
++          fi
++
++          git fetch --no-tags origin main
++
++          if ! git merge-base --is-ancestor "${actual_sha}" origin/main; then
++            echo "${actual_sha} is not reachable from main."
++            exit 1
++          fi
++
++          echo "sha=${actual_sha}" >> "${GITHUB_OUTPUT}"
++
++      - name: Require successful full CI for exact SHA
++        shell: bash
++        env:
++          GH_TOKEN: ${{ github.token }}
++          SOURCE_SHA: ${{ steps.source.outputs.sha }}
++        run: |
++          set -euo pipefail
++
++          runs_json="$(
++            gh api \
++              --method GET \
++              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
++              -f head_sha="${SOURCE_SHA}" \
++              -f per_page=100
++          )"
++
++          successful_run="$(
++            jq -c \
++              --arg sha "${SOURCE_SHA}" \
++              '[
++                .workflow_runs[]
++                | select(.head_sha == $sha)
++                | select(.event == "push")
++                | select(.head_branch == "main")
++                | select(.status == "completed")
++                | select(.conclusion == "success")
++              ]
++              | sort_by(.run_number)
++              | reverse
++              | .[0] // empty' \
++              <<<"${runs_json}"
++          )"
++
++          if [[ -z "${successful_run}" ]]; then
++            echo "No successful CI run exists for ${SOURCE_SHA} on main."
++            exit 1
++          fi
++
++          echo "Verified CI: $(jq -r '.html_url' <<<"${successful_run}")"
++
++      - name: Setup Docker Buildx
++        if: inputs.deployment_mode == 'Registry'
++        uses: docker/setup-buildx-action@v3
++
++      - name: Login to GHCR for manifest verification
++        if: inputs.deployment_mode == 'Registry'
++        uses: docker/login-action@v3
++        with:
++          registry: ghcr.io
++          username: ${{ github.actor }}
++          password: ${{ secrets.GITHUB_TOKEN }}
++
++      - name: Require all immutable application images
++        if: inputs.deployment_mode == 'Registry'
++        shell: bash
++        env:
++          SOURCE_SHA: ${{ steps.source.outputs.sha }}
++        run: |
++          set -euo pipefail
++
++          owner="${GITHUB_REPOSITORY_OWNER,,}"
++
++          images=(
++            "ghcr.io/${owner}/quan-ly-truyen-backend:${SOURCE_SHA}"
++            "ghcr.io/${owner}/quan-ly-truyen-backend-migrate:${SOURCE_SHA}"
++            "ghcr.io/${owner}/quan-ly-truyen-frontend:${SOURCE_SHA}"
++          )
++
++          for image in "${images[@]}"; do
++            echo "Verifying ${image}"
++            docker buildx imagetools inspect "${image}" >/dev/null
++          done
++
++  deploy:
++    name: Deploy ${{ inputs.environment }}
++    needs: verify
++    runs-on: ubuntu-latest
++    timeout-minutes: 45
++
++    environment:
++      name: ${{ inputs.environment }}
++
++    permissions:
++      contents: read
++      packages: read
++
++    steps:
++      - name: Checkout verified source
++        uses: actions/checkout@v6
++        with:
++          ref: ${{ needs.verify.outputs.source_sha }}
++          fetch-depth: 1
++
++      - name: Configure pinned SSH host
++        shell: bash
++        env:
++          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
++          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
++        run: |
++          set -euo pipefail
++
++          test -n "${DEPLOY_SSH_PRIVATE_KEY}"
++          test -n "${DEPLOY_KNOWN_HOSTS}"
++
++          install -d -m 0700 "${HOME}/.ssh"
++          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/deploy_key"
++          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
++          chmod 0600 "${HOME}/.ssh/deploy_key" "${HOME}/.ssh/known_hosts"
++
++      - name: Validate deployment connection secrets
++        shell: bash
++        env:
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++        run: |
++          set -euo pipefail
++          test -n "${DEPLOY_HOST}"
++          test -n "${DEPLOY_USER}"
++          test -n "${DEPLOY_PATH}"
++
++          if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
++            echo 'DEPLOY_PATH must be an absolute Linux path without whitespace.'
++            exit 1
++          fi
++
++      - name: Package deployment source
++        shell: bash
++        env:
++          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
++        run: |
++          set -euo pipefail
++
++          tar \
++            --exclude='backend/.env*' \
++            --exclude='backend/backups' \
++            --exclude='backend/ops/production/secrets' \
++            --exclude='backend/ops/production/.deployment-state' \
++            --exclude='backend/node_modules' \
++            --exclude='backend/dist' \
++            --exclude='frontend/node_modules' \
++            --exclude='frontend/dist' \
++            --exclude='frontend/playwright-report' \
++            --exclude='frontend/test-results' \
++            -czf "${RUNNER_TEMP}/deployment-${SOURCE_SHA}.tar.gz" \
++            backend \
++            frontend
++
++      - name: Upload clean release source
++        shell: bash
++        env:
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
++        run: |
++          set -euo pipefail
++
++          port="${DEPLOY_PORT:-22}"
++          ssh_opts=(
++            -i "${HOME}/.ssh/deploy_key"
++            -o BatchMode=yes
++            -o StrictHostKeyChecking=yes
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts"
++            -p "${port}"
++          )
++
++          ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            "mkdir -p -- '${DEPLOY_PATH}'"
++
++          scp \
++            -i "${HOME}/.ssh/deploy_key" \
++            -o BatchMode=yes \
++            -o StrictHostKeyChecking=yes \
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
++            -P "${port}" \
++            "${RUNNER_TEMP}/deployment-${SOURCE_SHA}.tar.gz" \
++            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/.incoming-${SOURCE_SHA}.tar.gz"
++
++      - name: Refresh deployment tooling without deleting runtime state
++        shell: bash
++        env:
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
++        run: |
++          set -euo pipefail
++
++          port="${DEPLOY_PORT:-22}"
++          ssh_opts=(
++            -i "${HOME}/.ssh/deploy_key"
++            -o BatchMode=yes
++            -o StrictHostKeyChecking=yes
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts"
++            -p "${port}"
++          )
++
++          ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            bash -s -- "${DEPLOY_PATH}" "${SOURCE_SHA}" <<'REMOTE'
++          set -euo pipefail
++
++          deploy_path="$1"
++          source_sha="$2"
++          incoming="${deploy_path}/.incoming-${source_sha}.tar.gz"
++          preserve="$(mktemp -d)"
++
++          test -f "${incoming}"
++
++          preserve_path() {
++            local relative="$1"
++            local source="${deploy_path}/${relative}"
++            local target="${preserve}/${relative}"
++
++            if [[ -e "${source}" ]]; then
++              mkdir -p "$(dirname "${target}")"
++              mv "${source}" "${target}"
++            fi
++          }
++
++          restore_path() {
++            local relative="$1"
++            local source="${preserve}/${relative}"
++            local target="${deploy_path}/${relative}"
++
++            if [[ -e "${source}" ]]; then
++              mkdir -p "$(dirname "${target}")"
++              rm -rf "${target}"
++              mv "${source}" "${target}"
++            fi
++          }
++
++          cleanup() {
++            restore_path 'backend/.env.production'
++            restore_path 'backend/.env.staging'
++            restore_path 'backend/backups'
++            restore_path 'backend/ops/production/secrets'
++            restore_path 'backend/ops/production/.deployment-state'
++            rm -rf "${preserve}"
++          }
++          trap cleanup EXIT
++
++          preserve_path 'backend/.env.production'
++          preserve_path 'backend/.env.staging'
++          preserve_path 'backend/backups'
++          preserve_path 'backend/ops/production/secrets'
++          preserve_path 'backend/ops/production/.deployment-state'
++
++          rm -rf "${deploy_path}/backend" "${deploy_path}/frontend"
++          tar -xzf "${incoming}" -C "${deploy_path}"
++          rm -f "${incoming}"
++
++          restore_path 'backend/.env.production'
++          restore_path 'backend/.env.staging'
++          restore_path 'backend/backups'
++          restore_path 'backend/ops/production/secrets'
++          restore_path 'backend/ops/production/.deployment-state'
++
++          command -v docker >/dev/null
++          docker compose version >/dev/null
++          command -v pwsh >/dev/null
++          REMOTE
++
++      - name: Authenticate deployment host to GHCR
++        if: inputs.deployment_mode == 'Registry'
++        shell: bash
++        env:
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          GHCR_TOKEN: ${{ github.token }}
++          GHCR_USERNAME: ${{ github.actor }}
++        run: |
++          set -euo pipefail
++
++          port="${DEPLOY_PORT:-22}"
++
++          printf '%s' "${GHCR_TOKEN}" | ssh \
++            -i "${HOME}/.ssh/deploy_key" \
++            -o BatchMode=yes \
++            -o StrictHostKeyChecking=yes \
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
++            -p "${port}" \
++            "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            "docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
++
++      - name: Deploy verified release
++        shell: bash
++        env:
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
++        run: |
++          set -euo pipefail
++
++          port="${DEPLOY_PORT:-22}"
++
++          args=(
++            pwsh -NoProfile
++            -File "${DEPLOY_PATH}/backend/ops/production/Invoke-Release.ps1"
++            -EnvironmentName "${DEPLOY_ENVIRONMENT}"
++            -SourceSha "${SOURCE_SHA}"
++            -DeploymentMode "${DEPLOYMENT_MODE}"
++          )
++
++          printf -v remote_command '%q ' "${args[@]}"
++
++          ssh \
++            -i "${HOME}/.ssh/deploy_key" \
++            -o BatchMode=yes \
++            -o StrictHostKeyChecking=yes \
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
++            -p "${port}" \
++            "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            "${remote_command}"
++
++      - name: Record deployment summary
++        shell: bash
++        env:
++          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
++        run: |
++          {
++            echo "## Deployment complete"
++            echo
++            echo "- Environment: \`${DEPLOY_ENVIRONMENT}\`"
++            echo "- Source SHA: \`${SOURCE_SHA}\`"
++            echo "- Mode: \`${DEPLOYMENT_MODE}\`"
++          } >> "${GITHUB_STEP_SUMMARY}"
+diff --git a/.github/workflows/rollback-environment.yml b/.github/workflows/rollback-environment.yml
+new file mode 100644
+index 0000000..76bd651
+--- /dev/null
++++ b/.github/workflows/rollback-environment.yml
+@@ -0,0 +1,192 @@
++name: Rollback Environment
++
++on:
++  workflow_dispatch:
++    inputs:
++      environment:
++        description: Deployment target
++        required: true
++        type: choice
++        options:
++          - staging
++          - production
++      target_sha:
++        description: Full 40-character SHA to restore; images must already exist in GHCR
++        required: true
++        type: string
++      confirm_database_backward_compatible:
++        description: Confirm current DB schema/data are compatible with target application SHA
++        required: true
++        default: false
++        type: boolean
++
++permissions:
++  contents: read
++
++concurrency:
++  group: deploy-${{ inputs.environment }}
++  cancel-in-progress: false
++
++jobs:
++  rollback:
++    name: Roll back ${{ inputs.environment }}
++    runs-on: ubuntu-latest
++    timeout-minutes: 35
++
++    environment:
++      name: ${{ inputs.environment }}
++
++    permissions:
++      contents: read
++      packages: read
++
++    steps:
++      - name: Validate rollback request
++        id: target
++        shell: bash
++        env:
++          TARGET_SHA: ${{ inputs.target_sha }}
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++          CONFIRM_DB: ${{ inputs.confirm_database_backward_compatible }}
++        run: |
++          set -euo pipefail
++
++          if ! [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
++            echo 'target_sha must be a full 40-character Git SHA.'
++            exit 1
++          fi
++
++          if [[ "${DEPLOY_ENVIRONMENT}" == "production" && "${CONFIRM_DB}" != "true" ]]; then
++            echo 'Production rollback requires explicit database backward-compatibility confirmation.'
++            exit 1
++          fi
++
++          echo "sha=${TARGET_SHA,,}" >> "${GITHUB_OUTPUT}"
++
++      - name: Setup Docker Buildx
++        uses: docker/setup-buildx-action@v3
++
++      - name: Login to GHCR for manifest verification
++        uses: docker/login-action@v3
++        with:
++          registry: ghcr.io
++          username: ${{ github.actor }}
++          password: ${{ secrets.GITHUB_TOKEN }}
++
++      - name: Verify rollback images exist
++        shell: bash
++        env:
++          TARGET_SHA: ${{ steps.target.outputs.sha }}
++        run: |
++          set -euo pipefail
++
++          owner="${GITHUB_REPOSITORY_OWNER,,}"
++          images=(
++            "ghcr.io/${owner}/quan-ly-truyen-backend:${TARGET_SHA}"
++            "ghcr.io/${owner}/quan-ly-truyen-backend-migrate:${TARGET_SHA}"
++            "ghcr.io/${owner}/quan-ly-truyen-frontend:${TARGET_SHA}"
++          )
++
++          for image in "${images[@]}"; do
++            echo "Verifying ${image}"
++            docker buildx imagetools inspect "${image}" >/dev/null
++          done
++
++      - name: Configure pinned SSH host
++        shell: bash
++        env:
++          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
++          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
++        run: |
++          set -euo pipefail
++
++          test -n "${DEPLOY_SSH_PRIVATE_KEY}"
++          test -n "${DEPLOY_KNOWN_HOSTS}"
++
++          install -d -m 0700 "${HOME}/.ssh"
++          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/deploy_key"
++          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
++          chmod 0600 "${HOME}/.ssh/deploy_key" "${HOME}/.ssh/known_hosts"
++
++      - name: Authenticate deployment host to GHCR
++        shell: bash
++        env:
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          GHCR_TOKEN: ${{ github.token }}
++          GHCR_USERNAME: ${{ github.actor }}
++        run: |
++          set -euo pipefail
++
++          test -n "${DEPLOY_HOST}"
++          test -n "${DEPLOY_USER}"
++
++          port="${DEPLOY_PORT:-22}"
++
++          printf '%s' "${GHCR_TOKEN}" | ssh \
++            -i "${HOME}/.ssh/deploy_key" \
++            -o BatchMode=yes \
++            -o StrictHostKeyChecking=yes \
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
++            -p "${port}" \
++            "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            "docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
++
++      - name: Execute rollback
++        shell: bash
++        env:
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++          CONFIRM_DB: ${{ inputs.confirm_database_backward_compatible }}
++          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
++          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++          TARGET_SHA: ${{ steps.target.outputs.sha }}
++        run: |
++          set -euo pipefail
++
++          test -n "${DEPLOY_PATH}"
++
++          if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
++            echo 'DEPLOY_PATH must be an absolute Linux path without whitespace.'
++            exit 1
++          fi
++
++          port="${DEPLOY_PORT:-22}"
++
++          args=(
++            pwsh -NoProfile
++            -File "${DEPLOY_PATH}/backend/ops/production/Invoke-Rollback.ps1"
++            -EnvironmentName "${DEPLOY_ENVIRONMENT}"
++            -TargetSha "${TARGET_SHA}"
++          )
++
++          if [[ "${CONFIRM_DB}" == "true" ]]; then
++            args+=( -ConfirmDatabaseIsBackwardCompatible )
++          fi
++
++          printf -v remote_command '%q ' "${args[@]}"
++
++          ssh \
++            -i "${HOME}/.ssh/deploy_key" \
++            -o BatchMode=yes \
++            -o StrictHostKeyChecking=yes \
++            -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
++            -p "${port}" \
++            "${DEPLOY_USER}@${DEPLOY_HOST}" \
++            "${remote_command}"
++
++      - name: Record rollback summary
++        shell: bash
++        env:
++          TARGET_SHA: ${{ steps.target.outputs.sha }}
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++        run: |
++          {
++            echo "## Rollback complete"
++            echo
++            echo "- Environment: \`${DEPLOY_ENVIRONMENT}\`"
++            echo "- Target SHA: \`${TARGET_SHA}\`"
++            echo '- Database rollback: not performed by this workflow'
++          } >> "${GITHUB_STEP_SUMMARY}"
+diff --git a/backend/.gitignore b/backend/.gitignore
+index 4fdf608..ccc9be3 100644
+--- a/backend/.gitignore
++++ b/backend/.gitignore
+@@ -6,3 +6,5 @@
+ docker/.env.docker
+ backups/
+ ops/production/secrets/
++.env.staging
++ops/production/.deployment-state/
+diff --git a/backend/compose.production.yml b/backend/compose.production.yml
+index f40f82b..a0ad3c4 100644
+--- a/backend/compose.production.yml
++++ b/backend/compose.production.yml
+@@ -1,4 +1,4 @@
+-name: quan-ly-truyen-production
++name: ${COMPOSE_PROJECT_NAME:-quan-ly-truyen-production}
+ 
+ x-default-logging: &default-logging
+   driver: json-file
+@@ -562,7 +562,7 @@ services:
+ 
+ networks:
+   backend:
+-    name: quan-ly-truyen-production-backend
++    name: ${COMPOSE_PROJECT_NAME:-quan-ly-truyen-production}-backend
+     driver: bridge
+ 
+ volumes:
+diff --git a/backend/ops/production/Deploy-Production.ps1 b/backend/ops/production/Deploy-Production.ps1
+index 7a57056..e451bca 100644
+--- a/backend/ops/production/Deploy-Production.ps1
++++ b/backend/ops/production/Deploy-Production.ps1
+@@ -3,6 +3,8 @@ param(
+   [ValidateSet('Auto', 'Local', 'Registry')]
+   [string]$DeploymentMode = 'Auto',
+ 
++  [string]$EnvironmentFile = '.env.production',
++
+   [switch]$SkipPull,
+   [switch]$SkipObservability,
+   [switch]$SkipPostdeployGate
+@@ -14,11 +16,16 @@ $ErrorActionPreference = 'Stop'
+ $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+ Set-Location $BackendRoot
+ 
+-$EnvironmentFile = Join-Path $BackendRoot '.env.production'
++$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
++  $EnvironmentFile
++}
++else {
++  Join-Path $BackendRoot $EnvironmentFile
++}
+ $BuildComposeFile = Join-Path $BackendRoot 'compose.production.build.yml'
+ 
+-if (-not (Test-Path -LiteralPath $EnvironmentFile -PathType Leaf)) {
+-  throw '.env.production is missing. Run ops/production/New-ProductionEnv.ps1 first.'
++if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
++  throw "Deployment environment file is missing: $EnvironmentFilePath"
+ }
+ 
+ function Get-DotEnvValue {
+@@ -53,19 +60,19 @@ function Get-DotEnvValue {
+ }
+ 
+ $BackendImageName = Get-DotEnvValue `
+-  -Path $EnvironmentFile `
++  -Path $EnvironmentFilePath `
+   -Name 'BACKEND_IMAGE_NAME'
+ 
+ $BackendImageTag = Get-DotEnvValue `
+-  -Path $EnvironmentFile `
++  -Path $EnvironmentFilePath `
+   -Name 'BACKEND_IMAGE_TAG'
+ 
+ $FrontendImageName = Get-DotEnvValue `
+-  -Path $EnvironmentFile `
++  -Path $EnvironmentFilePath `
+   -Name 'FRONTEND_IMAGE_NAME'
+ 
+ $FrontendImageTag = Get-DotEnvValue `
+-  -Path $EnvironmentFile `
++  -Path $EnvironmentFilePath `
+   -Name 'FRONTEND_IMAGE_TAG'
+ 
+ if ([string]::IsNullOrWhiteSpace($BackendImageName)) {
+@@ -134,7 +141,7 @@ if (-not $UseLocalBuild -and
+ 
+ $Compose = @(
+   'compose',
+-  '--env-file', '.env.production',
++  '--env-file', $EnvironmentFilePath,
+   '-f', 'compose.production.yml'
+ )
+ 
+diff --git a/backend/ops/production/Deployment.Common.ps1 b/backend/ops/production/Deployment.Common.ps1
+new file mode 100644
+index 0000000..46ad3bb
+--- /dev/null
++++ b/backend/ops/production/Deployment.Common.ps1
+@@ -0,0 +1,262 @@
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++function Get-DeploymentDotEnvValue {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$Path,
++
++    [Parameter(Mandatory = $true)]
++    [string]$Name
++  )
++
++  $Line = Get-Content -LiteralPath $Path |
++    Where-Object {
++      $_ -match "^\s*$([regex]::Escape($Name))\s*="
++    } |
++    Select-Object -Last 1
++
++  if ($null -eq $Line) {
++    return $null
++  }
++
++  $Value = ($Line -split '=', 2)[1].Trim()
++
++  if (
++    ($Value.StartsWith('"') -and $Value.EndsWith('"')) -or
++    ($Value.StartsWith("'") -and $Value.EndsWith("'"))
++  ) {
++    $Value = $Value.Substring(1, $Value.Length - 2)
++  }
++
++  return $Value
++}
++
++function Assert-DeploymentSourceSha {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$Value,
++
++    [string]$Name = 'SourceSha'
++  )
++
++  if ($Value -notmatch '^[0-9a-fA-F]{40}$') {
++    throw "$Name must be a full 40-character Git SHA. Received: $Value"
++  }
++}
++
++function Set-DeploymentDotEnvValues {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$Path,
++
++    [Parameter(Mandatory = $true)]
++    [hashtable]$Values
++  )
++
++  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
++    throw "Environment file does not exist: $Path"
++  }
++
++  $Lines = [Collections.Generic.List[string]]::new()
++
++  foreach ($Line in Get-Content -LiteralPath $Path) {
++    $Lines.Add($Line)
++  }
++
++  foreach ($Name in $Values.Keys) {
++    $Replacement = "$Name=$($Values[$Name])"
++    $Pattern = "^\s*$([regex]::Escape([string]$Name))\s*="
++    $Found = $false
++
++    for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
++      if ($Lines[$Index] -match $Pattern) {
++        $Lines[$Index] = $Replacement
++        $Found = $true
++      }
++    }
++
++    if (-not $Found) {
++      $Lines.Add($Replacement)
++    }
++  }
++
++  $Directory = Split-Path -Parent $Path
++  $TemporaryPath = Join-Path $Directory ('.env.deploy.' + [guid]::NewGuid().ToString('N') + '.tmp')
++
++  try {
++    $Utf8WithoutBom = [Text.UTF8Encoding]::new($false)
++    [IO.File]::WriteAllLines($TemporaryPath, $Lines, $Utf8WithoutBom)
++    Move-Item -LiteralPath $TemporaryPath -Destination $Path -Force
++  }
++  finally {
++    if (Test-Path -LiteralPath $TemporaryPath) {
++      Remove-Item -LiteralPath $TemporaryPath -Force
++    }
++  }
++}
++
++function Get-DeploymentEnvironmentFilePath {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$BackendRoot,
++
++    [Parameter(Mandatory = $true)]
++    [ValidateSet('staging', 'production')]
++    [string]$EnvironmentName,
++
++    [string]$EnvironmentFile
++  )
++
++  $ResolvedFile = if ([string]::IsNullOrWhiteSpace($EnvironmentFile)) {
++    if ($EnvironmentName -eq 'production') {
++      '.env.production'
++    }
++    else {
++      '.env.staging'
++    }
++  }
++  else {
++    $EnvironmentFile
++  }
++
++  if ([IO.Path]::IsPathRooted($ResolvedFile)) {
++    return $ResolvedFile
++  }
++
++  return Join-Path $BackendRoot $ResolvedFile
++}
++
++function Get-DeploymentStateDirectory {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$BackendRoot,
++
++    [Parameter(Mandatory = $true)]
++    [ValidateSet('staging', 'production')]
++    [string]$EnvironmentName,
++
++    [string]$StateDirectory
++  )
++
++  $ResolvedDirectory = if ([string]::IsNullOrWhiteSpace($StateDirectory)) {
++    Join-Path $BackendRoot "ops/production/.deployment-state/$EnvironmentName"
++  }
++  elseif ([IO.Path]::IsPathRooted($StateDirectory)) {
++    $StateDirectory
++  }
++  else {
++    Join-Path $BackendRoot $StateDirectory
++  }
++
++  New-Item -ItemType Directory -Path $ResolvedDirectory -Force | Out-Null
++  return $ResolvedDirectory
++}
++
++function Write-DeploymentJsonAtomic {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$Path,
++
++    [Parameter(Mandatory = $true)]
++    [object]$Value
++  )
++
++  $Directory = Split-Path -Parent $Path
++  New-Item -ItemType Directory -Path $Directory -Force | Out-Null
++
++  $TemporaryPath = Join-Path $Directory ((Split-Path -Leaf $Path) + '.' + [guid]::NewGuid().ToString('N') + '.tmp')
++
++  try {
++    $Json = $Value | ConvertTo-Json -Depth 8
++    $Utf8WithoutBom = [Text.UTF8Encoding]::new($false)
++    [IO.File]::WriteAllText($TemporaryPath, $Json + [Environment]::NewLine, $Utf8WithoutBom)
++    Move-Item -LiteralPath $TemporaryPath -Destination $Path -Force
++  }
++  finally {
++    if (Test-Path -LiteralPath $TemporaryPath) {
++      Remove-Item -LiteralPath $TemporaryPath -Force
++    }
++  }
++}
++
++function Read-DeploymentJson {
++  param([Parameter(Mandatory = $true)][string]$Path)
++
++  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
++    return $null
++  }
++
++  return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
++}
++
++function Enter-DeploymentLock {
++  param([Parameter(Mandatory = $true)][string]$StateDirectory)
++
++  $Path = Join-Path $StateDirectory 'deployment.lock'
++
++  try {
++    return [IO.File]::Open(
++      $Path,
++      [IO.FileMode]::OpenOrCreate,
++      [IO.FileAccess]::ReadWrite,
++      [IO.FileShare]::None
++    )
++  }
++  catch {
++    throw "Another deployment or rollback is already running. Lock: $Path"
++  }
++}
++
++function New-DeploymentRecord {
++  param(
++    [Parameter(Mandatory = $true)]
++    [ValidateSet('release', 'rollback')]
++    [string]$Operation,
++
++    [Parameter(Mandatory = $true)]
++    [ValidateSet('staging', 'production')]
++    [string]$EnvironmentName,
++
++    [Parameter(Mandatory = $true)]
++    [string]$SourceSha,
++
++    [string]$PreviousSourceSha,
++
++    [Parameter(Mandatory = $true)]
++    [string]$DeploymentMode,
++
++    [string]$PublicUrl
++  )
++
++  [pscustomobject]@{
++    schemaVersion = 1
++    operation = $Operation
++    environment = $EnvironmentName
++    sourceSha = $SourceSha.ToLowerInvariant()
++    previousSourceSha = if ($PreviousSourceSha) { $PreviousSourceSha.ToLowerInvariant() } else { $null }
++    deploymentMode = $DeploymentMode
++    publicUrl = $PublicUrl
++    completedAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
++  }
++}
++
++function Save-DeploymentHistoryRecord {
++  param(
++    [Parameter(Mandatory = $true)]
++    [string]$StateDirectory,
++
++    [Parameter(Mandatory = $true)]
++    [object]$Record
++  )
++
++  $HistoryDirectory = Join-Path $StateDirectory 'history'
++  New-Item -ItemType Directory -Path $HistoryDirectory -Force | Out-Null
++
++  $Timestamp = [DateTimeOffset]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')
++  $SourceSha = [string]$Record.sourceSha
++  $Operation = [string]$Record.operation
++  $Path = Join-Path $HistoryDirectory "$Timestamp-$Operation-$SourceSha.json"
++
++  Write-DeploymentJsonAtomic -Path $Path -Value $Record
++}
+diff --git a/backend/ops/production/Invoke-Release.ps1 b/backend/ops/production/Invoke-Release.ps1
+new file mode 100644
+index 0000000..f73ad20
+--- /dev/null
++++ b/backend/ops/production/Invoke-Release.ps1
+@@ -0,0 +1,219 @@
++[CmdletBinding()]
++param(
++  [Parameter(Mandatory = $true)]
++  [ValidateSet('staging', 'production')]
++  [string]$EnvironmentName,
++
++  [Parameter(Mandatory = $true)]
++  [string]$SourceSha,
++
++  [ValidateSet('Auto', 'Local', 'Registry')]
++  [string]$DeploymentMode = 'Registry',
++
++  [string]$EnvironmentFile,
++
++  [string]$StateDirectory,
++
++  [switch]$SkipPull,
++  [switch]$SkipObservability,
++  [switch]$SkipPostdeployGate,
++  [switch]$SkipSmoke,
++  [switch]$SkipProductionBackup
++)
++
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++. (Join-Path $PSScriptRoot 'Deployment.Common.ps1')
++
++Assert-DeploymentSourceSha -Value $SourceSha
++$SourceSha = $SourceSha.ToLowerInvariant()
++
++if ($EnvironmentName -eq 'production' -and $DeploymentMode -ne 'Registry') {
++  throw 'Production releases must use Registry deployment mode with immutable images.'
++}
++
++$BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
++Set-Location $BackendRoot
++
++$EnvironmentFilePath = Get-DeploymentEnvironmentFilePath `
++  -BackendRoot $BackendRoot `
++  -EnvironmentName $EnvironmentName `
++  -EnvironmentFile $EnvironmentFile
++
++if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
++  throw "Deployment environment file is missing: $EnvironmentFilePath"
++}
++
++$ComposeProjectName = Get-DeploymentDotEnvValue `
++  -Path $EnvironmentFilePath `
++  -Name 'COMPOSE_PROJECT_NAME'
++
++if ($EnvironmentName -eq 'staging' -and
++    ([string]::IsNullOrWhiteSpace($ComposeProjectName) -or
++     $ComposeProjectName -eq 'quan-ly-truyen-production')) {
++  throw 'Staging must set a dedicated COMPOSE_PROJECT_NAME (for example quan-ly-truyen-staging).'
++}
++
++$ResolvedStateDirectory = Get-DeploymentStateDirectory `
++  -BackendRoot $BackendRoot `
++  -EnvironmentName $EnvironmentName `
++  -StateDirectory $StateDirectory
++
++$Lock = Enter-DeploymentLock -StateDirectory $ResolvedStateDirectory
++$BackendTagBefore = $null
++$FrontendTagBefore = $null
++
++try {
++  $BackendTagBefore = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'BACKEND_IMAGE_TAG'
++
++  $FrontendTagBefore = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'FRONTEND_IMAGE_TAG'
++
++  $PublicUrl = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'APP_PUBLIC_URL'
++
++  $PreviousSuccessful = Read-DeploymentJson `
++    -Path (Join-Path $ResolvedStateDirectory 'current.json')
++
++  $PreviousSourceSha = if ($null -ne $PreviousSuccessful) {
++    [string]$PreviousSuccessful.sourceSha
++  }
++  elseif ($BackendTagBefore -match '^[0-9a-fA-F]{40}$' -and
++          $FrontendTagBefore -eq $BackendTagBefore) {
++    $BackendTagBefore.ToLowerInvariant()
++  }
++  else {
++    $null
++  }
++
++  if ($EnvironmentName -eq 'production' -and
++      $PreviousSourceSha -and
++      -not $SkipProductionBackup) {
++    Write-Host '[release] Creating verified pre-deploy backup...' -ForegroundColor Cyan
++    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1')
++
++    if ($LASTEXITCODE -ne 0) {
++      throw 'Pre-deploy PostgreSQL backup failed.'
++    }
++
++    & (Join-Path $PSScriptRoot 'Test-RecoveryReadiness.ps1')
++
++    if ($LASTEXITCODE -ne 0) {
++      throw 'Recovery readiness gate failed before production deploy.'
++    }
++  }
++
++  if ($null -ne $PreviousSuccessful) {
++    Write-DeploymentJsonAtomic `
++      -Path (Join-Path $ResolvedStateDirectory 'previous.json') `
++      -Value $PreviousSuccessful
++  }
++  elseif ($PreviousSourceSha) {
++    $SyntheticPrevious = New-DeploymentRecord `
++      -Operation release `
++      -EnvironmentName $EnvironmentName `
++      -SourceSha $PreviousSourceSha `
++      -DeploymentMode $DeploymentMode `
++      -PublicUrl $PublicUrl
++
++    Write-DeploymentJsonAtomic `
++      -Path (Join-Path $ResolvedStateDirectory 'previous.json') `
++      -Value $SyntheticPrevious
++  }
++
++  Set-DeploymentDotEnvValues `
++    -Path $EnvironmentFilePath `
++    -Values @{
++      BACKEND_IMAGE_TAG = $SourceSha
++      FRONTEND_IMAGE_TAG = $SourceSha
++      DEPLOYMENT_ENVIRONMENT = $EnvironmentName
++      RELEASE_SHA = $SourceSha
++    }
++
++  Write-Host (
++    '[release] Deploying {0} at source SHA {1}...' -f `
++      $EnvironmentName,
++      $SourceSha
++  ) -ForegroundColor Cyan
++
++  $DeployArguments = @{
++    DeploymentMode = $DeploymentMode
++    EnvironmentFile = $EnvironmentFilePath
++    SkipPull = $SkipPull
++    SkipObservability = $SkipObservability
++    SkipPostdeployGate = $SkipPostdeployGate
++  }
++
++  & (Join-Path $PSScriptRoot 'Deploy-Production.ps1') @DeployArguments
++
++  if ($LASTEXITCODE -ne 0) {
++    throw 'Deployment script failed.'
++  }
++
++  if (-not $SkipSmoke) {
++    & (Join-Path $PSScriptRoot 'Test-DeploymentSmoke.ps1') `
++      -EnvironmentName $EnvironmentName `
++      -EnvironmentFile $EnvironmentFilePath
++
++    if ($LASTEXITCODE -ne 0) {
++      throw 'External deployment smoke tests failed.'
++    }
++  }
++
++  $Record = New-DeploymentRecord `
++    -Operation release `
++    -EnvironmentName $EnvironmentName `
++    -SourceSha $SourceSha `
++    -PreviousSourceSha $PreviousSourceSha `
++    -DeploymentMode $DeploymentMode `
++    -PublicUrl $PublicUrl
++
++  Write-DeploymentJsonAtomic `
++    -Path (Join-Path $ResolvedStateDirectory 'current.json') `
++    -Value $Record
++
++  Save-DeploymentHistoryRecord `
++    -StateDirectory $ResolvedStateDirectory `
++    -Record $Record
++
++  Write-Host (
++    '[release] {0} now runs {1}.' -f $EnvironmentName, $SourceSha
++  ) -ForegroundColor Green
++}
++catch {
++  if ($BackendTagBefore -and $FrontendTagBefore) {
++    Set-DeploymentDotEnvValues `
++      -Path $EnvironmentFilePath `
++      -Values @{
++        BACKEND_IMAGE_TAG = $BackendTagBefore
++        FRONTEND_IMAGE_TAG = $FrontendTagBefore
++        RELEASE_SHA = $BackendTagBefore
++      }
++  }
++
++  $Failure = [pscustomobject]@{
++    schemaVersion = 1
++    environment = $EnvironmentName
++    attemptedSourceSha = $SourceSha
++    previousBackendImageTag = $BackendTagBefore
++    previousFrontendImageTag = $FrontendTagBefore
++    failedAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
++    message = $_.Exception.Message
++  }
++
++  Write-DeploymentJsonAtomic `
++    -Path (Join-Path $ResolvedStateDirectory 'last-failure.json') `
++    -Value $Failure
++
++  Write-Warning 'The environment file was restored, but containers may be partially updated.'
++  Write-Warning 'Inspect docker compose state before retrying or invoking rollback.'
++  throw
++}
++finally {
++  $Lock.Dispose()
++}
+diff --git a/backend/ops/production/Invoke-Rollback.ps1 b/backend/ops/production/Invoke-Rollback.ps1
+new file mode 100644
+index 0000000..5069349
+--- /dev/null
++++ b/backend/ops/production/Invoke-Rollback.ps1
+@@ -0,0 +1,197 @@
++[CmdletBinding()]
++param(
++  [Parameter(Mandatory = $true)]
++  [ValidateSet('staging', 'production')]
++  [string]$EnvironmentName,
++
++  [string]$TargetSha,
++
++  [string]$EnvironmentFile,
++
++  [string]$StateDirectory,
++
++  [switch]$ConfirmDatabaseIsBackwardCompatible,
++  [switch]$SkipPull,
++  [switch]$SkipObservability,
++  [switch]$SkipPostdeployGate,
++  [switch]$SkipSmoke
++)
++
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++. (Join-Path $PSScriptRoot 'Deployment.Common.ps1')
++
++if ($EnvironmentName -eq 'production' -and
++    -not $ConfirmDatabaseIsBackwardCompatible) {
++  throw @'
++Production application rollback does not roll back database schema/data.
++Re-run with -ConfirmDatabaseIsBackwardCompatible only after confirming the
++current database is backward-compatible with the target application SHA.
++Use Restore-Postgres.ps1 separately when a database restore is required.
++'@
++}
++
++$BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
++Set-Location $BackendRoot
++
++$EnvironmentFilePath = Get-DeploymentEnvironmentFilePath `
++  -BackendRoot $BackendRoot `
++  -EnvironmentName $EnvironmentName `
++  -EnvironmentFile $EnvironmentFile
++
++if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
++  throw "Deployment environment file is missing: $EnvironmentFilePath"
++}
++
++$ComposeProjectName = Get-DeploymentDotEnvValue `
++  -Path $EnvironmentFilePath `
++  -Name 'COMPOSE_PROJECT_NAME'
++
++if ($EnvironmentName -eq 'staging' -and
++    ([string]::IsNullOrWhiteSpace($ComposeProjectName) -or
++     $ComposeProjectName -eq 'quan-ly-truyen-production')) {
++  throw 'Staging must set a dedicated COMPOSE_PROJECT_NAME (for example quan-ly-truyen-staging).'
++}
++
++$ResolvedStateDirectory = Get-DeploymentStateDirectory `
++  -BackendRoot $BackendRoot `
++  -EnvironmentName $EnvironmentName `
++  -StateDirectory $StateDirectory
++
++$Lock = Enter-DeploymentLock -StateDirectory $ResolvedStateDirectory
++$BackendTagBefore = $null
++$FrontendTagBefore = $null
++
++try {
++  $Current = Read-DeploymentJson `
++    -Path (Join-Path $ResolvedStateDirectory 'current.json')
++
++  $Previous = Read-DeploymentJson `
++    -Path (Join-Path $ResolvedStateDirectory 'previous.json')
++
++  $ResolvedTargetSha = if ([string]::IsNullOrWhiteSpace($TargetSha)) {
++    if ($null -eq $Previous) {
++      throw 'No previous successful deployment is recorded. Pass -TargetSha explicitly.'
++    }
++
++    [string]$Previous.sourceSha
++  }
++  else {
++    $TargetSha
++  }
++
++  Assert-DeploymentSourceSha -Value $ResolvedTargetSha -Name 'TargetSha'
++  $ResolvedTargetSha = $ResolvedTargetSha.ToLowerInvariant()
++
++  $CurrentSourceSha = if ($null -ne $Current) {
++    [string]$Current.sourceSha
++  }
++  else {
++    Get-DeploymentDotEnvValue -Path $EnvironmentFilePath -Name 'BACKEND_IMAGE_TAG'
++  }
++
++  if ($CurrentSourceSha -eq $ResolvedTargetSha) {
++    throw "Target SHA $ResolvedTargetSha is already the active release."
++  }
++
++  $BackendTagBefore = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'BACKEND_IMAGE_TAG'
++
++  $FrontendTagBefore = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'FRONTEND_IMAGE_TAG'
++
++  $PublicUrl = Get-DeploymentDotEnvValue `
++    -Path $EnvironmentFilePath `
++    -Name 'APP_PUBLIC_URL'
++
++  if ($EnvironmentName -eq 'production') {
++    Write-Host '[rollback] Creating safety backup before application rollback...' -ForegroundColor Cyan
++    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1')
++
++    if ($LASTEXITCODE -ne 0) {
++      throw 'Safety backup failed; rollback aborted.'
++    }
++  }
++
++  Set-DeploymentDotEnvValues `
++    -Path $EnvironmentFilePath `
++    -Values @{
++      BACKEND_IMAGE_TAG = $ResolvedTargetSha
++      FRONTEND_IMAGE_TAG = $ResolvedTargetSha
++      DEPLOYMENT_ENVIRONMENT = $EnvironmentName
++      RELEASE_SHA = $ResolvedTargetSha
++    }
++
++  Write-Host (
++    '[rollback] Rolling {0} back from {1} to {2}...' -f `
++      $EnvironmentName,
++      $CurrentSourceSha,
++      $ResolvedTargetSha
++  ) -ForegroundColor Yellow
++
++  & (Join-Path $PSScriptRoot 'Deploy-Production.ps1') `
++    -DeploymentMode Registry `
++    -EnvironmentFile $EnvironmentFilePath `
++    -SkipPull:$SkipPull `
++    -SkipObservability:$SkipObservability `
++    -SkipPostdeployGate:$SkipPostdeployGate
++
++  if ($LASTEXITCODE -ne 0) {
++    throw 'Rollback deployment failed.'
++  }
++
++  if (-not $SkipSmoke) {
++    & (Join-Path $PSScriptRoot 'Test-DeploymentSmoke.ps1') `
++      -EnvironmentName $EnvironmentName `
++      -EnvironmentFile $EnvironmentFilePath
++
++    if ($LASTEXITCODE -ne 0) {
++      throw 'Rollback smoke tests failed.'
++    }
++  }
++
++  if ($null -ne $Current) {
++    Write-DeploymentJsonAtomic `
++      -Path (Join-Path $ResolvedStateDirectory 'previous.json') `
++      -Value $Current
++  }
++
++  $Record = New-DeploymentRecord `
++    -Operation rollback `
++    -EnvironmentName $EnvironmentName `
++    -SourceSha $ResolvedTargetSha `
++    -PreviousSourceSha $CurrentSourceSha `
++    -DeploymentMode Registry `
++    -PublicUrl $PublicUrl
++
++  Write-DeploymentJsonAtomic `
++    -Path (Join-Path $ResolvedStateDirectory 'current.json') `
++    -Value $Record
++
++  Save-DeploymentHistoryRecord `
++    -StateDirectory $ResolvedStateDirectory `
++    -Record $Record
++
++  Write-Host (
++    '[rollback] {0} now runs {1}.' -f $EnvironmentName, $ResolvedTargetSha
++  ) -ForegroundColor Green
++}
++catch {
++  if ($BackendTagBefore -and $FrontendTagBefore) {
++    Set-DeploymentDotEnvValues `
++      -Path $EnvironmentFilePath `
++      -Values @{
++        BACKEND_IMAGE_TAG = $BackendTagBefore
++        FRONTEND_IMAGE_TAG = $FrontendTagBefore
++        RELEASE_SHA = $BackendTagBefore
++      }
++  }
++
++  throw
++}
++finally {
++  $Lock.Dispose()
++}
+diff --git a/backend/ops/production/New-ProductionEnv.ps1 b/backend/ops/production/New-ProductionEnv.ps1
+index b8d86cf..8d38ff0 100644
+--- a/backend/ops/production/New-ProductionEnv.ps1
++++ b/backend/ops/production/New-ProductionEnv.ps1
+@@ -72,6 +72,14 @@ param(
+   [string]$DkimDomain,
+   [string]$DkimSelector,
+   [string]$DkimPrivateKeyPath,
++
++  [ValidateSet('production', 'staging')]
++  [string]$EnvironmentName = 'production',
++
++  [string]$OutputFile,
++
++  [string]$ComposeProjectName,
++
+   [switch]$Force
+ )
+ 
+@@ -79,12 +87,35 @@ Set-StrictMode -Version Latest
+ $ErrorActionPreference = 'Stop'
+ 
+ $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+-$OutputPath = Join-Path $BackendRoot '.env.production'
++$ResolvedOutputFile = if ([string]::IsNullOrWhiteSpace($OutputFile)) {
++  if ($EnvironmentName -eq 'production') { '.env.production' } else { '.env.staging' }
++}
++else {
++  $OutputFile
++}
++$OutputPath = if ([IO.Path]::IsPathRooted($ResolvedOutputFile)) {
++  $ResolvedOutputFile
++}
++else {
++  Join-Path $BackendRoot $ResolvedOutputFile
++}
++$ResolvedComposeProjectName = if ([string]::IsNullOrWhiteSpace($ComposeProjectName)) {
++  "quan-ly-truyen-$EnvironmentName"
++}
++else {
++  $ComposeProjectName
++}
++$ComposeEnvironmentFile = if ([IO.Path]::IsPathRooted($ResolvedOutputFile)) {
++  $OutputPath
++}
++else {
++  $ResolvedOutputFile
++}
+ $SecretsDirectory = Join-Path $PSScriptRoot 'secrets'
+ $MetricsTokenFile = Join-Path $SecretsDirectory 'metrics_bearer_token'
+ 
+ if ((Test-Path -LiteralPath $OutputPath) -and -not $Force) {
+-  throw ".env.production already exists. Use -Force to overwrite it."
++  throw "$OutputPath already exists. Use -Force to overwrite it."
+ }
+ 
+ function Assert-ApplicationImageTag {
+@@ -204,7 +235,10 @@ $DkimKeyBase64 = if ($EnableDkim) {
+ }
+ 
+ $Content = @"
+-PRODUCTION_ENV_FILE=.env.production
++PRODUCTION_ENV_FILE=$(Get-QuotedEnvValue $ComposeEnvironmentFile)
++COMPOSE_PROJECT_NAME=$(Get-QuotedEnvValue $ResolvedComposeProjectName)
++DEPLOYMENT_ENVIRONMENT=$EnvironmentName
++RELEASE_SHA=$(Get-QuotedEnvValue $BackendImageTag)
+ 
+ NODE_IMAGE=node:24.18.0-bookworm-slim
+ FRONTEND_NODE_IMAGE=node:24.18.0-alpine
+@@ -426,7 +460,7 @@ CLOUDINARY_ATTACHMENT_UPLOAD_PRESET=
+ 
+ RESTIC_IMAGE=$(Get-QuotedEnvValue $ResticImage)
+ OFFSITE_BACKUP_ENABLED=true
+-BACKUP_HOST_ID=quan-ly-truyen-production
++BACKUP_HOST_ID=quan-ly-truyen-$EnvironmentName
+ RESTIC_REPOSITORY=$(Get-QuotedEnvValue $ResticRepository)
+ BACKUP_S3_ACCESS_KEY_ID=$(Get-QuotedEnvValue $BackupS3AccessKeyId)
+ BACKUP_S3_SECRET_ACCESS_KEY=$(Get-QuotedEnvValue $BackupS3SecretAccessKey)
+diff --git a/backend/ops/production/PRODUCTION_RUNBOOK.md b/backend/ops/production/PRODUCTION_RUNBOOK.md
+index 8a47c52..117448d 100644
+--- a/backend/ops/production/PRODUCTION_RUNBOOK.md
++++ b/backend/ops/production/PRODUCTION_RUNBOOK.md
+@@ -94,3 +94,90 @@ Khi phải restore production thật:
+ - Redis unavailable test xác nhận fail-closed.
+ - Audit/security event không chứa token, password hoặc secret.
+ - Admin MFA là gate bắt buộc trước khi cấp tài khoản admin production cho người dùng thật.
++
++## Staging release flow
++
++Staging chạy cùng production Compose nhưng bắt buộc dùng project name, domain, database volume và secret riêng. Tối thiểu `.env.staging` phải có:
++
++```text
++PRODUCTION_ENV_FILE=.env.staging
++COMPOSE_PROJECT_NAME=quan-ly-truyen-staging
++DEPLOYMENT_ENVIRONMENT=staging
++APP_DOMAIN=staging.example.com
++APP_PUBLIC_URL=https://staging.example.com
++```
++
++Không dùng chung `DEPLOY_PATH`, `.env`, PostgreSQL volume hoặc `ops/production/secrets` giữa GitHub Environment `staging` và `production`.
++
++Release thủ công trên host:
++
++```powershell
++./ops/production/Invoke-Release.ps1 `
++  -EnvironmentName staging `
++  -SourceSha <FULL_40_CHAR_SHA> `
++  -DeploymentMode Registry
++```
++
++`Invoke-Release.ps1` cập nhật đồng thời backend/frontend image tag, serialize deployment bằng lock file, chạy production gate, external smoke test và ghi trạng thái vào `ops/production/.deployment-state/staging`.
++
++## GitHub deployment environments
++
++Workflow `Deploy Environment` yêu cầu GitHub Environments `staging` và `production`. Mỗi environment cấu hình riêng các secrets sau:
++
++```text
++DEPLOY_HOST
++DEPLOY_PORT                 # optional, mặc định 22
++DEPLOY_USER
++DEPLOY_PATH                 # absolute Linux path, không có whitespace
++DEPLOY_SSH_PRIVATE_KEY
++DEPLOY_KNOWN_HOSTS          # pinned known_hosts entry; không disable host-key checking
++```
++
++Deployment host phải có Docker Engine + Docker Compose plugin và PowerShell 7 (`pwsh`). `DEPLOY_PATH` của staging và production phải khác nhau. Production environment nên bật required reviewers để mọi release/rollback cần approval.
++
++Registry deployment chỉ chấp nhận exact SHA đã xanh trên `main` và yêu cầu đủ ba immutable images:
++
++```text
++ghcr.io/<owner>/quan-ly-truyen-backend:<SHA>
++ghcr.io/<owner>/quan-ly-truyen-backend-migrate:<SHA>
++ghcr.io/<owner>/quan-ly-truyen-frontend:<SHA>
++```
++
++Workflow copy source deployment tooling nhưng giữ nguyên `.env.production`, `.env.staging`, backup, secret và deployment-state trên host.
++
++## Production release
++
++Production luôn dùng Registry mode:
++
++```powershell
++./ops/production/Invoke-Release.ps1 `
++  -EnvironmentName production `
++  -SourceSha <FULL_40_CHAR_SHA> `
++  -DeploymentMode Registry
++```
++
++Khi đã có release hiện tại, script tạo verified PostgreSQL backup và chạy recovery-readiness gate trước khi thay image. Sau deploy, smoke gate gọi:
++
++```text
++/health
++/api/v1/health/live
++/api/v1/health/ready
++/robots.txt
++```
++
++Release thành công ghi `current.json`, `previous.json` và immutable history record. Nếu deploy fail, image tags trong env file được phục hồi nhưng container có thể đã partial-update; phải kiểm tra `docker compose ps -a` trước khi retry.
++
++## Application rollback
++
++Rollback application không tự rollback database. Với production phải xác nhận schema/data hiện tại backward-compatible với target SHA:
++
++```powershell
++./ops/production/Invoke-Rollback.ps1 `
++  -EnvironmentName production `
++  -TargetSha <PREVIOUS_FULL_40_CHAR_SHA> `
++  -ConfirmDatabaseIsBackwardCompatible
++```
++
++Script tạo safety backup trước production rollback, pull immutable target images, deploy, chạy postdeploy gate và external smoke test. Nếu migration destructive làm database không còn backward-compatible, không dùng application rollback đơn thuần; thực hiện database recovery theo phần `Restore drill and recovery gate`.
++
++GitHub workflow `Rollback Environment` cũng yêu cầu explicit target SHA và production approval. Không dùng mutable tag như `latest`, branch name hoặc release alias để rollback.
+diff --git a/backend/ops/production/Test-DeploymentSmoke.ps1 b/backend/ops/production/Test-DeploymentSmoke.ps1
+new file mode 100644
+index 0000000..eff4299
+--- /dev/null
++++ b/backend/ops/production/Test-DeploymentSmoke.ps1
+@@ -0,0 +1,114 @@
++[CmdletBinding()]
++param(
++  [ValidateSet('staging', 'production')]
++  [string]$EnvironmentName = 'production',
++
++  [string]$EnvironmentFile,
++
++  [string]$PublicUrl,
++
++  [ValidateRange(1, 30)]
++  [int]$Attempts = 10,
++
++  [ValidateRange(1, 30)]
++  [int]$DelaySeconds = 3,
++
++  [ValidateRange(1, 60)]
++  [int]$TimeoutSeconds = 15
++)
++
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++. (Join-Path $PSScriptRoot 'Deployment.Common.ps1')
++
++$BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
++$EnvironmentFilePath = Get-DeploymentEnvironmentFilePath `
++  -BackendRoot $BackendRoot `
++  -EnvironmentName $EnvironmentName `
++  -EnvironmentFile $EnvironmentFile
++
++if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
++  throw "Deployment environment file is missing: $EnvironmentFilePath"
++}
++
++$ResolvedPublicUrl = if ([string]::IsNullOrWhiteSpace($PublicUrl)) {
++  Get-DeploymentDotEnvValue -Path $EnvironmentFilePath -Name 'APP_PUBLIC_URL'
++}
++else {
++  $PublicUrl
++}
++
++if ([string]::IsNullOrWhiteSpace($ResolvedPublicUrl)) {
++  $Domain = Get-DeploymentDotEnvValue -Path $EnvironmentFilePath -Name 'APP_DOMAIN'
++
++  if ([string]::IsNullOrWhiteSpace($Domain)) {
++    throw 'APP_PUBLIC_URL or APP_DOMAIN is required for deployment smoke tests.'
++  }
++
++  $ResolvedPublicUrl = if ($Domain -match '^https?://') {
++    $Domain
++  }
++  else {
++    "https://$Domain"
++  }
++}
++
++$ResolvedPublicUrl = $ResolvedPublicUrl.TrimEnd('/')
++
++if ($EnvironmentName -eq 'production' -and $ResolvedPublicUrl -notmatch '^https://') {
++  throw "Production smoke tests require HTTPS. Received: $ResolvedPublicUrl"
++}
++
++$Checks = @(
++  @{ Name = 'frontend health'; Path = '/health' },
++  @{ Name = 'API liveness'; Path = '/api/v1/health/live' },
++  @{ Name = 'API readiness'; Path = '/api/v1/health/ready' },
++  @{ Name = 'robots'; Path = '/robots.txt' }
++)
++
++foreach ($Check in $Checks) {
++  $Uri = $ResolvedPublicUrl + $Check.Path
++  $Succeeded = $false
++  $LastError = $null
++
++  for ($Attempt = 1; $Attempt -le $Attempts; $Attempt++) {
++    try {
++      $Response = Invoke-WebRequest `
++        -Uri $Uri `
++        -Method Get `
++        -TimeoutSec $TimeoutSeconds `
++        -MaximumRedirection 5 `
++        -UseBasicParsing
++
++      if ($Response.StatusCode -ge 200 -and $Response.StatusCode -lt 400) {
++        Write-Host (
++          '[smoke] {0}: HTTP {1} ({2})' -f `
++            $Check.Name,
++            $Response.StatusCode,
++            $Uri
++        ) -ForegroundColor Green
++
++        $Succeeded = $true
++        break
++      }
++
++      $LastError = "Unexpected HTTP status: $($Response.StatusCode)"
++    }
++    catch {
++      $LastError = $_.Exception.Message
++    }
++
++    if ($Attempt -lt $Attempts) {
++      Start-Sleep -Seconds $DelaySeconds
++    }
++  }
++
++  if (-not $Succeeded) {
++    throw "Deployment smoke test failed for $($Check.Name) ($Uri): $LastError"
++  }
++}
++
++Write-Host (
++  "Deployment smoke tests passed for $EnvironmentName at $ResolvedPublicUrl."
++) -ForegroundColor Green
+diff --git a/backend/ops/production/compose.validation.env.example b/backend/ops/production/compose.validation.env.example
+index bc67cd5..bd85076 100644
+--- a/backend/ops/production/compose.validation.env.example
++++ b/backend/ops/production/compose.validation.env.example
+@@ -1,6 +1,9 @@
+ # Safe placeholders used only by `docker compose config` in CI/local validation.
+ # This file is intentionally NOT a deployable production environment.
+ PRODUCTION_ENV_FILE=ops/production/compose.validation.env.example
++COMPOSE_PROJECT_NAME=quan-ly-truyen-validation
++DEPLOYMENT_ENVIRONMENT=staging
++RELEASE_SHA=0123456789abcdef0123456789abcdef01234567
+ 
+ POSTGRES_IMAGE=postgres:validation
+ REDIS_IMAGE=redis:validation
+diff --git a/backend/package.json b/backend/package.json
+index 5eeac8a..41e955e 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -109,7 +109,12 @@
+     "docker:prod:backup:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-PostgresBackupArtifact.ps1",
+     "docker:prod:recovery-check": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-RecoveryReadiness.ps1",
+     "observability:logs": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml logs -f prometheus alertmanager loki tempo alloy grafana",
+-    "observability:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f ops/observability/docker-compose.observability.yml config --quiet"
++    "observability:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f ops/observability/docker-compose.observability.yml config --quiet",
++    "deployment:release:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Release.ps1 -EnvironmentName staging",
++    "deployment:release:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Release.ps1 -EnvironmentName production -DeploymentMode Registry",
++    "deployment:rollback:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Rollback.ps1 -EnvironmentName production",
++    "deployment:smoke:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName staging",
++    "deployment:smoke:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName production"
+   },
+   "dependencies": {
+     "@nestjs/bullmq": "^11.0.4",

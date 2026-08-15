@@ -3,6 +3,8 @@ param(
   [ValidateSet('Auto', 'Local', 'Registry')]
   [string]$DeploymentMode = 'Auto',
 
+  [string]$EnvironmentFile = '.env.production',
+
   [switch]$SkipPull,
   [switch]$SkipObservability,
   [switch]$SkipPostdeployGate
@@ -14,11 +16,16 @@ $ErrorActionPreference = 'Stop'
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $BackendRoot
 
-$EnvironmentFile = Join-Path $BackendRoot '.env.production'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
 $BuildComposeFile = Join-Path $BackendRoot 'compose.production.build.yml'
 
-if (-not (Test-Path -LiteralPath $EnvironmentFile -PathType Leaf)) {
-  throw '.env.production is missing. Run ops/production/New-ProductionEnv.ps1 first.'
+if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 function Get-DotEnvValue {
@@ -53,19 +60,19 @@ function Get-DotEnvValue {
 }
 
 $BackendImageName = Get-DotEnvValue `
-  -Path $EnvironmentFile `
+  -Path $EnvironmentFilePath `
   -Name 'BACKEND_IMAGE_NAME'
 
 $BackendImageTag = Get-DotEnvValue `
-  -Path $EnvironmentFile `
+  -Path $EnvironmentFilePath `
   -Name 'BACKEND_IMAGE_TAG'
 
 $FrontendImageName = Get-DotEnvValue `
-  -Path $EnvironmentFile `
+  -Path $EnvironmentFilePath `
   -Name 'FRONTEND_IMAGE_NAME'
 
 $FrontendImageTag = Get-DotEnvValue `
-  -Path $EnvironmentFile `
+  -Path $EnvironmentFilePath `
   -Name 'FRONTEND_IMAGE_TAG'
 
 if ([string]::IsNullOrWhiteSpace($BackendImageName)) {
@@ -134,7 +141,7 @@ if (-not $UseLocalBuild -and
 
 $Compose = @(
   'compose',
-  '--env-file', '.env.production',
+  '--env-file', $EnvironmentFilePath,
   '-f', 'compose.production.yml'
 )
 

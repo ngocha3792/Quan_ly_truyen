@@ -539,7 +539,7 @@ index 968fb34..b8d86cf 100644
  
  $EncodedPostgresPassword = [Uri]::EscapeDataString($PostgresPassword)
  $EncodedRedisPassword = [Uri]::EscapeDataString($RedisPassword)
-@@ -203,6 +212,7 @@ FRONTEND_NODE_IMAGE=node:24.18.0-alpine
+@@ -203,6 +212,7 @@ FRONTEND_NODE_IMAGE=node:24.15.0-alpine
  POSTGRES_IMAGE=postgres:17.10-alpine3.23
  REDIS_IMAGE=redis:7.4.10-alpine3.21
  CADDY_IMAGE=caddy:2.11.4-alpine
