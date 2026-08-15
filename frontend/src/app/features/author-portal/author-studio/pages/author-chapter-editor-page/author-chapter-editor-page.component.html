@@ -1,0 +1,45 @@
+<main class="studio-page">
+  <header class="page-header">
+    <div>
+      <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']">← Danh sách chương</a>
+      <h1>{{ isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' }}</h1>
+      @if (store.story(); as story) { <p>{{ story.title }} · {{ story.status }}</p> }
+    </div>
+  </header>
+
+  @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
+  @if (store.loading()) {
+    <p class="notice">Đang tải chương...</p>
+  } @else {
+    @if (!isEditable()) {
+      <p class="notice">Chương này không thể chỉnh sửa ở trạng thái hiện tại.</p>
+    }
+
+    <form class="editor" [formGroup]="form" (ngSubmit)="save()">
+      <label>
+        <span>Tiêu đề chương</span>
+        <input type="text" maxlength="255" formControlName="title" />
+      </label>
+
+      <label class="content-field">
+        <span>Nội dung Markdown</span>
+        <textarea
+          rows="28"
+          formControlName="content"
+          placeholder="Bắt đầu viết nội dung chương..."
+        ></textarea>
+      </label>
+
+      <footer>
+        @if (store.chapter(); as chapter) {
+          <span>{{ chapter.wordCount }} từ · phiên bản {{ chapter.version }}</span>
+        } @else {
+          <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
+        }
+        <button type="submit" [disabled]="!isEditable() || store.saving()">
+          {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
+        </button>
+      </footer>
+    </form>
+  }
+</main>

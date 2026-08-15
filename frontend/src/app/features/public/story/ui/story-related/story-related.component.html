@@ -10,7 +10,7 @@
         <img [src]="rel.coverUrl" [alt]="rel.title" />
         <div>
           <strong>{{ rel.title }}</strong>
-          <small>Ch. {{ rel.latestChapter }}</small>
+          <small>{{ rel.latestChapter !== null ? 'Ch. ' + rel.latestChapter : 'Chưa có chương' }}</small>
         </div>
       </a>
     }

@@ -33,13 +33,13 @@ export interface StoryCatalogItem {
 
   readonly badge: StoryCatalogBadge;
 
-  readonly latestChapter: number;
+  readonly latestChapter: number | null;
   readonly chapterCount: number;
 
   readonly views: number;
   readonly rating: number;
 
-  readonly releaseYear: number;
+  readonly releaseYear: number | null;
   readonly updatedAt: string;
 }
 

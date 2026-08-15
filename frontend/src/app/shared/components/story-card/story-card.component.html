@@ -15,8 +15,12 @@
       <app-icon name="bookmark" [size]="17" />
     </button>
     <div class="chapter-row">
-      <span>Ch.{{ story().latestChapter.number }}</span>
-      <small>{{ story().latestChapter.updatedAt | relativeTime }}</small>
+      @if (story().latestChapter; as chapter) {
+        <span>Ch.{{ chapter.number }}</span>
+        <small>{{ chapter.updatedAt | relativeTime }}</small>
+      } @else {
+        <span>Chưa có chương</span>
+      }
     </div>
   </a>
   <a class="title" [routerLink]="['/truyen', story().slug]">{{ story().title }}</a>

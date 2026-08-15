@@ -42,7 +42,7 @@
         }
       </div>
 
-      <div class="chapter-cell" data-label="Chương mới nhất">Ch. {{ story.latestChapter }}</div>
+      <div class="chapter-cell" data-label="Chương mới nhất">{{ story.latestChapter !== null ? 'Ch. ' + story.latestChapter : '—' }}</div>
 
       <div class="views-cell" data-label="Lượt đọc">
         <app-icon name="eye" [size]="13" />

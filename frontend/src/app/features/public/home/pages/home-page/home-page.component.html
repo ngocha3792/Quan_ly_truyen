@@ -110,7 +110,7 @@
                     <small><app-icon name="star" [size]="14" />{{ story.rating }}</small
                     ><small
                       ><app-icon name="eye" [size]="14" />{{ story.views | compactNumber }}</small
-                    ><b>Ch.{{ story.latestChapter.number }}</b>
+                    ><b>{{ story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương' }}</b>
                   </div>
                 </div>
               </a>
@@ -151,13 +151,15 @@
             @for (story of vm.recentUpdates; track story.id) {
               <a [routerLink]="['/truyen', story.slug]">
                 <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
-                <span
-                  ><strong>{{ story.title }}</strong
-                  ><small
-                    >Chương {{ story.latestChapter.number }}:
-                    {{ story.latestChapter.title || 'Chương mới' }}</small
-                  ><em>{{ story.latestChapter.updatedAt | relativeTime }}</em></span
-                >
+                <span>
+                  <strong>{{ story.title }}</strong>
+                  @if (story.latestChapter; as chapter) {
+                    <small>Chương {{ chapter.number }}: {{ chapter.title || 'Chương mới' }}</small>
+                    <em>{{ chapter.updatedAt | relativeTime }}</em>
+                  } @else {
+                    <small>Chưa có chương công khai</small>
+                  }
+                </span>
               </a>
             }
           </div>

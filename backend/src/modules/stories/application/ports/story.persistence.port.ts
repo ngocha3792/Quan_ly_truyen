@@ -323,6 +323,10 @@ export type ReviewStorySubmissionResult =
     };
 
 export interface StoryPersistencePort {
+  listOwned(userId: string): Promise<readonly StoryRecord[]>;
+
+  findOwnedById(userId: string, storyId: string): Promise<StoryRecord | null>;
+
   createDraft(input: CreateAuthorStoryInput): Promise<CreateAuthorStoryResult>;
 
   updateDraft(input: UpdateAuthorStoryInput): Promise<UpdateAuthorStoryResult>;

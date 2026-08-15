@@ -13,9 +13,10 @@ export interface Story {
   readonly description: string;
   readonly coverUrl: string;
   readonly categories: readonly string[];
-  readonly latestChapter: ChapterSummary;
+  readonly latestChapter: ChapterSummary | null;
   readonly views: number;
   readonly rating: number;
+  readonly chapterCount?: number;
   readonly status: 'ONGOING' | 'COMPLETED' | 'HIATUS';
   readonly badge?: 'NEW' | 'HOT' | 'FULL';
 }
@@ -47,3 +48,7 @@ export interface HomePageData {
   readonly topStories: readonly Story[];
   readonly recentUpdates: readonly Story[];
 }
+
+export const STORY_COVER_PLACEHOLDER =
+  'data:image/svg+xml;charset=UTF-8,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="480" viewBox="0 0 320 480"><rect width="320" height="480" fill="#e5e7eb"/><path d="M90 120h140v240H90z" fill="#cbd5e1"/><path d="M115 165h90M115 205h90M115 245h70" stroke="#94a3b8" stroke-width="12" stroke-linecap="round"/></svg>');

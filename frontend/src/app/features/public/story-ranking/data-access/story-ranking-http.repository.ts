@@ -1,69 +1,144 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
-
 import { inject, Injectable } from '@angular/core';
+import { map, Observable } from 'rxjs';
 
-import { forkJoin, map, Observable } from 'rxjs';
-
-import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
-
+import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
+import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
+import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
 import {
   GenreRankingDistribution,
-  StoryRankingListResponse,
+  RankingTone,
+  StoryRankingItem,
   StoryRankingOverview,
   StoryRankingQuery,
-  StoryRankingSummary,
-  StoryRankingTrend,
 } from '../domain/story-ranking.models';
+import { StoryRankingRepository } from './story-ranking.repository';
 
-import { STORY_RANKING_ENDPOINTS, StoryRankingRepository } from './story-ranking.repository';
+const TONES: readonly RankingTone[] = ['purple', 'blue', 'pink', 'orange', 'green'];
 
 @Injectable()
 export class StoryRankingHttpRepository implements StoryRankingRepository {
-  private readonly http = inject(HttpClient);
-
-  private readonly endpoints = inject(STORY_RANKING_ENDPOINTS);
+  private readonly api = inject(PublicStoriesApiClient);
 
   getOverview(query: StoryRankingQuery): Observable<StoryRankingOverview> {
-    const baseParams = new HttpParams().set('period', query.period);
-
-    const rankingParams = baseParams.set('metric', query.metric).set('limit', String(query.limit));
-
-    const sidebarParams = baseParams.set('limit', '5');
-
-    return forkJoin({
-      ranking: this.http
-        .get<ApiSuccessEnvelope<StoryRankingListResponse>>(this.endpoints.ranking, {
-          params: rankingParams,
-        })
-        .pipe(map((response) => response.data)),
-
-      summary: this.http
-        .get<ApiSuccessEnvelope<StoryRankingSummary>>(this.endpoints.summary, {
-          params: baseParams,
-        })
-        .pipe(map((response) => response.data)),
-
-      genres: this.http
-        .get<ApiSuccessEnvelope<readonly GenreRankingDistribution[]>>(this.endpoints.genres, {
-          params: sidebarParams,
-        })
-        .pipe(map((response) => response.data)),
-
-      trends: this.http
-        .get<ApiSuccessEnvelope<readonly StoryRankingTrend[]>>(this.endpoints.trends, {
-          params: sidebarParams,
-        })
-        .pipe(map((response) => response.data)),
-    }).pipe(
-      map(({ ranking, summary, genres, trends }) => ({
-        items: ranking.items,
-
-        summary,
-        genres,
-        trends,
-
-        generatedAt: ranking.generatedAt,
-      })),
+    return this.api.list({ sort: 'popular', pageSize: 100 }).pipe(
+      map((page) => buildOverview(page.items, query)),
     );
   }
+}
+
+function buildOverview(
+  stories: readonly PublicStoryApiItem[],
+  query: StoryRankingQuery,
+): StoryRankingOverview {
+  const mapped = stories.map(toRankingItem);
+  const ranked = sortStories(mapped, query.metric)
+    .slice(0, query.limit)
+    .map((story, index) => ({ ...story, rank: index + 1 }));
+
+  const totalReads = ranked.reduce((sum, story) => sum + story.viewCount, 0);
+  const followerCount = ranked.reduce((sum, story) => sum + story.followerCount, 0);
+  const maximumValue = Math.max(...ranked.map((story) => story.viewCount), 1);
+
+  return {
+    items: ranked,
+    summary: {
+      totalReads,
+      totalReadsChangePercent: 0,
+      hotStoryCount: ranked.filter((story) => story.popularityScore >= 70).length,
+      hotStoryChange: 0,
+      followerCount,
+      followerChangePercent: 0,
+    },
+    genres: buildGenreDistribution(stories),
+    trends: [...ranked]
+      .sort((left, right) => right.trendingScore - left.trendingScore)
+      .slice(0, 5)
+      .map((story) => ({
+        id: story.id,
+        slug: story.slug,
+        title: story.title,
+        coverUrl: story.coverUrl,
+        value: story.viewCount,
+        maximumValue,
+      })),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function toRankingItem(story: PublicStoryApiItem): StoryRankingItem {
+  const popularityScore = normalizedScore(story.stats.views, story.stats.followers);
+  const trendingScore = normalizedScore(
+    story.stats.views + story.stats.comments * 20,
+    story.stats.followers,
+  );
+
+  return {
+    id: story.id,
+    slug: story.slug,
+    rank: 0,
+    rankChange: 0,
+    title: story.title,
+    authorName: story.author.penName,
+    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
+    genres: story.categories.map(({ slug, name }) => ({ slug, name })),
+    latestChapter: story.latestChapter?.number ?? null,
+    viewCount: story.stats.views,
+    rating: story.stats.ratingAverage,
+    ratingCount: story.stats.ratingCount,
+    followerCount: story.stats.followers,
+    popularityScore,
+    trendingScore,
+  };
+}
+
+function sortStories(
+  stories: readonly StoryRankingItem[],
+  metric: StoryRankingQuery['metric'],
+): StoryRankingItem[] {
+  const result = [...stories];
+  switch (metric) {
+    case 'rating':
+      return result.sort(
+        (left, right) => right.rating - left.rating || right.ratingCount - left.ratingCount,
+      );
+    case 'followers':
+      return result.sort((left, right) => right.followerCount - left.followerCount);
+    case 'trending':
+      return result.sort((left, right) => right.trendingScore - left.trendingScore);
+    case 'popular':
+    default:
+      return result.sort((left, right) => right.viewCount - left.viewCount);
+  }
+}
+
+function buildGenreDistribution(
+  stories: readonly PublicStoryApiItem[],
+): readonly GenreRankingDistribution[] {
+  const counts = new Map<string, { slug: string; name: string; count: number }>();
+  for (const story of stories) {
+    for (const category of story.categories) {
+      const current = counts.get(category.slug);
+      counts.set(category.slug, {
+        slug: category.slug,
+        name: category.name,
+        count: (current?.count ?? 0) + 1,
+      });
+    }
+  }
+
+  const total = Math.max([...counts.values()].reduce((sum, item) => sum + item.count, 0), 1);
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 5)
+    .map((item, index) => ({
+      slug: item.slug,
+      name: item.name,
+      percentage: Math.round((item.count / total) * 100),
+      tone: TONES[index % TONES.length] ?? 'blue',
+    }));
+}
+
+function normalizedScore(primary: number, secondary: number): number {
+  const weighted = Math.log10(Math.max(primary, 1)) * 18 + Math.log10(Math.max(secondary, 1)) * 10;
+  return Math.min(100, Math.max(0, Math.round(weighted)));
 }

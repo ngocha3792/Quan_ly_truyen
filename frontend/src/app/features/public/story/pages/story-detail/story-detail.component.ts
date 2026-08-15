@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LibraryStore } from '../../../../../core/storage/library.store';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
+import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
 import { StoryDetailStore } from '../../data-access/story.store';
 import { StoryCommentsComponent } from '../../ui/story-comments/story-comments.component';
 import { StoryRelatedComponent } from '../../ui/story-related/story-related.component';
@@ -14,6 +15,7 @@ import { StoryRelatedComponent } from '../../ui/story-related/story-related.comp
     RouterLink,
     IconComponent,
     CompactNumberPipe,
+    RelativeTimePipe,
     StoryCommentsComponent,
     StoryRelatedComponent,
   ],
@@ -27,7 +29,6 @@ export class StoryDetailComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(StoryDetailStore);
   protected readonly library = inject(LibraryStore);
-  protected readonly chapters = Array.from({ length: 12 }, (_, index) => index);
 
   ngOnInit(): void {
     const sub = this.route.paramMap.subscribe((params) => {

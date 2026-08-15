@@ -1,0 +1,4444 @@
+diff --git a/frontend/src/app/app.routes.ts b/frontend/src/app/app.routes.ts
+index e148aa2d4225fcd7e3deb45190b11eb770039c55..592a08812f74c6723ed4c3a6fe6130353f47e35c 100644
+--- a/frontend/src/app/app.routes.ts
++++ b/frontend/src/app/app.routes.ts
+@@ -15,7 +15,7 @@ export const routes: Routes = [
+     path: '',
+     component: AppShellComponent,
+     // AppHeader also consumes HomeRepository, so the provider belongs to the shell.
+-    providers: provideHome({ useMock: true }),
++    providers: provideHome(),
+     children: [
+       ...PUBLIC_ROUTES,
+       ...AUTH_ROUTES,
+diff --git a/frontend/src/app/core/http/public-stories-api.client.ts b/frontend/src/app/core/http/public-stories-api.client.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..30b5517679eecb03b12dbda834447ee76564fbe6
+--- /dev/null
++++ b/frontend/src/app/core/http/public-stories-api.client.ts
+@@ -0,0 +1,50 @@
++import { HttpClient, HttpParams } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
++import { ApiSuccessEnvelope } from './api-envelope.model';
++import {
++  PublicChapterReaderApiResponse,
++  PublicStoryApiItem,
++  PublicStoryApiPage,
++  PublicStoryListParams,
++} from './public-stories-api.model';
++
++@Injectable({ providedIn: 'root' })
++export class PublicStoriesApiClient {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++
++  list(params: PublicStoryListParams = {}): Observable<PublicStoryApiPage> {
++    let httpParams = new HttpParams();
++
++    for (const [key, value] of Object.entries(params)) {
++      if (value !== undefined && value !== null && value !== '') {
++        httpParams = httpParams.set(key, String(value));
++      }
++    }
++
++    return this.http
++      .get<ApiSuccessEnvelope<PublicStoryApiPage>>(`${this.config.apiBaseUrl}/stories`, {
++        params: httpParams,
++      })
++      .pipe(map((response) => response.data));
++  }
++
++  detail(slug: string): Observable<PublicStoryApiItem> {
++    return this.http
++      .get<ApiSuccessEnvelope<PublicStoryApiItem>>(
++        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(slug)}`,
++      )
++      .pipe(map((response) => response.data));
++  }
++
++  chapter(storySlug: string, chapterNumber: string): Observable<PublicChapterReaderApiResponse> {
++    return this.http
++      .get<ApiSuccessEnvelope<PublicChapterReaderApiResponse>>(
++        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storySlug)}/chapters/${encodeURIComponent(chapterNumber)}`,
++      )
++      .pipe(map((response) => response.data));
++  }
++}
+diff --git a/frontend/src/app/core/http/public-stories-api.model.ts b/frontend/src/app/core/http/public-stories-api.model.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..775dcd91f93c30211e5141c59c6294fc00b7aeb9
+--- /dev/null
++++ b/frontend/src/app/core/http/public-stories-api.model.ts
+@@ -0,0 +1,104 @@
++export type PublicStoryStatus = 'ONGOING' | 'HIATUS' | 'COMPLETED';
++export type PublicStorySort = 'latest' | 'popular' | 'rating' | 'chapter-count' | 'oldest';
++
++export interface PublicStoryApiCategory {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++  readonly isPrimary: boolean;
++}
++
++export interface PublicStoryApiItem {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++  readonly synopsis: string;
++  readonly languageCode: string;
++  readonly contentRating: string;
++  readonly releaseYear: number | null;
++  readonly status: PublicStoryStatus;
++  readonly author: {
++    readonly id: string;
++    readonly penName: string;
++    readonly slug: string;
++  };
++  readonly coverUrl: string | null;
++  readonly categories: readonly PublicStoryApiCategory[];
++  readonly tags: readonly {
++    readonly id: string;
++    readonly name: string;
++    readonly slug: string;
++  }[];
++  readonly latestChapter: {
++    readonly id: string;
++    readonly number: number;
++    readonly title: string;
++    readonly slug: string;
++    readonly publishedAt: string;
++  } | null;
++  readonly stats: {
++    readonly views: number;
++    readonly followers: number;
++    readonly ratingCount: number;
++    readonly ratingAverage: number;
++    readonly chapters: number;
++    readonly comments: number;
++  };
++  readonly publishedAt: string | null;
++  readonly lastChapterAt: string | null;
++  readonly updatedAt: string;
++}
++
++export interface PublicStoryApiPage {
++  readonly items: readonly PublicStoryApiItem[];
++  readonly pagination: {
++    readonly page: number;
++    readonly pageSize: number;
++    readonly totalItems: number;
++    readonly totalPages: number;
++  };
++}
++
++export interface PublicStoryListParams {
++  readonly q?: string;
++  readonly genre?: string;
++  readonly status?: 'ongoing' | 'completed' | 'hiatus';
++  readonly sort?: PublicStorySort;
++  readonly yearFrom?: number;
++  readonly yearTo?: number;
++  readonly page?: number;
++  readonly pageSize?: number;
++}
++
++export interface PublicChapterReaderApiResponse {
++  readonly story: {
++    readonly id: string;
++    readonly slug: string;
++    readonly title: string;
++  };
++  readonly chapter: {
++    readonly id: string;
++    readonly number: number;
++    readonly title: string;
++    readonly slug: string;
++    readonly content: string;
++    readonly contentFormat: string;
++    readonly wordCount: number;
++    readonly views: number;
++    readonly comments: number;
++    readonly publishedAt: string;
++    readonly updatedAt: string;
++  };
++  readonly navigation: {
++    readonly previous: PublicChapterNavigationApiItem | null;
++    readonly next: PublicChapterNavigationApiItem | null;
++  };
++}
++
++export interface PublicChapterNavigationApiItem {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly publishedAt: string;
++}
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4335e5c1dcf8811ecbd2816816e0b7f208624cd9
+--- /dev/null
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts
+@@ -0,0 +1,68 @@
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import {
++  PublicChapterNavigationApiItem,
++  PublicChapterReaderApiResponse,
++} from '../../../../core/http/public-stories-api.model';
++import { ChapterNavigationItem, ChapterReaderView } from '../domain/chapter-reader.models';
++import { ChapterReaderRepository } from './chapter-reader.repository';
++
++@Injectable()
++export class ChapterReaderHttpRepository implements ChapterReaderRepository {
++  private readonly api = inject(PublicStoriesApiClient);
++
++  getChapter(storySlug: string, chapterNumber: string): Observable<ChapterReaderView> {
++    return this.api
++      .chapter(storySlug, chapterNumber)
++      .pipe(map((result) => toChapterReaderView(result)));
++  }
++}
++
++function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterReaderView {
++  return {
++    story: result.story,
++    chapter: {
++      id: result.chapter.id,
++      number: result.chapter.number,
++      title: result.chapter.title,
++      paragraphs: toParagraphs(result.chapter.content),
++      publishedAt: result.chapter.publishedAt,
++      views: result.chapter.views,
++    },
++    navigation: {
++      previous: toNavigation(result.story.slug, result.navigation.previous),
++      next: toNavigation(result.story.slug, result.navigation.next),
++    },
++    comments: [],
++    totalComments: result.chapter.comments,
++  };
++}
++
++function toNavigation(
++  storySlug: string,
++  chapter: PublicChapterNavigationApiItem | null,
++): ChapterNavigationItem | null {
++  if (!chapter) {
++    return null;
++  }
++
++  return {
++    number: chapter.number,
++    title: chapter.title,
++    url: `/truyen/${storySlug}/chuong/${chapter.number}`,
++  };
++}
++
++function toParagraphs(content: string): readonly string[] {
++  const normalized = content.replace(/\r\n/g, '\n').trim();
++  if (!normalized) {
++    return [];
++  }
++
++  return normalized
++    .split(/\n\s*\n/g)
++    .map((paragraph) => paragraph.trim())
++    .filter(Boolean);
++}
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.providers.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.providers.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0bc678ec8512b274b855ed1b7a701467c7538005
+--- /dev/null
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.providers.ts
+@@ -0,0 +1,15 @@
++import { Provider } from '@angular/core';
++
++import { ChapterReaderHttpRepository } from './chapter-reader-http.repository';
++import { ChapterReaderRepository } from './chapter-reader.repository';
++import { ChapterReaderStore } from './chapter-reader.store';
++
++export function provideChapterReader(): Provider[] {
++  return [
++    {
++      provide: ChapterReaderRepository,
++      useClass: ChapterReaderHttpRepository,
++    },
++    ChapterReaderStore,
++  ];
++}
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..ffcfd01436bb61f40b082fbc56a5f2f0b6862c8b
+--- /dev/null
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts
+@@ -0,0 +1,7 @@
++import { Observable } from 'rxjs';
++
++import { ChapterReaderView } from '../domain/chapter-reader.models';
++
++export abstract class ChapterReaderRepository {
++  abstract getChapter(storySlug: string, chapterNumber: string): Observable<ChapterReaderView>;
++}
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
+index aa9a2e849b5e6dd1e9621c7ab7b74ca23ac6f819..849f96a4f77a7882dff8543def712cf6bd4b1d50 100644
+--- a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
+@@ -1,20 +1,38 @@
+-import { Injectable, signal } from '@angular/core';
++import { inject, Injectable, signal } from '@angular/core';
++import { catchError, finalize, of, tap } from 'rxjs';
+ 
++import { getApiErrorMessage } from '../../../../core/http/api-error.util';
+ import { ChapterReaderView } from '../domain/chapter-reader.models';
+-import { CHAPTER_READER_MOCK } from '../mock/chapter-reader.mock';
++import { ChapterReaderRepository } from './chapter-reader.repository';
+ 
+ @Injectable()
+ export class ChapterReaderStore {
++  private readonly repository = inject(ChapterReaderRepository);
+   private readonly viewState = signal<ChapterReaderView | null>(null);
+ 
+   readonly view = this.viewState.asReadonly();
+-
++  readonly loading = signal(false);
++  readonly error = signal<string | null>(null);
+   readonly fontSize = signal(18);
+   readonly lightsOff = signal(false);
+   readonly bookmarked = signal(false);
+ 
+-  load(): void {
+-    this.viewState.set(CHAPTER_READER_MOCK);
++  load(storySlug: string, chapterNumber: string): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    this.repository
++      .getChapter(storySlug, chapterNumber)
++      .pipe(
++        tap((view) => this.viewState.set(view)),
++        catchError((error: unknown) => {
++          this.viewState.set(null);
++          this.error.set(getApiErrorMessage(error, 'Không thể tải chương truyện.'));
++          return of(null);
++        }),
++        finalize(() => this.loading.set(false)),
++      )
++      .subscribe();
+   }
+ 
+   decreaseFontSize(): void {
+diff --git a/frontend/src/app/features/public/chapter-reader/mock/chapter-reader.mock.ts b/frontend/src/app/features/public/chapter-reader/mock/chapter-reader.mock.ts
+deleted file mode 100644
+index 70f40b15ebb1ab138c0475d5aa74c4e6e932f047..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/chapter-reader/mock/chapter-reader.mock.ts
++++ /dev/null
+@@ -1,76 +0,0 @@
+-import { ChapterReaderView } from '../domain/chapter-reader.models';
+-
+-export const CHAPTER_READER_MOCK: ChapterReaderView = {
+-  story: {
+-    id: 'story-dau-pha-thuong-khung',
+-    slug: 'dau-pha-thuong-khung',
+-    title: 'Đấu Phá Thương Khung',
+-  },
+-
+-  chapter: {
+-    id: 'chapter-1',
+-    number: 1,
+-    title: 'Giới thiệu',
+-    publishedAt: '01/05/2025 10:00',
+-    views: 3256,
+-
+-    paragraphs: [
+-      'Ba năm trước, Tiêu Viêm, một thiên tài tu luyện của gia tộc Tiêu gia, bất ngờ mất hết sức mạnh tu luyện.',
+-
+-      'Ba năm sau, khi mọi người đã dần quên đi thiên tài từng một thời làm mưa làm gió, thì cậu bé ấy, Tiêu Viêm, lại một lần nữa bước lên con đường tu luyện, viết nên huyền thoại của riêng mình.',
+-
+-      '---',
+-
+-      '“Vận mệnh? Ha ha... Nếu ông trời đã muốn ta như vậy, vậy ta sẽ nghịch thiên mà đi!”',
+-
+-      'Tiêu Viêm nắm chặt tay, ánh mắt kiên định, ngẩng đầu nhìn bầu trời xa xăm.',
+-
+-      '“Từ nay về sau, ta không còn là phế vật!”',
+-
+-      '---',
+-
+-      'Từ một thiếu niên bị chế giễu, trở thành cường giả đứng trên đỉnh cao của đấu khí đại lục, hành trình của Tiêu Viêm chính thức bắt đầu từ đây...',
+-    ],
+-  },
+-
+-  navigation: {
+-    previous: {
+-      number: 0,
+-      title: 'Dẫn nhập',
+-      url: '/truyen/dau-pha-thuong-khung/chuong/0',
+-    },
+-
+-    next: {
+-      number: 2,
+-      title: 'Gia tộc suy yếu',
+-      url: '/truyen/dau-pha-thuong-khung/chuong/2',
+-    },
+-  },
+-
+-  totalComments: 128,
+-
+-  comments: [
+-    {
+-      id: 'comment-1',
+-      author: {
+-        name: 'HuyềnThiên',
+-        level: 23,
+-        initials: 'HT',
+-      },
+-      content: 'Chương mở đầu hay quá! Mong chờ hành trình của Tiêu Viêm phía trước!',
+-      createdAt: '2 giờ trước',
+-      likes: 34,
+-    },
+-    {
+-      id: 'comment-2',
+-      author: {
+-        name: 'LinhNhi',
+-        level: 18,
+-        initials: 'LN',
+-      },
+-      content: 'Câu nói “Nếu ông trời đã muốn ta như vậy, vậy ta sẽ nghịch thiên mà đi!” quá đỉnh!',
+-      createdAt: '3 giờ trước',
+-      likes: 27,
+-    },
+-  ],
+-};
+diff --git a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
+index c45ea7eff68eade1f785f81939f2d0dac73cd6dc..897543ada80a1ec175585028556aee9eb802b69d 100644
+--- a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
++++ b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
+@@ -1,5 +1,9 @@
+ <main class="chapter-page" [class.chapter-page--lights-off]="store.lightsOff()">
+-  @if (store.view(); as view) {
++  @if (store.loading()) {
++    <section class="reader-card"><p>Đang tải chương...</p></section>
++  } @else if (store.error(); as error) {
++    <section class="reader-card"><p>{{ error }}</p></section>
++  } @else if (store.view(); as view) {
+     <div class="chapter-layout">
+       <section class="reader-column">
+         <section class="reader-card">
+diff --git a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+index f812f42c3333d152febca9871de1d6401c977cb0..c01fdc52d8dfaf58dd046d6cae0bb5179b8f79e3 100644
+--- a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
++++ b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+@@ -1,5 +1,5 @@
+-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+-import { RouterLink } from '@angular/router';
++import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
++import { ActivatedRoute, RouterLink } from '@angular/router';
+ 
+ import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
+ import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
+@@ -12,7 +12,6 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
+ 
+   imports: [RouterLink, ChapterHeadingComponent, ChapterSidebarComponent, ChapterCommentsComponent],
+ 
+-  providers: [ChapterReaderStore],
+ 
+   templateUrl: './chapter-reader-page.component.html',
+   styleUrls: ['./chapter-reader-page.component.scss'],
+@@ -20,9 +19,20 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
+   changeDetection: ChangeDetectionStrategy.OnPush,
+ })
+ export class ChapterReaderPageComponent implements OnInit {
++  private readonly route = inject(ActivatedRoute);
++  private readonly destroyRef = inject(DestroyRef);
+   protected readonly store = inject(ChapterReaderStore);
+ 
+   ngOnInit(): void {
+-    this.store.load();
++    const subscription = this.route.paramMap.subscribe((params) => {
++      const storySlug = params.get('storySlug') ?? '';
++      const chapterNumber = params.get('chapterNumber') ?? '';
++
++      if (storySlug && chapterNumber) {
++        this.store.load(storySlug, chapterNumber);
++      }
++    });
++
++    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+   }
+ }
+diff --git a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-http.repository.ts b/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-http.repository.ts
+index 8c92a6f59d51eda36bc2b40d3733a5ea213156bb..526d8b9ce099d7d5a1a2fbe8940530b5d0c707a1 100644
+--- a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-http.repository.ts
++++ b/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-http.repository.ts
+@@ -1,57 +1,154 @@
+-import { HttpClient, HttpParams } from '@angular/common/http';
+-
+ import { inject, Injectable } from '@angular/core';
++import { map, Observable, shareReplay } from 'rxjs';
+ 
+-import { map, Observable } from 'rxjs';
+-
+-import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+-
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
+ import {
+   GenreDiscoveryQuery,
+   GenreRankingItem,
+   GenreSummary,
++  GenreTone,
+   GenreTrendingItem,
++  GenreVisual,
+ } from '../domain/genre-discovery.models';
++import { GenreDiscoveryRepository } from './genre-discovery.repository';
++
++interface GenreAggregate {
++  readonly id: string;
++  readonly slug: string;
++  readonly name: string;
++  readonly storyCount: number;
++  readonly reads: number;
++  readonly coverUrl: string | null;
++}
+ 
+-import { GENRE_DISCOVERY_ENDPOINTS, GenreDiscoveryRepository } from './genre-discovery.repository';
++const TONES: readonly GenreTone[] = [
++  'red',
++  'violet',
++  'pink',
++  'yellow',
++  'purple',
++  'orange',
++  'gray',
++  'blue',
++  'cyan',
++  'indigo',
++];
++const VISUALS: readonly GenreVisual[] = [
++  'action',
++  'fantasy',
++  'romance',
++  'comedy',
++  'manhwa',
++  'manhua',
++  'horror',
++  'drama',
++  'adventure',
++  'school-life',
++  'sci-fi',
++  'isekai',
++];
+ 
+ @Injectable()
+ export class GenreDiscoveryHttpRepository implements GenreDiscoveryRepository {
+-  private readonly http = inject(HttpClient);
++  private readonly api = inject(PublicStoriesApiClient);
+ 
+-  private readonly endpoints = inject(GENRE_DISCOVERY_ENDPOINTS);
++  private readonly aggregates$ = this.api.list({ sort: 'popular', pageSize: 100 }).pipe(
++    map((page) => aggregateGenres(page.items)),
++    shareReplay({ bufferSize: 1, refCount: true }),
++  );
+ 
+   getGenres(): Observable<readonly GenreSummary[]> {
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly GenreSummary[]>>(this.endpoints.genres)
+-      .pipe(map((response) => response.data));
++    return this.aggregates$.pipe(map((genres) => genres.map(toSummary)));
+   }
+ 
+   getFeaturedGenres(limit: number): Observable<readonly GenreSummary[]> {
+-    const params = new HttpParams().set('limit', String(limit));
+-
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly GenreSummary[]>>(this.endpoints.featured, { params })
+-      .pipe(map((response) => response.data));
++    return this.aggregates$.pipe(
++      map((genres) => genres.slice(0, Math.max(0, limit)).map(toSummary)),
++    );
+   }
+ 
+   getRanking(limit: number): Observable<readonly GenreRankingItem[]> {
+-    const params = new HttpParams().set('limit', String(limit));
+-
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly GenreRankingItem[]>>(this.endpoints.ranking, { params })
+-      .pipe(map((response) => response.data));
++    return this.aggregates$.pipe(
++      map((genres) =>
++        genres.slice(0, Math.max(0, limit)).map((genre, index) => ({
++          id: genre.id,
++          slug: genre.slug,
++          name: genre.name,
++          storyCount: genre.storyCount,
++          rank: index + 1,
++          tone: toneFor(genre.slug),
++        })),
++      ),
++    );
+   }
+ 
+   getTrending(
+     query: Pick<GenreDiscoveryQuery, 'trendingLimit' | 'trendingPeriod'>,
+   ): Observable<readonly GenreTrendingItem[]> {
+-    const params = new HttpParams()
+-      .set('limit', String(query.trendingLimit))
+-      .set('period', query.trendingPeriod);
++    return this.aggregates$.pipe(
++      map((genres) => {
++        const maximumReads = Math.max(...genres.map((genre) => genre.reads), 1);
++        return [...genres]
++          .sort((left, right) => right.reads - left.reads)
++          .slice(0, Math.max(0, query.trendingLimit))
++          .map((genre) => ({
++            id: genre.id,
++            slug: genre.slug,
++            name: genre.name,
++            coverUrl: genre.coverUrl,
++            percent: Math.round((genre.reads / maximumReads) * 100),
++            readingCount: genre.reads,
++            tone: toneFor(genre.slug),
++          }));
++      }),
++    );
++  }
++}
++
++function aggregateGenres(stories: readonly PublicStoryApiItem[]): GenreAggregate[] {
++  const aggregates = new Map<string, GenreAggregate>();
+ 
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly GenreTrendingItem[]>>(this.endpoints.trending, { params })
+-      .pipe(map((response) => response.data));
++  for (const story of stories) {
++    for (const category of story.categories) {
++      const current = aggregates.get(category.id);
++      aggregates.set(category.id, {
++        id: category.id,
++        slug: category.slug,
++        name: category.name,
++        storyCount: (current?.storyCount ?? 0) + 1,
++        reads: (current?.reads ?? 0) + story.stats.views,
++        coverUrl: current?.coverUrl ?? story.coverUrl,
++      });
++    }
+   }
++
++  return [...aggregates.values()].sort(
++    (left, right) => right.storyCount - left.storyCount || left.name.localeCompare(right.name, 'vi'),
++  );
++}
++
++function toSummary(genre: GenreAggregate): GenreSummary {
++  return {
++    id: genre.id,
++    slug: genre.slug,
++    name: genre.name,
++    description: `${genre.storyCount} truyện đang phát hành`,
++    visual: visualFor(genre.slug),
++    tone: toneFor(genre.slug),
++    storyCount: genre.storyCount,
++    coverUrl: genre.coverUrl,
++  };
++}
++
++function toneFor(slug: string): GenreTone {
++  return TONES[hash(slug) % TONES.length] ?? 'blue';
++}
++
++function visualFor(slug: string): GenreVisual {
++  return VISUALS[hash(slug) % VISUALS.length] ?? 'fantasy';
++}
++
++function hash(value: string): number {
++  return [...value].reduce((result, char) => (result * 31 + char.charCodeAt(0)) >>> 0, 0);
+ }
+diff --git a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-mock.repository.ts b/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-mock.repository.ts
+deleted file mode 100644
+index c9c80d70eaa5ba6e40176097474ceb985a756b9c..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery-mock.repository.ts
++++ /dev/null
+@@ -1,40 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { delay, Observable, of } from 'rxjs';
+-
+-import {
+-  GenreDiscoveryQuery,
+-  GenreRankingItem,
+-  GenreSummary,
+-  GenreTrendingItem,
+-} from '../domain/genre-discovery.models';
+-
+-import {
+-  GENRE_FEATURED_MOCK,
+-  GENRE_RANKING_MOCK,
+-  GENRE_SUMMARIES_MOCK,
+-  GENRE_TRENDING_MOCK,
+-} from '../mock/genre-discovery.mock';
+-
+-import { GenreDiscoveryRepository } from './genre-discovery.repository';
+-
+-@Injectable()
+-export class GenreDiscoveryMockRepository implements GenreDiscoveryRepository {
+-  getGenres(): Observable<readonly GenreSummary[]> {
+-    return of(GENRE_SUMMARIES_MOCK).pipe(delay(260));
+-  }
+-
+-  getFeaturedGenres(limit: number): Observable<readonly GenreSummary[]> {
+-    return of(GENRE_FEATURED_MOCK.slice(0, limit)).pipe(delay(220));
+-  }
+-
+-  getRanking(limit: number): Observable<readonly GenreRankingItem[]> {
+-    return of(GENRE_RANKING_MOCK.slice(0, limit)).pipe(delay(180));
+-  }
+-
+-  getTrending(
+-    query: Pick<GenreDiscoveryQuery, 'trendingLimit' | 'trendingPeriod'>,
+-  ): Observable<readonly GenreTrendingItem[]> {
+-    return of(GENRE_TRENDING_MOCK.slice(0, query.trendingLimit)).pipe(delay(210));
+-  }
+-}
+diff --git a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery.providers.ts b/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery.providers.ts
+index 9f47932417635fe37d6f052656b6d2796222b9ab..4994044c3f706be2676178ce824feca4322909ae 100644
+--- a/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery.providers.ts
++++ b/frontend/src/app/features/public/genre-discovery/data-access/genre-discovery.providers.ts
+@@ -1,42 +1,15 @@
+ import { Provider } from '@angular/core';
+ 
+-import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+-
+ import { GenreDiscoveryHttpRepository } from './genre-discovery-http.repository';
+-import { GenreDiscoveryMockRepository } from './genre-discovery-mock.repository';
+-
+-import { GENRE_DISCOVERY_ENDPOINTS, GenreDiscoveryRepository } from './genre-discovery.repository';
+-
++import { GenreDiscoveryRepository } from './genre-discovery.repository';
+ import { GenreDiscoveryStore } from './genre-discovery.store';
+ 
+-export interface GenreDiscoveryProviderOptions {
+-  readonly useMock: boolean;
+-}
+-
+-export function provideGenreDiscovery(options: GenreDiscoveryProviderOptions): Provider[] {
++export function provideGenreDiscovery(): Provider[] {
+   return [
+-    {
+-      provide: GENRE_DISCOVERY_ENDPOINTS,
+-
+-      deps: [APP_RUNTIME_CONFIG],
+-
+-      useFactory: (config: { readonly apiBaseUrl: string }) => ({
+-        genres: `${config.apiBaseUrl}/story-genres`,
+-
+-        featured: `${config.apiBaseUrl}/story-genres/featured`,
+-
+-        ranking: `${config.apiBaseUrl}/story-genres/ranking`,
+-
+-        trending: `${config.apiBaseUrl}/story-genres/trending`,
+-      }),
+-    },
+-
+     {
+       provide: GenreDiscoveryRepository,
+-
+-      useClass: options.useMock ? GenreDiscoveryMockRepository : GenreDiscoveryHttpRepository,
++      useClass: GenreDiscoveryHttpRepository,
+     },
+-
+     GenreDiscoveryStore,
+   ];
+ }
+diff --git a/frontend/src/app/features/public/genre-discovery/mock/genre-discovery.mock.ts b/frontend/src/app/features/public/genre-discovery/mock/genre-discovery.mock.ts
+deleted file mode 100644
+index cd0020443016f5722db90c9611b17b307a33650f..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/genre-discovery/mock/genre-discovery.mock.ts
++++ /dev/null
+@@ -1,296 +0,0 @@
+-import {
+-  GenreRankingItem,
+-  GenreSummary,
+-  GenreTrendingItem,
+-} from '../domain/genre-discovery.models';
+-
+-export const GENRE_SUMMARIES_MOCK: readonly GenreSummary[] = [
+-  {
+-    id: 'genre-action',
+-    slug: 'hanh-dong',
+-
+-    name: 'Hành động',
+-
+-    description: 'Chiến đấu, võ thuật, sức mạnh và những cuộc đối đầu kịch tính.',
+-
+-    visual: 'action',
+-    tone: 'red',
+-
+-    storyCount: 2845,
+-
+-    coverUrl: '/assets/mock/genres/action.webp',
+-  },
+-  {
+-    id: 'genre-fantasy',
+-    slug: 'fantasy',
+-
+-    name: 'Fantasy',
+-
+-    description: 'Ma thuật, thế giới khác và những điều kỳ diệu.',
+-
+-    visual: 'fantasy',
+-    tone: 'violet',
+-
+-    storyCount: 2312,
+-
+-    coverUrl: '/assets/mock/genres/fantasy.webp',
+-  },
+-  {
+-    id: 'genre-romance',
+-    slug: 'romance',
+-
+-    name: 'Romance',
+-
+-    description: 'Tình yêu, cảm xúc và những khoảnh khắc ngọt ngào.',
+-
+-    visual: 'romance',
+-    tone: 'pink',
+-
+-    storyCount: 1986,
+-
+-    coverUrl: '/assets/mock/genres/romance.webp',
+-  },
+-  {
+-    id: 'genre-comedy',
+-    slug: 'hai-huoc',
+-
+-    name: 'Comedy',
+-
+-    description: 'Hài hước, dí dỏm và những tình huống vui nhộn.',
+-
+-    visual: 'comedy',
+-    tone: 'yellow',
+-
+-    storyCount: 1652,
+-
+-    coverUrl: '/assets/mock/genres/comedy.webp',
+-  },
+-  {
+-    id: 'genre-manhwa',
+-    slug: 'manhwa',
+-
+-    name: 'Manhwa',
+-
+-    description: 'Truyện tranh Hàn Quốc được yêu thích nhất.',
+-
+-    visual: 'manhwa',
+-    tone: 'purple',
+-
+-    storyCount: 4128,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-manhua',
+-    slug: 'manhua',
+-
+-    name: 'Manhua',
+-
+-    description: 'Truyện tranh Trung Quốc với nét vẽ đặc sắc.',
+-
+-    visual: 'manhua',
+-    tone: 'orange',
+-
+-    storyCount: 2764,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-horror',
+-    slug: 'kinh-di',
+-
+-    name: 'Kinh dị',
+-
+-    description: 'Những câu chuyện rùng rợn, bí ẩn và ám ảnh.',
+-
+-    visual: 'horror',
+-    tone: 'gray',
+-
+-    storyCount: 1287,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-drama',
+-    slug: 'drama',
+-
+-    name: 'Drama',
+-
+-    description: 'Cốt truyện sâu sắc, kịch tính và nhiều cảm xúc.',
+-
+-    visual: 'drama',
+-    tone: 'blue',
+-
+-    storyCount: 1935,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-adventure',
+-    slug: 'phieu-luu',
+-
+-    name: 'Phiêu lưu',
+-
+-    description: 'Hành trình khám phá thế giới và những bí ẩn.',
+-
+-    visual: 'adventure',
+-    tone: 'blue',
+-
+-    storyCount: 1742,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-school-life',
+-    slug: 'school-life',
+-
+-    name: 'School Life',
+-
+-    description: 'Cuộc sống học đường với tình bạn và kỷ niệm.',
+-
+-    visual: 'school-life',
+-    tone: 'gray',
+-
+-    storyCount: 1516,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-sci-fi',
+-    slug: 'sci-fi',
+-
+-    name: 'Sci-fi',
+-
+-    description: 'Khoa học viễn tưởng, công nghệ và tương lai huyền bí.',
+-
+-    visual: 'sci-fi',
+-    tone: 'gray',
+-
+-    storyCount: 986,
+-
+-    coverUrl: null,
+-  },
+-  {
+-    id: 'genre-isekai',
+-    slug: 'isekai',
+-
+-    name: 'Isekai',
+-
+-    description: 'Xuyên không đến thế giới khác và bắt đầu cuộc sống mới.',
+-
+-    visual: 'isekai',
+-    tone: 'purple',
+-
+-    storyCount: 1195,
+-
+-    coverUrl: null,
+-  },
+-];
+-
+-export const GENRE_FEATURED_MOCK: readonly GenreSummary[] = GENRE_SUMMARIES_MOCK.slice(0, 4);
+-
+-export const GENRE_RANKING_MOCK: readonly GenreRankingItem[] = [
+-  {
+-    id: 'genre-action',
+-    slug: 'hanh-dong',
+-    name: 'Hành động',
+-    storyCount: 2845,
+-    rank: 1,
+-    tone: 'red',
+-  },
+-  {
+-    id: 'genre-fantasy',
+-    slug: 'fantasy',
+-    name: 'Fantasy',
+-    storyCount: 2312,
+-    rank: 2,
+-    tone: 'violet',
+-  },
+-  {
+-    id: 'genre-romance',
+-    slug: 'romance',
+-    name: 'Romance',
+-    storyCount: 1986,
+-    rank: 3,
+-    tone: 'pink',
+-  },
+-  {
+-    id: 'genre-comedy',
+-    slug: 'hai-huoc',
+-    name: 'Comedy',
+-    storyCount: 1652,
+-    rank: 4,
+-    tone: 'yellow',
+-  },
+-  {
+-    id: 'genre-manhwa',
+-    slug: 'manhwa',
+-    name: 'Manhwa',
+-    storyCount: 4128,
+-    rank: 5,
+-    tone: 'purple',
+-  },
+-];
+-
+-export const GENRE_TRENDING_MOCK: readonly GenreTrendingItem[] = [
+-  {
+-    id: 'trend-action',
+-    slug: 'hanh-dong',
+-    name: 'Hành động',
+-
+-    coverUrl: '/assets/mock/genres/action.webp',
+-
+-    percent: 42.5,
+-    readingCount: 385000,
+-
+-    tone: 'red',
+-  },
+-  {
+-    id: 'trend-fantasy',
+-    slug: 'fantasy',
+-    name: 'Fantasy',
+-
+-    coverUrl: '/assets/mock/genres/fantasy.webp',
+-
+-    percent: 27.3,
+-    readingCount: 247000,
+-
+-    tone: 'violet',
+-  },
+-  {
+-    id: 'trend-romance',
+-    slug: 'romance',
+-    name: 'Romance',
+-
+-    coverUrl: '/assets/mock/genres/romance.webp',
+-
+-    percent: 13.8,
+-    readingCount: 125000,
+-
+-    tone: 'pink',
+-  },
+-  {
+-    id: 'trend-manhwa',
+-    slug: 'manhwa',
+-    name: 'Manhwa',
+-
+-    coverUrl: '/assets/mock/genres/default.webp',
+-
+-    percent: 9.7,
+-    readingCount: 88000,
+-
+-    tone: 'purple',
+-  },
+-  {
+-    id: 'trend-comedy',
+-    slug: 'hai-huoc',
+-    name: 'Comedy',
+-
+-    coverUrl: '/assets/mock/genres/comedy.webp',
+-
+-    percent: 6.7,
+-    readingCount: 61000,
+-
+-    tone: 'yellow',
+-  },
+-];
+diff --git a/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.html b/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.html
+index 8ef325c9e76230265618a7afec5de93624154435..0a749ecd6c185277e0fd1e2d307d6c147c400aab 100644
+--- a/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.html
++++ b/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.html
+@@ -1,5 +1,5 @@
+ <section class="trending-card">
+-  <h2>Thể loại được đọc nhiều tuần này</h2>
++  <h2>Thể loại được đọc nhiều</h2>
+ 
+   <div class="trending-list">
+     @for (item of items(); track item.id) {
+@@ -11,11 +11,11 @@
+           sort: 'popular',
+         }"
+       >
+-        <img
+-          [src]="item.coverUrl || '/assets/mock/genres/default.webp'"
+-          [alt]="item.name"
+-          loading="lazy"
+-        />
++        @if (item.coverUrl) {
++          <img [src]="item.coverUrl" [alt]="item.name" loading="lazy" />
++        } @else {
++          <span class="cover-placeholder" aria-hidden="true">{{ item.name.slice(0, 1) }}</span>
++        }
+ 
+         <div>
+           <strong>{{ item.name }}</strong>
+diff --git a/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.scss b/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.scss
+index 8ad3b0c92f95181ac54f085f8f3040196d648130..318fe360ea7d22321c08e92d3fb18c926d1862fa 100644
+--- a/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.scss
++++ b/frontend/src/app/features/public/genre-discovery/ui/genre-trending-card/genre-trending-card.component.scss
+@@ -26,13 +26,25 @@ h2 {
+   text-decoration: none;
+ }
+ 
+-img {
++img,
++.cover-placeholder {
+   width: 42px;
+   height: 42px;
+-  object-fit: cover;
+   border-radius: 6px;
+ }
+ 
++img {
++  object-fit: cover;
++}
++
++.cover-placeholder {
++  display: grid;
++  place-items: center;
++  color: #c4b5fd;
++  font-weight: 800;
++  background: rgba(124, 58, 237, 0.2);
++}
++
+ .trending-item > div {
+   min-width: 0;
+   display: grid;
+diff --git a/frontend/src/app/features/public/home/data-access/home-http.repository.ts b/frontend/src/app/features/public/home/data-access/home-http.repository.ts
+index 3c2d47b1c11b04adc04136385d8dfb269b5fa65a..d33b5d1c5169a863f762c5bcc0e5b7be4e857b42 100644
+--- a/frontend/src/app/features/public/home/data-access/home-http.repository.ts
++++ b/frontend/src/app/features/public/home/data-access/home-http.repository.ts
+@@ -1,24 +1,121 @@
+-import { HttpClient } from '@angular/common/http';
+ import { inject, Injectable } from '@angular/core';
+-import { Observable } from 'rxjs';
++import { forkJoin, map, Observable, of } from 'rxjs';
++
++import {
++  PublicStoriesApiClient,
++} from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
++import {
++  STORY_COVER_PLACEHOLDER,
++} from '../../../../shared/models/story.model';
+ import { HomePageData, Story } from '../domain/home.models';
+ import { HomeRepository } from './home.repository';
+ 
+ @Injectable()
+ export class HomeHttpRepository implements HomeRepository {
+-  private readonly http = inject(HttpClient);
++  private readonly api = inject(PublicStoriesApiClient);
+ 
+   loadHome(): Observable<HomePageData> {
+-    return this.http.get<HomePageData>('/api/v1/home');
++    return forkJoin({
++      latest: this.api.list({ sort: 'latest', pageSize: 12 }),
++      popular: this.api.list({ sort: 'popular', pageSize: 10 }),
++      rated: this.api.list({ sort: 'rating', pageSize: 10 }),
++    }).pipe(
++      map(({ latest, popular, rated }) => {
++        const latestStories = latest.items.map(toStory);
++        const popularStories = popular.items.map(toStory);
++        const ratedStories = rated.items.map(toStory);
++
++        return {
++          heroSlides: popular.items
++            .filter((story) => story.latestChapter !== null)
++            .slice(0, 3)
++            .map((story, index) => ({
++              id: story.id,
++              eyebrow: index === 0 ? 'Nổi bật' : 'Đề xuất',
++              title: story.title,
++              description: story.synopsis,
++              imageUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++              storySlug: story.slug,
++              latestChapter: story.latestChapter!.number,
++              accent: (['violet', 'blue', 'orange'] as const)[index % 3],
++            })),
++          quickActions: [
++            {
++              id: 'latest',
++              label: 'Truyện mới cập nhật',
++              description: 'Theo dõi các truyện vừa có thay đổi mới.',
++              icon: 'clock',
++              route: '/cap-nhat',
++            },
++            {
++              id: 'catalog',
++              label: 'Danh sách truyện',
++              description: 'Khám phá toàn bộ truyện đang phát hành.',
++              icon: 'book-open',
++              route: '/danh-sach',
++            },
++            {
++              id: 'genres',
++              label: 'Thể loại',
++              description: 'Tìm truyện theo thể loại yêu thích.',
++              icon: 'grid',
++              route: '/the-loai',
++            },
++            {
++              id: 'ranking',
++              label: 'Xếp hạng',
++              description: 'Xem các truyện nổi bật theo dữ liệu hiện tại.',
++              icon: 'trophy',
++              route: '/xep-hang',
++            },
++          ],
++          latestStories: latestStories.slice(0, 8),
++          recommendedStories: ratedStories.slice(0, 8),
++          topStories: popularStories.slice(0, 8),
++          recentUpdates: latestStories.slice(0, 8),
++        } satisfies HomePageData;
++      }),
++    );
+   }
+ 
+   findStoryBySlug(slug: string): Observable<Story | null> {
+-    return this.http.get<Story | null>(`/api/v1/stories/${slug}`);
++    return this.api.detail(slug).pipe(map(toStory));
+   }
+ 
+   searchStories(query: string, limit = 6): Observable<readonly Story[]> {
+-    return this.http.get<readonly Story[]>(`/api/v1/stories/search`, {
+-      params: { q: query, limit },
+-    });
++    const normalized = query.trim();
++    if (!normalized) {
++      return of([]);
++    }
++
++    return this.api
++      .list({ q: normalized, pageSize: Math.min(Math.max(limit, 1), 100) })
++      .pipe(map((page) => page.items.map(toStory)));
+   }
+ }
++
++function toStory(story: PublicStoryApiItem): Story {
++  return {
++    id: story.id,
++    slug: story.slug,
++    title: story.title,
++    author: story.author.penName,
++    description: story.synopsis,
++    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++    categories: story.categories.map((category) => category.name),
++    latestChapter: story.latestChapter
++      ? {
++          number: story.latestChapter.number,
++          title: story.latestChapter.title,
++          slug: story.latestChapter.slug,
++          updatedAt: story.latestChapter.publishedAt,
++        }
++      : null,
++    views: story.stats.views,
++    rating: story.stats.ratingAverage,
++    chapterCount: story.stats.chapters,
++    status: story.status,
++    badge: story.status === 'COMPLETED' ? 'FULL' : undefined,
++  };
++}
+diff --git a/frontend/src/app/features/public/home/data-access/home-mock.repository.ts b/frontend/src/app/features/public/home/data-access/home-mock.repository.ts
+deleted file mode 100644
+index 16ffbf36639eb5513f991827da7c2a5d8c570bda..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/home/data-access/home-mock.repository.ts
++++ /dev/null
+@@ -1,34 +0,0 @@
+-import { Injectable } from '@angular/core';
+-import { delay, Observable, of } from 'rxjs';
+-import { HomePageData, Story } from '../domain/home.models';
+-import { HOME_DATA, STORIES } from '../mock/home.mock';
+-import { HomeRepository } from './home.repository';
+-
+-@Injectable()
+-export class HomeMockRepository implements HomeRepository {
+-  loadHome(): Observable<HomePageData> {
+-    return of(HOME_DATA).pipe(delay(260));
+-  }
+-
+-  findStoryBySlug(slug: string): Observable<Story | null> {
+-    return of(STORIES.find((story) => story.slug === slug) ?? null).pipe(delay(180));
+-  }
+-
+-  searchStories(query: string, limit = 6): Observable<readonly Story[]> {
+-    const normalized = normalize(query);
+-    if (!normalized) return of([]);
+-    const results = STORIES.filter((story) => {
+-      const haystack = normalize(`${story.title} ${story.author} ${story.categories.join(' ')}`);
+-      return haystack.includes(normalized);
+-    }).slice(0, limit);
+-    return of(results);
+-  }
+-}
+-
+-function normalize(value: string): string {
+-  return value
+-    .normalize('NFD')
+-    .replace(/[\u0300-\u036f]/g, '')
+-    .toLowerCase()
+-    .trim();
+-}
+diff --git a/frontend/src/app/features/public/home/data-access/home.providers.ts b/frontend/src/app/features/public/home/data-access/home.providers.ts
+index 9b855b67dcf69e80fd866eb019bc1c40177beb6b..ccf598d61e7e4f81681e76eb8735ea1ad0e4e96f 100644
+--- a/frontend/src/app/features/public/home/data-access/home.providers.ts
++++ b/frontend/src/app/features/public/home/data-access/home.providers.ts
+@@ -1,18 +1,13 @@
+ import { Provider } from '@angular/core';
+ 
+ import { HomeHttpRepository } from './home-http.repository';
+-import { HomeMockRepository } from './home-mock.repository';
+ import { HomeRepository } from './home.repository';
+ 
+-export interface ProvideHomeOptions {
+-  readonly useMock?: boolean;
+-}
+-
+-export function provideHome(options: ProvideHomeOptions = {}): Provider[] {
++export function provideHome(): Provider[] {
+   return [
+     {
+       provide: HomeRepository,
+-      useClass: options.useMock ? HomeMockRepository : HomeHttpRepository,
++      useClass: HomeHttpRepository,
+     },
+   ];
+ }
+diff --git a/frontend/src/app/features/public/home/mock/home.mock.ts b/frontend/src/app/features/public/home/mock/home.mock.ts
+deleted file mode 100644
+index 777cc3cd7ab9a61de8fb8d31d1c3c74e7de87cec..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/home/mock/home.mock.ts
++++ /dev/null
+@@ -1,89 +0,0 @@
+-import { HeroSlide, HomePageData, QuickAction } from '../../../../shared/models/story.model';
+-
+-import { STORIES } from '../../../../shared/testing/story.fixtures';
+-
+-export { STORIES };
+-
+-const asset = (file: string): string => `/assets/images/${file}`;
+-
+-const HERO_SLIDES: readonly HeroSlide[] = [
+-  {
+-    id: 'hero-1',
+-    eyebrow: 'TRUYỆN NỔI BẬT',
+-    title: 'Tôi Độc Nhất\nGiữa Vạn Người',
+-    description:
+-      'Bị coi là kẻ vô dụng, không có năng lực. Sau khi thức tỉnh, tôi trở thành người mạnh nhất!',
+-    imageUrl: asset('hero-shadow.webp'),
+-    storySlug: 'toi-doc-nhat-giua-van-nguoi',
+-    latestChapter: 318,
+-    accent: 'violet',
+-  },
+-  {
+-    id: 'hero-2',
+-    eyebrow: 'ĐỀ CỬ HÔM NAY',
+-    title: 'Hồi Sinh Thành\nCông Tước',
+-    description: 'Trở lại quá khứ với toàn bộ ký ức, anh quyết định viết lại vận mệnh của gia tộc.',
+-    imageUrl: asset('hero-azure.webp'),
+-    storySlug: 'hoi-sinh-thanh-cong-tuoc',
+-    latestChapter: 41,
+-    accent: 'blue',
+-  },
+-  {
+-    id: 'hero-3',
+-    eyebrow: 'ĐANG THỊNH HÀNH',
+-    title: 'Ta Có 999\nLoại Dị Năng',
+-    description: 'Một hệ thống kỳ lạ cho phép sao chép mọi năng lực và mở ra con đường vô địch.',
+-    imageUrl: asset('hero-ember.webp'),
+-    storySlug: 'ta-co-999-loai-di-nang',
+-    latestChapter: 55,
+-    accent: 'orange',
+-  },
+-] as const;
+-
+-const QUICK_ACTIONS: readonly QuickAction[] = [
+-  { id: 'hot', label: 'Truyện hot', description: 'Nổi bật tuần', icon: 'fire', route: '/xep-hang' },
+-  {
+-    id: 'new',
+-    label: 'Truyện mới',
+-    description: 'Cập nhật mỗi ngày',
+-    icon: 'sparkles',
+-    route: '/cap-nhat',
+-  },
+-  {
+-    id: 'rank',
+-    label: 'Xếp hạng',
+-    description: 'Top truyện hay',
+-    icon: 'trophy',
+-    route: '/xep-hang',
+-  },
+-  {
+-    id: 'categories',
+-    label: 'Thể loại',
+-    description: 'Đa dạng thể loại',
+-    icon: 'grid',
+-    route: '/the-loai',
+-  },
+-  {
+-    id: 'history',
+-    label: 'Lịch sử',
+-    description: 'Truyện đã đọc',
+-    icon: 'clock',
+-    route: '/lich-su',
+-  },
+-  {
+-    id: 'library',
+-    label: 'Thư viện',
+-    description: 'Truyện của bạn',
+-    icon: 'bookmark',
+-    route: '/thu-vien',
+-  },
+-] as const;
+-
+-export const HOME_DATA: HomePageData = {
+-  heroSlides: HERO_SLIDES,
+-  quickActions: QUICK_ACTIONS,
+-  latestStories: STORIES.slice(0, 6),
+-  recommendedStories: [STORIES[6], STORIES[8], STORIES[10], STORIES[11]],
+-  topStories: [STORIES[6], STORIES[7], STORIES[8], STORIES[9], STORIES[10]],
+-  recentUpdates: [STORIES[2], STORIES[1], STORIES[0], STORIES[3]],
+-};
+diff --git a/frontend/src/app/features/public/home/pages/home-page/home-page.component.html b/frontend/src/app/features/public/home/pages/home-page/home-page.component.html
+index 0882ea4ecc0df76c455228b50ccf2c8e2e0ceb6d..77df861b8a2ad643b65b01b0a94db9550e2a889d 100644
+--- a/frontend/src/app/features/public/home/pages/home-page/home-page.component.html
++++ b/frontend/src/app/features/public/home/pages/home-page/home-page.component.html
+@@ -110,7 +110,7 @@
+                     <small><app-icon name="star" [size]="14" />{{ story.rating }}</small
+                     ><small
+                       ><app-icon name="eye" [size]="14" />{{ story.views | compactNumber }}</small
+-                    ><b>Ch.{{ story.latestChapter.number }}</b>
++                    ><b>{{ story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương' }}</b>
+                   </div>
+                 </div>
+               </a>
+@@ -151,13 +151,15 @@
+             @for (story of vm.recentUpdates; track story.id) {
+               <a [routerLink]="['/truyen', story.slug]">
+                 <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
+-                <span
+-                  ><strong>{{ story.title }}</strong
+-                  ><small
+-                    >Chương {{ story.latestChapter.number }}:
+-                    {{ story.latestChapter.title || 'Chương mới' }}</small
+-                  ><em>{{ story.latestChapter.updatedAt | relativeTime }}</em></span
+-                >
++                <span>
++                  <strong>{{ story.title }}</strong>
++                  @if (story.latestChapter; as chapter) {
++                    <small>Chương {{ chapter.number }}: {{ chapter.title || 'Chương mới' }}</small>
++                    <em>{{ chapter.updatedAt | relativeTime }}</em>
++                  } @else {
++                    <small>Chưa có chương công khai</small>
++                  }
++                </span>
+               </a>
+             }
+           </div>
+diff --git a/frontend/src/app/features/public/story-catalog/data-access/story-catalog-http.repository.ts b/frontend/src/app/features/public/story-catalog/data-access/story-catalog-http.repository.ts
+index a1332f997490bcf309d4257ce0662da25cab194b..6f887a7019b1fb34679800ae684596ffb55a4764 100644
+--- a/frontend/src/app/features/public/story-catalog/data-access/story-catalog-http.repository.ts
++++ b/frontend/src/app/features/public/story-catalog/data-access/story-catalog-http.repository.ts
+@@ -1,68 +1,93 @@
+-import { HttpClient, HttpParams } from '@angular/common/http';
+-
+ import { inject, Injectable } from '@angular/core';
+-
+ import { map, Observable } from 'rxjs';
+ 
+-import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+-
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
++import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
+ import {
++  StoryCatalogItem,
+   StoryCatalogPage,
+   StoryCatalogQuery,
+   StoryGenre,
+   StoryRankingItem,
+ } from '../domain/story-catalog.models';
+-
+-import { STORY_CATALOG_ENDPOINTS, StoryCatalogRepository } from './story-catalog.repository';
++import { StoryCatalogRepository } from './story-catalog.repository';
+ 
+ @Injectable()
+ export class StoryCatalogHttpRepository implements StoryCatalogRepository {
+-  private readonly http = inject(HttpClient);
+-
+-  private readonly endpoints = inject(STORY_CATALOG_ENDPOINTS);
++  private readonly api = inject(PublicStoriesApiClient);
+ 
+   search(query: StoryCatalogQuery): Observable<StoryCatalogPage> {
+-    let params = new HttpParams()
+-      .set('page', String(query.page))
+-      .set('pageSize', String(query.pageSize))
+-      .set('sort', query.sort);
+-
+-    if (query.query.trim()) {
+-      params = params.set('q', query.query.trim());
+-    }
+-
+-    if (query.genre) {
+-      params = params.set('genre', query.genre);
+-    }
+-
+-    if (query.status !== 'all') {
+-      params = params.set('status', query.status);
+-    }
+-
+-    if (query.yearFrom !== null) {
+-      params = params.set('yearFrom', String(query.yearFrom));
+-    }
+-
+-    if (query.yearTo !== null) {
+-      params = params.set('yearTo', String(query.yearTo));
+-    }
+-
+-    return this.http
+-      .get<ApiSuccessEnvelope<StoryCatalogPage>>(this.endpoints.catalog, { params })
+-      .pipe(map((response) => response.data));
++    return this.api
++      .list({
++        q: query.query.trim() || undefined,
++        genre: query.genre ?? undefined,
++        status: query.status === 'all' ? undefined : query.status,
++        sort: query.sort,
++        yearFrom: query.yearFrom ?? undefined,
++        yearTo: query.yearTo ?? undefined,
++        page: query.page,
++        pageSize: query.pageSize,
++      })
++      .pipe(
++        map((page) => ({
++          items: page.items.map(toCatalogItem),
++          pagination: page.pagination,
++        })),
++      );
+   }
+ 
+   getGenres(): Observable<readonly StoryGenre[]> {
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly StoryGenre[]>>(this.endpoints.genres)
+-      .pipe(map((response) => response.data));
++    return this.api.list({ sort: 'popular', pageSize: 100 }).pipe(
++      map((page) => {
++        const genres = new Map<string, StoryGenre>();
++        for (const story of page.items) {
++          for (const category of story.categories) {
++            genres.set(category.id, {
++              id: category.id,
++              slug: category.slug,
++              name: category.name,
++            });
++          }
++        }
++        return [...genres.values()].sort((left, right) => left.name.localeCompare(right.name, 'vi'));
++      }),
++    );
+   }
+ 
+   getRanking(limit: number): Observable<readonly StoryRankingItem[]> {
+-    const params = new HttpParams().set('limit', String(limit));
+-
+-    return this.http
+-      .get<ApiSuccessEnvelope<readonly StoryRankingItem[]>>(this.endpoints.ranking, { params })
+-      .pipe(map((response) => response.data));
++    return this.api.list({ sort: 'popular', pageSize: Math.min(Math.max(limit, 1), 100) }).pipe(
++      map((page) =>
++        page.items.map((story) => ({
++          id: story.id,
++          slug: story.slug,
++          title: story.title,
++          coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++          genres: story.categories.map(({ slug, name }) => ({ slug, name })),
++          views: story.stats.views,
++          rating: story.stats.ratingAverage,
++        })),
++      ),
++    );
+   }
+ }
++
++function toCatalogItem(story: PublicStoryApiItem): StoryCatalogItem {
++  return {
++    id: story.id,
++    slug: story.slug,
++    title: story.title,
++    authorName: story.author.penName,
++    description: story.synopsis,
++    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++    genres: story.categories.map(({ slug, name }) => ({ slug, name })),
++    status: story.status.toLowerCase() as StoryCatalogItem['status'],
++    badge: story.status === 'COMPLETED' ? 'FULL' : null,
++    latestChapter: story.latestChapter?.number ?? null,
++    chapterCount: story.stats.chapters,
++    views: story.stats.views,
++    rating: story.stats.ratingAverage,
++    releaseYear: story.releaseYear,
++    updatedAt: story.updatedAt,
++  };
++}
+diff --git a/frontend/src/app/features/public/story-catalog/data-access/story-catalog-mock.repository.ts b/frontend/src/app/features/public/story-catalog/data-access/story-catalog-mock.repository.ts
+deleted file mode 100644
+index fcb8c19ac8a4da485aa294338cc3d6f3de1075ba..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-catalog/data-access/story-catalog-mock.repository.ts
++++ /dev/null
+@@ -1,138 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { delay, Observable, of } from 'rxjs';
+-
+-import {
+-  StoryCatalogItem,
+-  StoryCatalogPage,
+-  StoryCatalogQuery,
+-  StoryGenre,
+-  StoryRankingItem,
+-} from '../domain/story-catalog.models';
+-
+-import { STORY_CATALOG_MOCK, STORY_GENRES_MOCK } from '../mock/story-catalog.mock';
+-
+-import { StoryCatalogRepository } from './story-catalog.repository';
+-
+-@Injectable()
+-export class StoryCatalogMockRepository implements StoryCatalogRepository {
+-  search(query: StoryCatalogQuery): Observable<StoryCatalogPage> {
+-    let stories = [...STORY_CATALOG_MOCK];
+-
+-    const normalizedQuery = normalizeText(query.query);
+-
+-    if (normalizedQuery) {
+-      stories = stories.filter((story) => {
+-        const searchable = normalizeText(
+-          [
+-            story.title,
+-            story.authorName ?? '',
+-            story.description ?? '',
+-            ...story.genres.map((genre) => genre.name),
+-          ].join(' '),
+-        );
+-
+-        return searchable.includes(normalizedQuery);
+-      });
+-    }
+-
+-    if (query.genre) {
+-      stories = stories.filter((story) => story.genres.some((genre) => genre.slug === query.genre));
+-    }
+-
+-    if (query.status !== 'all') {
+-      stories = stories.filter((story) => story.status === query.status);
+-    }
+-
+-    if (query.yearFrom !== null) {
+-      stories = stories.filter((story) => story.releaseYear >= query.yearFrom!);
+-    }
+-
+-    if (query.yearTo !== null) {
+-      stories = stories.filter((story) => story.releaseYear <= query.yearTo!);
+-    }
+-
+-    stories = sortStories(stories, query.sort);
+-
+-    const totalItems = stories.length;
+-
+-    const totalPages = Math.max(1, Math.ceil(totalItems / query.pageSize));
+-
+-    const safePage = Math.min(query.page, totalPages);
+-
+-    const start = (safePage - 1) * query.pageSize;
+-
+-    const items = stories.slice(start, start + query.pageSize);
+-
+-    return of({
+-      items,
+-
+-      pagination: {
+-        page: safePage,
+-        pageSize: query.pageSize,
+-        totalItems,
+-        totalPages,
+-      },
+-    }).pipe(delay(350));
+-  }
+-
+-  getGenres(): Observable<readonly StoryGenre[]> {
+-    return of(STORY_GENRES_MOCK).pipe(delay(150));
+-  }
+-
+-  getRanking(limit: number): Observable<readonly StoryRankingItem[]> {
+-    const ranking = [...STORY_CATALOG_MOCK]
+-      .sort((left, right) => right.views - left.views)
+-      .slice(0, limit)
+-      .map((story) => ({
+-        id: story.id,
+-        slug: story.slug,
+-        title: story.title,
+-
+-        coverUrl: story.coverUrl,
+-        genres: story.genres,
+-
+-        views: story.views,
+-        rating: story.rating,
+-      }));
+-
+-    return of(ranking).pipe(delay(200));
+-  }
+-}
+-
+-function sortStories(
+-  stories: readonly StoryCatalogItem[],
+-  sort: StoryCatalogQuery['sort'],
+-): StoryCatalogItem[] {
+-  const result = [...stories];
+-
+-  switch (sort) {
+-    case 'popular':
+-      return result.sort((left, right) => right.views - left.views);
+-
+-    case 'rating':
+-      return result.sort((left, right) => right.rating - left.rating);
+-
+-    case 'chapter-count':
+-      return result.sort((left, right) => right.chapterCount - left.chapterCount);
+-
+-    case 'oldest':
+-      return result.sort(
+-        (left, right) => new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime(),
+-      );
+-
+-    case 'latest':
+-    default:
+-      return result.sort(
+-        (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+-      );
+-  }
+-}
+-
+-function normalizeText(value: string): string {
+-  return value
+-    .normalize('NFD')
+-    .replace(/\p{Diacritic}/gu, '')
+-    .toLowerCase()
+-    .trim();
+-}
+diff --git a/frontend/src/app/features/public/story-catalog/data-access/story-catalog.providers.ts b/frontend/src/app/features/public/story-catalog/data-access/story-catalog.providers.ts
+index 7c59e56b990ff6f5551e45d1fbc38cfedbd7a364..36a9c24cb7fb0843b0419df55f238d17d8902de7 100644
+--- a/frontend/src/app/features/public/story-catalog/data-access/story-catalog.providers.ts
++++ b/frontend/src/app/features/public/story-catalog/data-access/story-catalog.providers.ts
+@@ -1,40 +1,15 @@
+ import { Provider } from '@angular/core';
+ 
+-import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+-
+ import { StoryCatalogHttpRepository } from './story-catalog-http.repository';
+-import { StoryCatalogMockRepository } from './story-catalog-mock.repository';
+-
+-import { STORY_CATALOG_ENDPOINTS, StoryCatalogRepository } from './story-catalog.repository';
+-
++import { StoryCatalogRepository } from './story-catalog.repository';
+ import { StoryCatalogStore } from './story-catalog.store';
+ 
+-export interface StoryCatalogProviderOptions {
+-  readonly useMock: boolean;
+-}
+-
+-export function provideStoryCatalog(options: StoryCatalogProviderOptions): Provider[] {
++export function provideStoryCatalog(): Provider[] {
+   return [
+-    {
+-      provide: STORY_CATALOG_ENDPOINTS,
+-
+-      deps: [APP_RUNTIME_CONFIG],
+-
+-      useFactory: (config: { readonly apiBaseUrl: string }) => ({
+-        catalog: `${config.apiBaseUrl}/stories`,
+-
+-        genres: `${config.apiBaseUrl}/story-genres`,
+-
+-        ranking: `${config.apiBaseUrl}/stories/ranking`,
+-      }),
+-    },
+-
+     {
+       provide: StoryCatalogRepository,
+-
+-      useClass: options.useMock ? StoryCatalogMockRepository : StoryCatalogHttpRepository,
++      useClass: StoryCatalogHttpRepository,
+     },
+-
+     StoryCatalogStore,
+   ];
+ }
+diff --git a/frontend/src/app/features/public/story-catalog/domain/story-catalog.models.ts b/frontend/src/app/features/public/story-catalog/domain/story-catalog.models.ts
+index a045dcd956b04c8aeb103bbbfe873bc9c8ce90ec..a8a186d0e082c4a7aab596d9426e639d82af7d84 100644
+--- a/frontend/src/app/features/public/story-catalog/domain/story-catalog.models.ts
++++ b/frontend/src/app/features/public/story-catalog/domain/story-catalog.models.ts
+@@ -33,13 +33,13 @@ export interface StoryCatalogItem {
+ 
+   readonly badge: StoryCatalogBadge;
+ 
+-  readonly latestChapter: number;
++  readonly latestChapter: number | null;
+   readonly chapterCount: number;
+ 
+   readonly views: number;
+   readonly rating: number;
+ 
+-  readonly releaseYear: number;
++  readonly releaseYear: number | null;
+   readonly updatedAt: string;
+ }
+ 
+diff --git a/frontend/src/app/features/public/story-catalog/mock/story-catalog.mock.ts b/frontend/src/app/features/public/story-catalog/mock/story-catalog.mock.ts
+deleted file mode 100644
+index 947f625fca41cdb4894823003b96b44e46b10052..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-catalog/mock/story-catalog.mock.ts
++++ /dev/null
+@@ -1,456 +0,0 @@
+-import { StoryCatalogItem, StoryGenre } from '../domain/story-catalog.models';
+-
+-export const STORY_GENRES_MOCK: readonly StoryGenre[] = [
+-  {
+-    id: 'genre-action',
+-    slug: 'hanh-dong',
+-    name: 'Hành động',
+-  },
+-  {
+-    id: 'genre-fantasy',
+-    slug: 'fantasy',
+-    name: 'Fantasy',
+-  },
+-  {
+-    id: 'genre-romance',
+-    slug: 'romance',
+-    name: 'Romance',
+-  },
+-  {
+-    id: 'genre-comedy',
+-    slug: 'hai-huoc',
+-    name: 'Hài hước',
+-  },
+-  {
+-    id: 'genre-manhwa',
+-    slug: 'manhwa',
+-    name: 'Manhwa',
+-  },
+-  {
+-    id: 'genre-manhua',
+-    slug: 'manhua',
+-    name: 'Manhua',
+-  },
+-  {
+-    id: 'genre-drama',
+-    slug: 'drama',
+-    name: 'Drama',
+-  },
+-  {
+-    id: 'genre-horror',
+-    slug: 'kinh-di',
+-    name: 'Kinh dị',
+-  },
+-];
+-
+-export const STORY_CATALOG_MOCK: readonly StoryCatalogItem[] = [
+-  {
+-    id: 'story-001',
+-    slug: 'dai-chien-ma-vuong',
+-
+-    title: 'Đại Chiến Ma Vương',
+-    authorName: 'Hải Vô Nhai',
+-
+-    description:
+-      'Một thiếu niên thức tỉnh sức mạnh ma vương và bước vào cuộc chiến thay đổi thế giới.',
+-
+-    coverUrl: '/assets/mock/stories/dai-chien-ma-vuong.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    status: 'ongoing',
+-    badge: 'HOT',
+-
+-    latestChapter: 256,
+-    chapterCount: 256,
+-
+-    views: 18_300_000,
+-    rating: 9.4,
+-
+-    releaseYear: 2024,
+-    updatedAt: '2026-08-05T09:10:00.000Z',
+-  },
+-  {
+-    id: 'story-002',
+-    slug: 'toi-la-tan-thu-duy-nhat',
+-
+-    title: 'Tôi Là Tân Thủ Duy Nhất',
+-    authorName: 'Kim Dong Young',
+-
+-    description: 'Người chơi cuối cùng còn nhớ toàn bộ bí mật của trò chơi tử thần.',
+-
+-    coverUrl: '/assets/mock/stories/toi-la-tan-thu-duy-nhat.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Isekai',
+-      },
+-    ],
+-
+-    status: 'ongoing',
+-    badge: 'NEW',
+-
+-    latestChapter: 58,
+-    chapterCount: 58,
+-
+-    views: 8_600_000,
+-    rating: 8.7,
+-
+-    releaseYear: 2025,
+-    updatedAt: '2026-08-05T08:32:00.000Z',
+-  },
+-  {
+-    id: 'story-003',
+-    slug: 'thanh-guom-diet-quy',
+-
+-    title: 'Thanh Gươm Diệt Quỷ',
+-    authorName: 'Koyoharu Gotouge',
+-
+-    description: 'Hành trình chiến đấu chống lại quỷ dữ của một kiếm sĩ trẻ.',
+-
+-    coverUrl: '/assets/mock/stories/thanh-guom-diet-quy.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Dark Fantasy',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'HOT',
+-
+-    latestChapter: 205,
+-    chapterCount: 205,
+-
+-    views: 12_400_000,
+-    rating: 9.2,
+-
+-    releaseYear: 2016,
+-    updatedAt: '2026-08-04T16:00:00.000Z',
+-  },
+-  {
+-    id: 'story-004',
+-    slug: 'so-huu-suc-manh-vo-han',
+-
+-    title: 'Sở Hữu Sức Mạnh Vô Hạn',
+-    authorName: 'Lee Han',
+-
+-    description: 'Hệ thống bí ẩn giúp nhân vật chính sao chép mọi kỹ năng.',
+-
+-    coverUrl: '/assets/mock/stories/so-huu-suc-manh-vo-han.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    status: 'ongoing',
+-    badge: 'NEW',
+-
+-    latestChapter: 73,
+-    chapterCount: 73,
+-
+-    views: 6_800_000,
+-    rating: 8.9,
+-
+-    releaseYear: 2025,
+-    updatedAt: '2026-08-04T14:30:00.000Z',
+-  },
+-  {
+-    id: 'story-005',
+-    slug: 'thoi-gian-de-yeu-em',
+-
+-    title: 'Thời Gian Để Yêu Em',
+-    authorName: 'Han Ji Woo',
+-
+-    description: 'Một câu chuyện tình cảm nhẹ nhàng giữa hai con người bị thời gian chia cắt.',
+-
+-    coverUrl: '/assets/mock/stories/thoi-gian-de-yeu-em.webp',
+-
+-    genres: [
+-      {
+-        slug: 'romance',
+-        name: 'Romance',
+-      },
+-      {
+-        slug: 'drama',
+-        name: 'Drama',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'FULL',
+-
+-    latestChapter: 120,
+-    chapterCount: 120,
+-
+-    views: 9_100_000,
+-    rating: 9.0,
+-
+-    releaseYear: 2022,
+-    updatedAt: '2026-08-03T12:20:00.000Z',
+-  },
+-  {
+-    id: 'story-006',
+-    slug: 'tokyo-ghoul',
+-
+-    title: 'Tokyo Ghoul',
+-    authorName: 'Sui Ishida',
+-
+-    description: 'Một sinh viên bị biến đổi thành bán quỷ và phải sống giữa hai thế giới.',
+-
+-    coverUrl: '/assets/mock/stories/tokyo-ghoul.webp',
+-
+-    genres: [
+-      {
+-        slug: 'kinh-di',
+-        name: 'Horror',
+-      },
+-      {
+-        slug: 'drama',
+-        name: 'Psychological',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'HOT',
+-
+-    latestChapter: 179,
+-    chapterCount: 179,
+-
+-    views: 7_200_000,
+-    rating: 8.8,
+-
+-    releaseYear: 2011,
+-    updatedAt: '2026-08-02T10:00:00.000Z',
+-  },
+-  {
+-    id: 'story-007',
+-    slug: 'vo-luyen-dinh-phong',
+-
+-    title: 'Võ Luyện Đỉnh Phong',
+-    authorName: 'Mạc Mặc',
+-
+-    description: 'Con đường võ đạo không có điểm dừng, từng bước tiến đến đỉnh phong.',
+-
+-    coverUrl: '/assets/mock/stories/vo-luyen-dinh-phong.webp',
+-
+-    genres: [
+-      {
+-        slug: 'manhua',
+-        name: 'Manhua',
+-      },
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Martial Arts',
+-      },
+-    ],
+-
+-    status: 'ongoing',
+-    badge: 'NEW',
+-
+-    latestChapter: 314,
+-    chapterCount: 314,
+-
+-    views: 5_300_000,
+-    rating: 8.5,
+-
+-    releaseYear: 2018,
+-    updatedAt: '2026-08-02T08:20:00.000Z',
+-  },
+-  {
+-    id: 'story-008',
+-    slug: 'naruto',
+-
+-    title: 'Naruto',
+-    authorName: 'Masashi Kishimoto',
+-
+-    description: 'Cậu bé ninja bị cả làng xa lánh quyết tâm trở thành Hokage.',
+-
+-    coverUrl: '/assets/mock/stories/naruto.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'hai-huoc',
+-        name: 'Adventure',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'HOT',
+-
+-    latestChapter: 700,
+-    chapterCount: 700,
+-
+-    views: 18_700_000,
+-    rating: 9.1,
+-
+-    releaseYear: 1999,
+-    updatedAt: '2026-08-01T19:00:00.000Z',
+-  },
+-  {
+-    id: 'story-009',
+-    slug: 'attack-on-titan',
+-
+-    title: 'Attack on Titan',
+-    authorName: 'Hajime Isayama',
+-
+-    description: 'Nhân loại sống sau những bức tường khổng lồ để chống lại Titan.',
+-
+-    coverUrl: '/assets/mock/stories/attack-on-titan.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'drama',
+-        name: 'Drama',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'FULL',
+-
+-    latestChapter: 139,
+-    chapterCount: 139,
+-
+-    views: 16_200_000,
+-    rating: 9.5,
+-
+-    releaseYear: 2009,
+-    updatedAt: '2026-07-31T18:00:00.000Z',
+-  },
+-  {
+-    id: 'story-010',
+-    slug: 'solo-leveling',
+-
+-    title: 'Solo Leveling',
+-    authorName: 'Chugong',
+-
+-    description: 'Thợ săn yếu nhất thế giới nhận được hệ thống cho phép tăng cấp vô hạn.',
+-
+-    coverUrl: '/assets/mock/stories/solo-leveling.webp',
+-
+-    genres: [
+-      {
+-        slug: 'manhwa',
+-        name: 'Manhwa',
+-      },
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'NEW',
+-
+-    latestChapter: 181,
+-    chapterCount: 181,
+-
+-    views: 23_100_000,
+-    rating: 9.7,
+-
+-    releaseYear: 2018,
+-    updatedAt: '2026-07-30T15:00:00.000Z',
+-  },
+-  {
+-    id: 'story-011',
+-    slug: 'one-piece',
+-
+-    title: 'One Piece',
+-    authorName: 'Eiichiro Oda',
+-
+-    description: 'Cuộc hành trình tìm kiếm kho báu One Piece của băng Mũ Rơm.',
+-
+-    coverUrl: '/assets/mock/stories/one-piece.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'hai-huoc',
+-        name: 'Adventure',
+-      },
+-    ],
+-
+-    status: 'ongoing',
+-    badge: 'HOT',
+-
+-    latestChapter: 1105,
+-    chapterCount: 1105,
+-
+-    views: 24_800_000,
+-    rating: 9.2,
+-
+-    releaseYear: 1997,
+-    updatedAt: '2026-07-29T10:00:00.000Z',
+-  },
+-  {
+-    id: 'story-012',
+-    slug: 'death-note',
+-
+-    title: 'Death Note',
+-    authorName: 'Tsugumi Ohba',
+-
+-    description: 'Một cuốn sổ bí ẩn cho phép người sở hữu quyết định cái chết của người khác.',
+-
+-    coverUrl: '/assets/mock/stories/death-note.webp',
+-
+-    genres: [
+-      {
+-        slug: 'drama',
+-        name: 'Mystery',
+-      },
+-      {
+-        slug: 'kinh-di',
+-        name: 'Psychological',
+-      },
+-    ],
+-
+-    status: 'completed',
+-    badge: 'FULL',
+-
+-    latestChapter: 108,
+-    chapterCount: 108,
+-
+-    views: 8_900_000,
+-    rating: 9.3,
+-
+-    releaseYear: 2003,
+-    updatedAt: '2026-07-28T09:00:00.000Z',
+-  },
+-];
+diff --git a/frontend/src/app/features/public/story-catalog/ui/story-catalog-card/story-catalog-card.component.html b/frontend/src/app/features/public/story-catalog/ui/story-catalog-card/story-catalog-card.component.html
+index 78f2a996a1fc680d58c23a07879f1d15f40acd3a..4a6a5408ada04db54fbefce371b4f6bf446aa06d 100644
+--- a/frontend/src/app/features/public/story-catalog/ui/story-catalog-card/story-catalog-card.component.html
++++ b/frontend/src/app/features/public/story-catalog/ui/story-catalog-card/story-catalog-card.component.html
+@@ -13,7 +13,7 @@
+     }
+ 
+     <div class="cover-bottom">
+-      <span> Ch. {{ story().latestChapter }} </span>
++      <span>{{ story().latestChapter !== null ? 'Ch. ' + story().latestChapter : 'Chưa có chương' }}</span>
+ 
+       <span>
+         <app-icon name="eye" [size]="13" />
+diff --git a/frontend/src/app/features/public/story-ranking/data-access/story-ranking-http.repository.ts b/frontend/src/app/features/public/story-ranking/data-access/story-ranking-http.repository.ts
+index 1e1c25d2a474ffa8b721acf979fce43565c3e8ce..5d68bef41511dee68dd47efbc21f491def36ea7d 100644
+--- a/frontend/src/app/features/public/story-ranking/data-access/story-ranking-http.repository.ts
++++ b/frontend/src/app/features/public/story-ranking/data-access/story-ranking-http.repository.ts
+@@ -1,69 +1,144 @@
+-import { HttpClient, HttpParams } from '@angular/common/http';
+-
+ import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
+ 
+-import { forkJoin, map, Observable } from 'rxjs';
+-
+-import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+-
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
++import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
+ import {
+   GenreRankingDistribution,
+-  StoryRankingListResponse,
++  RankingTone,
++  StoryRankingItem,
+   StoryRankingOverview,
+   StoryRankingQuery,
+-  StoryRankingSummary,
+-  StoryRankingTrend,
+ } from '../domain/story-ranking.models';
++import { StoryRankingRepository } from './story-ranking.repository';
+ 
+-import { STORY_RANKING_ENDPOINTS, StoryRankingRepository } from './story-ranking.repository';
++const TONES: readonly RankingTone[] = ['purple', 'blue', 'pink', 'orange', 'green'];
+ 
+ @Injectable()
+ export class StoryRankingHttpRepository implements StoryRankingRepository {
+-  private readonly http = inject(HttpClient);
+-
+-  private readonly endpoints = inject(STORY_RANKING_ENDPOINTS);
++  private readonly api = inject(PublicStoriesApiClient);
+ 
+   getOverview(query: StoryRankingQuery): Observable<StoryRankingOverview> {
+-    const baseParams = new HttpParams().set('period', query.period);
+-
+-    const rankingParams = baseParams.set('metric', query.metric).set('limit', String(query.limit));
+-
+-    const sidebarParams = baseParams.set('limit', '5');
++    return this.api.list({ sort: 'popular', pageSize: 100 }).pipe(
++      map((page) => buildOverview(page.items, query)),
++    );
++  }
++}
+ 
+-    return forkJoin({
+-      ranking: this.http
+-        .get<ApiSuccessEnvelope<StoryRankingListResponse>>(this.endpoints.ranking, {
+-          params: rankingParams,
+-        })
+-        .pipe(map((response) => response.data)),
++function buildOverview(
++  stories: readonly PublicStoryApiItem[],
++  query: StoryRankingQuery,
++): StoryRankingOverview {
++  const mapped = stories.map(toRankingItem);
++  const ranked = sortStories(mapped, query.metric)
++    .slice(0, query.limit)
++    .map((story, index) => ({ ...story, rank: index + 1 }));
++
++  const totalReads = ranked.reduce((sum, story) => sum + story.viewCount, 0);
++  const followerCount = ranked.reduce((sum, story) => sum + story.followerCount, 0);
++  const maximumValue = Math.max(...ranked.map((story) => story.viewCount), 1);
++
++  return {
++    items: ranked,
++    summary: {
++      totalReads,
++      totalReadsChangePercent: 0,
++      hotStoryCount: ranked.filter((story) => story.popularityScore >= 70).length,
++      hotStoryChange: 0,
++      followerCount,
++      followerChangePercent: 0,
++    },
++    genres: buildGenreDistribution(stories),
++    trends: [...ranked]
++      .sort((left, right) => right.trendingScore - left.trendingScore)
++      .slice(0, 5)
++      .map((story) => ({
++        id: story.id,
++        slug: story.slug,
++        title: story.title,
++        coverUrl: story.coverUrl,
++        value: story.viewCount,
++        maximumValue,
++      })),
++    generatedAt: new Date().toISOString(),
++  };
++}
+ 
+-      summary: this.http
+-        .get<ApiSuccessEnvelope<StoryRankingSummary>>(this.endpoints.summary, {
+-          params: baseParams,
+-        })
+-        .pipe(map((response) => response.data)),
++function toRankingItem(story: PublicStoryApiItem): StoryRankingItem {
++  const popularityScore = normalizedScore(story.stats.views, story.stats.followers);
++  const trendingScore = normalizedScore(
++    story.stats.views + story.stats.comments * 20,
++    story.stats.followers,
++  );
++
++  return {
++    id: story.id,
++    slug: story.slug,
++    rank: 0,
++    rankChange: 0,
++    title: story.title,
++    authorName: story.author.penName,
++    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++    genres: story.categories.map(({ slug, name }) => ({ slug, name })),
++    latestChapter: story.latestChapter?.number ?? null,
++    viewCount: story.stats.views,
++    rating: story.stats.ratingAverage,
++    ratingCount: story.stats.ratingCount,
++    followerCount: story.stats.followers,
++    popularityScore,
++    trendingScore,
++  };
++}
+ 
+-      genres: this.http
+-        .get<ApiSuccessEnvelope<readonly GenreRankingDistribution[]>>(this.endpoints.genres, {
+-          params: sidebarParams,
+-        })
+-        .pipe(map((response) => response.data)),
++function sortStories(
++  stories: readonly StoryRankingItem[],
++  metric: StoryRankingQuery['metric'],
++): StoryRankingItem[] {
++  const result = [...stories];
++  switch (metric) {
++    case 'rating':
++      return result.sort(
++        (left, right) => right.rating - left.rating || right.ratingCount - left.ratingCount,
++      );
++    case 'followers':
++      return result.sort((left, right) => right.followerCount - left.followerCount);
++    case 'trending':
++      return result.sort((left, right) => right.trendingScore - left.trendingScore);
++    case 'popular':
++    default:
++      return result.sort((left, right) => right.viewCount - left.viewCount);
++  }
++}
+ 
+-      trends: this.http
+-        .get<ApiSuccessEnvelope<readonly StoryRankingTrend[]>>(this.endpoints.trends, {
+-          params: sidebarParams,
+-        })
+-        .pipe(map((response) => response.data)),
+-    }).pipe(
+-      map(({ ranking, summary, genres, trends }) => ({
+-        items: ranking.items,
++function buildGenreDistribution(
++  stories: readonly PublicStoryApiItem[],
++): readonly GenreRankingDistribution[] {
++  const counts = new Map<string, { slug: string; name: string; count: number }>();
++  for (const story of stories) {
++    for (const category of story.categories) {
++      const current = counts.get(category.slug);
++      counts.set(category.slug, {
++        slug: category.slug,
++        name: category.name,
++        count: (current?.count ?? 0) + 1,
++      });
++    }
++  }
+ 
+-        summary,
+-        genres,
+-        trends,
++  const total = Math.max([...counts.values()].reduce((sum, item) => sum + item.count, 0), 1);
++  return [...counts.values()]
++    .sort((left, right) => right.count - left.count)
++    .slice(0, 5)
++    .map((item, index) => ({
++      slug: item.slug,
++      name: item.name,
++      percentage: Math.round((item.count / total) * 100),
++      tone: TONES[index % TONES.length] ?? 'blue',
++    }));
++}
+ 
+-        generatedAt: ranking.generatedAt,
+-      })),
+-    );
+-  }
++function normalizedScore(primary: number, secondary: number): number {
++  const weighted = Math.log10(Math.max(primary, 1)) * 18 + Math.log10(Math.max(secondary, 1)) * 10;
++  return Math.min(100, Math.max(0, Math.round(weighted)));
+ }
+diff --git a/frontend/src/app/features/public/story-ranking/data-access/story-ranking-mock.repository.ts b/frontend/src/app/features/public/story-ranking/data-access/story-ranking-mock.repository.ts
+deleted file mode 100644
+index a92087e8318ae842d648bd46dc65e57073418f81..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-ranking/data-access/story-ranking-mock.repository.ts
++++ /dev/null
+@@ -1,152 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { delay, Observable, of } from 'rxjs';
+-
+-import {
+-  StoryRankingItem,
+-  StoryRankingMetric,
+-  StoryRankingOverview,
+-  StoryRankingPeriod,
+-  StoryRankingQuery,
+-} from '../domain/story-ranking.models';
+-
+-import {
+-  GENRE_RANKING_DISTRIBUTION_MOCK,
+-  STORY_RANKING_ITEMS_MOCK,
+-} from '../mock/story-ranking.mock';
+-
+-import { StoryRankingRepository } from './story-ranking.repository';
+-
+-@Injectable()
+-export class StoryRankingMockRepository implements StoryRankingRepository {
+-  getOverview(query: StoryRankingQuery): Observable<StoryRankingOverview> {
+-    const factor = getPeriodFactor(query.period);
+-
+-    const items = STORY_RANKING_ITEMS_MOCK.map((story) => ({
+-      ...story,
+-
+-      viewCount: Math.round(story.viewCount * factor),
+-
+-      ratingCount: Math.round(story.ratingCount * factor),
+-
+-      followerCount: Math.round(story.followerCount * Math.max(factor, 0.35)),
+-    }));
+-
+-    const rankedItems = sortStories(items, query.metric)
+-      .slice(0, query.limit)
+-      .map((story, index) => ({
+-        ...story,
+-        rank: index + 1,
+-      }));
+-
+-    const totalReads = rankedItems.reduce(
+-      (total, story) => total + story.viewCount,
+-
+-      0,
+-    );
+-
+-    const followerCount = rankedItems.reduce(
+-      (total, story) => total + story.followerCount,
+-
+-      0,
+-    );
+-
+-    const maximumValue = Math.max(...rankedItems.map((story) => story.viewCount), 1);
+-
+-    return of({
+-      items: rankedItems,
+-
+-      summary: {
+-        totalReads,
+-
+-        totalReadsChangePercent: getReadChange(query.period),
+-
+-        hotStoryCount: rankedItems.filter((story) => story.popularityScore >= 85).length,
+-
+-        hotStoryChange: query.period === 'day' ? 2 : 8,
+-
+-        followerCount,
+-
+-        followerChangePercent: query.period === 'day' ? 1.2 : 5.7,
+-      },
+-
+-      genres: GENRE_RANKING_DISTRIBUTION_MOCK,
+-
+-      trends: [...rankedItems]
+-        .sort((left, right) => right.trendingScore - left.trendingScore)
+-        .slice(0, 5)
+-        .map((story) => ({
+-          id: story.id,
+-          slug: story.slug,
+-          title: story.title,
+-
+-          coverUrl: story.coverUrl,
+-
+-          value: story.viewCount,
+-
+-          maximumValue,
+-        })),
+-
+-      generatedAt: new Date().toISOString(),
+-    }).pipe(delay(320));
+-  }
+-}
+-
+-function sortStories(
+-  items: readonly StoryRankingItem[],
+-
+-  metric: StoryRankingMetric,
+-): StoryRankingItem[] {
+-  const result = [...items];
+-
+-  switch (metric) {
+-    case 'rating':
+-      return result.sort(
+-        (left, right) => right.rating - left.rating || right.ratingCount - left.ratingCount,
+-      );
+-
+-    case 'followers':
+-      return result.sort((left, right) => right.followerCount - left.followerCount);
+-
+-    case 'trending':
+-      return result.sort((left, right) => right.trendingScore - left.trendingScore);
+-
+-    case 'popular':
+-    default:
+-      return result.sort((left, right) => right.viewCount - left.viewCount);
+-  }
+-}
+-
+-function getPeriodFactor(period: StoryRankingPeriod): number {
+-  switch (period) {
+-    case 'day':
+-      return 0.14;
+-
+-    case 'month':
+-      return 3.2;
+-
+-    case 'all':
+-      return 9.5;
+-
+-    case 'week':
+-    default:
+-      return 1;
+-  }
+-}
+-
+-function getReadChange(period: StoryRankingPeriod): number {
+-  switch (period) {
+-    case 'day':
+-      return 3.8;
+-
+-    case 'month':
+-      return 18.4;
+-
+-    case 'all':
+-      return 36.2;
+-
+-    case 'week':
+-    default:
+-      return 12.4;
+-  }
+-}
+diff --git a/frontend/src/app/features/public/story-ranking/data-access/story-ranking.providers.ts b/frontend/src/app/features/public/story-ranking/data-access/story-ranking.providers.ts
+index f85b174bb80b65c6408fe828668831ab87949c30..af8d8f198378975c51b42fb4754b93a19adacb55 100644
+--- a/frontend/src/app/features/public/story-ranking/data-access/story-ranking.providers.ts
++++ b/frontend/src/app/features/public/story-ranking/data-access/story-ranking.providers.ts
+@@ -1,42 +1,15 @@
+ import { Provider } from '@angular/core';
+ 
+-import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+-
+ import { StoryRankingHttpRepository } from './story-ranking-http.repository';
+-import { StoryRankingMockRepository } from './story-ranking-mock.repository';
+-
+-import { STORY_RANKING_ENDPOINTS, StoryRankingRepository } from './story-ranking.repository';
+-
++import { StoryRankingRepository } from './story-ranking.repository';
+ import { StoryRankingStore } from './story-ranking.store';
+ 
+-export interface StoryRankingProviderOptions {
+-  readonly useMock: boolean;
+-}
+-
+-export function provideStoryRanking(options: StoryRankingProviderOptions): Provider[] {
++export function provideStoryRanking(): Provider[] {
+   return [
+-    {
+-      provide: STORY_RANKING_ENDPOINTS,
+-
+-      deps: [APP_RUNTIME_CONFIG],
+-
+-      useFactory: (config: { readonly apiBaseUrl: string }) => ({
+-        ranking: `${config.apiBaseUrl}/rankings/stories`,
+-
+-        summary: `${config.apiBaseUrl}/rankings/stories/summary`,
+-
+-        genres: `${config.apiBaseUrl}/rankings/genres`,
+-
+-        trends: `${config.apiBaseUrl}/rankings/stories/trends`,
+-      }),
+-    },
+-
+     {
+       provide: StoryRankingRepository,
+-
+-      useClass: options.useMock ? StoryRankingMockRepository : StoryRankingHttpRepository,
++      useClass: StoryRankingHttpRepository,
+     },
+-
+     StoryRankingStore,
+   ];
+ }
+diff --git a/frontend/src/app/features/public/story-ranking/domain/story-ranking.models.ts b/frontend/src/app/features/public/story-ranking/domain/story-ranking.models.ts
+index b121731be5da3d58956bee47bd979e5d44fde027..352072f42a2a280cf02fad78c47c1f3b3596a519 100644
+--- a/frontend/src/app/features/public/story-ranking/domain/story-ranking.models.ts
++++ b/frontend/src/app/features/public/story-ranking/domain/story-ranking.models.ts
+@@ -23,7 +23,7 @@ export interface StoryRankingItem {
+ 
+   readonly genres: readonly StoryRankingGenre[];
+ 
+-  readonly latestChapter: number;
++  readonly latestChapter: number | null;
+ 
+   readonly viewCount: number;
+ 
+diff --git a/frontend/src/app/features/public/story-ranking/mock/story-ranking.mock.ts b/frontend/src/app/features/public/story-ranking/mock/story-ranking.mock.ts
+deleted file mode 100644
+index 54e315ccbcbe37151a362e4b02246a1365c30824..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-ranking/mock/story-ranking.mock.ts
++++ /dev/null
+@@ -1,389 +0,0 @@
+-import { GenreRankingDistribution, StoryRankingItem } from '../domain/story-ranking.models';
+-
+-export const STORY_RANKING_ITEMS_MOCK: readonly StoryRankingItem[] = [
+-  {
+-    id: 'story-solo-leveling',
+-    slug: 'solo-leveling',
+-
+-    rank: 1,
+-    rankChange: 2,
+-
+-    title: 'Solo Leveling',
+-    authorName: 'Chugong',
+-
+-    coverUrl: '/assets/mock/stories/solo-leveling.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    latestChapter: 181,
+-
+-    viewCount: 72_100_000,
+-
+-    rating: 9.7,
+-    ratingCount: 312_400,
+-
+-    followerCount: 2_450_000,
+-
+-    popularityScore: 98,
+-    trendingScore: 100,
+-  },
+-  {
+-    id: 'story-omniscient',
+-    slug: 'omniscient-readers-viewpoint',
+-
+-    rank: 2,
+-    rankChange: -1,
+-
+-    title: "Omniscient Reader's Viewpoint",
+-
+-    authorName: 'Sing Shong',
+-
+-    coverUrl: '/assets/mock/stories/omniscient-readers-viewpoint.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    latestChapter: 236,
+-
+-    viewCount: 58_700_000,
+-
+-    rating: 9.6,
+-    ratingCount: 245_300,
+-
+-    followerCount: 2_180_000,
+-
+-    popularityScore: 96,
+-    trendingScore: 94,
+-  },
+-  {
+-    id: 'story-attack-on-titan',
+-    slug: 'attack-on-titan',
+-
+-    rank: 3,
+-    rankChange: 0,
+-
+-    title: 'Attack on Titan',
+-    authorName: 'Hajime Isayama',
+-
+-    coverUrl: '/assets/mock/stories/attack-on-titan.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'drama',
+-        name: 'Drama',
+-      },
+-    ],
+-
+-    latestChapter: 139,
+-
+-    viewCount: 45_200_000,
+-
+-    rating: 9.5,
+-    ratingCount: 198_700,
+-
+-    followerCount: 1_930_000,
+-
+-    popularityScore: 94,
+-    trendingScore: 88,
+-  },
+-  {
+-    id: 'story-jujutsu-kaisen',
+-    slug: 'jujutsu-kaisen',
+-
+-    rank: 4,
+-    rankChange: 1,
+-
+-    title: 'Jujutsu Kaisen',
+-    authorName: 'Gege Akutami',
+-
+-    coverUrl: '/assets/mock/stories/jujutsu-kaisen.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'supernatural',
+-        name: 'Supernatural',
+-      },
+-    ],
+-
+-    latestChapter: 260,
+-
+-    viewCount: 34_600_000,
+-
+-    rating: 9.4,
+-    ratingCount: 176_200,
+-
+-    followerCount: 1_720_000,
+-
+-    popularityScore: 92,
+-    trendingScore: 84,
+-  },
+-  {
+-    id: 'story-kimetsu',
+-    slug: 'kimetsu-no-yaiba',
+-
+-    rank: 5,
+-    rankChange: -1,
+-
+-    title: 'Kimetsu no Yaiba',
+-    authorName: 'Koyoharu Gotouge',
+-
+-    coverUrl: '/assets/mock/stories/kimetsu-no-yaiba.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'historical',
+-        name: 'Historical',
+-      },
+-    ],
+-
+-    latestChapter: 205,
+-
+-    viewCount: 32_100_000,
+-
+-    rating: 9.3,
+-    ratingCount: 167_800,
+-
+-    followerCount: 1_680_000,
+-
+-    popularityScore: 91,
+-    trendingScore: 82,
+-  },
+-  {
+-    id: 'story-one-piece',
+-    slug: 'one-piece',
+-
+-    rank: 6,
+-    rankChange: 2,
+-
+-    title: 'One Piece',
+-    authorName: 'Eiichiro Oda',
+-
+-    coverUrl: '/assets/mock/stories/one-piece.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'phieu-luu',
+-        name: 'Adventure',
+-      },
+-    ],
+-
+-    latestChapter: 1115,
+-
+-    viewCount: 31_800_000,
+-
+-    rating: 9.2,
+-    ratingCount: 210_300,
+-
+-    followerCount: 2_760_000,
+-
+-    popularityScore: 90,
+-    trendingScore: 78,
+-  },
+-  {
+-    id: 'story-chainsaw-man',
+-    slug: 'chainsaw-man',
+-
+-    rank: 7,
+-    rankChange: 0,
+-
+-    title: 'Chainsaw Man',
+-    authorName: 'Tatsuki Fujimoto',
+-
+-    coverUrl: '/assets/mock/stories/chainsaw-man.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'kinh-di',
+-        name: 'Horror',
+-      },
+-    ],
+-
+-    latestChapter: 167,
+-
+-    viewCount: 25_700_000,
+-
+-    rating: 9.1,
+-    ratingCount: 142_100,
+-
+-    followerCount: 1_420_000,
+-
+-    popularityScore: 87,
+-    trendingScore: 75,
+-  },
+-  {
+-    id: 'story-beginning-after-end',
+-    slug: 'the-beginning-after-the-end',
+-
+-    rank: 8,
+-    rankChange: 1,
+-
+-    title: 'The Beginning After the End',
+-
+-    authorName: 'TurtleMe',
+-
+-    coverUrl: '/assets/mock/stories/the-beginning-after-the-end.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    latestChapter: 189,
+-
+-    viewCount: 22_400_000,
+-
+-    rating: 9,
+-    ratingCount: 128_500,
+-
+-    followerCount: 1_350_000,
+-
+-    popularityScore: 84,
+-    trendingScore: 73,
+-  },
+-  {
+-    id: 'story-wind-breaker',
+-    slug: 'wind-breaker',
+-
+-    rank: 9,
+-    rankChange: -2,
+-
+-    title: 'Wind Breaker',
+-    authorName: 'Jo Yongseok',
+-
+-    coverUrl: '/assets/mock/stories/wind-breaker.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'school-life',
+-        name: 'School Life',
+-      },
+-    ],
+-
+-    latestChapter: 145,
+-
+-    viewCount: 18_900_000,
+-
+-    rating: 8.9,
+-    ratingCount: 96_400,
+-
+-    followerCount: 1_120_000,
+-
+-    popularityScore: 80,
+-    trendingScore: 69,
+-  },
+-  {
+-    id: 'story-tokyo-revengers',
+-    slug: 'tokyo-revengers',
+-
+-    rank: 10,
+-    rankChange: 0,
+-
+-    title: 'Tokyo Revengers',
+-    authorName: 'Ken Wakui',
+-
+-    coverUrl: '/assets/mock/stories/tokyo-revengers.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Action',
+-      },
+-      {
+-        slug: 'drama',
+-        name: 'Drama',
+-      },
+-    ],
+-
+-    latestChapter: 278,
+-
+-    viewCount: 16_200_000,
+-
+-    rating: 8.8,
+-    ratingCount: 88_900,
+-
+-    followerCount: 980_000,
+-
+-    popularityScore: 76,
+-    trendingScore: 65,
+-  },
+-];
+-
+-export const GENRE_RANKING_DISTRIBUTION_MOCK: readonly GenreRankingDistribution[] = [
+-  {
+-    slug: 'hanh-dong',
+-    name: 'Action',
+-    percentage: 38,
+-    tone: 'purple',
+-  },
+-  {
+-    slug: 'fantasy',
+-    name: 'Fantasy',
+-    percentage: 24,
+-    tone: 'blue',
+-  },
+-  {
+-    slug: 'romance',
+-    name: 'Romance',
+-    percentage: 16,
+-    tone: 'pink',
+-  },
+-  {
+-    slug: 'hai-huoc',
+-    name: 'Comedy',
+-    percentage: 12,
+-    tone: 'orange',
+-  },
+-  {
+-    slug: 'drama',
+-    name: 'Drama',
+-    percentage: 10,
+-    tone: 'green',
+-  },
+-];
+diff --git a/frontend/src/app/features/public/story-ranking/ui/ranking-table/ranking-table.component.html b/frontend/src/app/features/public/story-ranking/ui/ranking-table/ranking-table.component.html
+index a7de6d530359847957cb65b0bf346d919571be27..59371ea086ab37303a40d350b3684a3f789a2343 100644
+--- a/frontend/src/app/features/public/story-ranking/ui/ranking-table/ranking-table.component.html
++++ b/frontend/src/app/features/public/story-ranking/ui/ranking-table/ranking-table.component.html
+@@ -42,7 +42,7 @@
+         }
+       </div>
+ 
+-      <div class="chapter-cell" data-label="Chương mới nhất">Ch. {{ story.latestChapter }}</div>
++      <div class="chapter-cell" data-label="Chương mới nhất">{{ story.latestChapter !== null ? 'Ch. ' + story.latestChapter : '—' }}</div>
+ 
+       <div class="views-cell" data-label="Lượt đọc">
+         <app-icon name="eye" [size]="13" />
+diff --git a/frontend/src/app/features/public/story-updates/data-access/story-updates-http.repository.ts b/frontend/src/app/features/public/story-updates/data-access/story-updates-http.repository.ts
+index 7282e75c8e5f9ee4f9bcce576fb68fc3f5ffbc75..7a386f43849a1b056a67c093f0fa433f5f2a7854 100644
+--- a/frontend/src/app/features/public/story-updates/data-access/story-updates-http.repository.ts
++++ b/frontend/src/app/features/public/story-updates/data-access/story-updates-http.repository.ts
+@@ -1,30 +1,182 @@
+-import { HttpClient, HttpParams } from '@angular/common/http';
+-
+ import { inject, Injectable } from '@angular/core';
+-
+ import { map, Observable } from 'rxjs';
+ 
+-import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+-
+-import { StoryUpdatesOverview, StoryUpdatesQuery } from '../domain/story-updates.models';
+-
+-import { STORY_UPDATES_ENDPOINTS, StoryUpdatesRepository } from './story-updates.repository';
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
++import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
++import {
++  StoryUpdateItem,
++  StoryUpdateStat,
++  StoryUpdatesOverview,
++  StoryUpdatesQuery,
++} from '../domain/story-updates.models';
++import { StoryUpdatesRepository } from './story-updates.repository';
+ 
+ @Injectable()
+ export class StoryUpdatesHttpRepository implements StoryUpdatesRepository {
+-  private readonly http = inject(HttpClient);
+-
+-  private readonly endpoints = inject(STORY_UPDATES_ENDPOINTS);
++  private readonly api = inject(PublicStoriesApiClient);
+ 
+   getOverview(query: StoryUpdatesQuery): Observable<StoryUpdatesOverview> {
+-    const params = new HttpParams()
+-      .set('tab', query.tab)
+-      .set('sort', query.sort)
+-      .set('page', String(query.page))
+-      .set('pageSize', String(query.pageSize));
+-
+-    return this.http
+-      .get<ApiSuccessEnvelope<StoryUpdatesOverview>>(this.endpoints.overview, { params })
+-      .pipe(map((response) => response.data));
++    return this.api.list({ sort: 'latest', pageSize: 100 }).pipe(
++      map((page) => buildOverview(page.items, query)),
++    );
++  }
++}
++
++function buildOverview(
++  stories: readonly PublicStoryApiItem[],
++  query: StoryUpdatesQuery,
++): StoryUpdatesOverview {
++  const allItems = stories.map(toUpdateItem);
++  const featured = allItems[0] ?? null;
++  let items = featured ? allItems.filter((story) => story.id !== featured.id) : allItems;
++
++  items = filterStories(items, query.tab);
++  items = sortStories(items, query.sort);
++
++  const totalItems = items.length;
++  const totalPages = Math.max(1, Math.ceil(totalItems / query.pageSize));
++  const page = Math.min(Math.max(query.page, 1), totalPages);
++  const start = (page - 1) * query.pageSize;
++  const topUpdates = [...allItems].sort((left, right) => right.viewCount - left.viewCount).slice(0, 5);
++
++  return {
++    featured,
++    items: items.slice(start, start + query.pageSize),
++    topUpdates,
++    stats: buildStats(stories),
++    schedule: [],
++    popularGenres: buildPopularGenres(stories),
++    pagination: {
++      page,
++      pageSize: query.pageSize,
++      totalItems,
++      totalPages,
++    },
++    generatedAt: new Date().toISOString(),
++  };
++}
++
++function toUpdateItem(story: PublicStoryApiItem): StoryUpdateItem {
++  const recentlyUpdated = Date.now() - new Date(story.updatedAt).getTime() <= 24 * 60 * 60 * 1000;
++  const hot = story.stats.views >= 1000 || story.stats.followers >= 100;
++
++  return {
++    id: story.id,
++    slug: story.slug,
++    title: story.title,
++    description: story.synopsis,
++    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++    bannerUrl: story.coverUrl,
++    genres: story.categories.map(({ slug, name }) => ({ slug, name })),
++    latestChapter: story.latestChapter?.number ?? null,
++    previousChapter: null,
++    updatedAt: story.updatedAt,
++    viewCount: story.stats.views,
++    commentCount: story.stats.comments,
++    status: story.status === 'COMPLETED' ? 'completed' : 'ongoing',
++    badge: recentlyUpdated ? 'new' : hot ? 'hot' : null,
++    followed: false,
++    hot,
++  };
++}
++
++function filterStories(
++  stories: readonly StoryUpdateItem[],
++  tab: StoryUpdatesQuery['tab'],
++): StoryUpdateItem[] {
++  switch (tab) {
++    case 'latest':
++      return stories.filter(
++        (story) => Date.now() - new Date(story.updatedAt).getTime() <= 24 * 60 * 60 * 1000,
++      );
++    case 'following':
++      return stories.filter((story) => story.followed);
++    case 'hot':
++      return stories.filter((story) => story.hot);
++    case 'completed':
++      return stories.filter((story) => story.status === 'completed');
++    case 'all':
++    default:
++      return [...stories];
+   }
+ }
++
++function sortStories(
++  stories: readonly StoryUpdateItem[],
++  sort: StoryUpdatesQuery['sort'],
++): StoryUpdateItem[] {
++  const result = [...stories];
++  switch (sort) {
++    case 'views':
++      return result.sort((left, right) => right.viewCount - left.viewCount);
++    case 'title':
++      return result.sort((left, right) => left.title.localeCompare(right.title, 'vi'));
++    case 'latest':
++    default:
++      return result.sort(
++        (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
++      );
++  }
++}
++
++function buildStats(stories: readonly PublicStoryApiItem[]): readonly StoryUpdateStat[] {
++  const today = new Date().toDateString();
++  const chaptersToday = stories.filter(
++    (story) => story.lastChapterAt && new Date(story.lastChapterAt).toDateString() === today,
++  ).length;
++
++  return [
++    {
++      id: 'updated-stories',
++      label: 'Truyện đang hiển thị',
++      value: stories.length,
++      valueSuffix: null,
++      comparisonText: 'Dữ liệu công khai hiện tại',
++      tone: 'purple',
++    },
++    {
++      id: 'chapters-today',
++      label: 'Có chương mới hôm nay',
++      value: chaptersToday,
++      valueSuffix: null,
++      comparisonText: 'Dựa trên thời điểm chương mới nhất',
++      tone: 'blue',
++    },
++    {
++      id: 'following',
++      label: 'Đang theo dõi',
++      value: 0,
++      valueSuffix: null,
++      comparisonText: 'Chưa có API thư viện/follow công khai',
++      tone: 'pink',
++    },
++    {
++      id: 'average-speed',
++      label: 'Tốc độ cập nhật',
++      value: 0,
++      valueSuffix: null,
++      comparisonText: 'Chưa có dữ liệu lịch sử để tính',
++      tone: 'orange',
++    },
++  ];
++}
++
++function buildPopularGenres(stories: readonly PublicStoryApiItem[]) {
++  const counts = new Map<string, { slug: string; name: string; count: number }>();
++  for (const story of stories) {
++    for (const category of story.categories) {
++      const current = counts.get(category.slug);
++      counts.set(category.slug, {
++        slug: category.slug,
++        name: category.name,
++        count: (current?.count ?? 0) + 1,
++      });
++    }
++  }
++
++  return [...counts.values()]
++    .sort((left, right) => right.count - left.count)
++    .slice(0, 8)
++    .map(({ slug, name }) => ({ slug, name }));
++}
+diff --git a/frontend/src/app/features/public/story-updates/data-access/story-updates-mock.repository.ts b/frontend/src/app/features/public/story-updates/data-access/story-updates-mock.repository.ts
+deleted file mode 100644
+index 189bfecb8becb44562cb1f1a4d3b02a5df7b2d2a..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-updates/data-access/story-updates-mock.repository.ts
++++ /dev/null
+@@ -1,115 +0,0 @@
+-import { Injectable } from '@angular/core';
+-
+-import { delay, Observable, of } from 'rxjs';
+-
+-import {
+-  StoryUpdateItem,
+-  StoryUpdatesOverview,
+-  StoryUpdatesQuery,
+-} from '../domain/story-updates.models';
+-
+-import {
+-  STORY_UPDATE_GENRES_MOCK,
+-  STORY_UPDATE_ITEMS_MOCK,
+-  STORY_UPDATE_SCHEDULE_MOCK,
+-  STORY_UPDATE_STATS_MOCK,
+-} from '../mock/story-updates.mock';
+-
+-import { StoryUpdatesRepository } from './story-updates.repository';
+-
+-@Injectable()
+-export class StoryUpdatesMockRepository implements StoryUpdatesRepository {
+-  getOverview(query: StoryUpdatesQuery): Observable<StoryUpdatesOverview> {
+-    const featured = STORY_UPDATE_ITEMS_MOCK[0] ?? null;
+-
+-    let items = STORY_UPDATE_ITEMS_MOCK.filter((story) => story.id !== featured?.id);
+-
+-    items = filterStories(items, query.tab);
+-
+-    items = sortStories(items, query.sort);
+-
+-    const totalItems = items.length;
+-
+-    const totalPages = Math.max(1, Math.ceil(totalItems / query.pageSize));
+-
+-    const safePage = Math.min(Math.max(query.page, 1), totalPages);
+-
+-    const start = (safePage - 1) * query.pageSize;
+-
+-    const paginatedItems = items.slice(start, start + query.pageSize);
+-
+-    const topUpdates = [...STORY_UPDATE_ITEMS_MOCK]
+-      .sort((left, right) => right.viewCount - left.viewCount)
+-      .slice(0, 5);
+-
+-    return of({
+-      featured,
+-      items: paginatedItems,
+-
+-      topUpdates,
+-
+-      stats: STORY_UPDATE_STATS_MOCK,
+-
+-      schedule: STORY_UPDATE_SCHEDULE_MOCK,
+-
+-      popularGenres: STORY_UPDATE_GENRES_MOCK,
+-
+-      pagination: {
+-        page: safePage,
+-        pageSize: query.pageSize,
+-        totalItems,
+-        totalPages,
+-      },
+-
+-      generatedAt: new Date().toISOString(),
+-    }).pipe(delay(320));
+-  }
+-}
+-
+-function filterStories(
+-  stories: readonly StoryUpdateItem[],
+-
+-  tab: StoryUpdatesQuery['tab'],
+-): StoryUpdateItem[] {
+-  switch (tab) {
+-    case 'latest':
+-      return stories.filter(
+-        (story) => Date.now() - new Date(story.updatedAt).getTime() <= 60 * 60 * 1000,
+-      );
+-
+-    case 'following':
+-      return stories.filter((story) => story.followed);
+-
+-    case 'hot':
+-      return stories.filter((story) => story.hot);
+-
+-    case 'completed':
+-      return stories.filter((story) => story.status === 'completed');
+-
+-    case 'all':
+-    default:
+-      return [...stories];
+-  }
+-}
+-
+-function sortStories(
+-  stories: readonly StoryUpdateItem[],
+-
+-  sort: StoryUpdatesQuery['sort'],
+-): StoryUpdateItem[] {
+-  const result = [...stories];
+-
+-  switch (sort) {
+-    case 'views':
+-      return result.sort((left, right) => right.viewCount - left.viewCount);
+-
+-    case 'title':
+-      return result.sort((left, right) => left.title.localeCompare(right.title, 'vi'));
+-
+-    case 'latest':
+-    default:
+-      return result.sort(
+-        (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+-      );
+-  }
+-}
+diff --git a/frontend/src/app/features/public/story-updates/data-access/story-updates.providers.ts b/frontend/src/app/features/public/story-updates/data-access/story-updates.providers.ts
+index d72fbf1eed8fbf9d7fae6519b33fd702a84b93a1..61ec4ba3bae7ffdf42021a412bc1d0d89f405cd5 100644
+--- a/frontend/src/app/features/public/story-updates/data-access/story-updates.providers.ts
++++ b/frontend/src/app/features/public/story-updates/data-access/story-updates.providers.ts
+@@ -1,36 +1,15 @@
+ import { Provider } from '@angular/core';
+ 
+-import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+-
+ import { StoryUpdatesHttpRepository } from './story-updates-http.repository';
+-import { StoryUpdatesMockRepository } from './story-updates-mock.repository';
+-
+-import { STORY_UPDATES_ENDPOINTS, StoryUpdatesRepository } from './story-updates.repository';
+-
++import { StoryUpdatesRepository } from './story-updates.repository';
+ import { StoryUpdatesStore } from './story-updates.store';
+ 
+-export interface StoryUpdatesProviderOptions {
+-  readonly useMock: boolean;
+-}
+-
+-export function provideStoryUpdates(options: StoryUpdatesProviderOptions): Provider[] {
++export function provideStoryUpdates(): Provider[] {
+   return [
+-    {
+-      provide: STORY_UPDATES_ENDPOINTS,
+-
+-      deps: [APP_RUNTIME_CONFIG],
+-
+-      useFactory: (config: { readonly apiBaseUrl: string }) => ({
+-        overview: `${config.apiBaseUrl}/story-updates/overview`,
+-      }),
+-    },
+-
+     {
+       provide: StoryUpdatesRepository,
+-
+-      useClass: options.useMock ? StoryUpdatesMockRepository : StoryUpdatesHttpRepository,
++      useClass: StoryUpdatesHttpRepository,
+     },
+-
+     StoryUpdatesStore,
+   ];
+ }
+diff --git a/frontend/src/app/features/public/story-updates/domain/story-updates.models.ts b/frontend/src/app/features/public/story-updates/domain/story-updates.models.ts
+index 7812f07e2423763e5301122d04473daa80f34521..0782c0a6dc1c4b3298370c72ea7782c5b07f436b 100644
+--- a/frontend/src/app/features/public/story-updates/domain/story-updates.models.ts
++++ b/frontend/src/app/features/public/story-updates/domain/story-updates.models.ts
+@@ -25,7 +25,7 @@ export interface StoryUpdateItem {
+ 
+   readonly genres: readonly StoryUpdateGenre[];
+ 
+-  readonly latestChapter: number;
++  readonly latestChapter: number | null;
+   readonly previousChapter: number | null;
+ 
+   readonly updatedAt: string;
+diff --git a/frontend/src/app/features/public/story-updates/mock/story-updates.mock.ts b/frontend/src/app/features/public/story-updates/mock/story-updates.mock.ts
+deleted file mode 100644
+index df5be91378d1204b3e1ea783af23289b4ea3ac4b..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story-updates/mock/story-updates.mock.ts
++++ /dev/null
+@@ -1,451 +0,0 @@
+-import {
+-  StoryUpdateGenreSummary,
+-  StoryUpdateItem,
+-  StoryUpdateScheduleItem,
+-  StoryUpdateStat,
+-} from '../domain/story-updates.models';
+-
+-export const STORY_UPDATE_ITEMS_MOCK: readonly StoryUpdateItem[] = [
+-  {
+-    id: 'story-solo-leveling',
+-    slug: 'solo-leveling',
+-
+-    title: 'Solo Leveling',
+-
+-    description:
+-      'Sung Jinwoo, người được mệnh danh là thợ săn yếu nhất thế giới, bỗng nhiên nhận được khả năng tăng cấp kỳ lạ.',
+-
+-    coverUrl: '/assets/mock/stories/solo-leveling.webp',
+-
+-    bannerUrl: '/assets/mock/stories/solo-leveling.webp',
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Hành động',
+-      },
+-      {
+-        slug: 'phieu-luu',
+-        name: 'Phiêu lưu',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    latestChapter: 188,
+-    previousChapter: 187,
+-
+-    updatedAt: '2026-08-05T22:21:00+07:00',
+-
+-    viewCount: 2_300_000,
+-    commentCount: 12_500,
+-
+-    status: 'ongoing',
+-    badge: 'featured',
+-
+-    followed: true,
+-    hot: true,
+-  },
+-  {
+-    id: 'story-girl',
+-    slug: 'toi-nhat-duoc-mot-co-gai',
+-
+-    title: 'Tôi Nhặt Được Một Cô Gái',
+-
+-    description: 'Một cuộc gặp gỡ bất ngờ làm thay đổi cuộc sống của một thanh niên bình thường.',
+-
+-    coverUrl: '/assets/mock/stories/toi-nhat-duoc-mot-co-gai.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'romance',
+-        name: 'Romance',
+-      },
+-      {
+-        slug: 'hoc-duong',
+-        name: 'Học đường',
+-      },
+-    ],
+-
+-    latestChapter: 125,
+-    previousChapter: 124,
+-
+-    updatedAt: '2026-08-05T22:21:00+07:00',
+-
+-    viewCount: 98_700,
+-    commentCount: 1_200,
+-
+-    status: 'ongoing',
+-    badge: 'new',
+-
+-    followed: false,
+-    hot: false,
+-  },
+-  {
+-    id: 'story-demon-slayer',
+-    slug: 'thanh-guom-diet-quy',
+-
+-    title: 'Thanh Gươm Diệt Quỷ',
+-
+-    description: 'Hành trình chiến đấu chống lại quỷ dữ của kiếm sĩ trẻ Tanjiro.',
+-
+-    coverUrl: '/assets/mock/stories/thanh-guom-diet-quy.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Hành động',
+-      },
+-      {
+-        slug: 'fantasy',
+-        name: 'Fantasy',
+-      },
+-    ],
+-
+-    latestChapter: 205,
+-    previousChapter: 204,
+-
+-    updatedAt: '2026-08-05T22:11:00+07:00',
+-
+-    viewCount: 126_400,
+-    commentCount: 2_100,
+-
+-    status: 'completed',
+-    badge: 'hot',
+-
+-    followed: true,
+-    hot: true,
+-  },
+-  {
+-    id: 'story-immortal-king',
+-    slug: 'van-gioi-tien-vuong',
+-
+-    title: 'Vạn Giới Tiên Vương',
+-
+-    description: 'Một cường giả bước qua vạn giới để tìm lại sức mạnh đã mất.',
+-
+-    coverUrl: '/assets/mock/stories/van-gioi-tien-vuong.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'tien-hiep',
+-        name: 'Tiên hiệp',
+-      },
+-      {
+-        slug: 'huyen-huyen',
+-        name: 'Huyền huyễn',
+-      },
+-    ],
+-
+-    latestChapter: 976,
+-    previousChapter: 975,
+-
+-    updatedAt: '2026-08-05T22:06:00+07:00',
+-
+-    viewCount: 85_200,
+-    commentCount: 1_100,
+-
+-    status: 'ongoing',
+-    badge: null,
+-
+-    followed: false,
+-    hot: true,
+-  },
+-  {
+-    id: 'story-kengan',
+-    slug: 'kengan-omega',
+-
+-    title: 'Kengan Omega',
+-
+-    description: 'Những trận đấu võ thuật khốc liệt trong đấu trường Kengan.',
+-
+-    coverUrl: '/assets/mock/stories/kengan-omega.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'vo-thuat',
+-        name: 'Võ thuật',
+-      },
+-      {
+-        slug: 'dau-truong',
+-        name: 'Đấu trường',
+-      },
+-    ],
+-
+-    latestChapter: 274,
+-    previousChapter: 273,
+-
+-    updatedAt: '2026-08-05T21:56:00+07:00',
+-
+-    viewCount: 64_100,
+-    commentCount: 892,
+-
+-    status: 'ongoing',
+-    badge: null,
+-
+-    followed: false,
+-    hot: false,
+-  },
+-  {
+-    id: 'story-return-strongest',
+-    slug: 'tro-lai-lam-manh-nhat',
+-
+-    title: 'Trở Lại Làm Mạnh Nhất',
+-
+-    description: 'Sau khi trở về quá khứ, hắn quyết tâm sửa chữa tất cả sai lầm.',
+-
+-    coverUrl: '/assets/mock/stories/tro-lai-lam-manh-nhat.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'hanh-dong',
+-        name: 'Hành động',
+-      },
+-      {
+-        slug: 'isekai',
+-        name: 'Isekai',
+-      },
+-    ],
+-
+-    latestChapter: 86,
+-    previousChapter: 85,
+-
+-    updatedAt: '2026-08-05T21:41:00+07:00',
+-
+-    viewCount: 77_300,
+-    commentCount: 970,
+-
+-    status: 'ongoing',
+-    badge: 'new',
+-
+-    followed: true,
+-    hot: true,
+-  },
+-  {
+-    id: 'story-rebirth-system',
+-    slug: 'tan-the-trung-sinh-ta-co-he-thong',
+-
+-    title: 'Tận Thế Trùng Sinh: Ta Có Hệ Thống',
+-
+-    description: 'Trở lại ngày tận thế bắt đầu với một hệ thống bí ẩn.',
+-
+-    coverUrl: '/assets/mock/stories/tan-the-trung-sinh.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'kinh-di',
+-        name: 'Kinh dị',
+-      },
+-      {
+-        slug: 'sinh-ton',
+-        name: 'Sinh tồn',
+-      },
+-    ],
+-
+-    latestChapter: 112,
+-    previousChapter: 111,
+-
+-    updatedAt: '2026-08-05T21:26:00+07:00',
+-
+-    viewCount: 53_800,
+-    commentCount: 745,
+-
+-    status: 'ongoing',
+-    badge: null,
+-
+-    followed: false,
+-    hot: false,
+-  },
+-  {
+-    id: 'story-yinian-yongheng',
+-    slug: 'nhat-niem-vinh-hang',
+-
+-    title: 'Nhất Niệm Vĩnh Hằng',
+-
+-    description: 'Con đường tu tiên đầy hài hước và những thử thách bất ngờ.',
+-
+-    coverUrl: '/assets/mock/stories/nhat-niem-vinh-hang.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'tien-hiep',
+-        name: 'Tiên hiệp',
+-      },
+-      {
+-        slug: 'huyen-huyen',
+-        name: 'Huyền huyễn',
+-      },
+-    ],
+-
+-    latestChapter: 1483,
+-    previousChapter: 1482,
+-
+-    updatedAt: '2026-08-05T21:26:00+07:00',
+-
+-    viewCount: 49_600,
+-    commentCount: 621,
+-
+-    status: 'ongoing',
+-    badge: null,
+-
+-    followed: false,
+-    hot: false,
+-  },
+-  {
+-    id: 'story-wind-breaker',
+-    slug: 'wind-breaker',
+-
+-    title: 'Wind Breaker',
+-
+-    description: 'Những cuộc đua xe đạp đường phố và tình bạn tuổi trẻ.',
+-
+-    coverUrl: '/assets/mock/stories/wind-breaker.webp',
+-
+-    bannerUrl: null,
+-
+-    genres: [
+-      {
+-        slug: 'hoc-duong',
+-        name: 'Học đường',
+-      },
+-      {
+-        slug: 'vo-thuat',
+-        name: 'Võ thuật',
+-      },
+-    ],
+-
+-    latestChapter: 156,
+-    previousChapter: 155,
+-
+-    updatedAt: '2026-08-05T20:26:00+07:00',
+-
+-    viewCount: 42_200,
+-    commentCount: 563,
+-
+-    status: 'ongoing',
+-    badge: null,
+-
+-    followed: true,
+-    hot: false,
+-  },
+-];
+-
+-export const STORY_UPDATE_STATS_MOCK: readonly StoryUpdateStat[] = [
+-  {
+-    id: 'updated-stories',
+-
+-    label: 'Truyện vừa cập nhật',
+-
+-    value: 1_248,
+-    valueSuffix: null,
+-
+-    comparisonText: '+36 hôm nay',
+-
+-    tone: 'purple',
+-  },
+-  {
+-    id: 'chapters-today',
+-
+-    label: 'Chương mới hôm nay',
+-
+-    value: 3_256,
+-    valueSuffix: null,
+-
+-    comparisonText: '+128 hôm nay',
+-
+-    tone: 'blue',
+-  },
+-  {
+-    id: 'following',
+-
+-    label: 'Đang theo dõi',
+-
+-    value: 56,
+-    valueSuffix: null,
+-
+-    comparisonText: '↑ 3 tuần này',
+-
+-    tone: 'pink',
+-  },
+-  {
+-    id: 'average-speed',
+-
+-    label: 'Cập nhật nhanh',
+-
+-    value: 5,
+-    valueSuffix: 'phút',
+-
+-    comparisonText: 'Trung bình',
+-
+-    tone: 'orange',
+-  },
+-];
+-
+-export const STORY_UPDATE_SCHEDULE_MOCK: readonly StoryUpdateScheduleItem[] = [
+-  {
+-    id: 'today',
+-    label: 'Hôm nay',
+-    chapterCount: 3_256,
+-  },
+-  {
+-    id: 'tomorrow',
+-    label: 'Ngày mai',
+-    chapterCount: 2_104,
+-  },
+-  {
+-    id: 'next-two-days',
+-    label: '2 ngày tới',
+-    chapterCount: 1_678,
+-  },
+-];
+-
+-export const STORY_UPDATE_GENRES_MOCK: readonly StoryUpdateGenreSummary[] = [
+-  {
+-    slug: 'hanh-dong',
+-    name: 'Hành động',
+-  },
+-  {
+-    slug: 'fantasy',
+-    name: 'Fantasy',
+-  },
+-  {
+-    slug: 'tien-hiep',
+-    name: 'Tiên hiệp',
+-  },
+-  {
+-    slug: 'romance',
+-    name: 'Romance',
+-  },
+-  {
+-    slug: 'hoc-duong',
+-    name: 'Học đường',
+-  },
+-  {
+-    slug: 'kinh-di',
+-    name: 'Kinh dị',
+-  },
+-  {
+-    slug: 'isekai',
+-    name: 'Isekai',
+-  },
+-  {
+-    slug: 'vo-thuat',
+-    name: 'Võ thuật',
+-  },
+-];
+diff --git a/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html b/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
+index 6778f8337cf2f50d2c8807560c1c33dc56d585db..956cc41ab6235f084c49b301c34779ecf5a69fe8 100644
+--- a/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
++++ b/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
+@@ -20,7 +20,7 @@
+ 
+     <div class="footer-row">
+       <div>
+-        <span class="chapter"> Ch.{{ story().latestChapter }} </span>
++        <span class="chapter"> {{ story().latestChapter !== null ? 'Ch.' + story().latestChapter : 'Chưa có chương' }} </span>
+ 
+         <span>
+           {{ story().updatedAt | relativeTime }}
+diff --git a/frontend/src/app/features/public/story-updates/ui/top-updates-card/top-updates-card.component.html b/frontend/src/app/features/public/story-updates/ui/top-updates-card/top-updates-card.component.html
+index fc818b499d9f5e960b6bc6144e8540554c84b51a..bc6816a4fd2d3320da152daad99732f3468bd1a4 100644
+--- a/frontend/src/app/features/public/story-updates/ui/top-updates-card/top-updates-card.component.html
++++ b/frontend/src/app/features/public/story-updates/ui/top-updates-card/top-updates-card.component.html
+@@ -18,7 +18,7 @@
+ 
+         <div class="ranking-info">
+           <strong>{{ story.title }}</strong>
+-          <span>Ch. {{ story.latestChapter }}</span>
++          <span>{{ story.latestChapter !== null ? 'Ch. ' + story.latestChapter : 'Chưa có chương' }}</span>
+         </div>
+ 
+         <time>
+diff --git a/frontend/src/app/features/public/story-updates/ui/update-story-card/update-story-card.component.html b/frontend/src/app/features/public/story-updates/ui/update-story-card/update-story-card.component.html
+index 3b8cf4810a535b1f336355154b20908ee39e21f1..85227de26a0ceeefda8d4a4743e851bcacd119c3 100644
+--- a/frontend/src/app/features/public/story-updates/ui/update-story-card/update-story-card.component.html
++++ b/frontend/src/app/features/public/story-updates/ui/update-story-card/update-story-card.component.html
+@@ -22,7 +22,7 @@
+ 
+     <div class="bottom-row">
+       <div class="chapter-row">
+-        <strong>Ch. {{ story().latestChapter }}</strong>
++        <strong>{{ story().latestChapter !== null ? 'Ch. ' + story().latestChapter : 'Chưa có chương' }}</strong>
+         <span class="time">{{ story().updatedAt | relativeTime }}</span>
+       </div>
+ 
+diff --git a/frontend/src/app/features/public/story/data-access/story-http.repository.ts b/frontend/src/app/features/public/story/data-access/story-http.repository.ts
+index 30018238124c264ed5026ec01ca88207940a6f32..c16c0753c2c4793ed61eb60a60545244e6223e51 100644
+--- a/frontend/src/app/features/public/story/data-access/story-http.repository.ts
++++ b/frontend/src/app/features/public/story/data-access/story-http.repository.ts
+@@ -1,24 +1,75 @@
+-import { HttpClient } from '@angular/common/http';
+ import { inject, Injectable } from '@angular/core';
+-import { Observable } from 'rxjs';
++import { map, Observable, of } from 'rxjs';
++
++import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
++import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
++import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
+ import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
+ import { StoryDetailRepository } from './story.repository';
+ 
+ @Injectable()
+ export class StoryDetailHttpRepository implements StoryDetailRepository {
+-  private readonly http = inject(HttpClient);
++  private readonly api = inject(PublicStoriesApiClient);
++  private categorySlugs: readonly string[] = [];
++  private currentSlug = '';
+ 
+   getStoryBySlug(slug: string): Observable<Story | null> {
+-    return this.http.get<Story | null>(`/api/v1/stories/${slug}`);
++    this.currentSlug = slug;
++    return this.api.detail(slug).pipe(
++      map((story) => {
++        this.categorySlugs = story.categories.map((category) => category.slug);
++        return toStory(story);
++      }),
++    );
+   }
+ 
+-  getComments(storyId: string): Observable<readonly StoryComment[]> {
+-    return this.http.get<readonly StoryComment[]>(`/api/v1/stories/${storyId}/comments`);
++  getComments(_storyId: string): Observable<readonly StoryComment[]> {
++    return of([]);
+   }
+ 
+-  getRelatedStories(categories: readonly string[]): Observable<readonly RelatedStoryItem[]> {
+-    return this.http.get<readonly RelatedStoryItem[]>(`/api/v1/stories/related`, {
+-      params: { categories: categories.join(',') },
+-    });
++  getRelatedStories(_categories: readonly string[]): Observable<readonly RelatedStoryItem[]> {
++    const genre = this.categorySlugs[0];
++    if (!genre) {
++      return of([]);
++    }
++
++    return this.api.list({ genre, sort: 'popular', pageSize: 6 }).pipe(
++      map((page) =>
++        page.items
++          .filter((story) => story.slug !== this.currentSlug)
++          .slice(0, 5)
++          .map((story) => ({
++            title: story.title,
++            slug: story.slug,
++            coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++            latestChapter: story.latestChapter?.number ?? null,
++          })),
++      ),
++    );
+   }
+ }
++
++function toStory(story: PublicStoryApiItem): Story {
++  return {
++    id: story.id,
++    slug: story.slug,
++    title: story.title,
++    author: story.author.penName,
++    description: story.synopsis,
++    coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
++    categories: story.categories.map((category) => category.name),
++    latestChapter: story.latestChapter
++      ? {
++          number: story.latestChapter.number,
++          title: story.latestChapter.title,
++          slug: story.latestChapter.slug,
++          updatedAt: story.latestChapter.publishedAt,
++        }
++      : null,
++    views: story.stats.views,
++    rating: story.stats.ratingAverage,
++    chapterCount: story.stats.chapters,
++    status: story.status,
++    badge: story.status === 'COMPLETED' ? 'FULL' : undefined,
++  };
++}
+diff --git a/frontend/src/app/features/public/story/data-access/story-mock.repository.ts b/frontend/src/app/features/public/story/data-access/story-mock.repository.ts
+deleted file mode 100644
+index bdb200de7a9f894f7745a5bfefb00484c0db9d38..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story/data-access/story-mock.repository.ts
++++ /dev/null
+@@ -1,22 +0,0 @@
+-import { Injectable } from '@angular/core';
+-import { delay, Observable, of } from 'rxjs';
+-import { STORIES } from '../../../../shared/testing/story.fixtures';
+-import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
+-import { MOCK_RELATED_STORIES, MOCK_STORY_COMMENTS } from '../mock/story.mock';
+-import { StoryDetailRepository } from './story.repository';
+-
+-@Injectable()
+-export class StoryDetailMockRepository implements StoryDetailRepository {
+-  getStoryBySlug(slug: string): Observable<Story | null> {
+-    const found = STORIES.find((s) => s.slug === slug) ?? null;
+-    return of(found).pipe(delay(200));
+-  }
+-
+-  getComments(_storyId: string): Observable<readonly StoryComment[]> {
+-    return of(MOCK_STORY_COMMENTS).pipe(delay(150));
+-  }
+-
+-  getRelatedStories(_categories: readonly string[]): Observable<readonly RelatedStoryItem[]> {
+-    return of(MOCK_RELATED_STORIES).pipe(delay(180));
+-  }
+-}
+diff --git a/frontend/src/app/features/public/story/data-access/story.providers.ts b/frontend/src/app/features/public/story/data-access/story.providers.ts
+index 5e8e79485eb4b68e0aace713a1aec459ade19f9e..85338ac599cf5e01071c2cc820804cd5cf7a19da 100644
+--- a/frontend/src/app/features/public/story/data-access/story.providers.ts
++++ b/frontend/src/app/features/public/story/data-access/story.providers.ts
+@@ -1,18 +1,14 @@
+ import { Provider } from '@angular/core';
++
+ import { StoryDetailHttpRepository } from './story-http.repository';
+-import { StoryDetailMockRepository } from './story-mock.repository';
+ import { StoryDetailRepository } from './story.repository';
+ import { StoryDetailStore } from './story.store';
+ 
+-export interface ProvideStoryDetailOptions {
+-  readonly useMock?: boolean;
+-}
+-
+-export function provideStoryDetail(options: ProvideStoryDetailOptions = {}): Provider[] {
++export function provideStoryDetail(): Provider[] {
+   return [
+     {
+       provide: StoryDetailRepository,
+-      useClass: options.useMock ? StoryDetailMockRepository : StoryDetailHttpRepository,
++      useClass: StoryDetailHttpRepository,
+     },
+     StoryDetailStore,
+   ];
+diff --git a/frontend/src/app/features/public/story/domain/story.models.ts b/frontend/src/app/features/public/story/domain/story.models.ts
+index 3ddbaef734d0989c47298d4d1d17df7d5925efd9..7b905454eebe830fc92548f098dd89e409b2befc 100644
+--- a/frontend/src/app/features/public/story/domain/story.models.ts
++++ b/frontend/src/app/features/public/story/domain/story.models.ts
+@@ -13,7 +13,7 @@ export interface RelatedStoryItem {
+   readonly title: string;
+   readonly slug: string;
+   readonly coverUrl: string;
+-  readonly latestChapter: number;
++  readonly latestChapter: number | null;
+ }
+ 
+ export interface StoryDetailState {
+diff --git a/frontend/src/app/features/public/story/mock/story.mock.ts b/frontend/src/app/features/public/story/mock/story.mock.ts
+deleted file mode 100644
+index 619ed507bd328dc1a4d9d7b9a7eca4ecd6b8666a..0000000000000000000000000000000000000000
+--- a/frontend/src/app/features/public/story/mock/story.mock.ts
++++ /dev/null
+@@ -1,47 +0,0 @@
+-import { RelatedStoryItem, StoryComment } from '../domain/story.models';
+-
+-export const MOCK_STORY_COMMENTS: readonly StoryComment[] = [
+-  {
+-    id: '1',
+-    user: 'MinhTu99',
+-    time: '10 phút trước',
+-    content: 'Main ẩn giấu thực lực đỉnh vãi, mong ra chương mới nhanh!',
+-  },
+-  {
+-    id: '2',
+-    user: 'ThanhPha',
+-    time: '1 giờ trước',
+-    content: 'Bộ này nét vẽ đẹp mà cốt truyện cuốn thế nhở.',
+-  },
+-  {
+-    id: '3',
+-    user: 'PhamHoang',
+-    time: '3 giờ trước',
+-    content: 'Chương 318 quay xe khét lẹt luôn hóng chương 319.',
+-  },
+-  { id: '4', user: 'DucAnh', time: '5 giờ trước', content: 'Hay quá ad ơi, ra bão chương đi!' },
+-];
+-
+-export const MOCK_RELATED_STORIES: readonly RelatedStoryItem[] = [
+-  {
+-    title: 'Vạn Giới Tiên Vương',
+-    slug: 'van-gioi-tien-vuong',
+-    coverUrl:
+-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&auto=format&fit=crop&q=80',
+-    latestChapter: 976,
+-  },
+-  {
+-    title: 'Thanh Gươm Diệt Quỷ',
+-    slug: 'thanh-guom-diet-quy',
+-    coverUrl:
+-      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=150&auto=format&fit=crop&q=80',
+-    latestChapter: 205,
+-  },
+-  {
+-    title: 'Nhất Niệm Vĩnh Hằng',
+-    slug: 'nhat-niem-vinh-hang',
+-    coverUrl:
+-      'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150&auto=format&fit=crop&q=80',
+-    latestChapter: 1403,
+-  },
+-];
+diff --git a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
+index c6b9b3ea251326667e47c601d2064bef6d83d948..2500460292acc053e13b61168e94ae07c2c53a0a 100644
+--- a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
++++ b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
+@@ -30,12 +30,17 @@
+         <div class="stats">
+           <span><app-icon name="star" [size]="17" />{{ item.rating }}</span
+           ><span><app-icon name="eye" [size]="17" />{{ item.views | compactNumber }} lượt xem</span
+-          ><span><app-icon name="book" [size]="17" />{{ item.latestChapter.number }} chương</span>
++          ><span><app-icon name="book" [size]="17" />{{ item.chapterCount ?? 0 }} chương</span>
+         </div>
+         <div class="buttons">
+-          <button class="read" type="button">
+-            <app-icon name="play" [size]="16" />Đọc Chương {{ item.latestChapter.number }}
+-          </button>
++          @if (item.latestChapter; as latestChapter) {
++            <a
++              class="read"
++              [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]"
++            >
++              <app-icon name="play" [size]="16" />Đọc Chương {{ latestChapter.number }}
++            </a>
++          }
+           <button
+             class="save"
+             type="button"
+@@ -56,17 +61,19 @@
+           <div class="panel-heading">
+             <div>
+               <span></span>
+-              <h2>Danh sách chương</h2>
++              <h2>Chương mới nhất</h2>
+             </div>
+-            <small>{{ item.latestChapter.number }} chương</small>
++            <small>{{ item.chapterCount ?? 0 }} chương đã xuất bản</small>
+           </div>
+           <div class="chapter-list">
+-            @for (offset of chapters; track offset) {
+-              <a href="#" (click)="$event.preventDefault()"
+-                ><span>Chương {{ item.latestChapter.number - offset }}</span
+-                ><small>{{ offset === 0 ? 'Mới nhất' : offset + 1 + ' ngày trước' }}</small
+-                ><app-icon name="chevron-right" [size]="16"
+-              /></a>
++            @if (item.latestChapter; as latestChapter) {
++              <a [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]">
++                <span>Chương {{ latestChapter.number }}: {{ latestChapter.title || 'Chương mới' }}</span>
++                <small>{{ latestChapter.updatedAt | relativeTime }}</small>
++                <app-icon name="chevron-right" [size]="16" />
++              </a>
++            } @else {
++              <p>Truyện chưa có chương công khai.</p>
+             }
+           </div>
+         </section>
+diff --git a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
+index 4679662bde30f50f449bd460de8ab686b3a6e0f3..5579c2d38414f1e1867274435786c671219e5760 100644
+--- a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
++++ b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
+@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
+ import { LibraryStore } from '../../../../../core/storage/library.store';
+ import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
++import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
+ import { StoryDetailStore } from '../../data-access/story.store';
+ import { StoryCommentsComponent } from '../../ui/story-comments/story-comments.component';
+ import { StoryRelatedComponent } from '../../ui/story-related/story-related.component';
+@@ -14,6 +15,7 @@ import { StoryRelatedComponent } from '../../ui/story-related/story-related.comp
+     RouterLink,
+     IconComponent,
+     CompactNumberPipe,
++    RelativeTimePipe,
+     StoryCommentsComponent,
+     StoryRelatedComponent,
+   ],
+@@ -27,7 +29,6 @@ export class StoryDetailComponent implements OnInit {
+   private readonly destroyRef = inject(DestroyRef);
+   protected readonly store = inject(StoryDetailStore);
+   protected readonly library = inject(LibraryStore);
+-  protected readonly chapters = Array.from({ length: 12 }, (_, index) => index);
+ 
+   ngOnInit(): void {
+     const sub = this.route.paramMap.subscribe((params) => {
+diff --git a/frontend/src/app/features/public/story/ui/story-related/story-related.component.html b/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
+index dc22a2a453b87f867fc711efc1f0b2c0bc0efdb6..fa19d69a60f4017afc752f4f792134fdb8873557 100644
+--- a/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
++++ b/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
+@@ -10,7 +10,7 @@
+         <img [src]="rel.coverUrl" [alt]="rel.title" />
+         <div>
+           <strong>{{ rel.title }}</strong>
+-          <small>Ch. {{ rel.latestChapter }}</small>
++          <small>{{ rel.latestChapter !== null ? 'Ch. ' + rel.latestChapter : 'Chưa có chương' }}</small>
+         </div>
+       </a>
+     }
+diff --git a/frontend/src/app/layout/header/app-header.component.html b/frontend/src/app/layout/header/app-header.component.html
+index e1d166114345035ea9c189944edadf319979a36f..53036e1f32fa5179e2ae4b23e40f219a522633d9 100644
+--- a/frontend/src/app/layout/header/app-header.component.html
++++ b/frontend/src/app/layout/header/app-header.component.html
+@@ -330,7 +330,7 @@
+                 </small>
+               </div>
+ 
+-              <span> Ch.{{ story.latestChapter.number }} </span>
++              <span>{{ story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương' }}</span>
+             </a>
+           } @empty {
+             <div class="no-result">Không tìm thấy truyện phù hợp.</div>
+diff --git a/frontend/src/app/routes/public.routes.ts b/frontend/src/app/routes/public.routes.ts
+index 137ace639a614f0018ff03fe8852d69840d42236..78037c997934a34c07b4847daa8eef10dc2009ec 100644
+--- a/frontend/src/app/routes/public.routes.ts
++++ b/frontend/src/app/routes/public.routes.ts
+@@ -1,6 +1,6 @@
+ import { Routes } from '@angular/router';
+ 
+-import { environment } from '../../environments/environment';
++import { provideChapterReader } from '../features/public/chapter-reader/data-access/chapter-reader.providers';
+ import { provideGenreDiscovery } from '../features/public/genre-discovery/data-access/genre-discovery.providers';
+ import { HomePageComponent } from '../features/public/home/pages/home-page/home-page.component';
+ import { provideStoryCatalog } from '../features/public/story-catalog/data-access/story-catalog.providers';
+@@ -18,7 +18,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'truyen/:slug',
+     title: 'Chi tiết truyện - TruyenHub',
+-    providers: provideStoryDetail({ useMock: true }),
++    providers: provideStoryDetail(),
+     loadComponent: () =>
+       import('../features/public/story/pages/story-detail/story-detail.component').then(
+         (module) => module.StoryDetailComponent,
+@@ -27,6 +27,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'truyen/:storySlug/chuong/:chapterNumber',
+     title: 'Đọc chương - TruyenHub',
++    providers: provideChapterReader(),
+     loadComponent: () =>
+       import('../features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component').then(
+         (module) => module.ChapterReaderPageComponent,
+@@ -35,7 +36,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'danh-sach',
+     title: 'Danh sách truyện - TruyenHub',
+-    providers: provideStoryCatalog({ useMock: environment.storyCatalogUseMock }),
++    providers: provideStoryCatalog(),
+     loadComponent: () =>
+       import('../features/public/story-catalog/pages/story-catalog-page/story-catalog-page.component').then(
+         (module) => module.StoryCatalogPageComponent,
+@@ -44,7 +45,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'the-loai',
+     title: 'Thể loại truyện - TruyenHub',
+-    providers: provideGenreDiscovery({ useMock: environment.genreDiscoveryUseMock }),
++    providers: provideGenreDiscovery(),
+     loadComponent: () =>
+       import('../features/public/genre-discovery/pages/genre-discovery-page/genre-discovery-page.component').then(
+         (module) => module.GenreDiscoveryPageComponent,
+@@ -53,7 +54,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'xep-hang',
+     title: 'Xếp hạng truyện - TruyenHub',
+-    providers: provideStoryRanking({ useMock: environment.storyRankingUseMock }),
++    providers: provideStoryRanking(),
+     loadComponent: () =>
+       import('../features/public/story-ranking/pages/story-ranking-page/story-ranking-page.component').then(
+         (module) => module.StoryRankingPageComponent,
+@@ -62,7 +63,7 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'cap-nhat',
+     title: 'Cập nhật truyện mới - TruyenHub',
+-    providers: provideStoryUpdates({ useMock: environment.storyUpdatesUseMock }),
++    providers: provideStoryUpdates(),
+     loadComponent: () =>
+       import('../features/public/story-updates/pages/story-updates-page/story-updates-page.component').then(
+         (module) => module.StoryUpdatesPageComponent,
+diff --git a/frontend/src/app/shared/components/story-card/story-card.component.html b/frontend/src/app/shared/components/story-card/story-card.component.html
+index d704915118149b81ff6690043436854f7f8f8054..5d8607a381847d2bef64f3ebf5c927181ecd0226 100644
+--- a/frontend/src/app/shared/components/story-card/story-card.component.html
++++ b/frontend/src/app/shared/components/story-card/story-card.component.html
+@@ -15,8 +15,12 @@
+       <app-icon name="bookmark" [size]="17" />
+     </button>
+     <div class="chapter-row">
+-      <span>Ch.{{ story().latestChapter.number }}</span>
+-      <small>{{ story().latestChapter.updatedAt | relativeTime }}</small>
++      @if (story().latestChapter; as chapter) {
++        <span>Ch.{{ chapter.number }}</span>
++        <small>{{ chapter.updatedAt | relativeTime }}</small>
++      } @else {
++        <span>Chưa có chương</span>
++      }
+     </div>
+   </a>
+   <a class="title" [routerLink]="['/truyen', story().slug]">{{ story().title }}</a>
+diff --git a/frontend/src/app/shared/models/story.model.ts b/frontend/src/app/shared/models/story.model.ts
+index 93dfc155c96d90630cc39d724627d95b5ce02c70..1806bd36d3fdd0e0c202b3bfccf60e1f0c23a886 100644
+--- a/frontend/src/app/shared/models/story.model.ts
++++ b/frontend/src/app/shared/models/story.model.ts
+@@ -13,9 +13,10 @@ export interface Story {
+   readonly description: string;
+   readonly coverUrl: string;
+   readonly categories: readonly string[];
+-  readonly latestChapter: ChapterSummary;
++  readonly latestChapter: ChapterSummary | null;
+   readonly views: number;
+   readonly rating: number;
++  readonly chapterCount?: number;
+   readonly status: 'ONGOING' | 'COMPLETED' | 'HIATUS';
+   readonly badge?: 'NEW' | 'HOT' | 'FULL';
+ }
+@@ -47,3 +48,7 @@ export interface HomePageData {
+   readonly topStories: readonly Story[];
+   readonly recentUpdates: readonly Story[];
+ }
++
++export const STORY_COVER_PLACEHOLDER =
++  'data:image/svg+xml;charset=UTF-8,' +
++  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="480" viewBox="0 0 320 480"><rect width="320" height="480" fill="#e5e7eb"/><path d="M90 120h140v240H90z" fill="#cbd5e1"/><path d="M115 165h90M115 205h90M115 245h70" stroke="#94a3b8" stroke-width="12" stroke-linecap="round"/></svg>');
+diff --git a/frontend/src/environments/environment.production.ts b/frontend/src/environments/environment.production.ts
+index 1a9fcc0a3e43e2bf0d355672915c5cfcd3471d79..11b491ba862414cc5019ba599ec1ba964e0f9072 100644
+--- a/frontend/src/environments/environment.production.ts
++++ b/frontend/src/environments/environment.production.ts
+@@ -2,8 +2,4 @@ export const environment = {
+   production: true,
+   apiBaseUrl: '/api/v1',
+   appName: 'TruyenHub',
+-  storyCatalogUseMock: false,
+-  genreDiscoveryUseMock: false,
+-  storyRankingUseMock: false,
+-  storyUpdatesUseMock: false,
+ } as const;
+diff --git a/frontend/src/environments/environment.ts b/frontend/src/environments/environment.ts
+index acf9463c202488eac3c8b05d48ee37257fa74e81..58c590879a147342c2c9776aeec5e32acf93a2fe 100644
+--- a/frontend/src/environments/environment.ts
++++ b/frontend/src/environments/environment.ts
+@@ -13,12 +13,4 @@ export const environment = {
+   apiBaseUrl: '/api/v1',
+ 
+   appName: 'TruyenHub',
+-
+-  storyCatalogUseMock: true,
+-
+-  genreDiscoveryUseMock: true,
+-
+-  storyRankingUseMock: true,
+-
+-  storyUpdatesUseMock: true,
+ } as const;

@@ -1,5 +1,9 @@
 <main class="chapter-page" [class.chapter-page--lights-off]="store.lightsOff()">
-  @if (store.view(); as view) {
+  @if (store.loading()) {
+    <section class="reader-card"><p>Đang tải chương...</p></section>
+  } @else if (store.error(); as error) {
+    <section class="reader-card"><p>{{ error }}</p></section>
+  } @else if (store.view(); as view) {
     <div class="chapter-layout">
       <section class="reader-column">
         <section class="reader-card">

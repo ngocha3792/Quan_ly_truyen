@@ -26,11 +26,23 @@ h2 {
   text-decoration: none;
 }
 
-img {
+img,
+.cover-placeholder {
   width: 42px;
   height: 42px;
-  object-fit: cover;
   border-radius: 6px;
+}
+
+img {
+  object-fit: cover;
+}
+
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  color: #c4b5fd;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.2);
 }
 
 .trending-item > div {

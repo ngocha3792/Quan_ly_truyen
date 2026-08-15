@@ -30,12 +30,17 @@
         <div class="stats">
           <span><app-icon name="star" [size]="17" />{{ item.rating }}</span
           ><span><app-icon name="eye" [size]="17" />{{ item.views | compactNumber }} lượt xem</span
-          ><span><app-icon name="book" [size]="17" />{{ item.latestChapter.number }} chương</span>
+          ><span><app-icon name="book" [size]="17" />{{ item.chapterCount ?? 0 }} chương</span>
         </div>
         <div class="buttons">
-          <button class="read" type="button">
-            <app-icon name="play" [size]="16" />Đọc Chương {{ item.latestChapter.number }}
-          </button>
+          @if (item.latestChapter; as latestChapter) {
+            <a
+              class="read"
+              [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]"
+            >
+              <app-icon name="play" [size]="16" />Đọc Chương {{ latestChapter.number }}
+            </a>
+          }
           <button
             class="save"
             type="button"
@@ -56,17 +61,19 @@
           <div class="panel-heading">
             <div>
               <span></span>
-              <h2>Danh sách chương</h2>
+              <h2>Chương mới nhất</h2>
             </div>
-            <small>{{ item.latestChapter.number }} chương</small>
+            <small>{{ item.chapterCount ?? 0 }} chương đã xuất bản</small>
           </div>
           <div class="chapter-list">
-            @for (offset of chapters; track offset) {
-              <a href="#" (click)="$event.preventDefault()"
-                ><span>Chương {{ item.latestChapter.number - offset }}</span
-                ><small>{{ offset === 0 ? 'Mới nhất' : offset + 1 + ' ngày trước' }}</small
-                ><app-icon name="chevron-right" [size]="16"
-              /></a>
+            @if (item.latestChapter; as latestChapter) {
+              <a [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]">
+                <span>Chương {{ latestChapter.number }}: {{ latestChapter.title || 'Chương mới' }}</span>
+                <small>{{ latestChapter.updatedAt | relativeTime }}</small>
+                <app-icon name="chevron-right" [size]="16" />
+              </a>
+            } @else {
+              <p>Truyện chưa có chương công khai.</p>
             }
           </div>
         </section>

@@ -151,6 +151,9 @@ const PUBLIC_STORY_SELECT = {
     where: {
       status: ChapterStatus.PUBLISHED,
       deletedAt: null,
+      publishedAt: {
+        not: null,
+      },
     },
     orderBy: {
       number: 'desc',
@@ -179,6 +182,49 @@ const PUBLIC_STORY_STATUSES = [
 @Injectable()
 export class PrismaStoryPersistence implements StoryPersistencePort {
   constructor(private readonly prisma: PrismaService) { }
+
+  async listOwned(userId: string): Promise<readonly StoryRecord[]> {
+    try {
+      const stories = await this.prisma.story.findMany({
+        where: {
+          authorId: userId,
+          deletedAt: null,
+        },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        select: STORY_SELECT,
+      });
+
+      return stories.map((story) => this.toRecord(story));
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'author-story-list',
+        resource: 'Truyện',
+      });
+    }
+  }
+
+  async findOwnedById(
+    userId: string,
+    storyId: string,
+  ): Promise<StoryRecord | null> {
+    try {
+      const story = await this.prisma.story.findFirst({
+        where: {
+          id: storyId,
+          authorId: userId,
+          deletedAt: null,
+        },
+        select: STORY_SELECT,
+      });
+
+      return story ? this.toRecord(story) : null;
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'author-story-detail',
+        resource: 'Truyện',
+      });
+    }
+  }
 
   async createDraft(
     input: CreateAuthorStoryInput,
@@ -324,7 +370,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         return await this.prisma.$transaction(async (tx) => {
-          const locked = await lockStoryRow(tx, input.storyId);
+          const locked = await lockOwnedStoryRow(
+            tx,
+            input.storyId,
+            input.userId,
+          );
 
           if (!locked) {
             return {
@@ -545,7 +595,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
   ): Promise<DeleteAuthorStoryResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const locked = await lockStoryRow(tx, input.storyId);
+        const locked = await lockOwnedStoryRow(
+          tx,
+          input.storyId,
+          input.userId,
+        );
 
         if (!locked) {
           return {
@@ -657,7 +711,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
   ): Promise<SubmitAuthorStoryResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        if (!(await lockStoryRow(tx, input.storyId))) {
+        if (!(await lockOwnedStoryRow(tx, input.storyId, input.userId))) {
           return { status: 'not_found' };
         }
         const story = await tx.story.findFirst({
@@ -746,7 +800,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
   ): Promise<CancelAuthorStorySubmissionResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        if (!(await lockStoryRow(tx, input.storyId))) {
+        if (!(await lockOwnedStoryRow(tx, input.storyId, input.userId))) {
           return { status: 'not_found' };
         }
         const story = await tx.story.findFirst({
@@ -1024,6 +1078,9 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
           slug,
           deletedAt: null,
           visibility: StoryVisibility.PUBLIC,
+          publishedAt: {
+            not: null,
+          },
           status: {
             in: [...PUBLIC_STORY_STATUSES],
           },
@@ -1315,6 +1372,23 @@ async function validateAndLockStoryCover(
   return Boolean(media && readMediaOwnerId(media.metadata) === storyId);
 }
 
+async function lockOwnedStoryRow(
+  tx: Prisma.TransactionClient,
+  storyId: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+    SELECT "id"
+    FROM "stories"
+    WHERE "id" = ${storyId}::uuid
+      AND "author_id" = ${userId}::uuid
+      AND "deleted_at" IS NULL
+    FOR UPDATE
+  `);
+
+  return rows.length === 1;
+}
+
 async function lockStoryRow(
   tx: Prisma.TransactionClient,
   storyId: string,
@@ -1406,6 +1480,9 @@ function buildPublicStoryWhere(
   return {
     deletedAt: null,
     visibility: StoryVisibility.PUBLIC,
+    publishedAt: {
+      not: null,
+    },
     status: requestedStatus
       ? requestedStatus
       : {

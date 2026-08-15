@@ -37,6 +37,21 @@ export interface ChapterRecord {
   readonly updatedAt: Date;
 }
 
+export interface ChapterSummaryRecord {
+  readonly id: string;
+  readonly storyId: string;
+  readonly number: number;
+  readonly title: string;
+  readonly slug: string;
+  readonly status: string;
+  readonly wordCount: number;
+  readonly version: number;
+  readonly scheduledAt: Date | null;
+  readonly publishedAt: Date | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
 export interface CreateAuthorChapterInput {
   readonly userId: string;
 
@@ -158,6 +173,17 @@ export type PublishAuthorChapterResult =
     };
 
 export interface ChapterPersistencePort {
+  listOwnedByStory(
+    userId: string,
+    storyId: string,
+  ): Promise<readonly ChapterSummaryRecord[] | null>;
+
+  findOwnedById(
+    userId: string,
+    storyId: string,
+    chapterId: string,
+  ): Promise<ChapterRecord | null>;
+
   createDraft(
     input: CreateAuthorChapterInput,
   ): Promise<CreateAuthorChapterResult>;

@@ -1,0 +1,73 @@
+<main class="studio-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Author Studio</p>
+      <h1>Truyện của tôi</h1>
+      <p>Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện.</p>
+    </div>
+
+    <a class="primary-action" routerLink="/author-studio/truyen/tao-moi">+ Tạo truyện</a>
+  </header>
+
+  <section class="toolbar" aria-label="Bộ lọc truyện">
+    <input
+      type="search"
+      placeholder="Tìm theo tên truyện..."
+      [value]="query()"
+      (input)="updateQuery($event)"
+    />
+    <span>{{ filteredStories().length }} truyện</span>
+  </section>
+
+  @if (store.error()) {
+    <p class="notice notice--error">{{ store.error() }}</p>
+  }
+
+  @if (store.loading()) {
+    <p class="notice">Đang tải danh sách truyện...</p>
+  } @else if (filteredStories().length === 0) {
+    <section class="empty-state">
+      <h2>Chưa có truyện phù hợp</h2>
+      <p>Tạo một bản nháp mới để bắt đầu viết.</p>
+      <a routerLink="/author-studio/truyen/tao-moi">Tạo truyện đầu tiên</a>
+    </section>
+  } @else {
+    <section class="story-list">
+      @for (story of filteredStories(); track story.id) {
+        <article class="story-card">
+          <div class="story-copy">
+            <div class="story-title-row">
+              <h2>{{ story.title }}</h2>
+              <span class="status" [attr.data-status]="story.status">
+                {{ statusLabel(story.status) }}
+              </span>
+            </div>
+
+            <p>{{ story.synopsis || 'Chưa có mô tả.' }}</p>
+
+            <div class="meta">
+              <span>Cập nhật {{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+              <span>{{ story.categories[0]?.name || 'Chưa chọn thể loại' }}</span>
+              <span>v{{ story.version }}</span>
+            </div>
+          </div>
+
+          <div class="story-actions">
+            <a [routerLink]="['/author-studio/truyen', story.id]">Chi tiết</a>
+            <a [routerLink]="['/author-studio/truyen', story.id, 'chuong']">Chương</a>
+            @if (canDelete(story)) {
+              <button
+                type="button"
+                class="danger"
+                [disabled]="store.actionStoryId() === story.id"
+                (click)="deleteStory(story)"
+              >
+                {{ store.actionStoryId() === story.id ? 'Đang xóa...' : 'Xóa' }}
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </section>
+  }
+</main>

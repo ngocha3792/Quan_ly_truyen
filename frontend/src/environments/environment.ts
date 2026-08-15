@@ -13,12 +13,4 @@ export const environment = {
   apiBaseUrl: '/api/v1',
 
   appName: 'TruyenHub',
-
-  storyCatalogUseMock: true,
-
-  genreDiscoveryUseMock: true,
-
-  storyRankingUseMock: true,
-
-  storyUpdatesUseMock: true,
 } as const;

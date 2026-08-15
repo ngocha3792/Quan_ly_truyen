@@ -1,0 +1,2940 @@
+diff --git a/backend/src/modules/stories/application/dto/chapter-summary-result.dto.ts b/backend/src/modules/stories/application/dto/chapter-summary-result.dto.ts
+new file mode 100644
+index 0000000..592dcb2
+--- /dev/null
++++ b/backend/src/modules/stories/application/dto/chapter-summary-result.dto.ts
+@@ -0,0 +1,14 @@
++export interface ChapterSummaryResultDto {
++  readonly id: string;
++  readonly storyId: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly status: string;
++  readonly wordCount: number;
++  readonly version: number;
++  readonly scheduledAt: Date | null;
++  readonly publishedAt: Date | null;
++  readonly createdAt: Date;
++  readonly updatedAt: Date;
++}
+diff --git a/backend/src/modules/stories/application/dto/index.ts b/backend/src/modules/stories/application/dto/index.ts
+index 219f4d3..6d84c01 100644
+--- a/backend/src/modules/stories/application/dto/index.ts
++++ b/backend/src/modules/stories/application/dto/index.ts
+@@ -3,3 +3,4 @@ export * from './story-result.dto';
+ export * from './story-taxonomy-result.dto';
+ export * from './public-story-result.dto';
+ export * from './public-chapter-reader-result.dto';
++export * from './chapter-summary-result.dto';
+diff --git a/backend/src/modules/stories/application/mappers/chapter-summary-result.mapper.ts b/backend/src/modules/stories/application/mappers/chapter-summary-result.mapper.ts
+new file mode 100644
+index 0000000..98cd401
+--- /dev/null
++++ b/backend/src/modules/stories/application/mappers/chapter-summary-result.mapper.ts
+@@ -0,0 +1,21 @@
++import type { ChapterSummaryResultDto } from '../dto';
++import type { ChapterSummaryRecord } from '../ports';
++
++export class ChapterSummaryResultMapper {
++  static toDto(chapter: ChapterSummaryRecord): ChapterSummaryResultDto {
++    return {
++      id: chapter.id,
++      storyId: chapter.storyId,
++      number: chapter.number,
++      title: chapter.title,
++      slug: chapter.slug,
++      status: chapter.status,
++      wordCount: chapter.wordCount,
++      version: chapter.version,
++      scheduledAt: chapter.scheduledAt,
++      publishedAt: chapter.publishedAt,
++      createdAt: chapter.createdAt,
++      updatedAt: chapter.updatedAt,
++    };
++  }
++}
+diff --git a/backend/src/modules/stories/application/mappers/index.ts b/backend/src/modules/stories/application/mappers/index.ts
+index 46ac3aa..375aea1 100644
+--- a/backend/src/modules/stories/application/mappers/index.ts
++++ b/backend/src/modules/stories/application/mappers/index.ts
+@@ -1,2 +1,3 @@
+ export * from './chapter-result.mapper';
+ export * from './story-result.mapper';
++export * from './chapter-summary-result.mapper';
+diff --git a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+index 9d86d36..8595cff 100644
+--- a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
++++ b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+@@ -37,6 +37,21 @@ export interface ChapterRecord {
+   readonly updatedAt: Date;
+ }
+ 
++export interface ChapterSummaryRecord {
++  readonly id: string;
++  readonly storyId: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly status: string;
++  readonly wordCount: number;
++  readonly version: number;
++  readonly scheduledAt: Date | null;
++  readonly publishedAt: Date | null;
++  readonly createdAt: Date;
++  readonly updatedAt: Date;
++}
++
+ export interface CreateAuthorChapterInput {
+   readonly userId: string;
+ 
+@@ -158,6 +173,17 @@ export type PublishAuthorChapterResult =
+     };
+ 
+ export interface ChapterPersistencePort {
++  listOwnedByStory(
++    userId: string,
++    storyId: string,
++  ): Promise<readonly ChapterSummaryRecord[] | null>;
++
++  findOwnedById(
++    userId: string,
++    storyId: string,
++    chapterId: string,
++  ): Promise<ChapterRecord | null>;
++
+   createDraft(
+     input: CreateAuthorChapterInput,
+   ): Promise<CreateAuthorChapterResult>;
+diff --git a/backend/src/modules/stories/application/ports/story.persistence.port.ts b/backend/src/modules/stories/application/ports/story.persistence.port.ts
+index 14d5626..309a713 100644
+--- a/backend/src/modules/stories/application/ports/story.persistence.port.ts
++++ b/backend/src/modules/stories/application/ports/story.persistence.port.ts
+@@ -323,6 +323,10 @@ export type ReviewStorySubmissionResult =
+     };
+ 
+ export interface StoryPersistencePort {
++  listOwned(userId: string): Promise<readonly StoryRecord[]>;
++
++  findOwnedById(userId: string, storyId: string): Promise<StoryRecord | null>;
++
+   createDraft(input: CreateAuthorStoryInput): Promise<CreateAuthorStoryResult>;
+ 
+   updateDraft(input: UpdateAuthorStoryInput): Promise<UpdateAuthorStoryResult>;
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts
+new file mode 100644
+index 0000000..f8306b6
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts
+@@ -0,0 +1,35 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import { ChapterNotFoundException } from '../../../domain';
++import { GetAuthorChapterQuery } from './get-author-chapter.query';
++import { GetAuthorChapterQueryHandler } from './get-author-chapter.query-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
++
++describe('GetAuthorChapterQueryHandler', () => {
++  let persistence: { findOwnedById: jest.Mock };
++  let handler: GetAuthorChapterQueryHandler;
++
++  beforeEach(() => {
++    persistence = { findOwnedById: jest.fn() };
++    handler = new GetAuthorChapterQueryHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(
++      handler.execute(new GetAuthorChapterQuery(undefined, STORY_ID, CHAPTER_ID)),
++    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
++    expect(persistence.findOwnedById).not.toHaveBeenCalled();
++  });
++
++  it('trả 404 semantics khi chapter/story không thuộc author', async () => {
++    persistence.findOwnedById.mockResolvedValue(null);
++
++    await expect(
++      handler.execute(new GetAuthorChapterQuery(USER_ID, STORY_ID, CHAPTER_ID)),
++    ).rejects.toBeInstanceOf(ChapterNotFoundException);
++    expect(persistence.findOwnedById).toHaveBeenCalledWith(USER_ID, STORY_ID, CHAPTER_ID);
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.ts b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.ts
+new file mode 100644
+index 0000000..7e82ef1
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.ts
+@@ -0,0 +1,44 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import { ChapterNotFoundException } from '../../../domain';
++import type { ChapterResultDto } from '../../dto';
++import { ChapterResultMapper } from '../../mappers';
++import { CHAPTER_PERSISTENCE_PORT, type ChapterPersistencePort } from '../../ports';
++import { GetAuthorChapterQuery } from './get-author-chapter.query';
++
++@Injectable()
++export class GetAuthorChapterQueryHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(query: GetAuthorChapterQuery): Promise<ChapterResultDto> {
++    const userId = requireAuthorUserId(query.userId);
++    const chapter = await this.persistence.findOwnedById(
++      userId,
++      query.storyId,
++      query.chapterId,
++    );
++
++    if (!chapter) {
++      throw new ChapterNotFoundException(query.chapterId);
++    }
++
++    return ChapterResultMapper.toDto(chapter);
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'CHAPTER_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query.ts b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query.ts
+new file mode 100644
+index 0000000..841ed7b
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query.ts
+@@ -0,0 +1,7 @@
++export class GetAuthorChapterQuery {
++  constructor(
++    public readonly userId: string | undefined,
++    public readonly storyId: string,
++    public readonly chapterId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/index.ts b/backend/src/modules/stories/application/queries/get-author-chapter/index.ts
+new file mode 100644
+index 0000000..62ffeb0
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-chapter/index.ts
+@@ -0,0 +1,2 @@
++export * from './get-author-chapter.query';
++export * from './get-author-chapter.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.spec.ts b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.spec.ts
+new file mode 100644
+index 0000000..9a973b9
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.spec.ts
+@@ -0,0 +1,34 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import { StoryNotFoundException } from '../../../domain';
++import { GetAuthorStoryQuery } from './get-author-story.query';
++import { GetAuthorStoryQueryHandler } from './get-author-story.query-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++
++describe('GetAuthorStoryQueryHandler', () => {
++  let persistence: { findOwnedById: jest.Mock };
++  let handler: GetAuthorStoryQueryHandler;
++
++  beforeEach(() => {
++    persistence = { findOwnedById: jest.fn() };
++    handler = new GetAuthorStoryQueryHandler(persistence as never);
++  });
++
++  it('không query persistence nếu user chưa authenticated', async () => {
++    await expect(
++      handler.execute(new GetAuthorStoryQuery(undefined, STORY_ID)),
++    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
++    expect(persistence.findOwnedById).not.toHaveBeenCalled();
++  });
++
++  it('trả 404 semantics khi story không thuộc author', async () => {
++    persistence.findOwnedById.mockResolvedValue(null);
++
++    await expect(
++      handler.execute(new GetAuthorStoryQuery(USER_ID, STORY_ID)),
++    ).rejects.toBeInstanceOf(StoryNotFoundException);
++    expect(persistence.findOwnedById).toHaveBeenCalledWith(USER_ID, STORY_ID);
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.ts b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.ts
+new file mode 100644
+index 0000000..663fc12
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query-handler.ts
+@@ -0,0 +1,40 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import { StoryNotFoundException } from '../../../domain';
++import type { StoryResultDto } from '../../dto';
++import { StoryResultMapper } from '../../mappers';
++import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
++import { GetAuthorStoryQuery } from './get-author-story.query';
++
++@Injectable()
++export class GetAuthorStoryQueryHandler {
++  constructor(
++    @Inject(STORY_PERSISTENCE_PORT)
++    private readonly persistence: StoryPersistencePort,
++  ) {}
++
++  async execute(query: GetAuthorStoryQuery): Promise<StoryResultDto> {
++    const userId = requireAuthorUserId(query.userId);
++    const story = await this.persistence.findOwnedById(userId, query.storyId);
++
++    if (!story) {
++      throw new StoryNotFoundException(query.storyId);
++    }
++
++    return StoryResultMapper.toDto(story);
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'STORY_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query.ts b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query.ts
+new file mode 100644
+index 0000000..946355a
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-story/get-author-story.query.ts
+@@ -0,0 +1,6 @@
++export class GetAuthorStoryQuery {
++  constructor(
++    public readonly userId: string | undefined,
++    public readonly storyId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/queries/get-author-story/index.ts b/backend/src/modules/stories/application/queries/get-author-story/index.ts
+new file mode 100644
+index 0000000..dd64d3a
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-author-story/index.ts
+@@ -0,0 +1,2 @@
++export * from './get-author-story.query';
++export * from './get-author-story.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/index.ts b/backend/src/modules/stories/application/queries/index.ts
+index 947fa2f..c42b591 100644
+--- a/backend/src/modules/stories/application/queries/index.ts
++++ b/backend/src/modules/stories/application/queries/index.ts
+@@ -3,3 +3,7 @@ export * from './list-public-stories';
+ export * from './list-story-categories';
+ export * from './list-story-tags';
+ export * from './get-public-chapter-reader';
++export * from './get-author-chapter';
++export * from './get-author-story';
++export * from './list-author-chapters';
++export * from './list-author-stories';
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/index.ts b/backend/src/modules/stories/application/queries/list-author-chapters/index.ts
+new file mode 100644
+index 0000000..9143ce1
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-chapters/index.ts
+@@ -0,0 +1,2 @@
++export * from './list-author-chapters.query';
++export * from './list-author-chapters.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+new file mode 100644
+index 0000000..c5e7522
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+@@ -0,0 +1,58 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import { StoryNotFoundException } from '../../../domain';
++import { ListAuthorChaptersQuery } from './list-author-chapters.query';
++import { ListAuthorChaptersQueryHandler } from './list-author-chapters.query-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++
++describe('ListAuthorChaptersQueryHandler', () => {
++  let persistence: { listOwnedByStory: jest.Mock };
++  let handler: ListAuthorChaptersQueryHandler;
++
++  beforeEach(() => {
++    persistence = { listOwnedByStory: jest.fn() };
++    handler = new ListAuthorChaptersQueryHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(
++      handler.execute(new ListAuthorChaptersQuery(undefined, STORY_ID)),
++    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
++    expect(persistence.listOwnedByStory).not.toHaveBeenCalled();
++  });
++
++  it('không leak chapter list của story không thuộc author', async () => {
++    persistence.listOwnedByStory.mockResolvedValue(null);
++
++    await expect(
++      handler.execute(new ListAuthorChaptersQuery(USER_ID, STORY_ID)),
++    ).rejects.toBeInstanceOf(StoryNotFoundException);
++  });
++
++  it('map chapter summaries mà không cần load content', async () => {
++    const now = new Date('2026-08-15T00:00:00.000Z');
++    persistence.listOwnedByStory.mockResolvedValue([
++      {
++        id: '33333333-3333-4333-8333-333333333333',
++        storyId: STORY_ID,
++        number: 1,
++        title: 'Chương 1',
++        slug: 'chuong-1',
++        status: 'DRAFT',
++        wordCount: 120,
++        version: 1,
++        scheduledAt: null,
++        publishedAt: null,
++        createdAt: now,
++        updatedAt: now,
++      },
++    ]);
++
++    const result = await handler.execute(new ListAuthorChaptersQuery(USER_ID, STORY_ID));
++
++    expect(result).toHaveLength(1);
++    expect(result[0]).toEqual(expect.objectContaining({ number: 1, wordCount: 120 }));
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+new file mode 100644
+index 0000000..db0cad9
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+@@ -0,0 +1,42 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import { StoryNotFoundException } from '../../../domain';
++import type { ChapterSummaryResultDto } from '../../dto';
++import { ChapterSummaryResultMapper } from '../../mappers';
++import { CHAPTER_PERSISTENCE_PORT, type ChapterPersistencePort } from '../../ports';
++import { ListAuthorChaptersQuery } from './list-author-chapters.query';
++
++@Injectable()
++export class ListAuthorChaptersQueryHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(
++    query: ListAuthorChaptersQuery,
++  ): Promise<readonly ChapterSummaryResultDto[]> {
++    const userId = requireAuthorUserId(query.userId);
++    const result = await this.persistence.listOwnedByStory(userId, query.storyId);
++
++    if (result === null) {
++      throw new StoryNotFoundException(query.storyId);
++    }
++
++    return result.map((chapter) => ChapterSummaryResultMapper.toDto(chapter));
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'CHAPTER_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query.ts b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query.ts
+new file mode 100644
+index 0000000..2af1bd3
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query.ts
+@@ -0,0 +1,6 @@
++export class ListAuthorChaptersQuery {
++  constructor(
++    public readonly userId: string | undefined,
++    public readonly storyId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/queries/list-author-stories/index.ts b/backend/src/modules/stories/application/queries/list-author-stories/index.ts
+new file mode 100644
+index 0000000..41e3be8
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-stories/index.ts
+@@ -0,0 +1,2 @@
++export * from './list-author-stories.query';
++export * from './list-author-stories.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.spec.ts b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.spec.ts
+new file mode 100644
+index 0000000..f73aa51
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.spec.ts
+@@ -0,0 +1,56 @@
++import { AuthenticationRequiredException } from '@/common/exceptions';
++
++import { ListAuthorStoriesQuery } from './list-author-stories.query';
++import { ListAuthorStoriesQueryHandler } from './list-author-stories.query-handler';
++
++const USER_ID = '11111111-1111-4111-8111-111111111111';
++const STORY_ID = '22222222-2222-4222-8222-222222222222';
++
++describe('ListAuthorStoriesQueryHandler', () => {
++  let persistence: { listOwned: jest.Mock };
++  let handler: ListAuthorStoriesQueryHandler;
++
++  beforeEach(() => {
++    persistence = { listOwned: jest.fn() };
++    handler = new ListAuthorStoriesQueryHandler(persistence as never);
++  });
++
++  it('yêu cầu authenticated author UUID hợp lệ', async () => {
++    await expect(handler.execute(new ListAuthorStoriesQuery(undefined))).rejects.toBeInstanceOf(
++      AuthenticationRequiredException,
++    );
++    expect(persistence.listOwned).not.toHaveBeenCalled();
++  });
++
++  it('chỉ chuyển owned records từ persistence thành DTO', async () => {
++    persistence.listOwned.mockResolvedValue([storyRecord()]);
++
++    const result = await handler.execute(new ListAuthorStoriesQuery(USER_ID));
++
++    expect(persistence.listOwned).toHaveBeenCalledWith(USER_ID);
++    expect(result).toHaveLength(1);
++    expect(result[0]).toEqual(expect.objectContaining({ id: STORY_ID, authorId: USER_ID }));
++  });
++});
++
++function storyRecord() {
++  const now = new Date('2026-08-15T00:00:00.000Z');
++  return {
++    id: STORY_ID,
++    authorId: USER_ID,
++    title: 'Truyện Mới',
++    slug: 'truyen-moi',
++    synopsis: 'Mô tả',
++    languageCode: 'vi',
++    status: 'DRAFT',
++    visibility: 'PRIVATE',
++    contentRating: 'TEEN',
++    coverMediaId: null,
++    publishedAt: null,
++    categories: [],
++    tags: [],
++    version: 1,
++    createdAt: now,
++    updatedAt: now,
++  };
++}
+diff --git a/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.ts b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.ts
+new file mode 100644
+index 0000000..8238ee9
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query-handler.ts
+@@ -0,0 +1,35 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { AuthenticationRequiredException } from '@/common/exceptions';
++import { isUuidV4 } from '@/common/utils';
++
++import type { StoryResultDto } from '../../dto';
++import { StoryResultMapper } from '../../mappers';
++import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
++import { ListAuthorStoriesQuery } from './list-author-stories.query';
++
++@Injectable()
++export class ListAuthorStoriesQueryHandler {
++  constructor(
++    @Inject(STORY_PERSISTENCE_PORT)
++    private readonly persistence: StoryPersistencePort,
++  ) {}
++
++  async execute(query: ListAuthorStoriesQuery): Promise<readonly StoryResultDto[]> {
++    const userId = requireAuthorUserId(query.userId);
++    const stories = await this.persistence.listOwned(userId);
++
++    return stories.map((story) => StoryResultMapper.toDto(story));
++  }
++}
++
++function requireAuthorUserId(userId: string | undefined): string {
++  if (!userId || !isUuidV4(userId)) {
++    throw new AuthenticationRequiredException({
++      code: 'STORY_AUTHENTICATION_REQUIRED',
++      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
++    });
++  }
++
++  return userId;
++}
+diff --git a/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query.ts b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query.ts
+new file mode 100644
+index 0000000..1716980
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-author-stories/list-author-stories.query.ts
+@@ -0,0 +1,3 @@
++export class ListAuthorStoriesQuery {
++  constructor(public readonly userId: string | undefined) {}
++}
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+index adbbeb6..ff9c848 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+@@ -15,6 +15,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+ import type {
+   ChapterPersistencePort,
+   ChapterRecord,
++  ChapterSummaryRecord,
+   PublicChapterReaderDto,
+   CreateAuthorChapterInput,
+   CreateAuthorChapterResult,
+@@ -50,6 +51,25 @@ type ChapterRow = Prisma.ChapterGetPayload<{
+   select: typeof CHAPTER_SELECT;
+ }>;
+ 
++const CHAPTER_SUMMARY_SELECT = {
++  id: true,
++  storyId: true,
++  number: true,
++  title: true,
++  slug: true,
++  status: true,
++  wordCount: true,
++  version: true,
++  scheduledAt: true,
++  publishedAt: true,
++  createdAt: true,
++  updatedAt: true,
++} satisfies Prisma.ChapterSelect;
++
++type ChapterSummaryRow = Prisma.ChapterGetPayload<{
++  select: typeof CHAPTER_SUMMARY_SELECT;
++}>;
++
+ const PUBLIC_CHAPTER_READER_SELECT = {
+   id: true,
+   storyId: true,
+@@ -98,6 +118,70 @@ const PUBLIC_STORY_STATUSES = [
+ export class PrismaChapterPersistence implements ChapterPersistencePort {
+   constructor(private readonly prisma: PrismaService) { }
+ 
++  async listOwnedByStory(
++    userId: string,
++    storyId: string,
++  ): Promise<readonly ChapterSummaryRecord[] | null> {
++    try {
++      const story = await this.prisma.story.findFirst({
++        where: {
++          id: storyId,
++          authorId: userId,
++          deletedAt: null,
++        },
++        select: { id: true },
++      });
++
++      if (!story) {
++        return null;
++      }
++
++      const chapters = await this.prisma.chapter.findMany({
++        where: {
++          storyId,
++          deletedAt: null,
++        },
++        orderBy: [{ number: 'asc' }, { id: 'asc' }],
++        select: CHAPTER_SUMMARY_SELECT,
++      });
++
++      return chapters.map((chapter) => this.toSummaryRecord(chapter));
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'author-chapter-list',
++        resource: 'Chương',
++      });
++    }
++  }
++
++  async findOwnedById(
++    userId: string,
++    storyId: string,
++    chapterId: string,
++  ): Promise<ChapterRecord | null> {
++    try {
++      const chapter = await this.prisma.chapter.findFirst({
++        where: {
++          id: chapterId,
++          storyId,
++          deletedAt: null,
++          story: {
++            authorId: userId,
++            deletedAt: null,
++          },
++        },
++        select: CHAPTER_SELECT,
++      });
++
++      return chapter ? this.toRecord(chapter) : null;
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'author-chapter-detail',
++        resource: 'Chương',
++      });
++    }
++  }
++
+   async createDraft(
+     input: CreateAuthorChapterInput,
+   ): Promise<CreateAuthorChapterResult> {
+@@ -656,6 +740,23 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+     }
+   }
+ 
++  private toSummaryRecord(chapter: ChapterSummaryRow): ChapterSummaryRecord {
++    return {
++      id: chapter.id,
++      storyId: chapter.storyId,
++      number: chapter.number.toNumber(),
++      title: chapter.title,
++      slug: chapter.slug,
++      status: chapter.status,
++      wordCount: chapter.wordCount,
++      version: chapter.version,
++      scheduledAt: chapter.scheduledAt,
++      publishedAt: chapter.publishedAt,
++      createdAt: chapter.createdAt,
++      updatedAt: chapter.updatedAt,
++    };
++  }
++
+   private toRecord(chapter: ChapterRow): ChapterRecord {
+     return {
+       id: chapter.id,
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+index f989683..d7caa14 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+@@ -180,6 +180,49 @@ const PUBLIC_STORY_STATUSES = [
+ export class PrismaStoryPersistence implements StoryPersistencePort {
+   constructor(private readonly prisma: PrismaService) { }
+ 
++  async listOwned(userId: string): Promise<readonly StoryRecord[]> {
++    try {
++      const stories = await this.prisma.story.findMany({
++        where: {
++          authorId: userId,
++          deletedAt: null,
++        },
++        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
++        select: STORY_SELECT,
++      });
++
++      return stories.map((story) => this.toRecord(story));
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'author-story-list',
++        resource: 'Truyện',
++      });
++    }
++  }
++
++  async findOwnedById(
++    userId: string,
++    storyId: string,
++  ): Promise<StoryRecord | null> {
++    try {
++      const story = await this.prisma.story.findFirst({
++        where: {
++          id: storyId,
++          authorId: userId,
++          deletedAt: null,
++        },
++        select: STORY_SELECT,
++      });
++
++      return story ? this.toRecord(story) : null;
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'author-story-detail',
++        resource: 'Truyện',
++      });
++    }
++  }
++
+   async createDraft(
+     input: CreateAuthorStoryInput,
+   ): Promise<CreateAuthorStoryResult> {
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+index bd5c9e5..6380e05 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+@@ -2,6 +2,7 @@ import {
+   Body,
+   Controller,
+   Delete,
++  Get,
+   HttpCode,
+   HttpStatus,
+   Param,
+@@ -25,6 +26,10 @@ import {
+   CreateAuthorChapterCommandHandler,
+   DeleteAuthorChapterCommand,
+   DeleteAuthorChapterCommandHandler,
++  GetAuthorChapterQuery,
++  GetAuthorChapterQueryHandler,
++  ListAuthorChaptersQuery,
++  ListAuthorChaptersQueryHandler,
+   PublishAuthorChapterCommand,
+   PublishAuthorChapterCommandHandler,
+   UpdateAuthorChapterCommand,
+@@ -34,7 +39,12 @@ import {
+   CreateAuthorChapterRequest,
+   UpdateAuthorChapterRequest,
+ } from '../requests';
+-import { type ChapterResponse, toChapterResponse } from '../responses';
++import {
++  type ChapterResponse,
++  type ChapterSummaryResponse,
++  toChapterResponse,
++  toChapterSummaryResponse,
++} from '../responses';
+ 
+ @Controller('author/stories/:storyId/chapters')
+ export class AuthorChaptersController {
+@@ -42,9 +52,38 @@ export class AuthorChaptersController {
+     private readonly createChapter: CreateAuthorChapterCommandHandler,
+     private readonly updateChapter: UpdateAuthorChapterCommandHandler,
+     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
++    private readonly listChapters: ListAuthorChaptersQueryHandler,
++    private readonly getChapter: GetAuthorChapterQueryHandler,
+     private readonly publishChapter: PublishAuthorChapterCommandHandler,
+   ) {}
+ 
++  @Get()
++  @RequirePermissions(PermissionCode.STORY_CREATE)
++  async list(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++  ): Promise<readonly ChapterSummaryResponse[]> {
++    const results = await this.listChapters.execute(
++      new ListAuthorChaptersQuery(userId, storyId),
++    );
++
++    return results.map((result) => toChapterSummaryResponse(result));
++  }
++
++  @Get(':chapterId')
++  @RequirePermissions(PermissionCode.STORY_CREATE)
++  async findOne(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++  ): Promise<ChapterResponse> {
++    const result = await this.getChapter.execute(
++      new GetAuthorChapterQuery(userId, storyId, chapterId),
++    );
++
++    return toChapterResponse(result);
++  }
++
+   @Post()
+   @RequirePermissions(PermissionCode.CHAPTER_CREATE)
+   async create(
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts b/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
+index 52c4e03..a8057db 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
+@@ -2,6 +2,7 @@ import {
+   Body,
+   Controller,
+   Delete,
++  Get,
+   HttpCode,
+   HttpStatus,
+   Param,
+@@ -27,6 +28,10 @@ import {
+   CreateAuthorStoryCommandHandler,
+   DeleteAuthorStoryCommand,
+   DeleteAuthorStoryCommandHandler,
++  GetAuthorStoryQuery,
++  GetAuthorStoryQueryHandler,
++  ListAuthorStoriesQuery,
++  ListAuthorStoriesQueryHandler,
+   SubmitAuthorStoryCommand,
+   SubmitAuthorStoryCommandHandler,
+   UpdateAuthorStoryCommand,
+@@ -50,10 +55,33 @@ export class AuthorStoriesController {
+     private readonly createStory: CreateAuthorStoryCommandHandler,
+     private readonly updateStory: UpdateAuthorStoryCommandHandler,
+     private readonly deleteStory: DeleteAuthorStoryCommandHandler,
++    private readonly listStories: ListAuthorStoriesQueryHandler,
++    private readonly getStory: GetAuthorStoryQueryHandler,
+     private readonly submitStory: SubmitAuthorStoryCommandHandler,
+     private readonly cancelSubmission: CancelAuthorStorySubmissionCommandHandler,
+   ) {}
+ 
++  @Get()
++  @RequirePermissions(PermissionCode.STORY_CREATE)
++  async list(
++    @CurrentUserId() userId: string | undefined,
++  ): Promise<readonly StoryResponse[]> {
++    const results = await this.listStories.execute(new ListAuthorStoriesQuery(userId));
++
++    return results.map((result) => toStoryResponse(result));
++  }
++
++  @Get(':storyId')
++  @RequirePermissions(PermissionCode.STORY_CREATE)
++  async findOne(
++    @CurrentUserId() userId: string | undefined,
++    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
++  ): Promise<StoryResponse> {
++    const result = await this.getStory.execute(new GetAuthorStoryQuery(userId, storyId));
++
++    return toStoryResponse(result);
++  }
++
+   @Post()
+   @RequirePermissions(PermissionCode.STORY_CREATE)
+   async create(
+diff --git a/backend/src/modules/stories/presentation/http/responses/chapter-summary.response.ts b/backend/src/modules/stories/presentation/http/responses/chapter-summary.response.ts
+new file mode 100644
+index 0000000..e220e11
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/responses/chapter-summary.response.ts
+@@ -0,0 +1,35 @@
++import type { ChapterSummaryResultDto } from '../../../application';
++
++export interface ChapterSummaryResponse {
++  readonly id: string;
++  readonly storyId: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly status: string;
++  readonly wordCount: number;
++  readonly version: number;
++  readonly scheduledAt: string | null;
++  readonly publishedAt: string | null;
++  readonly createdAt: string;
++  readonly updatedAt: string;
++}
++
++export function toChapterSummaryResponse(
++  result: ChapterSummaryResultDto,
++): ChapterSummaryResponse {
++  return {
++    id: result.id,
++    storyId: result.storyId,
++    number: result.number,
++    title: result.title,
++    slug: result.slug,
++    status: result.status,
++    wordCount: result.wordCount,
++    version: result.version,
++    scheduledAt: result.scheduledAt?.toISOString() ?? null,
++    publishedAt: result.publishedAt?.toISOString() ?? null,
++    createdAt: result.createdAt.toISOString(),
++    updatedAt: result.updatedAt.toISOString(),
++  };
++}
+diff --git a/backend/src/modules/stories/presentation/http/responses/index.ts b/backend/src/modules/stories/presentation/http/responses/index.ts
+index a2e48ba..a4462ba 100644
+--- a/backend/src/modules/stories/presentation/http/responses/index.ts
++++ b/backend/src/modules/stories/presentation/http/responses/index.ts
+@@ -3,3 +3,4 @@ export * from './story.response';
+ export * from './story-publication.response';
+ export * from './public-story.response';
+ export * from './public-chapter-reader.response';
++export * from './chapter-summary.response';
+diff --git a/backend/src/modules/stories/stories.module.ts b/backend/src/modules/stories/stories.module.ts
+index b0b29fa..08e003a 100644
+--- a/backend/src/modules/stories/stories.module.ts
++++ b/backend/src/modules/stories/stories.module.ts
+@@ -11,8 +11,12 @@ import {
+   CreateAuthorStoryCommandHandler,
+   DeleteAuthorChapterCommandHandler,
+   DeleteAuthorStoryCommandHandler,
++  GetAuthorChapterQueryHandler,
++  GetAuthorStoryQueryHandler,
+   GetPublicChapterReaderQueryHandler,
+   GetPublicStoryDetailQueryHandler,
++  ListAuthorChaptersQueryHandler,
++  ListAuthorStoriesQueryHandler,
+   ListPublicStoriesQueryHandler,
+   ListStoryCategoriesQueryHandler,
+   ListStoryTagsQueryHandler,
+@@ -48,9 +52,13 @@ import {
+     CreateAuthorStoryCommandHandler,
+     UpdateAuthorStoryCommandHandler,
+     DeleteAuthorStoryCommandHandler,
++    ListAuthorStoriesQueryHandler,
++    GetAuthorStoryQueryHandler,
+     CreateAuthorChapterCommandHandler,
+     UpdateAuthorChapterCommandHandler,
+     DeleteAuthorChapterCommandHandler,
++    ListAuthorChaptersQueryHandler,
++    GetAuthorChapterQueryHandler,
+     PublishAuthorChapterCommandHandler,
+     SubmitAuthorStoryCommandHandler,
+     CancelAuthorStorySubmissionCommandHandler,
+diff --git a/frontend/src/app/core/auth/authorization.models.ts b/frontend/src/app/core/auth/authorization.models.ts
+index d794d3a..6d9ed9a 100644
+--- a/frontend/src/app/core/auth/authorization.models.ts
++++ b/frontend/src/app/core/auth/authorization.models.ts
+@@ -12,6 +12,13 @@ export const AUTH_PERMISSIONS = {
+   ROLE_MANAGE: 'role.manage',
+ 
+   STORY_CREATE: 'story.create',
++  STORY_UPDATE_OWN: 'story.update.own',
++  STORY_DELETE_OWN: 'story.delete.own',
++  STORY_SUBMIT: 'story.submit',
++  CHAPTER_CREATE: 'chapter.create',
++  CHAPTER_UPDATE_OWN: 'chapter.update.own',
++  CHAPTER_DELETE_OWN: 'chapter.delete.own',
++  CHAPTER_PUBLISH_OWN: 'chapter.publish.own',
+ 
+   LIBRARY_MANAGE_OWN: 'library.manage.own',
+ 
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-editor.store.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-editor.store.ts
+new file mode 100644
+index 0000000..573afe1
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-editor.store.ts
+@@ -0,0 +1,66 @@
++import { DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { finalize, forkJoin, Observable, of, tap } from 'rxjs';
++
++import { getApiErrorMessage } from '../../../../core/http/api-error.util';
++import {
++  AuthorChapterDraftInput,
++  AuthorManagedChapter,
++  AuthorManagedStory,
++} from '../domain/author-story-management.models';
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++
++@Injectable()
++export class AuthorChapterEditorStore {
++  private readonly repository = inject(AuthorStoryManagementRepository);
++  private readonly destroyRef = inject(DestroyRef);
++
++  readonly story = signal<AuthorManagedStory | null>(null);
++  readonly chapter = signal<AuthorManagedChapter | null>(null);
++  readonly loading = signal(false);
++  readonly saving = signal(false);
++  readonly error = signal<string | null>(null);
++
++  load(storyId: string, chapterId: string | null): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    forkJoin({
++      story: this.repository.getStory(storyId),
++      chapter: chapterId ? this.repository.getChapter(storyId, chapterId) : of(null),
++    })
++      .pipe(
++        finalize(() => this.loading.set(false)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: ({ story, chapter }: { story: AuthorManagedStory; chapter: AuthorManagedChapter | null }) => {
++          this.story.set(story);
++          this.chapter.set(chapter);
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++
++  save(
++    storyId: string,
++    chapterId: string | null,
++    input: AuthorChapterDraftInput,
++  ): Observable<AuthorManagedChapter> {
++    this.saving.set(true);
++    this.error.set(null);
++
++    const request$ = chapterId
++      ? this.repository.updateChapter(storyId, chapterId, input)
++      : this.repository.createChapter(storyId, input);
++
++    return request$.pipe(
++      tap((chapter: AuthorManagedChapter) => this.chapter.set(chapter)),
++      finalize(() => this.saving.set(false)),
++    );
++  }
++
++  setError(error: unknown): void {
++    this.error.set(getApiErrorMessage(error));
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-chapters.store.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-chapters.store.ts
+new file mode 100644
+index 0000000..f1db24f
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-chapters.store.ts
+@@ -0,0 +1,106 @@
++import { DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { finalize, forkJoin } from 'rxjs';
++
++import { getApiErrorMessage } from '../../../../core/http/api-error.util';
++import {
++  AuthorManagedChapter,
++  AuthorManagedChapterSummary,
++  AuthorManagedStory,
++} from '../domain/author-story-management.models';
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++
++@Injectable()
++export class AuthorChaptersStore {
++  private readonly repository = inject(AuthorStoryManagementRepository);
++  private readonly destroyRef = inject(DestroyRef);
++  private readonly chaptersState = signal<readonly AuthorManagedChapterSummary[]>([]);
++
++  readonly story = signal<AuthorManagedStory | null>(null);
++  readonly chapters = this.chaptersState.asReadonly();
++  readonly loading = signal(false);
++  readonly actionChapterId = signal<string | null>(null);
++  readonly error = signal<string | null>(null);
++
++  load(storyId: string): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    forkJoin({
++      story: this.repository.getStory(storyId),
++      chapters: this.repository.listChapters(storyId),
++    })
++      .pipe(
++        finalize(() => this.loading.set(false)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: ({ story, chapters }: { story: AuthorManagedStory; chapters: readonly AuthorManagedChapterSummary[] }) => {
++          this.story.set(story);
++          this.chaptersState.set(chapters);
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++
++  deleteDraft(storyId: string, chapterId: string): void {
++    if (this.actionChapterId()) return;
++
++    this.actionChapterId.set(chapterId);
++    this.error.set(null);
++
++    this.repository
++      .deleteChapter(storyId, chapterId)
++      .pipe(
++        finalize(() => this.actionChapterId.set(null)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: () => {
++          this.chaptersState.update((chapters: readonly AuthorManagedChapterSummary[]) =>
++            chapters.filter((chapter: AuthorManagedChapterSummary) => chapter.id !== chapterId),
++          );
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++
++  publish(storyId: string, chapterId: string): void {
++    if (this.actionChapterId()) return;
++
++    this.actionChapterId.set(chapterId);
++    this.error.set(null);
++
++    this.repository
++      .publishChapter(storyId, chapterId)
++      .pipe(
++        finalize(() => this.actionChapterId.set(null)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: (published: AuthorManagedChapter) => {
++          this.chaptersState.update((chapters: readonly AuthorManagedChapterSummary[]) =>
++            chapters.map((chapter: AuthorManagedChapterSummary) =>
++              chapter.id === published.id
++                ? {
++                    id: published.id,
++                    storyId: published.storyId,
++                    number: published.number,
++                    title: published.title,
++                    slug: published.slug,
++                    status: published.status,
++                    wordCount: published.wordCount,
++                    version: published.version,
++                    scheduledAt: published.scheduledAt,
++                    publishedAt: published.publishedAt,
++                    createdAt: published.createdAt,
++                    updatedAt: published.updatedAt,
++                  }
++                : chapter,
++            ),
++          );
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-stories.store.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-stories.store.ts
+new file mode 100644
+index 0000000..bd0e0ea
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-stories.store.ts
+@@ -0,0 +1,57 @@
++import { DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { finalize } from 'rxjs';
++
++import { getApiErrorMessage } from '../../../../core/http/api-error.util';
++import { AuthorManagedStory } from '../domain/author-story-management.models';
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++
++@Injectable()
++export class AuthorStoriesStore {
++  private readonly repository = inject(AuthorStoryManagementRepository);
++  private readonly destroyRef = inject(DestroyRef);
++  private readonly storiesState = signal<readonly AuthorManagedStory[]>([]);
++
++  readonly stories = this.storiesState.asReadonly();
++  readonly loading = signal(false);
++  readonly actionStoryId = signal<string | null>(null);
++  readonly error = signal<string | null>(null);
++
++  load(): void {
++    this.loading.set(true);
++    this.error.set(null);
++
++    this.repository
++      .listStories()
++      .pipe(
++        finalize(() => this.loading.set(false)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: (stories: readonly AuthorManagedStory[]) => this.storiesState.set(stories),
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++
++  deleteDraft(storyId: string): void {
++    if (this.actionStoryId()) return;
++
++    this.actionStoryId.set(storyId);
++    this.error.set(null);
++
++    this.repository
++      .deleteStory(storyId)
++      .pipe(
++        finalize(() => this.actionStoryId.set(null)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: () => {
++          this.storiesState.update((stories: readonly AuthorManagedStory[]) =>
++            stories.filter((story: AuthorManagedStory) => story.id !== storyId),
++          );
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-cover-upload.service.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-cover-upload.service.ts
+new file mode 100644
+index 0000000..5b4be68
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-cover-upload.service.ts
+@@ -0,0 +1,109 @@
++import { HttpClient, HttpHeaders } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable, switchMap } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import { AuthorStoryMedia } from '../domain/author-story-management.models';
++
++interface StoryCoverUploadIntent {
++  readonly mediaAssetId: string;
++  readonly uploadUrl: string;
++  readonly apiKey: string;
++  readonly signature: string;
++  readonly timestamp: number;
++  readonly parameters: {
++    readonly upload_preset: string;
++    readonly public_id: string;
++    readonly asset_folder: string;
++    readonly overwrite: boolean;
++    readonly tags: string;
++  };
++}
++
++interface CloudinaryStoryCoverUploadResponse {
++  readonly public_id: string;
++  readonly version: number;
++  readonly signature: string;
++  readonly resource_type: 'image' | 'video' | 'raw';
++}
++
++@Injectable()
++export class AuthorStoryCoverUploadService {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++
++  upload(storyId: string, file: File): Observable<AuthorStoryMedia> {
++    return this.createIntent(storyId, file).pipe(
++      switchMap((intent: StoryCoverUploadIntent) =>
++        this.uploadToCloudinary(intent, file).pipe(
++          switchMap((result: CloudinaryStoryCoverUploadResponse) => this.confirm(intent, result)),
++        ),
++      ),
++    );
++  }
++
++  private createIntent(storyId: string, file: File): Observable<StoryCoverUploadIntent> {
++    return this.http
++      .post<ApiSuccessEnvelope<StoryCoverUploadIntent>>(
++        `${this.config.apiBaseUrl}/media/upload-intents`,
++        {
++          purpose: 'STORY_COVER',
++          ownerId: storyId,
++          originalName: file.name,
++          declaredMimeType: resolveImageMimeType(file),
++          declaredSizeBytes: file.size,
++        },
++        { headers: idempotencyHeaders() },
++      )
++      .pipe(map((response: ApiSuccessEnvelope<StoryCoverUploadIntent>) => response.data));
++  }
++
++  private uploadToCloudinary(
++    intent: StoryCoverUploadIntent,
++    file: File,
++  ): Observable<CloudinaryStoryCoverUploadResponse> {
++    const formData = new FormData();
++    formData.append('file', file);
++    formData.append('api_key', intent.apiKey);
++    formData.append('timestamp', String(intent.timestamp));
++    formData.append('signature', intent.signature);
++    formData.append('upload_preset', intent.parameters.upload_preset);
++    formData.append('public_id', intent.parameters.public_id);
++    formData.append('asset_folder', intent.parameters.asset_folder);
++    formData.append('overwrite', String(intent.parameters.overwrite));
++    formData.append('tags', intent.parameters.tags);
++
++    return this.http.post<CloudinaryStoryCoverUploadResponse>(intent.uploadUrl, formData);
++  }
++
++  private confirm(
++    intent: StoryCoverUploadIntent,
++    result: CloudinaryStoryCoverUploadResponse,
++  ): Observable<AuthorStoryMedia> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorStoryMedia>>(
++        `${this.config.apiBaseUrl}/media/upload-intents/${intent.mediaAssetId}/confirm`,
++        {
++          publicId: result.public_id,
++          version: result.version,
++          signature: result.signature,
++          resourceType: result.resource_type,
++        },
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryMedia>) => response.data));
++  }
++}
++
++function resolveImageMimeType(file: File): string {
++  if (file.type) return file.type;
++  const extension = file.name.split('.').pop()?.toLowerCase();
++  if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
++  if (extension === 'png') return 'image/png';
++  if (extension === 'webp') return 'image/webp';
++  return 'application/octet-stream';
++}
++
++function idempotencyHeaders(): HttpHeaders {
++  return new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() });
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-editor.store.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-editor.store.ts
+new file mode 100644
+index 0000000..6ea31d6
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-editor.store.ts
+@@ -0,0 +1,180 @@
++import { DestroyRef, inject, Injectable, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { catchError, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
++
++import { getApiErrorMessage } from '../../../../core/http/api-error.util';
++import {
++  AuthorManagedStory,
++  AuthorStoryDraftInput,
++  AuthorStoryMedia,
++  AuthorStoryMetadataCategory,
++  AuthorStoryMetadataTag,
++  AuthorStoryPublication,
++  AuthorStoryUpdateInput,
++} from '../domain/author-story-management.models';
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++
++@Injectable()
++export class AuthorStoryEditorStore {
++  private readonly repository = inject(AuthorStoryManagementRepository);
++  private readonly destroyRef = inject(DestroyRef);
++
++  readonly story = signal<AuthorManagedStory | null>(null);
++  readonly categories = signal<readonly AuthorStoryMetadataCategory[]>([]);
++  readonly tags = signal<readonly AuthorStoryMetadataTag[]>([]);
++  readonly coverUrl = signal<string | null>(null);
++  readonly loading = signal(false);
++  readonly saving = signal(false);
++  readonly workflowBusy = signal(false);
++  readonly error = signal<string | null>(null);
++
++  load(storyId: string | null): void {
++    this.loading.set(true);
++    this.error.set(null);
++    this.coverUrl.set(null);
++
++    const story$ = storyId ? this.repository.getStory(storyId) : of(null);
++
++    forkJoin({
++      story: story$,
++      categories: this.repository.listCategories(),
++      tags: this.repository.listTags(),
++    })
++      .pipe(
++        finalize(() => this.loading.set(false)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe({
++        next: ({ story, categories, tags }: { story: AuthorManagedStory | null; categories: readonly AuthorStoryMetadataCategory[]; tags: readonly AuthorStoryMetadataTag[] }) => {
++          this.story.set(story);
++          this.categories.set(categories);
++          this.tags.set(tags);
++          this.loadCover(story);
++        },
++        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
++      });
++  }
++
++  save(
++    storyId: string | null,
++    input: AuthorStoryDraftInput,
++    coverFile: File | null,
++    clearCover: boolean,
++  ): Observable<AuthorManagedStory> {
++    this.saving.set(true);
++    this.error.set(null);
++
++    const request$ = storyId
++      ? this.saveExisting(storyId, input, coverFile, clearCover)
++      : this.saveNew(input, coverFile);
++
++    return request$.pipe(
++      tap((story: AuthorManagedStory) => this.story.set(story)),
++      catchError((error: unknown) => {
++        this.error.set(getApiErrorMessage(error));
++        throw error;
++      }),
++      finalize(() => this.saving.set(false)),
++    );
++  }
++
++  submit(storyId: string, authorNote: string): Observable<AuthorManagedStory> {
++    return this.runWorkflow(
++      this.repository.submitStory(storyId, authorNote).pipe(map((publication: AuthorStoryPublication) => publication.story)),
++    );
++  }
++
++  cancelSubmission(storyId: string): Observable<AuthorManagedStory> {
++    return this.runWorkflow(
++      this.repository.cancelSubmission(storyId).pipe(map((publication: AuthorStoryPublication) => publication.story)),
++    );
++  }
++
++  clearError(): void {
++    this.error.set(null);
++  }
++
++  private saveNew(
++    input: AuthorStoryDraftInput,
++    coverFile: File | null,
++  ): Observable<AuthorManagedStory> {
++    return this.repository.createStory(input).pipe(
++      tap((story: AuthorManagedStory) => this.story.set(story)),
++      switchMap((story: AuthorManagedStory) => {
++        if (!coverFile) return of(story);
++
++        return this.repository.uploadCover(story.id, coverFile).pipe(
++          switchMap((media: AuthorStoryMedia) =>
++            this.repository.updateStory(story.id, {
++              ...input,
++              coverMediaId: media.id,
++            }).pipe(tap(() => this.coverUrl.set(media.deliveryUrl))),
++          ),
++          catchError((error: unknown) => {
++            this.coverUrl.set(null);
++            this.error.set(
++              `Truyện đã được tạo nhưng tải ảnh bìa thất bại. ${getApiErrorMessage(error)}`,
++            );
++            return of(story);
++          }),
++        );
++      }),
++    );
++  }
++
++  private saveExisting(
++    storyId: string,
++    input: AuthorStoryDraftInput,
++    coverFile: File | null,
++    clearCover: boolean,
++  ): Observable<AuthorManagedStory> {
++    if (coverFile) {
++      return this.repository.uploadCover(storyId, coverFile).pipe(
++        switchMap((media: AuthorStoryMedia) =>
++          this.repository
++            .updateStory(storyId, {
++              ...input,
++              coverMediaId: media.id,
++            })
++            .pipe(tap(() => this.coverUrl.set(media.deliveryUrl))),
++        ),
++      );
++    }
++
++    const update: AuthorStoryUpdateInput = clearCover
++      ? { ...input, coverMediaId: null }
++      : input;
++
++    return this.repository.updateStory(storyId, update).pipe(
++      tap(() => {
++        if (clearCover) this.coverUrl.set(null);
++      }),
++    );
++  }
++
++  private loadCover(story: AuthorManagedStory | null): void {
++    if (!story?.coverMediaId) return;
++
++    this.repository
++      .getMedia(story.coverMediaId)
++      .pipe(
++        catchError(() => of(null)),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe((media: AuthorStoryMedia | null) => this.coverUrl.set(media?.deliveryUrl ?? null));
++  }
++
++  private runWorkflow(request$: Observable<AuthorManagedStory>): Observable<AuthorManagedStory> {
++    this.workflowBusy.set(true);
++    this.error.set(null);
++
++    return request$.pipe(
++      tap((story: AuthorManagedStory) => this.story.set(story)),
++      catchError((error: unknown) => {
++        this.error.set(getApiErrorMessage(error));
++        throw error;
++      }),
++      finalize(() => this.workflowBusy.set(false)),
++    );
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
+new file mode 100644
+index 0000000..af5687c
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
+@@ -0,0 +1,160 @@
++import { HttpClient, HttpHeaders } from '@angular/common/http';
++import { inject, Injectable } from '@angular/core';
++import { map, Observable } from 'rxjs';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
++import {
++  AuthorChapterDraftInput,
++  AuthorManagedChapter,
++  AuthorManagedChapterSummary,
++  AuthorManagedStory,
++  AuthorStoryDraftInput,
++  AuthorStoryMedia,
++  AuthorStoryMetadataCategory,
++  AuthorStoryMetadataTag,
++  AuthorStoryPublication,
++  AuthorStoryUpdateInput,
++} from '../domain/author-story-management.models';
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++import { AuthorStoryCoverUploadService } from './author-story-cover-upload.service';
++
++@Injectable()
++export class AuthorStoryManagementHttpRepository implements AuthorStoryManagementRepository {
++  private readonly http = inject(HttpClient);
++  private readonly config = inject(APP_RUNTIME_CONFIG);
++  private readonly coverUpload = inject(AuthorStoryCoverUploadService);
++  private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
++  private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
++
++  listStories(): Observable<readonly AuthorManagedStory[]> {
++    return this.http
++      .get<ApiSuccessEnvelope<readonly AuthorManagedStory[]>>(this.storiesUrl)
++      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorManagedStory[]>) => response.data));
++  }
++
++  getStory(storyId: string): Observable<AuthorManagedStory> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorManagedStory>>(`${this.storiesUrl}/${storyId}`)
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data));
++  }
++
++  createStory(input: AuthorStoryDraftInput): Observable<AuthorManagedStory> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorManagedStory>>(this.storiesUrl, input)
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data));
++  }
++
++  updateStory(storyId: string, input: AuthorStoryUpdateInput): Observable<AuthorManagedStory> {
++    return this.http
++      .patch<ApiSuccessEnvelope<AuthorManagedStory>>(`${this.storiesUrl}/${storyId}`, input)
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data));
++  }
++
++  deleteStory(storyId: string): Observable<void> {
++    return this.http.delete<void>(`${this.storiesUrl}/${storyId}`);
++  }
++
++  listCategories(): Observable<readonly AuthorStoryMetadataCategory[]> {
++    return this.http
++      .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>>(
++        `${this.metadataUrl}/categories`,
++      )
++      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>) => response.data));
++  }
++
++  listTags(): Observable<readonly AuthorStoryMetadataTag[]> {
++    return this.http
++      .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>>(`${this.metadataUrl}/tags`)
++      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>) => response.data));
++  }
++
++  submitStory(storyId: string, authorNote: string): Observable<AuthorStoryPublication> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorStoryPublication>>(
++        `${this.storiesUrl}/${storyId}/submit`,
++        authorNote.trim() ? { authorNote: authorNote.trim() } : {},
++        { headers: idempotencyHeaders() },
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryPublication>) => response.data));
++  }
++
++  cancelSubmission(storyId: string): Observable<AuthorStoryPublication> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorStoryPublication>>(
++        `${this.storiesUrl}/${storyId}/submission/cancel`,
++        {},
++        { headers: idempotencyHeaders() },
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryPublication>) => response.data));
++  }
++
++  listChapters(storyId: string): Observable<readonly AuthorManagedChapterSummary[]> {
++    return this.http
++      .get<ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>>(
++        `${this.storiesUrl}/${storyId}/chapters`,
++      )
++      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>) => response.data));
++  }
++
++  getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorManagedChapter>>(
++        `${this.storiesUrl}/${storyId}/chapters/${chapterId}`,
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
++  }
++
++  createChapter(
++    storyId: string,
++    input: AuthorChapterDraftInput,
++  ): Observable<AuthorManagedChapter> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
++        `${this.storiesUrl}/${storyId}/chapters`,
++        input,
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
++  }
++
++  updateChapter(
++    storyId: string,
++    chapterId: string,
++    input: AuthorChapterDraftInput,
++  ): Observable<AuthorManagedChapter> {
++    return this.http
++      .patch<ApiSuccessEnvelope<AuthorManagedChapter>>(
++        `${this.storiesUrl}/${storyId}/chapters/${chapterId}`,
++        input,
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
++  }
++
++  deleteChapter(storyId: string, chapterId: string): Observable<void> {
++    return this.http.delete<void>(`${this.storiesUrl}/${storyId}/chapters/${chapterId}`);
++  }
++
++  publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
++    return this.http
++      .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
++        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/publish`,
++        {},
++        { headers: idempotencyHeaders() },
++      )
++      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
++  }
++
++  uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia> {
++    return this.coverUpload.upload(storyId, file);
++  }
++
++  getMedia(mediaId: string): Observable<AuthorStoryMedia> {
++    return this.http
++      .get<ApiSuccessEnvelope<AuthorStoryMedia>>(`${this.config.apiBaseUrl}/media/${mediaId}`)
++      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryMedia>) => response.data));
++  }
++}
++
++function idempotencyHeaders(): HttpHeaders {
++  return new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() });
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management.providers.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management.providers.ts
+new file mode 100644
+index 0000000..b7ea055
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management.providers.ts
+@@ -0,0 +1,15 @@
++import { Provider } from '@angular/core';
++
++import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
++import { AuthorStoryCoverUploadService } from './author-story-cover-upload.service';
++import { AuthorStoryManagementHttpRepository } from './author-story-management-http.repository';
++
++export function provideAuthorStoryManagement(): Provider[] {
++  return [
++    AuthorStoryCoverUploadService,
++    {
++      provide: AuthorStoryManagementRepository,
++      useClass: AuthorStoryManagementHttpRepository,
++    },
++  ];
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.models.ts b/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.models.ts
+new file mode 100644
+index 0000000..e420715
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.models.ts
+@@ -0,0 +1,126 @@
++export type AuthorStoryStatus =
++  | 'DRAFT'
++  | 'PENDING_REVIEW'
++  | 'REJECTED'
++  | 'PUBLISHED'
++  | 'HIATUS'
++  | 'SUSPENDED'
++  | 'COMPLETED'
++  | 'ARCHIVED';
++
++export type AuthorStoryVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
++export type AuthorChapterStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
++
++export interface AuthorStoryCategory {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++  readonly isPrimary: boolean;
++}
++
++export interface AuthorStoryTag {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++}
++
++export interface AuthorManagedStory {
++  readonly id: string;
++  readonly authorId: string;
++  readonly title: string;
++  readonly slug: string;
++  readonly synopsis: string;
++  readonly languageCode: string;
++  readonly status: AuthorStoryStatus;
++  readonly visibility: AuthorStoryVisibility;
++  readonly contentRating: string;
++  readonly coverMediaId: string | null;
++  readonly publishedAt: string | null;
++  readonly categories: readonly AuthorStoryCategory[];
++  readonly tags: readonly AuthorStoryTag[];
++  readonly version: number;
++  readonly createdAt: string;
++  readonly updatedAt: string;
++}
++
++export interface AuthorManagedChapterSummary {
++  readonly id: string;
++  readonly storyId: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly status: AuthorChapterStatus;
++  readonly wordCount: number;
++  readonly version: number;
++  readonly scheduledAt: string | null;
++  readonly publishedAt: string | null;
++  readonly createdAt: string;
++  readonly updatedAt: string;
++}
++
++export interface AuthorManagedChapter extends AuthorManagedChapterSummary {
++  readonly createdById: string;
++  readonly updatedById: string;
++  readonly content: string;
++  readonly contentFormat: string;
++}
++
++export interface AuthorStoryMetadataCategory {
++  readonly id: string;
++  readonly parentId: string | null;
++  readonly name: string;
++  readonly slug: string;
++  readonly sortOrder: number;
++}
++
++export interface AuthorStoryMetadataTag {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++}
++
++export interface AuthorStoryDraftInput {
++  readonly title: string;
++  readonly synopsis: string;
++  readonly categoryIds: readonly string[];
++  readonly tagIds: readonly string[];
++}
++
++export interface AuthorStoryUpdateInput extends AuthorStoryDraftInput {
++  readonly coverMediaId?: string | null;
++}
++
++export interface AuthorChapterDraftInput {
++  readonly title: string;
++  readonly content: string;
++}
++
++export interface AuthorStorySubmission {
++  readonly id: string;
++  readonly storyId: string;
++  readonly submittedById: string;
++  readonly reviewedById: string | null;
++  readonly status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
++  readonly authorNote: string | null;
++  readonly reviewerNote: string | null;
++  readonly submittedAt: string;
++  readonly reviewedAt: string | null;
++  readonly canceledAt: string | null;
++}
++
++export interface AuthorStoryPublication {
++  readonly story: AuthorManagedStory;
++  readonly submission: AuthorStorySubmission;
++}
++
++export interface AuthorStoryMedia {
++  readonly id: string;
++  readonly purpose: string;
++  readonly status: string;
++  readonly resourceType: string | null;
++  readonly deliveryUrl: string | null;
++  readonly width: number | null;
++  readonly height: number | null;
++  readonly sizeBytes: string | null;
++  readonly readyAt: string | null;
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.repository.ts b/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.repository.ts
+new file mode 100644
+index 0000000..620c7d6
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/domain/author-story-management.repository.ts
+@@ -0,0 +1,34 @@
++import { Observable } from 'rxjs';
++
++import {
++  AuthorChapterDraftInput,
++  AuthorManagedChapter,
++  AuthorManagedChapterSummary,
++  AuthorManagedStory,
++  AuthorStoryDraftInput,
++  AuthorStoryMedia,
++  AuthorStoryMetadataCategory,
++  AuthorStoryMetadataTag,
++  AuthorStoryPublication,
++  AuthorStoryUpdateInput,
++} from './author-story-management.models';
++
++export abstract class AuthorStoryManagementRepository {
++  abstract listStories(): Observable<readonly AuthorManagedStory[]>;
++  abstract getStory(storyId: string): Observable<AuthorManagedStory>;
++  abstract createStory(input: AuthorStoryDraftInput): Observable<AuthorManagedStory>;
++  abstract updateStory(storyId: string, input: AuthorStoryUpdateInput): Observable<AuthorManagedStory>;
++  abstract deleteStory(storyId: string): Observable<void>;
++  abstract listCategories(): Observable<readonly AuthorStoryMetadataCategory[]>;
++  abstract listTags(): Observable<readonly AuthorStoryMetadataTag[]>;
++  abstract submitStory(storyId: string, authorNote: string): Observable<AuthorStoryPublication>;
++  abstract cancelSubmission(storyId: string): Observable<AuthorStoryPublication>;
++  abstract listChapters(storyId: string): Observable<readonly AuthorManagedChapterSummary[]>;
++  abstract getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
++  abstract createChapter(storyId: string, input: AuthorChapterDraftInput): Observable<AuthorManagedChapter>;
++  abstract updateChapter(storyId: string, chapterId: string, input: AuthorChapterDraftInput): Observable<AuthorManagedChapter>;
++  abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
++  abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
++  abstract uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia>;
++  abstract getMedia(mediaId: string): Observable<AuthorStoryMedia>;
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.html b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.html
+new file mode 100644
+index 0000000..2dbfcb1
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.html
+@@ -0,0 +1,45 @@
++<main class="studio-page">
++  <header class="page-header">
++    <div>
++      <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']">← Danh sách chương</a>
++      <h1>{{ isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' }}</h1>
++      @if (store.story(); as story) { <p>{{ story.title }} · {{ story.status }}</p> }
++    </div>
++  </header>
++
++  @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
++  @if (store.loading()) {
++    <p class="notice">Đang tải chương...</p>
++  } @else {
++    @if (!isEditable()) {
++      <p class="notice">Chương này không thể chỉnh sửa ở trạng thái hiện tại.</p>
++    }
++
++    <form class="editor" [formGroup]="form" (ngSubmit)="save()">
++      <label>
++        <span>Tiêu đề chương</span>
++        <input type="text" maxlength="255" formControlName="title" />
++      </label>
++
++      <label class="content-field">
++        <span>Nội dung Markdown</span>
++        <textarea
++          rows="28"
++          formControlName="content"
++          placeholder="Bắt đầu viết nội dung chương..."
++        ></textarea>
++      </label>
++
++      <footer>
++        @if (store.chapter(); as chapter) {
++          <span>{{ chapter.wordCount }} từ · phiên bản {{ chapter.version }}</span>
++        } @else {
++          <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
++        }
++        <button type="submit" [disabled]="!isEditable() || store.saving()">
++          {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
++        </button>
++      </footer>
++    </form>
++  }
++</main>
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.scss b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.scss
+new file mode 100644
+index 0000000..4c67f71
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.scss
+@@ -0,0 +1,18 @@
++:host { display: block; }
++.studio-page { padding: 32px clamp(18px, 4vw, 48px) 56px; color: #dfe6f5; }
++.page-header { margin-bottom: 20px; }
++.page-header a { color: #b76cff; text-decoration: none; }
++h1 { margin: 8px 0 0; color: #fff; font-size: clamp(26px, 4vw, 36px); }
++.page-header p { margin: 7px 0 0; color: #8f9bb3; }
++.editor { display: grid; gap: 18px; padding: 22px; border: 1px solid #202b40; border-radius: 12px; background: linear-gradient(145deg, rgba(16,24,42,.96), rgba(9,16,29,.96)); }
++label { display: grid; gap: 8px; }
++label > span { color: #bac4d7; font-size: 13px; font-weight: 700; }
++input, textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid #293650; border-radius: 8px; background: #081322; color: #edf2fb; font: inherit; }
++textarea { min-height: 55vh; resize: vertical; line-height: 1.7; }
++input:disabled, textarea:disabled { opacity: .7; cursor: not-allowed; }
++footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; color: #8290a8; font-size: 12px; }
++footer button { min-width: 130px; min-height: 42px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #9d43ef, #6e31da); color: #fff; font-weight: 750; cursor: pointer; }
++footer button:disabled { opacity: .5; cursor: default; }
++.notice { padding: 14px; border: 1px solid #293650; border-radius: 8px; background: #0c1627; color: #9da9be; }
++.notice--error { border-color: rgba(239,68,68,.3); color: #ff9494; }
++@media (max-width: 680px) { footer { align-items: stretch; flex-direction: column; } footer button { width: 100%; } }
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.ts b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.ts
+new file mode 100644
+index 0000000..1d3e46a
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component.ts
+@@ -0,0 +1,72 @@
++import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
++import { ActivatedRoute, Router, RouterLink } from '@angular/router';
++
++import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
++
++@Component({
++  selector: 'app-author-chapter-editor-page',
++  standalone: true,
++  imports: [ReactiveFormsModule, RouterLink],
++  providers: [AuthorChapterEditorStore],
++  templateUrl: './author-chapter-editor-page.component.html',
++  styleUrl: './author-chapter-editor-page.component.scss',
++  changeDetection: ChangeDetectionStrategy.OnPush,
++})
++export class AuthorChapterEditorPageComponent implements OnInit {
++  protected readonly store = inject(AuthorChapterEditorStore);
++  private readonly route = inject(ActivatedRoute);
++  private readonly router = inject(Router);
++  private readonly fb = inject(FormBuilder);
++  private readonly destroyRef = inject(DestroyRef);
++
++  protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
++  private readonly chapterId = this.route.snapshot.paramMap.get('chapterId');
++  protected readonly isCreate = this.chapterId === null;
++  protected readonly form = this.fb.nonNullable.group({
++    title: ['', [Validators.required, Validators.maxLength(255)]],
++    content: [''],
++  });
++  protected readonly isEditable = computed(() => {
++    const story = this.store.story();
++    const chapter = this.store.chapter();
++    if (!story || story.status === 'PENDING_REVIEW') return false;
++    return !chapter || chapter.status === 'DRAFT';
++  });
++
++  constructor() {
++    effect(() => {
++      const chapter = this.store.chapter();
++      if (chapter) {
++        this.form.patchValue({ title: chapter.title, content: chapter.content }, { emitEvent: false });
++      }
++      if (this.store.story() && !this.isEditable()) this.form.disable({ emitEvent: false });
++      else this.form.enable({ emitEvent: false });
++      this.form.markAsPristine();
++    });
++  }
++
++  ngOnInit(): void {
++    this.store.load(this.storyId, this.chapterId);
++  }
++
++  protected save(): void {
++    if (!this.isEditable() || this.form.invalid || this.store.saving()) {
++      this.form.markAllAsTouched();
++      return;
++    }
++
++    const value = this.form.getRawValue();
++    this.store
++      .save(this.storyId, this.chapterId, {
++        title: value.title.trim(),
++        content: value.content,
++      })
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe({
++        next: () => void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong']),
++        error: (error: unknown) => this.store.setError(error),
++      });
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.html b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.html
+new file mode 100644
+index 0000000..c010db2
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.html
+@@ -0,0 +1,73 @@
++<main class="studio-page">
++  <header class="page-header">
++    <div>
++      <p class="eyebrow">Author Studio</p>
++      <h1>Truyện của tôi</h1>
++      <p>Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện.</p>
++    </div>
++
++    <a class="primary-action" routerLink="/author-studio/truyen/tao-moi">+ Tạo truyện</a>
++  </header>
++
++  <section class="toolbar" aria-label="Bộ lọc truyện">
++    <input
++      type="search"
++      placeholder="Tìm theo tên truyện..."
++      [value]="query()"
++      (input)="updateQuery($event)"
++    />
++    <span>{{ filteredStories().length }} truyện</span>
++  </section>
++
++  @if (store.error()) {
++    <p class="notice notice--error">{{ store.error() }}</p>
++  }
++
++  @if (store.loading()) {
++    <p class="notice">Đang tải danh sách truyện...</p>
++  } @else if (filteredStories().length === 0) {
++    <section class="empty-state">
++      <h2>Chưa có truyện phù hợp</h2>
++      <p>Tạo một bản nháp mới để bắt đầu viết.</p>
++      <a routerLink="/author-studio/truyen/tao-moi">Tạo truyện đầu tiên</a>
++    </section>
++  } @else {
++    <section class="story-list">
++      @for (story of filteredStories(); track story.id) {
++        <article class="story-card">
++          <div class="story-copy">
++            <div class="story-title-row">
++              <h2>{{ story.title }}</h2>
++              <span class="status" [attr.data-status]="story.status">
++                {{ statusLabel(story.status) }}
++              </span>
++            </div>
++
++            <p>{{ story.synopsis || 'Chưa có mô tả.' }}</p>
++
++            <div class="meta">
++              <span>Cập nhật {{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
++              <span>{{ story.categories[0]?.name || 'Chưa chọn thể loại' }}</span>
++              <span>v{{ story.version }}</span>
++            </div>
++          </div>
++
++          <div class="story-actions">
++            <a [routerLink]="['/author-studio/truyen', story.id]">Chi tiết</a>
++            <a [routerLink]="['/author-studio/truyen', story.id, 'chuong']">Chương</a>
++            @if (canDelete(story)) {
++              <button
++                type="button"
++                class="danger"
++                [disabled]="store.actionStoryId() === story.id"
++                (click)="deleteStory(story)"
++              >
++                {{ store.actionStoryId() === story.id ? 'Đang xóa...' : 'Xóa' }}
++              </button>
++            }
++          </div>
++        </article>
++      }
++    </section>
++  }
++</main>
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.scss b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.scss
+new file mode 100644
+index 0000000..abb9284
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.scss
+@@ -0,0 +1,31 @@
++:host { display: block; }
++.studio-page { padding: 32px clamp(18px, 4vw, 48px) 56px; color: #dfe6f5; }
++.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
++.eyebrow { margin: 0 0 6px; color: #b76cff; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
++h1 { margin: 0; color: #fff; font-size: clamp(26px, 4vw, 38px); }
++.page-header p:not(.eyebrow) { max-width: 680px; margin: 8px 0 0; color: #8f9bb3; }
++.primary-action, .empty-state a { padding: 11px 16px; border-radius: 8px; background: linear-gradient(135deg, #9d43ef, #6e31da); color: #fff; font-weight: 700; text-decoration: none; white-space: nowrap; }
++.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
++.toolbar input { width: min(480px, 100%); min-height: 42px; padding: 0 14px; border: 1px solid #243047; border-radius: 8px; background: #0b1424; color: #fff; }
++.toolbar span, .meta { color: #7f8ba2; font-size: 12px; }
++.story-list { display: grid; gap: 12px; }
++.story-card { display: flex; justify-content: space-between; gap: 24px; padding: 20px; border: 1px solid #202b40; border-radius: 12px; background: linear-gradient(145deg, rgba(16,24,42,.96), rgba(9,16,29,.96)); }
++.story-copy { min-width: 0; flex: 1; }
++.story-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
++h2 { margin: 0; color: #fff; font-size: 18px; }
++.story-copy > p { display: -webkit-box; max-width: 760px; margin: 10px 0; overflow: hidden; color: #a6b0c4; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
++.meta { display: flex; flex-wrap: wrap; gap: 14px; }
++.status { padding: 4px 8px; border-radius: 999px; background: rgba(59,130,246,.14); color: #7db2ff; font-size: 11px; font-weight: 800; }
++.status[data-status='DRAFT'] { background: rgba(148,163,184,.14); color: #c0c9d8; }
++.status[data-status='PENDING_REVIEW'] { background: rgba(245,158,11,.14); color: #f4bd53; }
++.status[data-status='REJECTED'], .status[data-status='SUSPENDED'] { background: rgba(239,68,68,.13); color: #ff8585; }
++.status[data-status='PUBLISHED'], .status[data-status='COMPLETED'] { background: rgba(34,197,94,.13); color: #62da86; }
++.story-actions { display: flex; align-items: center; gap: 8px; }
++.story-actions a, .story-actions button { min-height: 36px; padding: 0 12px; border: 1px solid #2a3650; border-radius: 7px; background: #101a2d; color: #d7deeb; cursor: pointer; text-decoration: none; line-height: 34px; }
++.story-actions .danger { border-color: rgba(239,68,68,.25); color: #ff8585; }
++.story-actions button:disabled { opacity: .55; cursor: default; }
++.notice, .empty-state { padding: 22px; border: 1px solid #202b40; border-radius: 10px; background: #0b1424; color: #9ca8bd; }
++.notice--error { border-color: rgba(239,68,68,.3); color: #ff9494; }
++.empty-state { display: grid; justify-items: start; gap: 8px; }
++.empty-state p { margin: 0 0 8px; }
++@media (max-width: 760px) { .page-header, .story-card { align-items: stretch; flex-direction: column; } .story-actions { flex-wrap: wrap; } .toolbar { align-items: stretch; flex-direction: column; } }
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.ts b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.ts
+new file mode 100644
+index 0000000..bb2ed1a
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component.ts
+@@ -0,0 +1,61 @@
++import { DatePipe } from '@angular/common';
++import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
++import { RouterLink } from '@angular/router';
++
++import { AuthorStoriesStore } from '../../data-access/author-stories.store';
++import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story-management.models';
++
++@Component({
++  selector: 'app-author-stories-page',
++  standalone: true,
++  imports: [DatePipe, RouterLink],
++  providers: [AuthorStoriesStore],
++  templateUrl: './author-stories-page.component.html',
++  styleUrl: './author-stories-page.component.scss',
++  changeDetection: ChangeDetectionStrategy.OnPush,
++})
++export class AuthorStoriesPageComponent implements OnInit {
++  protected readonly store = inject(AuthorStoriesStore);
++  protected readonly query = signal('');
++  protected readonly filteredStories = computed(() => {
++    const keyword = this.query().trim().toLocaleLowerCase('vi');
++    if (!keyword) return this.store.stories();
++
++    return this.store
++      .stories()
++      .filter((story: AuthorManagedStory) => story.title.toLocaleLowerCase('vi').includes(keyword));
++  });
++
++  ngOnInit(): void {
++    this.store.load();
++  }
++
++  protected updateQuery(event: Event): void {
++    this.query.set((event.target as HTMLInputElement).value);
++  }
++
++  protected canDelete(story: AuthorManagedStory): boolean {
++    return story.status === 'DRAFT' || story.status === 'REJECTED';
++  }
++
++  protected deleteStory(story: AuthorManagedStory): void {
++    if (!this.canDelete(story)) return;
++    if (!window.confirm(`Xóa bản nháp “${story.title}”?`)) return;
++    this.store.deleteDraft(story.id);
++  }
++
++  protected statusLabel(status: AuthorStoryStatus): string {
++    return STORY_STATUS_LABELS[status];
++  }
++}
++
++const STORY_STATUS_LABELS: Record<AuthorStoryStatus, string> = {
++  DRAFT: 'Bản nháp',
++  PENDING_REVIEW: 'Chờ duyệt',
++  REJECTED: 'Bị từ chối',
++  PUBLISHED: 'Đang xuất bản',
++  HIATUS: 'Tạm ngưng',
++  SUSPENDED: 'Bị đình chỉ',
++  COMPLETED: 'Hoàn thành',
++  ARCHIVED: 'Lưu trữ',
++};
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.html b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.html
+new file mode 100644
+index 0000000..fae54ae
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.html
+@@ -0,0 +1,71 @@
++<main class="studio-page">
++  @if (store.story(); as story) {
++    <header class="page-header">
++      <div>
++        <a [routerLink]="['/author-studio/truyen', story.id]">← {{ story.title }}</a>
++        <h1>Quản lý chương</h1>
++        <p>{{ store.chapters().length }} chương · trạng thái truyện {{ story.status }}</p>
++      </div>
++
++      @if (canCreate(story)) {
++        <a class="primary-action" [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']">
++          + Viết chương mới
++        </a>
++      }
++    </header>
++
++    @if (story.status === 'PENDING_REVIEW') {
++      <p class="notice">Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương.</p>
++    }
++
++    @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
++
++    @if (store.chapters().length === 0) {
++      <section class="empty-state">
++        <h2>Chưa có chương</h2>
++        <p>Tạo chương đầu tiên cho truyện này.</p>
++      </section>
++    } @else {
++      <section class="chapter-list">
++        @for (chapter of store.chapters(); track chapter.id) {
++          <article>
++            <div class="chapter-number">{{ chapter.number }}</div>
++            <div class="chapter-copy">
++              <div>
++                <h2>{{ chapter.title }}</h2>
++                <span class="status" [attr.data-status]="chapter.status">{{ chapter.status }}</span>
++              </div>
++              <p>
++                {{ chapter.wordCount }} từ · v{{ chapter.version }} · cập nhật
++                {{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}
++              </p>
++            </div>
++            <div class="actions">
++              @if (canEdit(story, chapter)) {
++                <a [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]">Sửa</a>
++                <button
++                  type="button"
++                  class="danger"
++                  [disabled]="store.actionChapterId() === chapter.id"
++                  (click)="deleteChapter(story, chapter)"
++                >Xóa</button>
++              }
++              @if (canPublish(story, chapter)) {
++                <button
++                  type="button"
++                  class="publish"
++                  [disabled]="store.actionChapterId() === chapter.id"
++                  (click)="publishChapter(story, chapter)"
++                >Xuất bản</button>
++              }
++            </div>
++          </article>
++        }
++      </section>
++    }
++  } @else if (store.loading()) {
++    <p class="notice">Đang tải danh sách chương...</p>
++  } @else if (store.error()) {
++    <p class="notice notice--error">{{ store.error() }}</p>
++  }
++</main>
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.scss b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.scss
+new file mode 100644
+index 0000000..b8799a6
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.scss
+@@ -0,0 +1,25 @@
++:host { display: block; }
++.studio-page { padding: 32px clamp(18px, 4vw, 48px) 56px; color: #dfe6f5; }
++.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
++.page-header a { color: #b76cff; text-decoration: none; }
++h1 { margin: 8px 0 0; color: #fff; font-size: clamp(26px, 4vw, 36px); }
++.page-header p { margin: 7px 0 0; color: #8f9bb3; }
++.primary-action { padding: 11px 16px; border-radius: 8px; background: linear-gradient(135deg, #9d43ef, #6e31da); color: #fff !important; font-weight: 700; white-space: nowrap; }
++.chapter-list { display: grid; gap: 10px; }
++.chapter-list article { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 16px 18px; border: 1px solid #202b40; border-radius: 10px; background: #0c1627; }
++.chapter-number { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 9px; background: rgba(132,71,214,.15); color: #d5a4ff; font-weight: 800; }
++.chapter-copy > div { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
++h2 { margin: 0; color: #fff; font-size: 16px; }
++.chapter-copy p { margin: 6px 0 0; color: #8290a8; font-size: 12px; }
++.status { padding: 3px 7px; border-radius: 999px; background: rgba(148,163,184,.13); color: #c5cedd; font-size: 10px; font-weight: 800; }
++.status[data-status='PUBLISHED'] { background: rgba(34,197,94,.13); color: #62da86; }
++.actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
++.actions a, .actions button { min-height: 34px; padding: 0 10px; border: 1px solid #2b3853; border-radius: 7px; background: #111d31; color: #d4dcea; cursor: pointer; line-height: 32px; text-decoration: none; }
++.actions .danger { color: #ff8585; }
++.actions .publish { border-color: rgba(34,197,94,.25); color: #62da86; }
++.actions button:disabled { opacity: .5; cursor: default; }
++.notice, .empty-state { padding: 18px; border: 1px solid #26334c; border-radius: 9px; background: #0b1424; color: #99a6bb; }
++.notice--error { border-color: rgba(239,68,68,.3); color: #ff9494; }
++.empty-state h2 { margin-bottom: 6px; }
++.empty-state p { margin: 0; }
++@media (max-width: 760px) { .page-header { align-items: stretch; flex-direction: column; } .chapter-list article { grid-template-columns: 48px minmax(0, 1fr); } .actions { grid-column: 1 / -1; justify-content: flex-start; } }
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.ts b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.ts
+new file mode 100644
+index 0000000..297bb14
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component.ts
+@@ -0,0 +1,49 @@
++import { DatePipe } from '@angular/common';
++import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
++import { ActivatedRoute, RouterLink } from '@angular/router';
++
++import { AuthorChaptersStore } from '../../data-access/author-chapters.store';
++import { AuthorManagedChapterSummary, AuthorManagedStory } from '../../domain/author-story-management.models';
++
++@Component({
++  selector: 'app-author-story-chapters-page',
++  standalone: true,
++  imports: [DatePipe, RouterLink],
++  providers: [AuthorChaptersStore],
++  templateUrl: './author-story-chapters-page.component.html',
++  styleUrl: './author-story-chapters-page.component.scss',
++  changeDetection: ChangeDetectionStrategy.OnPush,
++})
++export class AuthorStoryChaptersPageComponent implements OnInit {
++  protected readonly store = inject(AuthorChaptersStore);
++  private readonly route = inject(ActivatedRoute);
++  protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
++
++  ngOnInit(): void {
++    this.store.load(this.storyId);
++  }
++
++  protected canCreate(story: AuthorManagedStory): boolean {
++    return story.status !== 'PENDING_REVIEW';
++  }
++
++  protected canEdit(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
++    return story.status !== 'PENDING_REVIEW' && chapter.status === 'DRAFT';
++  }
++
++  protected canPublish(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
++    return story.status === 'PUBLISHED' && chapter.status === 'DRAFT' && chapter.wordCount > 0;
++  }
++
++  protected deleteChapter(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): void {
++    if (!this.canEdit(story, chapter)) return;
++    if (!window.confirm(`Xóa bản nháp chương ${chapter.number}: “${chapter.title}”?`)) return;
++    this.store.deleteDraft(story.id, chapter.id);
++  }
++
++  protected publishChapter(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): void {
++    if (!this.canPublish(story, chapter)) return;
++    if (!window.confirm(`Xuất bản chương ${chapter.number}: “${chapter.title}”?`)) return;
++    this.store.publish(story.id, chapter.id);
++  }
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.html b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.html
+new file mode 100644
+index 0000000..dbfadc4
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.html
+@@ -0,0 +1,127 @@
++<main class="studio-page">
++  <header class="page-header">
++    <div>
++      <a routerLink="/author-studio/truyen">← Truyện của tôi</a>
++      <h1>{{ isCreate() ? 'Tạo truyện mới' : 'Chỉnh sửa truyện' }}</h1>
++      @if (store.story(); as story) {
++        <p>Trạng thái: <strong>{{ statusLabel(story) }}</strong> · phiên bản {{ story.version }}</p>
++      } @else {
++        <p>Tạo bản nháp trước, sau đó bạn có thể tải ảnh bìa và viết chương.</p>
++      }
++    </div>
++
++    @if (store.story(); as story) {
++      <a class="secondary-action" [routerLink]="['/author-studio/truyen', story.id, 'chuong']">
++        Quản lý chương
++      </a>
++    }
++  </header>
++
++  @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
++  @if (fileError()) { <p class="notice notice--error">{{ fileError() }}</p> }
++
++  @if (store.loading()) {
++    <p class="notice">Đang tải dữ liệu truyện...</p>
++  } @else {
++    @if (!isEditable()) {
++      <p class="notice">
++        Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa.
++      </p>
++    }
++
++    <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()">
++      <section class="panel main-panel">
++        <label>
++          <span>Tên truyện</span>
++          <input type="text" formControlName="title" maxlength="255" />
++        </label>
++
++        <label>
++          <span>Mô tả</span>
++          <textarea rows="9" formControlName="synopsis" placeholder="Giới thiệu nội dung truyện..."></textarea>
++        </label>
++
++        <div class="field-group">
++          <span class="field-label">Thể loại</span>
++          <div class="chip-list">
++            @for (category of store.categories(); track category.id) {
++              <button
++                type="button"
++                class="chip"
++                [class.chip--selected]="isCategorySelected(category.id)"
++                [disabled]="!isEditable()"
++                (click)="toggleCategory(category.id)"
++              >{{ category.name }}</button>
++            }
++          </div>
++        </div>
++
++        <div class="field-group">
++          <span class="field-label">Tag</span>
++          <div class="chip-list">
++            @for (tag of store.tags(); track tag.id) {
++              <button
++                type="button"
++                class="chip"
++                [class.chip--selected]="isTagSelected(tag.id)"
++                [disabled]="!isEditable()"
++                (click)="toggleTag(tag.id)"
++              >{{ tag.name }}</button>
++            }
++          </div>
++        </div>
++      </section>
++
++      <aside class="panel side-panel">
++        <h2>Ảnh bìa</h2>
++        <div class="cover-box">
++          @if (displayedCoverUrl(); as coverUrl) {
++            <img [src]="coverUrl" alt="Ảnh bìa truyện" />
++          } @else {
++            <span>Chưa có ảnh bìa</span>
++          }
++        </div>
++
++        @if (isEditable()) {
++          <label class="file-action">
++            Chọn ảnh JPG / PNG / WebP
++            <input type="file" accept="image/jpeg,image/png,image/webp" (change)="selectCover($event)" />
++          </label>
++          @if (displayedCoverUrl()) {
++            <button type="button" class="text-danger" (click)="removeCover()">Gỡ ảnh bìa</button>
++          }
++        }
++
++        <button class="primary-action" type="submit" [disabled]="!isEditable() || store.saving()">
++          {{ store.saving() ? 'Đang lưu...' : 'Lưu bản nháp' }}
++        </button>
++
++        @if (canSubmit()) {
++          <hr />
++          <label>
++            <span>Ghi chú cho người duyệt</span>
++            <textarea rows="3" maxlength="2000" [value]="authorNote()" (input)="updateAuthorNote($event)"></textarea>
++          </label>
++          @if (hasUnsavedChanges()) {
++            <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
++          }
++          <button
++            type="button"
++            class="review-action"
++            [disabled]="store.workflowBusy() || hasUnsavedChanges()"
++            (click)="submitForReview()"
++          >{{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}</button>
++        }
++
++        @if (canCancel()) {
++          <button
++            type="button"
++            class="review-action review-action--cancel"
++            [disabled]="store.workflowBusy()"
++            (click)="cancelReview()"
++          >Hủy yêu cầu duyệt</button>
++        }
++      </aside>
++    </form>
++  }
++</main>
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.scss b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.scss
+new file mode 100644
+index 0000000..84fbec9
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.scss
+@@ -0,0 +1,34 @@
++:host { display: block; }
++.studio-page { padding: 32px clamp(18px, 4vw, 48px) 56px; color: #dfe6f5; }
++.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
++.page-header a { color: #b76cff; text-decoration: none; }
++h1 { margin: 8px 0 0; color: #fff; font-size: clamp(26px, 4vw, 36px); }
++.page-header p { margin: 8px 0 0; color: #8f9bb3; }
++.secondary-action { padding: 10px 14px; border: 1px solid #33415f; border-radius: 8px; color: #dfe6f5 !important; white-space: nowrap; }
++.editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; }
++.panel { padding: 22px; border: 1px solid #202b40; border-radius: 12px; background: linear-gradient(145deg, rgba(16,24,42,.96), rgba(9,16,29,.96)); }
++.main-panel { display: grid; gap: 20px; }
++.side-panel { align-self: start; display: grid; gap: 12px; }
++label, .field-group { display: grid; gap: 8px; }
++label > span, .field-label { color: #bac4d7; font-size: 13px; font-weight: 700; }
++input[type='text'], textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid #293650; border-radius: 8px; background: #091322; color: #fff; font: inherit; resize: vertical; }
++input:disabled, textarea:disabled { opacity: .7; cursor: not-allowed; }
++.chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
++.chip { padding: 7px 10px; border: 1px solid #2a3650; border-radius: 999px; background: #0d1728; color: #9da9be; cursor: pointer; }
++.chip--selected { border-color: #8447d6; background: rgba(132,71,214,.2); color: #d7a6ff; }
++.chip:disabled { cursor: default; }
++h2 { margin: 0; color: #fff; font-size: 16px; }
++.cover-box { display: grid; min-height: 260px; place-items: center; overflow: hidden; border: 1px dashed #33415f; border-radius: 9px; background: #08101d; color: #718099; }
++.cover-box img { width: 100%; max-height: 390px; object-fit: cover; }
++.file-action { display: block; padding: 9px 12px; border: 1px solid #33415f; border-radius: 7px; color: #c8d0df; text-align: center; cursor: pointer; }
++.file-action input { display: none; }
++.primary-action, .review-action { min-height: 41px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #9d43ef, #6e31da); color: #fff; font-weight: 750; cursor: pointer; }
++.review-action { background: #17395d; }
++.review-action--cancel { background: #3a2b16; color: #f4bd53; }
++.primary-action:disabled, .review-action:disabled { opacity: .5; cursor: default; }
++.text-danger { border: 0; background: transparent; color: #ff8585; cursor: pointer; }
++hr { width: 100%; border: 0; border-top: 1px solid #202b40; }
++small { color: #8794aa; }
++.notice { padding: 13px 15px; border: 1px solid #293650; border-radius: 8px; background: #0c1627; color: #9da9be; }
++.notice--error { border-color: rgba(239,68,68,.3); color: #ff9494; }
++@media (max-width: 900px) { .editor-grid { grid-template-columns: 1fr; } .page-header { align-items: stretch; flex-direction: column; } .side-panel { order: -1; } .cover-box { min-height: 180px; } }
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.ts b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.ts
+new file mode 100644
+index 0000000..ba515eb
+--- /dev/null
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component.ts
+@@ -0,0 +1,214 @@
++import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
++import { ActivatedRoute, Router, RouterLink } from '@angular/router';
++
++import { AuthorStoryEditorStore } from '../../data-access/author-story-editor.store';
++import { AuthorManagedStory, AuthorStoryCategory, AuthorStoryDraftInput, AuthorStoryTag } from '../../domain/author-story-management.models';
++
++@Component({
++  selector: 'app-author-story-editor-page',
++  standalone: true,
++  imports: [ReactiveFormsModule, RouterLink],
++  providers: [AuthorStoryEditorStore],
++  templateUrl: './author-story-editor-page.component.html',
++  styleUrl: './author-story-editor-page.component.scss',
++  changeDetection: ChangeDetectionStrategy.OnPush,
++})
++export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
++  protected readonly store = inject(AuthorStoryEditorStore);
++  private readonly route = inject(ActivatedRoute);
++  private readonly router = inject(Router);
++  private readonly fb = inject(FormBuilder);
++  private readonly destroyRef = inject(DestroyRef);
++
++  private storyId: string | null = this.route.snapshot.paramMap.get('storyId');
++  private previewObjectUrl: string | null = null;
++
++  protected readonly form = this.fb.nonNullable.group({
++    title: ['', [Validators.required, Validators.maxLength(255)]],
++    synopsis: [''],
++  });
++  protected readonly selectedCategoryIds = signal<readonly string[]>([]);
++  protected readonly selectedTagIds = signal<readonly string[]>([]);
++  protected readonly coverFile = signal<File | null>(null);
++  protected readonly coverPreviewUrl = signal<string | null>(null);
++  protected readonly clearCover = signal(false);
++  protected readonly authorNote = signal('');
++  protected readonly fileError = signal<string | null>(null);
++  protected readonly isCreate = computed(() => this.storyId === null);
++  protected readonly isEditable = computed(() => {
++    const story = this.store.story();
++    return !story || story.status === 'DRAFT' || story.status === 'REJECTED';
++  });
++  protected readonly canSubmit = computed(() => {
++    const status = this.store.story()?.status;
++    return status === 'DRAFT' || status === 'REJECTED';
++  });
++  protected readonly canCancel = computed(() => this.store.story()?.status === 'PENDING_REVIEW');
++  protected readonly displayedCoverUrl = computed(
++    () => this.coverPreviewUrl() ?? (this.clearCover() ? null : this.store.coverUrl()),
++  );
++
++  constructor() {
++    effect(() => {
++      const story = this.store.story();
++      if (!story) return;
++
++      this.form.patchValue({ title: story.title, synopsis: story.synopsis }, { emitEvent: false });
++      this.selectedCategoryIds.set(story.categories.map((category: AuthorStoryCategory) => category.id));
++      this.selectedTagIds.set(story.tags.map((tag: AuthorStoryTag) => tag.id));
++      if (this.isEditable()) this.form.enable({ emitEvent: false });
++      else this.form.disable({ emitEvent: false });
++      this.form.markAsPristine();
++    });
++  }
++
++  ngOnInit(): void {
++    this.store.load(this.storyId);
++  }
++
++  ngOnDestroy(): void {
++    this.revokePreview();
++  }
++
++  protected toggleCategory(categoryId: string): void {
++    if (!this.isEditable()) return;
++    this.selectedCategoryIds.update((ids: readonly string[]) => toggleId(ids, categoryId));
++    this.form.markAsDirty();
++  }
++
++  protected toggleTag(tagId: string): void {
++    if (!this.isEditable()) return;
++    this.selectedTagIds.update((ids: readonly string[]) => toggleId(ids, tagId));
++    this.form.markAsDirty();
++  }
++
++  protected isCategorySelected(categoryId: string): boolean {
++    return this.selectedCategoryIds().includes(categoryId);
++  }
++
++  protected isTagSelected(tagId: string): boolean {
++    return this.selectedTagIds().includes(tagId);
++  }
++
++  protected selectCover(event: Event): void {
++    const input = event.target as HTMLInputElement;
++    const file = input.files?.[0] ?? null;
++    input.value = '';
++    if (!file) return;
++
++    const message = validateCover(file);
++    if (message) {
++      this.fileError.set(message);
++      return;
++    }
++
++    this.fileError.set(null);
++    this.clearCover.set(false);
++    this.coverFile.set(file);
++    this.revokePreview();
++    this.previewObjectUrl = URL.createObjectURL(file);
++    this.coverPreviewUrl.set(this.previewObjectUrl);
++    this.form.markAsDirty();
++  }
++
++  protected removeCover(): void {
++    if (!this.isEditable()) return;
++    this.coverFile.set(null);
++    this.clearCover.set(true);
++    this.revokePreview();
++    this.coverPreviewUrl.set(null);
++    this.form.markAsDirty();
++  }
++
++  protected save(): void {
++    if (!this.isEditable() || this.form.invalid || this.store.saving()) {
++      this.form.markAllAsTouched();
++      return;
++    }
++
++    const input = this.buildInput();
++    this.store
++      .save(this.storyId, input, this.coverFile(), this.clearCover())
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe({
++        next: (story: AuthorManagedStory) => {
++          this.resetPendingCover();
++          this.form.markAsPristine();
++          if (!this.storyId) {
++            this.storyId = story.id;
++            void this.router.navigate(['/author-studio/truyen', story.id]);
++          }
++        },
++        error: () => undefined,
++      });
++  }
++
++  protected submitForReview(): void {
++    if (!this.storyId || !this.canSubmit() || this.hasUnsavedChanges()) return;
++
++    this.store
++      .submit(this.storyId, this.authorNote())
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe({ next: () => this.authorNote.set(''), error: () => undefined });
++  }
++
++  protected cancelReview(): void {
++    if (!this.storyId || !this.canCancel()) return;
++    if (!window.confirm('Hủy yêu cầu duyệt để chỉnh sửa truyện?')) return;
++
++    this.store
++      .cancelSubmission(this.storyId)
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe({ error: () => undefined });
++  }
++
++  protected updateAuthorNote(event: Event): void {
++    this.authorNote.set((event.target as HTMLTextAreaElement).value);
++  }
++
++  protected hasUnsavedChanges(): boolean {
++    return this.form.dirty || this.coverFile() !== null || this.clearCover();
++  }
++
++  protected statusLabel(story: AuthorManagedStory): string {
++    return story.status.replaceAll('_', ' ');
++  }
++
++  private buildInput(): AuthorStoryDraftInput {
++    const value = this.form.getRawValue();
++    return {
++      title: value.title.trim(),
++      synopsis: value.synopsis.trim(),
++      categoryIds: this.selectedCategoryIds(),
++      tagIds: this.selectedTagIds(),
++    };
++  }
++
++  private resetPendingCover(): void {
++    this.coverFile.set(null);
++    this.clearCover.set(false);
++    this.revokePreview();
++    this.coverPreviewUrl.set(null);
++  }
++
++  private revokePreview(): void {
++    if (!this.previewObjectUrl) return;
++    URL.revokeObjectURL(this.previewObjectUrl);
++    this.previewObjectUrl = null;
++  }
++}
++
++function toggleId(ids: readonly string[], id: string): readonly string[] {
++  return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
++}
++
++function validateCover(file: File): string | null {
++  if (file.size > 10 * 1024 * 1024) return 'Ảnh bìa không được vượt quá 10 MB.';
++  const mime = file.type.toLowerCase();
++  const extension = file.name.split('.').pop()?.toLowerCase();
++  const mimeValid = !mime || ['image/jpeg', 'image/png', 'image/webp'].includes(mime);
++  const extensionValid = ['jpg', 'jpeg', 'png', 'webp'].includes(extension ?? '');
++  return mimeValid && extensionValid ? null : 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
++}
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/author-story-table/author-story-table.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/author-story-table/author-story-table.component.ts
+index f281778..03985c7 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/author-story-table/author-story-table.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/author-story-table/author-story-table.component.ts
+@@ -36,7 +36,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+             @for (story of stories; track story.id) {
+               <tr>
+                 <td>
+-                  <a class="story-title" [routerLink]="['/author-studio/truyen', story.slug]">
++                  <a class="story-title" [routerLink]="['/truyen', story.slug]">
+                     <img [src]="story.coverUrl" [alt]="story.title" />
+ 
+                     <strong>
+@@ -73,7 +73,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+                 <td>
+                   <a
+                     class="edit-button"
+-                    [routerLink]="['/author-studio/truyen', story.slug]"
++                    routerLink="/author-studio/truyen"
+                     aria-label="Chỉnh sửa truyện"
+                   >
+                     <app-studio-icon name="edit" [size]="14"></app-studio-icon>
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
+index 13a02da..625583d 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
+@@ -19,7 +19,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+       </header>
+ 
+       <div class="action-grid">
+-        <a class="action-card action-card--purple" routerLink="/author-studio/chuong/tao-moi">
++        <a class="action-card action-card--purple" routerLink="/author-studio/truyen">
+           <app-studio-icon name="edit" [size]="28"></app-studio-icon>
+ 
+           <span>Viết chương mới</span>
+diff --git a/frontend/src/app/routes/author-studio.routes.ts b/frontend/src/app/routes/author-studio.routes.ts
+index c62398d..34c554c 100644
+--- a/frontend/src/app/routes/author-studio.routes.ts
++++ b/frontend/src/app/routes/author-studio.routes.ts
+@@ -4,6 +4,7 @@ import { authenticatedGuard } from '../core/auth/authenticated.guard';
+ import { AUTH_PERMISSIONS, AUTH_ROLES } from '../core/auth/authorization.models';
+ import { permissionGuard } from '../core/auth/permission.guard';
+ import { roleGuard } from '../core/auth/role.guard';
++import { provideAuthorStoryManagement } from '../features/author-portal/author-studio/data-access/author-story-management.providers';
+ 
+ export const AUTHOR_STUDIO_ROUTES: Routes = [
+   {
+@@ -13,6 +14,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
+       roleGuard(AUTH_ROLES.AUTHOR),
+       permissionGuard(AUTH_PERMISSIONS.STORY_CREATE),
+     ],
++    providers: provideAuthorStoryManagement(),
+     loadComponent: () =>
+       import('../features/author-portal/author-studio/pages/author-studio-shell/author-studio-shell.component').then(
+         (module) => module.AuthorStudioShellComponent,
+@@ -27,6 +29,61 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
+             (module) => module.AuthorDashboardPageComponent,
+           ),
+       },
++      {
++        path: 'truyen/tao-moi',
++        title: 'Tạo truyện - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component').then(
++            (module) => module.AuthorStoryEditorPageComponent,
++          ),
++      },
++      {
++        path: 'truyen/:storyId/chuong/tao-moi',
++        canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
++        title: 'Viết chương mới - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component').then(
++            (module) => module.AuthorChapterEditorPageComponent,
++          ),
++      },
++      {
++        path: 'truyen/:storyId/chuong/:chapterId',
++        canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_UPDATE_OWN)],
++        title: 'Chỉnh sửa chương - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component').then(
++            (module) => module.AuthorChapterEditorPageComponent,
++          ),
++      },
++      {
++        path: 'truyen/:storyId/chuong',
++        canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
++        title: 'Quản lý chương - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component').then(
++            (module) => module.AuthorStoryChaptersPageComponent,
++          ),
++      },
++      {
++        path: 'truyen/:storyId',
++        canActivate: [permissionGuard(AUTH_PERMISSIONS.STORY_UPDATE_OWN)],
++        title: 'Chỉnh sửa truyện - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component').then(
++            (module) => module.AuthorStoryEditorPageComponent,
++          ),
++      },
++      {
++        path: 'truyen',
++        title: 'Truyện của tôi - TruyenHub',
++        loadComponent: () =>
++          import('../features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component').then(
++            (module) => module.AuthorStoriesPageComponent,
++          ),
++      },
++      { path: 'chuong/tao-moi', pathMatch: 'full', redirectTo: 'truyen' },
++      { path: 'chuong', pathMatch: 'full', redirectTo: 'truyen' },
++      { path: 'ban-nhap', pathMatch: 'full', redirectTo: 'truyen' },
+       { path: '**', redirectTo: 'tong-quan' },
+     ],
+   },

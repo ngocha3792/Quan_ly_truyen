@@ -13,7 +13,7 @@
     }
 
     <div class="cover-bottom">
-      <span> Ch. {{ story().latestChapter }} </span>
+      <span>{{ story().latestChapter !== null ? 'Ch. ' + story().latestChapter : 'Chưa có chương' }}</span>
 
       <span>
         <app-icon name="eye" [size]="13" />

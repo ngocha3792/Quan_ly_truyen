@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { environment } from '../../environments/environment';
+import { provideChapterReader } from '../features/public/chapter-reader/data-access/chapter-reader.providers';
 import { provideGenreDiscovery } from '../features/public/genre-discovery/data-access/genre-discovery.providers';
 import { HomePageComponent } from '../features/public/home/pages/home-page/home-page.component';
 import { provideStoryCatalog } from '../features/public/story-catalog/data-access/story-catalog.providers';
@@ -18,7 +18,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'truyen/:slug',
     title: 'Chi tiết truyện - TruyenHub',
-    providers: provideStoryDetail({ useMock: true }),
+    providers: provideStoryDetail(),
     loadComponent: () =>
       import('../features/public/story/pages/story-detail/story-detail.component').then(
         (module) => module.StoryDetailComponent,
@@ -27,6 +27,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'truyen/:storySlug/chuong/:chapterNumber',
     title: 'Đọc chương - TruyenHub',
+    providers: provideChapterReader(),
     loadComponent: () =>
       import('../features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component').then(
         (module) => module.ChapterReaderPageComponent,
@@ -35,7 +36,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'danh-sach',
     title: 'Danh sách truyện - TruyenHub',
-    providers: provideStoryCatalog({ useMock: environment.storyCatalogUseMock }),
+    providers: provideStoryCatalog(),
     loadComponent: () =>
       import('../features/public/story-catalog/pages/story-catalog-page/story-catalog-page.component').then(
         (module) => module.StoryCatalogPageComponent,
@@ -44,7 +45,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'the-loai',
     title: 'Thể loại truyện - TruyenHub',
-    providers: provideGenreDiscovery({ useMock: environment.genreDiscoveryUseMock }),
+    providers: provideGenreDiscovery(),
     loadComponent: () =>
       import('../features/public/genre-discovery/pages/genre-discovery-page/genre-discovery-page.component').then(
         (module) => module.GenreDiscoveryPageComponent,
@@ -53,7 +54,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'xep-hang',
     title: 'Xếp hạng truyện - TruyenHub',
-    providers: provideStoryRanking({ useMock: environment.storyRankingUseMock }),
+    providers: provideStoryRanking(),
     loadComponent: () =>
       import('../features/public/story-ranking/pages/story-ranking-page/story-ranking-page.component').then(
         (module) => module.StoryRankingPageComponent,
@@ -62,7 +63,7 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'cap-nhat',
     title: 'Cập nhật truyện mới - TruyenHub',
-    providers: provideStoryUpdates({ useMock: environment.storyUpdatesUseMock }),
+    providers: provideStoryUpdates(),
     loadComponent: () =>
       import('../features/public/story-updates/pages/story-updates-page/story-updates-page.component').then(
         (module) => module.StoryUpdatesPageComponent,

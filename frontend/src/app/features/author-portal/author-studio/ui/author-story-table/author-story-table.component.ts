@@ -36,7 +36,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
             @for (story of stories; track story.id) {
               <tr>
                 <td>
-                  <a class="story-title" [routerLink]="['/author-studio/truyen', story.slug]">
+                  <a class="story-title" [routerLink]="['/truyen', story.slug]">
                     <img [src]="story.coverUrl" [alt]="story.title" />
 
                     <strong>
@@ -73,7 +73,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
                 <td>
                   <a
                     class="edit-button"
-                    [routerLink]="['/author-studio/truyen', story.slug]"
+                    routerLink="/author-studio/truyen"
                     aria-label="Chỉnh sửa truyện"
                   >
                     <app-studio-icon name="edit" [size]="14"></app-studio-icon>

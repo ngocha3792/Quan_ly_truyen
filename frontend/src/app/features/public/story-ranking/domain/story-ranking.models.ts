@@ -23,7 +23,7 @@ export interface StoryRankingItem {
 
   readonly genres: readonly StoryRankingGenre[];
 
-  readonly latestChapter: number;
+  readonly latestChapter: number | null;
 
   readonly viewCount: number;
 

@@ -13,7 +13,7 @@ export interface RelatedStoryItem {
   readonly title: string;
   readonly slug: string;
   readonly coverUrl: string;
-  readonly latestChapter: number;
+  readonly latestChapter: number | null;
 }
 
 export interface StoryDetailState {

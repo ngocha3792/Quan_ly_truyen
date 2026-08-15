@@ -19,7 +19,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
       </header>
 
       <div class="action-grid">
-        <a class="action-card action-card--purple" routerLink="/author-studio/chuong/tao-moi">
+        <a class="action-card action-card--purple" routerLink="/author-studio/truyen">
           <app-studio-icon name="edit" [size]="28"></app-studio-icon>
 
           <span>Viết chương mới</span>

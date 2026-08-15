@@ -1,0 +1,1821 @@
+diff --git a/backend/package.json b/backend/package.json
+index f59b679..c2b63b6 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -20,6 +20,10 @@
+     "test": "jest",
+     "test:author-applications:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+     "test:author-applications:integration": "npm run test:author-applications:prepare && jest --config ./test/jest-author-applications-integration.json --runInBand",
++    "test:stories:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
++    "test:stories:integration": "npm run test:stories:prepare && jest --config ./test/jest-stories-integration.json --runInBand",
++    "test:stories:e2e": "npm run test:stories:prepare && jest --config ./test/jest-stories-e2e.json --runInBand",
++    "test:stories:all": "npm run test:stories:integration && npm run test:stories:e2e",
+     "test:users:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+     "test:users:integration": "npm run test:users:prepare && jest --config ./test/jest-users-integration.json --runInBand",
+     "test:phase4": "npm run test:auth:unit && npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration",
+@@ -34,10 +38,11 @@
+     "test:auth:e2e": "npm run test:auth:prepare && jest --config ./test/jest-auth-e2e.json --runInBand",
+     "test:auth:all": "npm run test:auth:unit && npm run test:auth:integration && npm run test:auth:e2e",
+     "ci:unit": "npm run lint:check && npm run typecheck:scripts && npm run build && npm test -- --runInBand",
+-    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:e2e",
++    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:e2e",
+     "postinstall": "prisma generate --config prisma.config.ts",
+     "db:seed": "tsx prisma/seed.ts",
+     "db:seed:e2e": "tsx prisma/seed-e2e.ts",
++    "db:seed:e2e:stories": "tsx prisma/seed-e2e-stories.ts",
+     "db:seed:e2e:admin": "tsx prisma/seed-e2e-admin.ts",
+     "db:reset:local": "tsx scripts/database/reset-local-database.ts",
+     "db:check": "tsx scripts/database/check-connection.ts",
+diff --git a/backend/prisma/seed-e2e-stories.ts b/backend/prisma/seed-e2e-stories.ts
+new file mode 100644
+index 0000000..0603e78
+--- /dev/null
++++ b/backend/prisma/seed-e2e-stories.ts
+@@ -0,0 +1,156 @@
++import {
++  ChapterStatus,
++  StoryStatus,
++  StoryVisibility,
++} from '../src/generated/prisma/enums';
++import { assertNotProduction } from '../scripts/shared/environment';
++import { createScriptPrismaClient } from '../scripts/shared/prisma-client';
++
++const prisma = createScriptPrismaClient();
++
++const AUTHOR_EMAIL = 'e2e.story.author@truyenhub.test';
++const STORY_SLUG = 'e2e-public-story';
++const CATEGORY_SLUG = 'e2e-testing';
++
++async function main(): Promise<void> {
++  assertNotProduction('Preparing public stories E2E data');
++
++  const now = new Date();
++  const author = await prisma.user.upsert({
++    where: { email: AUTHOR_EMAIL },
++    update: {
++      username: 'e2e_story_author',
++      displayName: 'E2E Story Author',
++      emailVerifiedAt: now,
++      deletedAt: null,
++    },
++    create: {
++      email: AUTHOR_EMAIL,
++      username: 'e2e_story_author',
++      displayName: 'E2E Story Author',
++      passwordHash: 'e2e-story-seed-not-for-login',
++      emailVerifiedAt: now,
++    },
++    select: { id: true },
++  });
++
++  await prisma.authorProfile.upsert({
++    where: { userId: author.id },
++    update: {
++      penName: 'E2E Story Pen',
++      slug: 'e2e-story-pen',
++    },
++    create: {
++      userId: author.id,
++      penName: 'E2E Story Pen',
++      slug: 'e2e-story-pen',
++    },
++  });
++
++  const category = await prisma.category.upsert({
++    where: { slug: CATEGORY_SLUG },
++    update: {
++      name: 'E2E Testing',
++      isActive: true,
++      sortOrder: 999,
++    },
++    create: {
++      name: 'E2E Testing',
++      slug: CATEGORY_SLUG,
++      isActive: true,
++      sortOrder: 999,
++    },
++    select: { id: true },
++  });
++
++  const story = await prisma.story.upsert({
++    where: { slug: STORY_SLUG },
++    update: {
++      authorId: author.id,
++      title: 'E2E Public Story',
++      synopsis: 'Câu chuyện công khai dùng cho Playwright E2E.',
++      status: StoryStatus.PUBLISHED,
++      visibility: StoryVisibility.PUBLIC,
++      publishedAt: now,
++      lastChapterAt: now,
++      chapterCount: 2,
++      deletedAt: null,
++    },
++    create: {
++      authorId: author.id,
++      title: 'E2E Public Story',
++      slug: STORY_SLUG,
++      synopsis: 'Câu chuyện công khai dùng cho Playwright E2E.',
++      status: StoryStatus.PUBLISHED,
++      visibility: StoryVisibility.PUBLIC,
++      publishedAt: now,
++      lastChapterAt: now,
++      chapterCount: 2,
++    },
++    select: { id: true },
++  });
++
++  await prisma.$transaction([
++    prisma.storyCategory.deleteMany({ where: { storyId: story.id } }),
++    prisma.chapter.deleteMany({ where: { storyId: story.id } }),
++  ]);
++
++  await prisma.storyCategory.create({
++    data: {
++      storyId: story.id,
++      categoryId: category.id,
++      isPrimary: true,
++    },
++  });
++
++  await prisma.chapter.createMany({
++    data: [
++      {
++        storyId: story.id,
++        createdById: author.id,
++        updatedById: author.id,
++        number: 1,
++        title: 'Khởi đầu E2E',
++        slug: 'chuong-1-khoi-dau-e2e',
++        content: 'Đây là đoạn đầu tiên của chương E2E.\n\nNội dung phải được render từ API thật.',
++        status: ChapterStatus.PUBLISHED,
++        wordCount: 16,
++        publishedAt: now,
++      },
++      {
++        storyId: story.id,
++        createdById: author.id,
++        updatedById: author.id,
++        number: 2,
++        title: 'Tiếp tục E2E',
++        slug: 'chuong-2-tiep-tuc-e2e',
++        content: 'Đây là chương thứ hai dùng để kiểm tra navigation.',
++        status: ChapterStatus.PUBLISHED,
++        wordCount: 10,
++        publishedAt: now,
++      },
++      {
++        storyId: story.id,
++        createdById: author.id,
++        updatedById: author.id,
++        number: 3,
++        title: 'Draft không được lộ',
++        slug: 'chuong-3-draft-khong-duoc-lo',
++        content: 'Draft private.',
++        status: ChapterStatus.DRAFT,
++        wordCount: 2,
++      },
++    ],
++  });
++
++  console.log('Public stories E2E data ready:', STORY_SLUG);
++}
++
++main()
++  .catch((error: unknown) => {
++    console.error(error);
++    process.exitCode = 1;
++  })
++  .finally(async () => {
++    await prisma.$disconnect();
++  });
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+index ff9c848..b9ad941 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+@@ -187,7 +187,11 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+   ): Promise<CreateAuthorChapterResult> {
+     try {
+       return await this.prisma.$transaction(async (tx) => {
+-        const storyLocked = await lockStoryRow(tx, input.storyId);
++        const storyLocked = await lockOwnedStoryRow(
++          tx,
++          input.storyId,
++          input.userId,
++        );
+ 
+         if (!storyLocked) {
+           return {
+@@ -325,7 +329,11 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+           };
+         }
+ 
+-        const chapterLocked = await lockChapterRow(tx, input.chapterId);
++        const chapterLocked = await lockChapterRowForStory(
++          tx,
++          input.chapterId,
++          story.id,
++        );
+ 
+         if (!chapterLocked) {
+           return {
+@@ -485,7 +493,11 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+           };
+         }
+ 
+-        const chapterLocked = await lockChapterRow(tx, input.chapterId);
++        const chapterLocked = await lockChapterRowForStory(
++          tx,
++          input.chapterId,
++          story.id,
++        );
+ 
+         if (!chapterLocked) {
+           return {
+@@ -567,7 +579,11 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+   ): Promise<PublishAuthorChapterResult> {
+     try {
+       return await this.prisma.$transaction(async (tx) => {
+-        const storyLocked = await lockStoryRow(tx, input.storyId);
++        const storyLocked = await lockOwnedStoryRow(
++          tx,
++          input.storyId,
++          input.userId,
++        );
+         if (!storyLocked) {
+           return { status: 'not_found' };
+         }
+@@ -581,7 +597,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+         if (story.status !== StoryStatus.PUBLISHED) {
+           return { status: 'story_not_published' };
+         }
+-        if (!(await lockChapterRow(tx, input.chapterId))) {
++        if (!(await lockChapterRowForStory(tx, input.chapterId, story.id))) {
+           return { status: 'not_found' };
+         }
+         const current = await tx.chapter.findFirst({
+@@ -667,6 +683,9 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+             slug: storySlug,
+             deletedAt: null,
+             visibility: StoryVisibility.PUBLIC,
++            publishedAt: {
++              not: null,
++            },
+             status: {
+               in: [...PUBLIC_STORY_STATUSES],
+             },
+@@ -682,6 +701,9 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+       const publicStoryWhere = {
+         deletedAt: null,
+         visibility: StoryVisibility.PUBLIC,
++        publishedAt: {
++          not: null,
++        },
+         status: {
+           in: [...PUBLIC_STORY_STATUSES],
+         },
+@@ -784,7 +806,7 @@ async function lockAndFindOwnedStory(
+   storyId: string,
+   userId: string,
+ ): Promise<{ readonly id: string; readonly status: StoryStatus; } | null> {
+-  const locked = await lockStoryRow(tx, storyId);
++  const locked = await lockOwnedStoryRow(tx, storyId, userId);
+ 
+   if (!locked) {
+     return null;
+@@ -803,28 +825,34 @@ async function lockAndFindOwnedStory(
+   });
+ }
+ 
+-async function lockStoryRow(
++async function lockOwnedStoryRow(
+   tx: Prisma.TransactionClient,
+   storyId: string,
++  userId: string,
+ ): Promise<boolean> {
+   const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+     SELECT "id"
+     FROM "stories"
+     WHERE "id" = ${storyId}::uuid
++      AND "author_id" = ${userId}::uuid
++      AND "deleted_at" IS NULL
+     FOR UPDATE
+   `);
+ 
+   return rows.length === 1;
+ }
+ 
+-async function lockChapterRow(
++async function lockChapterRowForStory(
+   tx: Prisma.TransactionClient,
+   chapterId: string,
++  storyId: string,
+ ): Promise<boolean> {
+   const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+     SELECT "id"
+     FROM "chapters"
+     WHERE "id" = ${chapterId}::uuid
++      AND "story_id" = ${storyId}::uuid
++      AND "deleted_at" IS NULL
+     FOR UPDATE
+   `);
+ 
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+index d7caa14..023794e 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+@@ -151,6 +151,9 @@ const PUBLIC_STORY_SELECT = {
+     where: {
+       status: ChapterStatus.PUBLISHED,
+       deletedAt: null,
++      publishedAt: {
++        not: null,
++      },
+     },
+     orderBy: {
+       number: 'desc',
+@@ -367,7 +370,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+     for (let attempt = 0; attempt < 2; attempt += 1) {
+       try {
+         return await this.prisma.$transaction(async (tx) => {
+-          const locked = await lockStoryRow(tx, input.storyId);
++          const locked = await lockOwnedStoryRow(
++            tx,
++            input.storyId,
++            input.userId,
++          );
+ 
+           if (!locked) {
+             return {
+@@ -588,7 +595,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+   ): Promise<DeleteAuthorStoryResult> {
+     try {
+       return await this.prisma.$transaction(async (tx) => {
+-        const locked = await lockStoryRow(tx, input.storyId);
++        const locked = await lockOwnedStoryRow(
++          tx,
++          input.storyId,
++          input.userId,
++        );
+ 
+         if (!locked) {
+           return {
+@@ -700,7 +711,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+   ): Promise<SubmitAuthorStoryResult> {
+     try {
+       return await this.prisma.$transaction(async (tx) => {
+-        if (!(await lockStoryRow(tx, input.storyId))) {
++        if (!(await lockOwnedStoryRow(tx, input.storyId, input.userId))) {
+           return { status: 'not_found' };
+         }
+         const story = await tx.story.findFirst({
+@@ -789,7 +800,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+   ): Promise<CancelAuthorStorySubmissionResult> {
+     try {
+       return await this.prisma.$transaction(async (tx) => {
+-        if (!(await lockStoryRow(tx, input.storyId))) {
++        if (!(await lockOwnedStoryRow(tx, input.storyId, input.userId))) {
+           return { status: 'not_found' };
+         }
+         const story = await tx.story.findFirst({
+@@ -1067,6 +1078,9 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+           slug,
+           deletedAt: null,
+           visibility: StoryVisibility.PUBLIC,
++          publishedAt: {
++            not: null,
++          },
+           status: {
+             in: [...PUBLIC_STORY_STATUSES],
+           },
+@@ -1358,6 +1372,23 @@ async function validateAndLockStoryCover(
+   return Boolean(media && readMediaOwnerId(media.metadata) === storyId);
+ }
+ 
++async function lockOwnedStoryRow(
++  tx: Prisma.TransactionClient,
++  storyId: string,
++  userId: string,
++): Promise<boolean> {
++  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
++    SELECT "id"
++    FROM "stories"
++    WHERE "id" = ${storyId}::uuid
++      AND "author_id" = ${userId}::uuid
++      AND "deleted_at" IS NULL
++    FOR UPDATE
++  `);
++
++  return rows.length === 1;
++}
++
+ async function lockStoryRow(
+   tx: Prisma.TransactionClient,
+   storyId: string,
+@@ -1449,6 +1480,9 @@ function buildPublicStoryWhere(
+   return {
+     deletedAt: null,
+     visibility: StoryVisibility.PUBLIC,
++    publishedAt: {
++      not: null,
++    },
+     status: requestedStatus
+       ? requestedStatus
+       : {
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+index 6380e05..361d2b1 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+@@ -85,6 +85,7 @@ export class AuthorChaptersController {
+   }
+ 
+   @Post()
++  @Idempotent({ required: true, ttlSeconds: 86_400 })
+   @RequirePermissions(PermissionCode.CHAPTER_CREATE)
+   async create(
+     @CurrentUserId() userId: string | undefined,
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts b/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
+index a8057db..06103eb 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts
+@@ -83,6 +83,7 @@ export class AuthorStoriesController {
+   }
+ 
+   @Post()
++  @Idempotent({ required: true, ttlSeconds: 86_400 })
+   @RequirePermissions(PermissionCode.STORY_CREATE)
+   async create(
+     @CurrentUserId() userId: string | undefined,
+diff --git a/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts b/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts
+new file mode 100644
+index 0000000..ce3d265
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts
+@@ -0,0 +1,39 @@
++import { IDEMPOTENT_KEY } from '@/common/constants';
++import type { IdempotencyMetadata } from '@/common/decorators';
++
++import { AuthorChaptersController } from './author-chapters.controller';
++import { AuthorStoriesController } from './author-stories.controller';
++
++const EXPECTED = {
++  required: true,
++  ttlSeconds: 86_400,
++} satisfies IdempotencyMetadata;
++
++describe('Stories HTTP idempotency hardening', () => {
++  it('create story requires an idempotency key', () => {
++    expect(
++      readMetadata(
++        // eslint-disable-next-line @typescript-eslint/unbound-method
++        AuthorStoriesController.prototype.create,
++      ),
++    ).toEqual(EXPECTED);
++  });
++
++  it('create chapter requires an idempotency key', () => {
++    expect(
++      readMetadata(
++        // eslint-disable-next-line @typescript-eslint/unbound-method
++        AuthorChaptersController.prototype.create,
++      ),
++    ).toEqual(EXPECTED);
++  });
++});
++
++function readMetadata(
++  target: (...args: never[]) => unknown,
++): IdempotencyMetadata | undefined {
++  return Reflect.getMetadata(
++    IDEMPOTENT_KEY,
++    target,
++  ) as IdempotencyMetadata | undefined;
++}
+diff --git a/backend/test/e2e/stories-workflow.e2e-spec.ts b/backend/test/e2e/stories-workflow.e2e-spec.ts
+new file mode 100644
+index 0000000..bb800ba
+--- /dev/null
++++ b/backend/test/e2e/stories-workflow.e2e-spec.ts
+@@ -0,0 +1,433 @@
++import { randomUUID } from 'node:crypto';
++
++import type { INestApplication } from '@nestjs/common';
++import { ConfigService } from '@nestjs/config';
++import { Test } from '@nestjs/testing';
++import * as jwt from 'jsonwebtoken';
++import request from 'supertest';
++
++import { AppModule } from '@/app.module';
++import { configureApplication } from '@/bootstrap';
++import { JwtTokenType, PermissionCode, RoleCode } from '@/common/enums';
++import type { AppConfig } from '@/config';
++import {
++  ChapterStatus,
++  MediaPurpose,
++  MediaResourceType,
++  MediaStatus,
++  StoryStatus,
++} from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
++
++const ACCESS_SECRET = 'e2e-access-secret-at-least-32-characters';
++
++const AUTHOR_PERMISSIONS = [
++  PermissionCode.STORY_CREATE,
++  PermissionCode.STORY_UPDATE_OWN,
++  PermissionCode.STORY_DELETE_OWN,
++  PermissionCode.STORY_SUBMIT,
++  PermissionCode.CHAPTER_CREATE,
++  PermissionCode.CHAPTER_UPDATE_OWN,
++  PermissionCode.CHAPTER_DELETE_OWN,
++  PermissionCode.CHAPTER_PUBLISH_OWN,
++] as const;
++
++const ADMIN_PERMISSIONS = [
++  PermissionCode.STORY_REVIEW,
++  PermissionCode.STORY_PUBLISH,
++] as const;
++
++describe('Stories author-to-public HTTP workflow E2E', () => {
++  let app: INestApplication;
++  let prisma: PrismaService;
++
++  const runId = randomUUID();
++  const compactRunId = runId.replaceAll('-', '');
++  const authorId = randomUUID();
++  const intruderId = randomUUID();
++  const adminId = randomUUID();
++  const authorSessionId = randomUUID();
++  const intruderSessionId = randomUUID();
++  const adminSessionId = randomUUID();
++
++  let categoryId: string | null = null;
++  let storyId: string | null = null;
++  let coverMediaId: string | null = null;
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++
++    app = moduleRef.createNestApplication({ rawBody: true });
++    const appConfig = app.get(ConfigService).getOrThrow<AppConfig>('app');
++    configureApplication(app, appConfig);
++    await app.init();
++
++    prisma = app.get(PrismaService);
++    await seedAuthorization();
++  });
++
++  afterAll(async () => {
++    await cleanupRun();
++    await app.close();
++  });
++
++  it('create → chapter → submit → approve → publish → public read, với idempotent replay', async () => {
++    const authorToken = token(authorId, authorSessionId);
++    const adminToken = token(adminId, adminSessionId);
++    const createStoryKey = `story-create-${runId}`;
++    const createStoryBody = {
++      title: `Workflow E2E ${compactRunId.slice(0, 8)}`,
++      synopsis: 'Story đi xuyên write-side tới public reader trong E2E.',
++      categoryIds: categoryId ? [categoryId] : [],
++    };
++
++    const firstStoryResponse = await request(httpServer())
++      .post('/api/v1/author/stories')
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', createStoryKey)
++      .send(createStoryBody)
++      .expect(201);
++
++    const createdStory = unwrap<{ id: string; slug: string }>(
++      firstStoryResponse.body as unknown,
++    );
++    storyId = createdStory.id;
++
++    const replayStoryResponse = await request(httpServer())
++      .post('/api/v1/author/stories')
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', createStoryKey)
++      .send(createStoryBody)
++      .expect(201);
++
++    expect(replayStoryResponse.headers['x-idempotent-replayed']).toBe('true');
++    expect(
++      unwrap<{ id: string }>(replayStoryResponse.body as unknown).id,
++    ).toBe(storyId);
++    await expect(
++      prisma.story.count({ where: { id: storyId } }),
++    ).resolves.toBe(1);
++
++    coverMediaId = await createReadyCover(storyId);
++
++    await request(httpServer())
++      .patch(`/api/v1/author/stories/${storyId}`)
++      .set('Authorization', `Bearer ${authorToken}`)
++      .send({ coverMediaId })
++      .expect(200);
++
++    const chapterBody = {
++      title: 'Workflow chapter',
++      content: 'Nội dung chapter được publish qua HTTP E2E.',
++    };
++    const createChapterKey = `chapter-create-${runId}`;
++    const firstChapterResponse = await request(httpServer())
++      .post(`/api/v1/author/stories/${storyId}/chapters`)
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', createChapterKey)
++      .send(chapterBody)
++      .expect(201);
++
++    const chapter = unwrap<{ id: string; number: number }>(
++      firstChapterResponse.body as unknown,
++    );
++
++    const replayChapterResponse = await request(httpServer())
++      .post(`/api/v1/author/stories/${storyId}/chapters`)
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', createChapterKey)
++      .send(chapterBody)
++      .expect(201);
++
++    expect(replayChapterResponse.headers['x-idempotent-replayed']).toBe(
++      'true',
++    );
++    expect(
++      unwrap<{ id: string }>(replayChapterResponse.body as unknown).id,
++    ).toBe(chapter.id);
++    await expect(
++      prisma.chapter.count({ where: { storyId } }),
++    ).resolves.toBe(1);
++
++    const intruderResponse = await request(httpServer())
++      .patch(`/api/v1/author/stories/${storyId}`)
++      .set('Authorization', `Bearer ${token(intruderId, intruderSessionId)}`)
++      .send({ title: 'Intruder must not mutate this story' });
++
++    expect(intruderResponse.status).toBe(404);
++
++    const submitResponse = await request(httpServer())
++      .post(`/api/v1/author/stories/${storyId}/submit`)
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', `story-submit-${runId}`)
++      .send({ authorNote: 'Ready for E2E review.' })
++      .expect(200);
++
++    const submissionId = unwrap<{
++      submission: { id: string };
++    }>(submitResponse.body as unknown).submission.id;
++
++    await request(httpServer())
++      .post(`/api/v1/admin/story-submissions/${submissionId}/approve`)
++      .set('Authorization', `Bearer ${adminToken}`)
++      .set('x-idempotency-key', `story-approve-${runId}`)
++      .expect(200);
++
++    await request(httpServer())
++      .post(`/api/v1/author/stories/${storyId}/chapters/${chapter.id}/publish`)
++      .set('Authorization', `Bearer ${authorToken}`)
++      .set('x-idempotency-key', `chapter-publish-${runId}`)
++      .expect(200);
++
++    const publicStoryResponse = await request(httpServer())
++      .get(`/api/v1/stories/${createdStory.slug}`)
++      .expect(200);
++    const publicStory = unwrap<{
++      id: string;
++      status: string;
++      latestChapter: { id: string; number: number } | null;
++    }>(publicStoryResponse.body as unknown);
++
++    expect(publicStory).toMatchObject({
++      id: storyId,
++      status: 'ONGOING',
++      latestChapter: { id: chapter.id, number: 1 },
++    });
++
++    const publicChapterResponse = await request(httpServer())
++      .get(`/api/v1/stories/${createdStory.slug}/chapters/1`)
++      .expect(200);
++    const publicChapter = unwrap<{
++      chapter: { id: string; status?: string; content: string };
++    }>(publicChapterResponse.body as unknown);
++
++    expect(publicChapter.chapter).toMatchObject({
++      id: chapter.id,
++      content: chapterBody.content,
++    });
++
++    const persisted = await prisma.story.findUniqueOrThrow({
++      where: { id: storyId },
++      select: { status: true, chapterCount: true, publishedAt: true },
++    });
++    expect(persisted.status).toBe(StoryStatus.PUBLISHED);
++    expect(persisted.chapterCount).toBe(1);
++    expect(persisted.publishedAt).not.toBeNull();
++
++    const persistedChapter = await prisma.chapter.findUniqueOrThrow({
++      where: { id: chapter.id },
++      select: { status: true, publishedAt: true },
++    });
++    expect(persistedChapter.status).toBe(ChapterStatus.PUBLISHED);
++    expect(persistedChapter.publishedAt).not.toBeNull();
++  });
++
++  it('create endpoints reject requests without an idempotency key', async () => {
++    const authorToken = token(authorId, authorSessionId);
++
++    await request(httpServer())
++      .post('/api/v1/author/stories')
++      .set('Authorization', `Bearer ${authorToken}`)
++      .send({ title: 'Missing idempotency key' })
++      .expect(400);
++  });
++
++  function httpServer(): Parameters<typeof request>[0] {
++    return app.getHttpServer() as Parameters<typeof request>[0];
++  }
++
++  function token(userId: string, sessionId: string): string {
++    return jwt.sign(
++      {
++        sub: userId,
++        sid: sessionId,
++        typ: JwtTokenType.ACCESS,
++        ver: 0,
++      },
++      ACCESS_SECRET,
++      {
++        algorithm: 'HS256',
++        issuer: process.env.JWT_ISSUER,
++        audience: process.env.JWT_AUDIENCE,
++        expiresIn: '5m',
++        jwtid: randomUUID(),
++      },
++    );
++  }
++
++  function unwrap<T>(body: unknown): T {
++    if (!body || typeof body !== 'object' || !('data' in body)) {
++      throw new Error('Expected API success envelope');
++    }
++
++    return (body as { data: T }).data;
++  }
++
++  async function seedAuthorization(): Promise<void> {
++    const permissionCodes = [...AUTHOR_PERMISSIONS, ...ADMIN_PERMISSIONS];
++    const permissions = await Promise.all(
++      permissionCodes.map((code) =>
++        prisma.permission.upsert({
++          where: { code },
++          update: {},
++          create: {
++            code,
++            name: `E2E ${code}`,
++            resource: code.split('.')[0] ?? 'stories',
++            action: code.split('.').slice(1).join('.') || 'use',
++          },
++          select: { id: true, code: true },
++        }),
++      ),
++    );
++
++    const [authorRole, adminRole] = await Promise.all([
++      prisma.role.upsert({
++        where: { code: RoleCode.AUTHOR },
++        update: {},
++        create: {
++          code: RoleCode.AUTHOR,
++          name: 'Author',
++          isSystem: true,
++        },
++      }),
++      prisma.role.upsert({
++        where: { code: RoleCode.ADMIN },
++        update: {},
++        create: {
++          code: RoleCode.ADMIN,
++          name: 'Admin',
++          isSystem: true,
++        },
++      }),
++    ]);
++
++    const permissionIdByCode = new Map<string, string>(
++      permissions.map((permission) => [permission.code, permission.id]),
++    );
++
++    await prisma.rolePermission.createMany({
++      data: [
++        ...AUTHOR_PERMISSIONS.map((code) => ({
++          roleId: authorRole.id,
++          permissionId: requiredPermissionId(permissionIdByCode, code),
++        })),
++        ...ADMIN_PERMISSIONS.map((code) => ({
++          roleId: adminRole.id,
++          permissionId: requiredPermissionId(permissionIdByCode, code),
++        })),
++      ],
++      skipDuplicates: true,
++    });
++
++    await prisma.user.createMany({
++      data: [
++        actorRow(authorId, 'author'),
++        actorRow(intruderId, 'intruder'),
++        actorRow(adminId, 'admin'),
++      ],
++    });
++
++    await prisma.authorProfile.create({
++      data: {
++        userId: authorId,
++        penName: `Workflow Pen ${compactRunId.slice(0, 8)}`,
++        slug: `workflow-pen-${compactRunId.slice(0, 12)}`,
++      },
++    });
++
++    await prisma.userRole.createMany({
++      data: [
++        { userId: authorId, roleId: authorRole.id },
++        { userId: intruderId, roleId: authorRole.id },
++        { userId: adminId, roleId: adminRole.id },
++      ],
++    });
++
++    await prisma.session.createMany({
++      data: [
++        sessionRow(authorId, authorSessionId),
++        sessionRow(intruderId, intruderSessionId),
++        sessionRow(adminId, adminSessionId),
++      ],
++    });
++
++    const category = await prisma.category.create({
++      data: {
++        name: `Workflow E2E ${compactRunId.slice(0, 8)}`,
++        slug: `workflow-e2e-${compactRunId.slice(0, 12)}`,
++        isActive: true,
++      },
++      select: { id: true },
++    });
++    categoryId = category.id;
++  }
++
++  function actorRow(id: string, label: string) {
++    return {
++      id,
++      email: `stories-workflow-${label}-${runId}@example.test`,
++      username: `stories_${label}_${compactRunId.slice(0, 16)}`,
++      passwordHash: 'stories-workflow-e2e-password-hash',
++      displayName: `Stories Workflow ${label}`,
++      emailVerifiedAt: new Date(),
++    };
++  }
++
++  function sessionRow(userId: string, id: string) {
++    return {
++      id,
++      userId,
++      refreshTokenHash: `stories-workflow-refresh-${id}`,
++      expiresAt: new Date(Date.now() + 60 * 60_000),
++    };
++  }
++
++  async function createReadyCover(ownerStoryId: string): Promise<string> {
++    const media = await prisma.mediaAsset.create({
++      data: {
++        uploaderId: authorId,
++        purpose: MediaPurpose.STORY_COVER,
++        status: MediaStatus.READY,
++        resourceType: MediaResourceType.IMAGE,
++        storageProvider: 'e2e',
++        publicId: `workflow-cover-${compactRunId}`,
++        secureUrl: 'https://example.test/workflow-cover.webp',
++        metadata: { ownerId: ownerStoryId },
++        readyAt: new Date(),
++      },
++      select: { id: true },
++    });
++
++    return media.id;
++  }
++
++  async function cleanupRun(): Promise<void> {
++    const actorIds = [authorId, intruderId, adminId];
++
++    await prisma.auditLog.deleteMany({
++      where: { actorId: { in: actorIds } },
++    });
++    await prisma.moderationAction.deleteMany({
++      where: { actorId: { in: actorIds } },
++    });
++    await prisma.story.deleteMany({ where: { authorId } });
++    await prisma.mediaAsset.deleteMany({ where: { uploaderId: authorId } });
++    await prisma.authorProfile.deleteMany({ where: { userId: authorId } });
++    await prisma.user.deleteMany({ where: { id: { in: actorIds } } });
++    if (categoryId) {
++      await prisma.category.deleteMany({ where: { id: categoryId } });
++    }
++  }
++});
++
++function requiredPermissionId(
++  permissionIdByCode: ReadonlyMap<string, string>,
++  code: PermissionCode,
++): string {
++  const id = permissionIdByCode.get(code);
++  if (!id) throw new Error(`Missing permission row for ${code}`);
++  return id;
++}
+diff --git a/backend/test/e2e/stories.e2e-spec.ts b/backend/test/e2e/stories.e2e-spec.ts
+new file mode 100644
+index 0000000..5775ec8
+--- /dev/null
++++ b/backend/test/e2e/stories.e2e-spec.ts
+@@ -0,0 +1,236 @@
++import { randomUUID } from 'node:crypto';
++
++import type { INestApplication } from '@nestjs/common';
++import { ConfigService } from '@nestjs/config';
++import { Test } from '@nestjs/testing';
++import request from 'supertest';
++
++import { AppModule } from '@/app.module';
++import { configureApplication } from '@/bootstrap';
++import type { AppConfig } from '@/config';
++import {
++  ChapterStatus,
++  StoryStatus,
++  StoryVisibility,
++} from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
++
++describe('Stories public HTTP E2E', () => {
++  let app: INestApplication;
++  let prisma: PrismaService;
++
++  const runId = randomUUID();
++  const compactRunId = runId.replaceAll('-', '');
++  let authorId: string;
++  let publicStoryId: string;
++  let publicSlug: string;
++  let inconsistentSlug: string;
++
++  beforeAll(async () => {
++    const moduleRef = await Test.createTestingModule({
++      imports: [AppModule],
++    }).compile();
++
++    app = moduleRef.createNestApplication({ rawBody: true });
++    const appConfig = app.get(ConfigService).getOrThrow<AppConfig>('app');
++    configureApplication(app, appConfig);
++    await app.init();
++
++    prisma = app.get(PrismaService);
++    await seedRun();
++  });
++
++  afterAll(async () => {
++    await cleanupRun();
++    await app.close();
++  });
++
++  it('list/detail chỉ expose story thật sự đã published', async () => {
++    const listResponse = await request(app.getHttpServer())
++      .get('/api/v1/stories')
++      .query({ q: `E2E ${compactRunId.slice(0, 8)}` })
++      .expect(200);
++
++    const page = unwrap<{
++      items: Array<{ id: string; slug: string }>;
++    }>(listResponse.body);
++
++    expect(page.items).toEqual([
++      expect.objectContaining({ id: publicStoryId, slug: publicSlug }),
++    ]);
++
++    const detailResponse = await request(app.getHttpServer())
++      .get(`/api/v1/stories/${publicSlug}`)
++      .expect(200);
++
++    expect(
++      unwrap<{
++        id: string;
++        latestChapter: { number: number } | null;
++      }>(detailResponse.body),
++    ).toMatchObject({
++      id: publicStoryId,
++      latestChapter: { number: 2 },
++    });
++
++    await request(app.getHttpServer())
++      .get(`/api/v1/stories/${inconsistentSlug}`)
++      .expect(404);
++  });
++
++  it('chapter reader chỉ expose published chapter và navigation bỏ qua draft/deleted', async () => {
++    const response = await request(app.getHttpServer())
++      .get(`/api/v1/stories/${publicSlug}/chapters/1`)
++      .expect(200);
++
++    const reader = unwrap<{
++      chapter: { number: number; content: string };
++      navigation: {
++        previous: { number: number } | null;
++        next: { number: number } | null;
++      };
++    }>(response.body);
++
++    expect(reader.chapter).toMatchObject({
++      number: 1,
++      content: 'E2E first published chapter.',
++    });
++    expect(reader.navigation.previous).toBeNull();
++    expect(reader.navigation.next).toMatchObject({ number: 2 });
++
++    await request(app.getHttpServer())
++      .get(`/api/v1/stories/${publicSlug}/chapters/3`)
++      .expect(404);
++    await request(app.getHttpServer())
++      .get(`/api/v1/stories/${publicSlug}/chapters/4`)
++      .expect(404);
++  });
++
++  it('chapter number malformed bị validation chặn trước persistence', async () => {
++    await request(app.getHttpServer())
++      .get(`/api/v1/stories/${publicSlug}/chapters/1.234`)
++      .expect(400);
++  });
++
++  async function seedRun(): Promise<void> {
++    const user = await prisma.user.create({
++      data: {
++        email: `stories.e2e.${runId}@example.test`,
++        username: `stories_e2e_${compactRunId.slice(0, 12)}`,
++        passwordHash: 'stories-e2e-password-hash',
++        displayName: 'Stories E2E Author',
++        emailVerifiedAt: new Date(),
++      },
++      select: { id: true },
++    });
++    authorId = user.id;
++
++    await prisma.authorProfile.create({
++      data: {
++        userId: authorId,
++        penName: `E2E Pen ${compactRunId.slice(0, 8)}`,
++        slug: `e2e-pen-${compactRunId.slice(0, 12)}`,
++      },
++    });
++
++    const now = new Date();
++    publicSlug = `e2e-public-${compactRunId.slice(0, 12)}`;
++    inconsistentSlug = `e2e-inconsistent-${compactRunId.slice(0, 12)}`;
++
++    const publicStory = await prisma.story.create({
++      data: {
++        authorId,
++        title: `E2E ${compactRunId.slice(0, 8)} Public Story`,
++        slug: publicSlug,
++        synopsis: 'Public story used by HTTP E2E.',
++        status: StoryStatus.PUBLISHED,
++        visibility: StoryVisibility.PUBLIC,
++        publishedAt: now,
++        chapterCount: 2,
++        lastChapterAt: now,
++      },
++      select: { id: true },
++    });
++    publicStoryId = publicStory.id;
++
++    await prisma.story.create({
++      data: {
++        authorId,
++        title: `E2E ${compactRunId.slice(0, 8)} Inconsistent Story`,
++        slug: inconsistentSlug,
++        synopsis: 'Must fail closed because publishedAt is null.',
++        status: StoryStatus.PUBLISHED,
++        visibility: StoryVisibility.PUBLIC,
++        publishedAt: null,
++      },
++    });
++
++    await prisma.chapter.createMany({
++      data: [
++        {
++          storyId: publicStoryId,
++          createdById: authorId,
++          updatedById: authorId,
++          number: 1,
++          title: 'E2E Chapter One',
++          slug: 'chapter-1',
++          content: 'E2E first published chapter.',
++          status: ChapterStatus.PUBLISHED,
++          wordCount: 4,
++          publishedAt: now,
++        },
++        {
++          storyId: publicStoryId,
++          createdById: authorId,
++          updatedById: authorId,
++          number: 2,
++          title: 'E2E Chapter Two',
++          slug: 'chapter-2',
++          content: 'E2E second published chapter.',
++          status: ChapterStatus.PUBLISHED,
++          wordCount: 4,
++          publishedAt: now,
++        },
++        {
++          storyId: publicStoryId,
++          createdById: authorId,
++          updatedById: authorId,
++          number: 3,
++          title: 'E2E Draft Chapter',
++          slug: 'chapter-3',
++          content: 'This draft must stay private.',
++          status: ChapterStatus.DRAFT,
++          wordCount: 5,
++        },
++        {
++          storyId: publicStoryId,
++          createdById: authorId,
++          updatedById: authorId,
++          number: 4,
++          title: 'E2E Deleted Published Chapter',
++          slug: 'chapter-4',
++          content: 'Deleted content must stay private.',
++          status: ChapterStatus.PUBLISHED,
++          wordCount: 5,
++          publishedAt: now,
++          deletedAt: now,
++        },
++      ],
++    });
++  }
++
++  async function cleanupRun(): Promise<void> {
++    if (!authorId) return;
++    await prisma.story.deleteMany({ where: { authorId } });
++    await prisma.authorProfile.deleteMany({ where: { userId: authorId } });
++    await prisma.user.deleteMany({ where: { id: authorId } });
++  }
++});
++
++function unwrap<T>(body: unknown): T {
++  if (!body || typeof body !== 'object' || !('data' in body)) {
++    throw new Error('Expected API success envelope');
++  }
++
++  return (body as { data: T }).data;
++}
+diff --git a/backend/test/integration/stories.integration-spec.ts b/backend/test/integration/stories.integration-spec.ts
+new file mode 100644
+index 0000000..0196d90
+--- /dev/null
++++ b/backend/test/integration/stories.integration-spec.ts
+@@ -0,0 +1,449 @@
++import { randomUUID } from 'node:crypto';
++
++import type { TestingModule } from '@nestjs/testing';
++import { Test } from '@nestjs/testing';
++
++import { AppConfigModule } from '@/config';
++import {
++  ChapterStatus,
++  MediaPurpose,
++  MediaResourceType,
++  MediaStatus,
++  StoryStatus,
++  StoryVisibility,
++  SubmissionStatus,
++} from '@/generated/prisma/client';
++import { PrismaModule, PrismaService } from '@/infrastructure/database';
++import {
++  PrismaChapterPersistence,
++  PrismaStoryPersistence,
++} from '@/modules/stories/infrastructure';
++
++describe('Stories PostgreSQL race and ownership invariants', () => {
++  let moduleRef: TestingModule;
++  let prisma: PrismaService;
++  let stories: PrismaStoryPersistence;
++  let chapters: PrismaChapterPersistence;
++
++  const runId = randomUUID();
++  const compactRunId = runId.replaceAll('-', '');
++  let sequence = 0;
++
++  beforeAll(async () => {
++    moduleRef = await Test.createTestingModule({
++      imports: [AppConfigModule, PrismaModule],
++      providers: [PrismaStoryPersistence, PrismaChapterPersistence],
++    }).compile();
++
++    await moduleRef.init();
++
++    prisma = moduleRef.get(PrismaService);
++    stories = moduleRef.get(PrismaStoryPersistence);
++    chapters = moduleRef.get(PrismaChapterPersistence);
++  });
++
++  afterEach(async () => {
++    await cleanupRun();
++  });
++
++  afterAll(async () => {
++    await cleanupRun();
++    await moduleRef.close();
++  });
++
++  it('serialize concurrent chapter creation so chapter numbers remain unique', async () => {
++    const author = await createAuthor('chapter-race');
++    const story = await createStory(author.id, StoryStatus.DRAFT);
++    const createdAt = new Date();
++
++    const results = await Promise.all([
++      chapters.createDraft({
++        userId: author.id,
++        storyId: story.id,
++        title: 'Concurrent A',
++        content: 'Nội dung A',
++        wordCount: 3,
++        createdAt,
++        audit: audit('chapter-race-a'),
++      }),
++      chapters.createDraft({
++        userId: author.id,
++        storyId: story.id,
++        title: 'Concurrent B',
++        content: 'Nội dung B',
++        wordCount: 3,
++        createdAt,
++        audit: audit('chapter-race-b'),
++      }),
++    ]);
++
++    expect(results.map((result) => result.status)).toEqual([
++      'created',
++      'created',
++    ]);
++
++    const persisted = await prisma.chapter.findMany({
++      where: { storyId: story.id },
++      orderBy: { number: 'asc' },
++      select: { number: true },
++    });
++
++    expect(persisted.map(({ number }) => number.toNumber())).toEqual([1, 2]);
++  });
++
++  it('publish concurrent chỉ transition một lần và chỉ increment chapterCount một lần', async () => {
++    const author = await createAuthor('publish-race');
++    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
++      visibility: StoryVisibility.PUBLIC,
++      publishedAt: new Date(),
++    });
++    const chapter = await createChapter(author.id, story.id, 1);
++    const publishedAt = new Date();
++
++    const results = await Promise.all([
++      chapters.publish({
++        userId: author.id,
++        storyId: story.id,
++        chapterId: chapter.id,
++        publishedAt,
++        audit: audit('publish-race-a'),
++      }),
++      chapters.publish({
++        userId: author.id,
++        storyId: story.id,
++        chapterId: chapter.id,
++        publishedAt,
++        audit: audit('publish-race-b'),
++      }),
++    ]);
++
++    const statuses = results.map((result) => result.status).sort();
++    expect(statuses).toEqual(['not_draft', 'published']);
++
++    const [freshStory, freshChapter, publishAudits] = await Promise.all([
++      prisma.story.findUniqueOrThrow({
++        where: { id: story.id },
++        select: { chapterCount: true },
++      }),
++      prisma.chapter.findUniqueOrThrow({
++        where: { id: chapter.id },
++        select: { status: true, publishedAt: true },
++      }),
++      prisma.auditLog.count({
++        where: {
++          entityId: chapter.id,
++          action: 'chapter.published',
++        },
++      }),
++    ]);
++
++    expect(freshStory.chapterCount).toBe(1);
++    expect(freshChapter.status).toBe(ChapterStatus.PUBLISHED);
++    expect(freshChapter.publishedAt).not.toBeNull();
++    expect(publishAudits).toBe(1);
++  });
++
++  it('cancel-vs-approve concurrent chỉ cho phép đúng một terminal transition thắng', async () => {
++    const author = await createAuthor('review-race-author');
++    const reviewer = await createUser('review-race-reviewer');
++    const ready = await createReviewReadyDraft(author.id);
++
++    const submitted = await stories.submitForReview({
++      userId: author.id,
++      storyId: ready.storyId,
++      authorNote: 'Ready for review',
++      submittedAt: new Date(),
++      audit: audit('submit-before-race'),
++    });
++
++    expect(submitted.status).toBe('submitted');
++    if (submitted.status !== 'submitted') return;
++
++    const submissionId = submitted.publication.submission.id;
++    const transitionedAt = new Date();
++
++    const [cancelResult, approveResult] = await Promise.all([
++      stories.cancelSubmission({
++        userId: author.id,
++        storyId: ready.storyId,
++        canceledAt: transitionedAt,
++        audit: audit('cancel-race'),
++      }),
++      stories.approveSubmission({
++        reviewerId: reviewer.id,
++        submissionId,
++        reviewedAt: transitionedAt,
++        audit: audit('approve-race'),
++      }),
++    ]);
++
++    const terminalStatuses = [cancelResult.status, approveResult.status];
++    expect(
++      terminalStatuses.filter(
++        (status) => status === 'canceled' || status === 'approved',
++      ),
++    ).toHaveLength(1);
++    expect(
++      terminalStatuses.filter((status) => status === 'not_pending'),
++    ).toHaveLength(1);
++
++    const [freshStory, freshSubmission] = await Promise.all([
++      prisma.story.findUniqueOrThrow({
++        where: { id: ready.storyId },
++        select: { status: true, visibility: true },
++      }),
++      prisma.storySubmission.findUniqueOrThrow({
++        where: { id: submissionId },
++        select: { status: true },
++      }),
++    ]);
++
++    if (freshSubmission.status === SubmissionStatus.APPROVED) {
++      expect(freshStory).toMatchObject({
++        status: StoryStatus.PUBLISHED,
++        visibility: StoryVisibility.PUBLIC,
++      });
++    } else {
++      expect(freshSubmission.status).toBe(SubmissionStatus.CANCELED);
++      expect(freshStory).toMatchObject({
++        status: StoryStatus.DRAFT,
++        visibility: StoryVisibility.PRIVATE,
++      });
++    }
++  });
++
++  it('không leak hoặc mutate story/chapter của author khác', async () => {
++    const owner = await createAuthor('ownership-owner');
++    const intruder = await createAuthor('ownership-intruder');
++    const story = await createStory(owner.id, StoryStatus.DRAFT);
++    const chapter = await createChapter(owner.id, story.id, 1);
++
++    await expect(
++      stories.findOwnedById(intruder.id, story.id),
++    ).resolves.toBeNull();
++    await expect(
++      chapters.listOwnedByStory(intruder.id, story.id),
++    ).resolves.toBeNull();
++    await expect(
++      chapters.findOwnedById(intruder.id, story.id, chapter.id),
++    ).resolves.toBeNull();
++
++    const storyUpdate = await stories.updateDraft({
++      userId: intruder.id,
++      storyId: story.id,
++      title: 'Stolen title',
++      updatedAt: new Date(),
++      audit: audit('intruder-story-update'),
++    });
++    const chapterUpdate = await chapters.updateDraft({
++      userId: intruder.id,
++      storyId: story.id,
++      chapterId: chapter.id,
++      title: 'Stolen chapter',
++      updatedAt: new Date(),
++      audit: audit('intruder-chapter-update'),
++    });
++
++    expect(storyUpdate.status).toBe('not_found');
++    expect(chapterUpdate.status).toBe('not_found');
++
++    const [freshStory, freshChapter] = await Promise.all([
++      prisma.story.findUniqueOrThrow({
++        where: { id: story.id },
++        select: { title: true },
++      }),
++      prisma.chapter.findUniqueOrThrow({
++        where: { id: chapter.id },
++        select: { title: true },
++      }),
++    ]);
++
++    expect(freshStory.title).not.toBe('Stolen title');
++    expect(freshChapter.title).not.toBe('Stolen chapter');
++  });
++
++  it('public read model fail-closed khi PUBLISHED/PUBLIC record thiếu publishedAt', async () => {
++    const author = await createAuthor('public-invariant');
++    const inconsistent = await createStory(author.id, StoryStatus.PUBLISHED, {
++      visibility: StoryVisibility.PUBLIC,
++      publishedAt: null,
++    });
++    await createChapter(author.id, inconsistent.id, 1, {
++      status: ChapterStatus.PUBLISHED,
++      publishedAt: new Date(),
++    });
++
++    const page = await stories.listPublic({
++      sort: 'latest',
++      page: 1,
++      pageSize: 20,
++    });
++
++    expect(page.items.some((item) => item.id === inconsistent.id)).toBe(false);
++    await expect(
++      stories.findPublicBySlug(inconsistent.slug),
++    ).resolves.toBeNull();
++    await expect(
++      chapters.findPublicReader(inconsistent.slug, '1'),
++    ).resolves.toBeNull();
++  });
++
++  async function createReviewReadyDraft(
++    userId: string,
++  ): Promise<{ storyId: string }> {
++    const story = await createStory(userId, StoryStatus.DRAFT, {
++      synopsis: 'Đủ dữ liệu để gửi duyệt.',
++    });
++    const category = await prisma.category.create({
++      data: {
++        name: unique('Category'),
++        slug: unique('category'),
++        isActive: true,
++      },
++    });
++    await prisma.storyCategory.create({
++      data: {
++        storyId: story.id,
++        categoryId: category.id,
++        isPrimary: true,
++      },
++    });
++    const cover = await prisma.mediaAsset.create({
++      data: {
++        uploaderId: userId,
++        purpose: MediaPurpose.STORY_COVER,
++        status: MediaStatus.READY,
++        resourceType: MediaResourceType.IMAGE,
++        storageProvider: 'integration-test',
++        publicId: unique('cover'),
++        secureUrl: 'https://example.test/cover.webp',
++        metadata: { ownerId: story.id },
++        readyAt: new Date(),
++      },
++    });
++    await prisma.story.update({
++      where: { id: story.id },
++      data: { coverMediaId: cover.id },
++    });
++    await createChapter(userId, story.id, 1, {
++      content: 'Nội dung hợp lệ.',
++    });
++
++    return { storyId: story.id };
++  }
++
++  async function createAuthor(label: string): Promise<{ id: string }> {
++    const user = await createUser(label);
++    await prisma.authorProfile.create({
++      data: {
++        userId: user.id,
++        penName: unique(`Pen ${label}`),
++        slug: unique(`pen-${label}`),
++      },
++    });
++    return user;
++  }
++
++  async function createUser(label: string): Promise<{ id: string }> {
++    sequence += 1;
++    return prisma.user.create({
++      data: {
++        email: `${label}.${sequence}.${runId}@example.test`,
++        username: unique(`${label}-${sequence}`).slice(0, 50),
++        passwordHash: 'stories-integration-password-hash',
++        displayName: `Stories ${label}`,
++        emailVerifiedAt: new Date(),
++      },
++      select: { id: true },
++    });
++  }
++
++  async function createStory(
++    authorId: string,
++    status: StoryStatus,
++    overrides: {
++      visibility?: StoryVisibility;
++      publishedAt?: Date | null;
++      synopsis?: string;
++    } = {},
++  ) {
++    return prisma.story.create({
++      data: {
++        authorId,
++        title: unique('Story'),
++        slug: unique('story'),
++        synopsis: overrides.synopsis ?? 'Integration story synopsis.',
++        status,
++        visibility: overrides.visibility ?? StoryVisibility.PRIVATE,
++        publishedAt: overrides.publishedAt,
++      },
++    });
++  }
++
++  async function createChapter(
++    userId: string,
++    storyId: string,
++    number: number,
++    overrides: {
++      status?: ChapterStatus;
++      publishedAt?: Date | null;
++      content?: string;
++    } = {},
++  ) {
++    return prisma.chapter.create({
++      data: {
++        storyId,
++        createdById: userId,
++        updatedById: userId,
++        number,
++        title: `Chapter ${number}`,
++        slug: `chapter-${number}-${compactRunId.slice(0, 8)}`,
++        content: overrides.content ?? 'Draft content',
++        status: overrides.status ?? ChapterStatus.DRAFT,
++        wordCount: 2,
++        publishedAt: overrides.publishedAt,
++      },
++    });
++  }
++
++  function audit(label: string) {
++    return {
++      requestId: `${label}-${runId}`,
++      ipAddress: '127.0.0.1',
++      userAgent: 'Jest stories integration',
++    };
++  }
++
++  function unique(prefix: string): string {
++    sequence += 1;
++    return `${prefix}-${compactRunId.slice(0, 10)}-${sequence}`.toLowerCase();
++  }
++
++  async function cleanupRun(): Promise<void> {
++    const users = await prisma.user.findMany({
++      where: { email: { contains: runId } },
++      select: { id: true },
++    });
++    const userIds = users.map(({ id }) => id);
++
++    if (userIds.length === 0) return;
++
++    await prisma.auditLog.deleteMany({
++      where: { actorId: { in: userIds } },
++    });
++    await prisma.moderationAction.deleteMany({
++      where: { actorId: { in: userIds } },
++    });
++    await prisma.story.deleteMany({ where: { authorId: { in: userIds } } });
++    await prisma.mediaAsset.deleteMany({
++      where: { uploaderId: { in: userIds } },
++    });
++    await prisma.authorProfile.deleteMany({
++      where: { userId: { in: userIds } },
++    });
++    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
++    await prisma.category.deleteMany({
++      where: { slug: { contains: compactRunId.slice(0, 10) } },
++    });
++  }
++});
+diff --git a/backend/test/jest-stories-e2e.json b/backend/test/jest-stories-e2e.json
+new file mode 100644
+index 0000000..a93fe61
+--- /dev/null
++++ b/backend/test/jest-stories-e2e.json
+@@ -0,0 +1,17 @@
++{
++  "moduleFileExtensions": ["js", "json", "ts"],
++  "rootDir": ".",
++  "testEnvironment": "node",
++  "testTimeout": 30000,
++  "maxWorkers": 1,
++  "detectOpenHandles": true,
++  "setupFiles": ["<rootDir>/setup/setup-e2e-env.ts"],
++  "testRegex": "stories(?:-workflow)?\\.e2e-spec\\.ts$",
++  "transform": {
++    "^.+\\.(t|j)s$": "ts-jest"
++  },
++  "moduleNameMapper": {
++    "^@/(.*)$": "<rootDir>/../src/$1",
++    "^(\\.\\.?/.*)\\.js$": "$1"
++  }
++}
+diff --git a/backend/test/jest-stories-integration.json b/backend/test/jest-stories-integration.json
+new file mode 100644
+index 0000000..a2de637
+--- /dev/null
++++ b/backend/test/jest-stories-integration.json
+@@ -0,0 +1,17 @@
++{
++  "moduleFileExtensions": ["js", "json", "ts"],
++  "rootDir": ".",
++  "testEnvironment": "node",
++  "testTimeout": 60000,
++  "maxWorkers": 1,
++  "detectOpenHandles": true,
++  "setupFiles": ["<rootDir>/setup/setup-e2e-env.ts"],
++  "testRegex": "stories\\.integration-spec\\.ts$",
++  "transform": {
++    "^.+\\.(t|j)s$": "ts-jest"
++  },
++  "moduleNameMapper": {
++    "^@/(.*)$": "<rootDir>/../src/$1",
++    "^(\\.\\.?/.*)\\.js$": "$1"
++  }
++}
+diff --git a/frontend/e2e/public/stories.spec.ts b/frontend/e2e/public/stories.spec.ts
+new file mode 100644
+index 0000000..e1bd8d4
+--- /dev/null
++++ b/frontend/e2e/public/stories.spec.ts
+@@ -0,0 +1,34 @@
++import { expect, test } from '@playwright/test';
++
++test.describe('Public stories real API', () => {
++  test('story detail và chapter reader render dữ liệu seed thật @smoke', async ({ page }) => {
++    await page.goto('/truyen/e2e-public-story');
++
++    await expect(page.getByRole('heading', { level: 1, name: 'E2E Public Story' })).toBeVisible();
++    await expect(page.getByRole('link', { name: /Đọc Chương 2/u })).toBeVisible();
++    await expect(page.getByText('Chương 2: Tiếp tục E2E')).toBeVisible();
++
++    await page.getByRole('link', { name: /Đọc Chương 2/u }).click();
++
++    await expect(page).toHaveURL(/\/truyen\/e2e-public-story\/chuong\/2$/u);
++    await expect(
++      page.getByRole('heading', {
++        level: 2,
++        name: /Chương 2:\s*Tiếp tục E2E/u,
++      }),
++    ).toBeVisible();
++    await expect(
++      page.getByText('Đây là chương thứ hai dùng để kiểm tra navigation.'),
++    ).toBeVisible();
++    await expect(page.getByText(/Chương trước/u).first()).toBeVisible();
++    await expect(page.getByText(/Chương 1:\s*Khởi đầu E2E/u).first()).toBeVisible();
++    await expect(page.getByText('Chương tiếp theo')).toHaveCount(0);
++  });
++
++  test('draft chapter không thể đọc từ public route', async ({ page }) => {
++    await page.goto('/truyen/e2e-public-story/chuong/3');
++
++    await expect(page.getByText(/Không thể tải chương|Không tìm thấy/u)).toBeVisible();
++    await expect(page.getByText('Draft private.')).toHaveCount(0);
++  });
++});
+diff --git a/frontend/package.json b/frontend/package.json
+index f2d11e9..2e5e859 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -19,7 +19,7 @@
+     "e2e:headed": "playwright test --headed",
+     "e2e:ui": "playwright test --ui",
+     "e2e:report": "playwright show-report",
+-    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e && npm --prefix ../backend run db:seed:e2e:admin",
++    "e2e:prepare": "npm --prefix ../backend run db:seed && npm --prefix ../backend run db:seed:e2e && npm --prefix ../backend run db:seed:e2e:admin && npm --prefix ../backend run db:seed:e2e:stories",
+     "pree2e": "npm run e2e:prepare",
+     "ci": "npm run format:check && npm run architecture:check && npm run lint:check && npm run typecheck && npm run typecheck:e2e && npm run test:ci && npm run build:ci"
+   },
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
+index af5687c..4dc3026 100644
+--- a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
+@@ -1,6 +1,6 @@
+ import { HttpClient, HttpHeaders } from '@angular/common/http';
+ import { inject, Injectable } from '@angular/core';
+-import { map, Observable } from 'rxjs';
++import { map, Observable, tap } from 'rxjs';
+ 
+ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+@@ -26,6 +26,8 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
+   private readonly coverUpload = inject(AuthorStoryCoverUploadService);
+   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
+   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
++  private storyCreateRetry: CreateRetryState | null = null;
++  private chapterCreateRetry: CreateRetryState | null = null;
+ 
+   listStories(): Observable<readonly AuthorManagedStory[]> {
+     return this.http
+@@ -40,9 +42,21 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
+   }
+ 
+   createStory(input: AuthorStoryDraftInput): Observable<AuthorManagedStory> {
++    const retry = reuseCreateKey(this.storyCreateRetry, input);
++    this.storyCreateRetry = retry;
++
+     return this.http
+-      .post<ApiSuccessEnvelope<AuthorManagedStory>>(this.storiesUrl, input)
+-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data));
++      .post<ApiSuccessEnvelope<AuthorManagedStory>>(this.storiesUrl, input, {
++        headers: idempotencyHeaders(retry.key),
++      })
++      .pipe(
++        map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data),
++        tap(() => {
++          if (this.storyCreateRetry?.key === retry.key) {
++            this.storyCreateRetry = null;
++          }
++        }),
++      );
+   }
+ 
+   updateStory(storyId: string, input: AuthorStoryUpdateInput): Observable<AuthorManagedStory> {
+@@ -109,12 +123,23 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
+     storyId: string,
+     input: AuthorChapterDraftInput,
+   ): Observable<AuthorManagedChapter> {
++    const retry = reuseCreateKey(this.chapterCreateRetry, { storyId, input });
++    this.chapterCreateRetry = retry;
++
+     return this.http
+       .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
+         `${this.storiesUrl}/${storyId}/chapters`,
+         input,
++        { headers: idempotencyHeaders(retry.key) },
+       )
+-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
++      .pipe(
++        map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data),
++        tap(() => {
++          if (this.chapterCreateRetry?.key === retry.key) {
++            this.chapterCreateRetry = null;
++          }
++        }),
++      );
+   }
+ 
+   updateChapter(
+@@ -155,6 +180,21 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
+   }
+ }
+ 
+-function idempotencyHeaders(): HttpHeaders {
+-  return new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() });
++interface CreateRetryState {
++  readonly identity: string;
++  readonly key: string;
++}
++
++function reuseCreateKey(
++  current: CreateRetryState | null,
++  payload: unknown,
++): CreateRetryState {
++  const identity = JSON.stringify(payload) ?? 'undefined';
++  if (current?.identity === identity) return current;
++
++  return { identity, key: crypto.randomUUID() };
++}
++
++function idempotencyHeaders(key = crypto.randomUUID()): HttpHeaders {
++  return new HttpHeaders({ 'x-idempotency-key': key });
+ }

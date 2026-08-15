@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -27,6 +28,10 @@ import {
   CreateAuthorStoryCommandHandler,
   DeleteAuthorStoryCommand,
   DeleteAuthorStoryCommandHandler,
+  GetAuthorStoryQuery,
+  GetAuthorStoryQueryHandler,
+  ListAuthorStoriesQuery,
+  ListAuthorStoriesQueryHandler,
   SubmitAuthorStoryCommand,
   SubmitAuthorStoryCommandHandler,
   UpdateAuthorStoryCommand,
@@ -50,11 +55,35 @@ export class AuthorStoriesController {
     private readonly createStory: CreateAuthorStoryCommandHandler,
     private readonly updateStory: UpdateAuthorStoryCommandHandler,
     private readonly deleteStory: DeleteAuthorStoryCommandHandler,
+    private readonly listStories: ListAuthorStoriesQueryHandler,
+    private readonly getStory: GetAuthorStoryQueryHandler,
     private readonly submitStory: SubmitAuthorStoryCommandHandler,
     private readonly cancelSubmission: CancelAuthorStorySubmissionCommandHandler,
   ) {}
 
+  @Get()
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async list(
+    @CurrentUserId() userId: string | undefined,
+  ): Promise<readonly StoryResponse[]> {
+    const results = await this.listStories.execute(new ListAuthorStoriesQuery(userId));
+
+    return results.map((result) => toStoryResponse(result));
+  }
+
+  @Get(':storyId')
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async findOne(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<StoryResponse> {
+    const result = await this.getStory.execute(new GetAuthorStoryQuery(userId, storyId));
+
+    return toStoryResponse(result);
+  }
+
   @Post()
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.STORY_CREATE)
   async create(
     @CurrentUserId() userId: string | undefined,

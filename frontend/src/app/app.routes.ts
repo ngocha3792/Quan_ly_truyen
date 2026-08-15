@@ -15,7 +15,7 @@ export const routes: Routes = [
     path: '',
     component: AppShellComponent,
     // AppHeader also consumes HomeRepository, so the provider belongs to the shell.
-    providers: provideHome({ useMock: true }),
+    providers: provideHome(),
     children: [
       ...PUBLIC_ROUTES,
       ...AUTH_ROUTES,

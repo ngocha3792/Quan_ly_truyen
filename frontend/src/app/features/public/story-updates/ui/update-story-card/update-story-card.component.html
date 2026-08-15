@@ -22,7 +22,7 @@
 
     <div class="bottom-row">
       <div class="chapter-row">
-        <strong>Ch. {{ story().latestChapter }}</strong>
+        <strong>{{ story().latestChapter !== null ? 'Ch. ' + story().latestChapter : 'Chưa có chương' }}</strong>
         <span class="time">{{ story().updatedAt | relativeTime }}</span>
       </div>
 

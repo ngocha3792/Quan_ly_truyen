@@ -12,6 +12,13 @@ export const AUTH_PERMISSIONS = {
   ROLE_MANAGE: 'role.manage',
 
   STORY_CREATE: 'story.create',
+  STORY_UPDATE_OWN: 'story.update.own',
+  STORY_DELETE_OWN: 'story.delete.own',
+  STORY_SUBMIT: 'story.submit',
+  CHAPTER_CREATE: 'chapter.create',
+  CHAPTER_UPDATE_OWN: 'chapter.update.own',
+  CHAPTER_DELETE_OWN: 'chapter.delete.own',
+  CHAPTER_PUBLISH_OWN: 'chapter.publish.own',
 
   LIBRARY_MANAGE_OWN: 'library.manage.own',
 

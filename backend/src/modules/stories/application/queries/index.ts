@@ -3,3 +3,7 @@ export * from './list-public-stories';
 export * from './list-story-categories';
 export * from './list-story-tags';
 export * from './get-public-chapter-reader';
+export * from './get-author-chapter';
+export * from './get-author-story';
+export * from './list-author-chapters';
+export * from './list-author-stories';

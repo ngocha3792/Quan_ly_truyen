@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
@@ -12,7 +12,6 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
 
   imports: [RouterLink, ChapterHeadingComponent, ChapterSidebarComponent, ChapterCommentsComponent],
 
-  providers: [ChapterReaderStore],
 
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: ['./chapter-reader-page.component.scss'],
@@ -20,9 +19,20 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChapterReaderPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(ChapterReaderStore);
 
   ngOnInit(): void {
-    this.store.load();
+    const subscription = this.route.paramMap.subscribe((params) => {
+      const storySlug = params.get('storySlug') ?? '';
+      const chapterNumber = params.get('chapterNumber') ?? '';
+
+      if (storySlug && chapterNumber) {
+        this.store.load(storySlug, chapterNumber);
+      }
+    });
+
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
 }

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -25,6 +26,10 @@ import {
   CreateAuthorChapterCommandHandler,
   DeleteAuthorChapterCommand,
   DeleteAuthorChapterCommandHandler,
+  GetAuthorChapterQuery,
+  GetAuthorChapterQueryHandler,
+  ListAuthorChaptersQuery,
+  ListAuthorChaptersQueryHandler,
   PublishAuthorChapterCommand,
   PublishAuthorChapterCommandHandler,
   UpdateAuthorChapterCommand,
@@ -34,7 +39,12 @@ import {
   CreateAuthorChapterRequest,
   UpdateAuthorChapterRequest,
 } from '../requests';
-import { type ChapterResponse, toChapterResponse } from '../responses';
+import {
+  type ChapterResponse,
+  type ChapterSummaryResponse,
+  toChapterResponse,
+  toChapterSummaryResponse,
+} from '../responses';
 
 @Controller('author/stories/:storyId/chapters')
 export class AuthorChaptersController {
@@ -42,10 +52,40 @@ export class AuthorChaptersController {
     private readonly createChapter: CreateAuthorChapterCommandHandler,
     private readonly updateChapter: UpdateAuthorChapterCommandHandler,
     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
+    private readonly listChapters: ListAuthorChaptersQueryHandler,
+    private readonly getChapter: GetAuthorChapterQueryHandler,
     private readonly publishChapter: PublishAuthorChapterCommandHandler,
   ) {}
 
+  @Get()
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async list(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<readonly ChapterSummaryResponse[]> {
+    const results = await this.listChapters.execute(
+      new ListAuthorChaptersQuery(userId, storyId),
+    );
+
+    return results.map((result) => toChapterSummaryResponse(result));
+  }
+
+  @Get(':chapterId')
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async findOne(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+  ): Promise<ChapterResponse> {
+    const result = await this.getChapter.execute(
+      new GetAuthorChapterQuery(userId, storyId, chapterId),
+    );
+
+    return toChapterResponse(result);
+  }
+
   @Post()
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.CHAPTER_CREATE)
   async create(
     @CurrentUserId() userId: string | undefined,

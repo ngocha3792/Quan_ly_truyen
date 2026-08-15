@@ -25,7 +25,7 @@ export interface StoryUpdateItem {
 
   readonly genres: readonly StoryUpdateGenre[];
 
-  readonly latestChapter: number;
+  readonly latestChapter: number | null;
   readonly previousChapter: number | null;
 
   readonly updatedAt: string;
