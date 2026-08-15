@@ -173,49 +173,45 @@ describe('Auth Redis integrations', () => {
   });
 
   it('stores JWT blacklist with TTL bounded by token expiration', async () => {
-    jest.useFakeTimers();
+    const now = new Date('2026-08-03T07:00:00.000Z').getTime();
 
-    jest.setSystemTime(new Date('2026-08-03T07:00:00.000Z'));
+    jest.spyOn(Date, 'now').mockReturnValue(now);
 
-    try {
-      const blacklist = new RedisJwtBlacklist(
-        configService(),
+    const blacklist = new RedisJwtBlacklist(
+      configService(),
 
-        redis,
-      );
+      redis,
+    );
 
-      const tokenId = randomUUID();
+    const tokenId = randomUUID();
 
-      await blacklist.blacklist({
-        tokenId,
+    await blacklist.blacklist({
+      tokenId,
 
-        expiresAt: new Date('2026-08-03T07:02:00.000Z'),
+      expiresAt: new Date('2026-08-03T07:02:00.000Z'),
 
-        reason: 'integration-test',
-      });
+      reason: 'integration-test',
+    });
 
-      await expect(blacklist.isBlacklisted(tokenId)).resolves.toBe(true);
+    await expect(blacklist.isBlacklisted(tokenId)).resolves.toBe(true);
 
-      const key = ['auth', 'jwt', 'blacklist', sha256(tokenId)].join(':');
+    const key = ['auth', 'jwt', 'blacklist', sha256(tokenId)].join(':');
 
-      const ttl = await redis.ttl(key);
+    const ttl = await redis.ttl(key);
 
-      expect(ttl).toBeGreaterThanOrEqual(119);
+    expect(ttl).toBeGreaterThanOrEqual(119);
 
-      expect(ttl).toBeLessThanOrEqual(120);
+    expect(ttl).toBeLessThanOrEqual(120);
 
-      const keys = await redis.keys('auth:jwt:blacklist:*');
+    const keys = await redis.keys('auth:jwt:blacklist:*');
 
-      expect(keys).toHaveLength(1);
+    expect(keys).toHaveLength(1);
 
-      expect(keys[0]).not.toContain(tokenId);
+    expect(keys[0]).not.toContain(tokenId);
 
-      const stored = await redis.get(key);
+    const stored = await redis.get(key);
 
-      expect(stored).not.toContain(tokenId);
-    } finally {
-      jest.useRealTimers();
-    }
+    expect(stored).not.toContain(tokenId);
   });
 
   it('does not create a blacklist entry for an expired token', async () => {

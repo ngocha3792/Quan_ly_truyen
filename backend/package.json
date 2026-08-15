@@ -204,6 +204,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "clearMocks": true,
+    "restoreMocks": true,
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",
       "^(\\.\\.?/.*)\\.js$": "$1"

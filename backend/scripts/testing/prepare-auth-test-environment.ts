@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import Redis from 'ioredis';
 import { Client } from 'pg';
 
@@ -67,46 +69,74 @@ void runScript({
     await adminClient.end();
     adminClient = undefined;
 
-    redis = new Redis(testRedisUrl, {
-      lazyConnect: true,
-      enableReadyCheck: true,
-      maxRetriesPerRequest: 1,
-      retryStrategy: () => null,
-    });
+    const redisAttempts = 10;
+    let redisReady = false;
+    let lastRedisError: unknown;
 
-    redis.on('error', () => {
-      /* Suppress unhandled ioredis error events during test prep check */
-    });
-
-    try {
-      await redis.connect();
-      await redis.ping();
-      await redis.flushdb();
-
-      logger.info('Redis test database is reachable and clean', {
-        database: redisDatabase,
+    for (let attempt = 1; attempt <= redisAttempts; attempt += 1) {
+      redis = new Redis(testRedisUrl, {
+        lazyConnect: true,
+        enableReadyCheck: true,
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null,
       });
 
-      await redis.quit();
-    } catch (error) {
-      logger.warn(
-        'Redis test instance is not running or unreachable; skipping Redis test prep flush',
-        {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
-    } finally {
-      if (redis) {
+      redis.on('error', () => {
+        /* Suppress unhandled ioredis error events during test prep check */
+      });
+
+      try {
+        await redis.connect();
+        await redis.ping();
+        await redis.flushdb();
+
+        logger.info('Redis test database is reachable and clean', {
+          database: redisDatabase,
+          attempt,
+        });
+
+        await redis.quit();
+        redis = undefined;
+        redisReady = true;
+        break;
+      } catch (error) {
+        lastRedisError = error;
         redis.disconnect(false);
         redis = undefined;
+
+        logger.warn('Redis test instance is not ready', {
+          attempt,
+          attempts: redisAttempts,
+        });
+
+        if (attempt < redisAttempts) {
+          await sleep(500);
+        }
       }
     }
 
-    logger.info('applying Prisma migrations to the test database');
+    if (!redisReady) {
+      throw new ScriptError(
+        'Redis test instance is not running or unreachable',
+        ScriptExitCode.EXECUTION_ERROR,
+        { cause: lastRedisError },
+      );
+    }
+
+    logger.info('resetting and migrating the PostgreSQL test database');
 
     await runCommand({
-      command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      args: ['run', 'db:migrate:deploy'],
+      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
+      args: [
+        '--no-install',
+        'prisma',
+        'migrate',
+        'reset',
+        '--force',
+        '--skip-seed',
+        '--config',
+        'prisma.config.ts',
+      ],
       cwd: process.cwd(),
       env: {
         ...process.env,

@@ -2,6 +2,8 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
   "testEnvironment": "node",
+  "clearMocks": true,
+  "restoreMocks": true,
   "testMatch": [
     "<rootDir>/src/modules/users/application/commands/**/*.spec.ts",
     "<rootDir>/src/modules/users/domain/policies/**/*.spec.ts"

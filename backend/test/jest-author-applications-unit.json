@@ -2,6 +2,8 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
   "testEnvironment": "node",
+  "clearMocks": true,
+  "restoreMocks": true,
   "testMatch": [
     "<rootDir>/src/modules/author-applications/application/commands/**/*.spec.ts",
     "<rootDir>/src/modules/author-applications/domain/policies/author-application-lifecycle.policy.spec.ts"

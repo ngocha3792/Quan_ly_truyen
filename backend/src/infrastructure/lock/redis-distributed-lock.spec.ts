@@ -20,6 +20,10 @@ describe('RedisDistributedLock', () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('acquires lock, executes work and releases lock via lua script', async () => {
     mockRedisClient.set.mockResolvedValue('OK');
     mockRedisClient.eval.mockResolvedValue(1);
@@ -96,7 +100,6 @@ describe('RedisDistributedLock', () => {
     );
     finishWork();
     await expect(resultPromise).resolves.toBe('done');
-    jest.useRealTimers();
   });
 
   it('does not report success after ownership is lost', async () => {
@@ -117,7 +120,6 @@ describe('RedisDistributedLock', () => {
     await expect(resultPromise).rejects.toBeInstanceOf(
       ConcurrencyConflictException,
     );
-    jest.useRealTimers();
   });
 
   it('fails closed when Redis is unavailable', async () => {

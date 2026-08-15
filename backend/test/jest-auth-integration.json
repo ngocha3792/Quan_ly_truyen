@@ -6,6 +6,8 @@
     ],
     "rootDir": ".",
     "testEnvironment": "node",
+    "clearMocks": true,
+    "restoreMocks": true,
     "testTimeout": 60000,
     "maxWorkers": 1,
     "detectOpenHandles": true,

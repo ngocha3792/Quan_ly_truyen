@@ -79,12 +79,21 @@ void runScript({
 
     adminClient = undefined;
 
-    logger.info('applying Prisma migrations to the test database');
+    logger.info('resetting and migrating the PostgreSQL test database');
 
     await runCommand({
-      command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
 
-      args: ['run', 'db:migrate:deploy'],
+      args: [
+        '--no-install',
+        'prisma',
+        'migrate',
+        'reset',
+        '--force',
+        '--skip-seed',
+        '--config',
+        'prisma.config.ts',
+      ],
 
       cwd: process.cwd(),
 
