@@ -6,7 +6,8 @@
 2. Backend và frontend production phải dùng full 40-character Git SHA; không dùng `latest`, branch tag hoặc tag mutable. Runtime và migrate backend phải cùng source SHA.
 3. Tạo `.env.production` bằng `New-ProductionEnv.ps1`; không dùng file example.
 4. Chạy `Deploy-Production.ps1` và không bỏ qua predeploy/postdeploy gate khi release thật.
-5. Kiểm tra `/api/v1/health/live`, `/api/v1/health/ready`, worker heartbeat, mail delivery và dashboard.
+5. Kiểm tra `/api/v1/health/live`, `/api/v1/health/ready`, worker heartbeat, recovery metrics, mail delivery và dashboard.
+6. Sau khi hệ thống đã bootstrap backup lần đầu, `Test-RecoveryReadiness.ps1` phải xanh trước release định kỳ.
 
 ## External requirements
 
@@ -18,6 +19,7 @@ Các mục sau không thể được tự động hóa chỉ bằng repository:
 - DMARC được bật, ban đầu có thể dùng `p=none`, sau đó nâng chính sách.
 - SMTP production cho phép From/Reply-To đã khai báo.
 - Backup được sao chép sang storage khác máy chủ và được mã hóa.
+- Alertmanager webhook phải trỏ tới hệ thống nhận cảnh báo production (incident/chat/on-call gateway) qua HTTPS.
 
 ## Deploy
 
@@ -33,9 +35,21 @@ Kiểm tra Compose trước deploy mà không cần secret thật:
 npm run docker:prod:config:example
 ```
 
-Frontend container chạy non-root trên cổng nội bộ `8080`, filesystem read-only và drop toàn bộ Linux capabilities trong production Compose.
+Frontend container chạy non-root trên cổng nội bộ `8080`, filesystem read-only và drop toàn bộ Linux capabilities trong production Compose. `recovery-metrics` chỉ đọc thư mục backup ở chế độ read-only và không nhận application secrets.
 
-## Maintenance
+## Observability and alerting
+
+Production observability gồm Prometheus, Alertmanager, Loki, Tempo, Alloy và Grafana. Alertmanager đọc webhook URL từ `ops/production/secrets/alert_webhook_url`; URL không nằm trong Git hoặc `.env.production`.
+
+```powershell
+npm run observability:config
+npm run observability:up
+npm run observability:smoke
+```
+
+Dashboard `Recovery Readiness` theo dõi backup RPO, off-site verification và tuổi restore drill. Alert critical phải được kiểm tra bằng receiver thật trước khi mở traffic production.
+
+## Maintenance and backup
 
 Chạy hằng ngày:
 
@@ -44,11 +58,22 @@ Chạy hằng ngày:
 ./ops/production/Backup-Postgres.ps1
 ```
 
+Backup chỉ được ghi nhận thành công sau khi SHA-256 khớp, `pg_restore --list` đọc được archive và (khi bật off-site) Restic upload + repository check hoàn tất. Trạng thái cuối cùng nằm ở `backup-last-success.json`.
+
 Windows dùng `Register-ScheduledTasks.ps1`. Linux dùng `cron.example` hoặc systemd timer.
 
-## Restore drill
+## Restore drill and recovery gate
 
-Thực hiện ít nhất mỗi tháng trên staging:
+Mặc định mục tiêu là backup không cũ hơn 26 giờ (`BACKUP_RPO_HOURS=26`) và restore drill không cũ hơn 8 ngày (`RESTORE_DRILL_MAX_AGE_DAYS=8`). Chạy restore drill ít nhất mỗi tuần:
+
+```powershell
+./ops/production/Test-PostgresRestoreDrill.ps1
+./ops/production/Test-RecoveryReadiness.ps1
+```
+
+Restore drill luôn lấy snapshot encrypted off-site, verify checksum/archive, restore vào PostgreSQL disposable và xác nhận Prisma migrations cùng các bảng `users`, `stories`, `chapters`, `outbox_events`.
+
+Khi phải restore production thật:
 
 ```powershell
 ./ops/production/Restore-Postgres.ps1 `
@@ -57,7 +82,7 @@ Thực hiện ít nhất mỗi tháng trên staging:
   -Confirm
 ```
 
-Sau restore phải chạy postdeploy gate và Auth smoke test.
+`Restore-Postgres.ps1` verify checksum/archive trước khi dừng API/worker và tạo safety backup mặc định trước thao tác destructive. Sau restore phải chạy postdeploy gate và Auth smoke test.
 
 ## Auth release checklist
 

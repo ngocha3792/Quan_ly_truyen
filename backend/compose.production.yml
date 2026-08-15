@@ -227,6 +227,49 @@ services:
 
     stop_grace_period: 15s
 
+  recovery-metrics:
+    image: ${BACKEND_IMAGE_NAME:?BACKEND_IMAGE_NAME is required}:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG must be the full source Git SHA}
+    command:
+      - node
+      - dist/healthcheck/recovery-metrics.js
+    restart: unless-stopped
+    environment:
+      RECOVERY_METRICS_PORT: '9464'
+      RECOVERY_BACKUP_STATUS_FILE: /backups/backup-last-success.json
+      RECOVERY_RESTORE_DRILL_STATUS_FILE: /backups/restore-drill/restore-drill-last-success.json
+      BACKUP_RPO_HOURS: ${BACKUP_RPO_HOURS:-26}
+      RESTORE_DRILL_MAX_AGE_DAYS: ${RESTORE_DRILL_MAX_AGE_DAYS:-8}
+      OFFSITE_BACKUP_ENABLED: ${OFFSITE_BACKUP_ENABLED:-false}
+    expose:
+      - '9464'
+    volumes:
+      - ${POSTGRES_BACKUP_DIRECTORY:-./backups}:/backups:ro
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: ${RECOVERY_METRICS_MEMORY_LIMIT:-128m}
+    cpus: ${RECOVERY_METRICS_CPU_LIMIT:-0.25}
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9464/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1));",
+        ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   caddy:
     image: ${CADDY_IMAGE:?CADDY_IMAGE is required}
 

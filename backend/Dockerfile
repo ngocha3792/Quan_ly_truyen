@@ -47,7 +47,8 @@ RUN npm run build \
     && npm run typecheck:scripts \
     && test -f dist/main.js \
     && test -f dist/worker.js \
-    && test -f dist/healthcheck/worker-heartbeat.healthcheck.js
+    && test -f dist/healthcheck/worker-heartbeat.healthcheck.js \
+    && test -f dist/healthcheck/recovery-metrics.js
 
 
 FROM dependencies AS production-dependencies

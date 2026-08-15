@@ -1,0 +1,62 @@
+{
+  "uid": "qlt-recovery",
+  "title": "Recovery Readiness",
+  "schemaVersion": 41,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Backup within RPO",
+      "targets": [
+        {
+          "expr": "qlt_backup_within_rpo"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Latest backup age (hours)",
+      "targets": [
+        {
+          "expr": "qlt_backup_age_seconds / 3600"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Off-site backup verified",
+      "targets": [
+        {
+          "expr": "qlt_backup_offsite_verified"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Restore drill current",
+      "targets": [
+        {
+          "expr": "qlt_restore_drill_within_objective"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Restore drill age (days)",
+      "targets": [
+        {
+          "expr": "qlt_restore_drill_age_seconds / 86400"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Recovery status file validity",
+      "targets": [
+        {
+          "expr": "qlt_recovery_status_file_valid"
+        }
+      ]
+    }
+  ]
+}

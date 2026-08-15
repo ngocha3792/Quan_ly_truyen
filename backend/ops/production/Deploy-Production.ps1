@@ -235,7 +235,7 @@ foreach (
 }
 
 Write-Host `
-  '[7/8] Starting API, worker, frontend and HTTPS edge...' `
+  '[7/8] Starting API, worker, recovery metrics, frontend and HTTPS edge...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose up `
@@ -243,6 +243,7 @@ Invoke-DockerCompose up `
   --wait `
   api `
   worker `
+  recovery-metrics `
   frontend `
   caddy
 

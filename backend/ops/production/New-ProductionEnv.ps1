@@ -44,6 +44,13 @@ param(
   [string]$ResticImage,
 
   [Parameter(Mandatory = $true)]
+  [string]$AlertmanagerImage,
+
+  [Parameter(Mandatory = $true)]
+  [ValidatePattern('^https://[^\s]+$')]
+  [string]$AlertWebhookUrl,
+
+  [Parameter(Mandatory = $true)]
   [string]$ResticRepository,
 
   [Parameter(Mandatory = $true)]
@@ -116,6 +123,7 @@ function Assert-PinnedContainerImage {
 Assert-ApplicationImageTag -Name 'BackendImageTag' -Value $BackendImageTag
 Assert-ApplicationImageTag -Name 'FrontendImageTag' -Value $FrontendImageTag
 Assert-PinnedContainerImage -Name 'ResticImage' -Value $ResticImage
+Assert-PinnedContainerImage -Name 'AlertmanagerImage' -Value $AlertmanagerImage
 
 if ($EnableDkim) {
   if ([string]::IsNullOrWhiteSpace($DkimDomain) -or
@@ -180,6 +188,7 @@ $MfaEncryptionKey = [Convert]::ToBase64String((New-RandomBytes -Count 32))
 $ResticRepositoryPassword = New-UrlSafeSecret -Bytes 64
 $RestoreDrillPostgresPassword = New-UrlSafeSecret -Bytes 48
 $ResticPasswordFile = Join-Path $SecretsDirectory 'restic_repository_password'
+$AlertWebhookFile = Join-Path $SecretsDirectory 'alert_webhook_url'
 
 $EncodedPostgresPassword = [Uri]::EscapeDataString($PostgresPassword)
 $EncodedRedisPassword = [Uri]::EscapeDataString($RedisPassword)
@@ -203,6 +212,7 @@ FRONTEND_NODE_IMAGE=node:24.18.0-alpine
 POSTGRES_IMAGE=postgres:17.10-alpine3.23
 REDIS_IMAGE=redis:7.4.10-alpine3.21
 CADDY_IMAGE=caddy:2.11.4-alpine
+ALERTMANAGER_IMAGE=$(Get-QuotedEnvValue $AlertmanagerImage)
 
 BACKEND_IMAGE_NAME=$(Get-QuotedEnvValue $BackendImageName)
 BACKEND_IMAGE_TAG=$(Get-QuotedEnvValue $BackendImageTag)
@@ -232,6 +242,14 @@ FRONTEND_CPU_LIMIT=0.50
 
 CADDY_MEMORY_LIMIT=256m
 CADDY_CPU_LIMIT=0.50
+
+RECOVERY_METRICS_MEMORY_LIMIT=128m
+RECOVERY_METRICS_CPU_LIMIT=0.25
+BACKUP_RPO_HOURS=26
+RESTORE_DRILL_MAX_AGE_DAYS=8
+
+ALERTMANAGER_MEMORY_LIMIT=256m
+ALERTMANAGER_CPU_LIMIT=0.25
 
 BACKUP_MEMORY_LIMIT=512m
 BACKUP_CPU_LIMIT=0.75
@@ -434,10 +452,16 @@ New-Item -ItemType Directory -Path $SecretsDirectory -Force | Out-Null
   $ResticRepositoryPassword + [Environment]::NewLine,
   [Text.UTF8Encoding]::new($false)
 )
+[IO.File]::WriteAllText(
+  $AlertWebhookFile,
+  (Assert-SingleLineValue $AlertWebhookUrl) + [Environment]::NewLine,
+  [Text.UTF8Encoding]::new($false)
+)
 
 Write-Host "Created: $OutputPath" -ForegroundColor Green
 Write-Host "Created: $MetricsTokenFile" -ForegroundColor Green
 Write-Host "Created: $ResticPasswordFile" -ForegroundColor Green
+Write-Host "Created: $AlertWebhookFile" -ForegroundColor Green
 Write-Host 'Store the Restic password separately from object-storage credentials. Losing it makes encrypted backups unrecoverable.' -ForegroundColor Yellow
 Write-Host 'Store both files securely. Never commit them.' -ForegroundColor Yellow
 Write-Host 'Next: npm run ci:check-env' -ForegroundColor Cyan

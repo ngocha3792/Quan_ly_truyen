@@ -71,3 +71,66 @@ groups:
             summary: Redis operations are failing,
             runbook_url: 'http://localhost:3001/d/qlt-infra/infrastructure',
           }
+      - alert: QuanLyTruyenDependencyUnhealthy
+        expr: qlt_dependency_health < 1
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: A required application dependency is unhealthy
+          runbook_url: http://localhost:3001/d/qlt-infra/infrastructure
+      - alert: QuanLyTruyenQueueWorkerMissing
+        expr: sum(qlt_queue_workers) < 1
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: No queue worker is reporting as active
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenQueueBacklogStale
+        expr: max(qlt_queue_oldest_waiting_age_seconds) > 300
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: A queue has been waiting more than five minutes
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenBackupStatusMissing
+        expr: qlt_recovery_status_file_valid{kind="backup"} != 1
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: PostgreSQL backup status is missing or invalid
+          runbook_url: http://localhost:3001/d/qlt-recovery/recovery-readiness
+      - alert: QuanLyTruyenBackupRpoViolated
+        expr: qlt_backup_within_rpo != 1
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: The latest PostgreSQL backup is outside the configured RPO
+          runbook_url: http://localhost:3001/d/qlt-recovery/recovery-readiness
+      - alert: QuanLyTruyenOffsiteBackupNotVerified
+        expr: qlt_backup_offsite_required == 1 and qlt_backup_offsite_verified != 1
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: The latest required off-site backup was not verified
+          runbook_url: http://localhost:3001/d/qlt-recovery/recovery-readiness
+      - alert: QuanLyTruyenRestoreDrillStale
+        expr: qlt_restore_drill_within_objective != 1
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: The restore drill is missing or older than the configured objective
+          runbook_url: http://localhost:3001/d/qlt-recovery/recovery-readiness
+      - alert: QuanLyTruyenObservabilityComponentUnavailable
+        expr: up{job=~"quan-ly-truyen-(alertmanager|loki|tempo|alloy)"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: An observability component is unavailable
+          runbook_url: http://localhost:3001
+      - alert: QuanLyTruyenRecoveryExporterUnavailable
+        expr: up{job="quan-ly-truyen-recovery"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Recovery readiness metrics are unavailable
+          runbook_url: http://localhost:3001/d/qlt-recovery/recovery-readiness

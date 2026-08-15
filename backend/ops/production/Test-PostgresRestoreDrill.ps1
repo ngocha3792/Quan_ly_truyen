@@ -114,6 +114,26 @@ if (
 }
 
 
+$BackupDirectoryValue =
+  Get-EnvValue `
+    -Name 'POSTGRES_BACKUP_DIRECTORY'
+
+if ([string]::IsNullOrWhiteSpace($BackupDirectoryValue)) {
+  $BackupDirectoryValue = './backups'
+}
+
+$BackupDirectory =
+  if ([IO.Path]::IsPathRooted($BackupDirectoryValue)) {
+    $BackupDirectoryValue
+  } else {
+    Join-Path $BackendRoot $BackupDirectoryValue
+  }
+
+$RestoreDrillRoot =
+  Join-Path `
+    $BackupDirectory `
+    'restore-drill'
+
 $Timestamp =
   [DateTime]::UtcNow.ToString(
     'yyyyMMddTHHmmssZ'
@@ -121,8 +141,8 @@ $Timestamp =
 
 $RestoreRoot =
   Join-Path `
-    $BackendRoot `
-    "backups/restore-drill/$Timestamp"
+    $RestoreDrillRoot `
+    $Timestamp
 
 New-Item `
   -ItemType Directory `
@@ -224,6 +244,11 @@ try {
     'Off-host backup SHA-256 verification passed.' `
     -ForegroundColor Green
 
+  & (Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1') `
+    -BackupFile $Dump.FullName `
+    -SkipAgeCheck |
+  Out-Null
+
 
   # ----------------------------------------------------------
   # 3. Start disposable PostgreSQL
@@ -278,6 +303,40 @@ try {
     'Running restored database sanity checks...' `
     -ForegroundColor Cyan
 
+  $SanitySql = @'
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM "_prisma_migrations"
+    WHERE finished_at IS NOT NULL
+      AND rolled_back_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'No successful Prisma migrations were restored';
+  END IF;
+
+  IF to_regclass('public.users') IS NULL
+     OR to_regclass('public.stories') IS NULL
+     OR to_regclass('public.chapters') IS NULL
+     OR to_regclass('public.outbox_events') IS NULL THEN
+    RAISE EXCEPTION 'One or more critical application tables are missing';
+  END IF;
+END
+$$;
+
+SELECT json_build_object(
+  'users', (SELECT COUNT(*) FROM users),
+  'stories', (SELECT COUNT(*) FROM stories),
+  'chapters', (SELECT COUNT(*) FROM chapters),
+  'migrations', (
+    SELECT COUNT(*)
+    FROM "_prisma_migrations"
+    WHERE finished_at IS NOT NULL
+      AND rolled_back_at IS NULL
+  )
+);
+'@
+
   & docker compose `
     --env-file .env.production `
     -f compose.production.yml `
@@ -295,7 +354,7 @@ try {
     --no-align `
     --tuples-only `
     --set ON_ERROR_STOP=1 `
-    --command 'SELECT COUNT(*) FROM "_prisma_migrations";'
+    --command $SanitySql
 
   if ($LASTEXITCODE -ne 0) {
     throw (
@@ -303,6 +362,37 @@ try {
     )
   }
 
+
+  New-Item `
+    -ItemType Directory `
+    -Path $RestoreDrillRoot `
+    -Force |
+  Out-Null
+
+  $RestoreStatus = [ordered]@{
+    version = 1
+    completedAt = [DateTime]::UtcNow.ToString('o')
+    dumpFile = $Dump.Name
+    source = 'offsite-restic'
+    sha256 = $ActualHash
+  }
+
+  $RestoreStatusPath =
+    Join-Path $RestoreDrillRoot 'restore-drill-last-success.json'
+
+  $RestoreStatusJson = $RestoreStatus | ConvertTo-Json
+  $TemporaryRestoreStatusPath = "$RestoreStatusPath.tmp"
+
+  [IO.File]::WriteAllText(
+    $TemporaryRestoreStatusPath,
+    $RestoreStatusJson + [Environment]::NewLine,
+    [Text.UTF8Encoding]::new($false)
+  )
+
+  Move-Item `
+    -LiteralPath $TemporaryRestoreStatusPath `
+    -Destination $RestoreStatusPath `
+    -Force
 
   Write-Host (
     "RESTORE DRILL PASSED: {0}" -f

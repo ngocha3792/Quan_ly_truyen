@@ -45,7 +45,7 @@ OpenTelemetry is started by dynamic import in `main.ts`/`worker.ts` before impor
 
 ## Dashboards and alerts
 
-Provisioned dashboards are API Overview, Queue and Outbox, and Infrastructure. Alerts cover API unavailable, minimum-traffic 5xx ratio, P95 latency, stuck/failed outbox, mail failures, stuck Cloudinary webhook inbox, and Redis errors. Each alert links to the relevant operational dashboard. Treat thresholds as initial local baselines and tune them from production observations before defining SLOs.
+Provisioned dashboards are API Overview, Queue and Outbox, Infrastructure, and Recovery Readiness. Prometheus sends alerts to Alertmanager; production Alertmanager reads its HTTPS receiver URL from the ignored `ops/production/secrets/alert_webhook_url` file. Alerts cover API/dependency availability, 5xx ratio, P95 latency, queue/worker health, outbox/mail/webhook/Redis failures, observability component availability, backup RPO, encrypted off-site verification, and restore-drill freshness. Each alert links to the relevant operational dashboard. Treat latency/error thresholds as initial baselines and tune them from production observations before defining SLOs.
 
 ## Version-specific API notes
 
@@ -57,3 +57,5 @@ This implementation follows installed APIs rather than older snippets: OpenTelem
 - No traces: verify Alloy on ports 4317/4318 and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces`.
 - No host-process logs in Loki: Alloy discovers Docker containers. Run the backend in Docker or configure an environment-specific stdout collector; never add a Loki HTTP call to application code.
 - Collector unavailable: business traffic should continue; inspect `telemetry.bootstrap.failed` and collector health.
+- Recovery dashboard red: inspect `backup-last-success.json` and `restore-drill/restore-drill-last-success.json`, then run `Test-RecoveryReadiness.ps1`.
+- Alerts visible in Prometheus but no notification delivered: verify Alertmanager status and the ignored webhook secret file; never place the webhook URL in Git.

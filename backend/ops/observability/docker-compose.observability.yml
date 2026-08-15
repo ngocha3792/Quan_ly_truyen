@@ -7,6 +7,25 @@ x-default-logging: &default-logging
     max-file: '5'
 
 services:
+  alertmanager:
+    image: ${ALERTMANAGER_IMAGE:?ALERTMANAGER_IMAGE is required}
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../production/secrets/alert_webhook_url:/run/secrets/alert_webhook_url:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - '127.0.0.1:9093:9093'
+    networks:
+      - observability
+    restart: unless-stopped
+    mem_limit: ${ALERTMANAGER_MEMORY_LIMIT:-256m}
+    cpus: ${ALERTMANAGER_CPU_LIMIT:-0.25}
+    pids_limit: 128
+    logging: *default-logging
+
   prometheus:
     image: prom/prometheus:v3.10.0
     command:
@@ -22,6 +41,8 @@ services:
     networks:
       - observability
       - backend
+    depends_on:
+      - alertmanager
     restart: unless-stopped
     mem_limit: ${PROMETHEUS_MEMORY_LIMIT:-768m}
     cpus: ${PROMETHEUS_CPU_LIMIT:-0.75}
@@ -118,6 +139,7 @@ networks:
     name: quan-ly-truyen-production-backend
 
 volumes:
+  alertmanager-data:
   prometheus-data:
   loki-data:
   tempo-data:

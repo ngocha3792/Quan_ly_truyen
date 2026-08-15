@@ -149,6 +149,7 @@ jobs:
           test -s dist/main.js
           test -s dist/worker.js
           test -s dist/healthcheck/worker-heartbeat.healthcheck.js
+          test -s dist/healthcheck/recovery-metrics.js
 
       - name: Critical module unit coverage gates
         run: npm run test:critical:unit:cov
@@ -310,6 +311,11 @@ jobs:
             --env-file ops/production/compose.validation.env.example \
             -f compose.production.yml \
             -f compose.production.build.yml \
+            config --quiet
+
+          docker compose \
+            --env-file ops/production/compose.validation.env.example \
+            -f ops/observability/docker-compose.observability.yml \
             config --quiet
 
           if grep -RInE '(^|[[:space:]])image:[[:space:]].*:latest([[:space:]]|$|[}])' \

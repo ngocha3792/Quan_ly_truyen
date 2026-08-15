@@ -82,7 +82,7 @@
     "docker:prod:build:no-cache": "docker compose --env-file .env.production -f compose.production.yml -f compose.production.build.yml build --no-cache",
     "docker:prod:down": "docker compose --env-file .env.production -f compose.production.yml down --remove-orphans",
     "docker:prod:ps": "docker compose --env-file .env.production -f compose.production.yml ps -a",
-    "docker:prod:logs": "docker compose --env-file .env.production -f compose.production.yml logs -f api worker frontend caddy",
+    "docker:prod:logs": "docker compose --env-file .env.production -f compose.production.yml logs -f api worker recovery-metrics frontend caddy",
     "docker:prod:migrate": "docker compose --env-file .env.production -f compose.production.yml run --rm migrate",
     "docker:prod:seed": "docker compose --env-file .env.production -f compose.production.yml --profile tools run --rm seed",
     "lint:check": "eslint \"{src,scripts,test}/**/*.ts\" --max-warnings=0",
@@ -105,7 +105,11 @@
     "observability:config": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml config",
     "db:seed:e2e:all": "npm run db:seed && npm run db:seed:e2e && npm run db:seed:e2e:admin && npm run db:seed:e2e:stories",
     "test:e2e:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
-    "docker:prod:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f compose.production.yml -f compose.production.build.yml config --quiet"
+    "docker:prod:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f compose.production.yml -f compose.production.build.yml config --quiet",
+    "docker:prod:backup:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-PostgresBackupArtifact.ps1",
+    "docker:prod:recovery-check": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-RecoveryReadiness.ps1",
+    "observability:logs": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml logs -f prometheus alertmanager loki tempo alloy grafana",
+    "observability:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f ops/observability/docker-compose.observability.yml config --quiet"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

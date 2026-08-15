@@ -163,10 +163,52 @@ if (
   )
 }
 
+$Verification = & (
+  Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1'
+) `
+  -BackupFile $LatestDump.FullName `
+  -MaxAgeHours 2
+
 Write-Host (
-  "Local backup verified: {0}" -f
-  $LatestDump.Name
+  "Local backup verified: {0} ({1} bytes)" -f
+  $LatestDump.Name,
+  $Verification.SizeBytes
 ) -ForegroundColor Green
+
+function Write-BackupStatus {
+  param(
+    [Parameter(Mandatory = $true)]
+    [bool]$OffsiteVerified
+  )
+
+  $StatusPath =
+    Join-Path `
+      $BackupDirectory `
+      'backup-last-success.json'
+
+  $Status = [ordered]@{
+    version = 1
+    completedAt = [DateTime]::UtcNow.ToString('o')
+    dumpFile = $LatestDump.Name
+    sizeBytes = [long]$Verification.SizeBytes
+    sha256 = [string]$Verification.Sha256
+    offsiteVerified = $OffsiteVerified
+  }
+
+  $StatusJson = $Status | ConvertTo-Json
+  $TemporaryStatusPath = "$StatusPath.tmp"
+
+  [IO.File]::WriteAllText(
+    $TemporaryStatusPath,
+    $StatusJson + [Environment]::NewLine,
+    [Text.UTF8Encoding]::new($false)
+  )
+
+  Move-Item `
+    -LiteralPath $TemporaryStatusPath `
+    -Destination $StatusPath `
+    -Force
+}
 
 
 # ------------------------------------------------------------
@@ -180,11 +222,13 @@ $OffsiteEnabled =
 if (
   $OffsiteEnabled -ne 'true'
 ) {
+  Write-BackupStatus -OffsiteVerified $false
+
   Write-Host `
     'Off-site backup is disabled. Local PostgreSQL backup completed.' `
     -ForegroundColor Yellow
 
-  exit 0
+  return
 }
 
 $ResticImage =
@@ -331,6 +375,8 @@ Invoke-Compose `
   --no-deps `
   backup-offsite `
   check
+
+Write-BackupStatus -OffsiteVerified $true
 
 
 Write-Host `

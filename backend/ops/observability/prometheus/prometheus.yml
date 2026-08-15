@@ -5,6 +5,12 @@ global:
 rule_files:
   - /etc/prometheus/alerts.yml
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
 scrape_configs:
   - job_name: quan-ly-truyen-api
     metrics_path: /internal/metrics
@@ -14,3 +20,29 @@ scrape_configs:
     static_configs:
       - targets:
           - api:3000
+
+  - job_name: quan-ly-truyen-recovery
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - recovery-metrics:9464
+
+  - job_name: quan-ly-truyen-alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+
+  - job_name: quan-ly-truyen-loki
+    static_configs:
+      - targets:
+          - loki:3100
+
+  - job_name: quan-ly-truyen-tempo
+    static_configs:
+      - targets:
+          - tempo:3200
+
+  - job_name: quan-ly-truyen-alloy
+    static_configs:
+      - targets:
+          - alloy:12345

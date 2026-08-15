@@ -41,6 +41,13 @@ if ($ConfirmDatabaseName -cne $DatabaseName) {
   throw "Confirmation mismatch. Expected database name: $DatabaseName"
 }
 
+Write-Host 'Validating backup checksum and archive structure...' -ForegroundColor Cyan
+
+& (Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1') `
+  -BackupFile $ResolvedBackup `
+  -SkipAgeCheck |
+Out-Null
+
 if (-not $PSCmdlet.ShouldProcess($DatabaseName, "Restore from $ResolvedBackup")) {
   return
 }
