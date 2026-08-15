@@ -7,6 +7,7 @@ import {
   ContentFormat,
   Prisma,
   StoryStatus,
+  StoryVisibility,
 } from '@/generated/prisma/client';
 import { slugify } from '@/common/utils';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
@@ -14,6 +15,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import type {
   ChapterPersistencePort,
   ChapterRecord,
+  PublicChapterReaderDto,
   CreateAuthorChapterInput,
   CreateAuthorChapterResult,
   DeleteAuthorChapterInput,
@@ -47,6 +49,50 @@ const CHAPTER_SELECT = {
 type ChapterRow = Prisma.ChapterGetPayload<{
   select: typeof CHAPTER_SELECT;
 }>;
+
+const PUBLIC_CHAPTER_READER_SELECT = {
+  id: true,
+  storyId: true,
+  number: true,
+  title: true,
+  slug: true,
+  content: true,
+  contentFormat: true,
+  wordCount: true,
+  viewCount: true,
+  commentCount: true,
+  publishedAt: true,
+  updatedAt: true,
+  story: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+    },
+  },
+} satisfies Prisma.ChapterSelect;
+
+type PublicChapterReaderRow = Prisma.ChapterGetPayload<{
+  select: typeof PUBLIC_CHAPTER_READER_SELECT;
+}>;
+
+const PUBLIC_CHAPTER_NAVIGATION_SELECT = {
+  id: true,
+  number: true,
+  title: true,
+  slug: true,
+  publishedAt: true,
+} satisfies Prisma.ChapterSelect;
+
+type PublicChapterNavigationRow = Prisma.ChapterGetPayload<{
+  select: typeof PUBLIC_CHAPTER_NAVIGATION_SELECT;
+}>;
+
+const PUBLIC_STORY_STATUSES = [
+  StoryStatus.PUBLISHED,
+  StoryStatus.HIATUS,
+  StoryStatus.COMPLETED,
+] as const;
 
 @Injectable()
 export class PrismaChapterPersistence implements ChapterPersistencePort {
@@ -520,6 +566,96 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
   }
 
+  async findPublicReader(
+    storySlug: string,
+    chapterNumber: string,
+  ): Promise<PublicChapterReaderDto | null> {
+    try {
+      const chapter = await this.prisma.chapter.findFirst({
+        where: {
+          number: chapterNumber,
+          status: ChapterStatus.PUBLISHED,
+          deletedAt: null,
+          publishedAt: {
+            not: null,
+          },
+          story: {
+            slug: storySlug,
+            deletedAt: null,
+            visibility: StoryVisibility.PUBLIC,
+            status: {
+              in: [...PUBLIC_STORY_STATUSES],
+            },
+          },
+        },
+        select: PUBLIC_CHAPTER_READER_SELECT,
+      });
+
+      if (!chapter?.publishedAt) {
+        return null;
+      }
+
+      const publicStoryWhere = {
+        deletedAt: null,
+        visibility: StoryVisibility.PUBLIC,
+        status: {
+          in: [...PUBLIC_STORY_STATUSES],
+        },
+      } satisfies Prisma.StoryWhereInput;
+
+      const [previous, next] = await Promise.all([
+        this.prisma.chapter.findFirst({
+          where: {
+            storyId: chapter.storyId,
+            number: {
+              lt: chapter.number,
+            },
+            status: ChapterStatus.PUBLISHED,
+            deletedAt: null,
+            publishedAt: {
+              not: null,
+            },
+            story: publicStoryWhere,
+          },
+          orderBy: {
+            number: 'desc',
+          },
+          select: PUBLIC_CHAPTER_NAVIGATION_SELECT,
+        }),
+        this.prisma.chapter.findFirst({
+          where: {
+            storyId: chapter.storyId,
+            number: {
+              gt: chapter.number,
+            },
+            status: ChapterStatus.PUBLISHED,
+            deletedAt: null,
+            publishedAt: {
+              not: null,
+            },
+            story: publicStoryWhere,
+          },
+          orderBy: {
+            number: 'asc',
+          },
+          select: PUBLIC_CHAPTER_NAVIGATION_SELECT,
+        }),
+      ]);
+
+      return toPublicChapterReaderDto(
+        chapter,
+        previous,
+        next,
+        chapter.publishedAt,
+      );
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'public-chapter-reader',
+        resource: 'Chương',
+      });
+    }
+  }
+
   private toRecord(chapter: ChapterRow): ChapterRecord {
     return {
       id: chapter.id,
@@ -592,6 +728,65 @@ async function lockChapterRow(
   `);
 
   return rows.length === 1;
+}
+
+function toPublicChapterReaderDto(
+  chapter: PublicChapterReaderRow,
+  previous: PublicChapterNavigationRow | null,
+  next: PublicChapterNavigationRow | null,
+  publishedAt: Date,
+): PublicChapterReaderDto {
+  return {
+    story: {
+      id: chapter.story.id,
+      slug: chapter.story.slug,
+      title: chapter.story.title,
+    },
+    chapter: {
+      id: chapter.id,
+      number: chapter.number.toNumber(),
+      title: chapter.title,
+      slug: chapter.slug,
+      content: chapter.content,
+      contentFormat: chapter.contentFormat,
+      wordCount: chapter.wordCount,
+      views: bigintToSafeNumber(chapter.viewCount),
+      comments: chapter.commentCount,
+      publishedAt,
+      updatedAt: chapter.updatedAt,
+    },
+    navigation: {
+      previous: toPublicChapterNavigation(previous),
+      next: toPublicChapterNavigation(next),
+    },
+  };
+}
+
+function toPublicChapterNavigation(
+  chapter: PublicChapterNavigationRow | null,
+): PublicChapterReaderDto['navigation']['previous'] {
+  if (!chapter?.publishedAt) {
+    return null;
+  }
+
+  return {
+    id: chapter.id,
+    number: chapter.number.toNumber(),
+    title: chapter.title,
+    slug: chapter.slug,
+    publishedAt: chapter.publishedAt,
+  };
+}
+
+function bigintToSafeNumber(value: bigint): number {
+  const max = BigInt(Number.MAX_SAFE_INTEGER);
+  if (value > max) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  if (value < -max) {
+    return -Number.MAX_SAFE_INTEGER;
+  }
+  return Number(value);
 }
 
 function createChapterSlug(number: number, title: string): string {

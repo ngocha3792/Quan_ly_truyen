@@ -1,3 +1,4 @@
+import type { PublicChapterReaderDto } from '../dto';
 import type { StoryAuditContext } from './story.persistence.port';
 
 export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
@@ -172,4 +173,9 @@ export interface ChapterPersistencePort {
   publish(
     input: PublishAuthorChapterInput,
   ): Promise<PublishAuthorChapterResult>;
+
+  findPublicReader(
+    storySlug: string,
+    chapterNumber: string,
+  ): Promise<PublicChapterReaderDto | null>;
 }

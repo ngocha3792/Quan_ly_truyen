@@ -3,6 +3,8 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Public } from '@/common/decorators';
 
 import {
+  GetPublicChapterReaderQuery,
+  GetPublicChapterReaderQueryHandler,
   GetPublicStoryDetailQuery,
   GetPublicStoryDetailQueryHandler,
   ListPublicStoriesQuery,
@@ -10,8 +12,10 @@ import {
 } from '../../../application';
 import { ListPublicStoriesRequest } from '../requests';
 import {
+  type PublicChapterReaderResponse,
   type PublicStoryPageResponse,
   type PublicStoryResponse,
+  toPublicChapterReaderResponse,
   toPublicStoryPageResponse,
   toPublicStoryResponse,
 } from '../responses';
@@ -22,6 +26,7 @@ export class PublicStoriesController {
   constructor(
     private readonly listStories: ListPublicStoriesQueryHandler,
     private readonly getStoryDetail: GetPublicStoryDetailQueryHandler,
+    private readonly getChapterReader: GetPublicChapterReaderQueryHandler,
   ) {}
 
   @Get()
@@ -42,6 +47,18 @@ export class PublicStoriesController {
     );
 
     return toPublicStoryPageResponse(result);
+  }
+
+  @Get(':storySlug/chapters/:chapterNumber')
+  async chapterReader(
+    @Param('storySlug') storySlug: string,
+    @Param('chapterNumber') chapterNumber: string,
+  ): Promise<PublicChapterReaderResponse> {
+    const result = await this.getChapterReader.execute(
+      new GetPublicChapterReaderQuery(storySlug, chapterNumber),
+    );
+
+    return toPublicChapterReaderResponse(result);
   }
 
   @Get(':slug')

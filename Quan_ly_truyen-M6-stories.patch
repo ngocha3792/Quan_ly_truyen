@@ -1,0 +1,606 @@
+diff --git a/backend/src/modules/stories/application/dto/index.ts b/backend/src/modules/stories/application/dto/index.ts
+index 57ebcdc..219f4d3 100644
+--- a/backend/src/modules/stories/application/dto/index.ts
++++ b/backend/src/modules/stories/application/dto/index.ts
+@@ -2,3 +2,4 @@ export * from './chapter-result.dto';
+ export * from './story-result.dto';
+ export * from './story-taxonomy-result.dto';
+ export * from './public-story-result.dto';
++export * from './public-chapter-reader-result.dto';
+diff --git a/backend/src/modules/stories/application/dto/public-chapter-reader-result.dto.ts b/backend/src/modules/stories/application/dto/public-chapter-reader-result.dto.ts
+new file mode 100644
+index 0000000..acff253
+--- /dev/null
++++ b/backend/src/modules/stories/application/dto/public-chapter-reader-result.dto.ts
+@@ -0,0 +1,36 @@
++export interface PublicChapterReaderStoryDto {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++}
++
++export interface PublicChapterNavigationDto {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly publishedAt: Date;
++}
++
++export interface PublicChapterReaderChapterDto {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly content: string;
++  readonly contentFormat: string;
++  readonly wordCount: number;
++  readonly views: number;
++  readonly comments: number;
++  readonly publishedAt: Date;
++  readonly updatedAt: Date;
++}
++
++export interface PublicChapterReaderDto {
++  readonly story: PublicChapterReaderStoryDto;
++  readonly chapter: PublicChapterReaderChapterDto;
++  readonly navigation: {
++    readonly previous: PublicChapterNavigationDto | null;
++    readonly next: PublicChapterNavigationDto | null;
++  };
++}
+diff --git a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+index fbbdb89..9d86d36 100644
+--- a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
++++ b/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+@@ -1,3 +1,4 @@
++import type { PublicChapterReaderDto } from '../dto';
+ import type { StoryAuditContext } from './story.persistence.port';
+ 
+ export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
+@@ -172,4 +173,9 @@ export interface ChapterPersistencePort {
+   publish(
+     input: PublishAuthorChapterInput,
+   ): Promise<PublishAuthorChapterResult>;
++
++  findPublicReader(
++    storySlug: string,
++    chapterNumber: string,
++  ): Promise<PublicChapterReaderDto | null>;
+ }
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts
+new file mode 100644
+index 0000000..31e5535
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts
+@@ -0,0 +1,48 @@
++import {
++  ChapterNotFoundException,
++  InvalidChapterFieldException,
++} from '../../../domain';
++
++import { GetPublicChapterReaderQuery } from './get-public-chapter-reader.query';
++import { GetPublicChapterReaderQueryHandler } from './get-public-chapter-reader.query-handler';
++
++describe('GetPublicChapterReaderQueryHandler', () => {
++  let persistence: { findPublicReader: jest.Mock };
++  let handler: GetPublicChapterReaderQueryHandler;
++
++  beforeEach(() => {
++    persistence = { findPublicReader: jest.fn() };
++    handler = new GetPublicChapterReaderQueryHandler(persistence as never);
++  });
++
++  it('normalize story slug và hỗ trợ chapter number thập phân', async () => {
++    const reader = { chapter: { id: 'chapter-id' } };
++    persistence.findPublicReader.mockResolvedValue(reader);
++
++    const result = await handler.execute(
++      new GetPublicChapterReaderQuery('  Truyen-Moi  ', ' 1.50 '),
++    );
++
++    expect(persistence.findPublicReader).toHaveBeenCalledWith(
++      'truyen-moi',
++      '1.50',
++    );
++    expect(result).toBe(reader);
++  });
++
++  it('reject chapter number sai định dạng trước khi query database', async () => {
++    await expect(
++      handler.execute(new GetPublicChapterReaderQuery('truyen-moi', '1.234')),
++    ).rejects.toBeInstanceOf(InvalidChapterFieldException);
++
++    expect(persistence.findPublicReader).not.toHaveBeenCalled();
++  });
++
++  it('trả CHAPTER_NOT_FOUND khi chapter không public hoặc không tồn tại', async () => {
++    persistence.findPublicReader.mockResolvedValue(null);
++
++    await expect(
++      handler.execute(new GetPublicChapterReaderQuery('truyen-moi', '12')),
++    ).rejects.toBeInstanceOf(ChapterNotFoundException);
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts
+new file mode 100644
+index 0000000..1c36bd2
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts
+@@ -0,0 +1,60 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import type { PublicChapterReaderDto } from '../../dto';
++import {
++  CHAPTER_PERSISTENCE_PORT,
++  type ChapterPersistencePort,
++} from '../../ports';
++import {
++  ChapterNotFoundException,
++  InvalidChapterFieldException,
++} from '../../../domain';
++import { GetPublicChapterReaderQuery } from './get-public-chapter-reader.query';
++
++const CHAPTER_NUMBER_PATTERN = /^\d{1,8}(?:\.\d{1,2})?$/;
++
++@Injectable()
++export class GetPublicChapterReaderQueryHandler {
++  constructor(
++    @Inject(CHAPTER_PERSISTENCE_PORT)
++    private readonly persistence: ChapterPersistencePort,
++  ) {}
++
++  async execute(
++    query: GetPublicChapterReaderQuery,
++  ): Promise<PublicChapterReaderDto> {
++    const storySlug = query.storySlug.trim().toLowerCase();
++
++    if (!storySlug) {
++      throw new ChapterNotFoundException();
++    }
++
++    const chapterNumber = validateChapterNumber(query.chapterNumber);
++
++    const result = await this.persistence.findPublicReader(
++      storySlug,
++      chapterNumber,
++    );
++
++    if (!result) {
++      throw new ChapterNotFoundException(
++        query.chapterNumber.trim() || undefined,
++      );
++    }
++
++    return result;
++  }
++}
++
++function validateChapterNumber(value: string): string {
++  const normalized = value.trim();
++
++  if (!CHAPTER_NUMBER_PATTERN.test(normalized)) {
++    throw new InvalidChapterFieldException(
++      'chapterNumber',
++      'Số chương không hợp lệ',
++    );
++  }
++
++  return normalized;
++}
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts
+new file mode 100644
+index 0000000..563f025
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts
+@@ -0,0 +1,6 @@
++export class GetPublicChapterReaderQuery {
++  constructor(
++    readonly storySlug: string,
++    readonly chapterNumber: string,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/index.ts b/backend/src/modules/stories/application/queries/get-public-chapter-reader/index.ts
+new file mode 100644
+index 0000000..1781862
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-chapter-reader/index.ts
+@@ -0,0 +1,2 @@
++export * from './get-public-chapter-reader.query';
++export * from './get-public-chapter-reader.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/index.ts b/backend/src/modules/stories/application/queries/index.ts
+index 0ec8182..947fa2f 100644
+--- a/backend/src/modules/stories/application/queries/index.ts
++++ b/backend/src/modules/stories/application/queries/index.ts
+@@ -2,3 +2,4 @@ export * from './get-public-story-detail';
+ export * from './list-public-stories';
+ export * from './list-story-categories';
+ export * from './list-story-tags';
++export * from './get-public-chapter-reader';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+index 24d0b78..adbbeb6 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+@@ -7,6 +7,7 @@ import {
+   ContentFormat,
+   Prisma,
+   StoryStatus,
++  StoryVisibility,
+ } from '@/generated/prisma/client';
+ import { slugify } from '@/common/utils';
+ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+@@ -14,6 +15,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+ import type {
+   ChapterPersistencePort,
+   ChapterRecord,
++  PublicChapterReaderDto,
+   CreateAuthorChapterInput,
+   CreateAuthorChapterResult,
+   DeleteAuthorChapterInput,
+@@ -48,6 +50,50 @@ type ChapterRow = Prisma.ChapterGetPayload<{
+   select: typeof CHAPTER_SELECT;
+ }>;
+ 
++const PUBLIC_CHAPTER_READER_SELECT = {
++  id: true,
++  storyId: true,
++  number: true,
++  title: true,
++  slug: true,
++  content: true,
++  contentFormat: true,
++  wordCount: true,
++  viewCount: true,
++  commentCount: true,
++  publishedAt: true,
++  updatedAt: true,
++  story: {
++    select: {
++      id: true,
++      slug: true,
++      title: true,
++    },
++  },
++} satisfies Prisma.ChapterSelect;
++
++type PublicChapterReaderRow = Prisma.ChapterGetPayload<{
++  select: typeof PUBLIC_CHAPTER_READER_SELECT;
++}>;
++
++const PUBLIC_CHAPTER_NAVIGATION_SELECT = {
++  id: true,
++  number: true,
++  title: true,
++  slug: true,
++  publishedAt: true,
++} satisfies Prisma.ChapterSelect;
++
++type PublicChapterNavigationRow = Prisma.ChapterGetPayload<{
++  select: typeof PUBLIC_CHAPTER_NAVIGATION_SELECT;
++}>;
++
++const PUBLIC_STORY_STATUSES = [
++  StoryStatus.PUBLISHED,
++  StoryStatus.HIATUS,
++  StoryStatus.COMPLETED,
++] as const;
++
+ @Injectable()
+ export class PrismaChapterPersistence implements ChapterPersistencePort {
+   constructor(private readonly prisma: PrismaService) { }
+@@ -520,6 +566,96 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
+     }
+   }
+ 
++  async findPublicReader(
++    storySlug: string,
++    chapterNumber: string,
++  ): Promise<PublicChapterReaderDto | null> {
++    try {
++      const chapter = await this.prisma.chapter.findFirst({
++        where: {
++          number: chapterNumber,
++          status: ChapterStatus.PUBLISHED,
++          deletedAt: null,
++          publishedAt: {
++            not: null,
++          },
++          story: {
++            slug: storySlug,
++            deletedAt: null,
++            visibility: StoryVisibility.PUBLIC,
++            status: {
++              in: [...PUBLIC_STORY_STATUSES],
++            },
++          },
++        },
++        select: PUBLIC_CHAPTER_READER_SELECT,
++      });
++
++      if (!chapter?.publishedAt) {
++        return null;
++      }
++
++      const publicStoryWhere = {
++        deletedAt: null,
++        visibility: StoryVisibility.PUBLIC,
++        status: {
++          in: [...PUBLIC_STORY_STATUSES],
++        },
++      } satisfies Prisma.StoryWhereInput;
++
++      const [previous, next] = await Promise.all([
++        this.prisma.chapter.findFirst({
++          where: {
++            storyId: chapter.storyId,
++            number: {
++              lt: chapter.number,
++            },
++            status: ChapterStatus.PUBLISHED,
++            deletedAt: null,
++            publishedAt: {
++              not: null,
++            },
++            story: publicStoryWhere,
++          },
++          orderBy: {
++            number: 'desc',
++          },
++          select: PUBLIC_CHAPTER_NAVIGATION_SELECT,
++        }),
++        this.prisma.chapter.findFirst({
++          where: {
++            storyId: chapter.storyId,
++            number: {
++              gt: chapter.number,
++            },
++            status: ChapterStatus.PUBLISHED,
++            deletedAt: null,
++            publishedAt: {
++              not: null,
++            },
++            story: publicStoryWhere,
++          },
++          orderBy: {
++            number: 'asc',
++          },
++          select: PUBLIC_CHAPTER_NAVIGATION_SELECT,
++        }),
++      ]);
++
++      return toPublicChapterReaderDto(
++        chapter,
++        previous,
++        next,
++        chapter.publishedAt,
++      );
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'public-chapter-reader',
++        resource: 'Chương',
++      });
++    }
++  }
++
+   private toRecord(chapter: ChapterRow): ChapterRecord {
+     return {
+       id: chapter.id,
+@@ -594,6 +730,65 @@ async function lockChapterRow(
+   return rows.length === 1;
+ }
+ 
++function toPublicChapterReaderDto(
++  chapter: PublicChapterReaderRow,
++  previous: PublicChapterNavigationRow | null,
++  next: PublicChapterNavigationRow | null,
++  publishedAt: Date,
++): PublicChapterReaderDto {
++  return {
++    story: {
++      id: chapter.story.id,
++      slug: chapter.story.slug,
++      title: chapter.story.title,
++    },
++    chapter: {
++      id: chapter.id,
++      number: chapter.number.toNumber(),
++      title: chapter.title,
++      slug: chapter.slug,
++      content: chapter.content,
++      contentFormat: chapter.contentFormat,
++      wordCount: chapter.wordCount,
++      views: bigintToSafeNumber(chapter.viewCount),
++      comments: chapter.commentCount,
++      publishedAt,
++      updatedAt: chapter.updatedAt,
++    },
++    navigation: {
++      previous: toPublicChapterNavigation(previous),
++      next: toPublicChapterNavigation(next),
++    },
++  };
++}
++
++function toPublicChapterNavigation(
++  chapter: PublicChapterNavigationRow | null,
++): PublicChapterReaderDto['navigation']['previous'] {
++  if (!chapter?.publishedAt) {
++    return null;
++  }
++
++  return {
++    id: chapter.id,
++    number: chapter.number.toNumber(),
++    title: chapter.title,
++    slug: chapter.slug,
++    publishedAt: chapter.publishedAt,
++  };
++}
++
++function bigintToSafeNumber(value: bigint): number {
++  const max = BigInt(Number.MAX_SAFE_INTEGER);
++  if (value > max) {
++    return Number.MAX_SAFE_INTEGER;
++  }
++  if (value < -max) {
++    return -Number.MAX_SAFE_INTEGER;
++  }
++  return Number(value);
++}
++
+ function createChapterSlug(number: number, title: string): string {
+   const numberPart = formatChapterNumber(number);
+   const titlePart = slugify(title, {
+diff --git a/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+index 3b0b6df..263ed9d 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+@@ -3,6 +3,8 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
+ import { Public } from '@/common/decorators';
+ 
+ import {
++  GetPublicChapterReaderQuery,
++  GetPublicChapterReaderQueryHandler,
+   GetPublicStoryDetailQuery,
+   GetPublicStoryDetailQueryHandler,
+   ListPublicStoriesQuery,
+@@ -10,8 +12,10 @@ import {
+ } from '../../../application';
+ import { ListPublicStoriesRequest } from '../requests';
+ import {
++  type PublicChapterReaderResponse,
+   type PublicStoryPageResponse,
+   type PublicStoryResponse,
++  toPublicChapterReaderResponse,
+   toPublicStoryPageResponse,
+   toPublicStoryResponse,
+ } from '../responses';
+@@ -22,6 +26,7 @@ export class PublicStoriesController {
+   constructor(
+     private readonly listStories: ListPublicStoriesQueryHandler,
+     private readonly getStoryDetail: GetPublicStoryDetailQueryHandler,
++    private readonly getChapterReader: GetPublicChapterReaderQueryHandler,
+   ) {}
+ 
+   @Get()
+@@ -44,6 +49,18 @@ export class PublicStoriesController {
+     return toPublicStoryPageResponse(result);
+   }
+ 
++  @Get(':storySlug/chapters/:chapterNumber')
++  async chapterReader(
++    @Param('storySlug') storySlug: string,
++    @Param('chapterNumber') chapterNumber: string,
++  ): Promise<PublicChapterReaderResponse> {
++    const result = await this.getChapterReader.execute(
++      new GetPublicChapterReaderQuery(storySlug, chapterNumber),
++    );
++
++    return toPublicChapterReaderResponse(result);
++  }
++
+   @Get(':slug')
+   async detail(@Param('slug') slug: string): Promise<PublicStoryResponse> {
+     const result = await this.getStoryDetail.execute(
+diff --git a/backend/src/modules/stories/presentation/http/responses/index.ts b/backend/src/modules/stories/presentation/http/responses/index.ts
+index 881d25f..a2e48ba 100644
+--- a/backend/src/modules/stories/presentation/http/responses/index.ts
++++ b/backend/src/modules/stories/presentation/http/responses/index.ts
+@@ -2,3 +2,4 @@ export * from './chapter.response';
+ export * from './story.response';
+ export * from './story-publication.response';
+ export * from './public-story.response';
++export * from './public-chapter-reader.response';
+diff --git a/backend/src/modules/stories/presentation/http/responses/public-chapter-reader.response.ts b/backend/src/modules/stories/presentation/http/responses/public-chapter-reader.response.ts
+new file mode 100644
+index 0000000..a9b0616
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/responses/public-chapter-reader.response.ts
+@@ -0,0 +1,67 @@
++import type {
++  PublicChapterNavigationDto,
++  PublicChapterReaderDto,
++} from '../../../application';
++
++export interface PublicChapterNavigationResponse {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly publishedAt: string;
++}
++
++export interface PublicChapterReaderResponse {
++  readonly story: {
++    readonly id: string;
++    readonly slug: string;
++    readonly title: string;
++  };
++  readonly chapter: {
++    readonly id: string;
++    readonly number: number;
++    readonly title: string;
++    readonly slug: string;
++    readonly content: string;
++    readonly contentFormat: string;
++    readonly wordCount: number;
++    readonly views: number;
++    readonly comments: number;
++    readonly publishedAt: string;
++    readonly updatedAt: string;
++  };
++  readonly navigation: {
++    readonly previous: PublicChapterNavigationResponse | null;
++    readonly next: PublicChapterNavigationResponse | null;
++  };
++}
++
++export function toPublicChapterReaderResponse(
++  result: PublicChapterReaderDto,
++): PublicChapterReaderResponse {
++  return {
++    story: { ...result.story },
++    chapter: {
++      ...result.chapter,
++      publishedAt: result.chapter.publishedAt.toISOString(),
++      updatedAt: result.chapter.updatedAt.toISOString(),
++    },
++    navigation: {
++      previous: toNavigationResponse(result.navigation.previous),
++      next: toNavigationResponse(result.navigation.next),
++    },
++  };
++}
++
++function toNavigationResponse(
++  chapter: PublicChapterNavigationDto | null,
++): PublicChapterNavigationResponse | null {
++  if (!chapter) {
++    return null;
++  }
++
++  return {
++    ...chapter,
++    publishedAt: chapter.publishedAt.toISOString(),
++  };
++}
+diff --git a/backend/src/modules/stories/stories.module.ts b/backend/src/modules/stories/stories.module.ts
+index 3844609..b0b29fa 100644
+--- a/backend/src/modules/stories/stories.module.ts
++++ b/backend/src/modules/stories/stories.module.ts
+@@ -11,6 +11,7 @@ import {
+   CreateAuthorStoryCommandHandler,
+   DeleteAuthorChapterCommandHandler,
+   DeleteAuthorStoryCommandHandler,
++  GetPublicChapterReaderQueryHandler,
+   GetPublicStoryDetailQueryHandler,
+   ListPublicStoriesQueryHandler,
+   ListStoryCategoriesQueryHandler,
+@@ -57,6 +58,7 @@ import {
+     RejectStorySubmissionCommandHandler,
+     ListPublicStoriesQueryHandler,
+     GetPublicStoryDetailQueryHandler,
++    GetPublicChapterReaderQueryHandler,
+     ListStoryCategoriesQueryHandler,
+     ListStoryTagsQueryHandler,
+     PrismaStoryPersistence,
