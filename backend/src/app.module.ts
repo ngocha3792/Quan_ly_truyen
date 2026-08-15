@@ -25,12 +25,14 @@ import { InfrastructureModule } from './infrastructure';
 import { AuthModule } from './modules/auth';
 import { ObservabilityModule } from './infrastructure/observability';
 import { AuthorApplicationsModule } from './modules/author-applications';
+import { StoriesModule } from './modules/stories';
 @Module({
   imports: [
     AppConfigModule,
     ObservabilityModule,
     AuthModule,
     AuthorApplicationsModule,
+    StoriesModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,
