@@ -69,6 +69,7 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       categoryIds: [CATEGORY_ID],
       tagIds: undefined,
       coverMediaId: COVER_ID,
+      publishedAt: null,
       updatedAt: expect.any(Date) as unknown,
       audit: {
         ipAddress: '127.0.0.1',
@@ -86,6 +87,7 @@ describe('UpdateAuthorStoryCommandHandler', () => {
         categories: [],
         tags: [],
         coverMediaId: null,
+        publishedAt: null,
       }),
     });
 
@@ -110,6 +112,7 @@ describe('UpdateAuthorStoryCommandHandler', () => {
         categoryIds: [],
         tagIds: [],
         coverMediaId: null,
+        publishedAt: null,
       }),
     );
   });
@@ -196,6 +199,7 @@ function createStoryRecord(overrides: Record<string, unknown> = {}) {
     visibility: 'PRIVATE',
     contentRating: 'TEEN',
     coverMediaId: COVER_ID,
+    publishedAt: null,
     categories: [
       {
         id: CATEGORY_ID,

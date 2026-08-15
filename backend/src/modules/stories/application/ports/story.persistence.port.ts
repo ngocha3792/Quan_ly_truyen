@@ -1,3 +1,5 @@
+import type { PublicStoryDto, PublicStoryPageDto } from '../dto';
+
 export const STORY_PERSISTENCE_PORT = Symbol('STORY_PERSISTENCE_PORT');
 
 export interface StoryCategoryRecord {
@@ -39,6 +41,8 @@ export interface StoryRecord {
 
   readonly coverMediaId: string | null;
 
+  readonly publishedAt: Date | null;
+
   readonly categories: readonly StoryCategoryRecord[];
 
   readonly tags: readonly StoryTagRecord[];
@@ -68,6 +72,26 @@ export interface StoryTaxonomyTagRecord {
   readonly name: string;
 
   readonly slug: string;
+}
+
+export type PublicStoryListSort =
+  | 'latest'
+  | 'popular'
+  | 'rating'
+  | 'chapter-count'
+  | 'oldest';
+
+export type PublicStoryListStatus = 'ongoing' | 'completed' | 'hiatus';
+
+export interface ListPublicStoriesInput {
+  readonly q?: string;
+  readonly genre?: string;
+  readonly status?: PublicStoryListStatus;
+  readonly sort: PublicStoryListSort;
+  readonly yearFrom?: number;
+  readonly yearTo?: number;
+  readonly page: number;
+  readonly pageSize: number;
 }
 
 export interface StoryAuditContext {
@@ -181,12 +205,147 @@ export type DeleteAuthorStoryResult =
       readonly status: 'not_draft';
     };
 
+export interface StorySubmissionRecord {
+  readonly id: string;
+
+  readonly storyId: string;
+
+  readonly submittedById: string;
+
+  readonly reviewedById: string | null;
+
+  readonly status: string;
+
+  readonly authorNote: string | null;
+
+  readonly reviewerNote: string | null;
+
+  readonly submittedAt: Date;
+
+  readonly reviewedAt: Date | null;
+
+  readonly canceledAt: Date | null;
+}
+
+export interface StoryPublicationRecord {
+  readonly story: StoryRecord;
+
+  readonly submission: StorySubmissionRecord;
+}
+
+export interface SubmitAuthorStoryInput {
+  readonly userId: string;
+
+  readonly storyId: string;
+
+  readonly authorNote?: string;
+
+  readonly submittedAt: Date;
+
+  readonly audit: StoryAuditContext;
+}
+
+export type SubmitAuthorStoryResult =
+  | {
+      readonly status: 'submitted';
+
+      readonly publication: StoryPublicationRecord;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'not_draft';
+    }
+  | {
+      readonly status: 'already_pending';
+    }
+  | {
+      readonly status: 'not_ready';
+
+      readonly missing: readonly string[];
+    };
+
+export interface CancelAuthorStorySubmissionInput {
+  readonly userId: string;
+
+  readonly storyId: string;
+
+  readonly canceledAt: Date;
+
+  readonly audit: StoryAuditContext;
+}
+
+export type CancelAuthorStorySubmissionResult =
+  | {
+      readonly status: 'canceled';
+
+      readonly publication: StoryPublicationRecord;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'not_pending';
+    };
+
+export interface ReviewStorySubmissionInput {
+  readonly reviewerId: string;
+
+  readonly submissionId: string;
+
+  readonly reviewerNote?: string;
+
+  readonly reviewedAt: Date;
+
+  readonly audit: StoryAuditContext;
+}
+
+export type ReviewStorySubmissionResult =
+  | {
+      readonly status: 'approved' | 'rejected';
+
+      readonly publication: StoryPublicationRecord;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'not_pending';
+    }
+  | {
+      readonly status: 'self_review';
+    }
+  | {
+      readonly status: 'not_ready';
+
+      readonly missing: readonly string[];
+    };
+
 export interface StoryPersistencePort {
   createDraft(input: CreateAuthorStoryInput): Promise<CreateAuthorStoryResult>;
 
   updateDraft(input: UpdateAuthorStoryInput): Promise<UpdateAuthorStoryResult>;
 
   deleteDraft(input: DeleteAuthorStoryInput): Promise<DeleteAuthorStoryResult>;
+
+  submitForReview(input: SubmitAuthorStoryInput): Promise<SubmitAuthorStoryResult>;
+
+  cancelSubmission(
+    input: CancelAuthorStorySubmissionInput,
+  ): Promise<CancelAuthorStorySubmissionResult>;
+
+  approveSubmission(
+    input: ReviewStorySubmissionInput,
+  ): Promise<ReviewStorySubmissionResult>;
+
+  rejectSubmission(
+    input: ReviewStorySubmissionInput,
+  ): Promise<ReviewStorySubmissionResult>;
+
+  listPublic(input: ListPublicStoriesInput): Promise<PublicStoryPageDto>;
+
+  findPublicBySlug(slug: string): Promise<PublicStoryDto | null>;
 
   listActiveCategories(): Promise<readonly StoryTaxonomyCategoryRecord[]>;
 

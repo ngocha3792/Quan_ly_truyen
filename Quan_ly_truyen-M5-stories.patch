@@ -1,0 +1,1124 @@
+diff --git a/backend/src/modules/stories/application/dto/index.ts b/backend/src/modules/stories/application/dto/index.ts
+index 7741bc6..57ebcdc 100644
+--- a/backend/src/modules/stories/application/dto/index.ts
++++ b/backend/src/modules/stories/application/dto/index.ts
+@@ -1,3 +1,4 @@
+ export * from './chapter-result.dto';
+ export * from './story-result.dto';
+ export * from './story-taxonomy-result.dto';
++export * from './public-story-result.dto';
+diff --git a/backend/src/modules/stories/application/dto/public-story-result.dto.ts b/backend/src/modules/stories/application/dto/public-story-result.dto.ts
+new file mode 100644
+index 0000000..59b198e
+--- /dev/null
++++ b/backend/src/modules/stories/application/dto/public-story-result.dto.ts
+@@ -0,0 +1,69 @@
++export type PublicStoryPublicationStatus = 'ONGOING' | 'HIATUS' | 'COMPLETED';
++
++export interface PublicStoryAuthorDto {
++  readonly id: string;
++  readonly penName: string;
++  readonly slug: string;
++}
++
++export interface PublicStoryCategoryDto {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++  readonly isPrimary: boolean;
++}
++
++export interface PublicStoryTagDto {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++}
++
++export interface PublicStoryChapterSummaryDto {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly publishedAt: Date;
++}
++
++export interface PublicStoryStatsDto {
++  readonly views: number;
++  readonly followers: number;
++  readonly ratingCount: number;
++  readonly ratingAverage: number;
++  readonly chapters: number;
++  readonly comments: number;
++}
++
++export interface PublicStoryDto {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++  readonly synopsis: string;
++  readonly languageCode: string;
++  readonly contentRating: string;
++  readonly releaseYear: number | null;
++  readonly status: PublicStoryPublicationStatus;
++  readonly author: PublicStoryAuthorDto;
++  readonly coverUrl: string | null;
++  readonly categories: readonly PublicStoryCategoryDto[];
++  readonly tags: readonly PublicStoryTagDto[];
++  readonly latestChapter: PublicStoryChapterSummaryDto | null;
++  readonly stats: PublicStoryStatsDto;
++  readonly publishedAt: Date | null;
++  readonly lastChapterAt: Date | null;
++  readonly updatedAt: Date;
++}
++
++export interface PublicStoryPaginationDto {
++  readonly page: number;
++  readonly pageSize: number;
++  readonly totalItems: number;
++  readonly totalPages: number;
++}
++
++export interface PublicStoryPageDto {
++  readonly items: readonly PublicStoryDto[];
++  readonly pagination: PublicStoryPaginationDto;
++}
+diff --git a/backend/src/modules/stories/application/ports/story.persistence.port.ts b/backend/src/modules/stories/application/ports/story.persistence.port.ts
+index 52f2df6..14d5626 100644
+--- a/backend/src/modules/stories/application/ports/story.persistence.port.ts
++++ b/backend/src/modules/stories/application/ports/story.persistence.port.ts
+@@ -1,3 +1,5 @@
++import type { PublicStoryDto, PublicStoryPageDto } from '../dto';
++
+ export const STORY_PERSISTENCE_PORT = Symbol('STORY_PERSISTENCE_PORT');
+ 
+ export interface StoryCategoryRecord {
+@@ -72,6 +74,26 @@ export interface StoryTaxonomyTagRecord {
+   readonly slug: string;
+ }
+ 
++export type PublicStoryListSort =
++  | 'latest'
++  | 'popular'
++  | 'rating'
++  | 'chapter-count'
++  | 'oldest';
++
++export type PublicStoryListStatus = 'ongoing' | 'completed' | 'hiatus';
++
++export interface ListPublicStoriesInput {
++  readonly q?: string;
++  readonly genre?: string;
++  readonly status?: PublicStoryListStatus;
++  readonly sort: PublicStoryListSort;
++  readonly yearFrom?: number;
++  readonly yearTo?: number;
++  readonly page: number;
++  readonly pageSize: number;
++}
++
+ export interface StoryAuditContext {
+   readonly ipAddress?: string;
+ 
+@@ -321,6 +343,10 @@ export interface StoryPersistencePort {
+     input: ReviewStorySubmissionInput,
+   ): Promise<ReviewStorySubmissionResult>;
+ 
++  listPublic(input: ListPublicStoriesInput): Promise<PublicStoryPageDto>;
++
++  findPublicBySlug(slug: string): Promise<PublicStoryDto | null>;
++
+   listActiveCategories(): Promise<readonly StoryTaxonomyCategoryRecord[]>;
+ 
+   listTags(): Promise<readonly StoryTaxonomyTagRecord[]>;
+diff --git a/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.spec.ts b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.spec.ts
+new file mode 100644
+index 0000000..acaeffd
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.spec.ts
+@@ -0,0 +1,34 @@
++import { StoryNotFoundException } from '../../../domain';
++
++import { GetPublicStoryDetailQuery } from './get-public-story-detail.query';
++import { GetPublicStoryDetailQueryHandler } from './get-public-story-detail.query-handler';
++
++describe('GetPublicStoryDetailQueryHandler', () => {
++  let persistence: { findPublicBySlug: jest.Mock };
++  let handler: GetPublicStoryDetailQueryHandler;
++
++  beforeEach(() => {
++    persistence = { findPublicBySlug: jest.fn() };
++    handler = new GetPublicStoryDetailQueryHandler(persistence as never);
++  });
++
++  it('normalize slug trước khi lookup', async () => {
++    const story = { id: 'story-id' };
++    persistence.findPublicBySlug.mockResolvedValue(story);
++
++    const result = await handler.execute(
++      new GetPublicStoryDetailQuery('  Truyen-Moi  '),
++    );
++
++    expect(persistence.findPublicBySlug).toHaveBeenCalledWith('truyen-moi');
++    expect(result).toBe(story);
++  });
++
++  it('trả STORY_NOT_FOUND khi slug không public hoặc không tồn tại', async () => {
++    persistence.findPublicBySlug.mockResolvedValue(null);
++
++    await expect(
++      handler.execute(new GetPublicStoryDetailQuery('khong-ton-tai')),
++    ).rejects.toBeInstanceOf(StoryNotFoundException);
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.ts b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.ts
+new file mode 100644
+index 0000000..b8cb154
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query-handler.ts
+@@ -0,0 +1,28 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import type { PublicStoryDto } from '../../dto';
++import {
++  STORY_PERSISTENCE_PORT,
++  type StoryPersistencePort,
++} from '../../ports';
++import { StoryNotFoundException } from '../../../domain';
++import { GetPublicStoryDetailQuery } from './get-public-story-detail.query';
++
++@Injectable()
++export class GetPublicStoryDetailQueryHandler {
++  constructor(
++    @Inject(STORY_PERSISTENCE_PORT)
++    private readonly persistence: StoryPersistencePort,
++  ) {}
++
++  async execute(query: GetPublicStoryDetailQuery): Promise<PublicStoryDto> {
++    const slug = query.slug.trim().toLowerCase();
++    const story = slug ? await this.persistence.findPublicBySlug(slug) : null;
++
++    if (!story) {
++      throw new StoryNotFoundException(slug || undefined);
++    }
++
++    return story;
++  }
++}
+diff --git a/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query.ts b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query.ts
+new file mode 100644
+index 0000000..04563e6
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-story-detail/get-public-story-detail.query.ts
+@@ -0,0 +1,3 @@
++export class GetPublicStoryDetailQuery {
++  constructor(readonly slug: string) {}
++}
+diff --git a/backend/src/modules/stories/application/queries/get-public-story-detail/index.ts b/backend/src/modules/stories/application/queries/get-public-story-detail/index.ts
+new file mode 100644
+index 0000000..578aec2
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/get-public-story-detail/index.ts
+@@ -0,0 +1,2 @@
++export * from './get-public-story-detail.query';
++export * from './get-public-story-detail.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/index.ts b/backend/src/modules/stories/application/queries/index.ts
+index 42be37c..0ec8182 100644
+--- a/backend/src/modules/stories/application/queries/index.ts
++++ b/backend/src/modules/stories/application/queries/index.ts
+@@ -1,2 +1,4 @@
++export * from './get-public-story-detail';
++export * from './list-public-stories';
+ export * from './list-story-categories';
+ export * from './list-story-tags';
+diff --git a/backend/src/modules/stories/application/queries/list-public-stories/index.ts b/backend/src/modules/stories/application/queries/list-public-stories/index.ts
+new file mode 100644
+index 0000000..895d6ef
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-public-stories/index.ts
+@@ -0,0 +1,2 @@
++export * from './list-public-stories.query';
++export * from './list-public-stories.query-handler';
+diff --git a/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.spec.ts b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.spec.ts
+new file mode 100644
+index 0000000..4f2cb39
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.spec.ts
+@@ -0,0 +1,64 @@
++import { InvalidStoryFieldException } from '../../../domain';
++
++import { ListPublicStoriesQuery } from './list-public-stories.query';
++import { ListPublicStoriesQueryHandler } from './list-public-stories.query-handler';
++
++describe('ListPublicStoriesQueryHandler', () => {
++  let persistence: { listPublic: jest.Mock };
++  let handler: ListPublicStoriesQueryHandler;
++
++  beforeEach(() => {
++    persistence = { listPublic: jest.fn() };
++    handler = new ListPublicStoriesQueryHandler(persistence as never);
++  });
++
++  it('normalize search và genre trước khi query persistence', async () => {
++    persistence.listPublic.mockResolvedValue({
++      items: [],
++      pagination: { page: 2, pageSize: 12, totalItems: 0, totalPages: 0 },
++    });
++
++    await handler.execute(
++      new ListPublicStoriesQuery(
++        '  kiếm tiên  ',
++        '  Tien-Hiep  ',
++        'ongoing',
++        'latest',
++        2020,
++        2026,
++        2,
++        12,
++      ),
++    );
++
++    expect(persistence.listPublic).toHaveBeenCalledWith({
++      q: 'kiếm tiên',
++      genre: 'tien-hiep',
++      status: 'ongoing',
++      sort: 'latest',
++      yearFrom: 2020,
++      yearTo: 2026,
++      page: 2,
++      pageSize: 12,
++    });
++  });
++
++  it('reject year range đảo ngược trước khi query database', async () => {
++    await expect(
++      handler.execute(
++        new ListPublicStoriesQuery(
++          undefined,
++          undefined,
++          undefined,
++          'latest',
++          2026,
++          2020,
++          1,
++          20,
++        ),
++      ),
++    ).rejects.toBeInstanceOf(InvalidStoryFieldException);
++
++    expect(persistence.listPublic).not.toHaveBeenCalled();
++  });
++});
+diff --git a/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.ts b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.ts
+new file mode 100644
+index 0000000..1bea1e2
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query-handler.ts
+@@ -0,0 +1,51 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import type { PublicStoryPageDto } from '../../dto';
++import {
++  STORY_PERSISTENCE_PORT,
++  type StoryPersistencePort,
++} from '../../ports';
++import { InvalidStoryFieldException } from '../../../domain';
++import { ListPublicStoriesQuery } from './list-public-stories.query';
++
++@Injectable()
++export class ListPublicStoriesQueryHandler {
++  constructor(
++    @Inject(STORY_PERSISTENCE_PORT)
++    private readonly persistence: StoryPersistencePort,
++  ) {}
++
++  execute(query: ListPublicStoriesQuery): Promise<PublicStoryPageDto> {
++    if (
++      query.yearFrom !== undefined &&
++      query.yearTo !== undefined &&
++      query.yearFrom > query.yearTo
++    ) {
++      throw new InvalidStoryFieldException(
++        'yearFrom',
++        'Năm bắt đầu không được lớn hơn năm kết thúc',
++      );
++    }
++
++    return this.persistence.listPublic({
++      q: normalizeOptionalText(query.q),
++      genre: normalizeOptionalSlug(query.genre),
++      status: query.status,
++      sort: query.sort,
++      yearFrom: query.yearFrom,
++      yearTo: query.yearTo,
++      page: query.page,
++      pageSize: query.pageSize,
++    });
++  }
++}
++
++function normalizeOptionalText(value: string | undefined): string | undefined {
++  const normalized = value?.trim();
++  return normalized ? normalized : undefined;
++}
++
++function normalizeOptionalSlug(value: string | undefined): string | undefined {
++  const normalized = normalizeOptionalText(value);
++  return normalized?.toLowerCase();
++}
+diff --git a/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query.ts b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query.ts
+new file mode 100644
+index 0000000..e2d92e9
+--- /dev/null
++++ b/backend/src/modules/stories/application/queries/list-public-stories/list-public-stories.query.ts
+@@ -0,0 +1,17 @@
++import type {
++  PublicStoryListSort,
++  PublicStoryListStatus,
++} from '../../ports';
++
++export class ListPublicStoriesQuery {
++  constructor(
++    readonly q: string | undefined,
++    readonly genre: string | undefined,
++    readonly status: PublicStoryListStatus | undefined,
++    readonly sort: PublicStoryListSort,
++    readonly yearFrom: number | undefined,
++    readonly yearTo: number | undefined,
++    readonly page: number,
++    readonly pageSize: number,
++  ) {}
++}
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+index b8319e5..f989683 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/prisma-story.persistence.ts
+@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
+ import { Injectable } from '@nestjs/common';
+ 
+ import {
++  ChapterStatus,
+   MediaPurpose,
+   MediaResourceType,
+   MediaStatus,
+@@ -17,6 +18,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+ 
+ import type {
+   CancelAuthorStorySubmissionInput,
++  ListPublicStoriesInput,
+   CancelAuthorStorySubmissionResult,
+   CreateAuthorStoryInput,
+   CreateAuthorStoryResult,
+@@ -24,6 +26,8 @@ import type {
+   DeleteAuthorStoryResult,
+   ReviewStorySubmissionInput,
+   ReviewStorySubmissionResult,
++  PublicStoryDto,
++  PublicStoryPageDto,
+   StoryPersistencePort,
+   StoryPublicationRecord,
+   StoryRecord,
+@@ -80,6 +84,98 @@ type StoryRow = Prisma.StoryGetPayload<{
+   select: typeof STORY_SELECT;
+ }>;
+ 
++const PUBLIC_STORY_SELECT = {
++  id: true,
++  title: true,
++  slug: true,
++  synopsis: true,
++  languageCode: true,
++  contentRating: true,
++  releaseYear: true,
++  status: true,
++  publishedAt: true,
++  lastChapterAt: true,
++  viewCount: true,
++  followerCount: true,
++  ratingCount: true,
++  ratingAverage: true,
++  chapterCount: true,
++  commentCount: true,
++  updatedAt: true,
++  author: {
++    select: {
++      userId: true,
++      penName: true,
++      slug: true,
++    },
++  },
++  coverMedia: {
++    select: {
++      purpose: true,
++      status: true,
++      resourceType: true,
++      secureUrl: true,
++      publicUrl: true,
++      deletedAt: true,
++    },
++  },
++  categories: {
++    where: {
++      category: {
++        isActive: true,
++      },
++    },
++    select: {
++      isPrimary: true,
++      category: {
++        select: {
++          id: true,
++          name: true,
++          slug: true,
++        },
++      },
++    },
++  },
++  tags: {
++    select: {
++      tag: {
++        select: {
++          id: true,
++          name: true,
++          slug: true,
++        },
++      },
++    },
++  },
++  chapters: {
++    where: {
++      status: ChapterStatus.PUBLISHED,
++      deletedAt: null,
++    },
++    orderBy: {
++      number: 'desc',
++    },
++    take: 1,
++    select: {
++      id: true,
++      number: true,
++      title: true,
++      slug: true,
++      publishedAt: true,
++    },
++  },
++} satisfies Prisma.StorySelect;
++
++type PublicStoryRow = Prisma.StoryGetPayload<{
++  select: typeof PUBLIC_STORY_SELECT;
++}>;
++
++const PUBLIC_STORY_STATUSES = [
++  StoryStatus.PUBLISHED,
++  StoryStatus.HIATUS,
++  StoryStatus.COMPLETED,
++] as const;
++
+ @Injectable()
+ export class PrismaStoryPersistence implements StoryPersistencePort {
+   constructor(private readonly prisma: PrismaService) { }
+@@ -887,6 +983,63 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
+     };
+   }
+ 
++  async listPublic(input: ListPublicStoriesInput): Promise<PublicStoryPageDto> {
++    const where = buildPublicStoryWhere(input);
++    const skip = (input.page - 1) * input.pageSize;
++
++    try {
++      const [totalItems, stories] = await this.prisma.$transaction([
++        this.prisma.story.count({ where }),
++        this.prisma.story.findMany({
++          where,
++          orderBy: buildPublicStoryOrderBy(input.sort),
++          skip,
++          take: input.pageSize,
++          select: PUBLIC_STORY_SELECT,
++        }),
++      ]);
++
++      return {
++        items: stories.map((story) => toPublicStoryDto(story)),
++        pagination: {
++          page: input.page,
++          pageSize: input.pageSize,
++          totalItems,
++          totalPages:
++            totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize),
++        },
++      };
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'public-story-list',
++        resource: 'Truyện',
++      });
++    }
++  }
++
++  async findPublicBySlug(slug: string): Promise<PublicStoryDto | null> {
++    try {
++      const story = await this.prisma.story.findFirst({
++        where: {
++          slug,
++          deletedAt: null,
++          visibility: StoryVisibility.PUBLIC,
++          status: {
++            in: [...PUBLIC_STORY_STATUSES],
++          },
++        },
++        select: PUBLIC_STORY_SELECT,
++      });
++
++      return story ? toPublicStoryDto(story) : null;
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'public-story-detail',
++        resource: 'Truyện',
++      });
++    }
++  }
++
+   async listActiveCategories(): Promise<
+     readonly StoryTaxonomyCategoryRecord[]
+   > {
+@@ -1242,3 +1395,227 @@ function isUniqueConstraintViolation(error: unknown): boolean {
+     error.code === 'P2002'
+   );
+ }
++
++function buildPublicStoryWhere(
++  input: ListPublicStoriesInput,
++): Prisma.StoryWhereInput {
++  const requestedStatus = input.status
++    ? mapPublicListStatusToStoryStatus(input.status)
++    : undefined;
++
++  return {
++    deletedAt: null,
++    visibility: StoryVisibility.PUBLIC,
++    status: requestedStatus
++      ? requestedStatus
++      : {
++          in: [...PUBLIC_STORY_STATUSES],
++        },
++    ...(input.q
++      ? {
++          OR: [
++            {
++              title: {
++                contains: input.q,
++                mode: 'insensitive',
++              },
++            },
++            {
++              synopsis: {
++                contains: input.q,
++                mode: 'insensitive',
++              },
++            },
++            {
++              author: {
++                penName: {
++                  contains: input.q,
++                  mode: 'insensitive',
++                },
++              },
++            },
++            {
++              tags: {
++                some: {
++                  tag: {
++                    name: {
++                      contains: input.q,
++                      mode: 'insensitive',
++                    },
++                  },
++                },
++              },
++            },
++          ],
++        }
++      : {}),
++    ...(input.genre
++      ? {
++          categories: {
++            some: {
++              category: {
++                slug: input.genre,
++                isActive: true,
++              },
++            },
++          },
++        }
++      : {}),
++    ...(input.yearFrom !== undefined || input.yearTo !== undefined
++      ? {
++          releaseYear: {
++            ...(input.yearFrom !== undefined ? { gte: input.yearFrom } : {}),
++            ...(input.yearTo !== undefined ? { lte: input.yearTo } : {}),
++          },
++        }
++      : {}),
++  };
++}
++
++function buildPublicStoryOrderBy(
++  sort: ListPublicStoriesInput['sort'],
++): Prisma.StoryOrderByWithRelationInput[] {
++  switch (sort) {
++    case 'popular':
++      return [{ viewCount: 'desc' }, { publishedAt: 'desc' }, { id: 'desc' }];
++    case 'rating':
++      return [
++        { ratingAverage: 'desc' },
++        { ratingCount: 'desc' },
++        { publishedAt: 'desc' },
++        { id: 'desc' },
++      ];
++    case 'chapter-count':
++      return [
++        { chapterCount: 'desc' },
++        { updatedAt: 'desc' },
++        { id: 'desc' },
++      ];
++    case 'oldest':
++      return [{ publishedAt: 'asc' }, { id: 'asc' }];
++    case 'latest':
++    default:
++      return [{ updatedAt: 'desc' }, { id: 'desc' }];
++  }
++}
++
++function mapPublicListStatusToStoryStatus(
++  status: NonNullable<ListPublicStoriesInput['status']>,
++): StoryStatus {
++  switch (status) {
++    case 'completed':
++      return StoryStatus.COMPLETED;
++    case 'hiatus':
++      return StoryStatus.HIATUS;
++    case 'ongoing':
++    default:
++      return StoryStatus.PUBLISHED;
++  }
++}
++
++function toPublicStoryDto(story: PublicStoryRow): PublicStoryDto {
++  const latest = story.chapters[0];
++  const latestChapter =
++    latest?.publishedAt != null
++      ? {
++          id: latest.id,
++          number: Number(latest.number),
++          title: latest.title,
++          slug: latest.slug,
++          publishedAt: latest.publishedAt,
++        }
++      : null;
++
++  const categories = story.categories
++    .map(({ category, isPrimary }) => ({
++      id: category.id,
++      name: category.name,
++      slug: category.slug,
++      isPrimary,
++    }))
++    .sort((left, right) => {
++      if (left.isPrimary !== right.isPrimary) {
++        return left.isPrimary ? -1 : 1;
++      }
++      return left.name.localeCompare(right.name);
++    });
++
++  const tags = story.tags
++    .map(({ tag }) => ({
++      id: tag.id,
++      name: tag.name,
++      slug: tag.slug,
++    }))
++    .sort((left, right) => left.name.localeCompare(right.name));
++
++  return {
++    id: story.id,
++    slug: story.slug,
++    title: story.title,
++    synopsis: story.synopsis,
++    languageCode: story.languageCode,
++    contentRating: story.contentRating,
++    releaseYear: story.releaseYear,
++    status: toPublicPublicationStatus(story.status),
++    author: {
++      id: story.author.userId,
++      penName: story.author.penName,
++      slug: story.author.slug,
++    },
++    coverUrl: getPublicStoryCoverUrl(story),
++    categories,
++    tags,
++    latestChapter,
++    stats: {
++      views: bigintToSafeNumber(story.viewCount),
++      followers: story.followerCount,
++      ratingCount: story.ratingCount,
++      ratingAverage: Number(story.ratingAverage),
++      chapters: story.chapterCount,
++      comments: story.commentCount,
++    },
++    publishedAt: story.publishedAt,
++    lastChapterAt: story.lastChapterAt,
++    updatedAt: story.updatedAt,
++  };
++}
++
++function toPublicPublicationStatus(
++  status: StoryStatus,
++): PublicStoryDto['status'] {
++  if (status === StoryStatus.COMPLETED) {
++    return 'COMPLETED';
++  }
++  if (status === StoryStatus.HIATUS) {
++    return 'HIATUS';
++  }
++  return 'ONGOING';
++}
++
++function bigintToSafeNumber(value: bigint): number {
++  const max = BigInt(Number.MAX_SAFE_INTEGER);
++  if (value > max) {
++    return Number.MAX_SAFE_INTEGER;
++  }
++  if (value < -max) {
++    return -Number.MAX_SAFE_INTEGER;
++  }
++  return Number(value);
++}
++
++
++function getPublicStoryCoverUrl(story: PublicStoryRow): string | null {
++  const cover = story.coverMedia;
++
++  if (
++    !cover ||
++    cover.deletedAt !== null ||
++    cover.purpose !== MediaPurpose.STORY_COVER ||
++    cover.status !== MediaStatus.READY ||
++    cover.resourceType !== MediaResourceType.IMAGE
++  ) {
++    return null;
++  }
++
++  return cover.secureUrl ?? cover.publicUrl ?? null;
++}
+diff --git a/backend/src/modules/stories/presentation/http/controllers/index.ts b/backend/src/modules/stories/presentation/http/controllers/index.ts
+index 6d5058c..665349f 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/index.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/index.ts
+@@ -2,3 +2,4 @@ export * from './author-chapters.controller';
+ export * from './author-stories.controller';
+ export * from './story-metadata.controller';
+ export * from './admin-story-publication.controller';
++export * from './public-stories.controller';
+diff --git a/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+new file mode 100644
+index 0000000..3b0b6df
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+@@ -0,0 +1,55 @@
++import { Controller, Get, Param, Query } from '@nestjs/common';
++
++import { Public } from '@/common/decorators';
++
++import {
++  GetPublicStoryDetailQuery,
++  GetPublicStoryDetailQueryHandler,
++  ListPublicStoriesQuery,
++  ListPublicStoriesQueryHandler,
++} from '../../../application';
++import { ListPublicStoriesRequest } from '../requests';
++import {
++  type PublicStoryPageResponse,
++  type PublicStoryResponse,
++  toPublicStoryPageResponse,
++  toPublicStoryResponse,
++} from '../responses';
++
++@Controller('stories')
++@Public()
++export class PublicStoriesController {
++  constructor(
++    private readonly listStories: ListPublicStoriesQueryHandler,
++    private readonly getStoryDetail: GetPublicStoryDetailQueryHandler,
++  ) {}
++
++  @Get()
++  async list(
++    @Query() request: ListPublicStoriesRequest,
++  ): Promise<PublicStoryPageResponse> {
++    const result = await this.listStories.execute(
++      new ListPublicStoriesQuery(
++        request.q,
++        request.genre,
++        request.status,
++        request.sort,
++        request.yearFrom,
++        request.yearTo,
++        request.page,
++        request.pageSize,
++      ),
++    );
++
++    return toPublicStoryPageResponse(result);
++  }
++
++  @Get(':slug')
++  async detail(@Param('slug') slug: string): Promise<PublicStoryResponse> {
++    const result = await this.getStoryDetail.execute(
++      new GetPublicStoryDetailQuery(slug),
++    );
++
++    return toPublicStoryResponse(result);
++  }
++}
+diff --git a/backend/src/modules/stories/presentation/http/requests/index.ts b/backend/src/modules/stories/presentation/http/requests/index.ts
+index c5d0330..95662f9 100644
+--- a/backend/src/modules/stories/presentation/http/requests/index.ts
++++ b/backend/src/modules/stories/presentation/http/requests/index.ts
+@@ -4,3 +4,4 @@ export * from './update-author-chapter.request';
+ export * from './update-author-story.request';
+ export * from './submit-author-story.request';
+ export * from './reject-story-submission.request';
++export * from './list-public-stories.request';
+diff --git a/backend/src/modules/stories/presentation/http/requests/list-public-stories.request.ts b/backend/src/modules/stories/presentation/http/requests/list-public-stories.request.ts
+new file mode 100644
+index 0000000..5e76b4e
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/requests/list-public-stories.request.ts
+@@ -0,0 +1,77 @@
++import { Type } from 'class-transformer';
++import {
++  IsIn,
++  IsInt,
++  IsOptional,
++  IsString,
++  Max,
++  MaxLength,
++  Min,
++} from 'class-validator';
++
++import type {
++  PublicStoryListSort,
++  PublicStoryListStatus,
++} from '../../../application';
++
++const PUBLIC_STORY_SORTS: readonly PublicStoryListSort[] = [
++  'latest',
++  'popular',
++  'rating',
++  'chapter-count',
++  'oldest',
++];
++
++const PUBLIC_STORY_STATUSES: readonly PublicStoryListStatus[] = [
++  'ongoing',
++  'completed',
++  'hiatus',
++];
++
++export class ListPublicStoriesRequest {
++  @IsOptional()
++  @IsString()
++  @MaxLength(120)
++  q?: string;
++
++  @IsOptional()
++  @IsString()
++  @MaxLength(120)
++  genre?: string;
++
++  @IsOptional()
++  @IsIn(PUBLIC_STORY_STATUSES)
++  status?: PublicStoryListStatus;
++
++  @IsOptional()
++  @IsIn(PUBLIC_STORY_SORTS)
++  sort: PublicStoryListSort = 'latest';
++
++  @IsOptional()
++  @Type(() => Number)
++  @IsInt()
++  @Min(1)
++  @Max(32767)
++  yearFrom?: number;
++
++  @IsOptional()
++  @Type(() => Number)
++  @IsInt()
++  @Min(1)
++  @Max(32767)
++  yearTo?: number;
++
++  @IsOptional()
++  @Type(() => Number)
++  @IsInt()
++  @Min(1)
++  @Max(100000)
++  page: number = 1;
++
++  @IsOptional()
++  @Type(() => Number)
++  @IsInt()
++  @Min(1)
++  @Max(100)
++  pageSize: number = 20;
++}
+diff --git a/backend/src/modules/stories/presentation/http/responses/index.ts b/backend/src/modules/stories/presentation/http/responses/index.ts
+index 6eec27b..881d25f 100644
+--- a/backend/src/modules/stories/presentation/http/responses/index.ts
++++ b/backend/src/modules/stories/presentation/http/responses/index.ts
+@@ -1,3 +1,4 @@
+ export * from './chapter.response';
+ export * from './story.response';
+ export * from './story-publication.response';
++export * from './public-story.response';
+diff --git a/backend/src/modules/stories/presentation/http/responses/public-story.response.ts b/backend/src/modules/stories/presentation/http/responses/public-story.response.ts
+new file mode 100644
+index 0000000..80bbbda
+--- /dev/null
++++ b/backend/src/modules/stories/presentation/http/responses/public-story.response.ts
+@@ -0,0 +1,100 @@
++import type {
++  PublicStoryDto,
++  PublicStoryPageDto,
++} from '../../../application';
++
++export interface PublicStoryChapterSummaryResponse {
++  readonly id: string;
++  readonly number: number;
++  readonly title: string;
++  readonly slug: string;
++  readonly publishedAt: string;
++}
++
++export interface PublicStoryResponse {
++  readonly id: string;
++  readonly slug: string;
++  readonly title: string;
++  readonly synopsis: string;
++  readonly languageCode: string;
++  readonly contentRating: string;
++  readonly releaseYear: number | null;
++  readonly status: 'ONGOING' | 'HIATUS' | 'COMPLETED';
++  readonly author: {
++    readonly id: string;
++    readonly penName: string;
++    readonly slug: string;
++  };
++  readonly coverUrl: string | null;
++  readonly categories: readonly {
++    readonly id: string;
++    readonly name: string;
++    readonly slug: string;
++    readonly isPrimary: boolean;
++  }[];
++  readonly tags: readonly {
++    readonly id: string;
++    readonly name: string;
++    readonly slug: string;
++  }[];
++  readonly latestChapter: PublicStoryChapterSummaryResponse | null;
++  readonly stats: {
++    readonly views: number;
++    readonly followers: number;
++    readonly ratingCount: number;
++    readonly ratingAverage: number;
++    readonly chapters: number;
++    readonly comments: number;
++  };
++  readonly publishedAt: string | null;
++  readonly lastChapterAt: string | null;
++  readonly updatedAt: string;
++}
++
++export interface PublicStoryPageResponse {
++  readonly items: readonly PublicStoryResponse[];
++  readonly pagination: {
++    readonly page: number;
++    readonly pageSize: number;
++    readonly totalItems: number;
++    readonly totalPages: number;
++  };
++}
++
++export function toPublicStoryResponse(
++  result: PublicStoryDto,
++): PublicStoryResponse {
++  return {
++    id: result.id,
++    slug: result.slug,
++    title: result.title,
++    synopsis: result.synopsis,
++    languageCode: result.languageCode,
++    contentRating: result.contentRating,
++    releaseYear: result.releaseYear,
++    status: result.status,
++    author: { ...result.author },
++    coverUrl: result.coverUrl,
++    categories: result.categories.map((category) => ({ ...category })),
++    tags: result.tags.map((tag) => ({ ...tag })),
++    latestChapter: result.latestChapter
++      ? {
++          ...result.latestChapter,
++          publishedAt: result.latestChapter.publishedAt.toISOString(),
++        }
++      : null,
++    stats: { ...result.stats },
++    publishedAt: result.publishedAt?.toISOString() ?? null,
++    lastChapterAt: result.lastChapterAt?.toISOString() ?? null,
++    updatedAt: result.updatedAt.toISOString(),
++  };
++}
++
++export function toPublicStoryPageResponse(
++  result: PublicStoryPageDto,
++): PublicStoryPageResponse {
++  return {
++    items: result.items.map((story) => toPublicStoryResponse(story)),
++    pagination: { ...result.pagination },
++  };
++}
+diff --git a/backend/src/modules/stories/stories.module.ts b/backend/src/modules/stories/stories.module.ts
+index 7273471..3844609 100644
+--- a/backend/src/modules/stories/stories.module.ts
++++ b/backend/src/modules/stories/stories.module.ts
+@@ -11,6 +11,8 @@ import {
+   CreateAuthorStoryCommandHandler,
+   DeleteAuthorChapterCommandHandler,
+   DeleteAuthorStoryCommandHandler,
++  GetPublicStoryDetailQueryHandler,
++  ListPublicStoriesQueryHandler,
+   ListStoryCategoriesQueryHandler,
+   ListStoryTagsQueryHandler,
+   PublishAuthorChapterCommandHandler,
+@@ -28,12 +30,14 @@ import {
+   AdminStoryPublicationController,
+   AuthorChaptersController,
+   AuthorStoriesController,
++  PublicStoriesController,
+   StoryMetadataController,
+ } from './presentation/http';
+ 
+ @Module({
+   imports: [PrismaModule, AuthAuthorizationModule],
+   controllers: [
++    PublicStoriesController,
+     AuthorStoriesController,
+     AuthorChaptersController,
+     StoryMetadataController,
+@@ -51,6 +55,8 @@ import {
+     CancelAuthorStorySubmissionCommandHandler,
+     ApproveStorySubmissionCommandHandler,
+     RejectStorySubmissionCommandHandler,
++    ListPublicStoriesQueryHandler,
++    GetPublicStoryDetailQueryHandler,
+     ListStoryCategoriesQueryHandler,
+     ListStoryTagsQueryHandler,
+     PrismaStoryPersistence,

@@ -5,6 +5,7 @@ import { isUuidV4 } from '@/common/utils';
 
 import {
   ChapterDraftOnlyMutationException,
+  ChapterStoryPendingReviewException,
   ChapterNotFoundException,
 } from '../../../domain';
 import {
@@ -18,7 +19,7 @@ export class DeleteAuthorChapterCommandHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
-  ) {}
+  ) { }
 
   async execute(command: DeleteAuthorChapterCommand): Promise<void> {
     const userId = requireAuthorUserId(command.userId);
@@ -38,6 +39,8 @@ export class DeleteAuthorChapterCommandHandler {
     switch (result.status) {
       case 'deleted':
         return;
+      case 'story_pending_review':
+        throw new ChapterStoryPendingReviewException();
       case 'not_draft':
         throw new ChapterDraftOnlyMutationException();
       case 'not_found':

@@ -39,6 +39,8 @@ export interface StoryResponse {
 
   readonly coverMediaId: string | null;
 
+  readonly publishedAt: string | null;
+
   readonly categories: readonly StoryCategoryResponse[];
 
   readonly tags: readonly StoryTagResponse[];
@@ -62,6 +64,7 @@ export function toStoryResponse(result: StoryResultDto): StoryResponse {
     visibility: result.visibility,
     contentRating: result.contentRating,
     coverMediaId: result.coverMediaId,
+    publishedAt: result.publishedAt?.toISOString() ?? null,
     categories: result.categories.map((category) => ({ ...category })),
     tags: result.tags.map((tag) => ({ ...tag })),
     version: result.version,

@@ -37,6 +37,8 @@ export interface StoryResultDto {
 
   readonly coverMediaId: string | null;
 
+  readonly publishedAt: Date | null;
+
   readonly categories: readonly StoryCategoryResultDto[];
 
   readonly tags: readonly StoryTagResultDto[];

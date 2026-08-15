@@ -60,6 +60,9 @@ export type CreateAuthorChapterResult =
     }
   | {
       readonly status: 'story_not_found';
+    }
+  | {
+      readonly status: 'story_pending_review';
     };
 
 export interface UpdateAuthorChapterInput {
@@ -91,6 +94,9 @@ export type UpdateAuthorChapterResult =
     }
   | {
       readonly status: 'not_draft';
+    }
+  | {
+      readonly status: 'story_pending_review';
     };
 
 export interface DeleteAuthorChapterInput {
@@ -114,6 +120,40 @@ export type DeleteAuthorChapterResult =
     }
   | {
       readonly status: 'not_draft';
+    }
+  | {
+      readonly status: 'story_pending_review';
+    };
+
+export interface PublishAuthorChapterInput {
+  readonly userId: string;
+
+  readonly storyId: string;
+
+  readonly chapterId: string;
+
+  readonly publishedAt: Date;
+
+  readonly audit: StoryAuditContext;
+}
+
+export type PublishAuthorChapterResult =
+  | {
+      readonly status: 'published';
+
+      readonly chapter: ChapterRecord;
+    }
+  | {
+      readonly status: 'not_found';
+    }
+  | {
+      readonly status: 'story_not_published';
+    }
+  | {
+      readonly status: 'not_draft';
+    }
+  | {
+      readonly status: 'empty_content';
     };
 
 export interface ChapterPersistencePort {
@@ -128,4 +168,8 @@ export interface ChapterPersistencePort {
   deleteDraft(
     input: DeleteAuthorChapterInput,
   ): Promise<DeleteAuthorChapterResult>;
+
+  publish(
+    input: PublishAuthorChapterInput,
+  ): Promise<PublishAuthorChapterResult>;
 }

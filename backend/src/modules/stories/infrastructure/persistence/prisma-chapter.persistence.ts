@@ -6,6 +6,7 @@ import {
   ChapterStatus,
   ContentFormat,
   Prisma,
+  StoryStatus,
 } from '@/generated/prisma/client';
 import { slugify } from '@/common/utils';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
@@ -17,6 +18,8 @@ import type {
   CreateAuthorChapterResult,
   DeleteAuthorChapterInput,
   DeleteAuthorChapterResult,
+  PublishAuthorChapterInput,
+  PublishAuthorChapterResult,
   UpdateAuthorChapterInput,
   UpdateAuthorChapterResult,
 } from '../../application';
@@ -47,7 +50,7 @@ type ChapterRow = Prisma.ChapterGetPayload<{
 
 @Injectable()
 export class PrismaChapterPersistence implements ChapterPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async createDraft(
     input: CreateAuthorChapterInput,
@@ -70,12 +73,19 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           },
           select: {
             id: true,
+            status: true,
           },
         });
 
         if (!story) {
           return {
             status: 'story_not_found',
+          };
+        }
+
+        if (story.status === StoryStatus.PENDING_REVIEW) {
+          return {
+            status: 'story_pending_review',
           };
         }
 
@@ -179,6 +189,12 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
+        if (story.status === StoryStatus.PENDING_REVIEW) {
+          return {
+            status: 'story_pending_review',
+          };
+        }
+
         const chapterLocked = await lockChapterRow(tx, input.chapterId);
 
         if (!chapterLocked) {
@@ -243,15 +259,15 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           data: {
             ...(titleChanged
               ? {
-                  title: nextTitle,
-                  slug: nextSlug,
-                }
+                title: nextTitle,
+                slug: nextSlug,
+              }
               : {}),
             ...(contentChanged
               ? {
-                  content: nextContent,
-                  wordCount: nextWordCount,
-                }
+                content: nextContent,
+                wordCount: nextWordCount,
+              }
               : {}),
             updatedById: input.userId,
             updatedAt: input.updatedAt,
@@ -333,6 +349,12 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
+        if (story.status === StoryStatus.PENDING_REVIEW) {
+          return {
+            status: 'story_pending_review',
+          };
+        }
+
         const chapterLocked = await lockChapterRow(tx, input.chapterId);
 
         if (!chapterLocked) {
@@ -410,6 +432,94 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
   }
 
+  async publish(
+    input: PublishAuthorChapterInput,
+  ): Promise<PublishAuthorChapterResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const storyLocked = await lockStoryRow(tx, input.storyId);
+        if (!storyLocked) {
+          return { status: 'not_found' };
+        }
+        const story = await tx.story.findFirst({
+          where: { id: input.storyId, authorId: input.userId, deletedAt: null },
+          select: { id: true, status: true },
+        });
+        if (!story) {
+          return { status: 'not_found' };
+        }
+        if (story.status !== StoryStatus.PUBLISHED) {
+          return { status: 'story_not_published' };
+        }
+        if (!(await lockChapterRow(tx, input.chapterId))) {
+          return { status: 'not_found' };
+        }
+        const current = await tx.chapter.findFirst({
+          where: { id: input.chapterId, storyId: story.id, deletedAt: null },
+          select: CHAPTER_SELECT,
+        });
+        if (!current) {
+          return { status: 'not_found' };
+        }
+        if (current.status !== ChapterStatus.DRAFT) {
+          return { status: 'not_draft' };
+        }
+        if (!current.content.trim()) {
+          return { status: 'empty_content' };
+        }
+
+        const updated = await tx.chapter.update({
+          where: { id: current.id },
+          data: {
+            status: ChapterStatus.PUBLISHED,
+            publishedAt: input.publishedAt,
+            scheduledAt: null,
+            updatedById: input.userId,
+            updatedAt: input.publishedAt,
+          },
+          select: CHAPTER_SELECT,
+        });
+        await tx.story.update({
+          where: { id: story.id },
+          data: {
+            chapterCount: { increment: 1 },
+            lastChapterAt: input.publishedAt,
+            updatedAt: input.publishedAt,
+            version: { increment: 1 },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action: 'chapter.published',
+            entityType: 'chapter',
+            entityId: current.id,
+            oldValues: {
+              storyId: current.storyId,
+              status: current.status,
+              publishedAt: current.publishedAt,
+            },
+            newValues: {
+              storyId: updated.storyId,
+              status: updated.status,
+              publishedAt: updated.publishedAt?.toISOString() ?? null,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.publishedAt,
+          },
+        });
+        return { status: 'published', chapter: this.toRecord(updated) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-publish',
+        resource: 'Chương',
+      });
+    }
+  }
+
   private toRecord(chapter: ChapterRow): ChapterRecord {
     return {
       id: chapter.id,
@@ -436,7 +546,7 @@ async function lockAndFindOwnedStory(
   tx: Prisma.TransactionClient,
   storyId: string,
   userId: string,
-): Promise<{ readonly id: string } | null> {
+): Promise<{ readonly id: string; readonly status: StoryStatus; } | null> {
   const locked = await lockStoryRow(tx, storyId);
 
   if (!locked) {
@@ -451,6 +561,7 @@ async function lockAndFindOwnedStory(
     },
     select: {
       id: true,
+      status: true,
     },
   });
 }
@@ -459,7 +570,7 @@ async function lockStoryRow(
   tx: Prisma.TransactionClient,
   storyId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
     SELECT "id"
     FROM "stories"
     WHERE "id" = ${storyId}::uuid
@@ -473,7 +584,7 @@ async function lockChapterRow(
   tx: Prisma.TransactionClient,
   chapterId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
     SELECT "id"
     FROM "chapters"
     WHERE "id" = ${chapterId}::uuid

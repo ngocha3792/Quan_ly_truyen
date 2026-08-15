@@ -14,6 +14,7 @@ export class StoryResultMapper {
       visibility: story.visibility,
       contentRating: story.contentRating,
       coverMediaId: story.coverMediaId,
+      publishedAt: story.publishedAt,
       categories: story.categories.map((category) => ({ ...category })),
       tags: story.tags.map((tag) => ({ ...tag })),
       version: story.version,

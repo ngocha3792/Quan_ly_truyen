@@ -17,6 +17,7 @@ import {
   RequirePermissions,
   UserAgent,
 } from '@/common/decorators';
+import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 
 import {
@@ -24,6 +25,8 @@ import {
   CreateAuthorChapterCommandHandler,
   DeleteAuthorChapterCommand,
   DeleteAuthorChapterCommandHandler,
+  PublishAuthorChapterCommand,
+  PublishAuthorChapterCommandHandler,
   UpdateAuthorChapterCommand,
   UpdateAuthorChapterCommandHandler,
 } from '../../../application';
@@ -39,6 +42,7 @@ export class AuthorChaptersController {
     private readonly createChapter: CreateAuthorChapterCommandHandler,
     private readonly updateChapter: UpdateAuthorChapterCommandHandler,
     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
+    private readonly publishChapter: PublishAuthorChapterCommandHandler,
   ) {}
 
   @Post()
@@ -57,6 +61,32 @@ export class AuthorChaptersController {
         storyId,
         request.title,
         request.content,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterResponse(result);
+  }
+
+  @Post(':chapterId/publish')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
+  async publish(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<ChapterResponse> {
+    const result = await this.publishChapter.execute(
+      new PublishAuthorChapterCommand(
+        userId,
+        storyId,
+        chapterId,
         ipAddress,
         userAgent,
         requestId,

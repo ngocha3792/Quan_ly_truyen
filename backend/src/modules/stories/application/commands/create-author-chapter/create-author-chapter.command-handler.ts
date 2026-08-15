@@ -8,6 +8,7 @@ import {
   ChapterTitleValueObject,
   countChapterWords,
   StoryNotFoundException,
+  ChapterStoryPendingReviewException,
 } from '../../../domain';
 import type { ChapterResultDto } from '../../dto';
 import { ChapterResultMapper } from '../../mappers';
@@ -22,7 +23,7 @@ export class CreateAuthorChapterCommandHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
-  ) {}
+  ) { }
 
   async execute(command: CreateAuthorChapterCommand): Promise<ChapterResultDto> {
     const userId = requireAuthorUserId(command.userId);
@@ -46,6 +47,8 @@ export class CreateAuthorChapterCommandHandler {
     switch (result.status) {
       case 'created':
         return ChapterResultMapper.toDto(result.chapter);
+      case 'story_pending_review':
+        throw new ChapterStoryPendingReviewException();
       case 'story_not_found':
       default:
         throw new StoryNotFoundException(command.storyId);

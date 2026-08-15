@@ -168,6 +168,7 @@ function storyRecord() {
     visibility: 'PRIVATE',
     contentRating: 'TEEN',
     coverMediaId: null,
+    publishedAt: null,
     categories: [
       {
         id: CATEGORY_ID,

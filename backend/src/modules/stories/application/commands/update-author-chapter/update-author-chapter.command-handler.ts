@@ -6,6 +6,7 @@ import { isUuidV4 } from '@/common/utils';
 import {
   ChapterContentValueObject,
   ChapterDraftOnlyMutationException,
+  ChapterStoryPendingReviewException,
   ChapterNotFoundException,
   ChapterTitleValueObject,
   countChapterWords,
@@ -23,7 +24,7 @@ export class UpdateAuthorChapterCommandHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
-  ) {}
+  ) { }
 
   async execute(command: UpdateAuthorChapterCommand): Promise<ChapterResultDto> {
     const userId = requireAuthorUserId(command.userId);
@@ -54,6 +55,8 @@ export class UpdateAuthorChapterCommandHandler {
     switch (result.status) {
       case 'updated':
         return ChapterResultMapper.toDto(result.chapter);
+      case 'story_pending_review':
+        throw new ChapterStoryPendingReviewException();
       case 'not_draft':
         throw new ChapterDraftOnlyMutationException();
       case 'not_found':

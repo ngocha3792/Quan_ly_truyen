@@ -2,3 +2,6 @@ export * from './create-author-chapter.request';
 export * from './create-author-story.request';
 export * from './update-author-chapter.request';
 export * from './update-author-story.request';
+export * from './submit-author-story.request';
+export * from './reject-story-submission.request';
+export * from './list-public-stories.request';

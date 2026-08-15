@@ -3,10 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
 import {
+  ChapterStatus,
   MediaPurpose,
   MediaResourceType,
   MediaStatus,
   Prisma,
+  ModerationActionType,
+  SubmissionStatus,
   StoryStatus,
   StoryVisibility,
 } from '@/generated/prisma/client';
@@ -14,14 +17,24 @@ import { createUniqueSlug, slugify } from '@/common/utils';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
+  CancelAuthorStorySubmissionInput,
+  ListPublicStoriesInput,
+  CancelAuthorStorySubmissionResult,
   CreateAuthorStoryInput,
   CreateAuthorStoryResult,
   DeleteAuthorStoryInput,
   DeleteAuthorStoryResult,
+  ReviewStorySubmissionInput,
+  ReviewStorySubmissionResult,
+  PublicStoryDto,
+  PublicStoryPageDto,
   StoryPersistencePort,
+  StoryPublicationRecord,
   StoryRecord,
   StoryTaxonomyCategoryRecord,
   StoryTaxonomyTagRecord,
+  SubmitAuthorStoryInput,
+  SubmitAuthorStoryResult,
   UpdateAuthorStoryInput,
   UpdateAuthorStoryResult,
 } from '../../application';
@@ -38,6 +51,7 @@ const STORY_SELECT = {
   visibility: true,
   contentRating: true,
   coverMediaId: true,
+  publishedAt: true,
   categories: {
     select: {
       isPrimary: true,
@@ -70,9 +84,101 @@ type StoryRow = Prisma.StoryGetPayload<{
   select: typeof STORY_SELECT;
 }>;
 
+const PUBLIC_STORY_SELECT = {
+  id: true,
+  title: true,
+  slug: true,
+  synopsis: true,
+  languageCode: true,
+  contentRating: true,
+  releaseYear: true,
+  status: true,
+  publishedAt: true,
+  lastChapterAt: true,
+  viewCount: true,
+  followerCount: true,
+  ratingCount: true,
+  ratingAverage: true,
+  chapterCount: true,
+  commentCount: true,
+  updatedAt: true,
+  author: {
+    select: {
+      userId: true,
+      penName: true,
+      slug: true,
+    },
+  },
+  coverMedia: {
+    select: {
+      purpose: true,
+      status: true,
+      resourceType: true,
+      secureUrl: true,
+      publicUrl: true,
+      deletedAt: true,
+    },
+  },
+  categories: {
+    where: {
+      category: {
+        isActive: true,
+      },
+    },
+    select: {
+      isPrimary: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  },
+  tags: {
+    select: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  },
+  chapters: {
+    where: {
+      status: ChapterStatus.PUBLISHED,
+      deletedAt: null,
+    },
+    orderBy: {
+      number: 'desc',
+    },
+    take: 1,
+    select: {
+      id: true,
+      number: true,
+      title: true,
+      slug: true,
+      publishedAt: true,
+    },
+  },
+} satisfies Prisma.StorySelect;
+
+type PublicStoryRow = Prisma.StoryGetPayload<{
+  select: typeof PUBLIC_STORY_SELECT;
+}>;
+
+const PUBLIC_STORY_STATUSES = [
+  StoryStatus.PUBLISHED,
+  StoryStatus.HIATUS,
+  StoryStatus.COMPLETED,
+] as const;
+
 @Injectable()
 export class PrismaStoryPersistence implements StoryPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async createDraft(
     input: CreateAuthorStoryInput,
@@ -85,9 +191,9 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
         attempt === 0
           ? baseSlug
           : createUniqueSlug(baseSlug, storyId.slice(0, 8)).slice(
-              0,
-              StoryDraftPolicy.SLUG_MAX_LENGTH,
-            );
+            0,
+            StoryDraftPolicy.SLUG_MAX_LENGTH,
+          );
 
       try {
         return await this.prisma.$transaction(async (tx) => {
@@ -129,30 +235,30 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
               updatedAt: input.createdAt,
               ...(input.categoryIds.length > 0
                 ? {
-                    categories: {
-                      create: input.categoryIds.map((categoryId, index) => ({
-                        isPrimary: index === 0,
-                        category: {
-                          connect: {
-                            id: categoryId,
-                          },
+                  categories: {
+                    create: input.categoryIds.map((categoryId, index) => ({
+                      isPrimary: index === 0,
+                      category: {
+                        connect: {
+                          id: categoryId,
                         },
-                      })),
-                    },
-                  }
+                      },
+                    })),
+                  },
+                }
                 : {}),
               ...(input.tagIds.length > 0
                 ? {
-                    tags: {
-                      create: input.tagIds.map((tagId) => ({
-                        tag: {
-                          connect: {
-                            id: tagId,
-                          },
+                  tags: {
+                    create: input.tagIds.map((tagId) => ({
+                      tag: {
+                        connect: {
+                          id: tagId,
                         },
-                      })),
-                    },
-                  }
+                      },
+                    })),
+                  },
+                }
                 : {}),
             },
             select: STORY_SELECT,
@@ -241,7 +347,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
             };
           }
 
-          if (current.status !== StoryStatus.DRAFT) {
+          if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(current.status)) {
             return {
               status: 'not_draft',
             };
@@ -310,58 +416,64 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
             data: {
               ...(titleChanged
                 ? {
-                    title: input.title,
-                    slug: nextSlug,
-                  }
+                  title: input.title,
+                  slug: nextSlug,
+                }
                 : {}),
               ...(synopsisChanged
                 ? {
-                    synopsis: input.synopsis,
-                  }
+                  synopsis: input.synopsis,
+                }
                 : {}),
               ...(categoriesChanged && input.categoryIds !== undefined
                 ? {
-                    categories: {
-                      deleteMany: {},
-                      ...(input.categoryIds.length > 0
-                        ? {
-                            create: input.categoryIds.map(
-                              (categoryId, index) => ({
-                                isPrimary: index === 0,
-                                category: {
-                                  connect: {
-                                    id: categoryId,
-                                  },
-                                },
-                              }),
-                            ),
-                          }
-                        : {}),
-                    },
-                  }
+                  categories: {
+                    deleteMany: {},
+                    ...(input.categoryIds.length > 0
+                      ? {
+                        create: input.categoryIds.map(
+                          (categoryId, index) => ({
+                            isPrimary: index === 0,
+                            category: {
+                              connect: {
+                                id: categoryId,
+                              },
+                            },
+                          }),
+                        ),
+                      }
+                      : {}),
+                  },
+                }
                 : {}),
               ...(tagsChanged && input.tagIds !== undefined
                 ? {
-                    tags: {
-                      deleteMany: {},
-                      ...(input.tagIds.length > 0
-                        ? {
-                            create: input.tagIds.map((tagId) => ({
-                              tag: {
-                                connect: {
-                                  id: tagId,
-                                },
-                              },
-                            })),
-                          }
-                        : {}),
-                    },
-                  }
+                  tags: {
+                    deleteMany: {},
+                    ...(input.tagIds.length > 0
+                      ? {
+                        create: input.tagIds.map((tagId) => ({
+                          tag: {
+                            connect: {
+                              id: tagId,
+                            },
+                          },
+                        })),
+                      }
+                      : {}),
+                  },
+                }
                 : {}),
               ...(coverChanged
                 ? {
-                    coverMediaId: input.coverMediaId,
-                  }
+                  coverMediaId: input.coverMediaId,
+                }
+                : {}),
+              ...(current.status === StoryStatus.REJECTED
+                ? {
+                  status: StoryStatus.DRAFT,
+                  visibility: StoryVisibility.PRIVATE,
+                }
                 : {}),
               version: {
                 increment: 1,
@@ -456,7 +568,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
           };
         }
 
-        if (current.status !== StoryStatus.DRAFT) {
+        if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(current.status)) {
           return {
             status: 'not_draft',
           };
@@ -540,6 +652,394 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
     }
   }
 
+  async submitForReview(
+    input: SubmitAuthorStoryInput,
+  ): Promise<SubmitAuthorStoryResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (!(await lockStoryRow(tx, input.storyId))) {
+          return { status: 'not_found' };
+        }
+        const story = await tx.story.findFirst({
+          where: { id: input.storyId, authorId: input.userId, deletedAt: null },
+          select: STORY_SELECT,
+        });
+        if (!story) {
+          return { status: 'not_found' };
+        }
+        if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(story.status)) {
+          return { status: 'not_draft' };
+        }
+
+        const pending = await tx.storySubmission.findFirst({
+          where: { storyId: story.id, status: SubmissionStatus.PENDING },
+          select: { id: true },
+        });
+        if (pending) {
+          return { status: 'already_pending' };
+        }
+
+        const missing = await getStoryPublicationMissing(
+          tx,
+          story,
+          input.userId,
+        );
+        if (missing.length > 0) {
+          return { status: 'not_ready', missing };
+        }
+
+        const submission = await tx.storySubmission.create({
+          data: {
+            storyId: story.id,
+            submittedById: input.userId,
+            status: SubmissionStatus.PENDING,
+            authorNote: input.authorNote,
+            submittedAt: input.submittedAt,
+          },
+        });
+        const updated = await tx.story.update({
+          where: { id: story.id },
+          data: {
+            status: StoryStatus.PENDING_REVIEW,
+            visibility: StoryVisibility.PRIVATE,
+            updatedAt: input.submittedAt,
+            version: { increment: 1 },
+          },
+          select: STORY_SELECT,
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action: 'story.submitted',
+            entityType: 'story',
+            entityId: story.id,
+            oldValues: { status: story.status, version: story.version },
+            newValues: {
+              status: updated.status,
+              submissionId: submission.id,
+              version: updated.version,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.submittedAt,
+          },
+        });
+        return {
+          status: 'submitted',
+          publication: this.toPublication(updated, submission),
+        };
+      });
+    } catch (error: unknown) {
+      if (isUniqueConstraintViolation(error)) {
+        return { status: 'already_pending' };
+      }
+      throw mapPrismaError(error, {
+        operation: 'story-submit',
+        resource: 'Truyện',
+      });
+    }
+  }
+
+  async cancelSubmission(
+    input: CancelAuthorStorySubmissionInput,
+  ): Promise<CancelAuthorStorySubmissionResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (!(await lockStoryRow(tx, input.storyId))) {
+          return { status: 'not_found' };
+        }
+        const story = await tx.story.findFirst({
+          where: { id: input.storyId, authorId: input.userId, deletedAt: null },
+          select: STORY_SELECT,
+        });
+        if (!story) {
+          return { status: 'not_found' };
+        }
+        const pending = await tx.storySubmission.findFirst({
+          where: { storyId: story.id, status: SubmissionStatus.PENDING },
+        });
+        if (!pending || story.status !== StoryStatus.PENDING_REVIEW) {
+          return { status: 'not_pending' };
+        }
+        await lockSubmissionRow(tx, pending.id);
+        const submission = await tx.storySubmission.update({
+          where: { id: pending.id },
+          data: {
+            status: SubmissionStatus.CANCELED,
+            canceledAt: input.canceledAt,
+          },
+        });
+        const updated = await tx.story.update({
+          where: { id: story.id },
+          data: {
+            status: StoryStatus.DRAFT,
+            visibility: StoryVisibility.PRIVATE,
+            updatedAt: input.canceledAt,
+            version: { increment: 1 },
+          },
+          select: STORY_SELECT,
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action: 'story.submission.canceled',
+            entityType: 'story',
+            entityId: story.id,
+            oldValues: { status: story.status, submissionId: pending.id },
+            newValues: {
+              status: updated.status,
+              submissionStatus: submission.status,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.canceledAt,
+          },
+        });
+        return {
+          status: 'canceled',
+          publication: this.toPublication(updated, submission),
+        };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'story-submission-cancel',
+        resource: 'Truyện',
+      });
+    }
+  }
+
+  async approveSubmission(
+    input: ReviewStorySubmissionInput,
+  ): Promise<ReviewStorySubmissionResult> {
+    return this.reviewSubmission(input, true);
+  }
+
+  async rejectSubmission(
+    input: ReviewStorySubmissionInput,
+  ): Promise<ReviewStorySubmissionResult> {
+    return this.reviewSubmission(input, false);
+  }
+
+  private async reviewSubmission(
+    input: ReviewStorySubmissionInput,
+    approve: boolean,
+  ): Promise<ReviewStorySubmissionResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const initial = await tx.storySubmission.findUnique({
+          where: { id: input.submissionId },
+          select: { storyId: true },
+        });
+        if (!initial) {
+          return { status: 'not_found' };
+        }
+        if (!(await lockStoryRow(tx, initial.storyId))) {
+          return { status: 'not_found' };
+        }
+        if (!(await lockSubmissionRow(tx, input.submissionId))) {
+          return { status: 'not_found' };
+        }
+        const submission = await tx.storySubmission.findUnique({
+          where: { id: input.submissionId },
+        });
+        if (!submission) {
+          return { status: 'not_found' };
+        }
+        if (submission.status !== SubmissionStatus.PENDING) {
+          return { status: 'not_pending' };
+        }
+        if (submission.submittedById === input.reviewerId) {
+          return { status: 'self_review' };
+        }
+        const story = await tx.story.findFirst({
+          where: { id: submission.storyId, deletedAt: null },
+          select: STORY_SELECT,
+        });
+        if (!story || story.status !== StoryStatus.PENDING_REVIEW) {
+          return { status: 'not_pending' };
+        }
+
+        if (approve) {
+          const missing = await getStoryPublicationMissing(
+            tx,
+            story,
+            story.authorId,
+          );
+          if (missing.length > 0) {
+            return { status: 'not_ready', missing };
+          }
+        }
+
+        const nextSubmissionStatus = approve
+          ? SubmissionStatus.APPROVED
+          : SubmissionStatus.REJECTED;
+        const nextStoryStatus = approve
+          ? StoryStatus.PUBLISHED
+          : StoryStatus.REJECTED;
+        const nextVisibility = approve
+          ? StoryVisibility.PUBLIC
+          : StoryVisibility.PRIVATE;
+        const reviewed = await tx.storySubmission.update({
+          where: { id: submission.id },
+          data: {
+            status: nextSubmissionStatus,
+            reviewedById: input.reviewerId,
+            reviewerNote: input.reviewerNote,
+            reviewedAt: input.reviewedAt,
+          },
+        });
+        const updated = await tx.story.update({
+          where: { id: story.id },
+          data: {
+            status: nextStoryStatus,
+            visibility: nextVisibility,
+            ...(approve ? { publishedAt: input.reviewedAt } : {}),
+            updatedAt: input.reviewedAt,
+            version: { increment: 1 },
+          },
+          select: STORY_SELECT,
+        });
+        await tx.moderationAction.create({
+          data: {
+            actorId: input.reviewerId,
+            submissionId: submission.id,
+            storyId: story.id,
+            action: approve
+              ? ModerationActionType.APPROVE_STORY
+              : ModerationActionType.REJECT_STORY,
+            reason: input.reviewerNote,
+            createdAt: input.reviewedAt,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: input.reviewerId,
+            action: approve ? 'story.published' : 'story.rejected',
+            entityType: 'story',
+            entityId: story.id,
+            oldValues: {
+              status: story.status,
+              visibility: story.visibility,
+              submissionId: submission.id,
+            },
+            newValues: {
+              status: updated.status,
+              visibility: updated.visibility,
+              submissionStatus: reviewed.status,
+              publishedAt: approve ? input.reviewedAt.toISOString() : null,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.reviewedAt,
+          },
+        });
+        return {
+          status: approve ? 'approved' : 'rejected',
+          publication: this.toPublication(updated, reviewed),
+        };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: approve
+          ? 'story-submission-approve'
+          : 'story-submission-reject',
+        resource: 'Truyện',
+      });
+    }
+  }
+
+  private toPublication(
+    story: StoryRow,
+    submission: {
+      id: string;
+      storyId: string;
+      submittedById: string;
+      reviewedById: string | null;
+      status: SubmissionStatus;
+      authorNote: string | null;
+      reviewerNote: string | null;
+      submittedAt: Date;
+      reviewedAt: Date | null;
+      canceledAt: Date | null;
+    },
+  ): StoryPublicationRecord {
+    return {
+      story: this.toRecord(story),
+      submission: {
+        id: submission.id,
+        storyId: submission.storyId,
+        submittedById: submission.submittedById,
+        reviewedById: submission.reviewedById,
+        status: submission.status,
+        authorNote: submission.authorNote,
+        reviewerNote: submission.reviewerNote,
+        submittedAt: submission.submittedAt,
+        reviewedAt: submission.reviewedAt,
+        canceledAt: submission.canceledAt,
+      },
+    };
+  }
+
+  async listPublic(input: ListPublicStoriesInput): Promise<PublicStoryPageDto> {
+    const where = buildPublicStoryWhere(input);
+    const skip = (input.page - 1) * input.pageSize;
+
+    try {
+      const [totalItems, stories] = await this.prisma.$transaction([
+        this.prisma.story.count({ where }),
+        this.prisma.story.findMany({
+          where,
+          orderBy: buildPublicStoryOrderBy(input.sort),
+          skip,
+          take: input.pageSize,
+          select: PUBLIC_STORY_SELECT,
+        }),
+      ]);
+
+      return {
+        items: stories.map((story) => toPublicStoryDto(story)),
+        pagination: {
+          page: input.page,
+          pageSize: input.pageSize,
+          totalItems,
+          totalPages:
+            totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize),
+        },
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'public-story-list',
+        resource: 'Truyện',
+      });
+    }
+  }
+
+  async findPublicBySlug(slug: string): Promise<PublicStoryDto | null> {
+    try {
+      const story = await this.prisma.story.findFirst({
+        where: {
+          slug,
+          deletedAt: null,
+          visibility: StoryVisibility.PUBLIC,
+          status: {
+            in: [...PUBLIC_STORY_STATUSES],
+          },
+        },
+        select: PUBLIC_STORY_SELECT,
+      });
+
+      return story ? toPublicStoryDto(story) : null;
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'public-story-detail',
+        resource: 'Truyện',
+      });
+    }
+  }
+
   async listActiveCategories(): Promise<
     readonly StoryTaxonomyCategoryRecord[]
   > {
@@ -606,6 +1106,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
       visibility: story.visibility,
       contentRating: story.contentRating,
       coverMediaId: story.coverMediaId,
+      publishedAt: story.publishedAt,
       categories,
       tags,
       version: story.version,
@@ -615,20 +1116,74 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
   }
 }
 
+async function getStoryPublicationMissing(
+  tx: Prisma.TransactionClient,
+  story: StoryRow,
+  authorUserId: string,
+): Promise<readonly string[]> {
+  const missing: string[] = [];
+
+  if (!story.synopsis.trim()) missing.push('synopsis');
+
+  if (!story.coverMediaId) {
+    missing.push('cover');
+  } else {
+    const validCover = await validateAndLockStoryCover(
+      tx,
+      story.coverMediaId,
+      authorUserId,
+      story.id,
+    );
+    if (!validCover) missing.push('cover');
+  }
+
+  const activeCategory = await tx.storyCategory.findFirst({
+    where: {
+      storyId: story.id,
+      category: { isActive: true },
+    },
+    select: { categoryId: true },
+  });
+  if (!activeCategory) missing.push('category');
+
+  const chapterRows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+    SELECT "id" FROM "chapters"
+    WHERE "story_id" = ${story.id}::uuid
+      AND "deleted_at" IS NULL
+      AND length(btrim("content")) > 0
+    LIMIT 1
+  `);
+  if (chapterRows.length === 0) missing.push('chapter');
+
+  return missing;
+}
+
+async function lockSubmissionRow(
+  tx: Prisma.TransactionClient,
+  submissionId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+    SELECT "id" FROM "story_submissions"
+    WHERE "id" = ${submissionId}::uuid
+    FOR UPDATE
+  `);
+  return rows.length === 1;
+}
+
 type TaxonomyValidationResult =
   | {
-      readonly status: 'valid';
-    }
+    readonly status: 'valid';
+  }
   | {
-      readonly status: 'invalid_categories';
+    readonly status: 'invalid_categories';
 
-      readonly invalidIds: readonly string[];
-    }
+    readonly invalidIds: readonly string[];
+  }
   | {
-      readonly status: 'invalid_tags';
+    readonly status: 'invalid_tags';
 
-      readonly invalidIds: readonly string[];
-    };
+    readonly invalidIds: readonly string[];
+  };
 
 async function validateTaxonomy(
   tx: Prisma.TransactionClient,
@@ -764,7 +1319,7 @@ async function lockStoryRow(
   tx: Prisma.TransactionClient,
   storyId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
     SELECT "id"
     FROM "stories"
     WHERE "id" = ${storyId}::uuid
@@ -778,7 +1333,7 @@ async function lockMediaAssetRow(
   tx: Prisma.TransactionClient,
   mediaAssetId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
     SELECT "id"
     FROM "media_assets"
     WHERE "id" = ${mediaAssetId}::uuid
@@ -839,4 +1394,228 @@ function isUniqueConstraintViolation(error: unknown): boolean {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === 'P2002'
   );
+}
+
+function buildPublicStoryWhere(
+  input: ListPublicStoriesInput,
+): Prisma.StoryWhereInput {
+  const requestedStatus = input.status
+    ? mapPublicListStatusToStoryStatus(input.status)
+    : undefined;
+
+  return {
+    deletedAt: null,
+    visibility: StoryVisibility.PUBLIC,
+    status: requestedStatus
+      ? requestedStatus
+      : {
+          in: [...PUBLIC_STORY_STATUSES],
+        },
+    ...(input.q
+      ? {
+          OR: [
+            {
+              title: {
+                contains: input.q,
+                mode: 'insensitive',
+              },
+            },
+            {
+              synopsis: {
+                contains: input.q,
+                mode: 'insensitive',
+              },
+            },
+            {
+              author: {
+                penName: {
+                  contains: input.q,
+                  mode: 'insensitive',
+                },
+              },
+            },
+            {
+              tags: {
+                some: {
+                  tag: {
+                    name: {
+                      contains: input.q,
+                      mode: 'insensitive',
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+    ...(input.genre
+      ? {
+          categories: {
+            some: {
+              category: {
+                slug: input.genre,
+                isActive: true,
+              },
+            },
+          },
+        }
+      : {}),
+    ...(input.yearFrom !== undefined || input.yearTo !== undefined
+      ? {
+          releaseYear: {
+            ...(input.yearFrom !== undefined ? { gte: input.yearFrom } : {}),
+            ...(input.yearTo !== undefined ? { lte: input.yearTo } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function buildPublicStoryOrderBy(
+  sort: ListPublicStoriesInput['sort'],
+): Prisma.StoryOrderByWithRelationInput[] {
+  switch (sort) {
+    case 'popular':
+      return [{ viewCount: 'desc' }, { publishedAt: 'desc' }, { id: 'desc' }];
+    case 'rating':
+      return [
+        { ratingAverage: 'desc' },
+        { ratingCount: 'desc' },
+        { publishedAt: 'desc' },
+        { id: 'desc' },
+      ];
+    case 'chapter-count':
+      return [
+        { chapterCount: 'desc' },
+        { updatedAt: 'desc' },
+        { id: 'desc' },
+      ];
+    case 'oldest':
+      return [{ publishedAt: 'asc' }, { id: 'asc' }];
+    case 'latest':
+    default:
+      return [{ updatedAt: 'desc' }, { id: 'desc' }];
+  }
+}
+
+function mapPublicListStatusToStoryStatus(
+  status: NonNullable<ListPublicStoriesInput['status']>,
+): StoryStatus {
+  switch (status) {
+    case 'completed':
+      return StoryStatus.COMPLETED;
+    case 'hiatus':
+      return StoryStatus.HIATUS;
+    case 'ongoing':
+    default:
+      return StoryStatus.PUBLISHED;
+  }
+}
+
+function toPublicStoryDto(story: PublicStoryRow): PublicStoryDto {
+  const latest = story.chapters[0];
+  const latestChapter =
+    latest?.publishedAt != null
+      ? {
+          id: latest.id,
+          number: Number(latest.number),
+          title: latest.title,
+          slug: latest.slug,
+          publishedAt: latest.publishedAt,
+        }
+      : null;
+
+  const categories = story.categories
+    .map(({ category, isPrimary }) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      isPrimary,
+    }))
+    .sort((left, right) => {
+      if (left.isPrimary !== right.isPrimary) {
+        return left.isPrimary ? -1 : 1;
+      }
+      return left.name.localeCompare(right.name);
+    });
+
+  const tags = story.tags
+    .map(({ tag }) => ({
+      id: tag.id,
+      name: tag.name,
+      slug: tag.slug,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  return {
+    id: story.id,
+    slug: story.slug,
+    title: story.title,
+    synopsis: story.synopsis,
+    languageCode: story.languageCode,
+    contentRating: story.contentRating,
+    releaseYear: story.releaseYear,
+    status: toPublicPublicationStatus(story.status),
+    author: {
+      id: story.author.userId,
+      penName: story.author.penName,
+      slug: story.author.slug,
+    },
+    coverUrl: getPublicStoryCoverUrl(story),
+    categories,
+    tags,
+    latestChapter,
+    stats: {
+      views: bigintToSafeNumber(story.viewCount),
+      followers: story.followerCount,
+      ratingCount: story.ratingCount,
+      ratingAverage: Number(story.ratingAverage),
+      chapters: story.chapterCount,
+      comments: story.commentCount,
+    },
+    publishedAt: story.publishedAt,
+    lastChapterAt: story.lastChapterAt,
+    updatedAt: story.updatedAt,
+  };
+}
+
+function toPublicPublicationStatus(
+  status: StoryStatus,
+): PublicStoryDto['status'] {
+  if (status === StoryStatus.COMPLETED) {
+    return 'COMPLETED';
+  }
+  if (status === StoryStatus.HIATUS) {
+    return 'HIATUS';
+  }
+  return 'ONGOING';
+}
+
+function bigintToSafeNumber(value: bigint): number {
+  const max = BigInt(Number.MAX_SAFE_INTEGER);
+  if (value > max) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  if (value < -max) {
+    return -Number.MAX_SAFE_INTEGER;
+  }
+  return Number(value);
+}
+
+
+function getPublicStoryCoverUrl(story: PublicStoryRow): string | null {
+  const cover = story.coverMedia;
+
+  if (
+    !cover ||
+    cover.deletedAt !== null ||
+    cover.purpose !== MediaPurpose.STORY_COVER ||
+    cover.status !== MediaStatus.READY ||
+    cover.resourceType !== MediaResourceType.IMAGE
+  ) {
+    return null;
+  }
+
+  return cover.secureUrl ?? cover.publicUrl ?? null;
 }
