@@ -20,8 +20,8 @@ export interface ChapterDetail {
 }
 
 export interface ChapterCommentAuthor {
+  readonly id: string;
   readonly name: string;
-  readonly level: number;
   readonly initials: string;
 }
 
@@ -31,17 +31,16 @@ export interface ChapterComment {
   readonly content: string;
   readonly createdAt: string;
   readonly likes: number;
+  readonly isOwner: boolean;
 }
 
 export interface ChapterReaderView {
   readonly story: ChapterStory;
   readonly chapter: ChapterDetail;
-
   readonly navigation: {
     readonly previous: ChapterNavigationItem | null;
     readonly next: ChapterNavigationItem | null;
   };
-
   readonly comments: readonly ChapterComment[];
   readonly totalComments: number;
 }

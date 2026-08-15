@@ -100,6 +100,10 @@
         <app-chapter-comments
           [comments]="view.comments"
           [totalComments]="view.totalComments"
+          [submitting]="store.commentPending()"
+          (commentCreate)="addComment($event)"
+          (commentUpdate)="editComment($event)"
+          (commentDelete)="deleteComment($event)"
         ></app-chapter-comments>
       </section>
 

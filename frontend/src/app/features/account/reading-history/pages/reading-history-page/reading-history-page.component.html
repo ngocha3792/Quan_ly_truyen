@@ -1,13 +1,17 @@
 <main class="reading-history-page">
-  @if (store.view(); as view) {
-    <div class="page-container">
-      <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-      <app-page-heading
-        title="Lịch sử đọc"
-        description="Theo dõi tiến độ và các chương truyện bạn đã đọc gần đây."
-      />
+    <app-page-heading
+      title="Lịch sử đọc"
+      description="Theo dõi tiến độ và các chương truyện bạn đã đọc gần đây."
+    />
 
+    @if (store.loading() && !store.view()) {
+      <app-loading-state message="Đang tải lịch sử đọc..." />
+    } @else if (store.error() && !store.view()) {
+      <app-error-alert [message]="store.error()" (retry)="store.load()" />
+    } @else if (store.view(); as view) {
       <app-content-layout class="history-layout" asideWidth="340px">
         <app-reading-history-toolbar
           main
@@ -21,16 +25,7 @@
 
         <header main class="list-heading">
           <h2>Đã đọc gần đây</h2>
-
-          <span>
-            Tìm thấy
-
-            <strong>
-              {{ store.resultCount() }}
-            </strong>
-
-            truyện
-          </span>
+          <span>Tìm thấy <strong>{{ store.resultCount() }}</strong> truyện</span>
         </header>
 
         <app-reading-history-list
@@ -49,6 +44,6 @@
           (syncDevices)="store.syncDevices()"
         />
       </app-content-layout>
-    </div>
-  }
+    }
+  </div>
 </main>

@@ -4,9 +4,11 @@ export type { ChapterSummary, Story };
 
 export interface StoryComment {
   readonly id: string;
+  readonly userId: string;
   readonly user: string;
   readonly time: string;
   readonly content: string;
+  readonly isOwner: boolean;
 }
 
 export interface RelatedStoryItem {

@@ -5,8 +5,10 @@
   </div>
 
   <div class="comment-input-box">
-    <textarea placeholder="Viết bình luận của bạn..." rows="2"></textarea>
-    <button type="button">Gửi</button>
+    <textarea #commentInput placeholder="Viết bình luận của bạn..." rows="2" maxlength="4000"></textarea>
+    <button type="button" [disabled]="submitting()" (click)="submit(commentInput)">
+      {{ submitting() ? 'Đang gửi...' : 'Gửi' }}
+    </button>
   </div>
 
   <div class="comment-list">
@@ -18,9 +20,32 @@
             <strong>{{ comment.user }}</strong>
             <small>{{ comment.time }}</small>
           </div>
-          <p>{{ comment.content }}</p>
+
+          @if (editingId() === comment.id) {
+            <textarea
+              class="edit-textarea"
+              rows="3"
+              maxlength="4000"
+              [value]="editBody()"
+              (input)="updateEdit($any($event.target).value)"
+            ></textarea>
+            <div class="comment-owner-actions">
+              <button type="button" (click)="saveEdit(comment.id)">Lưu</button>
+              <button type="button" (click)="cancelEdit()">Hủy</button>
+            </div>
+          } @else {
+            <p>{{ comment.content }}</p>
+            @if (comment.isOwner) {
+              <div class="comment-owner-actions">
+                <button type="button" (click)="startEdit(comment)">Sửa</button>
+                <button type="button" (click)="commentDelete.emit(comment.id)">Xóa</button>
+              </div>
+            }
+          }
         </div>
       </div>
+    } @empty {
+      <p class="comment-empty">Chưa có bình luận nào.</p>
     }
   </div>
 </section>

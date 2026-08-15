@@ -1,5 +1,7 @@
+import { Observable } from 'rxjs';
 import { ReadingHistoryView } from './reading-history.models';
 
 export abstract class ReadingHistoryRepository {
-  abstract getHistory(): ReadingHistoryView;
+  abstract getHistory(): Observable<ReadingHistoryView>;
+  abstract clearHistory(): Observable<void>;
 }

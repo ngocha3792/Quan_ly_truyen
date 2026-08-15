@@ -1,13 +1,17 @@
 <main class="my-library-page">
-  @if (store.view(); as view) {
-    <div class="page-container">
-      <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-      <app-page-heading
-        title="Thư viện của tôi"
-        description="Quản lý các truyện bạn đang theo dõi, đã lưu và đang đọc."
-      />
+    <app-page-heading
+      title="Thư viện của tôi"
+      description="Quản lý các truyện bạn đã lưu và đang đọc."
+    />
 
+    @if (store.loading() && !store.view()) {
+      <app-loading-state message="Đang tải thư viện..." />
+    } @else if (store.error() && !store.view()) {
+      <app-error-alert [message]="store.error()" (retry)="store.load()" />
+    } @else if (store.view(); as view) {
       <app-content-layout class="library-layout" asideWidth="340px">
         <app-library-toolbar
           main
@@ -22,13 +26,7 @@
         />
 
         <div main class="result-heading">
-          Có
-
-          <strong>
-            {{ store.resultCount() }}
-          </strong>
-
-          truyện trong thư viện
+          Có <strong>{{ store.resultCount() }}</strong> truyện trong thư viện
         </div>
 
         <app-library-story-list
@@ -45,6 +43,6 @@
           [goal]="view.goal"
         />
       </app-content-layout>
-    </div>
-  }
+    }
+  </div>
 </main>

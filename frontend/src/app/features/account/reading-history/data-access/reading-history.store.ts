@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { catchError, EMPTY, finalize, tap } from 'rxjs';
 
 import {
   ReadingHistoryPeriod,
@@ -11,53 +12,33 @@ import { ReadingHistoryRepository } from '../domain/reading-history.repository';
 @Injectable()
 export class ReadingHistoryStore {
   private readonly repository = inject(ReadingHistoryRepository);
-
   private readonly viewState = signal<ReadingHistoryView | null>(null);
 
   readonly view = this.viewState.asReadonly();
-
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
   readonly query = signal('');
   readonly period = signal<ReadingHistoryPeriod>('all');
-
   readonly sort = signal<ReadingHistorySort>('recent');
-
   readonly bookmarkedIds = signal<readonly string[]>([]);
-
   readonly syncState = signal<ReadingHistorySyncState>('idle');
 
   readonly filteredHistory = computed(() => {
     const view = this.viewState();
-
-    if (!view) {
-      return [];
-    }
-
+    if (!view) return [];
     const normalizedQuery = this.query().trim().toLocaleLowerCase('vi');
-
     const filtered = view.history.filter((item) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
+      const matchesQuery = normalizedQuery.length === 0 ||
         [item.title, item.author, item.chapterTitle, ...item.genres]
-          .join(' ')
-          .toLocaleLowerCase('vi')
-          .includes(normalizedQuery);
-
-      const matchesPeriod = this.matchesSelectedPeriod(item.lastReadMinutes);
-
-      return matchesQuery && matchesPeriod;
+          .join(' ').toLocaleLowerCase('vi').includes(normalizedQuery);
+      return matchesQuery && this.matchesSelectedPeriod(item.lastReadMinutes);
     });
-
     return [...filtered].sort((first, second) => {
       switch (this.sort()) {
-        case 'progress':
-          return second.progress - first.progress;
-
-        case 'title':
-          return first.title.localeCompare(second.title, 'vi');
-
+        case 'progress': return second.progress - first.progress;
+        case 'title': return first.title.localeCompare(second.title, 'vi');
         case 'recent':
-        default:
-          return first.lastReadMinutes - second.lastReadMinutes;
+        default: return first.lastReadMinutes - second.lastReadMinutes;
       }
     });
   });
@@ -65,73 +46,77 @@ export class ReadingHistoryStore {
   readonly resultCount = computed(() => this.filteredHistory().length);
 
   load(): void {
-    this.viewState.set(this.repository.getHistory());
+    this.fetchHistory(false);
   }
 
-  setQuery(query: string): void {
-    this.query.set(query);
-  }
-
-  setPeriod(period: ReadingHistoryPeriod): void {
-    this.period.set(period);
-  }
-
-  setSort(sort: ReadingHistorySort): void {
-    this.sort.set(sort);
-  }
+  setQuery(query: string): void { this.query.set(query); }
+  setPeriod(period: ReadingHistoryPeriod): void { this.period.set(period); }
+  setSort(sort: ReadingHistorySort): void { this.sort.set(sort); }
 
   toggleBookmark(historyId: string): void {
-    this.bookmarkedIds.update((currentIds) => {
-      if (currentIds.includes(historyId)) {
-        return currentIds.filter((id) => id !== historyId);
-      }
-
-      return [...currentIds, historyId];
-    });
+    this.bookmarkedIds.update((ids) => ids.includes(historyId)
+      ? ids.filter((id) => id !== historyId)
+      : [...ids, historyId]);
   }
 
   clearHistory(): void {
-    const currentView = this.viewState();
-
-    if (!currentView) {
-      return;
-    }
-
-    this.viewState.set({
-      ...currentView,
-
-      history: [],
-      continueReading: [],
-
-      statistics: {
-        ...currentView.statistics,
-        storiesRead: '0',
-        chaptersRead: '0',
-        weeklyReadingTime: '0 phút',
-      },
-    });
-
-    this.bookmarkedIds.set([]);
+    this.error.set(null);
+    this.repository.clearHistory().pipe(
+      tap(() => {
+        const current = this.viewState();
+        if (current) {
+          this.viewState.set({
+            ...current,
+            history: [],
+            continueReading: [],
+            statistics: {
+              ...current.statistics,
+              storiesRead: '0',
+              chaptersRead: '0',
+              weeklyReadingTime: '—',
+            },
+          });
+        }
+        this.bookmarkedIds.set([]);
+      }),
+      catchError(() => {
+        this.error.set('Không thể xóa lịch sử đọc.');
+        return EMPTY;
+      }),
+    ).subscribe();
   }
 
   syncDevices(): void {
-    this.syncState.set('success');
+    this.fetchHistory(true);
+  }
+
+  private fetchHistory(markAsSync: boolean): void {
+    if (this.loading()) return;
+    this.loading.set(true);
+    this.error.set(null);
+    if (markAsSync) this.syncState.set('syncing');
+
+    this.repository.getHistory().pipe(
+      tap((view) => {
+        this.viewState.set(view);
+        if (markAsSync) this.syncState.set('success');
+      }),
+      catchError(() => {
+        this.error.set('Không thể tải lịch sử đọc.');
+        if (markAsSync) this.syncState.set('error');
+        return EMPTY;
+      }),
+      finalize(() => this.loading.set(false)),
+    ).subscribe();
   }
 
   private matchesSelectedPeriod(lastReadMinutes: number): boolean {
     switch (this.period()) {
-      case 'today':
-        return lastReadMinutes <= 1_440;
-
-      case '7-days':
-        return lastReadMinutes <= 10_080;
-
-      case '30-days':
-        return lastReadMinutes <= 43_200;
-
+      case 'today': return lastReadMinutes <= 1_440;
+      case '7-days': return lastReadMinutes <= 10_080;
+      case '30-days': return lastReadMinutes <= 43_200;
       case 'all':
-      default:
-        return true;
+      default: return true;
     }
   }
 }

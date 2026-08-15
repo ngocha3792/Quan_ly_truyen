@@ -544,3 +544,37 @@ h2 {
     justify-content: center;
   }
 }
+
+.reader-rating {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  color: #aeb5c8;
+  font-size: 0.85rem;
+
+  button {
+    padding: 0.1rem 0.2rem;
+    border: 0;
+    color: #5f6677;
+    background: transparent;
+    font-size: 1.15rem;
+    cursor: pointer;
+  }
+
+  button.active {
+    color: #f6c453;
+  }
+
+  button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  .clear-rating {
+    margin-left: 0.35rem;
+    color: #9ba3b7;
+    font-size: 0.75rem;
+    text-decoration: underline;
+  }
+}

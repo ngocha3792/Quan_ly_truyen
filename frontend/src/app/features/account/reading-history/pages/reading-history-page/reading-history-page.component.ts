@@ -6,6 +6,8 @@ import {
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 
 import { ContentLayoutComponent } from '../../../../../shared/components/content-layout/content-layout.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
@@ -30,6 +32,8 @@ import { ReadingHistoryToolbarComponent } from '../../ui/reading-history-toolbar
     BreadcrumbComponent,
     PageHeadingComponent,
     ContentLayoutComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
 
     ReadingHistoryToolbarComponent,
     ReadingHistoryListComponent,

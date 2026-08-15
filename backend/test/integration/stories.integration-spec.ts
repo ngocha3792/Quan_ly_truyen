@@ -9,6 +9,7 @@ import {
   MediaPurpose,
   MediaResourceType,
   MediaStatus,
+  ModerationStatus,
   StoryStatus,
   StoryVisibility,
   SubmissionStatus,
@@ -16,6 +17,7 @@ import {
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import {
   PrismaChapterPersistence,
+  PrismaReaderEngagementPersistence,
   PrismaStoryPersistence,
 } from '@/modules/stories/infrastructure';
 
@@ -24,6 +26,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
   let prisma: PrismaService;
   let stories: PrismaStoryPersistence;
   let chapters: PrismaChapterPersistence;
+  let engagement: PrismaReaderEngagementPersistence;
 
   const runId = randomUUID();
   const compactRunId = runId.replaceAll('-', '');
@@ -32,7 +35,11 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
-      providers: [PrismaStoryPersistence, PrismaChapterPersistence],
+      providers: [
+        PrismaStoryPersistence,
+        PrismaChapterPersistence,
+        PrismaReaderEngagementPersistence,
+      ],
     }).compile();
 
     await moduleRef.init();
@@ -40,6 +47,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     prisma = moduleRef.get(PrismaService);
     stories = moduleRef.get(PrismaStoryPersistence);
     chapters = moduleRef.get(PrismaChapterPersistence);
+    engagement = moduleRef.get(PrismaReaderEngagementPersistence);
   });
 
   afterEach(async () => {
@@ -286,6 +294,187 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     await expect(
       chapters.findPublicReader(inconsistent.slug, '1'),
     ).resolves.toBeNull();
+  });
+
+  it('reader engagement giữ unique/counter/ownership invariants dưới concurrent writes', async () => {
+    const author = await createAuthor('engagement-author');
+    const reader = await createUser('engagement-reader');
+    const secondReader = await createUser('engagement-reader-2');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+      content: 'Public chapter for engagement.',
+    });
+    const nextChapter = await createChapter(author.id, story.id, 2, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+      content: 'Second public chapter for progress races.',
+    });
+
+    const libraryResults = await Promise.all([
+      engagement.upsertLibraryEntry({
+        userId: reader.id,
+        storyId: story.id,
+        isFavorite: true,
+        updatedAt: new Date(),
+      }),
+      engagement.upsertLibraryEntry({
+        userId: reader.id,
+        storyId: story.id,
+        isFavorite: true,
+        updatedAt: new Date(),
+      }),
+    ]);
+    expect(libraryResults.every((result) => result.status === 'updated')).toBe(true);
+    await expect(
+      prisma.libraryEntry.count({ where: { userId: reader.id, storyId: story.id } }),
+    ).resolves.toBe(1);
+
+    const olderReadAt = new Date(Date.now() - 1_000);
+    const newerReadAt = new Date();
+    const progressResults = await Promise.all([
+      engagement.saveReadingProgress({
+        userId: reader.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        position: 0,
+        readAt: olderReadAt,
+      }),
+      engagement.saveReadingProgress({
+        userId: reader.id,
+        storyId: story.id,
+        chapterId: nextChapter.id,
+        position: 200,
+        readAt: newerReadAt,
+      }),
+    ]);
+    expect(progressResults.every((result) => result.status === 'saved')).toBe(true);
+    const savedProgress = await prisma.readingProgress.findUniqueOrThrow({
+      where: { userId_storyId: { userId: reader.id, storyId: story.id } },
+      select: { currentChapterId: true, position: true, lastReadAt: true, progressPercent: true },
+    });
+    expect(savedProgress.currentChapterId).toBe(nextChapter.id);
+    expect(savedProgress.position).toBe(200);
+    expect(savedProgress.lastReadAt.getTime()).toBe(newerReadAt.getTime());
+    expect(Number(savedProgress.progressPercent)).toBe(100);
+
+    await engagement.saveReadingProgress({
+      userId: reader.id,
+      storyId: story.id,
+      chapterId: nextChapter.id,
+      position: 10,
+      readAt: olderReadAt,
+    });
+    const progressAfterStaleSameChapter = await prisma.readingProgress.findUniqueOrThrow({
+      where: { userId_storyId: { userId: reader.id, storyId: story.id } },
+      select: { currentChapterId: true, position: true, lastReadAt: true },
+    });
+    expect(progressAfterStaleSameChapter.currentChapterId).toBe(nextChapter.id);
+    expect(progressAfterStaleSameChapter.position).toBe(200);
+    expect(progressAfterStaleSameChapter.lastReadAt.getTime()).toBe(newerReadAt.getTime());
+    const progressLibrary = await prisma.libraryEntry.findUniqueOrThrow({
+      where: { userId_storyId: { userId: reader.id, storyId: story.id } },
+      select: { lastReadChapterId: true, progressPercent: true, completedAt: true },
+    });
+    expect(progressLibrary.lastReadChapterId).toBe(nextChapter.id);
+    expect(Number(progressLibrary.progressPercent)).toBe(100);
+    expect(progressLibrary.completedAt?.getTime()).toBe(newerReadAt.getTime());
+    await expect(
+      prisma.readingProgress.count({ where: { userId: reader.id, storyId: story.id } }),
+    ).resolves.toBe(1);
+
+    const ratings = await Promise.all([
+      engagement.upsertRating({
+        userId: reader.id,
+        storyId: story.id,
+        score: 5,
+        updatedAt: new Date(),
+      }),
+      engagement.upsertRating({
+        userId: secondReader.id,
+        storyId: story.id,
+        score: 4,
+        updatedAt: new Date(),
+      }),
+    ]);
+    expect(ratings.every((result) => result.status === 'updated')).toBe(true);
+    const ratedStory = await prisma.story.findUniqueOrThrow({
+      where: { id: story.id },
+      select: { ratingCount: true, ratingAverage: true },
+    });
+    expect(ratedStory.ratingCount).toBe(2);
+    expect(Number(ratedStory.ratingAverage)).toBe(4.5);
+
+    await Promise.all([
+      engagement.upsertRating({
+        userId: reader.id,
+        storyId: story.id,
+        score: 3,
+        updatedAt: new Date(),
+      }),
+      engagement.deleteRating(reader.id, story.id),
+    ]);
+    const activeRatings = await prisma.rating.aggregate({
+      where: {
+        storyId: story.id,
+        deletedAt: null,
+        moderationStatus: ModerationStatus.VISIBLE,
+      },
+      _count: { _all: true },
+      _avg: { score: true },
+    });
+    const reconciledStory = await prisma.story.findUniqueOrThrow({
+      where: { id: story.id },
+      select: { ratingCount: true, ratingAverage: true },
+    });
+    expect(reconciledStory.ratingCount).toBe(activeRatings._count._all);
+    expect(Number(reconciledStory.ratingAverage)).toBe(activeRatings._avg.score ?? 0);
+
+    const createdComment = await engagement.createComment({
+      userId: reader.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      body: 'A real reader comment',
+      createdAt: new Date(),
+    });
+    expect(createdComment.status).toBe('created');
+    if (createdComment.status !== 'created') return;
+
+    const intruderUpdate = await engagement.updateComment({
+      userId: secondReader.id,
+      commentId: createdComment.comment.id,
+      body: 'Must not overwrite',
+      updatedAt: new Date(),
+    });
+    expect(intruderUpdate.status).toBe('not_found');
+
+    const deleteResults = await Promise.all([
+      engagement.deleteComment({
+        userId: reader.id,
+        commentId: createdComment.comment.id,
+        deletedAt: new Date(),
+      }),
+      engagement.deleteComment({
+        userId: reader.id,
+        commentId: createdComment.comment.id,
+        deletedAt: new Date(),
+      }),
+    ]);
+    expect(deleteResults.map((result) => result.status).sort()).toEqual([
+      'deleted',
+      'not_found',
+    ]);
+
+    const counters = await Promise.all([
+      prisma.story.findUniqueOrThrow({ where: { id: story.id }, select: { commentCount: true } }),
+      prisma.chapter.findUniqueOrThrow({ where: { id: chapter.id }, select: { commentCount: true } }),
+    ]);
+    expect(counters[0].commentCount).toBe(0);
+    expect(counters[1].commentCount).toBe(0);
   });
 
   async function createReviewReadyDraft(

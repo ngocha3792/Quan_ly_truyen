@@ -30,6 +30,13 @@ const AUTHOR_PERMISSIONS = [
   PermissionCode.CHAPTER_UPDATE_OWN,
   PermissionCode.CHAPTER_DELETE_OWN,
   PermissionCode.CHAPTER_PUBLISH_OWN,
+  PermissionCode.COMMENT_CREATE,
+  PermissionCode.COMMENT_UPDATE_OWN,
+  PermissionCode.COMMENT_DELETE_OWN,
+  PermissionCode.RATING_CREATE,
+  PermissionCode.RATING_UPDATE_OWN,
+  PermissionCode.LIBRARY_MANAGE_OWN,
+  PermissionCode.READING_HISTORY_MANAGE_OWN,
 ] as const;
 
 const ADMIN_PERMISSIONS = [
@@ -222,6 +229,107 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     });
     expect(persistedChapter.status).toBe(ChapterStatus.PUBLISHED);
     expect(persistedChapter.publishedAt).not.toBeNull();
+
+    const readerToken = token(intruderId, intruderSessionId);
+    const libraryResponse = await request(httpServer())
+      .put(`/api/v1/library/${storyId}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .send({ isFavorite: true })
+      .expect(200);
+    expect(unwrap<{ isFavorite: boolean }>(libraryResponse.body as unknown).isFavorite).toBe(true);
+
+    await request(httpServer())
+      .put(`/api/v1/reading-progress/${storyId}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .send({ chapterId: chapter.id, position: 0 })
+      .expect(200);
+
+    const historyResponse = await request(httpServer())
+      .get('/api/v1/reading-history')
+      .set('Authorization', `Bearer ${readerToken}`)
+      .expect(200);
+    expect(unwrap<Array<{ story: { id: string } }>>(historyResponse.body as unknown))
+      .toEqual([expect.objectContaining({ story: expect.objectContaining({ id: storyId }) })]);
+
+    await request(httpServer())
+      .put(`/api/v1/stories/${storyId}/rating`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .send({ score: 5 })
+      .expect(200);
+    const ratingResponse = await request(httpServer())
+      .get(`/api/v1/stories/${storyId}/rating/me`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .expect(200);
+    expect(unwrap<{ score: number }>(ratingResponse.body as unknown).score).toBe(5);
+
+    const commentKey = `reader-comment-${runId}`;
+    const commentResponse = await request(httpServer())
+      .post(`/api/v1/stories/${storyId}/comments`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .set('x-idempotency-key', commentKey)
+      .send({ body: 'M10 reader comment' })
+      .expect(201);
+    const comment = unwrap<{ id: string; body: string }>(commentResponse.body as unknown);
+    expect(comment.body).toBe('M10 reader comment');
+
+    const replayCommentResponse = await request(httpServer())
+      .post(`/api/v1/stories/${storyId}/comments`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .set('x-idempotency-key', commentKey)
+      .send({ body: 'M10 reader comment' })
+      .expect(201);
+    expect(replayCommentResponse.headers['x-idempotent-replayed']).toBe('true');
+    expect(unwrap<{ id: string }>(replayCommentResponse.body as unknown).id).toBe(comment.id);
+    await expect(
+      prisma.comment.count({ where: { storyId, userId: intruderId, deletedAt: null } }),
+    ).resolves.toBe(1);
+
+    await request(httpServer())
+      .patch(`/api/v1/comments/${comment.id}`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({ body: 'Story owner must not edit another reader comment' })
+      .expect(404);
+
+    await request(httpServer())
+      .patch(`/api/v1/comments/${comment.id}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .send({ body: 'M10 edited reader comment' })
+      .expect(200);
+
+    const commentsResponse = await request(httpServer())
+      .get(`/api/v1/stories/${createdStory.slug}/comments`)
+      .expect(200);
+    expect(unwrap<{ items: Array<{ id: string; body: string }> }>(commentsResponse.body as unknown).items)
+      .toEqual([expect.objectContaining({ id: comment.id, body: 'M10 edited reader comment' })]);
+
+    await request(httpServer())
+      .delete(`/api/v1/comments/${comment.id}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .expect(204);
+
+    const commentsAfterDelete = await request(httpServer())
+      .get(`/api/v1/stories/${createdStory.slug}/comments`)
+      .expect(200);
+    expect(unwrap<{ items: Array<{ id: string }> }>(commentsAfterDelete.body as unknown).items)
+      .not.toEqual(expect.arrayContaining([expect.objectContaining({ id: comment.id })]));
+
+    const chapterCommentResponse = await request(httpServer())
+      .post(`/api/v1/stories/${storyId}/chapters/${chapter.id}/comments`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .set('x-idempotency-key', `reader-chapter-comment-${runId}`)
+      .send({ body: 'M10 chapter comment' })
+      .expect(201);
+    const chapterComment = unwrap<{ id: string; chapterId: string | null }>(
+      chapterCommentResponse.body as unknown,
+    );
+    expect(chapterComment.chapterId).toBe(chapter.id);
+
+    const chapterCommentsResponse = await request(httpServer())
+      .get(`/api/v1/stories/${createdStory.slug}/chapters/1/comments`)
+      .expect(200);
+    expect(
+      unwrap<{ items: Array<{ id: string }> }>(chapterCommentsResponse.body as unknown).items,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: chapterComment.id })]));
   });
 
   it('create endpoints reject requests without an idempotency key', async () => {

@@ -20,6 +20,11 @@ export const AUTH_PERMISSIONS = {
   CHAPTER_DELETE_OWN: 'chapter.delete.own',
   CHAPTER_PUBLISH_OWN: 'chapter.publish.own',
 
+  COMMENT_CREATE: 'comment.create',
+  COMMENT_UPDATE_OWN: 'comment.update.own',
+  COMMENT_DELETE_OWN: 'comment.delete.own',
+  RATING_CREATE: 'rating.create',
+  RATING_UPDATE_OWN: 'rating.update.own',
   LIBRARY_MANAGE_OWN: 'library.manage.own',
 
   READING_HISTORY_MANAGE_OWN: 'reading-history.manage.own',

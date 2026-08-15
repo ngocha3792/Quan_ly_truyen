@@ -2,7 +2,7 @@ export type ReadingHistoryPeriod = 'all' | 'today' | '7-days' | '30-days';
 
 export type ReadingHistorySort = 'recent' | 'progress' | 'title';
 
-export type ReadingHistorySyncState = 'idle' | 'success';
+export type ReadingHistorySyncState = 'idle' | 'syncing' | 'success' | 'error';
 
 export type StoryCoverTone = 'blue' | 'orange' | 'silver' | 'violet' | 'gold' | 'cyan';
 

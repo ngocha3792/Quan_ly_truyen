@@ -113,3 +113,40 @@
     font-size: 0.75rem;
   }
 }
+
+.comment-input-box button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid rgba(132, 145, 177, 0.22);
+  border-radius: 8px;
+  color: #dedbe4;
+  background: rgba(5, 10, 21, 0.5);
+  font: inherit;
+  resize: vertical;
+}
+
+.comment-owner-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+
+  button {
+    padding: 0.25rem 0.55rem;
+    border: 1px solid rgba(132, 145, 177, 0.2);
+    border-radius: 6px;
+    color: #aeb5c8;
+    background: transparent;
+    cursor: pointer;
+  }
+}
+
+.comment-empty {
+  margin: 0;
+  color: #727c90;
+  font-size: 0.85rem;
+}

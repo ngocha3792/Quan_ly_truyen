@@ -32,6 +32,21 @@
           ><span><app-icon name="eye" [size]="17" />{{ item.views | compactNumber }} lượt xem</span
           ><span><app-icon name="book" [size]="17" />{{ item.chapterCount ?? 0 }} chương</span>
         </div>
+        <div class="reader-rating" aria-label="Đánh giá truyện">
+          <span>Đánh giá của bạn:</span>
+          @for (score of [1, 2, 3, 4, 5]; track score) {
+            <button
+              type="button"
+              [class.active]="(store.ratingScore() ?? 0) >= score"
+              [disabled]="store.ratingPending()"
+              (click)="rate(score)"
+              [attr.aria-label]="'Đánh giá ' + score + ' sao'"
+            >★</button>
+          }
+          @if (store.ratingScore()) {
+            <button class="clear-rating" type="button" (click)="clearRating()">Xóa</button>
+          }
+        </div>
         <div class="buttons">
           @if (item.latestChapter; as latestChapter) {
             <a
@@ -80,7 +95,13 @@
       </div>
 
       <aside class="side-content">
-        <app-story-comments [comments]="store.comments()" />
+        <app-story-comments
+          [comments]="store.comments()"
+          [submitting]="store.commentPending()"
+          (commentCreate)="addComment($event)"
+          (commentUpdate)="editComment($event)"
+          (commentDelete)="deleteComment($event)"
+        />
         <app-story-related [relatedStories]="store.relatedStories()" />
       </aside>
     </div>

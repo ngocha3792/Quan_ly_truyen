@@ -7,3 +7,8 @@ export * from './get-author-chapter';
 export * from './get-author-story';
 export * from './list-author-chapters';
 export * from './list-author-stories';
+export * from './list-library';
+export * from './list-reading-history';
+export * from './get-my-story-rating';
+export * from './list-story-comments';
+export * from './list-chapter-comments';
