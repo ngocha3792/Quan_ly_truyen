@@ -12,6 +12,7 @@ import { configureApplication } from '@/bootstrap/application-configurator';
 import type { AppConfig } from '@/config';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import { InMemoryIdempotencyStore } from '@/infrastructure/idempotency/in-memory-idempotency.store';
+import type { AcquireIdempotencyResult } from '@/infrastructure/idempotency/idempotency-store.interface';
 import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
 import { CLOUDINARY_CLIENT } from '@/infrastructure/media/cloudinary/cloudinary.constants';
 import { CloudinaryUrlService } from '@/infrastructure/media/cloudinary/cloudinary-url.service';
@@ -303,7 +304,13 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       storageKey: string,
       requestHash: string,
       ttlSeconds: number,
-    ) => idempotencyStore.acquire(storageKey, requestHash, ttlSeconds);
+    ): Promise<AcquireIdempotencyResult> => {
+      const storeWithPrototype = Object.create(
+        InMemoryIdempotencyStore.prototype,
+      ) as InMemoryIdempotencyStore;
+      Object.assign(storeWithPrototype, idempotencyStore);
+      return storeWithPrototype.acquire(storageKey, requestHash, ttlSeconds);
+    };
 
     let releaseFirstAcquire!: () => void;
     let notifyFirstLeaseStored!: () => void;
@@ -386,7 +393,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       /*
        * Luôn mở gate và restore spy, kể cả khi assertion thất bại.
        */
-      releaseFirstAcquire();
+      releaseFirstAcquire?.();
       acquireSpy.mockRestore();
     }
   });

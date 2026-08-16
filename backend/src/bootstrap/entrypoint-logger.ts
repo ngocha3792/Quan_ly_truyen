@@ -9,8 +9,10 @@ export function writeEntrypointFailure(event: string, error: unknown): void {
     'service.version': process.env.OTEL_SERVICE_VERSION ?? '0.0.1',
     'deployment.environment': process.env.NODE_ENV ?? 'development',
     'service.instance.id':
-      process.env.SERVICE_INSTANCE_ID ?? `${hostname()}-${process.pid}`,
+      process.env.SERVICE_INSTANCE_ID || `${hostname()}-${process.pid}`,
     'error.type': error instanceof Error ? error.name : 'UnknownError',
+    'error.message': error instanceof Error ? error.message : String(error),
+    'error.stack': error instanceof Error ? error.stack : undefined,
   };
   try {
     process.stderr.write(`${JSON.stringify(record)}\n`);
