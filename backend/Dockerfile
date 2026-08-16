@@ -50,7 +50,12 @@ RUN npm run build \
     && test -f dist/worker.js \
     && test -f dist/healthcheck/worker-heartbeat.healthcheck.js \
     && test -f dist/healthcheck/recovery-metrics.js \
-    && cp -r src/generated/prisma/. dist/generated/prisma/
+    && cp dist/generated/prisma/internal/class.js \
+          dist/generated/prisma/internal/class.ts \
+    && cp dist/generated/prisma/internal/prismaNamespace.js \
+          dist/generated/prisma/internal/prismaNamespace.ts \
+    && cp dist/generated/prisma/internal/prismaNamespaceBrowser.js \
+          dist/generated/prisma/internal/prismaNamespaceBrowser.ts
 
 
 FROM dependencies AS production-dependencies
