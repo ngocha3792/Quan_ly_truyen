@@ -133,7 +133,6 @@ void runScript({
         'migrate',
         'reset',
         '--force',
-        '--skip-seed',
         '--config',
         'prisma.config.ts',
       ],

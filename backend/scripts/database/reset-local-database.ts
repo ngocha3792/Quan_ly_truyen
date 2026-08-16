@@ -46,14 +46,13 @@ void runScript({
     const backendRoot = process.cwd();
 
     await runCommand({
-      command: 'npx',
+      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
       args: [
         '--no-install',
         'prisma',
         'migrate',
         'reset',
         '--force',
-        '--skip-seed',
         '--config',
         'prisma.config.ts',
       ],
