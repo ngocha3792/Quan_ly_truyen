@@ -1,7 +1,115 @@
-export const STORY_MODERATION_READER_PORT = Symbol('STORY_MODERATION_READER_PORT');
+export const STORY_MODERATION_READER_PORT = Symbol(
+  'STORY_MODERATION_READER_PORT',
+);
 export type AdminStorySubmissionSort = 'submittedAt:desc' | 'submittedAt:asc';
-export interface ListStorySubmissionsInput { readonly status?: string; readonly author?: string; readonly story?: string; readonly reviewer?: string; readonly submittedFrom?: Date; readonly submittedTo?: Date; readonly page: number; readonly pageSize: number; readonly sort: AdminStorySubmissionSort }
-export interface StorySubmissionListItemRecord { readonly submissionId: string; readonly status: string; readonly story: { readonly id: string; readonly title: string; readonly slug: string }; readonly author: { readonly id: string; readonly displayName: string; readonly slug: string }; readonly submittedAt: Date; readonly reviewer: { readonly id: string; readonly displayName: string } | null; readonly reviewedAt: Date | null; readonly rejectionReason: string | null; readonly chapterCount: number }
-export interface ListStorySubmissionsResult { readonly items: readonly StorySubmissionListItemRecord[]; readonly totalItems: number }
-export interface StorySubmissionDetailRecord { readonly submission: { readonly id: string; readonly status: string; readonly authorNote: string | null; readonly submittedAt: Date; readonly reviewedAt: Date | null; readonly rejectionReason: string | null; readonly reviewer: { readonly id: string; readonly displayName: string } | null }; readonly author: { readonly id: string; readonly displayName: string; readonly penName: string; readonly slug: string; readonly status: string }; readonly story: { readonly id: string; readonly title: string; readonly slug: string; readonly synopsis: string; readonly status: string; readonly visibility: string; readonly coverUrl: string | null; readonly categories: readonly { readonly id: string; readonly name: string; readonly slug: string }[]; readonly tags: readonly { readonly id: string; readonly name: string; readonly slug: string }[] }; readonly chapters: readonly { readonly id: string; readonly number: string; readonly title: string; readonly status: string; readonly content: string; readonly updatedAt: Date }[]; readonly submissionHistory: readonly { readonly id: string; readonly status: string; readonly submittedAt: Date; readonly reviewedAt: Date | null; readonly reviewer: { readonly id: string; readonly displayName: string } | null; readonly rejectionReason: string | null }[]; readonly recentAudit: readonly { readonly id: string; readonly action: string; readonly actorId: string | null; readonly requestId: string | null; readonly createdAt: Date }[] }
-export interface StoryModerationReaderPort { listStorySubmissions(input: ListStorySubmissionsInput): Promise<ListStorySubmissionsResult>; getStorySubmission(submissionId: string): Promise<StorySubmissionDetailRecord | null> }
+export interface ListStorySubmissionsInput {
+  readonly status?: string;
+  readonly author?: string;
+  readonly story?: string;
+  readonly reviewer?: string;
+  readonly submittedFrom?: Date;
+  readonly submittedTo?: Date;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly sort: AdminStorySubmissionSort;
+}
+export interface StorySubmissionListItemRecord {
+  readonly submissionId: string;
+  readonly status: string;
+  readonly story: {
+    readonly id: string;
+    readonly title: string;
+    readonly slug: string;
+  };
+  readonly author: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly slug: string;
+  };
+  readonly submittedAt: Date;
+  readonly reviewer: {
+    readonly id: string;
+    readonly displayName: string;
+  } | null;
+  readonly reviewedAt: Date | null;
+  readonly rejectionReason: string | null;
+  readonly chapterCount: number;
+}
+export interface ListStorySubmissionsResult {
+  readonly items: readonly StorySubmissionListItemRecord[];
+  readonly totalItems: number;
+}
+export interface StorySubmissionDetailRecord {
+  readonly submission: {
+    readonly id: string;
+    readonly status: string;
+    readonly authorNote: string | null;
+    readonly submittedAt: Date;
+    readonly reviewedAt: Date | null;
+    readonly rejectionReason: string | null;
+    readonly reviewer: {
+      readonly id: string;
+      readonly displayName: string;
+    } | null;
+  };
+  readonly author: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly penName: string;
+    readonly slug: string;
+    readonly status: string;
+  };
+  readonly story: {
+    readonly id: string;
+    readonly title: string;
+    readonly slug: string;
+    readonly synopsis: string;
+    readonly status: string;
+    readonly visibility: string;
+    readonly coverUrl: string | null;
+    readonly categories: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly slug: string;
+    }[];
+    readonly tags: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly slug: string;
+    }[];
+  };
+  readonly chapters: readonly {
+    readonly id: string;
+    readonly number: string;
+    readonly title: string;
+    readonly status: string;
+    readonly content: string;
+    readonly updatedAt: Date;
+  }[];
+  readonly submissionHistory: readonly {
+    readonly id: string;
+    readonly status: string;
+    readonly submittedAt: Date;
+    readonly reviewedAt: Date | null;
+    readonly reviewer: {
+      readonly id: string;
+      readonly displayName: string;
+    } | null;
+    readonly rejectionReason: string | null;
+  }[];
+  readonly recentAudit: readonly {
+    readonly id: string;
+    readonly action: string;
+    readonly actorId: string | null;
+    readonly requestId: string | null;
+    readonly createdAt: Date;
+  }[];
+}
+export interface StoryModerationReaderPort {
+  listStorySubmissions(
+    input: ListStorySubmissionsInput,
+  ): Promise<ListStorySubmissionsResult>;
+  getStorySubmission(
+    submissionId: string,
+  ): Promise<StorySubmissionDetailRecord | null>;
+}

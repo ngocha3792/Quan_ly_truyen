@@ -12,7 +12,7 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { CurrentUserId, RequirePermissions } from '@/common/decorators';
+import { ClientIp, CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 
@@ -202,11 +202,12 @@ export class ReaderEngagementController {
   @RequirePermissions(PermissionCode.COMMENT_CREATE)
   createStoryComment(
     @CurrentUserId() userId: string | undefined,
+    @ClientIp() ipAddress: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
     @Body() request: CreateStoryCommentRequest,
   ): Promise<StoryCommentResultDto> {
     return this.createCommentCommand.execute(
-      new CreateStoryCommentCommand(userId, storyId, request.body),
+      new CreateStoryCommentCommand(userId, storyId, request.body, undefined, ipAddress),
     );
   }
 
@@ -215,12 +216,13 @@ export class ReaderEngagementController {
   @RequirePermissions(PermissionCode.COMMENT_CREATE)
   createChapterComment(
     @CurrentUserId() userId: string | undefined,
+    @ClientIp() ipAddress: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
     @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
     @Body() request: CreateStoryCommentRequest,
   ): Promise<StoryCommentResultDto> {
     return this.createCommentCommand.execute(
-      new CreateStoryCommentCommand(userId, storyId, request.body, chapterId),
+      new CreateStoryCommentCommand(userId, storyId, request.body, chapterId, ipAddress),
     );
   }
 

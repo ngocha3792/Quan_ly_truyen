@@ -144,6 +144,8 @@ const COMMENT_SELECT = {
   chapterId: true,
   parentId: true,
   body: true,
+  moderationStatus: true,
+  deletedAt: true,
   likeCount: true,
   replyCount: true,
   editedAt: true,
@@ -635,9 +637,26 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
         storyId: story.id,
         chapterId: chapterId ?? null,
         parentId: null,
-        moderationStatus: ModerationStatus.VISIBLE,
-        deletedAt: null,
         user: { deletedAt: null },
+        OR: [
+          { moderationStatus: ModerationStatus.VISIBLE, deletedAt: null },
+          {
+            moderationStatus: ModerationStatus.DELETED,
+            deletedAt: { not: null },
+            replies: {
+              some: {
+                OR: [
+                  { moderationStatus: ModerationStatus.VISIBLE, deletedAt: null },
+                  {
+                    moderationStatus: ModerationStatus.DELETED,
+                    deletedAt: { not: null },
+                    replies: { some: { moderationStatus: ModerationStatus.VISIBLE, deletedAt: null } },
+                  },
+                ],
+              },
+            },
+          },
+        ],
       };
       const skip = (input.page - 1) * input.pageSize;
       const [totalItems, rows] = await this.prisma.$transaction([
@@ -651,10 +670,27 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
         }),
       ]);
 
+      const reactionRows = rows.length === 0 ? [] : await this.prisma.commentReaction.groupBy({
+        by: ['commentId', 'type'],
+        where: { commentId: { in: rows.map((row) => row.id) } },
+        _count: { _all: true },
+      });
+      const reactions = new Map<string, { LIKE: number; LOVE: number; LAUGH: number; INSIGHTFUL: number }>();
+      for (const item of reactionRows) {
+        const counts = reactions.get(item.commentId) ?? { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 };
+        counts[item.type] = item._count._all;
+        reactions.set(item.commentId, counts);
+      }
+      const threadCounts = await countVisibleThreadReplies(this.prisma, rows.map((row) => row.id));
+
       return {
         status: 'found',
         page: {
-          items: rows.map(toCommentDto),
+          items: rows.map((row) => toCommentDto(
+            row,
+            reactions.get(row.id) ?? { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
+            threadCounts.get(row.id) ?? row.replyCount,
+          )),
           pagination: {
             page: input.page,
             pageSize: input.pageSize,
@@ -900,7 +936,11 @@ function toRatingDto(row: {
   };
 }
 
-function toCommentDto(row: CommentRow): StoryCommentResultDto {
+function toCommentDto(
+  row: CommentRow,
+  reactions: { LIKE: number; LOVE: number; LAUGH: number; INSIGHTFUL: number } = { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
+  threadReplyCount = row.replyCount,
+): StoryCommentResultDto {
   const avatar = row.user.avatarMedia;
   const avatarUrl =
     avatar &&
@@ -916,14 +956,18 @@ function toCommentDto(row: CommentRow): StoryCommentResultDto {
     storyId: row.storyId,
     chapterId: row.chapterId,
     parentId: row.parentId,
-    body: row.body,
+    depth: 0,
+    body: row.moderationStatus === ModerationStatus.DELETED || row.deletedAt ? '' : row.body,
+    displayState: row.moderationStatus === ModerationStatus.DELETED || row.deletedAt ? 'DELETED' : 'VISIBLE',
     user: {
       id: row.user.id,
       displayName: row.user.displayName,
       avatarUrl,
     },
     likeCount: row.likeCount,
+    reactions,
     replyCount: row.replyCount,
+    threadReplyCount,
     editedAt: row.editedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -1017,6 +1061,30 @@ async function refreshRatingAggregate(
       ratingAverage: aggregate._avg.score ?? 0,
     },
   });
+}
+
+async function countVisibleThreadReplies(
+  prisma: PrismaService,
+  rootIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (rootIds.length === 0) return new Map();
+  const rows = await prisma.$queryRaw<Array<{ rootId: string; count: bigint }>>(Prisma.sql`
+    SELECT roots."id" AS "rootId", COUNT(descendants."id")::bigint AS "count"
+    FROM "comments" roots
+    LEFT JOIN "comments" direct
+      ON direct."parent_id" = roots."id"
+      AND (
+        (direct."moderation_status" = 'visible'::"moderation_status" AND direct."deleted_at" IS NULL)
+        OR (direct."moderation_status" = 'deleted'::"moderation_status" AND direct."deleted_at" IS NOT NULL)
+      )
+    LEFT JOIN "comments" descendants
+      ON (descendants."id" = direct."id" OR descendants."parent_id" = direct."id")
+      AND descendants."moderation_status" = 'visible'
+      AND descendants."deleted_at" IS NULL
+    WHERE roots."id" IN (${Prisma.join(rootIds.map((id) => Prisma.sql`${id}::uuid`))})
+    GROUP BY roots."id"
+  `);
+  return new Map(rows.map((row) => [row.rootId, Number(row.count)]));
 }
 
 function parseChapterNumber(raw: string): Prisma.Decimal | null {

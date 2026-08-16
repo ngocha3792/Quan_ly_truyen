@@ -94,9 +94,12 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .expect(200);
 
     expect(
-      unwrap<{ id: string; activeSessionCount: number; statusReason: string | null; mfaEnabled: boolean }>(
-        detailResponse.body as unknown,
-      ),
+      unwrap<{
+        id: string;
+        activeSessionCount: number;
+        statusReason: string | null;
+        mfaEnabled: boolean;
+      }>(detailResponse.body as unknown),
     ).toMatchObject({
       id: targetUserId,
       activeSessionCount: 2,
@@ -111,23 +114,34 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
       .expect(200);
 
-    const sessions = unwrap<Array<Record<string, unknown>>>(sessionsResponse.body as unknown);
+    const sessions = unwrap<Array<Record<string, unknown>>>(
+      sessionsResponse.body as unknown,
+    );
     expect(sessions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ sessionId: targetSecuritySessionId, revoked: false }),
+        expect.objectContaining({
+          sessionId: targetSecuritySessionId,
+          revoked: false,
+        }),
       ]),
     );
     expect(JSON.stringify(sessions)).not.toContain('refreshTokenHash');
     expect(JSON.stringify(sessions)).not.toContain('refreshToken');
 
     await request(httpServer())
-      .post(`/api/v1/admin/users/${targetUserId}/sessions/${targetSecuritySessionId}/revoke`)
+      .post(
+        `/api/v1/admin/users/${targetUserId}/sessions/${targetSecuritySessionId}/revoke`,
+      )
       .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
       .expect(201);
 
     const revoked = await prisma.session.findUniqueOrThrow({
       where: { id: targetSecuritySessionId },
-      select: { revokedAt: true, accessTokenVersion: true, refreshTokenVersion: true },
+      select: {
+        revokedAt: true,
+        accessTokenVersion: true,
+        refreshTokenVersion: true,
+      },
     });
     expect(revoked.revokedAt).toBeInstanceOf(Date);
     expect(revoked.accessTokenVersion).toBe(1);
@@ -142,10 +156,12 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .get(`/api/v1/admin/users/${targetUserId}/security-events`)
       .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
       .expect(200);
-    const actions = unwrap<Array<{ action: string }>>(eventsResponse.body as unknown).map(
-      (event) => event.action,
+    const actions = unwrap<Array<{ action: string }>>(
+      eventsResponse.body as unknown,
+    ).map((event) => event.action);
+    expect(actions).toEqual(
+      expect.arrayContaining(['USER_SESSION_REVOKED', 'USER_ACCOUNT_UNLOCKED']),
     );
-    expect(actions).toEqual(expect.arrayContaining(['USER_SESSION_REVOKED', 'USER_ACCOUNT_UNLOCKED']));
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: targetUserId },
@@ -159,13 +175,19 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .patch(`/api/v1/admin/users/${targetUserId}/status`)
       .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
       .set('x-request-id', `admin-users-${runId}-status`)
-      .send({ status: 'SUSPENDED', reason: 'E2E suspension reason for security validation' })
+      .send({
+        status: 'SUSPENDED',
+        reason: 'E2E suspension reason for security validation',
+      })
       .expect(200);
 
     expect(
-      unwrap<{ id: string; status: string; activeSessionCount: number; statusReason: string | null }>(
-        response.body as unknown,
-      ),
+      unwrap<{
+        id: string;
+        status: string;
+        activeSessionCount: number;
+        statusReason: string | null;
+      }>(response.body as unknown),
     ).toMatchObject({
       id: targetUserId,
       status: 'SUSPENDED',

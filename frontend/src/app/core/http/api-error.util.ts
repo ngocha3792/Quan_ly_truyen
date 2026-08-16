@@ -50,6 +50,14 @@ export function getApiErrorMessage(
     }
 
     const backendMessage = body?.error?.message;
+    const retryAfterSeconds = readRetryAfterSeconds(body);
+
+    if (error.status === 429 && retryAfterSeconds !== null) {
+      const message = typeof backendMessage === 'string' && backendMessage.trim()
+        ? backendMessage.trim()
+        : 'Bạn thao tác quá nhanh.';
+      return `${message} Vui lòng thử lại sau ${retryAfterSeconds} giây.`;
+    }
 
     if (typeof backendMessage === 'string' && backendMessage.trim()) {
       return backendMessage.trim();
@@ -120,6 +128,14 @@ function readIssueMessage(issue: unknown): string | null {
   }
 
   return null;
+}
+
+function readRetryAfterSeconds(body: Partial<ApiErrorEnvelope> | undefined): number | null {
+  const details = body?.error?.details;
+  if (!isRecord(details)) return null;
+  const value = details['retryAfterSeconds'];
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return Math.ceil(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

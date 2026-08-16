@@ -72,8 +72,12 @@ export class AdminUserDetailPageComponent implements OnInit {
   protected readonly pendingStatus = signal<ManagedUserStatus | null>(null);
   protected statusReason = '';
 
-  protected readonly isSelf = computed(() => this.auth.user()?.id === this.detailStore.detail()?.id);
-  protected readonly canManageRoles = computed(() => this.hasPermission(AUTH_PERMISSIONS.ROLE_MANAGE));
+  protected readonly isSelf = computed(
+    () => this.auth.user()?.id === this.detailStore.detail()?.id,
+  );
+  protected readonly canManageRoles = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.ROLE_MANAGE),
+  );
   protected readonly canReadSecurity = computed(() =>
     this.hasPermission(AUTH_PERMISSIONS.USER_SECURITY_READ),
   );
@@ -137,7 +141,11 @@ export class AdminUserDetailPageComponent implements OnInit {
   }
 
   protected unlock(): void {
-    if (!window.confirm('Xóa trạng thái khóa đăng nhập tạm thời? Trạng thái tài khoản sẽ không thay đổi.'))
+    if (
+      !window.confirm(
+        'Xóa trạng thái khóa đăng nhập tạm thời? Trạng thái tài khoản sẽ không thay đổi.',
+      )
+    )
       return;
     this.runSecurityMutation(
       this.api.unlock(this.userId),
@@ -205,8 +213,6 @@ export class AdminUserDetailPageComponent implements OnInit {
 
   private hasPermission(permission: string): boolean {
     const expected = permission.toLowerCase();
-    return Boolean(
-      this.auth.user()?.permissions.some((item) => item.toLowerCase() === expected),
-    );
+    return Boolean(this.auth.user()?.permissions.some((item) => item.toLowerCase() === expected));
   }
 }

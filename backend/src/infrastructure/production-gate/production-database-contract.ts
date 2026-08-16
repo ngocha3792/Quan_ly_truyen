@@ -11,6 +11,10 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'tags_slug_lower_unique',
 
+  'categories_name_lower_unique',
+
+  'tags_name_lower_unique',
+
   'story_categories_one_primary_per_story',
 
   'story_submissions_one_pending_per_story',

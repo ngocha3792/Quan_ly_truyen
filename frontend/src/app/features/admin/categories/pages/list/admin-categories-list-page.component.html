@@ -1,0 +1,159 @@
+<main class="admin-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Admin · Taxonomy</p>
+      <h1>Categories</h1>
+      <p>Quản lý hierarchy, lifecycle và usage mà không detach truyện hiện có.</p>
+    </div>
+    <button class="primary" type="button" (click)="openCreate()">Tạo thể loại</button>
+  </header>
+
+  <section class="toolbar">
+    <input
+      type="search"
+      placeholder="Tìm theo tên hoặc slug…"
+      [(ngModel)]="q"
+      (ngModelChange)="searchChanged.next()"
+    />
+    <select [(ngModel)]="status" (ngModelChange)="applyFilters()">
+      <option value="">Tất cả trạng thái</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <select [(ngModel)]="parentFilter" (ngModelChange)="applyFilters()">
+      <option value="">Tất cả parent</option>
+      <option value="root">Root only</option>
+      @for (parent of parentOptions(); track parent.id) {
+        <option [value]="parent.id">{{ parent.name }}</option>
+      }
+    </select>
+  </section>
+
+  @if (error()) {
+    <p class="notice error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="notice success">{{ message() }}</p>
+  }
+  @if (loading()) {
+    <p class="notice">Đang tải categories…</p>
+  }
+
+  @if (result(); as data) {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Parent</th>
+            <th>Status</th>
+            <th>Stories</th>
+            <th>Children</th>
+            <th>Order</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (category of data.items; track category.id) {
+            <tr>
+              <td>
+                <strong>{{ category.name }}</strong>
+              </td>
+              <td>
+                <code>{{ category.slug }}</code>
+              </td>
+              <td>{{ category.parent?.name ?? '—' }}</td>
+              <td>
+                <span class="status" [class.inactive]="!category.isActive">{{
+                  category.isActive ? 'ACTIVE' : 'INACTIVE'
+                }}</span>
+              </td>
+              <td>{{ category.storyCount }}</td>
+              <td>{{ category.childCount }}</td>
+              <td>{{ category.sortOrder }}</td>
+              <td class="actions">
+                <button type="button" (click)="openEdit(category)">Edit</button
+                ><button type="button" (click)="toggleActive(category)">
+                  {{ category.isActive ? 'Deactivate' : 'Reactivate' }}</button
+                ><button
+                  class="danger"
+                  type="button"
+                  [disabled]="category.storyCount > 0 || category.childCount > 0"
+                  (click)="delete(category)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8">Không có thể loại phù hợp.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <nav class="pager">
+      <button
+        type="button"
+        [disabled]="data.pagination.page <= 1"
+        (click)="go(data.pagination.page - 1)"
+      >
+        ← Trước</button
+      ><span
+        >Trang {{ data.pagination.page }}/{{ data.pagination.totalPages || 1 }} ·
+        {{ data.pagination.totalItems }} thể loại</span
+      ><button
+        type="button"
+        [disabled]="data.pagination.page >= data.pagination.totalPages"
+        (click)="go(data.pagination.page + 1)"
+      >
+        Sau →
+      </button>
+    </nav>
+  }
+
+  @if (editorOpen()) {
+    <div class="modal-backdrop">
+      <section class="modal" role="dialog" aria-modal="true">
+        <h2>{{ editing ? 'Chỉnh sửa thể loại' : 'Tạo thể loại' }}</h2>
+        <label>Tên *<input [(ngModel)]="editName" maxlength="100" /></label>
+        @if (editing) {
+          <p class="muted">
+            Slug <code>{{ editing.slug }}</code> là read-only và không đổi khi rename.
+          </p>
+        }
+        <label
+          >Mô tả<textarea rows="4" maxlength="5000" [(ngModel)]="editDescription"></textarea>
+        </label>
+        <label
+          >Parent<select [(ngModel)]="editParentId">
+            <option value="">None</option>
+            @for (parent of parentOptions(); track parent.id) {
+              <option [value]="parent.id" [disabled]="editActive && !parent.isActive">
+                {{ parent.name }}{{ parent.isActive ? '' : ' · inactive' }}
+              </option>
+            }
+          </select></label
+        >
+        <label>Sort order<input type="number" [(ngModel)]="editSortOrder" /></label>
+        <label class="checkbox"><input type="checkbox" [(ngModel)]="editActive" /> Active</label>
+        @if (editing) {
+          <p class="muted">{{ editing.storyCount }} stories · {{ editing.childCount }} children</p>
+        }
+        <div class="modal-actions">
+          <button type="button" (click)="editorOpen.set(false)">Hủy</button
+          ><button
+            class="primary"
+            type="button"
+            [disabled]="!editName.trim() || mutating()"
+            (click)="saveEditor()"
+          >
+            Lưu
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</main>

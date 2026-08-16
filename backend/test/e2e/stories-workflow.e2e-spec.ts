@@ -176,14 +176,21 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
 
     const moderationListResponse = await request(httpServer())
       .get('/api/v1/admin/story-submissions')
-      .query({ status: 'PENDING', story: createStoryBody.title, page: 1, pageSize: 20 })
+      .query({
+        status: 'PENDING',
+        story: createStoryBody.title,
+        page: 1,
+        pageSize: 20,
+      })
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(
       unwrap<{ items: Array<{ submissionId: string }> }>(
         moderationListResponse.body as unknown,
       ).items,
-    ).toEqual(expect.arrayContaining([expect.objectContaining({ submissionId })]));
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ submissionId })]),
+    );
 
     const moderationDetailResponse = await request(httpServer())
       .get(`/api/v1/admin/story-submissions/${submissionId}`)
@@ -396,7 +403,8 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
   });
 
   it('suspend author blocks writes immediately while published content remains public', async () => {
-    if (!storyId) throw new Error('Workflow story must exist before lifecycle test');
+    if (!storyId)
+      throw new Error('Workflow story must exist before lifecycle test');
 
     const adminToken = token(adminId, adminSessionId);
     const authorToken = token(authorId, authorSessionId);
@@ -408,7 +416,10 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     await request(httpServer())
       .patch(`/api/v1/admin/authors/${authorId}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'SUSPENDED', reason: 'E2E lifecycle suspension for write protection' })
+      .send({
+        status: 'SUSPENDED',
+        reason: 'E2E lifecycle suspension for write protection',
+      })
       .expect(200);
 
     await request(httpServer())
@@ -418,7 +429,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .send({ title: 'Suspended author cannot create' })
       .expect(403);
 
-    await request(httpServer()).get(`/api/v1/stories/${publicStory.slug}`).expect(200);
+    await request(httpServer())
+      .get(`/api/v1/stories/${publicStory.slug}`)
+      .expect(200);
 
     await request(httpServer())
       .patch(`/api/v1/admin/authors/${authorId}/status`)
@@ -632,7 +645,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     });
     await prisma.story.deleteMany({ where: { authorId } });
     await prisma.mediaAsset.deleteMany({ where: { uploaderId: authorId } });
-    await prisma.authorProfile.deleteMany({ where: { userId: { in: [authorId, intruderId] } } });
+    await prisma.authorProfile.deleteMany({
+      where: { userId: { in: [authorId, intruderId] } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: actorIds } } });
     if (categoryId) {
       await prisma.category.deleteMany({ where: { id: categoryId } });

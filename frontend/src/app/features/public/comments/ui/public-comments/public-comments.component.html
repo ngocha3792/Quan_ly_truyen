@@ -1,0 +1,119 @@
+<section class="comments-shell">
+  <header class="comments-header">
+    <h3>
+      {{ title() }}
+      @if (totalComments() !== null) { <span>({{ totalComments() }})</span> }
+    </h3>
+  </header>
+
+  <div class="comment-editor">
+    <textarea #commentInput placeholder="Viết bình luận của bạn..." rows="2" maxlength="4000"></textarea>
+    <button type="button" [disabled]="submitting()" (click)="submit(commentInput)">
+      {{ submitting() ? 'Đang gửi...' : 'Gửi' }}
+    </button>
+  </div>
+
+  @if (message()) { <p class="comment-message">{{ message() }}</p> }
+
+  <div class="comment-list">
+    @for (comment of comments(); track comment.id) {
+      <article class="comment-thread">
+        <div class="comment-item" [class.tombstone]="comment.displayState === 'DELETED'">
+          <span class="avatar">{{ comment.author.initials }}</span>
+          <div class="comment-body">
+            <div class="comment-meta"><strong>{{ comment.author.name }}</strong><small>{{ comment.createdAt }}</small></div>
+            @if (comment.displayState === 'DELETED') {
+              <p class="deleted-copy">Bình luận này đã bị xóa.</p>
+            } @else if (editingId() === comment.id) {
+              <textarea class="edit-textarea" rows="3" maxlength="4000" [value]="editBody()" (input)="editBody.set($any($event.target).value)"></textarea>
+              <div class="comment-actions"><button type="button" (click)="saveEdit(comment.id)">Lưu</button><button type="button" (click)="cancelEdit()">Hủy</button></div>
+            } @else {
+              <p>{{ comment.content }}</p>
+              <div class="reaction-actions">
+                @for (reaction of reactionTypes; track reaction) {
+                  <button type="button" [class.active]="comment.viewerReaction === reaction" (click)="reactionSet.emit({ commentId: comment.id, type: reaction })">
+                    {{ reactionLabel(reaction) }} {{ comment.reactions[reaction] }}
+                  </button>
+                }
+              </div>
+              <div class="comment-actions">
+                <button type="button" (click)="startReply(comment.id, comment.id)">Phản hồi</button>
+                @if (comment.isOwner) {
+                  <button type="button" (click)="startEdit(comment)">Sửa</button>
+                  <button type="button" (click)="commentDelete.emit(comment.id)">Xóa</button>
+                } @else {
+                  <button type="button" (click)="openReport(comment.id)">Báo cáo</button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (replyTargetId() === comment.id) {
+          <div class="reply-editor">
+            <textarea rows="2" maxlength="4000" [value]="replyBody()" (input)="replyBody.set($any($event.target).value)" placeholder="Viết phản hồi..."></textarea>
+            <div><button type="button" (click)="submitReply()">Gửi phản hồi</button><button type="button" (click)="cancelReply()">Hủy</button></div>
+          </div>
+        }
+
+        @if (comment.threadReplyCount > 0 && comment.replies.length === 0) {
+          <button class="load-replies" type="button" (click)="repliesLoad.emit(comment.id)">Xem {{ comment.threadReplyCount }} phản hồi</button>
+        }
+
+        @for (reply of comment.replies; track reply.id) {
+          <div class="comment-item reply" [class.depth-two]="reply.depth === 2" [class.tombstone]="reply.displayState === 'DELETED'">
+            <span class="avatar">{{ reply.author.initials }}</span>
+            <div class="comment-body">
+              <div class="comment-meta"><strong>{{ reply.author.name }}</strong><small>{{ reply.createdAt }}</small></div>
+              @if (reply.displayState === 'DELETED') {
+                <p class="deleted-copy">Bình luận này đã bị xóa.</p>
+              } @else if (editingId() === reply.id) {
+                <textarea class="edit-textarea" rows="3" maxlength="4000" [value]="editBody()" (input)="editBody.set($any($event.target).value)"></textarea>
+                <div class="comment-actions"><button type="button" (click)="saveEdit(reply.id)">Lưu</button><button type="button" (click)="cancelEdit()">Hủy</button></div>
+              } @else {
+                <p>{{ reply.content }}</p>
+                <div class="reaction-actions">
+                  @for (reaction of reactionTypes; track reaction) {
+                    <button type="button" [class.active]="reply.viewerReaction === reaction" (click)="reactionSet.emit({ commentId: reply.id, type: reaction })">
+                      {{ reactionLabel(reaction) }} {{ reply.reactions[reaction] }}
+                    </button>
+                  }
+                </div>
+                <div class="comment-actions">
+                  @if (reply.depth < 2) { <button type="button" (click)="startReply(comment.id, reply.id)">Phản hồi</button> }
+                  @if (reply.isOwner) {
+                    <button type="button" (click)="startEdit(reply)">Sửa</button>
+                    <button type="button" (click)="commentDelete.emit(reply.id)">Xóa</button>
+                  } @else {
+                    <button type="button" (click)="openReport(reply.id)">Báo cáo</button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          @if (replyTargetId() === reply.id) {
+            <div class="reply-editor nested">
+              <textarea rows="2" maxlength="4000" [value]="replyBody()" (input)="replyBody.set($any($event.target).value)" placeholder="Viết phản hồi..."></textarea>
+              <div><button type="button" (click)="submitReply()">Gửi phản hồi</button><button type="button" (click)="cancelReply()">Hủy</button></div>
+            </div>
+          }
+        }
+      </article>
+    } @empty { <p class="comment-empty">{{ emptyMessage() }}</p> }
+  </div>
+
+  @if (reportTargetId()) {
+    <div class="report-dialog" role="dialog" aria-modal="true">
+      <div class="report-panel">
+        <h4>Báo cáo bình luận</h4>
+        <label>Lý do *</label>
+        <select [value]="reportReason()" (change)="updateReportReason($any($event.target).value)">
+          @for (reason of reportReasons; track reason) { <option [value]="reason">{{ reasonLabel(reason) }}</option> }
+        </select>
+        <label>Mô tả @if (reportReason() === 'OTHER') { * }</label>
+        <textarea rows="4" maxlength="2000" [value]="reportDescription()" (input)="reportDescription.set($any($event.target).value)" placeholder="Cung cấp thêm thông tin nếu cần"></textarea>
+        <div class="dialog-actions"><button type="button" (click)="submitReport()">Gửi báo cáo</button><button type="button" (click)="closeReport()">Hủy</button></div>
+      </div>
+    </div>
+  }
+</section>

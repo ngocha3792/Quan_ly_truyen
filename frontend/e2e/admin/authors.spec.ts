@@ -25,9 +25,7 @@ test('manager suspend rồi reactivate author lifecycle', async ({ page }) => {
   await page.getByRole('button', { name: 'Suspend' }).click();
 
   const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('textbox')
-    .fill('Tạm dừng tác giả từ Playwright để kiểm tra lifecycle.');
+  await dialog.getByRole('textbox').fill('Tạm dừng tác giả từ Playwright để kiểm tra lifecycle.');
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();
 
   await expect(page.getByText('Đã cập nhật author thành SUSPENDED.')).toBeVisible();

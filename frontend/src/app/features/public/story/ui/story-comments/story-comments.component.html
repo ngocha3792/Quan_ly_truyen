@@ -1,56 +1,13 @@
-<section class="side-card comments-card">
-  <div class="card-heading">
-    <app-icon name="message-circle" [size]="18" />
-    <h3>Bình luận mới nhất</h3>
-  </div>
-
-  <div class="comment-input-box">
-    <textarea
-      #commentInput
-      placeholder="Viết bình luận của bạn..."
-      rows="2"
-      maxlength="4000"
-    ></textarea>
-    <button type="button" [disabled]="submitting()" (click)="submit(commentInput)">
-      {{ submitting() ? 'Đang gửi...' : 'Gửi' }}
-    </button>
-  </div>
-
-  <div class="comment-list">
-    @for (comment of comments(); track comment.id) {
-      <div class="comment-item">
-        <div class="user-avatar">{{ comment.user[0] }}</div>
-        <div class="comment-body">
-          <div class="comment-meta">
-            <strong>{{ comment.user }}</strong>
-            <small>{{ comment.time }}</small>
-          </div>
-
-          @if (editingId() === comment.id) {
-            <textarea
-              class="edit-textarea"
-              rows="3"
-              maxlength="4000"
-              [value]="editBody()"
-              (input)="updateEdit($any($event.target).value)"
-            ></textarea>
-            <div class="comment-owner-actions">
-              <button type="button" (click)="saveEdit(comment.id)">Lưu</button>
-              <button type="button" (click)="cancelEdit()">Hủy</button>
-            </div>
-          } @else {
-            <p>{{ comment.content }}</p>
-            @if (comment.isOwner) {
-              <div class="comment-owner-actions">
-                <button type="button" (click)="startEdit(comment)">Sửa</button>
-                <button type="button" (click)="commentDelete.emit(comment.id)">Xóa</button>
-              </div>
-            }
-          }
-        </div>
-      </div>
-    } @empty {
-      <p class="comment-empty">Chưa có bình luận nào.</p>
-    }
-  </div>
-</section>
+<app-public-comments
+  title="Bình luận mới nhất"
+  [comments]="comments()"
+  [submitting]="submitting()"
+  [message]="message()"
+  (commentCreate)="commentCreate.emit($event)"
+  (commentUpdate)="commentUpdate.emit($event)"
+  (commentDelete)="commentDelete.emit($event)"
+  (repliesLoad)="repliesLoad.emit($event)"
+  (replyCreate)="replyCreate.emit($event)"
+  (reactionSet)="reactionSet.emit($event)"
+  (reportCreate)="reportCreate.emit($event)"
+/>

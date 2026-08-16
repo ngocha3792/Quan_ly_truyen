@@ -79,5 +79,6 @@ import { AdminUsersController, UsersController } from './presentation/http';
       useExisting: PrismaManagedUserRepository,
     },
   ],
+  exports: [UpdateManagedUserStatusCommandHandler],
 })
 export class UsersModule {}

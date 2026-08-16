@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  ChapterNotFoundException,
-  InvalidCommentBodyException,
-  ReaderEngagementPolicy,
-  StoryNotFoundException,
-} from '../../../domain';
+import { MetricsService } from '@/infrastructure/observability';
+import { ChapterNotFoundException, StoryNotFoundException } from '../../../domain';
+import { CommentWriteAbuseService } from '@/modules/comments';
 import type { StoryCommentResultDto } from '../../dto';
 import {
   READER_ENGAGEMENT_PERSISTENCE_PORT,
@@ -18,18 +15,24 @@ export class CreateStoryCommentCommandHandler {
   constructor(
     @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
     private readonly persistence: ReaderEngagementPersistencePort,
+    private readonly abuse: CommentWriteAbuseService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async execute(
     command: CreateStoryCommentCommand,
   ): Promise<StoryCommentResultDto> {
-    const body = ReaderEngagementPolicy.normalizeCommentBody(command.body);
-    if (!ReaderEngagementPolicy.isValidCommentBody(body)) {
-      throw new InvalidCommentBodyException();
-    }
+    const userId = requireReaderUserId(command.userId);
+    const body = await this.abuse.prepare({
+      userId,
+      storyId: command.storyId,
+      chapterId: command.chapterId,
+      body: command.body,
+      ipAddress: command.ipAddress,
+    });
 
     const result = await this.persistence.createComment({
-      userId: requireReaderUserId(command.userId),
+      userId,
       storyId: command.storyId,
       chapterId: command.chapterId,
       body,
@@ -38,6 +41,7 @@ export class CreateStoryCommentCommandHandler {
 
     switch (result.status) {
       case 'created':
+        this.metrics.recordCommentOperation('create');
         return result.comment;
       case 'chapter_not_found':
         throw new ChapterNotFoundException(command.chapterId);

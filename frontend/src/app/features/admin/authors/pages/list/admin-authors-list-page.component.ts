@@ -1,3 +1,95 @@
-import { DatePipe } from '@angular/common';import { ChangeDetectionStrategy,Component,DestroyRef,inject,OnInit,signal } from '@angular/core';import { takeUntilDestroyed } from '@angular/core/rxjs-interop';import { FormsModule } from '@angular/forms';import { ActivatedRoute,Router,RouterLink } from '@angular/router';import { debounceTime,Subject } from 'rxjs';import { getApiErrorMessage } from '../../../../../core/http/api-error.util';import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';import type { AdminAuthorListResponse,AuthorLifecycleStatus } from '../../domain/admin-author.models';
-@Component({selector:'app-admin-authors-list-page',standalone:true,imports:[DatePipe,FormsModule,RouterLink],changeDetection:ChangeDetectionStrategy.OnPush,templateUrl: './admin-authors-list-page.component.html', styleUrl: './admin-authors-list-page.component.scss'})
-export class AdminAuthorsListPageComponent implements OnInit{private readonly api=inject(AdminAuthorsApiService);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly destroyRef=inject(DestroyRef);readonly searchChanged=new Subject<void>();readonly result=signal<AdminAuthorListResponse|null>(null);readonly loading=signal(false);readonly error=signal('');search='';status:''|AuthorLifecycleStatus='';createdFrom='';createdTo='';page=1;readonly pageSize=20;ngOnInit():void{this.searchChanged.pipe(debounceTime(300),takeUntilDestroyed(this.destroyRef)).subscribe(()=>this.apply());this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(q=>{this.search=q.get('search')??'';this.status=(q.get('status') as AuthorLifecycleStatus|null)??'';this.createdFrom=q.get('createdFrom')??'';this.createdTo=q.get('createdTo')??'';this.page=Math.max(1,Number(q.get('page')??1)||1);this.load()})}apply():void{this.go(1)}go(page:number):void{void this.router.navigate([],{relativeTo:this.route,queryParams:{search:this.search.trim()||null,status:this.status||null,createdFrom:this.createdFrom||null,createdTo:this.createdTo||null,page}})}private load():void{this.loading.set(true);this.error.set('');this.api.list({search:this.search||undefined,status:this.status||undefined,createdFrom:this.createdFrom||undefined,createdTo:this.createdTo||undefined,page:this.page,pageSize:this.pageSize}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({next:r=>{this.result.set(r);this.loading.set(false)},error:(e:unknown)=>{this.error.set(getApiErrorMessage(e));this.loading.set(false)}})}}
+import { DatePipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { debounceTime, Subject } from 'rxjs';
+import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
+import type {
+  AdminAuthorListResponse,
+  AuthorLifecycleStatus,
+} from '../../domain/admin-author.models';
+@Component({
+  selector: 'app-admin-authors-list-page',
+  standalone: true,
+  imports: [DatePipe, FormsModule, RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './admin-authors-list-page.component.html',
+  styleUrl: './admin-authors-list-page.component.scss',
+})
+export class AdminAuthorsListPageComponent implements OnInit {
+  private readonly api = inject(AdminAuthorsApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly searchChanged = new Subject<void>();
+  readonly result = signal<AdminAuthorListResponse | null>(null);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  search = '';
+  status: '' | AuthorLifecycleStatus = '';
+  createdFrom = '';
+  createdTo = '';
+  page = 1;
+  readonly pageSize = 20;
+  ngOnInit(): void {
+    this.searchChanged
+      .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.apply());
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((q) => {
+      this.search = q.get('search') ?? '';
+      this.status = (q.get('status') as AuthorLifecycleStatus | null) ?? '';
+      this.createdFrom = q.get('createdFrom') ?? '';
+      this.createdTo = q.get('createdTo') ?? '';
+      this.page = Math.max(1, Number(q.get('page') ?? 1) || 1);
+      this.load();
+    });
+  }
+  apply(): void {
+    this.go(1);
+  }
+  go(page: number): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        search: this.search.trim() || null,
+        status: this.status || null,
+        createdFrom: this.createdFrom || null,
+        createdTo: this.createdTo || null,
+        page,
+      },
+    });
+  }
+  private load(): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.api
+      .list({
+        search: this.search || undefined,
+        status: this.status || undefined,
+        createdFrom: this.createdFrom || undefined,
+        createdTo: this.createdTo || undefined,
+        page: this.page,
+        pageSize: this.pageSize,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => {
+          this.result.set(r);
+          this.loading.set(false);
+        },
+        error: (e: unknown) => {
+          this.error.set(getApiErrorMessage(e));
+          this.loading.set(false);
+        },
+      });
+  }
+}

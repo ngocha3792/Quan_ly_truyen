@@ -10,6 +10,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { LibraryStore } from '../../../../../core/storage/library.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
+import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../../core/http/reader-engagement-api.model';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
@@ -110,6 +111,25 @@ export class StoryDetailComponent implements OnInit {
   protected deleteComment(commentId: string): void {
     if (!this.requireLogin()) return;
     this.store.deleteComment(commentId);
+  }
+
+  protected loadReplies(rootCommentId: string): void {
+    this.store.loadReplies(rootCommentId);
+  }
+
+  protected reply(event: { readonly rootId: string; readonly parentId: string; readonly body: string }): void {
+    if (!this.requireLogin()) return;
+    this.store.reply(event.rootId, event.parentId, event.body);
+  }
+
+  protected react(event: { readonly commentId: string; readonly type: CommentReactionApiType }): void {
+    if (!this.requireLogin()) return;
+    this.store.react(event.commentId, event.type);
+  }
+
+  protected report(event: { readonly commentId: string; readonly reason: CommentReportReasonApi; readonly description?: string }): void {
+    if (!this.requireLogin()) return;
+    this.store.report(event.commentId, event.reason, event.description);
   }
 
   private requireLogin(): boolean {

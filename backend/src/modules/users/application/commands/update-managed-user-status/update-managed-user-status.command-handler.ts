@@ -62,7 +62,10 @@ export class UpdateManagedUserStatusCommandHandler {
     }
 
     const reason = command.reason?.trim();
-    if (command.status !== ManagedUserStatus.ACTIVE && (!reason || reason.length < 10)) {
+    if (
+      command.status !== ManagedUserStatus.ACTIVE &&
+      (!reason || reason.length < 10)
+    ) {
       throw new ManagedUserStatusReasonRequiredException();
     }
 

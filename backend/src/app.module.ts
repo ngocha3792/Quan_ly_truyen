@@ -28,6 +28,8 @@ import { AuthorApplicationsModule } from './modules/author-applications';
 import { AuthorsModule } from './modules/authors';
 import { NotificationsModule } from './modules/notifications';
 import { StoriesModule } from './modules/stories';
+import { TaxonomyModule } from './modules/taxonomy';
+import { ModerationModule } from './modules/moderation';
 @Module({
   imports: [
     AppConfigModule,
@@ -37,6 +39,8 @@ import { StoriesModule } from './modules/stories';
     AuthorsModule,
     NotificationsModule,
     StoriesModule,
+    TaxonomyModule,
+    ModerationModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

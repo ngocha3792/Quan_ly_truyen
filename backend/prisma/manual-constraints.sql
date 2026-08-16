@@ -26,6 +26,12 @@ CREATE UNIQUE INDEX categories_slug_lower_unique
 CREATE UNIQUE INDEX tags_slug_lower_unique
   ON tags (LOWER(slug));
 
+CREATE UNIQUE INDEX categories_name_lower_unique
+  ON categories (LOWER(name));
+
+CREATE UNIQUE INDEX tags_name_lower_unique
+  ON tags (LOWER(name));
+
 -- Numeric domain constraints.
 ALTER TABLE ratings
   ADD CONSTRAINT ratings_score_between_1_and_5

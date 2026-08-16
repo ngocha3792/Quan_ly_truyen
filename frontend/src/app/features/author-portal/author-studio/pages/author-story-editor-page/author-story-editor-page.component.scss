@@ -98,6 +98,12 @@ textarea:disabled {
   background: rgba(132, 71, 214, 0.2);
   color: #d7a6ff;
 }
+.chip--legacy {
+  border-style: dashed;
+  border-color: #a06c32;
+  background: rgba(160, 108, 50, 0.14);
+  color: #efc47c;
+}
 .chip:disabled {
   cursor: default;
 }

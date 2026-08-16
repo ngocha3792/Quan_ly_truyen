@@ -1,11 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, of } from 'rxjs';
+import { map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
 import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
-import type { StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
+import type { CommentReactionApiType, CommentReportReasonApi, StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
 import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
 import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
 import { StoryDetailRepository } from './story.repository';
@@ -29,9 +29,9 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
   }
 
   getComments(storySlug: string): Observable<readonly StoryComment[]> {
-    return this.engagement
-      .listStoryComments(storySlug)
-      .pipe(map((page) => page.items.map((comment) => this.toComment(comment))));
+    return this.engagement.listStoryComments(storySlug).pipe(
+      switchMap((page) => this.withViewerReactions(page.items)),
+    );
   }
 
   getRelatedStories(_categories: readonly string[]): Observable<readonly RelatedStoryItem[]> {
@@ -78,14 +78,64 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
     return this.engagement.deleteComment(commentId);
   }
 
-  private toComment(comment: StoryCommentApiItem): StoryComment {
+  getReplies(rootCommentId: string): Observable<readonly StoryComment[]> {
+    return this.engagement.listCommentReplies(rootCommentId).pipe(
+      switchMap((page) => this.withViewerReactions(page.items)),
+    );
+  }
+
+  createReply(parentCommentId: string, body: string): Observable<StoryComment> {
+    return this.engagement.createCommentReply(parentCommentId, body).pipe(
+      map((item) => this.toComment(item)),
+    );
+  }
+
+  setReaction(commentId: string, type: CommentReactionApiType) {
+    return this.engagement.setCommentReaction(commentId, type).pipe(
+      map((summary) => ({ viewerReaction: summary.viewerReaction, reactions: summary.reactions })),
+    );
+  }
+
+  clearReaction(commentId: string): Observable<void> {
+    return this.engagement.clearCommentReaction(commentId);
+  }
+
+  reportComment(commentId: string, reason: CommentReportReasonApi, description?: string): Observable<void> {
+    return this.engagement.reportComment(commentId, reason, description).pipe(map(() => undefined));
+  }
+
+  private withViewerReactions(items: readonly StoryCommentApiItem[]): Observable<readonly StoryComment[]> {
+    const ids = items.map((item) => item.id);
+    if (!this.auth.isAuthenticated() || ids.length === 0) {
+      return of(items.map((item) => this.toComment(item)));
+    }
+    return this.engagement.getViewerCommentReactions(ids).pipe(
+      map((mine) => items.map((item) => this.toComment(item, mine[item.id] ?? null))),
+    );
+  }
+
+  private toComment(
+    comment: StoryCommentApiItem,
+    viewerReaction: CommentReactionApiType | null = null,
+  ): StoryComment {
     return {
       id: comment.id,
-      userId: comment.user.id,
-      user: comment.user.displayName,
-      time: relativeTime(comment.createdAt),
+      parentId: comment.parentId,
+      depth: comment.depth,
+      displayState: comment.displayState,
+      author: {
+        id: comment.user.id,
+        name: comment.user.displayName,
+        initials: initials(comment.user.displayName),
+      },
+      createdAt: relativeTime(comment.createdAt),
       content: comment.body,
       isOwner: this.auth.user()?.id === comment.user.id,
+      reactions: comment.reactions,
+      viewerReaction,
+      replyCount: comment.replyCount,
+      threadReplyCount: comment.threadReplyCount,
+      replies: [],
     };
   }
 }
@@ -113,6 +163,15 @@ function toStory(story: PublicStoryApiItem): Story {
     status: story.status,
     badge: story.status === 'COMPLETED' ? 'FULL' : undefined,
   };
+}
+
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 function relativeTime(value: string): string {

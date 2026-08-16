@@ -411,6 +411,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
             tx,
             input.categoryIds,
             input.tagIds,
+            current.categories.map(({ category }) => category.id),
           );
 
           if (taxonomyValidation.status !== 'valid') {
@@ -978,7 +979,9 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
         await tx.auditLog.create({
           data: {
             actorId: input.reviewerId,
-            action: approve ? 'STORY_SUBMISSION_APPROVED' : 'STORY_SUBMISSION_REJECTED',
+            action: approve
+              ? 'STORY_SUBMISSION_APPROVED'
+              : 'STORY_SUBMISSION_REJECTED',
             entityType: 'story',
             entityId: story.id,
             oldValues: { status: submission.status },
@@ -1253,6 +1256,7 @@ async function validateTaxonomy(
   tx: Prisma.TransactionClient,
   categoryIds: readonly string[] | undefined,
   tagIds: readonly string[] | undefined,
+  allowedInactiveCategoryIds: readonly string[] = [],
 ): Promise<TaxonomyValidationResult> {
   if (categoryIds !== undefined && categoryIds.length > 0) {
     const categories = await tx.category.findMany({
@@ -1260,7 +1264,10 @@ async function validateTaxonomy(
         id: {
           in: [...categoryIds],
         },
-        isActive: true,
+        OR: [
+          { isActive: true },
+          { id: { in: [...allowedInactiveCategoryIds] } },
+        ],
       },
       select: {
         id: true,

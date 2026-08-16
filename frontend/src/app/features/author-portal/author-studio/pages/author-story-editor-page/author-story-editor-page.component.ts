@@ -64,6 +64,15 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
   protected readonly displayedCoverUrl = computed(
     () => this.coverPreviewUrl() ?? (this.clearCover() ? null : this.store.coverUrl()),
   );
+  protected readonly legacySelectedCategories = computed(() => {
+    const story = this.store.story();
+    if (!story) return [] as readonly AuthorStoryCategory[];
+    const activeIds = new Set(this.store.categories().map((category) => category.id));
+    const selectedIds = new Set(this.selectedCategoryIds());
+    return story.categories.filter(
+      (category) => !activeIds.has(category.id) && selectedIds.has(category.id),
+    );
+  });
 
   constructor() {
     effect(() => {
@@ -92,6 +101,12 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
   protected toggleCategory(categoryId: string): void {
     if (!this.isEditable()) return;
     this.selectedCategoryIds.update((ids: readonly string[]) => toggleId(ids, categoryId));
+    this.form.markAsDirty();
+  }
+
+  protected removeLegacyCategory(categoryId: string): void {
+    if (!this.isEditable()) return;
+    this.selectedCategoryIds.update((ids) => ids.filter((id) => id !== categoryId));
     this.form.markAsDirty();
   }
 

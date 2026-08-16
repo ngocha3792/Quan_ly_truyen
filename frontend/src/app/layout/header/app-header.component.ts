@@ -64,6 +64,18 @@ export class AppHeaderComponent {
     this.hasPermission(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
   );
 
+  protected readonly canManageCategories = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.CATEGORY_MANAGE),
+  );
+
+  protected readonly canManageTags = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.TAG_MANAGE),
+  );
+
+  protected readonly canReviewReports = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.REPORT_REVIEW),
+  );
+
   protected readonly query = signal('');
 
   protected readonly searchOpen = signal(false);

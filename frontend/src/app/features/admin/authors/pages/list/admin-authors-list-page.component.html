@@ -1,1 +1,69 @@
-<main class="admin-page"><div class="page-container"><header><p>Quản trị / Tác giả</p><h1>Author lifecycle</h1><p>Quản lý capability tác giả độc lập với role.</p></header><section class="filters"><input [(ngModel)]="search" (ngModelChange)="searchChanged.next()" placeholder="Tên, slug, email"/><select [(ngModel)]="status" (change)="apply()"><option value="">Tất cả</option><option value="ACTIVE">ACTIVE</option><option value="SUSPENDED">SUSPENDED</option><option value="REVOKED">REVOKED</option></select><input type="date" [(ngModel)]="createdFrom" (change)="apply()"/><input type="date" [(ngModel)]="createdTo" (change)="apply()"/></section>@if(error()){<div class="error">{{error()}}</div>}@if(loading()){<p>Đang tải...</p>}@if(result();as data){<div class="table-wrap"><table><thead><tr><th>Author</th><th>User</th><th>Status</th><th>Stories</th><th>Joined</th><th></th></tr></thead><tbody>@for(item of data.items;track item.id){<tr><td><strong>{{item.penName}}</strong><small>{{item.slug}}</small></td><td>{{item.user.displayName}}<small>{{item.user.email}}</small></td><td>{{item.status}}</td><td>{{item.storyCount}}</td><td>{{item.createdAt|date:'shortDate'}}</td><td><a [routerLink]="['/admin/authors',item.id]">Chi tiết</a></td></tr>}</tbody></table></div><footer><button [disabled]="page<=1" (click)="go(page-1)">Trước</button> Trang {{data.pagination.page}} / {{data.pagination.totalPages||1}} <button [disabled]="page>=data.pagination.totalPages" (click)="go(page+1)">Sau</button></footer>}</div></main>
+<main class="admin-page">
+  <div class="page-container">
+    <header>
+      <p>Quản trị / Tác giả</p>
+      <h1>Author lifecycle</h1>
+      <p>Quản lý capability tác giả độc lập với role.</p>
+    </header>
+    <section class="filters">
+      <input
+        [(ngModel)]="search"
+        (ngModelChange)="searchChanged.next()"
+        placeholder="Tên, slug, email"
+      /><select [(ngModel)]="status" (change)="apply()">
+        <option value="">Tất cả</option>
+        <option value="ACTIVE">ACTIVE</option>
+        <option value="SUSPENDED">SUSPENDED</option>
+        <option value="REVOKED">REVOKED</option></select
+      ><input type="date" [(ngModel)]="createdFrom" (change)="apply()" /><input
+        type="date"
+        [(ngModel)]="createdTo"
+        (change)="apply()"
+      />
+    </section>
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+    @if (loading()) {
+      <p>Đang tải...</p>
+    }
+    @if (result(); as data) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Author</th>
+              <th>User</th>
+              <th>Status</th>
+              <th>Stories</th>
+              <th>Joined</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of data.items; track item.id) {
+              <tr>
+                <td>
+                  <strong>{{ item.penName }}</strong
+                  ><small>{{ item.slug }}</small>
+                </td>
+                <td>
+                  {{ item.user.displayName }}<small>{{ item.user.email }}</small>
+                </td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.storyCount }}</td>
+                <td>{{ item.createdAt | date: 'shortDate' }}</td>
+                <td><a [routerLink]="['/admin/authors', item.id]">Chi tiết</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        <button [disabled]="page <= 1" (click)="go(page - 1)">Trước</button> Trang
+        {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}
+        <button [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">Sau</button>
+      </footer>
+    }
+  </div>
+</main>

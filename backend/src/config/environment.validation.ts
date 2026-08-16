@@ -394,6 +394,34 @@ export class EnvironmentVariables {
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  COMMENT_ABUSE_RATE_LIMIT_ENABLED = false;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10)) @IsInt() @Min(1) @Max(1000)
+  COMMENT_WRITE_MINUTE_LIMIT = 10;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 50)) @IsInt() @Min(1) @Max(10000)
+  COMMENT_WRITE_HOUR_LIMIT = 50;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30)) @IsInt() @Min(1) @Max(5000)
+  COMMENT_REACTION_MINUTE_LIMIT = 30;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300)) @IsInt() @Min(1) @Max(50000)
+  COMMENT_REACTION_HOUR_LIMIT = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5)) @IsInt() @Min(1) @Max(1000)
+  COMMENT_REPORT_HOUR_LIMIT = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 20)) @IsInt() @Min(1) @Max(10000)
+  COMMENT_REPORT_DAY_LIMIT = 20;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300)) @IsInt() @Min(30) @Max(86400)
+  COMMENT_DUPLICATE_WINDOW_SECONDS = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3)) @IsInt() @Min(0) @Max(20)
+  COMMENT_MAX_LINKS = 3;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   QUEUE_ENABLED = false;
 
   @IsString()
@@ -804,13 +832,14 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       config.AUTH_JWT_BLACKLIST_ENABLED ||
       config.AUTH_ACCESS_AUTHORIZATION_CACHE_ENABLED ||
       config.AUTH_ADMIN_MFA_ENABLED ||
-      config.AUTH_OAUTH_ENABLED) &&
+      config.AUTH_OAUTH_ENABLED ||
+      config.COMMENT_ABUSE_RATE_LIMIT_ENABLED) &&
     !config.REDIS_ENABLED
   ) {
     throw new Error(
       [
         'REDIS_ENABLED must be true when login rate limit, JWT blacklist,',
-        'auth authorization cache is enabled, admin MFA, or OAuth is enabled',
+        'auth authorization cache is enabled, admin MFA, OAuth, or comment abuse protection is enabled',
       ].join(' '),
     );
   }

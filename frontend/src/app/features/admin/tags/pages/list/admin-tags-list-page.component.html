@@ -1,0 +1,165 @@
+<main class="admin-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Admin · Taxonomy</p>
+      <h1>Tags</h1>
+      <p>Quản lý tag, usage và hợp nhất duplicate an toàn.</p>
+    </div>
+    <button class="primary" type="button" (click)="openCreate()">Tạo tag</button>
+  </header>
+
+  <section class="toolbar">
+    <input
+      type="search"
+      placeholder="Tìm theo tên hoặc slug…"
+      [(ngModel)]="q"
+      (ngModelChange)="searchChanged.next()"
+    />
+  </section>
+
+  @if (error()) {
+    <p class="notice error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="notice success">{{ message() }}</p>
+  }
+  @if (loading()) {
+    <p class="notice">Đang tải tags…</p>
+  }
+
+  @if (result(); as data) {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Stories</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tag of data.items; track tag.id) {
+            <tr>
+              <td>
+                <strong>{{ tag.name }}</strong>
+              </td>
+              <td>
+                <code>{{ tag.slug }}</code>
+              </td>
+              <td>{{ tag.storyCount }}</td>
+              <td>{{ tag.createdAt.slice(0, 10) }}</td>
+              <td class="actions">
+                <button type="button" (click)="openEdit(tag)">Edit</button>
+                <button type="button" (click)="openMerge(tag)">Merge</button>
+                <button
+                  type="button"
+                  class="danger"
+                  [disabled]="tag.storyCount > 0"
+                  [title]="
+                    tag.storyCount > 0
+                      ? 'Tag đang được ' + tag.storyCount + ' truyện sử dụng. Hãy merge trước.'
+                      : ''
+                  "
+                  (click)="delete(tag)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">Không có tag phù hợp.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <nav class="pager">
+      <button
+        type="button"
+        [disabled]="data.pagination.page <= 1"
+        (click)="go(data.pagination.page - 1)"
+      >
+        ← Trước
+      </button>
+      <span
+        >Trang {{ data.pagination.page }}/{{ data.pagination.totalPages || 1 }} ·
+        {{ data.pagination.totalItems }} tag</span
+      >
+      <button
+        type="button"
+        [disabled]="data.pagination.page >= data.pagination.totalPages"
+        (click)="go(data.pagination.page + 1)"
+      >
+        Sau →
+      </button>
+    </nav>
+  }
+
+  @if (editorOpen()) {
+    <div class="modal-backdrop">
+      <section class="modal" role="dialog" aria-modal="true">
+        <h2>{{ editingTag ? 'Đổi tên tag' : 'Tạo tag' }}</h2>
+        <label>Tên *<input [(ngModel)]="editName" maxlength="80" /></label>
+        @if (editingTag) {
+          <p class="muted">
+            Slug <code>{{ editingTag.slug }}</code> được giữ ổn định để tránh làm hỏng liên kết.
+          </p>
+        }
+        <div class="modal-actions">
+          <button type="button" (click)="editorOpen.set(false)">Hủy</button
+          ><button
+            class="primary"
+            type="button"
+            [disabled]="!editName.trim() || mutating()"
+            (click)="saveEditor()"
+          >
+            Lưu
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (mergeOpen() && mergeSource; as source) {
+    <div class="modal-backdrop">
+      <section class="modal" role="dialog" aria-modal="true">
+        <h2>Merge tag</h2>
+        <p>
+          Source: <strong>{{ source.name }}</strong> · {{ source.storyCount }} stories
+        </p>
+        <label
+          >Tìm tag đích<input
+            type="search"
+            [(ngModel)]="mergeTargetSearch"
+            (ngModelChange)="mergeSearchChanged.next()"
+        /></label>
+        <label
+          >Merge into
+          <select [(ngModel)]="mergeTargetId">
+            <option value="">Chọn tag đích</option>
+            @for (tag of mergeTargets(); track tag.id) {
+              <option [value]="tag.id">{{ tag.name }} · {{ tag.storyCount }} stories</option>
+            }
+          </select>
+        </label>
+        <p class="warning">
+          Tag nguồn sẽ bị xóa sau khi hợp nhất. Thao tác không tự động hoàn tác.
+        </p>
+        <div class="modal-actions">
+          <button type="button" (click)="mergeOpen.set(false)">Hủy</button
+          ><button
+            class="primary"
+            type="button"
+            [disabled]="!mergeTargetId || mutating()"
+            (click)="merge()"
+          >
+            Hợp nhất
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</main>

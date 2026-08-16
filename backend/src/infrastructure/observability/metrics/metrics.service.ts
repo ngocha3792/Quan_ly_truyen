@@ -204,6 +204,36 @@ export class MetricsService implements OnModuleDestroy {
     labelNames: ['operation'] as const,
     registers: [this.registry],
   });
+  private readonly commentOperations = new Counter({
+    name: METRIC_NAMES.COMMENT_OPERATIONS,
+    help: 'Comment write operations by bounded operation',
+    labelNames: ['operation'] as const,
+    registers: [this.registry],
+  });
+  private readonly commentReactions = new Counter({
+    name: METRIC_NAMES.COMMENT_REACTIONS,
+    help: 'Comment reaction operations by bounded operation and reaction type',
+    labelNames: ['operation', 'type'] as const,
+    registers: [this.registry],
+  });
+  private readonly commentReports = new Counter({
+    name: METRIC_NAMES.COMMENT_REPORTS,
+    help: 'Comment reports created by reason',
+    labelNames: ['reason'] as const,
+    registers: [this.registry],
+  });
+  private readonly commentModerationActions = new Counter({
+    name: METRIC_NAMES.COMMENT_MODERATION_ACTIONS,
+    help: 'Comment moderation actions by bounded action',
+    labelNames: ['action'] as const,
+    registers: [this.registry],
+  });
+  private readonly commentAbuseBlocks = new Counter({
+    name: METRIC_NAMES.COMMENT_ABUSE_BLOCKS,
+    help: 'Comment abuse protection blocks by scope',
+    labelNames: ['scope'] as const,
+    registers: [this.registry],
+  });
   private readonly dependencyHealth = new Gauge({
     name: METRIC_NAMES.DEPENDENCY_HEALTH,
     help: 'Dependency health (1 up/configured, 0 down, -1 disabled)',
@@ -382,6 +412,27 @@ export class MetricsService implements OnModuleDestroy {
     operation: 'cache' | 'lock' | 'idempotency' | 'queue' | 'health',
   ): void {
     if (this.enabled) this.redisErrors.inc({ operation });
+  }
+
+  recordCommentOperation(operation: 'create' | 'reply' | 'update' | 'delete'): void {
+    if (this.enabled) this.commentOperations.inc({ operation });
+  }
+
+  recordCommentReaction(operation: 'set' | 'remove', type: 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL' | 'none'): void {
+    if (this.enabled) this.commentReactions.inc({ operation, type });
+  }
+
+  recordCommentReport(reason: string): void {
+    const allowed = ['SPAM', 'HARASSMENT', 'HATE_SPEECH', 'SEXUAL_CONTENT', 'VIOLENCE', 'COPYRIGHT', 'MISINFORMATION', 'OTHER'];
+    if (this.enabled) this.commentReports.inc({ reason: allowed.includes(reason) ? reason : 'OTHER' });
+  }
+
+  recordCommentModeration(action: 'hold' | 'hide' | 'restore' | 'remove' | 'warn' | 'ban'): void {
+    if (this.enabled) this.commentModerationActions.inc({ action });
+  }
+
+  recordCommentAbuseBlock(scope: 'comment' | 'reaction' | 'report'): void {
+    if (this.enabled) this.commentAbuseBlocks.inc({ scope });
   }
 
   setDependencyHealth(

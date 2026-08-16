@@ -1,2 +1,104 @@
-<main class="admin-page"><div class="page-container"><a routerLink="/admin/stories">← Queue duyệt truyện</a>@if(loading()){<p>Đang tải...</p>} @if(error()){<div class="error">{{error()}}</div>} @if(detail();as data){<header class="hero"><div><h1>{{data.story.title}}</h1><p>Gửi {{data.submission.submittedAt|date:'medium'}}</p><app-admin-story-status-badge [status]="data.submission.status"/></div>@if(data.submission.status==='PENDING'){<div class="actions"><button [disabled]="mutating()" (click)="approve()">Approve</button><button class="danger" [disabled]="mutating()" (click)="openReject()">Reject</button></div>}</header>@if(message()){<div class="success">{{message()}}</div>}<section class="grid"><article><h2>Tác giả</h2><p><strong>{{data.author.penName}}</strong> · {{data.author.displayName}}</p><p>Lifecycle: {{data.author.status}}</p></article><article><h2>Story metadata</h2><p>{{data.story.synopsis}}</p><p>@for(c of data.story.categories;track c.id){<span>{{c.name}} </span>}</p><p>@for(t of data.story.tags;track t.id){<span>#{{t.name}} </span>}</p></article></section><section><h2>Chapters</h2>@for(chapter of data.chapters;track chapter.id){<details><summary>Chương {{chapter.number}} — {{chapter.title}} ({{chapter.status}})</summary><pre>{{chapter.content}}</pre></details>}</section><section class="grid"><article><h2>Submission history</h2>@for(item of data.submissionHistory;track item.id){<p><strong>{{item.status}}</strong> · {{item.submittedAt|date:'short'}} @if(item.rejectionReason){ — {{item.rejectionReason}} }</p>}</article><article><h2>Recent audit</h2>@for(item of data.recentAudit;track item.id){<p><strong>{{item.action}}</strong> · {{item.createdAt|date:'short'}}</p>}</article></section>}
-@if(rejectOpen()){<div class="dialog-backdrop"><section class="dialog" role="dialog" aria-modal="true"><h2>Từ chối submission</h2><label>Lý do *</label><textarea [(ngModel)]="rejectReason" rows="6" maxlength="1000"></textarea><small>{{rejectReason.trim().length}} / 1000</small><div class="actions"><button (click)="closeReject()">Hủy</button><button class="danger" [disabled]="rejectReason.trim().length<10||mutating()" (click)="confirmReject()">Xác nhận từ chối</button></div></section></div>}</div></main>
+<main class="admin-page">
+  <div class="page-container">
+    <a routerLink="/admin/stories">← Queue duyệt truyện</a>
+    @if (loading()) {
+      <p>Đang tải...</p>
+    }
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+    @if (detail(); as data) {
+      <header class="hero">
+        <div>
+          <h1>{{ data.story.title }}</h1>
+          <p>Gửi {{ data.submission.submittedAt | date: 'medium' }}</p>
+          <app-admin-story-status-badge [status]="data.submission.status" />
+        </div>
+        @if (data.submission.status === 'PENDING') {
+          <div class="actions">
+            <button [disabled]="mutating()" (click)="approve()">Approve</button
+            ><button class="danger" [disabled]="mutating()" (click)="openReject()">Reject</button>
+          </div>
+        }
+      </header>
+      @if (message()) {
+        <div class="success">{{ message() }}</div>
+      }
+      <section class="grid">
+        <article>
+          <h2>Tác giả</h2>
+          <p>
+            <strong>{{ data.author.penName }}</strong> · {{ data.author.displayName }}
+          </p>
+          <p>Lifecycle: {{ data.author.status }}</p>
+        </article>
+        <article>
+          <h2>Story metadata</h2>
+          <p>{{ data.story.synopsis }}</p>
+          <p>
+            @for (c of data.story.categories; track c.id) {
+              <span>{{ c.name }} </span>
+            }
+          </p>
+          <p>
+            @for (t of data.story.tags; track t.id) {
+              <span>#{{ t.name }} </span>
+            }
+          </p>
+        </article>
+      </section>
+      <section>
+        <h2>Chapters</h2>
+        @for (chapter of data.chapters; track chapter.id) {
+          <details>
+            <summary>
+              Chương {{ chapter.number }} — {{ chapter.title }} ({{ chapter.status }})
+            </summary>
+            <pre>{{ chapter.content }}</pre>
+          </details>
+        }
+      </section>
+      <section class="grid">
+        <article>
+          <h2>Submission history</h2>
+          @for (item of data.submissionHistory; track item.id) {
+            <p>
+              <strong>{{ item.status }}</strong> · {{ item.submittedAt | date: 'short' }}
+              @if (item.rejectionReason) {
+                — {{ item.rejectionReason }}
+              }
+            </p>
+          }
+        </article>
+        <article>
+          <h2>Recent audit</h2>
+          @for (item of data.recentAudit; track item.id) {
+            <p>
+              <strong>{{ item.action }}</strong> · {{ item.createdAt | date: 'short' }}
+            </p>
+          }
+        </article>
+      </section>
+    }
+    @if (rejectOpen()) {
+      <div class="dialog-backdrop">
+        <section class="dialog" role="dialog" aria-modal="true">
+          <h2>Từ chối submission</h2>
+          <label>Lý do *</label
+          ><textarea [(ngModel)]="rejectReason" rows="6" maxlength="1000"></textarea
+          ><small>{{ rejectReason.trim().length }} / 1000</small>
+          <div class="actions">
+            <button (click)="closeReject()">Hủy</button
+            ><button
+              class="danger"
+              [disabled]="rejectReason.trim().length < 10 || mutating()"
+              (click)="confirmReject()"
+            >
+              Xác nhận từ chối
+            </button>
+          </div>
+        </section>
+      </div>
+    }
+  </div>
+</main>

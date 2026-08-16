@@ -1,4 +1,79 @@
-import type { ListStorySubmissionsResult, StorySubmissionDetailRecord } from '../../../application';
-export interface AdminStorySubmissionListResponse { readonly items: readonly { readonly submissionId: string; readonly status: string; readonly story: { readonly id: string; readonly title: string; readonly slug: string }; readonly author: { readonly id: string; readonly displayName: string; readonly slug: string }; readonly submittedAt: string; readonly reviewer: { readonly id: string; readonly displayName: string } | null; readonly reviewedAt: string | null; readonly rejectionReason: string | null; readonly chapterCount: number }[]; readonly pagination: { readonly page: number; readonly pageSize: number; readonly totalItems: number; readonly totalPages: number } }
-export function toAdminStorySubmissionListResponse(result: ListStorySubmissionsResult, page: number, pageSize: number): AdminStorySubmissionListResponse { return { items: result.items.map((item) => ({ ...item, submittedAt: item.submittedAt.toISOString(), reviewedAt: item.reviewedAt?.toISOString() ?? null })), pagination: { page, pageSize, totalItems: result.totalItems, totalPages: Math.ceil(result.totalItems / pageSize) } }; }
-export function toAdminStorySubmissionDetailResponse(result: StorySubmissionDetailRecord) { return { submission: { ...result.submission, submittedAt: result.submission.submittedAt.toISOString(), reviewedAt: result.submission.reviewedAt?.toISOString() ?? null }, author: result.author, story: result.story, chapters: result.chapters.map((chapter) => ({ ...chapter, updatedAt: chapter.updatedAt.toISOString() })), submissionHistory: result.submissionHistory.map((submission) => ({ ...submission, submittedAt: submission.submittedAt.toISOString(), reviewedAt: submission.reviewedAt?.toISOString() ?? null })), recentAudit: result.recentAudit.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })) }; }
+import type {
+  ListStorySubmissionsResult,
+  StorySubmissionDetailRecord,
+} from '../../../application';
+export interface AdminStorySubmissionListResponse {
+  readonly items: readonly {
+    readonly submissionId: string;
+    readonly status: string;
+    readonly story: {
+      readonly id: string;
+      readonly title: string;
+      readonly slug: string;
+    };
+    readonly author: {
+      readonly id: string;
+      readonly displayName: string;
+      readonly slug: string;
+    };
+    readonly submittedAt: string;
+    readonly reviewer: {
+      readonly id: string;
+      readonly displayName: string;
+    } | null;
+    readonly reviewedAt: string | null;
+    readonly rejectionReason: string | null;
+    readonly chapterCount: number;
+  }[];
+  readonly pagination: {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly totalItems: number;
+    readonly totalPages: number;
+  };
+}
+export function toAdminStorySubmissionListResponse(
+  result: ListStorySubmissionsResult,
+  page: number,
+  pageSize: number,
+): AdminStorySubmissionListResponse {
+  return {
+    items: result.items.map((item) => ({
+      ...item,
+      submittedAt: item.submittedAt.toISOString(),
+      reviewedAt: item.reviewedAt?.toISOString() ?? null,
+    })),
+    pagination: {
+      page,
+      pageSize,
+      totalItems: result.totalItems,
+      totalPages: Math.ceil(result.totalItems / pageSize),
+    },
+  };
+}
+export function toAdminStorySubmissionDetailResponse(
+  result: StorySubmissionDetailRecord,
+) {
+  return {
+    submission: {
+      ...result.submission,
+      submittedAt: result.submission.submittedAt.toISOString(),
+      reviewedAt: result.submission.reviewedAt?.toISOString() ?? null,
+    },
+    author: result.author,
+    story: result.story,
+    chapters: result.chapters.map((chapter) => ({
+      ...chapter,
+      updatedAt: chapter.updatedAt.toISOString(),
+    })),
+    submissionHistory: result.submissionHistory.map((submission) => ({
+      ...submission,
+      submittedAt: submission.submittedAt.toISOString(),
+      reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+    })),
+    recentAudit: result.recentAudit.map((event) => ({
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+    })),
+  };
+}

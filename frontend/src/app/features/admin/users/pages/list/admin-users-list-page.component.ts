@@ -13,10 +13,7 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { TabFilterOption } from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AdminUsersListStore } from '../../data-access/admin-users-list.store';
-import {
-  ManagedUserRoleFilter,
-  ManagedUserStatusFilter,
-} from '../../domain/admin-user.models';
+import { ManagedUserRoleFilter, ManagedUserStatusFilter } from '../../domain/admin-user.models';
 import { AdminUsersFiltersComponent } from '../../ui/admin-users-filters.component';
 import { AdminUsersTableComponent } from '../../ui/admin-users-table.component';
 

@@ -256,10 +256,14 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ]);
 
     const statuses = [approveResult.status, rejectResult.status];
-    expect(statuses.filter((status) => status === 'approved' || status === 'rejected')).toHaveLength(
+    expect(
+      statuses.filter(
+        (status) => status === 'approved' || status === 'rejected',
+      ),
+    ).toHaveLength(1);
+    expect(statuses.filter((status) => status === 'not_pending')).toHaveLength(
       1,
     );
-    expect(statuses.filter((status) => status === 'not_pending')).toHaveLength(1);
 
     const [submission, auditCount, moderationCount] = await Promise.all([
       prisma.storySubmission.findUniqueOrThrow({
@@ -270,13 +274,17 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         where: {
           entityType: 'story',
           entityId: ready.storyId,
-          action: { in: ['STORY_SUBMISSION_APPROVED', 'STORY_SUBMISSION_REJECTED'] },
+          action: {
+            in: ['STORY_SUBMISSION_APPROVED', 'STORY_SUBMISSION_REJECTED'],
+          },
         },
       }),
       prisma.moderationAction.count({ where: { submissionId } }),
     ]);
 
-    expect([SubmissionStatus.APPROVED, SubmissionStatus.REJECTED]).toContain(submission.status);
+    expect([SubmissionStatus.APPROVED, SubmissionStatus.REJECTED]).toContain(
+      submission.status,
+    );
     expect(auditCount).toBe(1);
     expect(moderationCount).toBe(1);
   });

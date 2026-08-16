@@ -72,7 +72,6 @@ export interface AdminUserListResponse {
   readonly users: readonly AdminUserSummary[];
 }
 
-
 export interface AdminUserSession {
   readonly sessionId: string;
   readonly createdAt: string;

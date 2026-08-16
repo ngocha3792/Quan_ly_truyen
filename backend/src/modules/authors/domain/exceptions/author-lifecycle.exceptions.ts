@@ -29,7 +29,8 @@ export class AuthorStatusReasonRequiredException extends InvalidInputException {
   constructor() {
     super({
       code: 'AUTHOR_STATUS_REASON_REQUIRED',
-      message: 'Lý do phải có từ 10 đến 1000 ký tự khi suspend hoặc revoke tác giả',
+      message:
+        'Lý do phải có từ 10 đến 1000 ký tự khi suspend hoặc revoke tác giả',
       details: { field: 'reason' },
     });
   }

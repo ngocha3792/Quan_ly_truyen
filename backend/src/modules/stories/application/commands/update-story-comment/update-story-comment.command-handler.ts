@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { MetricsService } from '@/infrastructure/observability';
 import {
   CommentNotFoundException,
   InvalidCommentBodyException,
@@ -17,6 +18,7 @@ export class UpdateStoryCommentCommandHandler {
   constructor(
     @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
     private readonly persistence: ReaderEngagementPersistencePort,
+    private readonly metrics: MetricsService,
   ) {}
 
   async execute(
@@ -36,6 +38,7 @@ export class UpdateStoryCommentCommandHandler {
     if (result.status === 'not_found') {
       throw new CommentNotFoundException(command.commentId);
     }
+    this.metrics.recordCommentOperation('update');
     return result.comment;
   }
 }

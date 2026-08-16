@@ -1,57 +1,15 @@
-<section class="comments">
-  <header class="comments-header">
-    <h2>Bình luận ({{ totalComments() }})</h2>
-  </header>
-
-  <div class="comment-editor">
-    <span class="editor-avatar" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 21c.6-5 3.3-7.5 8-7.5S19.4 16 20 21"></path>
-      </svg>
-    </span>
-    <input #commentInput type="text" maxlength="4000" placeholder="Viết bình luận của bạn..." />
-    <button type="button" [disabled]="submitting()" (click)="submit(commentInput)">
-      {{ submitting() ? 'Đang gửi...' : 'Gửi' }}
-    </button>
-  </div>
-
-  <div class="comment-list">
-    @for (comment of comments(); track comment.id) {
-      <article class="comment">
-        <span class="avatar">{{ comment.author.initials }}</span>
-        <div class="comment-body">
-          <div class="author-row">
-            <strong>{{ comment.author.name }}</strong>
-          </div>
-          <time>{{ comment.createdAt }}</time>
-
-          @if (editingId() === comment.id) {
-            <textarea
-              class="comment-edit"
-              rows="3"
-              maxlength="4000"
-              [value]="editBody()"
-              (input)="updateEdit($any($event.target).value)"
-            ></textarea>
-            <div class="comment-actions">
-              <button type="button" (click)="saveEdit(comment.id)">Lưu</button>
-              <button type="button" (click)="cancelEdit()">Hủy</button>
-            </div>
-          } @else {
-            <p>{{ comment.content }}</p>
-            <div class="comment-actions">
-              <span>{{ comment.likes }} lượt thích</span>
-              @if (comment.isOwner) {
-                <button type="button" (click)="startEdit(comment)">Sửa</button>
-                <button type="button" (click)="commentDelete.emit(comment.id)">Xóa</button>
-              }
-            </div>
-          }
-        </div>
-      </article>
-    } @empty {
-      <p>Chưa có bình luận nào cho chương này.</p>
-    }
-  </div>
-</section>
+<app-public-comments
+  title="Bình luận"
+  emptyMessage="Chưa có bình luận nào cho chương này."
+  [comments]="comments()"
+  [totalComments]="totalComments()"
+  [submitting]="submitting()"
+  [message]="message()"
+  (commentCreate)="commentCreate.emit($event)"
+  (commentUpdate)="commentUpdate.emit($event)"
+  (commentDelete)="commentDelete.emit($event)"
+  (repliesLoad)="repliesLoad.emit($event)"
+  (replyCreate)="replyCreate.emit($event)"
+  (reactionSet)="reactionSet.emit($event)"
+  (reportCreate)="reportCreate.emit($event)"
+/>

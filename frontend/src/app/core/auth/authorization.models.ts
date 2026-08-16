@@ -27,6 +27,10 @@ export const AUTH_PERMISSIONS = {
   COMMENT_CREATE: 'comment.create',
   COMMENT_UPDATE_OWN: 'comment.update.own',
   COMMENT_DELETE_OWN: 'comment.delete.own',
+  COMMENT_MODERATE: 'comment.moderate',
+  REPORT_CREATE: 'report.create',
+  REPORT_REVIEW: 'report.review',
+  MODERATION_EXECUTE: 'moderation.execute',
   RATING_CREATE: 'rating.create',
   RATING_UPDATE_OWN: 'rating.update.own',
   LIBRARY_MANAGE_OWN: 'library.manage.own',
@@ -41,6 +45,9 @@ export const AUTH_PERMISSIONS = {
   AUTHOR_APPLICATION_REVIEW: 'author-application.review',
   AUTHOR_READ: 'author.read',
   AUTHOR_STATUS_MANAGE: 'author.status.manage',
+
+  CATEGORY_MANAGE: 'category.manage',
+  TAG_MANAGE: 'tag.manage',
 } as const;
 
 export type AuthPermission = (typeof AUTH_PERMISSIONS)[keyof typeof AUTH_PERMISSIONS];

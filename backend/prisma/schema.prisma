@@ -152,7 +152,9 @@ enum LibraryStatus {
 
 enum ModerationStatus {
   VISIBLE @map("visible")
+  PENDING @map("pending")
   HIDDEN  @map("hidden")
+  REMOVED @map("removed")
   DELETED @map("deleted")
 
   @@map("moderation_status")
@@ -215,7 +217,10 @@ enum ModerationActionType {
   HIDE_CHAPTER    @map("hide_chapter")
   RESTORE_CHAPTER @map("restore_chapter")
   HIDE_COMMENT    @map("hide_comment")
+  HOLD_COMMENT    @map("hold_comment")
+  RESTORE_COMMENT @map("restore_comment")
   DELETE_COMMENT  @map("delete_comment")
+  WARN_USER       @map("warn_user")
   SUSPEND_USER    @map("suspend_user")
   BAN_USER        @map("ban_user")
   RESTORE_USER    @map("restore_user")

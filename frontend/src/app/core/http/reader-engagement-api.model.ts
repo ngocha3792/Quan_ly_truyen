@@ -44,19 +44,34 @@ export interface StoryRatingApiItem {
   readonly updatedAt: string;
 }
 
+
+export type CommentReactionApiType = 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL';
+export type CommentReportReasonApi = 'SPAM' | 'HARASSMENT' | 'HATE_SPEECH' | 'SEXUAL_CONTENT' | 'VIOLENCE' | 'COPYRIGHT' | 'MISINFORMATION' | 'OTHER';
+
+export interface CommentReactionSummaryApi {
+  readonly commentId: string;
+  readonly viewerReaction: CommentReactionApiType | null;
+  readonly reactions: Readonly<Record<CommentReactionApiType, number>>;
+  readonly total: number;
+}
+
 export interface StoryCommentApiItem {
   readonly id: string;
   readonly storyId: string;
   readonly chapterId: string | null;
   readonly parentId: string | null;
+  readonly depth: 0 | 1 | 2;
   readonly body: string;
+  readonly displayState: 'VISIBLE' | 'DELETED';
   readonly user: {
     readonly id: string;
     readonly displayName: string;
     readonly avatarUrl: string | null;
   };
   readonly likeCount: number;
+  readonly reactions: Readonly<Record<CommentReactionApiType, number>>;
   readonly replyCount: number;
+  readonly threadReplyCount: number;
   readonly editedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;

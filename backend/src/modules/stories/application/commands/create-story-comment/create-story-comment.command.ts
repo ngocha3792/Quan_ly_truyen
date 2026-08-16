@@ -4,5 +4,6 @@ export class CreateStoryCommentCommand {
     readonly storyId: string,
     readonly body: string,
     readonly chapterId?: string,
+    readonly ipAddress?: string,
   ) {}
 }

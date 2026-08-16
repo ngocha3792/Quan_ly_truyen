@@ -66,6 +66,21 @@
                 {{ category.name }}
               </button>
             }
+            @for (category of legacySelectedCategories(); track category.id) {
+              <button
+                type="button"
+                class="chip chip--selected chip--legacy"
+                [disabled]="!isEditable()"
+                [title]="
+                  isEditable()
+                    ? 'Thể loại đã ngừng hoạt động. Bạn chỉ có thể gỡ khỏi truyện.'
+                    : 'Thể loại đã ngừng hoạt động.'
+                "
+                (click)="removeLegacyCategory(category.id)"
+              >
+                {{ category.name }} · Không còn sử dụng
+              </button>
+            }
           </div>
         </div>
 

@@ -215,6 +215,27 @@
                 </a>
               }
 
+              @if (canManageCategories()) {
+                <a routerLink="/admin/categories" (click)="closeProfile()">
+                  <app-icon name="grid" [size]="18"></app-icon>
+                  <span>Quản lý thể loại</span>
+                </a>
+              }
+
+              @if (canManageTags()) {
+                <a routerLink="/admin/tags" (click)="closeProfile()">
+                  <app-icon name="bookmark" [size]="18"></app-icon>
+                  <span>Quản lý tag</span>
+                </a>
+              }
+
+              @if (canReviewReports()) {
+                <a routerLink="/admin/reports" (click)="closeProfile()">
+                  <app-icon name="shield" [size]="18"></app-icon>
+                  <span>Reports</span>
+                </a>
+              }
+
               <a routerLink="/tai-khoan" (click)="closeProfile()">
                 <app-icon name="user" [size]="18"></app-icon>
 

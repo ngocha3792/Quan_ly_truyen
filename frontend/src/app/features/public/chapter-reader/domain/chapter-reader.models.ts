@@ -1,3 +1,5 @@
+import type { PublicComment, PublicCommentAuthor } from '../../comments';
+
 export interface ChapterStory {
   readonly id: string;
   readonly slug: string;
@@ -19,20 +21,9 @@ export interface ChapterDetail {
   readonly views: number;
 }
 
-export interface ChapterCommentAuthor {
-  readonly id: string;
-  readonly name: string;
-  readonly initials: string;
-}
+export interface ChapterCommentAuthor extends PublicCommentAuthor {}
 
-export interface ChapterComment {
-  readonly id: string;
-  readonly author: ChapterCommentAuthor;
-  readonly content: string;
-  readonly createdAt: string;
-  readonly likes: number;
-  readonly isOwner: boolean;
-}
+export interface ChapterComment extends PublicComment {}
 
 export interface ChapterReaderView {
   readonly story: ChapterStory;

@@ -65,7 +65,12 @@ export class ManagedUserStatusNotManageableException extends InvalidInputExcepti
 
 export class ManagedUserStatusReasonRequiredException extends InvalidInputException {
   constructor() {
-    super({ code: 'MANAGED_USER_STATUS_REASON_REQUIRED', message: 'Lý do phải có từ 10 đến 1000 ký tự khi tạm khóa hoặc cấm tài khoản', details: { field: 'reason' } });
+    super({
+      code: 'MANAGED_USER_STATUS_REASON_REQUIRED',
+      message:
+        'Lý do phải có từ 10 đến 1000 ký tự khi tạm khóa hoặc cấm tài khoản',
+      details: { field: 'reason' },
+    });
   }
 }
 

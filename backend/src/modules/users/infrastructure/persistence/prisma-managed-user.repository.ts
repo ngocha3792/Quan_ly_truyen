@@ -242,7 +242,9 @@ export class PrismaManagedUserRepository
       }
 
       const [activeSessionCount, statusReason] = await Promise.all([
-        this.prisma.session.count({ where: { userId, revokedAt: null, expiresAt: { gt: now } } }),
+        this.prisma.session.count({
+          where: { userId, revokedAt: null, expiresAt: { gt: now } },
+        }),
         this.loadLatestStatusReason(this.prisma, userId),
       ]);
 
@@ -924,7 +926,9 @@ export class PrismaManagedUserRepository
     });
 
     const [activeSessionCount, statusReason] = await Promise.all([
-      transaction.session.count({ where: { userId, revokedAt: null, expiresAt: { gt: now } } }),
+      transaction.session.count({
+        where: { userId, revokedAt: null, expiresAt: { gt: now } },
+      }),
       this.loadLatestStatusReason(transaction, userId),
     ]);
 
@@ -1090,7 +1094,10 @@ export class PrismaManagedUserRepository
 
       statusReason,
 
-      Boolean(record.adminMfaCredential) || record.mfaCredentials.some((credential) => credential.status === 'ENABLED'),
+      Boolean(record.adminMfaCredential) ||
+        record.mfaCredentials.some(
+          (credential) => credential.status === 'ENABLED',
+        ),
 
       record.deletedAt,
     );
@@ -1101,11 +1108,20 @@ export class PrismaManagedUserRepository
     userId: string,
   ): Promise<string | null> {
     const event = await transaction.auditLog.findFirst({
-      where: { entityType: 'user', entityId: userId, action: { in: ['USER_STATUS_CHANGED', 'admin.user.status.changed'] } },
+      where: {
+        entityType: 'user',
+        entityId: userId,
+        action: { in: ['USER_STATUS_CHANGED', 'admin.user.status.changed'] },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { metadata: true },
     });
-    if (!event?.metadata || typeof event.metadata !== 'object' || Array.isArray(event.metadata)) return null;
+    if (
+      !event?.metadata ||
+      typeof event.metadata !== 'object' ||
+      Array.isArray(event.metadata)
+    )
+      return null;
     const reason = (event.metadata as Record<string, unknown>)['reason'];
     return typeof reason === 'string' && reason.trim() ? reason : null;
   }
@@ -1199,5 +1215,7 @@ async function lockManagedUserRow(
 }
 
 function looksLikeUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }

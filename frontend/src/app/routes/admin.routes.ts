@@ -6,14 +6,20 @@ import { permissionGuard } from '../core/auth/permission.guard';
 
 const userManagementGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.USER_MANAGE)];
 
-const storyModerationGuards = [
+const storyModerationGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.STORY_REVIEW)];
+
+const authorManagementGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.AUTHOR_READ)];
+
+const tagManagementGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.TAG_MANAGE)];
+
+const categoryManagementGuards = [
   authenticatedGuard,
-  permissionGuard(AUTH_PERMISSIONS.STORY_REVIEW),
+  permissionGuard(AUTH_PERMISSIONS.CATEGORY_MANAGE),
 ];
 
-const authorManagementGuards = [
+const reportReviewGuards = [
   authenticatedGuard,
-  permissionGuard(AUTH_PERMISSIONS.AUTHOR_READ),
+  permissionGuard(AUTH_PERMISSIONS.REPORT_REVIEW),
 ];
 
 const authorApplicationGuards = [
@@ -22,6 +28,42 @@ const authorApplicationGuards = [
 ];
 
 export const ADMIN_ROUTES: Routes = [
+  {
+    path: 'admin/reports',
+    title: 'Báo cáo bình luận - TruyenHub',
+    canActivate: reportReviewGuards,
+    loadComponent: () =>
+      import('../features/admin/reports/pages/list/admin-reports-list-page.component').then(
+        (module) => module.AdminReportsListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/reports/:reportId',
+    title: 'Chi tiết báo cáo - TruyenHub',
+    canActivate: reportReviewGuards,
+    loadComponent: () =>
+      import('../features/admin/reports/pages/detail/admin-report-detail-page.component').then(
+        (module) => module.AdminReportDetailPageComponent,
+      ),
+  },
+  {
+    path: 'admin/categories',
+    title: 'Quản lý thể loại - TruyenHub',
+    canActivate: categoryManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/categories/pages/list/admin-categories-list-page.component').then(
+        (module) => module.AdminCategoriesListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/tags',
+    title: 'Quản lý tag - TruyenHub',
+    canActivate: tagManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/tags/pages/list/admin-tags-list-page.component').then(
+        (module) => module.AdminTagsListPageComponent,
+      ),
+  },
   {
     path: 'admin/stories',
     title: 'Duyệt truyện - TruyenHub',

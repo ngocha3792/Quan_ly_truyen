@@ -6,7 +6,7 @@ export class UpdateAuthorStatusRequest {
   @IsEnum(AuthorLifecycleStatus)
   status!: AuthorLifecycleStatus;
   @IsOptional()
-  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @MaxLength(1000)
   reason?: string;

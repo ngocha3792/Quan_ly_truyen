@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
@@ -8,7 +8,7 @@ import {
   PublicChapterReaderApiResponse,
 } from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
-import type { StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
+import type { CommentReactionApiType, CommentReportReasonApi, StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
 import {
   ChapterComment,
   ChapterNavigationItem,
@@ -31,10 +31,9 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     chapterNumber: string,
   ): Observable<{ readonly items: readonly ChapterComment[]; readonly total: number }> {
     return this.engagement.listChapterComments(storySlug, chapterNumber).pipe(
-      map((page) => ({
-        items: page.items.map((comment) => this.toChapterComment(comment)),
-        total: page.pagination.totalItems,
-      })),
+      switchMap((page) => this.withViewerReactions(page.items).pipe(
+        map((items) => ({ items, total: page.pagination.totalItems })),
+      )),
     );
   }
 
@@ -54,21 +53,59 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     return this.engagement.deleteComment(commentId);
   }
 
+  getReplies(rootCommentId: string): Observable<readonly ChapterComment[]> {
+    return this.engagement.listCommentReplies(rootCommentId).pipe(
+      switchMap((page) => this.withViewerReactions(page.items)),
+    );
+  }
+
+  createReply(parentCommentId: string, body: string): Observable<ChapterComment> {
+    return this.engagement.createCommentReply(parentCommentId, body).pipe(
+      map((comment) => this.toChapterComment(comment)),
+    );
+  }
+
+  setReaction(commentId: string, type: CommentReactionApiType) {
+    return this.engagement.setCommentReaction(commentId, type).pipe(
+      map((summary) => ({ viewerReaction: summary.viewerReaction, reactions: summary.reactions })),
+    );
+  }
+
+  clearReaction(commentId: string): Observable<void> {
+    return this.engagement.clearCommentReaction(commentId);
+  }
+
+  reportComment(commentId: string, reason: CommentReportReasonApi, description?: string): Observable<void> {
+    return this.engagement.reportComment(commentId, reason, description).pipe(map(() => undefined));
+  }
+
   saveProgress(storyId: string, chapterId: string): Observable<void> {
     return this.engagement.saveReadingProgress(storyId, chapterId).pipe(map(() => undefined));
   }
 
-  private toChapterComment(comment: StoryCommentApiItem): ChapterComment {
+  private withViewerReactions(items: readonly StoryCommentApiItem[]): Observable<readonly ChapterComment[]> {
+    if (!this.auth.isAuthenticated() || items.length === 0) {
+      return of(items.map((comment) => this.toChapterComment(comment)));
+    }
+    return this.engagement.getViewerCommentReactions(items.map((item) => item.id)).pipe(
+      map((mine) => items.map((comment) => this.toChapterComment(comment, mine[comment.id] ?? null))),
+    );
+  }
+
+  private toChapterComment(comment: StoryCommentApiItem, viewerReaction: CommentReactionApiType | null = null): ChapterComment {
     return {
       id: comment.id,
-      author: {
-        id: comment.user.id,
-        name: comment.user.displayName,
-        initials: initials(comment.user.displayName),
-      },
+      parentId: comment.parentId,
+      depth: comment.depth,
+      displayState: comment.displayState,
+      author: { id: comment.user.id, name: comment.user.displayName, initials: initials(comment.user.displayName) },
       content: comment.body,
       createdAt: relativeTime(comment.createdAt),
-      likes: comment.likeCount,
+      reactions: comment.reactions,
+      viewerReaction,
+      replyCount: comment.replyCount,
+      threadReplyCount: comment.threadReplyCount,
+      replies: [],
       isOwner: this.auth.user()?.id === comment.user.id,
     };
   }

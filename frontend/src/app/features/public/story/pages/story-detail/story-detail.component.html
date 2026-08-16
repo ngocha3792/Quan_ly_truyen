@@ -106,9 +106,14 @@
         <app-story-comments
           [comments]="store.comments()"
           [submitting]="store.commentPending()"
+          [message]="store.commentMessage()"
           (commentCreate)="addComment($event)"
           (commentUpdate)="editComment($event)"
           (commentDelete)="deleteComment($event)"
+          (repliesLoad)="loadReplies($event)"
+          (replyCreate)="reply($event)"
+          (reactionSet)="react($event)"
+          (reportCreate)="report($event)"
         />
         <app-story-related [relatedStories]="store.relatedStories()" />
       </aside>

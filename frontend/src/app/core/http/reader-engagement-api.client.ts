@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, tap } from 'rxjs';
+import { map, Observable, of, tap } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
 import { ApiSuccessEnvelope } from './api-envelope.model';
@@ -10,6 +10,9 @@ import {
   ReadingHistoryApiItem,
   StoryCommentApiItem,
   StoryCommentApiPage,
+  CommentReactionApiType,
+  CommentReactionSummaryApi,
+  CommentReportReasonApi,
   StoryRatingApiItem,
 } from './reader-engagement-api.model';
 
@@ -122,6 +125,66 @@ export class ReaderEngagementApiClient {
     return this.http.delete<void>(
       `${this.config.apiBaseUrl}/comments/${encodeURIComponent(commentId)}`,
     );
+  }
+
+  listCommentReplies(commentId: string, page = 1, pageSize = 20): Observable<StoryCommentApiPage> {
+    return this.listComments(`/comments/${encodeURIComponent(commentId)}/replies`, page, pageSize);
+  }
+
+  createCommentReply(parentCommentId: string, body: string): Observable<StoryCommentApiItem> {
+    return this.postComment(`/comments/${encodeURIComponent(parentCommentId)}/replies`, body);
+  }
+
+  setCommentReaction(
+    commentId: string,
+    type: CommentReactionApiType,
+  ): Observable<CommentReactionSummaryApi> {
+    return this.http
+      .post<ApiSuccessEnvelope<CommentReactionSummaryApi>>(
+        `${this.config.apiBaseUrl}/comments/${encodeURIComponent(commentId)}/reactions`,
+        { type },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  clearCommentReaction(commentId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.config.apiBaseUrl}/comments/${encodeURIComponent(commentId)}/reactions`,
+    );
+  }
+
+  getViewerCommentReactions(
+    commentIds: readonly string[],
+  ): Observable<Record<string, CommentReactionApiType | null>> {
+    if (commentIds.length === 0) return of({});
+    const params = new HttpParams().set('commentIds', commentIds.join(','));
+    return this.http
+      .get<ApiSuccessEnvelope<Record<string, CommentReactionApiType | null>>>(
+        `${this.config.apiBaseUrl}/comments/reactions/me`,
+        { params },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  reportComment(
+    commentId: string,
+    reason: CommentReportReasonApi,
+    description?: string,
+  ): Observable<{ readonly id: string; readonly status: string }> {
+    const path = `/comments/${encodeURIComponent(commentId)}/report`;
+    const identity = JSON.stringify({ path, reason, description: description?.trim() ?? '' });
+    const key = this.commentRetryKeys.get(identity) ?? crypto.randomUUID();
+    this.commentRetryKeys.set(identity, key);
+    return this.http
+      .post<ApiSuccessEnvelope<{ readonly id: string; readonly status: string }>>(
+        `${this.config.apiBaseUrl}${path}`,
+        { reason, description: description?.trim() || undefined },
+        { headers: new HttpHeaders({ 'x-idempotency-key': key }) },
+      )
+      .pipe(
+        map((response) => response.data),
+        tap(() => { if (this.commentRetryKeys.get(identity) === key) this.commentRetryKeys.delete(identity); }),
+      );
   }
 
   private get<T>(path: string): Observable<T> {

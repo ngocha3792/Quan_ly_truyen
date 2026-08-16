@@ -24,9 +24,7 @@ test('manager xem queue, mở submission và reject với lý do', async ({ page
   await page.getByRole('button', { name: 'Reject' }).click();
 
   const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('textbox')
-    .fill('Nội dung cần chỉnh sửa trước khi có thể xuất bản.');
+  await dialog.getByRole('textbox').fill('Nội dung cần chỉnh sửa trước khi có thể xuất bản.');
   await dialog.getByRole('button', { name: 'Xác nhận từ chối' }).click();
 
   await expect(page.getByText('Đã từ chối truyện.')).toBeVisible();

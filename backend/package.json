@@ -40,7 +40,7 @@
     "test:auth:e2e": "npm run test:auth:prepare && jest --config ./test/jest-auth-e2e.json --runInBand",
     "test:auth:all": "npm run test:auth:unit && npm run test:auth:integration && npm run test:auth:e2e",
     "ci:unit": "npm run lint:check && npm run typecheck:scripts && npm run build && npm test -- --runInBand",
-    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:e2e",
+    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:taxonomy:integration && npm run test:comments:integration && npm run test:e2e",
     "quality:check": "npm run format:check && npm run lint:check && npm run typecheck:scripts && npm run db:validate && npm run build && npm test -- --runInBand",
     "ci": "npm run env:check && npm run quality:check",
     "postinstall": "prisma generate --config prisma.config.ts",
@@ -118,7 +118,12 @@
     "deployment:release:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Release.ps1 -EnvironmentName production -DeploymentMode Registry",
     "deployment:rollback:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Invoke-Rollback.ps1 -EnvironmentName production",
     "deployment:smoke:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName staging",
-    "deployment:smoke:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName production"
+    "deployment:smoke:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-DeploymentSmoke.ps1 -EnvironmentName production",
+    "test:taxonomy:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "test:taxonomy:integration": "npm run test:taxonomy:prepare && jest --config ./test/jest-taxonomy-integration.json --runInBand",
+    "db:taxonomy:preflight": "tsx scripts/database/preflight-taxonomy-names.ts",
+    "test:comments:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "test:comments:integration": "npm run test:comments:prepare && jest --config ./test/jest-comments-moderation-integration.json --runInBand"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

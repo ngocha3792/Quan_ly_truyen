@@ -27,4 +27,9 @@ export const METRIC_NAMES = {
   IDEMPOTENCY_OPERATIONS: 'qlt_idempotency_operations_total',
   REDIS_ERRORS: 'qlt_redis_errors_total',
   DEPENDENCY_HEALTH: 'qlt_dependency_health',
+  COMMENT_OPERATIONS: 'qlt_comment_operations_total',
+  COMMENT_REACTIONS: 'qlt_comment_reactions_total',
+  COMMENT_REPORTS: 'qlt_comment_reports_total',
+  COMMENT_MODERATION_ACTIONS: 'qlt_comment_moderation_actions_total',
+  COMMENT_ABUSE_BLOCKS: 'qlt_comment_abuse_blocks_total',
 } as const;

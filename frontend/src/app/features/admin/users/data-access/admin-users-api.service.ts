@@ -140,7 +140,6 @@ export class AdminUsersApiService {
       .pipe(map((response) => response.data));
   }
 
-
   listSessions(userId: string): Observable<readonly AdminUserSession[]> {
     return this.http
       .get<ApiSuccessEnvelope<readonly AdminUserSession[]>>(`${this.baseUrl}/${userId}/sessions`)

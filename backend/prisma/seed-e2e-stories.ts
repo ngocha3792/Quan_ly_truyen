@@ -1,4 +1,6 @@
+import bcrypt from 'bcryptjs';
 import {
+  AccountStatus,
   ChapterStatus,
   StoryStatus,
   StoryVisibility,
@@ -11,11 +13,18 @@ const prisma = createScriptPrismaClient();
 const AUTHOR_EMAIL = 'e2e.story.author@truyenhub.test';
 const STORY_SLUG = 'e2e-public-story';
 const CATEGORY_SLUG = 'e2e-testing';
+const COMMENT_READER_PASSWORD = 'E2eComment@2026';
+const COMMENT_READERS = [
+  { email: 'e2e.comment-a@truyenhub.test', username: 'e2e_comment_a', displayName: 'E2E Comment A' },
+  { email: 'e2e.comment-b@truyenhub.test', username: 'e2e_comment_b', displayName: 'E2E Comment B' },
+  { email: 'e2e.comment-c@truyenhub.test', username: 'e2e_comment_c', displayName: 'E2E Comment C' },
+] as const;
 
 async function main(): Promise<void> {
   assertNotProduction('Preparing public stories E2E data');
 
   const now = new Date();
+  await prepareCommentReaders(now);
   const author = await prisma.user.upsert({
     where: { email: AUTHOR_EMAIL },
     update: {
@@ -91,8 +100,12 @@ async function main(): Promise<void> {
   });
 
   await prisma.$transaction([
+    prisma.moderationAction.deleteMany({ where: { storyId: story.id } }),
+    prisma.report.deleteMany({ where: { storyId: story.id } }),
+    prisma.comment.deleteMany({ where: { storyId: story.id } }),
     prisma.storyCategory.deleteMany({ where: { storyId: story.id } }),
     prisma.chapter.deleteMany({ where: { storyId: story.id } }),
+    prisma.story.update({ where: { id: story.id }, data: { commentCount: 0 } }),
   ]);
 
   await prisma.storyCategory.create({
@@ -144,6 +157,45 @@ async function main(): Promise<void> {
   });
 
   console.log('Public stories E2E data ready:', STORY_SLUG);
+}
+
+
+async function prepareCommentReaders(now: Date): Promise<void> {
+  const userRole = await prisma.role.findUnique({ where: { code: 'USER' }, select: { id: true } });
+  if (!userRole) throw new Error('Không tìm thấy role USER. Hãy chạy db:seed trước.');
+  const passwordHash = await bcrypt.hash(COMMENT_READER_PASSWORD, 10);
+
+  for (const reader of COMMENT_READERS) {
+    const user = await prisma.user.upsert({
+      where: { email: reader.email },
+      update: {
+        username: reader.username,
+        displayName: reader.displayName,
+        passwordHash,
+        passwordUpdatedAt: now,
+        emailVerifiedAt: now,
+        status: AccountStatus.ACTIVE,
+        deletedAt: null,
+      },
+      create: {
+        email: reader.email,
+        username: reader.username,
+        displayName: reader.displayName,
+        passwordHash,
+        passwordUpdatedAt: now,
+        emailVerifiedAt: now,
+        status: AccountStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+    await prisma.$transaction([
+      prisma.session.deleteMany({ where: { userId: user.id } }),
+      prisma.userToken.deleteMany({ where: { userId: user.id } }),
+      prisma.notification.deleteMany({ where: { userId: user.id } }),
+      prisma.userRole.deleteMany({ where: { userId: user.id } }),
+      prisma.userRole.create({ data: { userId: user.id, roleId: userRole.id } }),
+    ]);
+  }
 }
 
 main()

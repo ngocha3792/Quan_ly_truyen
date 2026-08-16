@@ -11,6 +11,8 @@ import {
   ChapterStatus,
   MediaPurpose,
   MediaStatus,
+  ReportReason,
+  ReportTargetType,
   StoryStatus,
   StoryVisibility,
 } from '../src/generated/prisma/enums';
@@ -115,6 +117,16 @@ async function main():
     'author.read',
 
     'author.status.manage',
+
+    'category.manage',
+
+    'tag.manage',
+
+    'comment.moderate',
+
+    'report.review',
+
+    'moderation.execute',
   ];
 
   const permissions =
@@ -303,12 +315,22 @@ async function main():
     },
   });
 
-  await prepareLifecycleAuthor({
-    passwordHash,
-    userRoleId:
-      userRole.id,
-    authorRoleId:
-      authorRole.id,
+  const lifecycleAuthorId =
+    await prepareLifecycleAuthor({
+      passwordHash,
+      userRoleId:
+        userRole.id,
+      authorRoleId:
+        authorRole.id,
+    });
+
+  await prepareTaxonomyFixtures(
+    lifecycleAuthorId,
+  );
+
+  await prepareModerationFixture({
+    reportedUserId: target.id,
+    reporterId: lifecycleAuthorId,
   });
 
   await prepareAuthorApplicant({
@@ -484,7 +506,7 @@ async function prepareLifecycleAuthor(
     authorRoleId:
       string;
   },
-): Promise<void> {
+): Promise<string> {
   const user =
     await upsertUser({
       email:
@@ -652,6 +674,125 @@ async function prepareLifecycleAuthor(
 
       publishedAt:
         new Date(),
+    },
+  });
+
+  return user.id;
+}
+
+async function prepareTaxonomyFixtures(
+  authorId: string,
+): Promise<void> {
+  const sourceTag =
+    await prisma.tag.upsert({
+      where: { slug: 'e2e-sci-fi' },
+      update: { name: 'E2E Sci Fi' },
+      create: { name: 'E2E Sci Fi', slug: 'e2e-sci-fi' },
+    });
+
+  const targetTag =
+    await prisma.tag.upsert({
+      where: { slug: 'e2e-science-fiction' },
+      update: { name: 'E2E Science Fiction' },
+      create: { name: 'E2E Science Fiction', slug: 'e2e-science-fiction' },
+    });
+
+  const category =
+    await prisma.category.upsert({
+      where: { slug: 'e2e-legacy-fantasy' },
+      update: { name: 'E2E Legacy Fantasy', isActive: true, parentId: null },
+      create: { name: 'E2E Legacy Fantasy', slug: 'e2e-legacy-fantasy', isActive: true },
+    });
+
+  const draft =
+    await prisma.story.create({
+      data: {
+        authorId,
+        title: 'E2E Taxonomy Legacy Story',
+        slug: 'e2e-taxonomy-legacy-story',
+        synopsis: 'Story used to verify inactive category compatibility.',
+        status: StoryStatus.DRAFT,
+        visibility: StoryVisibility.PRIVATE,
+        categories: { create: { categoryId: category.id, isPrimary: true } },
+        tags: { create: [{ tagId: sourceTag.id }] },
+      },
+    });
+
+  const pending =
+    await prisma.story.findUniqueOrThrow({
+      where: { slug: 'e2e-pending-moderation-story' },
+      select: { id: true },
+    });
+
+  await prisma.storyTag.createMany({
+    data: [
+      { storyId: pending.id, tagId: sourceTag.id },
+      { storyId: pending.id, tagId: targetTag.id },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.authorProfile.update({
+    where: { userId: authorId },
+    data: { storyCount: 3 },
+  });
+
+  void draft;
+}
+
+async function prepareModerationFixture(input: {
+  reportedUserId: string;
+  reporterId: string;
+}): Promise<void> {
+  const story = await prisma.story.findUniqueOrThrow({
+    where: { slug: 'e2e-published-lifecycle-story' },
+    select: { id: true },
+  });
+
+  const previous = await prisma.comment.findMany({
+    where: { storyId: story.id, userId: input.reportedUserId, body: { contains: 'E2E moderation current' } },
+    select: { id: true },
+  });
+  if (previous.length > 0) {
+    const ids = previous.map((item) => item.id);
+    await prisma.moderationAction.deleteMany({ where: { commentId: { in: ids } } });
+    await prisma.report.deleteMany({ where: { commentId: { in: ids } } });
+    await prisma.commentReaction.deleteMany({ where: { commentId: { in: ids } } });
+    await prisma.comment.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  const reportCreatedAt = new Date(Date.now() - 5 * 60 * 1000);
+  const editedAt = new Date();
+  const comment = await prisma.comment.create({
+    data: {
+      storyId: story.id,
+      userId: input.reportedUserId,
+      body: 'E2E moderation current edited content',
+      editedAt,
+    },
+  });
+  await prisma.story.update({ where: { id: story.id }, data: { commentCount: 1 } });
+  await prisma.report.create({
+    data: {
+      reporterId: input.reporterId,
+      targetType: ReportTargetType.COMMENT,
+      storyId: story.id,
+      commentId: comment.id,
+      reportedUserId: input.reportedUserId,
+      reason: ReportReason.HARASSMENT,
+      description: 'E2E report dùng để kiểm tra immutable evidence và moderation workflow.',
+      evidence: {
+        comment: {
+          id: comment.id,
+          body: 'E2E original harassment evidence',
+          authorId: input.reportedUserId,
+          createdAt: reportCreatedAt.toISOString(),
+          editedAt: null,
+          moderationStatus: 'VISIBLE',
+        },
+        context: { storyId: story.id, chapterId: null },
+      },
+      createdAt: reportCreatedAt,
     },
   });
 }
