@@ -198,6 +198,8 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
   ): Promise<UpsertLibraryEntryResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await lockLibraryEngagement(tx, input.userId, input.storyId);
+
         const story = await tx.story.findFirst({
           where: { id: input.storyId, ...PUBLIC_STORY_WHERE },
           select: { id: true },
@@ -265,7 +267,10 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
 
   async removeLibraryEntry(userId: string, storyId: string): Promise<void> {
     try {
-      await this.prisma.libraryEntry.deleteMany({ where: { userId, storyId } });
+      await this.prisma.$transaction(async (tx) => {
+        await lockLibraryEngagement(tx, userId, storyId);
+        await tx.libraryEntry.deleteMany({ where: { userId, storyId } });
+      });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'library-remove-own',
@@ -300,6 +305,8 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
   ): Promise<SaveReadingProgressResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await lockLibraryEngagement(tx, input.userId, input.storyId);
+
         const story = await tx.story.findFirst({
           where: { id: input.storyId, ...PUBLIC_STORY_WHERE },
           select: { id: true },
@@ -364,8 +371,6 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
             updatedAt: input.readAt,
           },
         });
-
-        await lockLibraryEntry(tx, input.userId, input.storyId);
 
         const library = await tx.libraryEntry.findUnique({
           where: {
@@ -477,6 +482,7 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
   ): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
+        await lockLibraryEngagement(tx, userId, storyId);
         await tx.readingProgress.deleteMany({ where: { userId, storyId } });
         await tx.libraryEntry.updateMany({
           where: { userId, storyId },
@@ -924,17 +930,15 @@ function toCommentDto(row: CommentRow): StoryCommentResultDto {
   };
 }
 
-async function lockLibraryEntry(
+async function lockLibraryEngagement(
   tx: Prisma.TransactionClient,
   userId: string,
   storyId: string,
 ): Promise<void> {
-  await tx.$queryRaw(Prisma.sql`
-    SELECT "user_id"
-    FROM "library_entries"
-    WHERE "user_id" = ${userId}::uuid
-      AND "story_id" = ${storyId}::uuid
-    FOR UPDATE
+  await tx.$executeRaw(Prisma.sql`
+    SELECT pg_advisory_xact_lock(
+      hashtext('library_engagement:' || ${userId} || ':' || ${storyId})
+    )
   `);
 }
 
