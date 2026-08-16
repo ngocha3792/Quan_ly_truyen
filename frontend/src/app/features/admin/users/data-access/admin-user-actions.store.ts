@@ -23,12 +23,12 @@ export class AdminUserActionsStore {
     this.lifecycle.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reset());
   }
 
-  updateStatus(status: ManagedUserStatus): Observable<AdminUserDetail> {
+  updateStatus(status: ManagedUserStatus, reason?: string): Observable<AdminUserDetail> {
     const user = this.requireUser();
     if (!user) return throwError(() => new Error('Không có người dùng để cập nhật.'));
 
     return this.run(
-      this.api.updateStatus(user.id, status),
+      this.api.updateStatus(user.id, status, reason),
       status === 'ACTIVE'
         ? 'Tài khoản đã được kích hoạt.'
         : status === 'SUSPENDED'
@@ -67,7 +67,7 @@ export class AdminUserActionsStore {
       takeUntilDestroyed(this.destroyRef),
       tap((updated) => {
         if (revision !== this.lifecycle.revision()) return;
-        this.detailStore.replace(updated);
+        this.detailStore.load(updated.id);
         this.message.set(message);
       }),
       catchError((error: unknown) => {

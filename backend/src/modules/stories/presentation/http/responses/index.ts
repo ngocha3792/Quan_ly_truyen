@@ -4,3 +4,4 @@ export * from './story-publication.response';
 export * from './public-story.response';
 export * from './public-chapter-reader.response';
 export * from './chapter-summary.response';
+export * from './admin-story-submission.response';

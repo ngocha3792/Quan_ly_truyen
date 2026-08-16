@@ -16,6 +16,7 @@ import {
   ManagedUserSelfStatusChangeException,
   ManagedUserStatus,
   ManagedUserStatusNotManageableException,
+  ManagedUserStatusReasonRequiredException,
 } from '../../../domain';
 
 import type { ManagedUserDetailResultDto } from '../../dto';
@@ -60,12 +61,19 @@ export class UpdateManagedUserStatusCommandHandler {
       throw new ManagedUserStatusNotManageableException();
     }
 
+    const reason = command.reason?.trim();
+    if (command.status !== ManagedUserStatus.ACTIVE && (!reason || reason.length < 10)) {
+      throw new ManagedUserStatusReasonRequiredException();
+    }
+
     const result = await this.persistence.updateManagedUserStatus({
       actorUserId,
 
       targetUserId: command.targetUserId,
 
       status: command.status,
+
+      reason,
 
       changedAt: new Date(),
 

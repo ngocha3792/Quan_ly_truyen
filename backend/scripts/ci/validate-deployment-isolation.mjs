@@ -1,34 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-interface ComposeConfig {
-  name?: string;
-  networks?: Record<string, { name?: string; external?: boolean }>;
-  services?: Record<
-    string,
-    {
-      ports?: Array<
-        | string
-        | {
-            mode?: string;
-            target?: number;
-            published?: string | number;
-            protocol?: string;
-            host_ip?: string;
-          }
-      >;
-      environment?: Record<string, string | number | boolean>;
-      networks?: Record<string, unknown> | string[];
-    }
-  >;
-  volumes?: Record<string, { name?: string }>;
-}
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const BACKEND_ROOT = resolve(__dirname, '../..');
 const OPS_PROD_DIR = join(BACKEND_ROOT, 'ops/production');
 
-function getEnvValue(envFilePath: string, key: string): string | undefined {
+function getEnvValue(envFilePath, key) {
   const content = readFileSync(join(BACKEND_ROOT, envFilePath), 'utf-8');
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
@@ -46,11 +26,7 @@ function getEnvValue(envFilePath: string, key: string): string | undefined {
   return undefined;
 }
 
-function renderComposeConfig(
-  envFile: string,
-  composeFiles: string[],
-  projectName?: string,
-): ComposeConfig {
+function renderComposeConfig(envFile, composeFiles, projectName) {
   const args = ['compose', '--env-file', envFile];
 
   if (projectName) {
@@ -64,13 +40,15 @@ function renderComposeConfig(
     'json',
   );
 
+  const dockerExecutable = process.platform === 'win32' ? 'docker.exe' : 'docker';
+
   try {
-    const stdout = execFileSync('docker', args, {
+    const stdout = execFileSync(dockerExecutable, args, {
       cwd: BACKEND_ROOT,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    return JSON.parse(stdout) as ComposeConfig;
+    return JSON.parse(stdout);
   } catch (error) {
     console.error(
       `Failed to render docker compose config with args: ${args.join(' ')}`,
@@ -79,8 +57,8 @@ function renderComposeConfig(
   }
 }
 
-function extractHostPorts(config: ComposeConfig): Set<number> {
-  const ports = new Set<number>();
+function extractHostPorts(config) {
+  const ports = new Set();
   if (!config.services) return ports;
 
   for (const service of Object.values(config.services)) {
@@ -112,13 +90,13 @@ function extractHostPorts(config: ComposeConfig): Set<number> {
   return ports;
 }
 
-function extractBackendNetworkName(config: ComposeConfig): string | undefined {
+function extractBackendNetworkName(config) {
   if (!config.networks) return undefined;
   const backendNet = config.networks['backend'];
   return backendNet?.name;
 }
 
-function validateScriptStaticIsolation(): void {
+function validateScriptStaticIsolation() {
   console.info('Validating ops script environment-awareness...');
 
   const scriptsExpectingDynamicEnv = [
@@ -163,7 +141,7 @@ function validateScriptStaticIsolation(): void {
   );
 }
 
-function main(): void {
+function main() {
   console.info('Starting Phase 0 Deployment Isolation Validation...\n');
 
   // 1. Static checks on ops scripts
@@ -294,7 +272,7 @@ function main(): void {
     `  Staging Observability Ports: ${[...stagingHostPorts].sort().join(', ')}`,
   );
 
-  const collidingPorts: number[] = [];
+  const collidingPorts = [];
   for (const port of stagingHostPorts) {
     if (prodHostPorts.has(port)) {
       collidingPorts.push(port);
@@ -315,7 +293,7 @@ function main(): void {
 
 try {
   main();
-} catch (err: unknown) {
+} catch (err) {
   console.error(
     '\n❌ Deployment isolation validation failed:',
     err instanceof Error ? err.message : err,

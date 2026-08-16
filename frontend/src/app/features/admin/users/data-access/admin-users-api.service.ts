@@ -11,6 +11,8 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import type {
   AdminUserDetail,
   AdminUserListResponse,
+  AdminUserSecurityEvent,
+  AdminUserSession,
   ManagedUserRoleCode,
   ManagedUserRoleFilter,
   ManagedUserStatus,
@@ -97,6 +99,8 @@ export class AdminUsersApiService {
     userId: string,
 
     status: ManagedUserStatus,
+
+    reason?: string,
   ): Observable<AdminUserDetail> {
     return this.http
       .patch<ApiSuccessEnvelope<AdminUserDetail>>(
@@ -104,6 +108,7 @@ export class AdminUsersApiService {
 
         {
           status,
+          ...(reason?.trim() ? { reason: reason.trim() } : {}),
         },
       )
       .pipe(map((response) => response.data));
@@ -132,6 +137,47 @@ export class AdminUsersApiService {
   ): Observable<AdminUserDetail> {
     return this.http
       .delete<ApiSuccessEnvelope<AdminUserDetail>>(`${this.baseUrl}/${userId}/roles/${roleCode}`)
+      .pipe(map((response) => response.data));
+  }
+
+
+  listSessions(userId: string): Observable<readonly AdminUserSession[]> {
+    return this.http
+      .get<ApiSuccessEnvelope<readonly AdminUserSession[]>>(`${this.baseUrl}/${userId}/sessions`)
+      .pipe(map((response) => response.data));
+  }
+
+  revokeSession(userId: string, sessionId: string): Observable<{ readonly success: true }> {
+    return this.http
+      .post<ApiSuccessEnvelope<{ readonly success: true }>>(
+        `${this.baseUrl}/${userId}/sessions/${sessionId}/revoke`,
+        {},
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  revokeAllSessions(
+    userId: string,
+  ): Observable<{ readonly success: true; readonly revokedCount: number }> {
+    return this.http
+      .post<ApiSuccessEnvelope<{ readonly success: true; readonly revokedCount: number }>>(
+        `${this.baseUrl}/${userId}/sessions/revoke-all`,
+        {},
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  unlock(userId: string): Observable<{ readonly success: true }> {
+    return this.http
+      .post<ApiSuccessEnvelope<{ readonly success: true }>>(`${this.baseUrl}/${userId}/unlock`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  listSecurityEvents(userId: string): Observable<readonly AdminUserSecurityEvent[]> {
+    return this.http
+      .get<ApiSuccessEnvelope<readonly AdminUserSecurityEvent[]>>(
+        `${this.baseUrl}/${userId}/security-events`,
+      )
       .pipe(map((response) => response.data));
   }
 }

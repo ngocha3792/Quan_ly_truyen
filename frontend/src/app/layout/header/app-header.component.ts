@@ -52,6 +52,14 @@ export class AppHeaderComponent {
     this.hasPermission(AUTH_PERMISSIONS.USER_MANAGE),
   );
 
+  protected readonly canReviewStories = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.STORY_REVIEW),
+  );
+
+  protected readonly canManageAuthors = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.AUTHOR_READ),
+  );
+
   protected readonly canReviewAuthorApplications = computed(() =>
     this.hasPermission(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
   );

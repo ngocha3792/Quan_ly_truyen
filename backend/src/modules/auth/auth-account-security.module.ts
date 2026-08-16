@@ -18,7 +18,9 @@ import {
   UpdateSecurityQuestionsCommandHandler,
   VerifyRecoveryEmailCommandHandler,
 } from './application';
+import { AdminUserSecurityService } from './application/services';
 import {
+  AdminUserSecurityController,
   AuthAccountController,
   MfaController,
   MfaSecurityController,
@@ -31,6 +33,7 @@ import { AuthCoreModule } from './auth-core.module';
 @Module({
   imports: [AuthCoreModule],
   controllers: [
+    AdminUserSecurityController,
     AuthAccountController,
     RecoveryEmailSecurityController,
     SecurityQuestionsController,
@@ -38,6 +41,7 @@ import { AuthCoreModule } from './auth-core.module';
     MfaSecurityController,
   ],
   providers: [
+    AdminUserSecurityService,
     DeleteAccountCommandHandler,
     GetCurrentUserQueryHandler,
     GetSessionsQueryHandler,

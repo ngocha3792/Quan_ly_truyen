@@ -32,6 +32,8 @@ const permissions = [
         'author-application',
         'review',
     ],
+    ['author.read', 'Read author lifecycle administration', 'author', 'read'],
+    ['author.status.manage', 'Manage author lifecycle status', 'author', 'status.manage'],
     ["user.profile.read", "Read own profile", "user.profile", "read"],
     ["user.profile.update", "Update own profile", "user.profile", "update"],
     ["user.security.read", "Read own security settings", "user.security", "read"],

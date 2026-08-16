@@ -21,6 +21,8 @@ export interface UpdateManagedUserStatusPersistenceInput {
 
   readonly status: ManagedUserStatus;
 
+  readonly reason?: string;
+
   readonly changedAt: Date;
 
   readonly audit: ManagedUserAuditContext;

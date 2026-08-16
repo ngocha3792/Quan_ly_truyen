@@ -106,7 +106,7 @@
     "observability:config": "docker compose --env-file .env.production -f ops/observability/docker-compose.observability.yml config",
     "db:seed:e2e:all": "npm run db:seed && npm run db:seed:e2e && npm run db:seed:e2e:admin && npm run db:seed:e2e:stories",
     "test:e2e:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
-    "ci:deployment-isolation": "tsx scripts/ci/validate-deployment-isolation.ts",
+    "ci:deployment-isolation": "node scripts/ci/validate-deployment-isolation.mjs",
     "docker:prod:config:example": "docker compose --env-file ops/production/compose.validation.env.example -f compose.production.yml -f compose.production.build.yml config --quiet",
     "docker:staging:config:example": "docker compose --env-file ops/production/compose.validation.staging.env.example -f compose.production.yml config --quiet",
     "docker:prod:backup:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ops/production/Test-PostgresBackupArtifact.ps1",

@@ -12,10 +12,10 @@
         [status]="store.statusFilter()"
         [role]="store.roleFilter()"
         [statusOptions]="statusOptions"
-        (keywordChange)="store.setKeyword($event)"
-        (statusChange)="store.setStatusFilter($event)"
-        (roleChange)="store.setRoleFilter($event)"
-        (searchRequested)="store.search()"
+        (keywordChange)="keywordChanged($event)"
+        (statusChange)="statusChanged($event)"
+        (roleChange)="roleChanged($event)"
+        (searchRequested)="submitSearch()"
       />
       @if (store.error()) {
         <div class="state">
@@ -40,7 +40,7 @@
           [total]="store.total()"
           [page]="store.page()"
           [totalPages]="store.totalPages()"
-          (pageChange)="store.setPage($event)"
+          (pageChange)="pageChanged($event)"
         />
       }
     </section>

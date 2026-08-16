@@ -42,6 +42,8 @@ const AUTHOR_PERMISSIONS = [
 const ADMIN_PERMISSIONS = [
   PermissionCode.STORY_REVIEW,
   PermissionCode.STORY_PUBLISH,
+  PermissionCode.AUTHOR_READ,
+  PermissionCode.AUTHOR_STATUS_MANAGE,
 ] as const;
 
 describe('Stories author-to-public HTTP workflow E2E', () => {
@@ -171,6 +173,36 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     const submissionId = unwrap<{
       submission: { id: string };
     }>(submitResponse.body as unknown).submission.id;
+
+    const moderationListResponse = await request(httpServer())
+      .get('/api/v1/admin/story-submissions')
+      .query({ status: 'PENDING', story: createStoryBody.title, page: 1, pageSize: 20 })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      unwrap<{ items: Array<{ submissionId: string }> }>(
+        moderationListResponse.body as unknown,
+      ).items,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ submissionId })]));
+
+    const moderationDetailResponse = await request(httpServer())
+      .get(`/api/v1/admin/story-submissions/${submissionId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      unwrap<{ story: { id: string }; chapters: Array<{ id: string }> }>(
+        moderationDetailResponse.body as unknown,
+      ),
+    ).toMatchObject({
+      story: { id: storyId },
+      chapters: [expect.objectContaining({ id: chapter.id })],
+    });
+
+    await request(httpServer())
+      .patch(`/api/v1/author/stories/${storyId}`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({ title: 'Pending review must be immutable' })
+      .expect(409);
 
     await request(httpServer())
       .post(`/api/v1/admin/story-submissions/${submissionId}/approve`)
@@ -363,6 +395,45 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     );
   });
 
+  it('suspend author blocks writes immediately while published content remains public', async () => {
+    if (!storyId) throw new Error('Workflow story must exist before lifecycle test');
+
+    const adminToken = token(adminId, adminSessionId);
+    const authorToken = token(authorId, authorSessionId);
+    const publicStory = await prisma.story.findUniqueOrThrow({
+      where: { id: storyId },
+      select: { slug: true },
+    });
+
+    await request(httpServer())
+      .patch(`/api/v1/admin/authors/${authorId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'SUSPENDED', reason: 'E2E lifecycle suspension for write protection' })
+      .expect(200);
+
+    await request(httpServer())
+      .post('/api/v1/author/stories')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', `suspended-author-create-${runId}`)
+      .send({ title: 'Suspended author cannot create' })
+      .expect(403);
+
+    await request(httpServer()).get(`/api/v1/stories/${publicStory.slug}`).expect(200);
+
+    await request(httpServer())
+      .patch(`/api/v1/admin/authors/${authorId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+
+    await request(httpServer())
+      .post('/api/v1/author/stories')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', `reactivated-author-create-${runId}`)
+      .send({ title: `Reactivated ${compactRunId.slice(0, 8)}` })
+      .expect(201);
+  });
+
   it('create endpoints reject requests without an idempotency key', async () => {
     const authorToken = token(authorId, authorSessionId);
 
@@ -469,12 +540,19 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       ],
     });
 
-    await prisma.authorProfile.create({
-      data: {
-        userId: authorId,
-        penName: `Workflow Pen ${compactRunId.slice(0, 8)}`,
-        slug: `workflow-pen-${compactRunId.slice(0, 12)}`,
-      },
+    await prisma.authorProfile.createMany({
+      data: [
+        {
+          userId: authorId,
+          penName: `Workflow Pen ${compactRunId.slice(0, 8)}`,
+          slug: `workflow-pen-${compactRunId.slice(0, 12)}`,
+        },
+        {
+          userId: intruderId,
+          penName: `Workflow Intruder ${compactRunId.slice(0, 8)}`,
+          slug: `workflow-intruder-${compactRunId.slice(0, 12)}`,
+        },
+      ],
     });
 
     await prisma.userRole.createMany({
@@ -554,7 +632,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     });
     await prisma.story.deleteMany({ where: { authorId } });
     await prisma.mediaAsset.deleteMany({ where: { uploaderId: authorId } });
-    await prisma.authorProfile.deleteMany({ where: { userId: authorId } });
+    await prisma.authorProfile.deleteMany({ where: { userId: { in: [authorId, intruderId] } } });
     await prisma.user.deleteMany({ where: { id: { in: actorIds } } });
     if (categoryId) {
       await prisma.category.deleteMany({ where: { id: categoryId } });

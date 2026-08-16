@@ -11,3 +11,4 @@ export * from './upsert-story-rating.request';
 export * from './create-story-comment.request';
 export * from './update-story-comment.request';
 export * from './list-story-comments.request';
+export * from './list-admin-story-submissions.request';

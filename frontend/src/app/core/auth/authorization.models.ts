@@ -8,6 +8,8 @@ export type AuthRole = (typeof AUTH_ROLES)[keyof typeof AUTH_ROLES];
 
 export const AUTH_PERMISSIONS = {
   USER_MANAGE: 'user.manage',
+  USER_SECURITY_READ: 'user.security.read',
+  USER_SECURITY_MANAGE: 'user.security.manage',
 
   ROLE_MANAGE: 'role.manage',
 
@@ -15,6 +17,8 @@ export const AUTH_PERMISSIONS = {
   STORY_UPDATE_OWN: 'story.update.own',
   STORY_DELETE_OWN: 'story.delete.own',
   STORY_SUBMIT: 'story.submit',
+  STORY_REVIEW: 'story.review',
+  STORY_PUBLISH: 'story.publish',
   CHAPTER_CREATE: 'chapter.create',
   CHAPTER_UPDATE_OWN: 'chapter.update.own',
   CHAPTER_DELETE_OWN: 'chapter.delete.own',
@@ -35,6 +39,8 @@ export const AUTH_PERMISSIONS = {
   AUTHOR_APPLICATION_READ_OWN: 'author-application.read.own',
 
   AUTHOR_APPLICATION_REVIEW: 'author-application.review',
+  AUTHOR_READ: 'author.read',
+  AUTHOR_STATUS_MANAGE: 'author.status.manage',
 } as const;
 
 export type AuthPermission = (typeof AUTH_PERMISSIONS)[keyof typeof AUTH_PERMISSIONS];

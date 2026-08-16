@@ -978,19 +978,18 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
         await tx.auditLog.create({
           data: {
             actorId: input.reviewerId,
-            action: approve ? 'story.published' : 'story.rejected',
+            action: approve ? 'STORY_SUBMISSION_APPROVED' : 'STORY_SUBMISSION_REJECTED',
             entityType: 'story',
             entityId: story.id,
-            oldValues: {
-              status: story.status,
-              visibility: story.visibility,
+            oldValues: { status: submission.status },
+            newValues: { status: reviewed.status },
+            metadata: {
               submissionId: submission.id,
-            },
-            newValues: {
-              status: updated.status,
-              visibility: updated.visibility,
-              submissionStatus: reviewed.status,
-              publishedAt: approve ? input.reviewedAt.toISOString() : null,
+              storyId: story.id,
+              authorId: story.authorId,
+              previousStatus: submission.status,
+              newStatus: reviewed.status,
+              ...(input.reviewerNote ? { reason: input.reviewerNote } : {}),
             },
             ipAddress: input.audit.ipAddress,
             userAgent: input.audit.userAgent,

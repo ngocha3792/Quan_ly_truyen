@@ -59,6 +59,10 @@ export interface AdminUserDetail extends AdminUserSummary {
 
   readonly activeSessionCount: number;
 
+  readonly statusReason: string | null;
+
+  readonly mfaEnabled: boolean;
+
   readonly deletedAt: string | null;
 }
 
@@ -66,4 +70,27 @@ export interface AdminUserListResponse {
   readonly total: number;
 
   readonly users: readonly AdminUserSummary[];
+}
+
+
+export interface AdminUserSession {
+  readonly sessionId: string;
+  readonly createdAt: string;
+  readonly lastSeenAt: string | null;
+  readonly expiresAt: string;
+  readonly deviceName: string | null;
+  readonly userAgent: string | null;
+  readonly ipAddress: string | null;
+  readonly revoked: boolean;
+  readonly revokedAt: string | null;
+  readonly revokedReason: string | null;
+}
+
+export interface AdminUserSecurityEvent {
+  readonly id: string;
+  readonly action: string;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+  readonly requestId: string | null;
+  readonly createdAt: string;
 }

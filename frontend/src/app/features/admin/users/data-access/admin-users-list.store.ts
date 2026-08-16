@@ -38,6 +38,19 @@ export class AdminUsersListStore {
     this.keyword.set(value);
   }
 
+  hydrate(input: {
+    readonly keyword: string;
+    readonly status: ManagedUserStatusFilter;
+    readonly role: ManagedUserRoleFilter;
+    readonly page: number;
+  }): void {
+    this.keyword.set(input.keyword);
+    this.statusFilter.set(input.status);
+    this.roleFilter.set(input.role);
+    this.page.set(Math.max(1, Math.trunc(input.page)));
+    this.load();
+  }
+
   search(): void {
     this.page.set(1);
     this.load();

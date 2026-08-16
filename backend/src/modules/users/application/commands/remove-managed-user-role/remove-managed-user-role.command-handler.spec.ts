@@ -130,5 +130,9 @@ function createManagedUser(): ManagedUserDetailEntity {
     0,
 
     null,
+
+    false,
+
+    null,
   );
 }

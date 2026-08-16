@@ -13,5 +13,7 @@ export class UpdateManagedUserStatusCommand {
     readonly userAgent?: string,
 
     readonly requestId?: string,
+
+    readonly reason?: string,
   ) {}
 }

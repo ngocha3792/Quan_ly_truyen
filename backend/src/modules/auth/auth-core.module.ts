@@ -271,6 +271,7 @@ const portTokens = [
     PassportModule,
     CsrfTokenService,
     AuthCookieService,
+    AuthAuditWriterService,
     MfaService,
     OAuthFlowService,
     OAuthHandoffStore,

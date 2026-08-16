@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
+import { AuthorsModule } from '@/modules/authors';
 
 import {
   ApproveStorySubmissionCommandHandler,
@@ -31,6 +32,7 @@ import {
   ListStoryTagsQueryHandler,
   PublishAuthorChapterCommandHandler,
   READER_ENGAGEMENT_PERSISTENCE_PORT,
+  STORY_MODERATION_READER_PORT,
   RejectStorySubmissionCommandHandler,
   RemoveLibraryEntryCommandHandler,
   RemoveReadingHistoryEntryCommandHandler,
@@ -46,9 +48,11 @@ import {
 import {
   PrismaChapterPersistence,
   PrismaReaderEngagementPersistence,
+  PrismaStoryModerationReader,
   PrismaStoryPersistence,
 } from './infrastructure';
 import {
+  AdminStoryModerationController,
   AdminStoryPublicationController,
   AuthorChaptersController,
   AuthorStoriesController,
@@ -59,7 +63,7 @@ import {
 } from './presentation/http';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule],
+  imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule],
   controllers: [
     PublicStoriesController,
     PublicStoryCommentsController,
@@ -67,6 +71,7 @@ import {
     AuthorStoriesController,
     AuthorChaptersController,
     StoryMetadataController,
+    AdminStoryModerationController,
     AdminStoryPublicationController,
   ],
   providers: [
@@ -108,6 +113,7 @@ import {
     PrismaStoryPersistence,
     PrismaChapterPersistence,
     PrismaReaderEngagementPersistence,
+    PrismaStoryModerationReader,
     {
       provide: STORY_PERSISTENCE_PORT,
       useExisting: PrismaStoryPersistence,
@@ -119,6 +125,10 @@ import {
     {
       provide: READER_ENGAGEMENT_PERSISTENCE_PORT,
       useExisting: PrismaReaderEngagementPersistence,
+    },
+    {
+      provide: STORY_MODERATION_READER_PORT,
+      useExisting: PrismaStoryModerationReader,
     },
   ],
 })

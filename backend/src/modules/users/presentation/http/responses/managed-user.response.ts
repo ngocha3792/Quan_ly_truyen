@@ -37,6 +37,8 @@ export interface ManagedUserDetailResponse extends ManagedUserSummaryResponse {
     readonly verificationStatus: string;
   } | null;
   readonly activeSessionCount: number;
+  readonly statusReason: string | null;
+  readonly mfaEnabled: boolean;
   readonly deletedAt: string | null;
 }
 
@@ -77,6 +79,8 @@ export function toManagedUserDetailResponse(
     avatar: result.avatar,
     authorProfile: result.authorProfile,
     activeSessionCount: result.activeSessionCount,
+    statusReason: result.statusReason,
+    mfaEnabled: result.mfaEnabled,
     deletedAt: result.deletedAt?.toISOString() ?? null,
   };
 }

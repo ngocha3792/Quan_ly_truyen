@@ -59,6 +59,10 @@ export class ManagedUserResultMapper {
 
       activeSessionCount: user.activeSessionCount,
 
+      statusReason: user.statusReason,
+
+      mfaEnabled: user.mfaEnabled,
+
       deletedAt: user.deletedAt,
     };
   }

@@ -220,6 +220,67 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     }
   });
 
+  it('approve-vs-reject concurrent chỉ cho phép đúng một reviewer thắng', async () => {
+    const author = await createAuthor('moderation-race-author');
+    const approveReviewer = await createUser('moderation-race-approve');
+    const rejectReviewer = await createUser('moderation-race-reject');
+    const ready = await createReviewReadyDraft(author.id);
+
+    const submitted = await stories.submitForReview({
+      userId: author.id,
+      storyId: ready.storyId,
+      authorNote: 'Ready for approve/reject race',
+      submittedAt: new Date(),
+      audit: audit('moderation-race-submit'),
+    });
+
+    expect(submitted.status).toBe('submitted');
+    if (submitted.status !== 'submitted') return;
+
+    const submissionId = submitted.publication.submission.id;
+    const reviewedAt = new Date();
+    const [approveResult, rejectResult] = await Promise.all([
+      stories.approveSubmission({
+        reviewerId: approveReviewer.id,
+        submissionId,
+        reviewedAt,
+        audit: audit('moderation-race-approve'),
+      }),
+      stories.rejectSubmission({
+        reviewerId: rejectReviewer.id,
+        submissionId,
+        reviewerNote: 'Rejected by concurrent reviewer',
+        reviewedAt,
+        audit: audit('moderation-race-reject'),
+      }),
+    ]);
+
+    const statuses = [approveResult.status, rejectResult.status];
+    expect(statuses.filter((status) => status === 'approved' || status === 'rejected')).toHaveLength(
+      1,
+    );
+    expect(statuses.filter((status) => status === 'not_pending')).toHaveLength(1);
+
+    const [submission, auditCount, moderationCount] = await Promise.all([
+      prisma.storySubmission.findUniqueOrThrow({
+        where: { id: submissionId },
+        select: { status: true },
+      }),
+      prisma.auditLog.count({
+        where: {
+          entityType: 'story',
+          entityId: ready.storyId,
+          action: { in: ['STORY_SUBMISSION_APPROVED', 'STORY_SUBMISSION_REJECTED'] },
+        },
+      }),
+      prisma.moderationAction.count({ where: { submissionId } }),
+    ]);
+
+    expect([SubmissionStatus.APPROVED, SubmissionStatus.REJECTED]).toContain(submission.status);
+    expect(auditCount).toBe(1);
+    expect(moderationCount).toBe(1);
+  });
+
   it('không leak hoặc mutate story/chapter của author khác', async () => {
     const owner = await createAuthor('ownership-owner');
     const intruder = await createAuthor('ownership-intruder');

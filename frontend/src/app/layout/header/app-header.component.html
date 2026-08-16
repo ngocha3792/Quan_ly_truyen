@@ -185,11 +185,25 @@
                 }
               </a>
 
+              @if (canReviewStories()) {
+                <a routerLink="/admin/stories" (click)="closeProfile()">
+                  <app-icon name="shield" [size]="18"></app-icon>
+                  <span>Duyệt truyện</span>
+                </a>
+              }
+
               @if (canManageUsers()) {
                 <a routerLink="/admin/users" (click)="closeProfile()">
                   <app-icon name="user" [size]="18"></app-icon>
 
                   <span>Quản lý người dùng</span>
+                </a>
+              }
+
+              @if (canManageAuthors()) {
+                <a routerLink="/admin/authors" (click)="closeProfile()">
+                  <app-icon name="user" [size]="18"></app-icon>
+                  <span>Quản lý tác giả</span>
                 </a>
               }
 
@@ -242,9 +256,21 @@
       }
 
       @if (auth.isAuthenticated()) {
+        @if (canReviewStories()) {
+          <a routerLink="/admin/stories" routerLinkActive="active" (click)="closeMobileMenu()">
+            Duyệt truyện
+          </a>
+        }
+
         @if (canManageUsers()) {
           <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMobileMenu()">
             Quản lý người dùng
+          </a>
+        }
+
+        @if (canManageAuthors()) {
+          <a routerLink="/admin/authors" routerLinkActive="active" (click)="closeMobileMenu()">
+            Quản lý tác giả
           </a>
         }
 

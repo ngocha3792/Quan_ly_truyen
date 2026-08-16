@@ -16,3 +16,4 @@ export * from './validate-password-reset-token.response';
 export * from './security-overview.response';
 export * from './recovery-email.response';
 export * from './security-questions.response';
+export * from './admin-user-security.response';

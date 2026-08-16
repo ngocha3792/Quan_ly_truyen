@@ -101,6 +101,7 @@ export class AdminUsersController {
         ipAddress,
         userAgent,
         requestId,
+        request.reason,
       ),
     );
 

@@ -24,6 +24,7 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
   const regularUserId = randomUUID();
   const adminSessionId = randomUUID();
   const targetSessionId = randomUUID();
+  const targetSecuritySessionId = randomUUID();
   const regularSessionId = randomUUID();
 
   beforeAll(async () => {
@@ -93,13 +94,64 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .expect(200);
 
     expect(
-      unwrap<{ id: string; activeSessionCount: number }>(
+      unwrap<{ id: string; activeSessionCount: number; statusReason: string | null; mfaEnabled: boolean }>(
         detailResponse.body as unknown,
       ),
     ).toMatchObject({
       id: targetUserId,
-      activeSessionCount: 1,
+      activeSessionCount: 2,
+      statusReason: null,
+      mfaEnabled: false,
     });
+  });
+
+  it('lists, revokes and audits scoped user sessions without exposing tokens', async () => {
+    const sessionsResponse = await request(httpServer())
+      .get(`/api/v1/admin/users/${targetUserId}/sessions`)
+      .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
+      .expect(200);
+
+    const sessions = unwrap<Array<Record<string, unknown>>>(sessionsResponse.body as unknown);
+    expect(sessions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sessionId: targetSecuritySessionId, revoked: false }),
+      ]),
+    );
+    expect(JSON.stringify(sessions)).not.toContain('refreshTokenHash');
+    expect(JSON.stringify(sessions)).not.toContain('refreshToken');
+
+    await request(httpServer())
+      .post(`/api/v1/admin/users/${targetUserId}/sessions/${targetSecuritySessionId}/revoke`)
+      .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
+      .expect(201);
+
+    const revoked = await prisma.session.findUniqueOrThrow({
+      where: { id: targetSecuritySessionId },
+      select: { revokedAt: true, accessTokenVersion: true, refreshTokenVersion: true },
+    });
+    expect(revoked.revokedAt).toBeInstanceOf(Date);
+    expect(revoked.accessTokenVersion).toBe(1);
+    expect(revoked.refreshTokenVersion).toBe(1);
+
+    await request(httpServer())
+      .post(`/api/v1/admin/users/${targetUserId}/unlock`)
+      .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
+      .expect(201);
+
+    const eventsResponse = await request(httpServer())
+      .get(`/api/v1/admin/users/${targetUserId}/security-events`)
+      .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
+      .expect(200);
+    const actions = unwrap<Array<{ action: string }>>(eventsResponse.body as unknown).map(
+      (event) => event.action,
+    );
+    expect(actions).toEqual(expect.arrayContaining(['USER_SESSION_REVOKED', 'USER_ACCOUNT_UNLOCKED']));
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: targetUserId },
+      select: { status: true },
+    });
+    expect(user.status).toBe('ACTIVE');
   });
 
   it('updates status and immediately revokes active target sessions', async () => {
@@ -107,17 +159,18 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       .patch(`/api/v1/admin/users/${targetUserId}/status`)
       .set('Authorization', `Bearer ${token(adminId, adminSessionId)}`)
       .set('x-request-id', `admin-users-${runId}-status`)
-      .send({ status: 'SUSPENDED' })
+      .send({ status: 'SUSPENDED', reason: 'E2E suspension reason for security validation' })
       .expect(200);
 
     expect(
-      unwrap<{ id: string; status: string; activeSessionCount: number }>(
+      unwrap<{ id: string; status: string; activeSessionCount: number; statusReason: string | null }>(
         response.body as unknown,
       ),
     ).toMatchObject({
       id: targetUserId,
       status: 'SUSPENDED',
       activeSessionCount: 0,
+      statusReason: 'E2E suspension reason for security validation',
     });
 
     const revokedSession = await prisma.session.findUnique({
@@ -205,7 +258,12 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
   }
 
   async function seedActorsAndAuthorization(): Promise<void> {
-    const [userManagePermission, roleManagePermission] = await Promise.all([
+    const [
+      userManagePermission,
+      roleManagePermission,
+      userSecurityReadPermission,
+      userSecurityManagePermission,
+    ] = await Promise.all([
       prisma.permission.upsert({
         where: { code: PermissionCode.USER_MANAGE },
         update: {},
@@ -223,6 +281,26 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
           code: PermissionCode.ROLE_MANAGE,
           name: 'Manage roles',
           resource: 'role',
+          action: 'manage',
+        },
+      }),
+      prisma.permission.upsert({
+        where: { code: PermissionCode.USER_SECURITY_READ },
+        update: {},
+        create: {
+          code: PermissionCode.USER_SECURITY_READ,
+          name: 'Read user security',
+          resource: 'user.security',
+          action: 'read',
+        },
+      }),
+      prisma.permission.upsert({
+        where: { code: PermissionCode.USER_SECURITY_MANAGE },
+        update: {},
+        create: {
+          code: PermissionCode.USER_SECURITY_MANAGE,
+          name: 'Manage user security',
+          resource: 'user.security',
           action: 'manage',
         },
       }),
@@ -258,6 +336,14 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
         {
           roleId: adminRole.id,
           permissionId: roleManagePermission.id,
+        },
+        {
+          roleId: adminRole.id,
+          permissionId: userSecurityReadPermission.id,
+        },
+        {
+          roleId: adminRole.id,
+          permissionId: userSecurityManagePermission.id,
         },
       ],
       skipDuplicates: true,
@@ -301,6 +387,7 @@ describe('Admin Users API with AppModule wiring (e2e)', () => {
       data: [
         { id: adminSessionId, userId: adminId },
         { id: targetSessionId, userId: targetUserId },
+        { id: targetSecuritySessionId, userId: targetUserId },
         { id: regularSessionId, userId: regularUserId },
       ].map((session) => ({
         ...session,

@@ -4,6 +4,7 @@ import {
   ManagedUserSelfStatusChangeException,
   ManagedUserStatus,
   ManagedUserStatusNotManageableException,
+  ManagedUserStatusReasonRequiredException,
 } from '../../../domain';
 
 import { UpdateManagedUserStatusCommand } from './update-managed-user-status.command';
@@ -95,6 +96,8 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
         'Jest',
 
         'request-1',
+
+        'Repeated abuse during moderation',
       ),
     );
 
@@ -104,6 +107,8 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
       targetUserId,
 
       status: ManagedUserStatus.SUSPENDED,
+
+      reason: 'Repeated abuse during moderation',
 
       changedAt: expect.any(Date) as unknown,
 
@@ -121,6 +126,22 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
     );
 
     expect(result.status).toBe(ManagedUserStatus.SUSPENDED);
+  });
+
+  it('yêu cầu lý do khi suspend hoặc ban', async () => {
+    await expect(
+      handler.execute(
+        new UpdateManagedUserStatusCommand(
+          actorUserId,
+
+          targetUserId,
+
+          ManagedUserStatus.SUSPENDED,
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ManagedUserStatusReasonRequiredException);
+
+    expect(persistence.updateManagedUserStatus).not.toHaveBeenCalled();
   });
 
   it('không invalidate nếu status không đổi', async () => {
@@ -156,6 +177,14 @@ describe('UpdateManagedUserStatusCommandHandler', () => {
           targetUserId,
 
           ManagedUserStatus.SUSPENDED,
+
+          undefined,
+
+          undefined,
+
+          undefined,
+
+          'Required reason for suspension',
         ),
       ),
     ).rejects.toBeInstanceOf(LastActiveAdminException);
@@ -195,6 +224,10 @@ function createManagedUser(
     null,
 
     0,
+
+    null,
+
+    false,
 
     null,
   );

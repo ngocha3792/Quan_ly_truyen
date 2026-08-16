@@ -2,6 +2,8 @@ export enum PermissionCode {
   USER_PROFILE_READ = 'user.profile.read',
   USER_PROFILE_UPDATE = 'user.profile.update',
   USER_MANAGE = 'user.manage',
+  USER_SECURITY_READ = 'user.security.read',
+  USER_SECURITY_MANAGE = 'user.security.manage',
   ROLE_MANAGE = 'role.manage',
 
   STORY_READ = 'story.read',
@@ -51,4 +53,7 @@ export enum PermissionCode {
   AUTHOR_APPLICATION_READ_OWN = 'author-application.read.own',
 
   AUTHOR_APPLICATION_REVIEW = 'author-application.review',
+
+  AUTHOR_READ = 'author.read',
+  AUTHOR_STATUS_MANAGE = 'author.status.manage',
 }

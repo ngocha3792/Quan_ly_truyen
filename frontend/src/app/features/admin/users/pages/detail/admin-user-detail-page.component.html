@@ -3,10 +3,12 @@
     <app-breadcrumb [items]="breadcrumbs()" />
     <app-page-heading
       title="Chi tiết người dùng"
-      description="Quản lý trạng thái tài khoản, phiên đăng nhập và quyền quản trị."
+      description="Quản lý trạng thái tài khoản, quyền, phiên đăng nhập và security activity."
       icon="users"
-      ><a routerLink="/admin/users" class="back">← Danh sách người dùng</a></app-page-heading
     >
+      <a routerLink="/admin/users" class="back">← Danh sách người dùng</a>
+    </app-page-heading>
+
     @if (detailStore.loading()) {
       <app-loading-state message="Đang tải thông tin người dùng..." />
     } @else if (detailStore.error()) {
@@ -16,23 +18,25 @@
         (retry)="detailStore.load(userId)"
       />
     } @else if (detailStore.detail(); as user) {
-      @if (actionsStore.message()) {
-        <div class="success">{{ actionsStore.message() }}</div>
-      }
-      @if (actionsStore.error()) {
-        <div class="error">{{ actionsStore.error() }}</div>
-      }
+      @if (actionsStore.message()) { <div class="success">{{ actionsStore.message() }}</div> }
+      @if (actionsStore.error()) { <div class="error">{{ actionsStore.error() }}</div> }
+
       <app-admin-user-header
         [user]="user"
         [isSelf]="isSelf()"
         [actionLoading]="actionsStore.loading()"
         (statusChange)="changeStatus($event)"
       />
+
       @if (isSelf()) {
         <div class="notice">
           Đây là tài khoản của bạn. Hệ thống không cho phép tự khóa/ban hoặc tự gỡ quyền ADMIN.
         </div>
       }
+      @if (user.statusReason) {
+        <div class="notice"><strong>Lý do trạng thái:</strong> {{ user.statusReason }}</div>
+      }
+
       <app-admin-user-summary [user]="user" />
       <app-admin-user-sessions-summary [user]="user" />
       <app-admin-user-roles
@@ -43,6 +47,104 @@
         (grantAdmin)="grantAdmin()"
         (removeAdmin)="removeAdmin()"
       />
+
+      @if (canReadSecurity()) {
+        <section class="security-card">
+          <header class="security-card__header">
+            <div>
+              <h3>Security & sessions</h3>
+              <p>MFA: <strong>{{ user.mfaEnabled ? 'Đã bật' : 'Chưa bật' }}</strong></p>
+            </div>
+            @if (canManageSecurity()) {
+              <div class="security-actions">
+                <button type="button" [disabled]="securityLoading()" (click)="unlock()">
+                  Unlock login
+                </button>
+                <button
+                  type="button"
+                  class="danger-button"
+                  [disabled]="securityLoading()"
+                  (click)="revokeAllSessions()"
+                >
+                  Revoke all sessions
+                </button>
+              </div>
+            }
+          </header>
+
+          @if (securityMessage()) { <div class="success">{{ securityMessage() }}</div> }
+          @if (securityError()) { <div class="error">{{ securityError() }}</div> }
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Device</th><th>IP</th><th>Last seen</th><th>Expires</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                @for (session of sessions(); track session.sessionId) {
+                  <tr>
+                    <td>{{ session.deviceName || session.userAgent || 'Unknown' }}</td>
+                    <td>{{ session.ipAddress || '—' }}</td>
+                    <td>{{ formatDate(session.lastSeenAt) }}</td>
+                    <td>{{ formatDate(session.expiresAt) }}</td>
+                    <td>{{ session.revoked ? 'REVOKED' : 'ACTIVE' }}</td>
+                    <td>
+                      @if (canManageSecurity() && !session.revoked) {
+                        <button
+                          type="button"
+                          [disabled]="securityLoading()"
+                          (click)="revokeSession(session.sessionId)"
+                        >
+                          Revoke
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="6">Không có session.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="security-card">
+          <h3>Security activity gần đây</h3>
+          <div class="event-list">
+            @for (event of securityEvents(); track event.id) {
+              <div class="event-row">
+                <strong>{{ event.action }}</strong>
+                <span>{{ formatDate(event.createdAt) }}</span>
+                <small>{{ event.ipAddress || '—' }} · request {{ event.requestId || '—' }}</small>
+              </div>
+            } @empty {
+              <p>Chưa có security event phù hợp trong audit source hiện tại.</p>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    @if (pendingStatus(); as status) {
+      <div class="dialog-backdrop">
+        <section class="dialog" role="dialog" aria-modal="true">
+          <h2>{{ status === 'BANNED' ? 'Cấm tài khoản' : 'Tạm khóa tài khoản' }}</h2>
+          <p>Nhập lý do. Thao tác này sẽ làm mất hiệu lực các phiên/permission hiện tại theo backend.</p>
+          <textarea [(ngModel)]="statusReason" rows="5" maxlength="1000"></textarea>
+          <small>{{ statusReason.trim().length }} / 1000 (tối thiểu 10)</small>
+          <div class="dialog-actions">
+            <button type="button" (click)="pendingStatus.set(null)">Hủy</button>
+            <button
+              type="button"
+              class="danger-button"
+              [disabled]="statusReason.trim().length < 10 || actionsStore.loading()"
+              (click)="confirmStatus()"
+            >
+              Xác nhận
+            </button>
+          </div>
+        </section>
+      </div>
     }
   </div>
 </main>

@@ -58,6 +58,10 @@ const MANAGED_USER_SELECT = {
     },
   },
 
+  adminMfaCredential: { select: { id: true } },
+
+  mfaCredentials: { select: { status: true } },
+
   authorProfile: {
     select: {
       /*
@@ -116,6 +120,7 @@ export class PrismaManagedUserRepository
         ...(keyword
           ? {
               OR: [
+                ...(looksLikeUuid(keyword) ? [{ id: keyword }] : []),
                 {
                   email: {
                     contains: keyword,
@@ -236,25 +241,12 @@ export class PrismaManagedUserRepository
         return null;
       }
 
-      const activeSessionCount = await this.prisma.session.count({
-        where: {
-          userId,
+      const [activeSessionCount, statusReason] = await Promise.all([
+        this.prisma.session.count({ where: { userId, revokedAt: null, expiresAt: { gt: now } } }),
+        this.loadLatestStatusReason(this.prisma, userId),
+      ]);
 
-          revokedAt: null,
-
-          expiresAt: {
-            gt: now,
-          },
-        },
-      });
-
-      return this.toDetailEntity(
-        record,
-
-        now,
-
-        activeSessionCount,
-      );
+      return this.toDetailEntity(record, now, activeSessionCount, statusReason);
     } catch (error: unknown) {
       throw mapPrismaError(
         error,
@@ -446,7 +438,7 @@ export class PrismaManagedUserRepository
           data: {
             actorId: input.actorUserId,
 
-            action: 'admin.user.status.changed',
+            action: 'USER_STATUS_CHANGED',
 
             entityType: 'user',
 
@@ -461,6 +453,8 @@ export class PrismaManagedUserRepository
 
               sessionsRevoked,
             },
+
+            metadata: { ...(input.reason ? { reason: input.reason } : {}) },
 
             ipAddress: input.audit.ipAddress,
 
@@ -646,7 +640,7 @@ export class PrismaManagedUserRepository
           data: {
             actorId: input.actorUserId,
 
-            action: 'admin.user.role.assigned',
+            action: 'USER_ROLE_ADDED',
 
             entityType: 'user',
 
@@ -867,7 +861,7 @@ export class PrismaManagedUserRepository
           data: {
             actorId: input.actorUserId,
 
-            action: 'admin.user.role.removed',
+            action: 'USER_ROLE_REMOVED',
 
             entityType: 'user',
 
@@ -929,25 +923,12 @@ export class PrismaManagedUserRepository
       select: MANAGED_USER_SELECT,
     });
 
-    const activeSessionCount = await transaction.session.count({
-      where: {
-        userId,
+    const [activeSessionCount, statusReason] = await Promise.all([
+      transaction.session.count({ where: { userId, revokedAt: null, expiresAt: { gt: now } } }),
+      this.loadLatestStatusReason(transaction, userId),
+    ]);
 
-        revokedAt: null,
-
-        expiresAt: {
-          gt: now,
-        },
-      },
-    });
-
-    return this.toDetailEntity(
-      record,
-
-      now,
-
-      activeSessionCount,
-    );
+    return this.toDetailEntity(record, now, activeSessionCount, statusReason);
   }
 
   private async hasActiveAdminRole(
@@ -1054,6 +1035,8 @@ export class PrismaManagedUserRepository
     now: Date,
 
     activeSessionCount: number,
+
+    statusReason: string | null,
   ): ManagedUserDetailEntity {
     return new ManagedUserDetailEntity(
       record.id,
@@ -1105,8 +1088,26 @@ export class PrismaManagedUserRepository
 
       activeSessionCount,
 
+      statusReason,
+
+      Boolean(record.adminMfaCredential) || record.mfaCredentials.some((credential) => credential.status === 'ENABLED'),
+
       record.deletedAt,
     );
+  }
+
+  private async loadLatestStatusReason(
+    transaction: Pick<Prisma.TransactionClient, 'auditLog'>,
+    userId: string,
+  ): Promise<string | null> {
+    const event = await transaction.auditLog.findFirst({
+      where: { entityType: 'user', entityId: userId, action: { in: ['USER_STATUS_CHANGED', 'admin.user.status.changed'] } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { metadata: true },
+    });
+    if (!event?.metadata || typeof event.metadata !== 'object' || Array.isArray(event.metadata)) return null;
+    const reason = (event.metadata as Record<string, unknown>)['reason'];
+    return typeof reason === 'string' && reason.trim() ? reason : null;
   }
 
   private toRoleEntities(
@@ -1195,4 +1196,8 @@ async function lockManagedUserRow(
   `;
 
   return rows.length > 0;
+}
+
+function looksLikeUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

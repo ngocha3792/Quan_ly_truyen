@@ -6,12 +6,40 @@ import { permissionGuard } from '../core/auth/permission.guard';
 
 const userManagementGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.USER_MANAGE)];
 
+const storyModerationGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.STORY_REVIEW),
+];
+
+const authorManagementGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.AUTHOR_READ),
+];
+
 const authorApplicationGuards = [
   authenticatedGuard,
   permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
 ];
 
 export const ADMIN_ROUTES: Routes = [
+  {
+    path: 'admin/stories',
+    title: 'Duyệt truyện - TruyenHub',
+    canActivate: storyModerationGuards,
+    loadComponent: () =>
+      import('../features/admin/stories/pages/list/admin-stories-list-page.component').then(
+        (module) => module.AdminStoriesListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/story-submissions/:submissionId',
+    title: 'Chi tiết duyệt truyện - TruyenHub',
+    canActivate: storyModerationGuards,
+    loadComponent: () =>
+      import('../features/admin/stories/pages/detail/admin-story-submission-detail-page.component').then(
+        (module) => module.AdminStorySubmissionDetailPageComponent,
+      ),
+  },
   {
     path: 'admin/users',
     title: 'Quản lý người dùng - TruyenHub',
@@ -28,6 +56,24 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('../features/admin/users/pages/detail/admin-user-detail-page.component').then(
         (module) => module.AdminUserDetailPageComponent,
+      ),
+  },
+  {
+    path: 'admin/authors',
+    title: 'Quản lý tác giả - TruyenHub',
+    canActivate: authorManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/authors/pages/list/admin-authors-list-page.component').then(
+        (module) => module.AdminAuthorsListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/authors/:authorId',
+    title: 'Chi tiết tác giả - TruyenHub',
+    canActivate: authorManagementGuards,
+    loadComponent: () =>
+      import('../features/admin/authors/pages/detail/admin-author-detail-page.component').then(
+        (module) => module.AdminAuthorDetailPageComponent,
       ),
   },
   {

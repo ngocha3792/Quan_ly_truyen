@@ -29,6 +29,14 @@ enum AuthorVerificationStatus {
   @@map("author_verification_status")
 }
 
+enum AuthorLifecycleStatus {
+  ACTIVE    @map("active")
+  SUSPENDED @map("suspended")
+  REVOKED   @map("revoked")
+
+  @@map("author_lifecycle_status")
+}
+
 enum AuthorApplicationStatus {
   DRAFT    @map("draft")
   PENDING  @map("pending")
@@ -672,6 +680,10 @@ model AuthorProfile {
   slug               String                   @unique @db.VarChar(160)
   biography          String?                  @db.Text
   verificationStatus AuthorVerificationStatus @default(PENDING) @map("verification_status")
+  lifecycleStatus    AuthorLifecycleStatus    @default(ACTIVE) @map("lifecycle_status")
+  statusReason       String?                  @map("status_reason") @db.Text
+  statusUpdatedAt    DateTime?                @map("status_updated_at") @db.Timestamptz(3)
+  statusUpdatedBy    String?                  @map("status_updated_by") @db.Uuid
   verifiedAt         DateTime?                @map("verified_at") @db.Timestamptz(3)
   websiteUrl         String?                  @map("website_url") @db.VarChar(500)
   socialLinks        Json?                    @map("social_links")
@@ -688,6 +700,7 @@ model AuthorProfile {
   stories     Story[]
 
   @@index([verificationStatus])
+  @@index([lifecycleStatus, createdAt])
   @@index([featuredRank])
   @@index([followerCount])
   @@index([totalReadCount])

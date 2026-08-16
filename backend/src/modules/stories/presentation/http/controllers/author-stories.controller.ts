@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -20,6 +21,7 @@ import {
 } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
+import { ActiveAuthorGuard } from '@/modules/authors';
 
 import {
   CancelAuthorStorySubmissionCommand,
@@ -50,6 +52,7 @@ import {
 } from '../responses';
 
 @Controller('author/stories')
+@UseGuards(ActiveAuthorGuard)
 export class AuthorStoriesController {
   constructor(
     private readonly createStory: CreateAuthorStoryCommandHandler,

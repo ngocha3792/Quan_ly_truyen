@@ -89,6 +89,10 @@ export class ManagedUserDetailEntity extends ManagedUserSummaryEntity {
 
     readonly activeSessionCount: number,
 
+    readonly statusReason: string | null,
+
+    readonly mfaEnabled: boolean,
+
     readonly deletedAt: Date | null,
   ) {
     super(

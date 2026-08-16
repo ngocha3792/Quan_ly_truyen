@@ -7,8 +7,12 @@ import bcrypt from 'bcryptjs';
 import {
   AccountStatus,
   AuthorApplicationStatus,
+  AuthorLifecycleStatus,
+  ChapterStatus,
   MediaPurpose,
   MediaStatus,
+  StoryStatus,
+  StoryVisibility,
 } from '../src/generated/prisma/enums';
 
 import {
@@ -43,6 +47,9 @@ const APPROVE_EMAIL =
 const REJECT_EMAIL =
   'e2e.author.reject@truyenhub.test';
 
+const LIFECYCLE_AUTHOR_EMAIL =
+  'e2e.lifecycle-author@truyenhub.test';
+
 const MANAGER_ROLE_CODE =
   'E2E_MANAGER';
 
@@ -54,6 +61,7 @@ async function main():
 
   const [
     userRole,
+    authorRole,
     adminRole,
   ] =
     await Promise.all([
@@ -67,6 +75,13 @@ async function main():
       prisma.role.findUnique({
         where: {
           code:
+            'AUTHOR',
+        },
+      }),
+
+      prisma.role.findUnique({
+        where: {
+          code:
             'ADMIN',
         },
       }),
@@ -74,19 +89,32 @@ async function main():
 
   if (
     !userRole ||
+    !authorRole ||
     !adminRole
   ) {
     throw new Error(
-      'USER/ADMIN roles chưa được seed. Chạy db:seed trước.',
+      'USER/AUTHOR/ADMIN roles chưa được seed. Chạy db:seed trước.',
     );
   }
 
   const requiredPermissions = [
     'user.manage',
 
+    'user.security.read',
+
+    'user.security.manage',
+
     'role.manage',
 
+    'story.review',
+
+    'story.publish',
+
     'author-application.review',
+
+    'author.read',
+
+    'author.status.manage',
   ];
 
   const permissions =
@@ -247,6 +275,42 @@ async function main():
     ],
   );
 
+  await prisma.session.create({
+    data: {
+      userId:
+        target.id,
+
+      refreshTokenHash:
+        `e2e-managed-target-${randomUUID()}`,
+
+      deviceId:
+        'e2e-managed-target-device',
+
+      deviceName:
+        'E2E Target Browser',
+
+      ipAddress:
+        '127.0.0.1',
+
+      userAgent:
+        'Playwright seeded target session',
+
+      lastUsedAt:
+        new Date(),
+
+      expiresAt:
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  await prepareLifecycleAuthor({
+    passwordHash,
+    userRoleId:
+      userRole.id,
+    authorRoleId:
+      authorRole.id,
+  });
+
   await prepareAuthorApplicant({
     email:
       APPROVE_EMAIL,
@@ -406,6 +470,189 @@ async function resetRoles(
           roleId,
         }),
       ),
+  });
+}
+
+async function prepareLifecycleAuthor(
+  input: {
+    passwordHash:
+      string;
+
+    userRoleId:
+      string;
+
+    authorRoleId:
+      string;
+  },
+): Promise<void> {
+  const user =
+    await upsertUser({
+      email:
+        LIFECYCLE_AUTHOR_EMAIL,
+
+      username:
+        'e2e_lifecycle_author',
+
+      displayName:
+        'E2E Lifecycle Author',
+
+      passwordHash:
+        input.passwordHash,
+    });
+
+  await resetRoles(
+    user.id,
+
+    [
+      input.userRoleId,
+      input.authorRoleId,
+    ],
+  );
+
+  await prisma.story.deleteMany({
+    where: {
+      authorId:
+        user.id,
+    },
+  });
+
+  await prisma.authorProfile.upsert({
+    where: {
+      userId:
+        user.id,
+    },
+
+    update: {
+      penName:
+        'E2E Lifecycle Pen',
+
+      slug:
+        'e2e-lifecycle-pen',
+
+      lifecycleStatus:
+        AuthorLifecycleStatus.ACTIVE,
+
+      statusReason:
+        null,
+
+      statusUpdatedAt:
+        null,
+
+      statusUpdatedBy:
+        null,
+
+      storyCount:
+        2,
+    },
+
+    create: {
+      userId:
+        user.id,
+
+      penName:
+        'E2E Lifecycle Pen',
+
+      slug:
+        'e2e-lifecycle-pen',
+
+      lifecycleStatus:
+        AuthorLifecycleStatus.ACTIVE,
+
+      storyCount:
+        2,
+    },
+  });
+
+  const pendingStory =
+    await prisma.story.create({
+      data: {
+        authorId:
+          user.id,
+
+        title:
+          'E2E Pending Moderation Story',
+
+        slug:
+          'e2e-pending-moderation-story',
+
+        synopsis:
+          'Pending story seeded for admin moderation Playwright coverage.',
+
+        status:
+          StoryStatus.PENDING_REVIEW,
+
+        visibility:
+          StoryVisibility.PRIVATE,
+
+        chapterCount:
+          1,
+      },
+    });
+
+  await prisma.chapter.create({
+    data: {
+      storyId:
+        pendingStory.id,
+
+      createdById:
+        user.id,
+
+      updatedById:
+        user.id,
+
+      number:
+        1,
+
+      title:
+        'E2E moderation chapter',
+
+      slug:
+        'e2e-moderation-chapter',
+
+      content:
+        'Nội dung chương E2E để admin kiểm tra trước khi reject.',
+
+      status:
+        ChapterStatus.DRAFT,
+    },
+  });
+
+  await prisma.storySubmission.create({
+    data: {
+      storyId:
+        pendingStory.id,
+
+      submittedById:
+        user.id,
+
+      authorNote:
+        'E2E moderation submission',
+    },
+  });
+
+  await prisma.story.create({
+    data: {
+      authorId:
+        user.id,
+
+      title:
+        'E2E Published Lifecycle Story',
+
+      slug:
+        'e2e-published-lifecycle-story',
+
+      synopsis:
+        'Published story retained while lifecycle capability changes.',
+
+      status:
+        StoryStatus.PUBLISHED,
+
+      visibility:
+        StoryVisibility.PUBLIC,
+
+      publishedAt:
+        new Date(),
+    },
   });
 }
 
