@@ -12,6 +12,7 @@ ENV NPM_CONFIG_AUDIT=false
 
 RUN npm install --global "npm@${NPM_VERSION}" \
     && apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
     ca-certificates \
     dumb-init \
@@ -71,6 +72,8 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV HOME=/tmp
+
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn* /usr/local/bin/corepack /root/.npm
 
 COPY --from=production-dependencies \
     --chown=node:node \

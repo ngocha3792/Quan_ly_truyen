@@ -5,7 +5,8 @@ ARG NPM_VERSION=11.12.1
 
 WORKDIR /app
 
-RUN npm install --global "npm@${NPM_VERSION}"
+RUN apk upgrade --no-cache \
+    && npm install --global "npm@${NPM_VERSION}"
 
 COPY package.json package-lock.json .npmrc ./
 
@@ -30,6 +31,9 @@ ENV NODE_ENV=production \
     PORT=8080
 
 WORKDIR /app
+
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn* /usr/local/bin/corepack /root/.npm
 
 COPY --from=production-dependencies \
     --chown=node:node \
