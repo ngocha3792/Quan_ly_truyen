@@ -305,11 +305,14 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       requestHash: string,
       ttlSeconds: number,
     ): Promise<AcquireIdempotencyResult> => {
-      const storeWithPrototype = Object.create(
-        InMemoryIdempotencyStore.prototype,
-      ) as InMemoryIdempotencyStore;
-      Object.assign(storeWithPrototype, idempotencyStore);
-      return storeWithPrototype.acquire(storageKey, requestHash, ttlSeconds);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const boundAcquire: (
+        key: string,
+        hash: string,
+        ttl: number,
+      ) => Promise<AcquireIdempotencyResult> =
+        InMemoryIdempotencyStore.prototype.acquire.bind(idempotencyStore);
+      return boundAcquire(storageKey, requestHash, ttlSeconds);
     };
 
     let releaseFirstAcquire!: () => void;
