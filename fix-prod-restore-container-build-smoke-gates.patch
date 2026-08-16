@@ -1,0 +1,261 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 32c5eb1..945c8f1 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -294,6 +294,28 @@ jobs:
+     permissions:
+       contents: read
+ 
++    services:
++      postgres:
++        image: postgres:17-alpine
++        env:
++          POSTGRES_USER: postgres
++          POSTGRES_PASSWORD: postgres
++          POSTGRES_DB: quan_ly_truyen_container_smoke
++        ports: ["5432:5432"]
++        options: >-
++          --health-cmd "pg_isready -U postgres -d quan_ly_truyen_container_smoke"
++          --health-interval 5s
++          --health-timeout 5s
++          --health-retries 20
++      redis:
++        image: redis:7-alpine
++        ports: ["6379:6379"]
++        options: >-
++          --health-cmd "redis-cli ping"
++          --health-interval 5s
++          --health-timeout 3s
++          --health-retries 20
++
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v6
+@@ -342,6 +364,8 @@ jobs:
+ 
+           tags: quan-ly-truyen-frontend:ci
+ 
++          build-args: NODE_IMAGE=node:24.15.0-alpine
++
+           cache-from: type=gha,scope=ci-frontend
+ 
+           cache-to: type=gha,mode=max,scope=ci-frontend
+@@ -397,22 +421,40 @@ jobs:
+             exit 1
+           fi
+ 
++          frontend_ready=false
++
+           for attempt in $(seq 1 30); do
+             if curl \
+               --fail \
+               --silent \
+               http://127.0.0.1:8080/health \
+-              >/dev/null
++              >/dev/null \
++              && curl \
++                --fail \
++                --silent \
++                --output /tmp/quan-ly-truyen-frontend-index.html \
++                http://127.0.0.1:8080/index.html \
++              && grep \
++                --quiet \
++                '<app-root' \
++                /tmp/quan-ly-truyen-frontend-index.html
+             then
+-              exit 0
++              frontend_ready=true
++              break
++            fi
++
++            if test "$(docker inspect --format '{{.State.Running}}' "${container_id}")" != 'true'; then
++              echo 'Frontend container exited before becoming ready.'
++              exit 1
+             fi
+ 
+             sleep 1
+           done
+ 
+-          echo "Frontend container failed its health endpoint."
+-
+-          exit 1
++          if test "${frontend_ready}" != 'true'; then
++            echo 'Frontend container failed health/static artifact smoke checks.'
++            exit 1
++          fi
+ 
+       # ------------------------------------------------------------
+       # Backend runtime
+@@ -462,6 +504,13 @@ jobs:
+         run: |
+           set -euo pipefail
+ 
++          configured_user="$(docker inspect --format '{{.Config.User}}' quan-ly-truyen-backend:ci)"
++
++          if test -z "${configured_user}" -o "${configured_user}" = "root" -o "${configured_user}" = "0"; then
++            echo "Backend runtime image must declare a non-root runtime user."
++            exit 1
++          fi
++
+           docker run \
+             --rm \
+             --entrypoint sh \
+@@ -469,6 +518,7 @@ jobs:
+             -c '
+               test -s dist/main.js &&
+               test -s dist/worker.js &&
++              test -s dist/healthcheck/worker-heartbeat.healthcheck.js &&
+               test -d prisma/migrations
+             '
+ 
+@@ -513,6 +563,150 @@ jobs:
+           severity: CRITICAL,HIGH
+ 
+           skip-setup-trivy: true
++
++      - name: Smoke test backend migration and runtime images
++        shell: bash
++        run: |
++          set -euo pipefail
++
++          database_url='postgresql://postgres:postgres@127.0.0.1:5432/quan_ly_truyen_container_smoke?schema=public'
++          redis_url='redis://127.0.0.1:6379/0'
++          api_container_id=''
++          worker_container_id=''
++
++          cleanup() {
++            for container_id in "${worker_container_id}" "${api_container_id}"; do
++              if test -n "${container_id}"; then
++                docker logs "${container_id}" || true
++                docker rm --force "${container_id}" >/dev/null 2>&1 || true
++              fi
++            done
++          }
++
++          trap cleanup EXIT
++
++          migrate_user="$(
++            docker inspect \
++              --format '{{.Config.User}}' \
++              quan-ly-truyen-backend-migrate:ci
++          )"
++
++          if test -z "${migrate_user}" -o "${migrate_user}" = "root" -o "${migrate_user}" = "0"; then
++            echo 'Backend migration image must declare a non-root runtime user.'
++            exit 1
++          fi
++
++          docker run \
++            --rm \
++            --network host \
++            --read-only \
++            --cap-drop ALL \
++            --security-opt no-new-privileges \
++            --tmpfs /tmp:size=64m,mode=1777 \
++            --env DATABASE_URL="${database_url}" \
++            quan-ly-truyen-backend-migrate:ci
++
++          common_env=(
++            --env-file backend/.env.example
++            --env NODE_ENV=test
++            --env DATABASE_URL="${database_url}"
++            --env REDIS_ENABLED=true
++            --env REDIS_URL="${redis_url}"
++            --env REDIS_KEY_PREFIX=qlt:ci:container-smoke
++            --env MAIL_ENABLED=false
++            --env CLOUDINARY_ENABLED=false
++            --env OBSERVABILITY_ENABLED=false
++            --env METRICS_ENABLED=false
++            --env OTEL_SDK_DISABLED=true
++            --env SWAGGER_ENABLED=false
++            --env LOG_LEVEL=warn
++            --env LOG_PRETTY=false
++            --env ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK=false
++          )
++
++          api_container_id="$(
++            docker run \
++              --detach \
++              --network host \
++              --read-only \
++              --cap-drop ALL \
++              --security-opt no-new-privileges \
++              --tmpfs /tmp:size=64m,mode=1777 \
++              "${common_env[@]}" \
++              --env QUEUE_ENABLED=false \
++              quan-ly-truyen-backend:ci
++          )"
++
++          api_ready=false
++
++          for attempt in $(seq 1 60); do
++            if curl \
++              --fail \
++              --silent \
++              http://127.0.0.1:3000/api/v1/health/live \
++              >/dev/null \
++              && curl \
++                --fail \
++                --silent \
++                http://127.0.0.1:3000/api/v1/health/ready \
++                >/dev/null
++            then
++              api_ready=true
++              break
++            fi
++
++            if test "$(docker inspect --format '{{.State.Running}}' "${api_container_id}")" != 'true'; then
++              echo 'Backend API container exited before becoming ready.'
++              exit 1
++            fi
++
++            sleep 1
++          done
++
++          if test "${api_ready}" != 'true'; then
++            echo 'Backend API container failed liveness/readiness smoke checks.'
++            exit 1
++          fi
++
++          worker_container_id="$(
++            docker run \
++              --detach \
++              --network host \
++              --read-only \
++              --cap-drop ALL \
++              --security-opt no-new-privileges \
++              --tmpfs /tmp:size=64m,mode=1777 \
++              "${common_env[@]}" \
++              --env QUEUE_ENABLED=true \
++              --env QUEUE_WORKER_HEARTBEAT_ENABLED=true \
++              --env WORKER_ROLE=queue \
++              quan-ly-truyen-backend:ci \
++              node dist/worker.js
++          )"
++
++          worker_ready=false
++
++          for attempt in $(seq 1 45); do
++            if docker exec \
++              "${worker_container_id}" \
++              node dist/healthcheck/worker-heartbeat.healthcheck.js
++            then
++              worker_ready=true
++              break
++            fi
++
++            if test "$(docker inspect --format '{{.State.Running}}' "${worker_container_id}")" != 'true'; then
++              echo 'Backend worker container exited before its heartbeat became healthy.'
++              exit 1
++            fi
++
++            sleep 1
++          done
++
++          if test "${worker_ready}" != 'true'; then
++            echo 'Backend worker container failed its heartbeat smoke check.'
++            exit 1
++          fi
+   frontend-e2e:
+     name: Full stack / Playwright E2E
+     runs-on: ubuntu-latest

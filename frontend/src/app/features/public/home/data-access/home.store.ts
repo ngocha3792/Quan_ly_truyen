@@ -54,6 +54,10 @@ export class HomeStore {
   }
 
   startHeroAutoplay(intervalMs = 7000): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const timer = window.setInterval(() => this.nextHero(), intervalMs);
     this.destroyRef.onDestroy(() => window.clearInterval(timer));
   }

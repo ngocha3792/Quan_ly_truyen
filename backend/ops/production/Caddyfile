@@ -28,7 +28,7 @@
   # Shared-origin production deployment:
   #
   # /api/* -> NestJS
-  # /*      -> Angular nginx
+  # /*      -> Angular SSR
   @api path /api /api/*
 
   handle @api {

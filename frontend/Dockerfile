@@ -19,35 +19,39 @@ COPY . .
 RUN npm run build:ci
 
 
-FROM nginx:1.29-alpine AS runtime
+FROM dependencies AS production-dependencies
 
-COPY nginx/nginx.conf \
-    /etc/nginx/nginx.conf
+RUN npm prune --omit=dev
 
-COPY nginx/default.conf \
-    /etc/nginx/conf.d/default.conf
+
+FROM ${NODE_IMAGE} AS runtime
+
+ENV NODE_ENV=production \
+    PORT=8080
+
+WORKDIR /app
+
+COPY --from=production-dependencies \
+    --chown=node:node \
+    /app/node_modules \
+    ./node_modules
 
 COPY --from=build \
-    --chown=nginx:nginx \
-    /app/dist/frontend/browser \
-    /usr/share/nginx/html
+    --chown=node:node \
+    /app/dist/frontend \
+    ./dist/frontend
 
-# The runtime does not need root: nginx listens on an unprivileged port and
-# writes its pid/temp files below /tmp so the filesystem can stay read-only.
-USER nginx
+COPY --chown=node:node package.json ./package.json
+
+USER node
 
 EXPOSE 8080
 
 HEALTHCHECK \
     --interval=10s \
     --timeout=3s \
-    --start-period=10s \
+    --start-period=15s \
     --retries=5 \
-    CMD wget -q -O /dev/null \
-    http://127.0.0.1:8080/health \
-    || exit 1
+    CMD node -e "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
-# Bypass the image entrypoint scripts: production configuration is baked into
-# the image and must not be mutated at container startup.
-ENTRYPOINT []
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "dist/frontend/server/server.mjs"]

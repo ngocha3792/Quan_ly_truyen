@@ -23,7 +23,8 @@
     "e2e:prepare": "npm --prefix ../backend run db:seed:e2e:all",
     "quality:check": "npm run format:check && npm run architecture:check && npm run lint:check && npm run typecheck && npm run typecheck:e2e",
     "ci": "npm run env:check && npm run quality:check && npm run test:ci && npm run build:ci",
-    "e2e:ci": "playwright test"
+    "e2e:ci": "playwright test",
+    "serve:ssr": "node dist/frontend/server/server.mjs"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -33,7 +34,9 @@
     "@angular/core": "^22.1.0",
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
+    "@angular/platform-server": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@angular/ssr": "^22.1.2",
     "@types/qrcode": "^1.5.6",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
@@ -46,6 +49,7 @@
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.62.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^26.1.2",
     "angular-eslint": "^22.1.0",
     "eslint": "^9.39.5",
     "jsdom": "^30.0.1",

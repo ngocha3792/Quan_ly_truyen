@@ -188,6 +188,16 @@ services:
     expose:
       - '8080'
 
+    environment:
+      PORT: '8080'
+      SSR_API_ORIGIN: http://api:3000
+      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_URL:?APP_PUBLIC_URL is required}
+      NG_ALLOWED_HOSTS: ${APP_DOMAIN:?APP_DOMAIN is required}
+
+    depends_on:
+      api:
+        condition: service_healthy
+
     networks:
       - backend
 
@@ -204,8 +214,8 @@ services:
 
     pids_limit: 128
 
-    mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
-    cpus: ${FRONTEND_CPU_LIMIT:-0.50}
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-384m}
+    cpus: ${FRONTEND_CPU_LIMIT:-1.00}
 
     logging: *default-logging
 
@@ -213,7 +223,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1',
+          "node -e \"fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\"",
         ]
       interval: 10s
       timeout: 3s

@@ -1,0 +1,425 @@
+diff --git a/backend/package.json b/backend/package.json
+index 8d42c44..7031d46 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -204,6 +204,8 @@
+     ],
+     "coverageDirectory": "../coverage",
+     "testEnvironment": "node",
++    "clearMocks": true,
++    "restoreMocks": true,
+     "moduleNameMapper": {
+       "^@/(.*)$": "<rootDir>/$1",
+       "^(\\.\\.?/.*)\\.js$": "$1"
+diff --git a/backend/scripts/testing/prepare-auth-test-environment.ts b/backend/scripts/testing/prepare-auth-test-environment.ts
+index a2788fa..9cfd9df 100644
+--- a/backend/scripts/testing/prepare-auth-test-environment.ts
++++ b/backend/scripts/testing/prepare-auth-test-environment.ts
+@@ -1,3 +1,5 @@
++import { setTimeout as sleep } from 'node:timers/promises';
++
+ import Redis from 'ioredis';
+ import { Client } from 'pg';
+ 
+@@ -67,46 +69,74 @@ void runScript({
+     await adminClient.end();
+     adminClient = undefined;
+ 
+-    redis = new Redis(testRedisUrl, {
+-      lazyConnect: true,
+-      enableReadyCheck: true,
+-      maxRetriesPerRequest: 1,
+-      retryStrategy: () => null,
+-    });
+-
+-    redis.on('error', () => {
+-      /* Suppress unhandled ioredis error events during test prep check */
+-    });
++    const redisAttempts = 10;
++    let redisReady = false;
++    let lastRedisError: unknown;
+ 
+-    try {
+-      await redis.connect();
+-      await redis.ping();
+-      await redis.flushdb();
++    for (let attempt = 1; attempt <= redisAttempts; attempt += 1) {
++      redis = new Redis(testRedisUrl, {
++        lazyConnect: true,
++        enableReadyCheck: true,
++        maxRetriesPerRequest: 1,
++        retryStrategy: () => null,
++      });
+ 
+-      logger.info('Redis test database is reachable and clean', {
+-        database: redisDatabase,
++      redis.on('error', () => {
++        /* Suppress unhandled ioredis error events during test prep check */
+       });
+ 
+-      await redis.quit();
+-    } catch (error) {
+-      logger.warn(
+-        'Redis test instance is not running or unreachable; skipping Redis test prep flush',
+-        {
+-          error: error instanceof Error ? error.message : String(error),
+-        },
+-      );
+-    } finally {
+-      if (redis) {
++      try {
++        await redis.connect();
++        await redis.ping();
++        await redis.flushdb();
++
++        logger.info('Redis test database is reachable and clean', {
++          database: redisDatabase,
++          attempt,
++        });
++
++        await redis.quit();
++        redis = undefined;
++        redisReady = true;
++        break;
++      } catch (error) {
++        lastRedisError = error;
+         redis.disconnect(false);
+         redis = undefined;
++
++        logger.warn('Redis test instance is not ready', {
++          attempt,
++          attempts: redisAttempts,
++        });
++
++        if (attempt < redisAttempts) {
++          await sleep(500);
++        }
+       }
+     }
+ 
+-    logger.info('applying Prisma migrations to the test database');
++    if (!redisReady) {
++      throw new ScriptError(
++        'Redis test instance is not running or unreachable',
++        ScriptExitCode.EXECUTION_ERROR,
++        { cause: lastRedisError },
++      );
++    }
++
++    logger.info('resetting and migrating the PostgreSQL test database');
+ 
+     await runCommand({
+-      command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+-      args: ['run', 'db:migrate:deploy'],
++      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
++      args: [
++        '--no-install',
++        'prisma',
++        'migrate',
++        'reset',
++        '--force',
++        '--skip-seed',
++        '--config',
++        'prisma.config.ts',
++      ],
+       cwd: process.cwd(),
+       env: {
+         ...process.env,
+diff --git a/backend/scripts/testing/prepare-postgres-test-environment.ts b/backend/scripts/testing/prepare-postgres-test-environment.ts
+index 0a5b2e1..1d7532b 100644
+--- a/backend/scripts/testing/prepare-postgres-test-environment.ts
++++ b/backend/scripts/testing/prepare-postgres-test-environment.ts
+@@ -79,12 +79,21 @@ void runScript({
+ 
+     adminClient = undefined;
+ 
+-    logger.info('applying Prisma migrations to the test database');
++    logger.info('resetting and migrating the PostgreSQL test database');
+ 
+     await runCommand({
+-      command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+-
+-      args: ['run', 'db:migrate:deploy'],
++      command: process.platform === 'win32' ? 'npx.cmd' : 'npx',
++
++      args: [
++        '--no-install',
++        'prisma',
++        'migrate',
++        'reset',
++        '--force',
++        '--skip-seed',
++        '--config',
++        'prisma.config.ts',
++      ],
+ 
+       cwd: process.cwd(),
+ 
+diff --git a/backend/src/infrastructure/lock/redis-distributed-lock.spec.ts b/backend/src/infrastructure/lock/redis-distributed-lock.spec.ts
+index d941912..64c4637 100644
+--- a/backend/src/infrastructure/lock/redis-distributed-lock.spec.ts
++++ b/backend/src/infrastructure/lock/redis-distributed-lock.spec.ts
+@@ -20,6 +20,10 @@ describe('RedisDistributedLock', () => {
+     );
+   });
+ 
++  afterEach(() => {
++    jest.useRealTimers();
++  });
++
+   it('acquires lock, executes work and releases lock via lua script', async () => {
+     mockRedisClient.set.mockResolvedValue('OK');
+     mockRedisClient.eval.mockResolvedValue(1);
+@@ -96,7 +100,6 @@ describe('RedisDistributedLock', () => {
+     );
+     finishWork();
+     await expect(resultPromise).resolves.toBe('done');
+-    jest.useRealTimers();
+   });
+ 
+   it('does not report success after ownership is lost', async () => {
+@@ -117,7 +120,6 @@ describe('RedisDistributedLock', () => {
+     await expect(resultPromise).rejects.toBeInstanceOf(
+       ConcurrencyConflictException,
+     );
+-    jest.useRealTimers();
+   });
+ 
+   it('fails closed when Redis is unavailable', async () => {
+diff --git a/backend/test/integration/auth-redis.integration-spec.ts b/backend/test/integration/auth-redis.integration-spec.ts
+index adf4312..acd35aa 100644
+--- a/backend/test/integration/auth-redis.integration-spec.ts
++++ b/backend/test/integration/auth-redis.integration-spec.ts
+@@ -173,49 +173,45 @@ describe('Auth Redis integrations', () => {
+   });
+ 
+   it('stores JWT blacklist with TTL bounded by token expiration', async () => {
+-    jest.useFakeTimers();
++    const now = new Date('2026-08-03T07:00:00.000Z').getTime();
+ 
+-    jest.setSystemTime(new Date('2026-08-03T07:00:00.000Z'));
++    jest.spyOn(Date, 'now').mockReturnValue(now);
+ 
+-    try {
+-      const blacklist = new RedisJwtBlacklist(
+-        configService(),
++    const blacklist = new RedisJwtBlacklist(
++      configService(),
+ 
+-        redis,
+-      );
++      redis,
++    );
+ 
+-      const tokenId = randomUUID();
++    const tokenId = randomUUID();
+ 
+-      await blacklist.blacklist({
+-        tokenId,
++    await blacklist.blacklist({
++      tokenId,
+ 
+-        expiresAt: new Date('2026-08-03T07:02:00.000Z'),
++      expiresAt: new Date('2026-08-03T07:02:00.000Z'),
+ 
+-        reason: 'integration-test',
+-      });
++      reason: 'integration-test',
++    });
+ 
+-      await expect(blacklist.isBlacklisted(tokenId)).resolves.toBe(true);
++    await expect(blacklist.isBlacklisted(tokenId)).resolves.toBe(true);
+ 
+-      const key = ['auth', 'jwt', 'blacklist', sha256(tokenId)].join(':');
++    const key = ['auth', 'jwt', 'blacklist', sha256(tokenId)].join(':');
+ 
+-      const ttl = await redis.ttl(key);
++    const ttl = await redis.ttl(key);
+ 
+-      expect(ttl).toBeGreaterThanOrEqual(119);
++    expect(ttl).toBeGreaterThanOrEqual(119);
+ 
+-      expect(ttl).toBeLessThanOrEqual(120);
++    expect(ttl).toBeLessThanOrEqual(120);
+ 
+-      const keys = await redis.keys('auth:jwt:blacklist:*');
++    const keys = await redis.keys('auth:jwt:blacklist:*');
+ 
+-      expect(keys).toHaveLength(1);
++    expect(keys).toHaveLength(1);
+ 
+-      expect(keys[0]).not.toContain(tokenId);
++    expect(keys[0]).not.toContain(tokenId);
+ 
+-      const stored = await redis.get(key);
++    const stored = await redis.get(key);
+ 
+-      expect(stored).not.toContain(tokenId);
+-    } finally {
+-      jest.useRealTimers();
+-    }
++    expect(stored).not.toContain(tokenId);
+   });
+ 
+   it('does not create a blacklist entry for an expired token', async () => {
+diff --git a/backend/test/jest-auth-e2e.json b/backend/test/jest-auth-e2e.json
+index cd6bbdc..a001fe1 100644
+--- a/backend/test/jest-auth-e2e.json
++++ b/backend/test/jest-auth-e2e.json
+@@ -6,6 +6,8 @@
+     ],
+     "rootDir": ".",
+     "testEnvironment": "node",
++    "clearMocks": true,
++    "restoreMocks": true,
+     "testTimeout": 90000,
+     "maxWorkers": 1,
+     "detectOpenHandles": true,
+diff --git a/backend/test/jest-auth-integration.json b/backend/test/jest-auth-integration.json
+index 5fb2833..05cc141 100644
+--- a/backend/test/jest-auth-integration.json
++++ b/backend/test/jest-auth-integration.json
+@@ -6,6 +6,8 @@
+     ],
+     "rootDir": ".",
+     "testEnvironment": "node",
++    "clearMocks": true,
++    "restoreMocks": true,
+     "testTimeout": 60000,
+     "maxWorkers": 1,
+     "detectOpenHandles": true,
+diff --git a/backend/test/jest-auth-unit.json b/backend/test/jest-auth-unit.json
+index 0d8bb8e..950fcd8 100644
+--- a/backend/test/jest-auth-unit.json
++++ b/backend/test/jest-auth-unit.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": "..",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testMatch": ["<rootDir>/src/modules/auth/**/*.spec.ts"],
+   "transform": {
+     "^.+\\.(t|j)s$": "ts-jest"
+diff --git a/backend/test/jest-author-applications-integration.json b/backend/test/jest-author-applications-integration.json
+index 896718f..4ca4f71 100644
+--- a/backend/test/jest-author-applications-integration.json
++++ b/backend/test/jest-author-applications-integration.json
+@@ -6,6 +6,8 @@
+   ],
+   "rootDir": ".",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testTimeout": 60000,
+   "maxWorkers": 1,
+   "detectOpenHandles": true,
+diff --git a/backend/test/jest-author-applications-unit.json b/backend/test/jest-author-applications-unit.json
+index a0e3096..17ada80 100644
+--- a/backend/test/jest-author-applications-unit.json
++++ b/backend/test/jest-author-applications-unit.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": "..",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testMatch": [
+     "<rootDir>/src/modules/author-applications/application/commands/**/*.spec.ts",
+     "<rootDir>/src/modules/author-applications/domain/policies/author-application-lifecycle.policy.spec.ts"
+diff --git a/backend/test/jest-e2e.json b/backend/test/jest-e2e.json
+index 009ecfc..ead25d9 100644
+--- a/backend/test/jest-e2e.json
++++ b/backend/test/jest-e2e.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": ".",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testTimeout": 30000,
+   "maxWorkers": 1,
+   "detectOpenHandles": true,
+diff --git a/backend/test/jest-stories-e2e.json b/backend/test/jest-stories-e2e.json
+index a93fe61..f69bcb7 100644
+--- a/backend/test/jest-stories-e2e.json
++++ b/backend/test/jest-stories-e2e.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": ".",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testTimeout": 30000,
+   "maxWorkers": 1,
+   "detectOpenHandles": true,
+diff --git a/backend/test/jest-stories-integration.json b/backend/test/jest-stories-integration.json
+index a2de637..7b0ef0f 100644
+--- a/backend/test/jest-stories-integration.json
++++ b/backend/test/jest-stories-integration.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": ".",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testTimeout": 60000,
+   "maxWorkers": 1,
+   "detectOpenHandles": true,
+diff --git a/backend/test/jest-users-integration.json b/backend/test/jest-users-integration.json
+index 17b3268..019f9b5 100644
+--- a/backend/test/jest-users-integration.json
++++ b/backend/test/jest-users-integration.json
+@@ -6,6 +6,8 @@
+   ],
+   "rootDir": ".",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testTimeout": 60000,
+   "maxWorkers": 1,
+   "detectOpenHandles": true,
+diff --git a/backend/test/jest-users-unit.json b/backend/test/jest-users-unit.json
+index 4aae556..ad667b3 100644
+--- a/backend/test/jest-users-unit.json
++++ b/backend/test/jest-users-unit.json
+@@ -2,6 +2,8 @@
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": "..",
+   "testEnvironment": "node",
++  "clearMocks": true,
++  "restoreMocks": true,
+   "testMatch": [
+     "<rootDir>/src/modules/users/application/commands/**/*.spec.ts",
+     "<rootDir>/src/modules/users/domain/policies/**/*.spec.ts"
+diff --git a/frontend/angular.json b/frontend/angular.json
+index 69fb471..0b63bbc 100644
+--- a/frontend/angular.json
++++ b/frontend/angular.json
+@@ -93,7 +93,9 @@
+         "test": {
+           "builder": "@angular/build:unit-test",
+           "options": {
+-            "tsConfig": "tsconfig.spec.json"
++            "tsConfig": "tsconfig.spec.json",
++            "runnerConfig": "vitest.config.ts",
++            "isolate": true
+           }
+         },
+         "lint": {
+diff --git a/frontend/vitest.config.ts b/frontend/vitest.config.ts
+new file mode 100644
+index 0000000..584d3e3
+--- /dev/null
++++ b/frontend/vitest.config.ts
+@@ -0,0 +1,10 @@
++import { defineConfig } from 'vitest/config';
++
++export default defineConfig({
++  test: {
++    clearMocks: true,
++    restoreMocks: true,
++    unstubEnvs: true,
++    unstubGlobals: true,
++  },
++});

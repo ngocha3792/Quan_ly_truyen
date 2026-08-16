@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../../../core/auth/auth.store';
+import { SeoService } from '../../../../../core/seo/seo.service';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
@@ -21,8 +29,37 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(ChapterReaderStore);
+  private readonly seo = inject(SeoService);
+
+  private readonly seoEffect = effect(() => {
+    const view = this.store.view();
+
+    if (!view) return;
+
+    const chapterLabel = view.chapter.title.trim() || `Chương ${view.chapter.number}`;
+    const canonicalPath =
+      `/truyen/${encodeURIComponent(view.story.slug)}/chuong/${view.chapter.number}`;
+
+    this.seo.apply({
+      title: `${view.story.title} - ${chapterLabel} | TruyenHub`,
+      description: `Đọc ${chapterLabel} của ${view.story.title} online trên TruyenHub.`,
+      canonicalPath,
+      type: 'article',
+    });
+
+    this.seo.setStructuredData('chapter', {
+      '@context': 'https://schema.org',
+      '@type': 'Chapter',
+      name: chapterLabel,
+      isPartOf: { '@type': 'Book', name: view.story.title },
+      datePublished: view.chapter.publishedAt,
+      url: this.seo.absoluteUrl(canonicalPath),
+    });
+  });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('chapter'));
+
     const subscription = this.route.paramMap.subscribe((params) => {
       const storySlug = params.get('storySlug') ?? '';
       const chapterNumber = params.get('chapterNumber') ?? '';

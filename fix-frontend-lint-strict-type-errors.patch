@@ -1,0 +1,10 @@
+--- a/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts
+@@ -195,6 +195,6 @@
+   return { identity, key: crypto.randomUUID() };
+ }
+ 
+-function idempotencyHeaders(key = crypto.randomUUID()): HttpHeaders {
++function idempotencyHeaders(key: string = crypto.randomUUID()): HttpHeaders {
+   return new HttpHeaders({ 'x-idempotency-key': key });
+ }

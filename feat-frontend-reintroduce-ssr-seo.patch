@@ -1,0 +1,1444 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 945c8f1..e2b8a7c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -56,8 +56,17 @@ jobs:
+       - name: Production build
+         run: npm run build:ci
+ 
+-      - name: Verify browser artifact
+-        run: test -s dist/frontend/browser/index.html
++      - name: Verify browser and server artifacts
++        run: |
++          set -euo pipefail
++
++          test -s dist/frontend/server/server.mjs
++
++          if test -s dist/frontend/browser/index.html; then
++            exit 0
++          fi
++
++          test -s dist/frontend/browser/index.csr.html
+ 
+       - name: Upload browser artifact
+         uses: actions/upload-artifact@v6
+@@ -399,6 +408,9 @@ jobs:
+               --cap-drop ALL \
+               --security-opt no-new-privileges \
+               --tmpfs /tmp:size=32m,mode=1777 \
++              --env SSR_API_ORIGIN=http://127.0.0.1:3000 \
++              --env APP_PUBLIC_ORIGIN=http://127.0.0.1:8080 \
++              --env NG_ALLOWED_HOSTS=127.0.0.1,localhost \
+               --publish 8080:8080 \
+               quan-ly-truyen-frontend:ci
+           )"
+@@ -437,7 +449,16 @@ jobs:
+               && grep \
+                 --quiet \
+                 '<app-root' \
+-                /tmp/quan-ly-truyen-frontend-index.html
++                /tmp/quan-ly-truyen-frontend-index.html \
++              && curl \
++                --fail \
++                --silent \
++                --output /tmp/quan-ly-truyen-frontend-ssr.html \
++                http://127.0.0.1:8080/gioi-thieu \
++              && grep \
++                --quiet \
++                '<title>Giới thiệu - TruyenHub</title>' \
++                /tmp/quan-ly-truyen-frontend-ssr.html
+             then
+               frontend_ready=true
+               break
+@@ -452,7 +473,7 @@ jobs:
+           done
+ 
+           if test "${frontend_ready}" != 'true'; then
+-            echo 'Frontend container failed health/static artifact smoke checks.'
++            echo 'Frontend container failed health/static/SSR smoke checks.'
+             exit 1
+           fi
+ 
+diff --git a/backend/compose.production.yml b/backend/compose.production.yml
+index d8f84c2..60757e3 100644
+--- a/backend/compose.production.yml
++++ b/backend/compose.production.yml
+@@ -188,6 +188,16 @@ services:
+     expose:
+       - '8080'
+ 
++    environment:
++      PORT: '8080'
++      SSR_API_ORIGIN: http://api:3000
++      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_URL:?APP_PUBLIC_URL is required}
++      NG_ALLOWED_HOSTS: ${APP_DOMAIN:?APP_DOMAIN is required}
++
++    depends_on:
++      api:
++        condition: service_healthy
++
+     networks:
+       - backend
+ 
+@@ -204,8 +214,8 @@ services:
+ 
+     pids_limit: 128
+ 
+-    mem_limit: ${FRONTEND_MEMORY_LIMIT:-256m}
+-    cpus: ${FRONTEND_CPU_LIMIT:-0.50}
++    mem_limit: ${FRONTEND_MEMORY_LIMIT:-384m}
++    cpus: ${FRONTEND_CPU_LIMIT:-1.00}
+ 
+     logging: *default-logging
+ 
+@@ -213,7 +223,7 @@ services:
+       test:
+         [
+           'CMD-SHELL',
+-          'wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1',
++          "node -e \"fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\"",
+         ]
+       interval: 10s
+       timeout: 3s
+diff --git a/backend/ops/production/Caddyfile b/backend/ops/production/Caddyfile
+index c8e453b..48ee896 100644
+--- a/backend/ops/production/Caddyfile
++++ b/backend/ops/production/Caddyfile
+@@ -28,7 +28,7 @@
+   # Shared-origin production deployment:
+   #
+   # /api/* -> NestJS
+-  # /*      -> Angular nginx
++  # /*      -> Angular SSR
+   @api path /api /api/*
+ 
+   handle @api {
+diff --git a/backend/ops/production/compose.validation.env.example b/backend/ops/production/compose.validation.env.example
+index bd85076..41fa7e2 100644
+--- a/backend/ops/production/compose.validation.env.example
++++ b/backend/ops/production/compose.validation.env.example
+@@ -21,5 +21,6 @@ POSTGRES_USER=qlt_validation
+ POSTGRES_PASSWORD=validation-only-not-a-secret
+ REDIS_PASSWORD=validation-only-not-a-secret
+ APP_DOMAIN=validation.example
++APP_PUBLIC_URL=https://validation.example
+ GRAFANA_ADMIN_USER=validation
+ GRAFANA_ADMIN_PASSWORD=validation-only-not-a-secret
+diff --git a/frontend/Dockerfile b/frontend/Dockerfile
+index 8f724c2..e7438eb 100644
+--- a/frontend/Dockerfile
++++ b/frontend/Dockerfile
+@@ -19,35 +19,39 @@ COPY . .
+ RUN npm run build:ci
+ 
+ 
+-FROM nginx:1.29-alpine AS runtime
++FROM dependencies AS production-dependencies
+ 
+-COPY nginx/nginx.conf \
+-    /etc/nginx/nginx.conf
++RUN npm prune --omit=dev
+ 
+-COPY nginx/default.conf \
+-    /etc/nginx/conf.d/default.conf
++
++FROM ${NODE_IMAGE} AS runtime
++
++ENV NODE_ENV=production \
++    PORT=8080
++
++WORKDIR /app
++
++COPY --from=production-dependencies \
++    --chown=node:node \
++    /app/node_modules \
++    ./node_modules
+ 
+ COPY --from=build \
+-    --chown=nginx:nginx \
+-    /app/dist/frontend/browser \
+-    /usr/share/nginx/html
++    --chown=node:node \
++    /app/dist/frontend \
++    ./dist/frontend
++
++COPY --chown=node:node package.json ./package.json
+ 
+-# The runtime does not need root: nginx listens on an unprivileged port and
+-# writes its pid/temp files below /tmp so the filesystem can stay read-only.
+-USER nginx
++USER node
+ 
+ EXPOSE 8080
+ 
+ HEALTHCHECK \
+     --interval=10s \
+     --timeout=3s \
+-    --start-period=10s \
++    --start-period=15s \
+     --retries=5 \
+-    CMD wget -q -O /dev/null \
+-    http://127.0.0.1:8080/health \
+-    || exit 1
+-
+-# Bypass the image entrypoint scripts: production configuration is baked into
+-# the image and must not be mutated at container startup.
+-ENTRYPOINT []
+-CMD ["nginx", "-g", "daemon off;"]
++    CMD node -e "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
++
++CMD ["node", "dist/frontend/server/server.mjs"]
+diff --git a/frontend/angular.json b/frontend/angular.json
+index 0b63bbc..dc93864 100644
+--- a/frontend/angular.json
++++ b/frontend/angular.json
+@@ -52,7 +52,12 @@
+                 "input": "public"
+               }
+             ],
+-            "styles": ["src/styles.scss"]
++            "styles": ["src/styles.scss"],
++            "server": "src/main.server.ts",
++            "ssr": {
++              "entry": "src/server.ts"
++            },
++            "outputMode": "server"
+           },
+           "configurations": {
+             "production": {
+@@ -68,7 +73,13 @@
+                   "maximumError": "20kB"
+                 }
+               ],
+-              "outputHashing": "all"
++              "outputHashing": "all",
++              "fileReplacements": [
++                {
++                  "replace": "src/environments/environment.ts",
++                  "with": "src/environments/environment.production.ts"
++                }
++              ]
+             },
+             "development": {
+               "optimization": false,
+diff --git a/frontend/nginx/default.conf b/frontend/nginx/default.conf
+deleted file mode 100644
+index 59e8fb6..0000000
+--- a/frontend/nginx/default.conf
++++ /dev/null
+@@ -1,73 +0,0 @@
+-server {
+-    listen 8080;
+-    server_name _;
+-
+-    root /usr/share/nginx/html;
+-    index index.html;
+-
+-    client_max_body_size 10m;
+-
+-    location = /health {
+-        access_log off;
+-        default_type text/plain;
+-        return 200 "ok";
+-    }
+-
+-    # ------------------------------------------------------------
+-    # Fingerprinted assets
+-    #
+-    # Ví dụ:
+-    #   main-A7BC91F2.js
+-    #   styles-3D91CA82.css
+-    #   chunk-7F2BA001.js
+-    #
+-    # Chỉ những file js/css có hash >= 8 ký tự trước extension
+-    # mới được cache lâu + immutable.
+-    # ------------------------------------------------------------
+-    location ~* ^/.+[-.][a-z0-9_-]{8,}\.(?:js|css)$ {
+-        try_files $uri =404;
+-
+-        expires 1y;
+-
+-        add_header Cache-Control "public, max-age=31536000, immutable";
+-    }
+-
+-    # ------------------------------------------------------------
+-    # Non-fingerprinted static assets
+-    #
+-    # Ví dụ:
+-    #   logo.svg
+-    #   favicon.ico
+-    #   background.webp
+-    #   fonts/inter.woff2
+-    #
+-    # Không immutable vì nội dung có thể đổi nhưng URL giữ nguyên.
+-    # ------------------------------------------------------------
+-    location ~* \.(?:js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|otf)$ {
+-        try_files $uri =404;
+-
+-        expires 1h;
+-
+-        add_header Cache-Control "public, max-age=3600, must-revalidate";
+-    }
+-
+-    # ------------------------------------------------------------
+-    # index.html phải luôn được kiểm tra lại.
+-    #
+-    # File này tham chiếu tới tên bundle fingerprint mới sau deploy,
+-    # nên tuyệt đối không cache lâu.
+-    # ------------------------------------------------------------
+-    location = /index.html {
+-        expires -1;
+-
+-        add_header Cache-Control "no-cache, no-store, must-revalidate";
+-        add_header Pragma "no-cache";
+-    }
+-
+-    # ------------------------------------------------------------
+-    # Angular SPA fallback
+-    # ------------------------------------------------------------
+-    location / {
+-        try_files $uri $uri/ /index.html;
+-    }
+-}
+\ No newline at end of file
+diff --git a/frontend/nginx/nginx.conf b/frontend/nginx/nginx.conf
+deleted file mode 100644
+index e286a3d..0000000
+--- a/frontend/nginx/nginx.conf
++++ /dev/null
+@@ -1,32 +0,0 @@
+-worker_processes auto;
+-pid /tmp/nginx.pid;
+-error_log /dev/stderr notice;
+-
+-
+-events {
+-    worker_connections 1024;
+-}
+-
+-http {
+-    include /etc/nginx/mime.types;
+-    default_type application/octet-stream;
+-
+-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+-                    '$status $body_bytes_sent "$http_referer" '
+-                    '"$http_user_agent" "$http_x_forwarded_for"';
+-
+-    access_log /dev/stdout main;
+-
+-    sendfile on;
+-    tcp_nopush on;
+-    keepalive_timeout 65;
+-    server_tokens off;
+-
+-    client_body_temp_path /tmp/client_temp;
+-    proxy_temp_path /tmp/proxy_temp;
+-    fastcgi_temp_path /tmp/fastcgi_temp;
+-    uwsgi_temp_path /tmp/uwsgi_temp;
+-    scgi_temp_path /tmp/scgi_temp;
+-
+-    include /etc/nginx/conf.d/*.conf;
+-}
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 3aedf95..be4f3d3 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -13,7 +13,9 @@
+         "@angular/core": "^22.1.0",
+         "@angular/forms": "^22.1.0",
+         "@angular/platform-browser": "^22.1.0",
++        "@angular/platform-server": "^22.1.0",
+         "@angular/router": "^22.1.0",
++        "@angular/ssr": "^22.1.2",
+         "@types/qrcode": "^1.5.6",
+         "qrcode": "^1.5.4",
+         "rxjs": "~7.8.0",
+@@ -26,6 +28,7 @@
+         "@eslint/js": "^9.39.5",
+         "@playwright/test": "^1.62.1",
+         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
++        "@types/node": "^26.1.2",
+         "angular-eslint": "^22.1.0",
+         "eslint": "^9.39.5",
+         "jsdom": "^30.0.1",
+@@ -10237,6 +10240,55 @@
+       "peerDependencies": {
+         "zod": "^3.25.28 || ^4"
+       }
++    },
++    "node_modules/@angular/platform-server": {
++      "version": "22.1.0",
++      "resolved": "https://registry.npmjs.org/@angular/platform-server/-/platform-server-22.1.0.tgz",
++      "integrity": "sha512-b6Z17lqwtR1SuLBfh2LsGnyFGCPjAdgEXFOYVqV/JOACJCxHFG0TwE6BKYKe8lCgDkC5nQk0uM5pJNv2uC2tUw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "^2.3.0",
++        "xhr2": "^0.2.0"
++      },
++      "engines": {
++        "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
++      },
++      "peerDependencies": {
++        "@angular/common": "22.1.0",
++        "@angular/compiler": "22.1.0",
++        "@angular/core": "22.1.0",
++        "@angular/platform-browser": "22.1.0",
++        "rxjs": "^6.5.3 || ^7.4.0"
++      }
++    },
++    "node_modules/@angular/ssr": {
++      "version": "22.1.3",
++      "resolved": "https://registry.npmjs.org/@angular/ssr/-/ssr-22.1.3.tgz",
++      "integrity": "sha512-QGWnDyjOXPWXS7UOKoZ9AzYjh1UySK8hAkHFML/+l1rlQmAeArS/o33QJcmgU8jhuF32TppNdy6AaVqkLWHmJA==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "^2.3.0"
++      },
++      "peerDependencies": {
++        "@angular/common": "^22.0.0",
++        "@angular/core": "^22.0.0",
++        "@angular/platform-server": "^22.0.0",
++        "@angular/router": "^22.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@angular/platform-server": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/xhr2": {
++      "version": "0.2.1",
++      "resolved": "https://registry.npmjs.org/xhr2/-/xhr2-0.2.1.tgz",
++      "integrity": "sha512-sID0rrVCqkVNUn8t6xuv9+6FViXjUVXq8H5rWOH2rz9fDNQEd4g0EA2XlcEdJXRz5BMEn4O1pJFdT+z4YHhoWw==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 6"
++      }
+     }
+   }
+ }
+diff --git a/frontend/package.json b/frontend/package.json
+index 0477889..b096f54 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -23,7 +23,8 @@
+     "e2e:prepare": "npm --prefix ../backend run db:seed:e2e:all",
+     "quality:check": "npm run format:check && npm run architecture:check && npm run lint:check && npm run typecheck && npm run typecheck:e2e",
+     "ci": "npm run env:check && npm run quality:check && npm run test:ci && npm run build:ci",
+-    "e2e:ci": "playwright test"
++    "e2e:ci": "playwright test",
++    "serve:ssr": "node dist/frontend/server/server.mjs"
+   },
+   "private": true,
+   "packageManager": "npm@11.12.1",
+@@ -33,7 +34,9 @@
+     "@angular/core": "^22.1.0",
+     "@angular/forms": "^22.1.0",
+     "@angular/platform-browser": "^22.1.0",
++    "@angular/platform-server": "^22.1.0",
+     "@angular/router": "^22.1.0",
++    "@angular/ssr": "^22.1.2",
+     "@types/qrcode": "^1.5.6",
+     "qrcode": "^1.5.4",
+     "rxjs": "~7.8.0",
+@@ -46,6 +49,7 @@
+     "@eslint/js": "^9.39.5",
+     "@playwright/test": "^1.62.1",
+     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
++    "@types/node": "^26.1.2",
+     "angular-eslint": "^22.1.0",
+     "eslint": "^9.39.5",
+     "jsdom": "^30.0.1",
+diff --git a/frontend/src/app/app.config.server.ts b/frontend/src/app/app.config.server.ts
+new file mode 100644
+index 0000000..8385e21
+--- /dev/null
++++ b/frontend/src/app/app.config.server.ts
+@@ -0,0 +1,22 @@
++import { HTTP_TRANSFER_CACHE_ORIGIN_MAP } from '@angular/common/http';
++import { ApplicationConfig } from '@angular/core';
++import { provideServerRendering, withRoutes } from '@angular/ssr';
++import { publicAppOrigin, serverApiOrigin } from './core/config/app-runtime-config.server';
++import { SEO_PUBLIC_ORIGIN } from './core/seo/seo.service';
++import { serverRoutes } from './app.routes.server';
++
++export const serverConfig: ApplicationConfig = {
++  providers: [
++    provideServerRendering(withRoutes(serverRoutes)),
++    {
++      provide: HTTP_TRANSFER_CACHE_ORIGIN_MAP,
++      useFactory: () => ({
++        [serverApiOrigin()]: publicAppOrigin(),
++      }),
++    },
++    {
++      provide: SEO_PUBLIC_ORIGIN,
++      useFactory: publicAppOrigin,
++    },
++  ],
++};
+diff --git a/frontend/src/app/app.config.ts b/frontend/src/app/app.config.ts
+index 89331ca..17bb278 100644
+--- a/frontend/src/app/app.config.ts
++++ b/frontend/src/app/app.config.ts
+@@ -1,6 +1,7 @@
+ import { provideHttpClient, withInterceptors } from '@angular/common/http';
+ 
+ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
++import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+ 
+ import {
+   provideRouter,
+@@ -27,6 +28,8 @@ export function createAppConfig(runtimeConfig: AppRuntimeConfig): ApplicationCon
+ 
+       provideHttpClient(withInterceptors([apiInterceptor])),
+ 
++      provideClientHydration(withEventReplay()),
++
+       provideRouter(
+         routes,
+ 
+diff --git a/frontend/src/app/app.routes.server.ts b/frontend/src/app/app.routes.server.ts
+new file mode 100644
+index 0000000..40f8e12
+--- /dev/null
++++ b/frontend/src/app/app.routes.server.ts
+@@ -0,0 +1,24 @@
++import { RenderMode, ServerRoute } from '@angular/ssr';
++
++const SSR_PUBLIC_ROUTES = [
++  '',
++  'truyen/:slug',
++  'truyen/:storySlug/chuong/:chapterNumber',
++  'danh-sach',
++  'the-loai',
++  'xep-hang',
++  'cap-nhat',
++  'gioi-thieu',
++  'dieu-khoan',
++  'quyen-rieng-tu',
++  'cong-dong',
++  'tac-gia',
++  'tac-gia/:authorSlug',
++] as const;
++
++export const serverRoutes: ServerRoute[] = [
++  ...SSR_PUBLIC_ROUTES.map(
++    (path): ServerRoute => ({ path, renderMode: RenderMode.Server }),
++  ),
++  { path: '**', renderMode: RenderMode.Client },
++];
+diff --git a/frontend/src/app/core/auth/auth-session-lifecycle.service.ts b/frontend/src/app/core/auth/auth-session-lifecycle.service.ts
+index 361a040..0b6de8c 100644
+--- a/frontend/src/app/core/auth/auth-session-lifecycle.service.ts
++++ b/frontend/src/app/core/auth/auth-session-lifecycle.service.ts
+@@ -61,7 +61,7 @@ export class AuthSessionLifecycleService implements OnDestroy {
+   readonly changes$ = this.changesSubject.asObservable();
+ 
+   constructor() {
+-    if (typeof BroadcastChannel !== 'undefined') {
++    if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+       this.channel = new BroadcastChannel(AUTH_LIFECYCLE_CHANNEL_NAME);
+ 
+       this.channel.addEventListener(
+diff --git a/frontend/src/app/core/config/app-runtime-config.server.ts b/frontend/src/app/core/config/app-runtime-config.server.ts
+new file mode 100644
+index 0000000..0da42ea
+--- /dev/null
++++ b/frontend/src/app/core/config/app-runtime-config.server.ts
+@@ -0,0 +1,66 @@
++import { environment } from '../../../environments/environment';
++import { AppRuntimeConfig } from './app-config.token';
++
++const DEVELOPMENT_API_ORIGIN = 'http://127.0.0.1:3000';
++const DEVELOPMENT_PUBLIC_ORIGIN = 'http://localhost:4200';
++
++export function loadServerAppRuntimeConfig(): AppRuntimeConfig {
++  return {
++    apiBaseUrl: `${serverApiOrigin()}${environment.apiBaseUrl}`,
++    appName: environment.appName,
++    production: environment.production,
++    csrf: {
++      enabled: false,
++      cookieName: 'csrf_token',
++      headerName: 'X-CSRF-Token',
++    },
++  };
++}
++
++export function serverApiOrigin(): string {
++  return readOrigin('SSR_API_ORIGIN', DEVELOPMENT_API_ORIGIN);
++}
++
++export function publicAppOrigin(): string {
++  return readOrigin('APP_PUBLIC_ORIGIN', DEVELOPMENT_PUBLIC_ORIGIN);
++}
++
++export function assertProductionServerRuntimeConfig(): void {
++  if (!environment.production) {
++    return;
++  }
++
++  readRequiredOrigin('SSR_API_ORIGIN');
++  readRequiredOrigin('APP_PUBLIC_ORIGIN');
++}
++
++function readOrigin(name: string, fallback: string): string {
++  const raw = process.env[name]?.trim();
++  return raw ? parseOrigin(name, raw) : fallback;
++}
++
++function readRequiredOrigin(name: string): string {
++  const raw = process.env[name]?.trim();
++
++  if (!raw) {
++    throw new Error(`${name} is required for the production SSR runtime.`);
++  }
++
++  return parseOrigin(name, raw);
++}
++
++function parseOrigin(name: string, raw: string): string {
++  let parsed: URL;
++
++  try {
++    parsed = new URL(raw);
++  } catch {
++    throw new Error(`${name} must be a valid absolute HTTP(S) URL.`);
++  }
++
++  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
++    throw new Error(`${name} must use http: or https:.`);
++  }
++
++  return parsed.origin;
++}
+diff --git a/frontend/src/app/core/http/api.interceptor.spec.ts b/frontend/src/app/core/http/api.interceptor.spec.ts
+index 66c6230..e007490 100644
+--- a/frontend/src/app/core/http/api.interceptor.spec.ts
++++ b/frontend/src/app/core/http/api.interceptor.spec.ts
+@@ -91,6 +91,21 @@ describe('apiInterceptor', () => {
+     });
+   });
+ 
++  it('giữ anonymous GET credential-free để SSR transfer cache có thể tái sử dụng', () => {
++    tokenStore.clear();
++
++    http.get('/api/v1/public/stories').subscribe();
++
++    const request = httpTesting.expectOne('/api/v1/public/stories');
++
++    expect(request.request.withCredentials).toBe(false);
++    expect(request.request.headers.has('Authorization')).toBe(false);
++
++    request.flush({
++      ok: true,
++    });
++  });
++
+   it('đọc CSRF cookie/header name từ runtime config thay vì hard-code', () => {
+     document.cookie = 'custom_csrf=csrf-value; path=/';
+ 
+diff --git a/frontend/src/app/core/http/api.interceptor.ts b/frontend/src/app/core/http/api.interceptor.ts
+index 10dedb7..86805c5 100644
+--- a/frontend/src/app/core/http/api.interceptor.ts
++++ b/frontend/src/app/core/http/api.interceptor.ts
+@@ -201,9 +201,12 @@ function prepareApiRequest(
+     }
+   }
+ 
++  const method = request.method.toUpperCase();
++  const withCredentials = Boolean(accessToken) || MUTATING_METHODS.has(method);
++
+   return request.clone({
+     headers,
+ 
+-    withCredentials: true,
++    withCredentials,
+   });
+ }
+diff --git a/frontend/src/app/core/seo/seo.service.ts b/frontend/src/app/core/seo/seo.service.ts
+new file mode 100644
+index 0000000..bc1c025
+--- /dev/null
++++ b/frontend/src/app/core/seo/seo.service.ts
+@@ -0,0 +1,100 @@
++import { DOCUMENT } from '@angular/common';
++import { inject, Injectable, InjectionToken } from '@angular/core';
++import { Meta, Title } from '@angular/platform-browser';
++
++export interface SeoMetadata {
++  readonly title: string;
++  readonly description: string;
++  readonly canonicalPath: string;
++  readonly type: string;
++  readonly imageUrl?: string;
++  readonly robots?: string;
++}
++
++const DEFAULT_ROBOTS = 'index,follow,max-image-preview:large';
++const DEFAULT_SOCIAL_IMAGE = '/assets/images/og-preview.webp';
++
++export const SEO_PUBLIC_ORIGIN = new InjectionToken<string | null>('SEO_PUBLIC_ORIGIN', {
++  providedIn: 'root',
++  factory: () => null,
++});
++
++@Injectable({ providedIn: 'root' })
++export class SeoService {
++  private readonly document = inject(DOCUMENT);
++  private readonly meta = inject(Meta);
++  private readonly title = inject(Title);
++  private readonly publicOrigin = inject(SEO_PUBLIC_ORIGIN);
++
++  apply(metadata: SeoMetadata): void {
++    const canonicalUrl = this.absoluteUrl(metadata.canonicalPath);
++    const imageUrl = this.absoluteUrl(metadata.imageUrl ?? DEFAULT_SOCIAL_IMAGE);
++
++    this.title.setTitle(metadata.title);
++    this.updateName('description', metadata.description);
++    this.updateName('robots', metadata.robots ?? DEFAULT_ROBOTS);
++    this.updateProperty('og:site_name', 'TruyenHub');
++    this.updateProperty('og:type', metadata.type);
++    this.updateProperty('og:title', metadata.title);
++    this.updateProperty('og:description', metadata.description);
++    this.updateProperty('og:url', canonicalUrl);
++    this.updateProperty('og:image', imageUrl);
++    this.updateName('twitter:card', 'summary_large_image');
++    this.updateName('twitter:title', metadata.title);
++    this.updateName('twitter:description', metadata.description);
++    this.updateName('twitter:image', imageUrl);
++    this.updateCanonical(canonicalUrl);
++  }
++
++  setStructuredData(key: string, data: Readonly<Record<string, unknown>>): void {
++    const id = this.structuredDataId(key);
++    let script = this.document.getElementById(id) as HTMLScriptElement | null;
++
++    if (!script) {
++      script = this.document.createElement('script');
++      script.id = id;
++      script.type = 'application/ld+json';
++      this.document.head.appendChild(script);
++    }
++
++    script.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
++  }
++
++  removeStructuredData(key: string): void {
++    this.document.getElementById(this.structuredDataId(key))?.remove();
++  }
++
++  absoluteUrl(pathOrUrl: string): string {
++    const baseUrl = this.publicOrigin ?? this.document.baseURI;
++
++    try {
++      return new URL(pathOrUrl, baseUrl).toString();
++    } catch {
++      return pathOrUrl;
++    }
++  }
++
++  private updateName(name: string, content: string): void {
++    this.meta.updateTag({ name, content }, `name='${name}'`);
++  }
++
++  private updateProperty(property: string, content: string): void {
++    this.meta.updateTag({ property, content }, `property='${property}'`);
++  }
++
++  private updateCanonical(url: string): void {
++    let link = this.document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
++
++    if (!link) {
++      link = this.document.createElement('link');
++      link.rel = 'canonical';
++      this.document.head.appendChild(link);
++    }
++
++    link.href = url;
++  }
++
++  private structuredDataId(key: string): string {
++    return `seo-jsonld-${key}`;
++  }
++}
+diff --git a/frontend/src/app/features/public/author-detail/pages/author-detail-page/author-detail-page.component.ts b/frontend/src/app/features/public/author-detail/pages/author-detail-page/author-detail-page.component.ts
+index 90a2391..1a2ee82 100644
+--- a/frontend/src/app/features/public/author-detail/pages/author-detail-page/author-detail-page.component.ts
++++ b/frontend/src/app/features/public/author-detail/pages/author-detail-page/author-detail-page.component.ts
+@@ -1,6 +1,15 @@
+-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
++import {
++  ChangeDetectionStrategy,
++  Component,
++  DestroyRef,
++  effect,
++  inject,
++  OnInit,
++} from '@angular/core';
+ import { ActivatedRoute, RouterLink } from '@angular/router';
+ 
++import { SeoService } from '../../../../../core/seo/seo.service';
++
+ import { provideAuthorDetail } from '../../data-access/author-detail.providers';
+ import { AuthorDetailStore } from '../../data-access/author-detail.store';
+ import { AuthorBiographyComponent } from '../../ui/author-biography/author-biography.component';
+@@ -33,10 +42,47 @@ import { AuthorWorksComponent } from '../../ui/author-works/author-works.compone
+ })
+ export class AuthorDetailPageComponent implements OnInit {
+   private readonly route = inject(ActivatedRoute);
++  private readonly destroyRef = inject(DestroyRef);
+ 
+   protected readonly store = inject(AuthorDetailStore);
++  private readonly seo = inject(SeoService);
++
++  private readonly seoEffect = effect(() => {
++    const view = this.store.view();
++
++    if (!view) return;
++
++    const profile = view.profile;
++    const description = (
++      profile.biography[0] ||
++      profile.headline ||
++      `Tác giả ${profile.name} trên TruyenHub.`
++    )
++      .trim()
++      .slice(0, 160);
++    const canonicalPath = `/tac-gia/${encodeURIComponent(profile.slug)}`;
++
++    this.seo.apply({
++      title: `${profile.name} - Tác giả | TruyenHub`,
++      description,
++      canonicalPath,
++      type: 'profile',
++    });
++
++    this.seo.setStructuredData('author', {
++      '@context': 'https://schema.org',
++      '@type': 'Person',
++      name: profile.name,
++      alternateName: profile.penName,
++      description,
++      url: this.seo.absoluteUrl(canonicalPath),
++      knowsAbout: view.featuredWorks.flatMap((work) => work.genres),
++    });
++  });
+ 
+   ngOnInit(): void {
++    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('author'));
++
+     const slug = this.route.snapshot.paramMap.get('authorSlug') ?? 'nhi-can';
+ 
+     this.store.load(slug);
+diff --git a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+index f6640b1..baefa92 100644
+--- a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
++++ b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+@@ -1,7 +1,15 @@
+-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
++import {
++  ChangeDetectionStrategy,
++  Component,
++  DestroyRef,
++  effect,
++  inject,
++  OnInit,
++} from '@angular/core';
+ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+ 
+ import { AuthStore } from '../../../../../core/auth/auth.store';
++import { SeoService } from '../../../../../core/seo/seo.service';
+ import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
+ import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
+ import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
+@@ -21,8 +29,37 @@ export class ChapterReaderPageComponent implements OnInit {
+   private readonly auth = inject(AuthStore);
+   private readonly destroyRef = inject(DestroyRef);
+   protected readonly store = inject(ChapterReaderStore);
++  private readonly seo = inject(SeoService);
++
++  private readonly seoEffect = effect(() => {
++    const view = this.store.view();
++
++    if (!view) return;
++
++    const chapterLabel = view.chapter.title.trim() || `Chương ${view.chapter.number}`;
++    const canonicalPath =
++      `/truyen/${encodeURIComponent(view.story.slug)}/chuong/${view.chapter.number}`;
++
++    this.seo.apply({
++      title: `${view.story.title} - ${chapterLabel} | TruyenHub`,
++      description: `Đọc ${chapterLabel} của ${view.story.title} online trên TruyenHub.`,
++      canonicalPath,
++      type: 'article',
++    });
++
++    this.seo.setStructuredData('chapter', {
++      '@context': 'https://schema.org',
++      '@type': 'Chapter',
++      name: chapterLabel,
++      isPartOf: { '@type': 'Book', name: view.story.title },
++      datePublished: view.chapter.publishedAt,
++      url: this.seo.absoluteUrl(canonicalPath),
++    });
++  });
+ 
+   ngOnInit(): void {
++    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('chapter'));
++
+     const subscription = this.route.paramMap.subscribe((params) => {
+       const storySlug = params.get('storySlug') ?? '';
+       const chapterNumber = params.get('chapterNumber') ?? '';
+diff --git a/frontend/src/app/features/public/home/data-access/home.store.ts b/frontend/src/app/features/public/home/data-access/home.store.ts
+index 24410c2..963d4b1 100644
+--- a/frontend/src/app/features/public/home/data-access/home.store.ts
++++ b/frontend/src/app/features/public/home/data-access/home.store.ts
+@@ -54,6 +54,10 @@ export class HomeStore {
+   }
+ 
+   startHeroAutoplay(intervalMs = 7000): void {
++    if (typeof window === 'undefined') {
++      return;
++    }
++
+     const timer = window.setInterval(() => this.nextHero(), intervalMs);
+     this.destroyRef.onDestroy(() => window.clearInterval(timer));
+   }
+diff --git a/frontend/src/app/features/public/story-ranking/ui/top-ranking-card/top-ranking-card.component.html b/frontend/src/app/features/public/story-ranking/ui/top-ranking-card/top-ranking-card.component.html
+index f078396..227f572 100644
+--- a/frontend/src/app/features/public/story-ranking/ui/top-ranking-card/top-ranking-card.component.html
++++ b/frontend/src/app/features/public/story-ranking/ui/top-ranking-card/top-ranking-card.component.html
+@@ -11,7 +11,7 @@
+     <app-rank-movement [delta]="story().rankChange" />
+   </div>
+ 
+-  <img [src]="story().coverUrl" [alt]="story().title" />
++  <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" decoding="async" />
+ 
+   <div class="story-content">
+     <h3>{{ story().title }}</h3>
+diff --git a/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html b/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
+index 956cc41..8c45ebe 100644
+--- a/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
++++ b/frontend/src/app/features/public/story-updates/ui/featured-update-card/featured-update-card.component.html
+@@ -1,5 +1,5 @@
+ <a class="featured-card" [routerLink]="['/truyen', story().slug]">
+-  <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" />
++  <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" decoding="async" />
+ 
+   <span class="overlay"></span>
+ 
+diff --git a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
+index a4e732d..5b44e6b 100644
+--- a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
++++ b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.html
+@@ -12,7 +12,13 @@
+         [style.background-image]="'url(' + item.coverUrl + ')'"
+         aria-hidden="true"
+       ></div>
+-      <img class="cover" [src]="item.coverUrl" [alt]="item.title" />
++      <img
++        class="cover"
++        [src]="item.coverUrl"
++        [alt]="item.title"
++        fetchpriority="high"
++        decoding="async"
++      />
+       <div class="story-copy">
+         <span class="status">{{
+           item.status === 'COMPLETED' ? 'ĐÃ HOÀN THÀNH' : 'ĐANG CẬP NHẬT'
+diff --git a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
+index 71a718c..25e38dd 100644
+--- a/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
++++ b/frontend/src/app/features/public/story/pages/story-detail/story-detail.component.ts
+@@ -1,7 +1,15 @@
+-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
++import {
++  ChangeDetectionStrategy,
++  Component,
++  DestroyRef,
++  effect,
++  inject,
++  OnInit,
++} from '@angular/core';
+ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+ import { AuthStore } from '../../../../../core/auth/auth.store';
+ import { LibraryStore } from '../../../../../core/storage/library.store';
++import { SeoService } from '../../../../../core/seo/seo.service';
+ import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
+ import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
+@@ -32,8 +40,41 @@ export class StoryDetailComponent implements OnInit {
+   private readonly auth = inject(AuthStore);
+   protected readonly store = inject(StoryDetailStore);
+   protected readonly library = inject(LibraryStore);
++  private readonly seo = inject(SeoService);
++
++  private readonly seoEffect = effect(() => {
++    const story = this.store.story();
++
++    if (!story) return;
++
++    const description =
++      story.description.trim().slice(0, 160) ||
++      `Đọc ${story.title} của ${story.author} trên TruyenHub.`;
++    const canonicalPath = `/truyen/${encodeURIComponent(story.slug)}`;
++
++    this.seo.apply({
++      title: `${story.title} - ${story.author} | TruyenHub`,
++      description,
++      canonicalPath,
++      imageUrl: story.coverUrl,
++      type: 'book',
++    });
++
++    this.seo.setStructuredData('story', {
++      '@context': 'https://schema.org',
++      '@type': 'Book',
++      name: story.title,
++      description,
++      image: this.seo.absoluteUrl(story.coverUrl),
++      genre: story.categories,
++      author: { '@type': 'Person', name: story.author },
++      url: this.seo.absoluteUrl(canonicalPath),
++    });
++  });
+ 
+   ngOnInit(): void {
++    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('story'));
++
+     const sub = this.route.paramMap.subscribe((params) => {
+       const slug = params.get('slug') ?? '';
+       if (slug) this.store.loadStory(slug);
+diff --git a/frontend/src/app/features/public/story/ui/story-related/story-related.component.html b/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
+index fa19d69..2d9440c 100644
+--- a/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
++++ b/frontend/src/app/features/public/story/ui/story-related/story-related.component.html
+@@ -7,7 +7,7 @@
+   <div class="related-list">
+     @for (rel of relatedStories(); track rel.slug) {
+       <a class="related-item" [routerLink]="['/truyen', rel.slug]">
+-        <img [src]="rel.coverUrl" [alt]="rel.title" />
++        <img [src]="rel.coverUrl" [alt]="rel.title" loading="lazy" decoding="async" />
+         <div>
+           <strong>{{ rel.title }}</strong>
+           <small>{{ rel.latestChapter !== null ? 'Ch. ' + rel.latestChapter : 'Chưa có chương' }}</small>
+diff --git a/frontend/src/app/layout/app-shell/app-shell.component.ts b/frontend/src/app/layout/app-shell/app-shell.component.ts
+index 2c96621..6e10618 100644
+--- a/frontend/src/app/layout/app-shell/app-shell.component.ts
++++ b/frontend/src/app/layout/app-shell/app-shell.component.ts
+@@ -1,6 +1,9 @@
+-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+-import { RouterOutlet } from '@angular/router';
++import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
++import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
++import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
++import { filter } from 'rxjs';
+ import { AuthStore } from '../../core/auth/auth.store';
++import { SeoService } from '../../core/seo/seo.service';
+ import { AppFooterComponent } from '../footer/app-footer.component';
+ import { AppHeaderComponent } from '../header/app-header.component';
+ 
+@@ -13,8 +16,58 @@ import { AppHeaderComponent } from '../header/app-header.component';
+ })
+ export class AppShellComponent implements OnInit {
+   private readonly auth = inject(AuthStore);
++  private readonly router = inject(Router);
++  private readonly route = inject(ActivatedRoute);
++  private readonly seo = inject(SeoService);
++  private readonly destroyRef = inject(DestroyRef);
+ 
+   ngOnInit(): void {
+     this.auth.initialize();
++    this.syncRouteSeo();
++
++    this.router.events
++      .pipe(
++        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
++        takeUntilDestroyed(this.destroyRef),
++      )
++      .subscribe(() => this.syncRouteSeo());
++  }
++
++  private syncRouteSeo(): void {
++    let activeRoute = this.route;
++
++    while (activeRoute.firstChild) {
++      activeRoute = activeRoute.firstChild;
++    }
++
++    const snapshot = activeRoute.snapshot;
++    const description = snapshot.data['seoDescription'];
++
++    const title =
++      typeof snapshot.title === 'string'
++        ? snapshot.title
++        : 'TruyenHub - Đọc truyện online';
++    const canonicalPath = this.router.url.split(/[?#]/, 1)[0] || '/';
++
++    if (typeof description !== 'string' || !description.trim()) {
++      this.seo.apply({
++        title,
++        description: 'TruyenHub - nền tảng đọc và quản lý truyện online.',
++        canonicalPath,
++        type: 'website',
++        robots: 'noindex,nofollow',
++      });
++      return;
++    }
++
++    const hasQueryParameters = snapshot.queryParamMap.keys.length > 0;
++
++    this.seo.apply({
++      title,
++      description,
++      canonicalPath,
++      type: 'website',
++      robots: hasQueryParameters ? 'noindex,follow' : undefined,
++    });
+   }
+ }
+diff --git a/frontend/src/app/layout/header/app-header.component.html b/frontend/src/app/layout/header/app-header.component.html
+index bee7955..6389f44 100644
+--- a/frontend/src/app/layout/header/app-header.component.html
++++ b/frontend/src/app/layout/header/app-header.component.html
+@@ -306,7 +306,7 @@
+ 
+           @for (story of suggestions(); track story.id) {
+             <a [routerLink]="['/truyen', story.slug]" (click)="selectSuggestion()">
+-              <img [src]="story.coverUrl" [alt]="story.title" />
++              <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" decoding="async" />
+ 
+               <div>
+                 <strong>
+diff --git a/frontend/src/app/routes/public.routes.ts b/frontend/src/app/routes/public.routes.ts
+index 78037c9..601680b 100644
+--- a/frontend/src/app/routes/public.routes.ts
++++ b/frontend/src/app/routes/public.routes.ts
+@@ -13,11 +13,19 @@ export const PUBLIC_ROUTES: Routes = [
+     path: '',
+     pathMatch: 'full',
+     title: 'TruyenHub - Đọc truyện online',
++    data: {
++      seoDescription:
++        'Đọc truyện online, khám phá truyện mới cập nhật, bảng xếp hạng và thư viện truyện nổi bật tại TruyenHub.',
++    },
+     component: HomePageComponent,
+   },
+   {
+     path: 'truyen/:slug',
+     title: 'Chi tiết truyện - TruyenHub',
++    data: {
++      seoDescription:
++        'Thông tin truyện, tác giả, chương mới nhất, đánh giá và nội dung liên quan trên TruyenHub.',
++    },
+     providers: provideStoryDetail(),
+     loadComponent: () =>
+       import('../features/public/story/pages/story-detail/story-detail.component').then(
+@@ -27,6 +35,9 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'truyen/:storySlug/chuong/:chapterNumber',
+     title: 'Đọc chương - TruyenHub',
++    data: {
++      seoDescription: 'Đọc chương truyện online với chế độ đọc tối ưu trên TruyenHub.',
++    },
+     providers: provideChapterReader(),
+     loadComponent: () =>
+       import('../features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component').then(
+@@ -36,6 +47,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'danh-sach',
+     title: 'Danh sách truyện - TruyenHub',
++    data: {
++      seoDescription:
++        'Duyệt danh sách truyện theo từ khóa, thể loại, trạng thái và mức độ phổ biến trên TruyenHub.',
++    },
+     providers: provideStoryCatalog(),
+     loadComponent: () =>
+       import('../features/public/story-catalog/pages/story-catalog-page/story-catalog-page.component').then(
+@@ -45,6 +60,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'the-loai',
+     title: 'Thể loại truyện - TruyenHub',
++    data: {
++      seoDescription:
++        'Khám phá truyện theo thể loại và tìm các chủ đề đọc phù hợp trên TruyenHub.',
++    },
+     providers: provideGenreDiscovery(),
+     loadComponent: () =>
+       import('../features/public/genre-discovery/pages/genre-discovery-page/genre-discovery-page.component').then(
+@@ -54,6 +73,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'xep-hang',
+     title: 'Xếp hạng truyện - TruyenHub',
++    data: {
++      seoDescription:
++        'Bảng xếp hạng truyện nổi bật theo lượt đọc, đánh giá và xu hướng trên TruyenHub.',
++    },
+     providers: provideStoryRanking(),
+     loadComponent: () =>
+       import('../features/public/story-ranking/pages/story-ranking-page/story-ranking-page.component').then(
+@@ -63,6 +86,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'cap-nhat',
+     title: 'Cập nhật truyện mới - TruyenHub',
++    data: {
++      seoDescription:
++        'Theo dõi các truyện và chương mới được cập nhật gần đây trên TruyenHub.',
++    },
+     providers: provideStoryUpdates(),
+     loadComponent: () =>
+       import('../features/public/story-updates/pages/story-updates-page/story-updates-page.component').then(
+@@ -72,6 +99,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'gioi-thieu',
+     title: 'Giới thiệu - TruyenHub',
++    data: {
++      seoDescription:
++        'Tìm hiểu về TruyenHub và trải nghiệm đọc, quản lý truyện trên nền tảng.',
++    },
+     loadComponent: () =>
+       import('../features/public/static/pages/about-page/about-page.component').then(
+         (module) => module.AboutPageComponent,
+@@ -80,6 +111,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'dieu-khoan',
+     title: 'Điều khoản sử dụng - TruyenHub',
++    data: {
++      seoDescription:
++        'Điều khoản sử dụng dịch vụ và các nguyên tắc áp dụng khi sử dụng TruyenHub.',
++    },
+     loadComponent: () =>
+       import('../features/public/static/pages/terms-page/terms-page.component').then(
+         (module) => module.TermsPageComponent,
+@@ -88,6 +123,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'quyen-rieng-tu',
+     title: 'Chính sách quyền riêng tư - TruyenHub',
++    data: {
++      seoDescription:
++        'Chính sách quyền riêng tư và cách TruyenHub xử lý dữ liệu người dùng.',
++    },
+     loadComponent: () =>
+       import('../features/public/static/pages/privacy-page/privacy-page.component').then(
+         (module) => module.PrivacyPageComponent,
+@@ -96,6 +135,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'cong-dong',
+     title: 'Liên hệ hỗ trợ - TruyenHub',
++    data: {
++      seoDescription:
++        'Thông tin hỗ trợ và các kênh liên hệ dành cho người dùng TruyenHub.',
++    },
+     loadComponent: () =>
+       import('../features/public/static/pages/support-page/support-page.component').then(
+         (module) => module.SupportPageComponent,
+@@ -104,6 +147,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'tac-gia',
+     title: 'Tác giả nổi bật - TruyenHub',
++    data: {
++      seoDescription:
++        'Khám phá tác giả và các tác phẩm nổi bật đang được xuất bản trên TruyenHub.',
++    },
+     loadComponent: () =>
+       import('../features/public/author-directory/pages/author-directory-page/author-directory-page.component').then(
+         (module) => module.AuthorDirectoryPageComponent,
+@@ -112,6 +159,10 @@ export const PUBLIC_ROUTES: Routes = [
+   {
+     path: 'tac-gia/:authorSlug',
+     title: 'Chi tiết tác giả - TruyenHub',
++    data: {
++      seoDescription:
++        'Thông tin tác giả, tiểu sử và danh sách tác phẩm được xuất bản trên TruyenHub.',
++    },
+     loadComponent: () =>
+       import('../features/public/author-detail/pages/author-detail-page/author-detail-page.component').then(
+         (module) => module.AuthorDetailPageComponent,
+diff --git a/frontend/src/index.html b/frontend/src/index.html
+index 5bdbbcf..f9391f7 100644
+--- a/frontend/src/index.html
++++ b/frontend/src/index.html
+@@ -8,14 +8,18 @@
+     <meta name="theme-color" content="#070b16" />
+     <meta
+       name="description"
+-      content="TruyenHub - giao diện đọc và quản lý truyện hiện đại xây dựng bằng Angular."
++      content="Đọc truyện online, khám phá truyện mới cập nhật, bảng xếp hạng và tác giả nổi bật tại TruyenHub."
+     />
++    <meta name="robots" content="noindex,nofollow" />
++    <meta property="og:site_name" content="TruyenHub" />
++    <meta property="og:type" content="website" />
+     <meta property="og:title" content="TruyenHub - Đọc truyện online" />
+     <meta
+       property="og:description"
+       content="Khám phá truyện mới, xếp hạng và quản lý thư viện cá nhân."
+     />
+     <meta property="og:image" content="/assets/images/og-preview.webp" />
++    <meta name="twitter:card" content="summary_large_image" />
+     <link
+       rel="icon"
+       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23070b16%22/><path d=%22M20 22c18 0 28 7 30 12 2-5 12-12 30-12v56c-18 0-27 5-30 10-3-5-12-10-30-10z%22 fill=%22%23965cff%22/></svg>"
+diff --git a/frontend/src/main.server.ts b/frontend/src/main.server.ts
+new file mode 100644
+index 0000000..937d8f7
+--- /dev/null
++++ b/frontend/src/main.server.ts
+@@ -0,0 +1,15 @@
++import { mergeApplicationConfig } from '@angular/core';
++import { BootstrapContext, bootstrapApplication } from '@angular/platform-browser';
++import { App } from './app/app';
++import { createAppConfig } from './app/app.config';
++import { serverConfig } from './app/app.config.server';
++import { loadServerAppRuntimeConfig } from './app/core/config/app-runtime-config.server';
++
++const bootstrap = (context: BootstrapContext) =>
++  bootstrapApplication(
++    App,
++    mergeApplicationConfig(createAppConfig(loadServerAppRuntimeConfig()), serverConfig),
++    context,
++  );
++
++export default bootstrap;
+diff --git a/frontend/src/server.ts b/frontend/src/server.ts
+new file mode 100644
+index 0000000..eb16dce
+--- /dev/null
++++ b/frontend/src/server.ts
+@@ -0,0 +1,121 @@
++import { createServer, IncomingMessage, ServerResponse } from 'node:http';
++import { readFile } from 'node:fs/promises';
++import { dirname, resolve } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import {
++  AngularNodeAppEngine,
++  createNodeRequestHandler,
++  isMainModule,
++  writeResponseToNodeResponse,
++} from '@angular/ssr/node';
++import { assertProductionServerRuntimeConfig } from './app/core/config/app-runtime-config.server';
++
++const serverDistFolder = dirname(fileURLToPath(import.meta.url));
++const browserDistFolder = resolve(serverDistFolder, '../browser');
++const angularApp = new AngularNodeAppEngine({
++  trustProxyHeaders: ['x-forwarded-host', 'x-forwarded-proto'],
++});
++const runningAsMain = isMainModule(import.meta.url);
++let browserIndexPromise: Promise<string> | null = null;
++
++async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
++  const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
++
++  if (runningAsMain && url.pathname === '/health') {
++    await writeHealthResponse(response);
++    return;
++  }
++
++  if (runningAsMain && url.pathname === '/index.html') {
++    const html = await loadBrowserIndex();
++    response.writeHead(200, {
++      'cache-control': 'no-store',
++      'content-type': 'text/html; charset=utf-8',
++    });
++    response.end(html);
++    return;
++  }
++
++  const angularResponse = await angularApp.handle(request);
++
++  if (angularResponse) {
++    await writeResponseToNodeResponse(angularResponse, response);
++    return;
++  }
++
++  response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
++  response.end('Not found');
++}
++
++async function writeHealthResponse(response: ServerResponse): Promise<void> {
++  try {
++    await loadBrowserIndex();
++    response.writeHead(200, {
++      'cache-control': 'no-store',
++      'content-type': 'text/plain; charset=utf-8',
++    });
++    response.end('ok');
++  } catch {
++    response.writeHead(503, {
++      'cache-control': 'no-store',
++      'content-type': 'text/plain; charset=utf-8',
++    });
++    response.end('frontend artifact unavailable');
++  }
++}
++
++function loadBrowserIndex(): Promise<string> {
++  browserIndexPromise ??= readBrowserIndex();
++  return browserIndexPromise;
++}
++
++async function readBrowserIndex(): Promise<string> {
++  const candidates = ['index.csr.html', 'index.html'];
++  let lastError: unknown;
++
++  for (const candidate of candidates) {
++    try {
++      return await readFile(resolve(browserDistFolder, candidate), 'utf8');
++    } catch (error) {
++      lastError = error;
++    }
++  }
++
++  throw lastError ?? new Error('Angular browser index was not found.');
++}
++
++export const reqHandler = createNodeRequestHandler(async (request, response) => {
++  await handleRequest(request, response);
++});
++
++export default reqHandler;
++
++if (runningAsMain) {
++  assertProductionServerRuntimeConfig();
++  const port = readPort(process.env['PORT']);
++  const server = createServer((request, response) => {
++    void handleRequest(request, response).catch((error: unknown) => {
++      console.error('Unhandled frontend SSR request error.', error);
++
++      if (!response.headersSent) {
++        response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
++      }
++
++      response.end('Internal server error');
++    });
++  });
++
++  server.listen(port, '0.0.0.0', () => {
++    console.log(`TruyenHub SSR server listening on http://0.0.0.0:${port}`);
++  });
++}
++
++function readPort(rawPort: string | undefined): number {
++  const port = Number(rawPort ?? '8080');
++
++  if (!Number.isInteger(port) || port < 1 || port > 65535) {
++    throw new Error('PORT must be an integer between 1 and 65535.');
++  }
++
++  return port;
++}
+diff --git a/frontend/tsconfig.app.json b/frontend/tsconfig.app.json
+index 1eb42f4..423fed0 100644
+--- a/frontend/tsconfig.app.json
++++ b/frontend/tsconfig.app.json
+@@ -3,7 +3,7 @@
+ {
+   "extends": "./tsconfig.json",
+   "compilerOptions": {
+-    "types": []
++    "types": ["node"]
+   },
+   "include": ["src/**/*.ts"],
+   "exclude": ["src/**/*.spec.ts"]

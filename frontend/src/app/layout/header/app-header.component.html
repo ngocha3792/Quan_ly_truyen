@@ -306,7 +306,7 @@
 
           @for (story of suggestions(); track story.id) {
             <a [routerLink]="['/truyen', story.slug]" (click)="selectSuggestion()">
-              <img [src]="story.coverUrl" [alt]="story.title" />
+              <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" decoding="async" />
 
               <div>
                 <strong>

@@ -1,5 +1,5 @@
 <a class="featured-card" [routerLink]="['/truyen', story().slug]">
-  <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" />
+  <img [src]="story().bannerUrl || story().coverUrl" [alt]="story().title" decoding="async" />
 
   <span class="overlay"></span>
 

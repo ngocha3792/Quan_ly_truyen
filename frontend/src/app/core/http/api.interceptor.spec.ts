@@ -91,6 +91,21 @@ describe('apiInterceptor', () => {
     });
   });
 
+  it('giữ anonymous GET credential-free để SSR transfer cache có thể tái sử dụng', () => {
+    tokenStore.clear();
+
+    http.get('/api/v1/public/stories').subscribe();
+
+    const request = httpTesting.expectOne('/api/v1/public/stories');
+
+    expect(request.request.withCredentials).toBe(false);
+    expect(request.request.headers.has('Authorization')).toBe(false);
+
+    request.flush({
+      ok: true,
+    });
+  });
+
   it('đọc CSRF cookie/header name từ runtime config thay vì hard-code', () => {
     document.cookie = 'custom_csrf=csrf-value; path=/';
 

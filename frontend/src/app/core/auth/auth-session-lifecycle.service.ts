@@ -61,7 +61,7 @@ export class AuthSessionLifecycleService implements OnDestroy {
   readonly changes$ = this.changesSubject.asObservable();
 
   constructor() {
-    if (typeof BroadcastChannel !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
       this.channel = new BroadcastChannel(AUTH_LIFECYCLE_CHANNEL_NAME);
 
       this.channel.addEventListener(

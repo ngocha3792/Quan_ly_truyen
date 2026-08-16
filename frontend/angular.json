@@ -52,7 +52,12 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.scss"],
+            "server": "src/main.server.ts",
+            "ssr": {
+              "entry": "src/server.ts"
+            },
+            "outputMode": "server"
           },
           "configurations": {
             "production": {
@@ -68,7 +73,13 @@
                   "maximumError": "20kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,

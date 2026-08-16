@@ -56,8 +56,17 @@ jobs:
       - name: Production build
         run: npm run build:ci
 
-      - name: Verify browser artifact
-        run: test -s dist/frontend/browser/index.html
+      - name: Verify browser and server artifacts
+        run: |
+          set -euo pipefail
+
+          test -s dist/frontend/server/server.mjs
+
+          if test -s dist/frontend/browser/index.html; then
+            exit 0
+          fi
+
+          test -s dist/frontend/browser/index.csr.html
 
       - name: Upload browser artifact
         uses: actions/upload-artifact@v6
@@ -399,6 +408,9 @@ jobs:
               --cap-drop ALL \
               --security-opt no-new-privileges \
               --tmpfs /tmp:size=32m,mode=1777 \
+              --env SSR_API_ORIGIN=http://127.0.0.1:3000 \
+              --env APP_PUBLIC_ORIGIN=http://127.0.0.1:8080 \
+              --env NG_ALLOWED_HOSTS=127.0.0.1,localhost \
               --publish 8080:8080 \
               quan-ly-truyen-frontend:ci
           )"
@@ -437,7 +449,16 @@ jobs:
               && grep \
                 --quiet \
                 '<app-root' \
-                /tmp/quan-ly-truyen-frontend-index.html
+                /tmp/quan-ly-truyen-frontend-index.html \
+              && curl \
+                --fail \
+                --silent \
+                --output /tmp/quan-ly-truyen-frontend-ssr.html \
+                http://127.0.0.1:8080/gioi-thieu \
+              && grep \
+                --quiet \
+                '<title>Giới thiệu - TruyenHub</title>' \
+                /tmp/quan-ly-truyen-frontend-ssr.html
             then
               frontend_ready=true
               break
@@ -452,7 +473,7 @@ jobs:
           done
 
           if test "${frontend_ready}" != 'true'; then
-            echo 'Frontend container failed health/static artifact smoke checks.'
+            echo 'Frontend container failed health/static/SSR smoke checks.'
             exit 1
           fi
 
