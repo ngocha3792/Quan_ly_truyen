@@ -17,9 +17,9 @@ export class StoryUpdatesHttpRepository implements StoryUpdatesRepository {
   private readonly api = inject(PublicStoriesApiClient);
 
   getOverview(query: StoryUpdatesQuery): Observable<StoryUpdatesOverview> {
-    return this.api.list({ sort: 'latest', pageSize: 100 }).pipe(
-      map((page) => buildOverview(page.items, query)),
-    );
+    return this.api
+      .list({ sort: 'latest', pageSize: 100 })
+      .pipe(map((page) => buildOverview(page.items, query)));
   }
 }
 

@@ -14,10 +14,7 @@ import {
 } from '../../../domain';
 import type { StoryResultDto } from '../../dto';
 import { StoryResultMapper } from '../../mappers';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { UpdateAuthorStoryCommand } from './update-author-story.command';
 
 @Injectable()

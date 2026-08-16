@@ -3,7 +3,10 @@ import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/cor
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { AuthorChaptersStore } from '../../data-access/author-chapters.store';
-import { AuthorManagedChapterSummary, AuthorManagedStory } from '../../domain/author-story-management.models';
+import {
+  AuthorManagedChapterSummary,
+  AuthorManagedStory,
+} from '../../domain/author-story-management.models';
 
 @Component({
   selector: 'app-author-story-chapters-page',

@@ -4,7 +4,9 @@
       <a routerLink="/author-studio/truyen">← Truyện của tôi</a>
       <h1>{{ isCreate() ? 'Tạo truyện mới' : 'Chỉnh sửa truyện' }}</h1>
       @if (store.story(); as story) {
-        <p>Trạng thái: <strong>{{ statusLabel(story) }}</strong> · phiên bản {{ story.version }}</p>
+        <p>
+          Trạng thái: <strong>{{ statusLabel(story) }}</strong> · phiên bản {{ story.version }}
+        </p>
       } @else {
         <p>Tạo bản nháp trước, sau đó bạn có thể tải ảnh bìa và viết chương.</p>
       }
@@ -17,15 +19,20 @@
     }
   </header>
 
-  @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
-  @if (fileError()) { <p class="notice notice--error">{{ fileError() }}</p> }
+  @if (store.error()) {
+    <p class="notice notice--error">{{ store.error() }}</p>
+  }
+  @if (fileError()) {
+    <p class="notice notice--error">{{ fileError() }}</p>
+  }
 
   @if (store.loading()) {
     <p class="notice">Đang tải dữ liệu truyện...</p>
   } @else {
     @if (!isEditable()) {
       <p class="notice">
-        Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa.
+        Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi
+        chỉnh sửa.
       </p>
     }
 
@@ -38,7 +45,11 @@
 
         <label>
           <span>Mô tả</span>
-          <textarea rows="9" formControlName="synopsis" placeholder="Giới thiệu nội dung truyện..."></textarea>
+          <textarea
+            rows="9"
+            formControlName="synopsis"
+            placeholder="Giới thiệu nội dung truyện..."
+          ></textarea>
         </label>
 
         <div class="field-group">
@@ -51,7 +62,9 @@
                 [class.chip--selected]="isCategorySelected(category.id)"
                 [disabled]="!isEditable()"
                 (click)="toggleCategory(category.id)"
-              >{{ category.name }}</button>
+              >
+                {{ category.name }}
+              </button>
             }
           </div>
         </div>
@@ -66,7 +79,9 @@
                 [class.chip--selected]="isTagSelected(tag.id)"
                 [disabled]="!isEditable()"
                 (click)="toggleTag(tag.id)"
-              >{{ tag.name }}</button>
+              >
+                {{ tag.name }}
+              </button>
             }
           </div>
         </div>
@@ -85,7 +100,11 @@
         @if (isEditable()) {
           <label class="file-action">
             Chọn ảnh JPG / PNG / WebP
-            <input type="file" accept="image/jpeg,image/png,image/webp" (change)="selectCover($event)" />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="selectCover($event)"
+            />
           </label>
           @if (displayedCoverUrl()) {
             <button type="button" class="text-danger" (click)="removeCover()">Gỡ ảnh bìa</button>
@@ -100,7 +119,12 @@
           <hr />
           <label>
             <span>Ghi chú cho người duyệt</span>
-            <textarea rows="3" maxlength="2000" [value]="authorNote()" (input)="updateAuthorNote($event)"></textarea>
+            <textarea
+              rows="3"
+              maxlength="2000"
+              [value]="authorNote()"
+              (input)="updateAuthorNote($event)"
+            ></textarea>
           </label>
           @if (hasUnsavedChanges()) {
             <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
@@ -110,7 +134,9 @@
             class="review-action"
             [disabled]="store.workflowBusy() || hasUnsavedChanges()"
             (click)="submitForReview()"
-          >{{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}</button>
+          >
+            {{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}
+          </button>
         }
 
         @if (canCancel()) {
@@ -119,7 +145,9 @@
             class="review-action review-action--cancel"
             [disabled]="store.workflowBusy()"
             (click)="cancelReview()"
-          >Hủy yêu cầu duyệt</button>
+          >
+            Hủy yêu cầu duyệt
+          </button>
         }
       </aside>
     </form>

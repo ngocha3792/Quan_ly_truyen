@@ -8,17 +8,24 @@
       </div>
 
       @if (canCreate(story)) {
-        <a class="primary-action" [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']">
+        <a
+          class="primary-action"
+          [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
+        >
           + Viết chương mới
         </a>
       }
     </header>
 
     @if (story.status === 'PENDING_REVIEW') {
-      <p class="notice">Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương.</p>
+      <p class="notice">
+        Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương.
+      </p>
     }
 
-    @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
+    @if (store.error()) {
+      <p class="notice notice--error">{{ store.error() }}</p>
+    }
 
     @if (store.chapters().length === 0) {
       <section class="empty-state">
@@ -48,7 +55,9 @@
                   class="danger"
                   [disabled]="store.actionChapterId() === chapter.id"
                   (click)="deleteChapter(story, chapter)"
-                >Xóa</button>
+                >
+                  Xóa
+                </button>
               }
               @if (canPublish(story, chapter)) {
                 <button
@@ -56,7 +65,9 @@
                   class="publish"
                   [disabled]="store.actionChapterId() === chapter.id"
                   (click)="publishChapter(story, chapter)"
-                >Xuất bản</button>
+                >
+                  Xuất bản
+                </button>
               }
             </div>
           </article>

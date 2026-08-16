@@ -124,7 +124,8 @@ function aggregateGenres(stories: readonly PublicStoryApiItem[]): GenreAggregate
   }
 
   return [...aggregates.values()].sort(
-    (left, right) => right.storyCount - left.storyCount || left.name.localeCompare(right.name, 'vi'),
+    (left, right) =>
+      right.storyCount - left.storyCount || left.name.localeCompare(right.name, 'vi'),
   );
 }
 

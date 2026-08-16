@@ -110,7 +110,9 @@
                     <small><app-icon name="star" [size]="14" />{{ story.rating }}</small
                     ><small
                       ><app-icon name="eye" [size]="14" />{{ story.views | compactNumber }}</small
-                    ><b>{{ story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương' }}</b>
+                    ><b>{{
+                      story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương'
+                    }}</b>
                   </div>
                 </div>
               </a>

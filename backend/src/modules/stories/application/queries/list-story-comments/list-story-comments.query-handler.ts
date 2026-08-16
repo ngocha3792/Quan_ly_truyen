@@ -14,7 +14,9 @@ export class ListStoryCommentsQueryHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(query: ListStoryCommentsQuery): Promise<StoryCommentPageResultDto> {
+  async execute(
+    query: ListStoryCommentsQuery,
+  ): Promise<StoryCommentPageResultDto> {
     const result = await this.persistence.listComments({
       storySlug: query.storySlug.trim().toLowerCase(),
       page: query.page,

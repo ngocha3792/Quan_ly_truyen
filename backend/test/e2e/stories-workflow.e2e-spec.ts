@@ -110,12 +110,12 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .expect(201);
 
     expect(replayStoryResponse.headers['x-idempotent-replayed']).toBe('true');
-    expect(
-      unwrap<{ id: string }>(replayStoryResponse.body as unknown).id,
-    ).toBe(storyId);
-    await expect(
-      prisma.story.count({ where: { id: storyId } }),
-    ).resolves.toBe(1);
+    expect(unwrap<{ id: string }>(replayStoryResponse.body as unknown).id).toBe(
+      storyId,
+    );
+    await expect(prisma.story.count({ where: { id: storyId } })).resolves.toBe(
+      1,
+    );
 
     coverMediaId = await createReadyCover(storyId);
 
@@ -148,15 +148,11 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .send(chapterBody)
       .expect(201);
 
-    expect(replayChapterResponse.headers['x-idempotent-replayed']).toBe(
-      'true',
-    );
+    expect(replayChapterResponse.headers['x-idempotent-replayed']).toBe('true');
     expect(
       unwrap<{ id: string }>(replayChapterResponse.body as unknown).id,
     ).toBe(chapter.id);
-    await expect(
-      prisma.chapter.count({ where: { storyId } }),
-    ).resolves.toBe(1);
+    await expect(prisma.chapter.count({ where: { storyId } })).resolves.toBe(1);
 
     const intruderResponse = await request(httpServer())
       .patch(`/api/v1/author/stories/${storyId}`)
@@ -237,7 +233,8 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .send({ isFavorite: true })
       .expect(200);
     expect(
-      unwrap<{ isFavorite: boolean }>(libraryResponse.body as unknown).isFavorite,
+      unwrap<{ isFavorite: boolean }>(libraryResponse.body as unknown)
+        .isFavorite,
     ).toBe(true);
 
     await request(httpServer())
@@ -254,7 +251,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       unwrap<Array<{ story: { id: string } }>>(historyResponse.body as unknown),
     ).toEqual([
       expect.objectContaining({
-        story: expect.objectContaining({ id: storyId }),
+        story: expect.objectContaining({ id: storyId }) as unknown,
       }),
     ]);
 
@@ -267,7 +264,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .get(`/api/v1/stories/${storyId}/rating/me`)
       .set('Authorization', `Bearer ${readerToken}`)
       .expect(200);
-    expect(unwrap<{ score: number }>(ratingResponse.body as unknown).score).toBe(5);
+    expect(
+      unwrap<{ score: number }>(ratingResponse.body as unknown).score,
+    ).toBe(5);
 
     const commentKey = `reader-comment-${runId}`;
     const commentResponse = await request(httpServer())
@@ -332,8 +331,9 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .get(`/api/v1/stories/${createdStory.slug}/comments`)
       .expect(200);
     expect(
-      unwrap<{ items: Array<{ id: string }> }>(commentsAfterDelete.body as unknown)
-        .items,
+      unwrap<{ items: Array<{ id: string }> }>(
+        commentsAfterDelete.body as unknown,
+      ).items,
     ).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: comment.id })]),
     );
@@ -356,7 +356,11 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       unwrap<{ items: Array<{ id: string }> }>(
         chapterCommentsResponse.body as unknown,
       ).items,
-    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: chapterComment.id })]));
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: chapterComment.id }),
+      ]),
+    );
   });
 
   it('create endpoints reject requests without an idempotency key', async () => {

@@ -24,9 +24,9 @@ describe('CreateAuthorChapterCommandHandler', () => {
   });
 
   it('yêu cầu authenticated author UUID hợp lệ', async () => {
-    await expect(handler.execute(createCommand(undefined))).rejects.toBeInstanceOf(
-      AuthenticationRequiredException,
-    );
+    await expect(
+      handler.execute(createCommand(undefined)),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
 
     expect(persistence.createDraft).not.toHaveBeenCalled();
   });
@@ -97,9 +97,9 @@ describe('CreateAuthorChapterCommandHandler', () => {
       status: 'story_not_found',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      StoryNotFoundException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(StoryNotFoundException);
   });
 });
 

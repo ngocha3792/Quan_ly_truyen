@@ -349,9 +349,7 @@ export class OAuthFlowService {
     const keys = await this.getGoogleJwks();
     const jwk = keys.find((item) => item.kid === header.kid);
     if (!jwk)
-      throw new OAuthFlowInvalidException(
-        'Không tìm thấy khóa ký Google',
-      );
+      throw new OAuthFlowInvalidException('Không tìm thấy khóa ký Google');
     const key = createPublicKey({ key: jwk, format: 'jwk' });
     const payload = verify(token, key, {
       algorithms: ['RS256'],

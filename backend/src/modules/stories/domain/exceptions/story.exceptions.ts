@@ -85,7 +85,8 @@ export class StoryDraftOnlyMutationException extends ResourceConflictException {
     super({
       code: 'STORY_DRAFT_ONLY_MUTATION',
       resource: 'truyện',
-      message: 'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể chỉnh sửa hoặc xóa',
+      message:
+        'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể chỉnh sửa hoặc xóa',
     });
   }
 }
@@ -95,7 +96,8 @@ export class StoryNotSubmittableException extends ResourceConflictException {
     super({
       code: 'STORY_NOT_SUBMITTABLE',
       resource: 'truyện',
-      message: 'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể gửi duyệt',
+      message:
+        'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể gửi duyệt',
     });
   }
 }

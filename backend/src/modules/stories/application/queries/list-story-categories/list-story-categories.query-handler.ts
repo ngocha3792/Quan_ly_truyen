@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { StoryCategoryOptionDto } from '../../dto';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { ListStoryCategoriesQuery } from './list-story-categories.query';
 
 @Injectable()

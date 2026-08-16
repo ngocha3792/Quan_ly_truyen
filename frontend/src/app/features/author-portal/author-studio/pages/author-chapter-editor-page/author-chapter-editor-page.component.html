@@ -3,11 +3,15 @@
     <div>
       <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']">← Danh sách chương</a>
       <h1>{{ isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' }}</h1>
-      @if (store.story(); as story) { <p>{{ story.title }} · {{ story.status }}</p> }
+      @if (store.story(); as story) {
+        <p>{{ story.title }} · {{ story.status }}</p>
+      }
     </div>
   </header>
 
-  @if (store.error()) { <p class="notice notice--error">{{ store.error() }}</p> }
+  @if (store.error()) {
+    <p class="notice notice--error">{{ store.error() }}</p>
+  }
   @if (store.loading()) {
     <p class="notice">Đang tải chương...</p>
   } @else {

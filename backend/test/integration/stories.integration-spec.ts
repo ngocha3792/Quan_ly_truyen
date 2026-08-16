@@ -329,11 +329,13 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         updatedAt: new Date(),
       }),
     ]);
-    expect(
-      libraryResults.every((result) => result.status === 'updated'),
-    ).toBe(true);
+    expect(libraryResults.every((result) => result.status === 'updated')).toBe(
+      true,
+    );
     await expect(
-      prisma.libraryEntry.count({ where: { userId: reader.id, storyId: story.id } }),
+      prisma.libraryEntry.count({
+        where: { userId: reader.id, storyId: story.id },
+      }),
     ).resolves.toBe(1);
 
     const olderReadAt = new Date(Date.now() - 1_000);
@@ -354,7 +356,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         readAt: newerReadAt,
       }),
     ]);
-    expect(progressResults.every((result) => result.status === 'saved')).toBe(true);
+    expect(progressResults.every((result) => result.status === 'saved')).toBe(
+      true,
+    );
     const savedProgress = await prisma.readingProgress.findUniqueOrThrow({
       where: { userId_storyId: { userId: reader.id, storyId: story.id } },
       select: {
@@ -376,10 +380,11 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       position: 10,
       readAt: olderReadAt,
     });
-    const progressAfterStaleSameChapter = await prisma.readingProgress.findUniqueOrThrow({
-      where: { userId_storyId: { userId: reader.id, storyId: story.id } },
-      select: { currentChapterId: true, position: true, lastReadAt: true },
-    });
+    const progressAfterStaleSameChapter =
+      await prisma.readingProgress.findUniqueOrThrow({
+        where: { userId_storyId: { userId: reader.id, storyId: story.id } },
+        select: { currentChapterId: true, position: true, lastReadAt: true },
+      });
     expect(progressAfterStaleSameChapter.currentChapterId).toBe(nextChapter.id);
     expect(progressAfterStaleSameChapter.position).toBe(200);
     expect(progressAfterStaleSameChapter.lastReadAt.getTime()).toBe(
@@ -387,7 +392,11 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     );
     const progressLibrary = await prisma.libraryEntry.findUniqueOrThrow({
       where: { userId_storyId: { userId: reader.id, storyId: story.id } },
-      select: { lastReadChapterId: true, progressPercent: true, completedAt: true },
+      select: {
+        lastReadChapterId: true,
+        progressPercent: true,
+        completedAt: true,
+      },
     });
     expect(progressLibrary.lastReadChapterId).toBe(nextChapter.id);
     expect(Number(progressLibrary.progressPercent)).toBe(100);

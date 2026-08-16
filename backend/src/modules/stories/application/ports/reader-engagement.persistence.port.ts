@@ -11,11 +11,7 @@ export const READER_ENGAGEMENT_PERSISTENCE_PORT = Symbol(
 );
 
 export type LibraryEntryStatus =
-  | 'PLAN_TO_READ'
-  | 'READING'
-  | 'COMPLETED'
-  | 'ON_HOLD'
-  | 'DROPPED';
+  'PLAN_TO_READ' | 'READING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED';
 
 export interface UpsertLibraryEntryInput {
   readonly userId: string;
@@ -84,8 +80,7 @@ export interface DeleteStoryCommentInput {
 }
 
 export type DeleteStoryCommentResult =
-  | { readonly status: 'deleted' }
-  | { readonly status: 'not_found' };
+  { readonly status: 'deleted' } | { readonly status: 'not_found' };
 
 export interface ListCommentsInput {
   readonly storySlug: string;
@@ -101,20 +96,35 @@ export type ListCommentsResult =
 
 export interface ReaderEngagementPersistencePort {
   listLibrary(userId: string): Promise<readonly LibraryEntryResultDto[]>;
-  upsertLibraryEntry(input: UpsertLibraryEntryInput): Promise<UpsertLibraryEntryResult>;
+  upsertLibraryEntry(
+    input: UpsertLibraryEntryInput,
+  ): Promise<UpsertLibraryEntryResult>;
   removeLibraryEntry(userId: string, storyId: string): Promise<void>;
 
-  listReadingHistory(userId: string): Promise<readonly ReadingHistoryEntryResultDto[]>;
-  saveReadingProgress(input: SaveReadingProgressInput): Promise<SaveReadingProgressResult>;
+  listReadingHistory(
+    userId: string,
+  ): Promise<readonly ReadingHistoryEntryResultDto[]>;
+  saveReadingProgress(
+    input: SaveReadingProgressInput,
+  ): Promise<SaveReadingProgressResult>;
   removeReadingHistoryEntry(userId: string, storyId: string): Promise<void>;
   clearReadingHistory(userId: string): Promise<void>;
 
-  findMyRating(userId: string, storyId: string): Promise<StoryRatingResultDto | null>;
+  findMyRating(
+    userId: string,
+    storyId: string,
+  ): Promise<StoryRatingResultDto | null>;
   upsertRating(input: UpsertStoryRatingInput): Promise<UpsertStoryRatingResult>;
   deleteRating(userId: string, storyId: string): Promise<void>;
 
   listComments(input: ListCommentsInput): Promise<ListCommentsResult>;
-  createComment(input: CreateStoryCommentInput): Promise<CreateStoryCommentResult>;
-  updateComment(input: UpdateStoryCommentInput): Promise<UpdateStoryCommentResult>;
-  deleteComment(input: DeleteStoryCommentInput): Promise<DeleteStoryCommentResult>;
+  createComment(
+    input: CreateStoryCommentInput,
+  ): Promise<CreateStoryCommentResult>;
+  updateComment(
+    input: UpdateStoryCommentInput,
+  ): Promise<UpdateStoryCommentResult>;
+  deleteComment(
+    input: DeleteStoryCommentInput,
+  ): Promise<DeleteStoryCommentResult>;
 }

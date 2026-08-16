@@ -69,7 +69,6 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       categoryIds: [CATEGORY_ID],
       tagIds: undefined,
       coverMediaId: COVER_ID,
-      publishedAt: null,
       updatedAt: expect.any(Date) as unknown,
       audit: {
         ipAddress: '127.0.0.1',
@@ -112,7 +111,6 @@ describe('UpdateAuthorStoryCommandHandler', () => {
         categoryIds: [],
         tagIds: [],
         coverMediaId: null,
-        publishedAt: null,
       }),
     );
   });
@@ -122,9 +120,9 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       status: 'not_draft',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      StoryDraftOnlyMutationException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(StoryDraftOnlyMutationException);
   });
 
   it('map category không hợp lệ thành domain exception', async () => {
@@ -133,9 +131,9 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       invalidIds: [CATEGORY_ID],
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      InvalidStoryCategoriesException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(InvalidStoryCategoriesException);
   });
 
   it('map tag không hợp lệ thành domain exception', async () => {
@@ -144,9 +142,9 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       invalidIds: [TAG_ID],
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      InvalidStoryTagsException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(InvalidStoryTagsException);
   });
 
   it('map cover không hợp lệ thành domain exception', async () => {
@@ -154,9 +152,9 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       status: 'invalid_cover',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      InvalidStoryCoverException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(InvalidStoryCoverException);
   });
 
   it('ẩn story không tồn tại hoặc không thuộc author bằng not found', async () => {
@@ -164,9 +162,9 @@ describe('UpdateAuthorStoryCommandHandler', () => {
       status: 'not_found',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      StoryNotFoundException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(StoryNotFoundException);
   });
 });
 

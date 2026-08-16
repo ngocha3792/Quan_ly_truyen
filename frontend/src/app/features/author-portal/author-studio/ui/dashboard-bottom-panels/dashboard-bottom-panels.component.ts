@@ -30,15 +30,12 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
           <span>Quản lý bìa truyện</span>
         </a>
-
-
       </div>
     </section>
 
     <section class="top-stories dashboard-card">
       <header>
         <h2>Top truyện nổi bật của tôi</h2>
-
       </header>
 
       <div class="top-story-list">

@@ -9,7 +9,7 @@ const REVIEWER_ID = '11111111-1111-4111-8111-111111111111';
 const SUBMISSION_ID = '22222222-2222-4222-8222-222222222222';
 
 describe('ApproveStorySubmissionCommandHandler', () => {
-  let persistence: { approveSubmission: jest.Mock; };
+  let persistence: { approveSubmission: jest.Mock };
   let handler: ApproveStorySubmissionCommandHandler;
 
   beforeEach(() => {
@@ -20,7 +20,10 @@ describe('ApproveStorySubmissionCommandHandler', () => {
   it('approve submission qua persistence với review audit', async () => {
     persistence.approveSubmission.mockResolvedValue({
       status: 'approved',
-      publication: { story: { status: 'PUBLISHED' }, submission: { status: 'APPROVED' } },
+      publication: {
+        story: { status: 'PUBLISHED' },
+        submission: { status: 'APPROVED' },
+      },
     });
 
     const result = await handler.execute(

@@ -20,6 +20,7 @@ function readNpmVersion() {
       execFileSync(npmExecutable, ['--version'], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
+        shell: process.platform === 'win32',
       }),
     );
   } catch {

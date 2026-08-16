@@ -150,11 +150,27 @@
 
       <span>
         <strong>
-          {{ syncState === 'syncing' ? 'Đang đồng bộ...' : syncState === 'success' ? 'Đã đồng bộ' : syncState === 'error' ? 'Đồng bộ thất bại' : 'Đồng bộ thiết bị' }}
+          {{
+            syncState === 'syncing'
+              ? 'Đang đồng bộ...'
+              : syncState === 'success'
+                ? 'Đã đồng bộ'
+                : syncState === 'error'
+                  ? 'Đồng bộ thất bại'
+                  : 'Đồng bộ thiết bị'
+          }}
         </strong>
 
         <small>
-          {{ syncState === 'syncing' ? 'Đang tải dữ liệu mới nhất' : syncState === 'success' ? 'Dữ liệu đã được cập nhật' : syncState === 'error' ? 'Thử lại để đồng bộ' : 'Đồng bộ tiến độ đọc' }}
+          {{
+            syncState === 'syncing'
+              ? 'Đang tải dữ liệu mới nhất'
+              : syncState === 'success'
+                ? 'Dữ liệu đã được cập nhật'
+                : syncState === 'error'
+                  ? 'Thử lại để đồng bộ'
+                  : 'Đồng bộ tiến độ đọc'
+          }}
         </small>
       </span>
     </button>

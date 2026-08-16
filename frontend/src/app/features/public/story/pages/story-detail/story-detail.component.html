@@ -47,7 +47,9 @@
               [disabled]="store.ratingPending()"
               (click)="rate(score)"
               [attr.aria-label]="'Đánh giá ' + score + ' sao'"
-            >★</button>
+            >
+              ★
+            </button>
           }
           @if (store.ratingScore()) {
             <button class="clear-rating" type="button" (click)="clearRating()">Xóa</button>
@@ -55,10 +57,7 @@
         </div>
         <div class="buttons">
           @if (item.latestChapter; as latestChapter) {
-            <a
-              class="read"
-              [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]"
-            >
+            <a class="read" [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]">
               <app-icon name="play" [size]="16" />Đọc Chương {{ latestChapter.number }}
             </a>
           }
@@ -89,7 +88,10 @@
           <div class="chapter-list">
             @if (item.latestChapter; as latestChapter) {
               <a [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]">
-                <span>Chương {{ latestChapter.number }}: {{ latestChapter.title || 'Chương mới' }}</span>
+                <span
+                  >Chương {{ latestChapter.number }}:
+                  {{ latestChapter.title || 'Chương mới' }}</span
+                >
                 <small>{{ latestChapter.updatedAt | relativeTime }}</small>
                 <app-icon name="chevron-right" [size]="16" />
               </a>

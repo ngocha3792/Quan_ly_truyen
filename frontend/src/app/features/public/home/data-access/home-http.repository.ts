@@ -1,13 +1,9 @@
 import { inject, Injectable } from '@angular/core';
 import { forkJoin, map, Observable, of } from 'rxjs';
 
-import {
-  PublicStoriesApiClient,
-} from '../../../../core/http/public-stories-api.client';
+import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
 import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
-import {
-  STORY_COVER_PLACEHOLDER,
-} from '../../../../shared/models/story.model';
+import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
 import { HomePageData, Story } from '../domain/home.models';
 import { HomeRepository } from './home.repository';
 

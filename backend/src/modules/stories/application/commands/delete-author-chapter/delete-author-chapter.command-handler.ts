@@ -19,7 +19,7 @@ export class DeleteAuthorChapterCommandHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
-  ) { }
+  ) {}
 
   async execute(command: DeleteAuthorChapterCommand): Promise<void> {
     const userId = requireAuthorUserId(command.userId);

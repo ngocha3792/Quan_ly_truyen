@@ -16,9 +16,9 @@ describe('ListAuthorStoriesQueryHandler', () => {
   });
 
   it('yêu cầu authenticated author UUID hợp lệ', async () => {
-    await expect(handler.execute(new ListAuthorStoriesQuery(undefined))).rejects.toBeInstanceOf(
-      AuthenticationRequiredException,
-    );
+    await expect(
+      handler.execute(new ListAuthorStoriesQuery(undefined)),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
     expect(persistence.listOwned).not.toHaveBeenCalled();
   });
 

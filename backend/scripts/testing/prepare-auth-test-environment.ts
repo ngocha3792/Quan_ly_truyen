@@ -101,7 +101,7 @@ void runScript({
         break;
       } catch (error) {
         lastRedisError = error;
-        redis.disconnect(false);
+        redis?.disconnect(false);
         redis = undefined;
 
         logger.warn('Redis test instance is not ready', {

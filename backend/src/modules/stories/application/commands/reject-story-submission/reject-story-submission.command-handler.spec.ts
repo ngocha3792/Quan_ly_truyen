@@ -13,7 +13,9 @@ describe('RejectStorySubmissionCommandHandler', () => {
         publication: { story: {}, submission: {} },
       }),
     };
-    const handler = new RejectStorySubmissionCommandHandler(persistence as never);
+    const handler = new RejectStorySubmissionCommandHandler(
+      persistence as never,
+    );
     await handler.execute(
       new RejectStorySubmissionCommand(
         REVIEWER_ID,
@@ -37,7 +39,9 @@ describe('RejectStorySubmissionCommandHandler', () => {
     const persistence = {
       rejectSubmission: jest.fn().mockResolvedValue({ status: 'not_pending' }),
     };
-    const handler = new RejectStorySubmissionCommandHandler(persistence as never);
+    const handler = new RejectStorySubmissionCommandHandler(
+      persistence as never,
+    );
     await expect(
       handler.execute(
         new RejectStorySubmissionCommand(

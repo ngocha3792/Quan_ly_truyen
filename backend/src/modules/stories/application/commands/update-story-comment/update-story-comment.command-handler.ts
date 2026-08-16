@@ -19,7 +19,9 @@ export class UpdateStoryCommentCommandHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(command: UpdateStoryCommentCommand): Promise<StoryCommentResultDto> {
+  async execute(
+    command: UpdateStoryCommentCommand,
+  ): Promise<StoryCommentResultDto> {
     const body = ReaderEngagementPolicy.normalizeCommentBody(command.body);
     if (!ReaderEngagementPolicy.isValidCommentBody(body)) {
       throw new InvalidCommentBodyException();

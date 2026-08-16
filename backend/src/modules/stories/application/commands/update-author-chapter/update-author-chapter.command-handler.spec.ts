@@ -27,9 +27,9 @@ describe('UpdateAuthorChapterCommandHandler', () => {
   });
 
   it('yêu cầu authenticated author UUID hợp lệ', async () => {
-    await expect(handler.execute(createCommand(undefined))).rejects.toBeInstanceOf(
-      AuthenticationRequiredException,
-    );
+    await expect(
+      handler.execute(createCommand(undefined)),
+    ).rejects.toBeInstanceOf(AuthenticationRequiredException);
 
     expect(persistence.updateDraft).not.toHaveBeenCalled();
   });
@@ -107,9 +107,9 @@ describe('UpdateAuthorChapterCommandHandler', () => {
       status: 'not_draft',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      ChapterDraftOnlyMutationException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(ChapterDraftOnlyMutationException);
   });
 
   it('ẩn chapter không tồn tại, story sai hoặc không thuộc author bằng not found', async () => {
@@ -117,9 +117,9 @@ describe('UpdateAuthorChapterCommandHandler', () => {
       status: 'not_found',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      ChapterNotFoundException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(ChapterNotFoundException);
   });
 });
 

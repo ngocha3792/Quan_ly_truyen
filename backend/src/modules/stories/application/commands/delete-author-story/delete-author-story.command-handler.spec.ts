@@ -66,9 +66,9 @@ describe('DeleteAuthorStoryCommandHandler', () => {
       status: 'not_draft',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      StoryDraftOnlyMutationException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(StoryDraftOnlyMutationException);
   });
 
   it('ẩn story không tồn tại hoặc không thuộc author bằng not found', async () => {
@@ -76,9 +76,9 @@ describe('DeleteAuthorStoryCommandHandler', () => {
       status: 'not_found',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      StoryNotFoundException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(StoryNotFoundException);
   });
 });
 

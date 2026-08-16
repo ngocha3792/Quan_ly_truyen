@@ -1,9 +1,4 @@
-export type LibraryApiStatus =
-  | 'PLAN_TO_READ'
-  | 'READING'
-  | 'COMPLETED'
-  | 'ON_HOLD'
-  | 'DROPPED';
+export type LibraryApiStatus = 'PLAN_TO_READ' | 'READING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED';
 
 export interface ReaderStoryApiSummary {
   readonly id: string;

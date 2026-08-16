@@ -14,7 +14,11 @@ export class ListReadingHistoryQueryHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  execute(query: ListReadingHistoryQuery): Promise<readonly ReadingHistoryEntryResultDto[]> {
-    return this.persistence.listReadingHistory(requireReaderUserId(query.userId));
+  execute(
+    query: ListReadingHistoryQuery,
+  ): Promise<readonly ReadingHistoryEntryResultDto[]> {
+    return this.persistence.listReadingHistory(
+      requireReaderUserId(query.userId),
+    );
   }
 }

@@ -6,7 +6,10 @@ import { isUuidV4 } from '@/common/utils';
 import { StoryNotFoundException } from '../../../domain';
 import type { ChapterSummaryResultDto } from '../../dto';
 import { ChapterSummaryResultMapper } from '../../mappers';
-import { CHAPTER_PERSISTENCE_PORT, type ChapterPersistencePort } from '../../ports';
+import {
+  CHAPTER_PERSISTENCE_PORT,
+  type ChapterPersistencePort,
+} from '../../ports';
 import { ListAuthorChaptersQuery } from './list-author-chapters.query';
 
 @Injectable()
@@ -20,7 +23,10 @@ export class ListAuthorChaptersQueryHandler {
     query: ListAuthorChaptersQuery,
   ): Promise<readonly ChapterSummaryResultDto[]> {
     const userId = requireAuthorUserId(query.userId);
-    const result = await this.persistence.listOwnedByStory(userId, query.storyId);
+    const result = await this.persistence.listOwnedByStory(
+      userId,
+      query.storyId,
+    );
 
     if (result === null) {
       throw new StoryNotFoundException(query.storyId);
@@ -34,7 +40,8 @@ function requireAuthorUserId(userId: string | undefined): string {
   if (!userId || !isUuidV4(userId)) {
     throw new AuthenticationRequiredException({
       code: 'CHAPTER_AUTHENTICATION_REQUIRED',
-      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
+      message:
+        'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
     });
   }
 

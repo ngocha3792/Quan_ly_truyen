@@ -1,7 +1,4 @@
-import type {
-  PublicStoryListSort,
-  PublicStoryListStatus,
-} from '../../ports';
+import type { PublicStoryListSort, PublicStoryListStatus } from '../../ports';
 
 export class ListPublicStoriesQuery {
   constructor(

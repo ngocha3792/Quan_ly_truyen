@@ -26,11 +26,15 @@ function guardsOf(
     | 'saveMyDraft'
     | 'submitMyApplication',
 ): readonly unknown[] {
-  const guards = Reflect.getMetadata(
-    GUARDS_METADATA,
+  const descriptor = Object.getOwnPropertyDescriptor(
     AuthorApplicationsController.prototype,
     methodName,
-  ) as readonly unknown[] | undefined;
+  );
+  const target = descriptor?.value as object | undefined;
+  const guards = target
+    ? (Reflect.getMetadata(GUARDS_METADATA, target) as
+        readonly unknown[] | undefined)
+    : undefined;
 
   return guards ?? [];
 }

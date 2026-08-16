@@ -3,15 +3,18 @@ import { map, Observable } from 'rxjs';
 
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type { LibraryEntryApiItem } from '../../../../core/http/reader-engagement-api.model';
-import {
-  LibraryCoverTone,
-  LibraryStory,
-  MyLibraryView,
-} from '../domain/my-library.models';
+import { LibraryCoverTone, LibraryStory, MyLibraryView } from '../domain/my-library.models';
 import { MyLibraryRepository } from '../domain/my-library.repository';
 
 const TONES: readonly LibraryCoverTone[] = [
-  'blue', 'violet', 'orange', 'gold', 'cyan', 'silver', 'crimson', 'indigo',
+  'blue',
+  'violet',
+  'orange',
+  'gold',
+  'cyan',
+  'silver',
+  'crimson',
+  'indigo',
 ];
 
 @Injectable()
@@ -89,7 +92,12 @@ function relativeLabel(minutes: number): string {
 }
 
 function initials(title: string): string {
-  return title.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase() ?? '').join('');
+  return title
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 function hash(value: string): number {

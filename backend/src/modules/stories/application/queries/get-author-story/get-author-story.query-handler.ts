@@ -32,7 +32,8 @@ function requireAuthorUserId(userId: string | undefined): string {
   if (!userId || !isUuidV4(userId)) {
     throw new AuthenticationRequiredException({
       code: 'STORY_AUTHENTICATION_REQUIRED',
-      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
+      message:
+        'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
     });
   }
 

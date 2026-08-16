@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { PrismaService } from '@/infrastructure/database';
 
@@ -283,12 +287,15 @@ export class AuthorsService {
       const firstRank = first.featuredRank ?? Number.MAX_SAFE_INTEGER;
       const secondRank = second.featuredRank ?? Number.MAX_SAFE_INTEGER;
 
-      return firstRank - secondRank || second.followerCount - first.followerCount;
+      return (
+        firstRank - secondRank || second.followerCount - first.followerCount
+      );
     });
 
     return {
       authors: sortedAuthors.map((author, index) => {
-        const genre = author.stories[0]?.categories[0]?.category.name ?? 'Đa thể loại';
+        const genre =
+          author.stories[0]?.categories[0]?.category.name ?? 'Đa thể loại';
         const reads = this.safeNumber(author.totalReadCount);
 
         return {
@@ -501,161 +508,171 @@ export class AuthorsService {
     };
   }
 
-  async getDashboard(userId: string | undefined): Promise<AuthorStudioDashboardResponse> {
+  async getDashboard(
+    userId: string | undefined,
+  ): Promise<AuthorStudioDashboardResponse> {
     const authenticatedUserId = this.requireUserId(userId);
     const now = new Date();
     const start90Days = this.startOfDay(this.addDays(now, -89));
     const start30Days = this.startOfDay(this.addDays(now, -29));
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [profile, stories, draftChapters, scheduledChapters, comments, dailyStats, unreadNotifications, publishedThisMonth] =
-      await Promise.all([
-        this.prisma.authorProfile.findUnique({
-          where: { userId: authenticatedUserId },
-          select: {
-            penName: true,
-            verificationStatus: true,
-            followerCount: true,
-            user: {
-              select: {
-                displayName: true,
-                avatarMedia: {
-                  select: {
-                    secureUrl: true,
-                    publicUrl: true,
-                  },
+    const [
+      profile,
+      stories,
+      draftChapters,
+      scheduledChapters,
+      comments,
+      dailyStats,
+      unreadNotifications,
+      publishedThisMonth,
+    ] = await Promise.all([
+      this.prisma.authorProfile.findUnique({
+        where: { userId: authenticatedUserId },
+        select: {
+          penName: true,
+          verificationStatus: true,
+          followerCount: true,
+          user: {
+            select: {
+              displayName: true,
+              avatarMedia: {
+                select: {
+                  secureUrl: true,
+                  publicUrl: true,
                 },
               },
             },
           },
-        }),
-        this.prisma.story.findMany({
-          where: {
-            authorId: authenticatedUserId,
-            deletedAt: null,
+        },
+      }),
+      this.prisma.story.findMany({
+        where: {
+          authorId: authenticatedUserId,
+          deletedAt: null,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 100,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          status: true,
+          viewCount: true,
+          chapterCount: true,
+          updatedAt: true,
+          coverMedia: {
+            select: {
+              secureUrl: true,
+              publicUrl: true,
+            },
           },
-          orderBy: { updatedAt: 'desc' },
-          take: 100,
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            status: true,
-            viewCount: true,
-            chapterCount: true,
-            updatedAt: true,
-            coverMedia: {
-              select: {
-                secureUrl: true,
-                publicUrl: true,
+          categories: {
+            orderBy: { isPrimary: 'desc' },
+            select: {
+              category: {
+                select: { name: true },
               },
             },
-            categories: {
-              orderBy: { isPrimary: 'desc' },
-              select: {
-                category: {
-                  select: { name: true },
+          },
+        },
+      }),
+      this.prisma.chapter.findMany({
+        where: {
+          status: 'DRAFT',
+          deletedAt: null,
+          story: { is: { authorId: authenticatedUserId, deletedAt: null } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 4,
+        select: {
+          id: true,
+          title: true,
+          wordCount: true,
+          updatedAt: true,
+          story: { select: { title: true } },
+        },
+      }),
+      this.prisma.chapter.findMany({
+        where: {
+          scheduledAt: { not: null },
+          deletedAt: null,
+          story: { is: { authorId: authenticatedUserId, deletedAt: null } },
+        },
+        orderBy: { scheduledAt: 'asc' },
+        take: 4,
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          status: true,
+          scheduledAt: true,
+          story: {
+            select: {
+              title: true,
+              coverMedia: {
+                select: {
+                  secureUrl: true,
+                  publicUrl: true,
                 },
               },
             },
           },
-        }),
-        this.prisma.chapter.findMany({
-          where: {
-            status: 'DRAFT',
-            deletedAt: null,
-            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
-          },
-          orderBy: { updatedAt: 'desc' },
-          take: 4,
-          select: {
-            id: true,
-            title: true,
-            wordCount: true,
-            updatedAt: true,
-            story: { select: { title: true } },
-          },
-        }),
-        this.prisma.chapter.findMany({
-          where: {
-            scheduledAt: { not: null },
-            deletedAt: null,
-            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
-          },
-          orderBy: { scheduledAt: 'asc' },
-          take: 4,
-          select: {
-            id: true,
-            number: true,
-            title: true,
-            status: true,
-            scheduledAt: true,
-            story: {
-              select: {
-                title: true,
-                coverMedia: {
-                  select: {
-                    secureUrl: true,
-                    publicUrl: true,
-                  },
+        },
+      }),
+      this.prisma.comment.findMany({
+        where: {
+          moderationStatus: 'VISIBLE',
+          deletedAt: null,
+          story: { is: { authorId: authenticatedUserId, deletedAt: null } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+          user: {
+            select: {
+              displayName: true,
+              avatarMedia: {
+                select: {
+                  secureUrl: true,
+                  publicUrl: true,
                 },
               },
             },
           },
-        }),
-        this.prisma.comment.findMany({
-          where: {
-            moderationStatus: 'VISIBLE',
-            deletedAt: null,
-            story: { is: { authorId: authenticatedUserId, deletedAt: null } },
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 3,
-          select: {
-            id: true,
-            body: true,
-            createdAt: true,
-            user: {
-              select: {
-                displayName: true,
-                avatarMedia: {
-                  select: {
-                    secureUrl: true,
-                    publicUrl: true,
-                  },
-                },
-              },
-            },
-            story: { select: { title: true } },
-          },
-        }),
-        this.prisma.storyDailyStat.findMany({
-          where: {
-            date: { gte: start90Days },
-            story: { is: { authorId: authenticatedUserId } },
-          },
-          orderBy: { date: 'asc' },
-          select: {
-            date: true,
-            viewCount: true,
-          },
-        }),
-        this.prisma.notification.count({
-          where: {
-            userId: authenticatedUserId,
-            readAt: null,
-            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-          },
-        }),
-        this.prisma.chapter.count({
-          where: {
-            status: 'PUBLISHED',
-            publishedAt: { gte: monthStart },
-            deletedAt: null,
-            story: { is: { authorId: authenticatedUserId } },
-          },
-        }),
-      ]);
+          story: { select: { title: true } },
+        },
+      }),
+      this.prisma.storyDailyStat.findMany({
+        where: {
+          date: { gte: start90Days },
+          story: { is: { authorId: authenticatedUserId } },
+        },
+        orderBy: { date: 'asc' },
+        select: {
+          date: true,
+          viewCount: true,
+        },
+      }),
+      this.prisma.notification.count({
+        where: {
+          userId: authenticatedUserId,
+          readAt: null,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+      }),
+      this.prisma.chapter.count({
+        where: {
+          status: 'PUBLISHED',
+          publishedAt: { gte: monthStart },
+          deletedAt: null,
+          story: { is: { authorId: authenticatedUserId } },
+        },
+      }),
+    ]);
 
     if (!profile) {
       throw new NotFoundException('Author profile not found');
@@ -792,7 +809,9 @@ export class AuthorsService {
         unread: false,
       })),
       topStories: [...stories]
-        .sort((first, second) => this.compareBigInt(second.viewCount, first.viewCount))
+        .sort((first, second) =>
+          this.compareBigInt(second.viewCount, first.viewCount),
+        )
         .slice(0, 3)
         .map((story, index) => ({
           id: story.id,
@@ -818,7 +837,9 @@ export class AuthorsService {
           id: 'goal-views',
           label: 'Lượt xem',
           currentValue: this.formatCompact(views30Days),
-          targetValue: this.formatCompact(this.nextGoalTarget(views30Days, 10_000)),
+          targetValue: this.formatCompact(
+            this.nextGoalTarget(views30Days, 10_000),
+          ),
           progress: this.progress(
             views30Days,
             this.nextGoalTarget(views30Days, 10_000),
@@ -860,7 +881,10 @@ export class AuthorsService {
       readonly ratingCount: number;
     }[],
   ): number {
-    const totalRatings = stories.reduce((sum, story) => sum + story.ratingCount, 0);
+    const totalRatings = stories.reduce(
+      (sum, story) => sum + story.ratingCount,
+      0,
+    );
 
     if (totalRatings === 0) return 0;
 
@@ -917,12 +941,10 @@ export class AuthorsService {
   }
 
   private mediaUrl(
-    media:
-      | {
-          readonly secureUrl: string | null;
-          readonly publicUrl: string | null;
-        }
-      | null,
+    media: {
+      readonly secureUrl: string | null;
+      readonly publicUrl: string | null;
+    } | null,
   ): string | null {
     return media?.secureUrl ?? media?.publicUrl ?? null;
   }
@@ -933,7 +955,9 @@ export class AuthorsService {
     }
 
     const normalized = value.replace(/\s+/g, ' ').trim();
-    return normalized.length <= 180 ? normalized : `${normalized.slice(0, 177)}...`;
+    return normalized.length <= 180
+      ? normalized
+      : `${normalized.slice(0, 177)}...`;
   }
 
   private biography(value: string | null): readonly string[] {
@@ -955,7 +979,9 @@ export class AuthorsService {
     if (words.length === 0) return '?';
     if (words.length === 1) return words[0].slice(0, 2).toLocaleUpperCase('vi');
 
-    return `${words[0][0] ?? ''}${words[words.length - 1][0] ?? ''}`.toLocaleUpperCase('vi');
+    return `${words[0][0] ?? ''}${words[words.length - 1][0] ?? ''}`.toLocaleUpperCase(
+      'vi',
+    );
   }
 
   private formatCompact(value: bigint | number): string {

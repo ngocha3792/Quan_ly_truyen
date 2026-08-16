@@ -24,18 +24,10 @@ export abstract class AuthorStoryManagementRepository {
   abstract deleteStory(storyId: string): Observable<void>;
   abstract listCategories(): Observable<readonly AuthorStoryMetadataCategory[]>;
   abstract listTags(): Observable<readonly AuthorStoryMetadataTag[]>;
-  abstract submitStory(
-    storyId: string,
-    authorNote: string,
-  ): Observable<AuthorStoryPublication>;
+  abstract submitStory(storyId: string, authorNote: string): Observable<AuthorStoryPublication>;
   abstract cancelSubmission(storyId: string): Observable<AuthorStoryPublication>;
-  abstract listChapters(
-    storyId: string,
-  ): Observable<readonly AuthorManagedChapterSummary[]>;
-  abstract getChapter(
-    storyId: string,
-    chapterId: string,
-  ): Observable<AuthorManagedChapter>;
+  abstract listChapters(storyId: string): Observable<readonly AuthorManagedChapterSummary[]>;
+  abstract getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
   abstract createChapter(
     storyId: string,
     input: AuthorChapterDraftInput,
@@ -46,10 +38,7 @@ export abstract class AuthorStoryManagementRepository {
     input: AuthorChapterDraftInput,
   ): Observable<AuthorManagedChapter>;
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
-  abstract publishChapter(
-    storyId: string,
-    chapterId: string,
-  ): Observable<AuthorManagedChapter>;
+  abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
   abstract uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia>;
   abstract getMedia(mediaId: string): Observable<AuthorStoryMedia>;
 }

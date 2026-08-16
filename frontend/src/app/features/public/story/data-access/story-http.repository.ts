@@ -29,24 +29,26 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
   }
 
   getComments(storySlug: string): Observable<readonly StoryComment[]> {
-    return this.engagement.listStoryComments(storySlug).pipe(
-      map((page) => page.items.map((comment) => this.toComment(comment))),
-    );
+    return this.engagement
+      .listStoryComments(storySlug)
+      .pipe(map((page) => page.items.map((comment) => this.toComment(comment))));
   }
 
   getRelatedStories(_categories: readonly string[]): Observable<readonly RelatedStoryItem[]> {
     const genre = this.categorySlugs[0];
     if (!genre) return of([]);
     return this.api.list({ genre, sort: 'popular', pageSize: 6 }).pipe(
-      map((page) => page.items
-        .filter((story) => story.slug !== this.currentSlug)
-        .slice(0, 5)
-        .map((story) => ({
-          title: story.title,
-          slug: story.slug,
-          coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
-          latestChapter: story.latestChapter?.number ?? null,
-        }))),
+      map((page) =>
+        page.items
+          .filter((story) => story.slug !== this.currentSlug)
+          .slice(0, 5)
+          .map((story) => ({
+            title: story.title,
+            slug: story.slug,
+            coverUrl: story.coverUrl ?? STORY_COVER_PLACEHOLDER,
+            latestChapter: story.latestChapter?.number ?? null,
+          })),
+      ),
     );
   }
 
@@ -63,7 +65,9 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
   }
 
   createComment(storyId: string, body: string): Observable<StoryComment> {
-    return this.engagement.createStoryComment(storyId, body).pipe(map((item) => this.toComment(item)));
+    return this.engagement
+      .createStoryComment(storyId, body)
+      .pipe(map((item) => this.toComment(item)));
   }
 
   updateComment(commentId: string, body: string): Observable<StoryComment> {

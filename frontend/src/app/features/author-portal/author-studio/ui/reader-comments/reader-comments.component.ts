@@ -14,7 +14,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
     <section class="dashboard-card">
       <header>
         <h2>Bình luận cần phản hồi</h2>
-
       </header>
 
       <div class="comment-list">

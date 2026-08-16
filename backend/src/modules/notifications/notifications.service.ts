@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
@@ -59,45 +63,48 @@ export interface UpdateNotificationSettingsInput {
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getView(userId: string | undefined): Promise<NotificationsViewResponse> {
+  async getView(
+    userId: string | undefined,
+  ): Promise<NotificationsViewResponse> {
     const authenticatedUserId = this.requireUserId(userId);
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
 
-    const [notifications, total, unread, receivedToday, preference] = await Promise.all([
-      this.prisma.notification.findMany({
-        where: {
-          userId: authenticatedUserId,
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 200,
-      }),
-      this.prisma.notification.count({
-        where: {
-          userId: authenticatedUserId,
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-      }),
-      this.prisma.notification.count({
-        where: {
-          userId: authenticatedUserId,
-          readAt: null,
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-      }),
-      this.prisma.notification.count({
-        where: {
-          userId: authenticatedUserId,
-          createdAt: { gte: startOfToday },
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-      }),
-      this.prisma.notificationPreference.findUnique({
-        where: { userId: authenticatedUserId },
-      }),
-    ]);
+    const [notifications, total, unread, receivedToday, preference] =
+      await Promise.all([
+        this.prisma.notification.findMany({
+          where: {
+            userId: authenticatedUserId,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        }),
+        this.prisma.notification.count({
+          where: {
+            userId: authenticatedUserId,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+        }),
+        this.prisma.notification.count({
+          where: {
+            userId: authenticatedUserId,
+            readAt: null,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+        }),
+        this.prisma.notification.count({
+          where: {
+            userId: authenticatedUserId,
+            createdAt: { gte: startOfToday },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+        }),
+        this.prisma.notificationPreference.findUnique({
+          where: { userId: authenticatedUserId },
+        }),
+      ]);
 
     const items = notifications.map((notification) =>
       this.toItem(notification, now),
@@ -199,7 +206,9 @@ export class NotificationsService {
         ...(input.comments === undefined
           ? {}
           : { commentReplyEnabled: input.comments }),
-        ...(input.system === undefined ? {} : { moderationEnabled: input.system }),
+        ...(input.system === undefined
+          ? {}
+          : { moderationEnabled: input.system }),
         ...(input.promotions === undefined
           ? {}
           : {
@@ -214,7 +223,10 @@ export class NotificationsService {
     return this.toSettings(preference);
   }
 
-  private async ensureOwnedNotification(userId: string, notificationId: string) {
+  private async ensureOwnedNotification(
+    userId: string,
+    notificationId: string,
+  ) {
     const notification = await this.prisma.notification.findFirst({
       where: {
         id: notificationId,
@@ -265,14 +277,12 @@ export class NotificationsService {
   }
 
   private toSettings(
-    preference:
-      | {
-          readonly newChapterEnabled: boolean;
-          readonly commentReplyEnabled: boolean;
-          readonly moderationEnabled: boolean;
-          readonly preferences: unknown;
-        }
-      | null,
+    preference: {
+      readonly newChapterEnabled: boolean;
+      readonly commentReplyEnabled: boolean;
+      readonly moderationEnabled: boolean;
+      readonly preferences: unknown;
+    } | null,
   ): NotificationSettingsResponse {
     const preferences = this.asRecord(preference?.preferences);
 
@@ -291,7 +301,8 @@ export class NotificationsService {
     const normalized = type.toLocaleLowerCase('en');
 
     if (normalized.includes('chapter')) return 'chapter';
-    if (normalized.includes('comment') || normalized.includes('reply')) return 'comment';
+    if (normalized.includes('comment') || normalized.includes('reply'))
+      return 'comment';
     if (normalized.includes('author')) return 'author';
     if (normalized.includes('promotion')) return 'promotion';
     if (

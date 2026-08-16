@@ -117,10 +117,12 @@ export class AuthorStoryEditorStore {
 
         return this.repository.uploadCover(story.id, coverFile).pipe(
           switchMap((media: AuthorStoryMedia) =>
-            this.repository.updateStory(story.id, {
-              ...input,
-              coverMediaId: media.id,
-            }).pipe(tap(() => this.coverUrl.set(media.deliveryUrl))),
+            this.repository
+              .updateStory(story.id, {
+                ...input,
+                coverMediaId: media.id,
+              })
+              .pipe(tap(() => this.coverUrl.set(media.deliveryUrl))),
           ),
           catchError((error: unknown) => {
             this.coverUrl.set(null);
@@ -153,9 +155,7 @@ export class AuthorStoryEditorStore {
       );
     }
 
-    const update: AuthorStoryUpdateInput = clearCover
-      ? { ...input, coverMediaId: null }
-      : input;
+    const update: AuthorStoryUpdateInput = clearCover ? { ...input, coverMediaId: null } : input;
 
     return this.repository.updateStory(storyId, update).pipe(
       tap(() => {
@@ -173,14 +173,10 @@ export class AuthorStoryEditorStore {
         catchError(() => of(null)),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((media: AuthorStoryMedia | null) =>
-        this.coverUrl.set(media?.deliveryUrl ?? null),
-      );
+      .subscribe((media: AuthorStoryMedia | null) => this.coverUrl.set(media?.deliveryUrl ?? null));
   }
 
-  private runWorkflow(
-    request$: Observable<AuthorManagedStory>,
-  ): Observable<AuthorManagedStory> {
+  private runWorkflow(request$: Observable<AuthorManagedStory>): Observable<AuthorManagedStory> {
     this.workflowBusy.set(true);
     this.error.set(null);
 

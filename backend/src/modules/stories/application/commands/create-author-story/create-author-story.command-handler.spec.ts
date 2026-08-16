@@ -107,9 +107,9 @@ describe('CreateAuthorStoryCommandHandler', () => {
       invalidIds: [CATEGORY_ID],
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      InvalidStoryCategoriesException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(InvalidStoryCategoriesException);
   });
 
   it('map tag không hợp lệ thành domain exception', async () => {
@@ -118,9 +118,9 @@ describe('CreateAuthorStoryCommandHandler', () => {
       invalidIds: [TAG_ID],
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      InvalidStoryTagsException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(InvalidStoryTagsException);
   });
 
   it('map author_not_found thành domain exception', async () => {
@@ -128,9 +128,9 @@ describe('CreateAuthorStoryCommandHandler', () => {
       status: 'author_not_found',
     });
 
-    await expect(handler.execute(createCommand(USER_ID))).rejects.toBeInstanceOf(
-      AuthorProfileUnavailableException,
-    );
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(AuthorProfileUnavailableException);
   });
 });
 

@@ -8,13 +8,19 @@ export class StoryTitleValueObject {
 
   static create(raw: string): StoryTitleValueObject {
     if (typeof raw !== 'string') {
-      throw new InvalidStoryFieldException('title', 'Tiêu đề truyện không hợp lệ');
+      throw new InvalidStoryFieldException(
+        'title',
+        'Tiêu đề truyện không hợp lệ',
+      );
     }
 
     const value = normalizeWhitespace(raw);
 
     if (!value) {
-      throw new InvalidStoryFieldException('title', 'Tiêu đề truyện không được để trống');
+      throw new InvalidStoryFieldException(
+        'title',
+        'Tiêu đề truyện không được để trống',
+      );
     }
 
     if (value.length > StoryDraftPolicy.TITLE_MAX_LENGTH) {
@@ -37,7 +43,10 @@ export class StorySynopsisValueObject {
     }
 
     if (typeof raw !== 'string') {
-      throw new InvalidStoryFieldException('synopsis', 'Giới thiệu truyện không hợp lệ');
+      throw new InvalidStoryFieldException(
+        'synopsis',
+        'Giới thiệu truyện không hợp lệ',
+      );
     }
 
     const value = raw.trim();

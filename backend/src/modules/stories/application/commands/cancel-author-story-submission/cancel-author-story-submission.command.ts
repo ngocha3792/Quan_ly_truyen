@@ -5,5 +5,5 @@ export class CancelAuthorStorySubmissionCommand {
     readonly ipAddress: string | undefined,
     readonly userAgent: string | undefined,
     readonly requestId: string | undefined,
-  ) { }
+  ) {}
 }

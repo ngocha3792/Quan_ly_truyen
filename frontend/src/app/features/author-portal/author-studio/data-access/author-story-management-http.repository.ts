@@ -74,13 +74,19 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>>(
         `${this.metadataUrl}/categories`,
       )
-      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>) => response.data));
+      .pipe(
+        map(
+          (response: ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>) => response.data,
+        ),
+      );
   }
 
   listTags(): Observable<readonly AuthorStoryMetadataTag[]> {
     return this.http
       .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>>(`${this.metadataUrl}/tags`)
-      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>) => response.data));
+      .pipe(
+        map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>) => response.data),
+      );
   }
 
   submitStory(storyId: string, authorNote: string): Observable<AuthorStoryPublication> {
@@ -108,7 +114,11 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .get<ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>>(
         `${this.storiesUrl}/${storyId}/chapters`,
       )
-      .pipe(map((response: ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>) => response.data));
+      .pipe(
+        map(
+          (response: ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>) => response.data,
+        ),
+      );
   }
 
   getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
@@ -119,10 +129,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
   }
 
-  createChapter(
-    storyId: string,
-    input: AuthorChapterDraftInput,
-  ): Observable<AuthorManagedChapter> {
+  createChapter(storyId: string, input: AuthorChapterDraftInput): Observable<AuthorManagedChapter> {
     const retry = reuseCreateKey(this.chapterCreateRetry, { storyId, input });
     this.chapterCreateRetry = retry;
 
@@ -185,10 +192,7 @@ interface CreateRetryState {
   readonly key: string;
 }
 
-function reuseCreateKey(
-  current: CreateRetryState | null,
-  payload: unknown,
-): CreateRetryState {
+function reuseCreateKey(current: CreateRetryState | null, payload: unknown): CreateRetryState {
   const identity = JSON.stringify(payload) ?? 'undefined';
   if (current?.identity === identity) return current;
 

@@ -35,7 +35,13 @@ export class AuthorChaptersStore {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: ({ story, chapters }: { story: AuthorManagedStory; chapters: readonly AuthorManagedChapterSummary[] }) => {
+        next: ({
+          story,
+          chapters,
+        }: {
+          story: AuthorManagedStory;
+          chapters: readonly AuthorManagedChapterSummary[];
+        }) => {
           this.story.set(story);
           this.chaptersState.set(chapters);
         },

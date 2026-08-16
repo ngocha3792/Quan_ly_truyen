@@ -32,8 +32,6 @@ describe('Stories HTTP idempotency hardening', () => {
 function readMetadata(
   target: (...args: never[]) => unknown,
 ): IdempotencyMetadata | undefined {
-  return Reflect.getMetadata(
-    IDEMPOTENT_KEY,
-    target,
-  ) as IdempotencyMetadata | undefined;
+  return Reflect.getMetadata(IDEMPOTENT_KEY, target) as
+    IdempotencyMetadata | undefined;
 }

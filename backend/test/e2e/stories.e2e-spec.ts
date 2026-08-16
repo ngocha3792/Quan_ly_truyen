@@ -45,21 +45,23 @@ describe('Stories public HTTP E2E', () => {
     await app.close();
   });
 
+  const httpServer = () => app.getHttpServer() as Parameters<typeof request>[0];
+
   it('list/detail chỉ expose story thật sự đã published', async () => {
-    const listResponse = await request(app.getHttpServer())
+    const listResponse = await request(httpServer())
       .get('/api/v1/stories')
       .query({ q: `E2E ${compactRunId.slice(0, 8)}` })
       .expect(200);
 
     const page = unwrap<{
       items: Array<{ id: string; slug: string }>;
-    }>(listResponse.body);
+    }>(listResponse.body as unknown);
 
     expect(page.items).toEqual([
       expect.objectContaining({ id: publicStoryId, slug: publicSlug }),
     ]);
 
-    const detailResponse = await request(app.getHttpServer())
+    const detailResponse = await request(httpServer())
       .get(`/api/v1/stories/${publicSlug}`)
       .expect(200);
 
@@ -67,19 +69,19 @@ describe('Stories public HTTP E2E', () => {
       unwrap<{
         id: string;
         latestChapter: { number: number } | null;
-      }>(detailResponse.body),
+      }>(detailResponse.body as unknown),
     ).toMatchObject({
       id: publicStoryId,
       latestChapter: { number: 2 },
     });
 
-    await request(app.getHttpServer())
+    await request(httpServer())
       .get(`/api/v1/stories/${inconsistentSlug}`)
       .expect(404);
   });
 
   it('chapter reader chỉ expose published chapter và navigation bỏ qua draft/deleted', async () => {
-    const response = await request(app.getHttpServer())
+    const response = await request(httpServer())
       .get(`/api/v1/stories/${publicSlug}/chapters/1`)
       .expect(200);
 
@@ -89,7 +91,7 @@ describe('Stories public HTTP E2E', () => {
         previous: { number: number } | null;
         next: { number: number } | null;
       };
-    }>(response.body);
+    }>(response.body as unknown);
 
     expect(reader.chapter).toMatchObject({
       number: 1,
@@ -98,16 +100,16 @@ describe('Stories public HTTP E2E', () => {
     expect(reader.navigation.previous).toBeNull();
     expect(reader.navigation.next).toMatchObject({ number: 2 });
 
-    await request(app.getHttpServer())
+    await request(httpServer())
       .get(`/api/v1/stories/${publicSlug}/chapters/3`)
       .expect(404);
-    await request(app.getHttpServer())
+    await request(httpServer())
       .get(`/api/v1/stories/${publicSlug}/chapters/4`)
       .expect(404);
   });
 
   it('chapter number malformed bị validation chặn trước persistence', async () => {
-    await request(app.getHttpServer())
+    await request(httpServer())
       .get(`/api/v1/stories/${publicSlug}/chapters/1.234`)
       .expect(400);
   });

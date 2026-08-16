@@ -35,9 +35,7 @@ export class NotificationsHttpRepository implements NotificationsRepository {
     return this.http.patch<void>(`${this.baseUrl}/read-all`, {});
   }
 
-  updateSettings(
-    settings: Partial<NotificationSettings>,
-  ): Observable<NotificationSettings> {
+  updateSettings(settings: Partial<NotificationSettings>): Observable<NotificationSettings> {
     return this.http
       .patch<ApiSuccessEnvelope<NotificationSettings>>(`${this.baseUrl}/settings`, settings)
       .pipe(map((response) => response.data));

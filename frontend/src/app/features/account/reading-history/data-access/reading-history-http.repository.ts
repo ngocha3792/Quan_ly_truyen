@@ -19,9 +19,7 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
   getHistory(): Observable<ReadingHistoryView> {
     return this.api.listReadingHistory().pipe(
       map((entries) => {
-        const history = entries
-          .filter((entry) => entry.currentChapter !== null)
-          .map(toHistoryItem);
+        const history = entries.filter((entry) => entry.currentChapter !== null).map(toHistoryItem);
         const chaptersRead = entries.reduce((total, entry) => {
           return total + Math.round((entry.progressPercent / 100) * entry.story.chapterCount);
         }, 0);
@@ -86,7 +84,12 @@ function relativeLabel(minutes: number): string {
 }
 
 function initials(title: string): string {
-  return title.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase() ?? '').join('');
+  return title
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 function hash(value: string): number {

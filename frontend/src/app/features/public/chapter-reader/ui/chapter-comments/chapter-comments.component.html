@@ -21,7 +21,9 @@
       <article class="comment">
         <span class="avatar">{{ comment.author.initials }}</span>
         <div class="comment-body">
-          <div class="author-row"><strong>{{ comment.author.name }}</strong></div>
+          <div class="author-row">
+            <strong>{{ comment.author.name }}</strong>
+          </div>
           <time>{{ comment.createdAt }}</time>
 
           @if (editingId() === comment.id) {

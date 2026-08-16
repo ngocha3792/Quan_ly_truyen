@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { PublicStoryDto } from '../../dto';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { StoryNotFoundException } from '../../../domain';
 import { GetPublicStoryDetailQuery } from './get-public-story-detail.query';
 

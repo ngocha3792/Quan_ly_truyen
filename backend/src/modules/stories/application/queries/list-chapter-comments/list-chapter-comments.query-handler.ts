@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ChapterNotFoundException, StoryNotFoundException } from '../../../domain';
+import {
+  ChapterNotFoundException,
+  StoryNotFoundException,
+} from '../../../domain';
 import type { StoryCommentPageResultDto } from '../../dto';
 import {
   READER_ENGAGEMENT_PERSISTENCE_PORT,
@@ -14,7 +17,9 @@ export class ListChapterCommentsQueryHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(query: ListChapterCommentsQuery): Promise<StoryCommentPageResultDto> {
+  async execute(
+    query: ListChapterCommentsQuery,
+  ): Promise<StoryCommentPageResultDto> {
     const result = await this.persistence.listComments({
       storySlug: query.storySlug.trim().toLowerCase(),
       chapterNumber: query.chapterNumber.trim(),

@@ -50,7 +50,9 @@ export class StoryCatalogHttpRepository implements StoryCatalogRepository {
             });
           }
         }
-        return [...genres.values()].sort((left, right) => left.name.localeCompare(right.name, 'vi'));
+        return [...genres.values()].sort((left, right) =>
+          left.name.localeCompare(right.name, 'vi'),
+        );
       }),
     );
   }

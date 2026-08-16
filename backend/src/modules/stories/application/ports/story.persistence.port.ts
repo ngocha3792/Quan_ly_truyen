@@ -75,11 +75,7 @@ export interface StoryTaxonomyTagRecord {
 }
 
 export type PublicStoryListSort =
-  | 'latest'
-  | 'popular'
-  | 'rating'
-  | 'chapter-count'
-  | 'oldest';
+  'latest' | 'popular' | 'rating' | 'chapter-count' | 'oldest';
 
 export type PublicStoryListStatus = 'ongoing' | 'completed' | 'hiatus';
 
@@ -333,7 +329,9 @@ export interface StoryPersistencePort {
 
   deleteDraft(input: DeleteAuthorStoryInput): Promise<DeleteAuthorStoryResult>;
 
-  submitForReview(input: SubmitAuthorStoryInput): Promise<SubmitAuthorStoryResult>;
+  submitForReview(
+    input: SubmitAuthorStoryInput,
+  ): Promise<SubmitAuthorStoryResult>;
 
   cancelSubmission(
     input: CancelAuthorStorySubmissionInput,

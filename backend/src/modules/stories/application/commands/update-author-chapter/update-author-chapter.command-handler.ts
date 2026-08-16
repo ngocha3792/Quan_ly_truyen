@@ -24,9 +24,11 @@ export class UpdateAuthorChapterCommandHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
-  ) { }
+  ) {}
 
-  async execute(command: UpdateAuthorChapterCommand): Promise<ChapterResultDto> {
+  async execute(
+    command: UpdateAuthorChapterCommand,
+  ): Promise<ChapterResultDto> {
     const userId = requireAuthorUserId(command.userId);
     const title =
       command.title === undefined

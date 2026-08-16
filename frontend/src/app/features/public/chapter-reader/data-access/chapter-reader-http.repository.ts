@@ -9,7 +9,11 @@ import {
 } from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type { StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
-import { ChapterComment, ChapterNavigationItem, ChapterReaderView } from '../domain/chapter-reader.models';
+import {
+  ChapterComment,
+  ChapterNavigationItem,
+  ChapterReaderView,
+} from '../domain/chapter-reader.models';
 import { ChapterReaderRepository } from './chapter-reader.repository';
 
 @Injectable()
@@ -35,15 +39,15 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   }
 
   createComment(storyId: string, chapterId: string, body: string): Observable<ChapterComment> {
-    return this.engagement.createChapterComment(storyId, chapterId, body).pipe(
-      map((comment) => this.toChapterComment(comment)),
-    );
+    return this.engagement
+      .createChapterComment(storyId, chapterId, body)
+      .pipe(map((comment) => this.toChapterComment(comment)));
   }
 
   updateComment(commentId: string, body: string): Observable<ChapterComment> {
-    return this.engagement.updateComment(commentId, body).pipe(
-      map((comment) => this.toChapterComment(comment)),
-    );
+    return this.engagement
+      .updateComment(commentId, body)
+      .pipe(map((comment) => this.toChapterComment(comment)));
   }
 
   deleteComment(commentId: string): Observable<void> {
@@ -105,11 +109,19 @@ function toNavigation(
 function toParagraphs(content: string): readonly string[] {
   const normalized = content.replace(/\r\n/g, '\n').trim();
   if (!normalized) return [];
-  return normalized.split(/\n\s*\n/g).map((paragraph) => paragraph.trim()).filter(Boolean);
+  return normalized
+    .split(/\n\s*\n/g)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 }
 
 function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(-2).map((part) => part[0]?.toUpperCase() ?? '').join('');
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 function relativeTime(value: string): string {

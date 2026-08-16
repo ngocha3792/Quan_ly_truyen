@@ -15,7 +15,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
     <section class="dashboard-card">
       <header>
         <h2>Bản nháp gần đây</h2>
-
       </header>
 
       <div class="draft-list">
@@ -47,7 +46,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
               <strong> {{ draft.completionPercent }}% </strong>
             </div>
-
           </article>
         }
       </div>

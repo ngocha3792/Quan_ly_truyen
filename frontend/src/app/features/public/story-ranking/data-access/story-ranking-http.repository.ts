@@ -20,9 +20,9 @@ export class StoryRankingHttpRepository implements StoryRankingRepository {
   private readonly api = inject(PublicStoriesApiClient);
 
   getOverview(query: StoryRankingQuery): Observable<StoryRankingOverview> {
-    return this.api.list({ sort: 'popular', pageSize: 100 }).pipe(
-      map((page) => buildOverview(page.items, query)),
-    );
+    return this.api
+      .list({ sort: 'popular', pageSize: 100 })
+      .pipe(map((page) => buildOverview(page.items, query)));
   }
 }
 
@@ -126,7 +126,10 @@ function buildGenreDistribution(
     }
   }
 
-  const total = Math.max([...counts.values()].reduce((sum, item) => sum + item.count, 0), 1);
+  const total = Math.max(
+    [...counts.values()].reduce((sum, item) => sum + item.count, 0),
+    1,
+  );
   return [...counts.values()]
     .sort((left, right) => right.count - left.count)
     .slice(0, 5)

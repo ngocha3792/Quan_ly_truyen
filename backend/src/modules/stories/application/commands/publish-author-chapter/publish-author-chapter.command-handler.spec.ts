@@ -10,7 +10,7 @@ const STORY_ID = '22222222-2222-4222-8222-222222222222';
 const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
 
 describe('PublishAuthorChapterCommandHandler', () => {
-  let persistence: { publish: jest.Mock; };
+  let persistence: { publish: jest.Mock };
   let handler: PublishAuthorChapterCommandHandler;
 
   beforeEach(() => {

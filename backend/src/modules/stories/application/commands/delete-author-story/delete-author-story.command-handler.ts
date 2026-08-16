@@ -7,10 +7,7 @@ import {
   StoryDraftOnlyMutationException,
   StoryNotFoundException,
 } from '../../../domain';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { DeleteAuthorStoryCommand } from './delete-author-story.command';
 
 @Injectable()

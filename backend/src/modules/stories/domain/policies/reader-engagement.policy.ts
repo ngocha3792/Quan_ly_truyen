@@ -9,7 +9,9 @@ export class ReaderEngagementPolicy {
 
   static isValidCommentBody(value: string): boolean {
     const normalized = this.normalizeCommentBody(value);
-    return normalized.length >= 1 && normalized.length <= this.COMMENT_MAX_LENGTH;
+    return (
+      normalized.length >= 1 && normalized.length <= this.COMMENT_MAX_LENGTH
+    );
   }
 
   static isValidRating(score: number): boolean {

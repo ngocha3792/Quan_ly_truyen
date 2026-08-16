@@ -16,7 +16,9 @@ export class UpsertLibraryEntryCommandHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(command: UpsertLibraryEntryCommand): Promise<LibraryEntryResultDto> {
+  async execute(
+    command: UpsertLibraryEntryCommand,
+  ): Promise<LibraryEntryResultDto> {
     const result = await this.persistence.upsertLibraryEntry({
       userId: requireReaderUserId(command.userId),
       storyId: command.storyId,

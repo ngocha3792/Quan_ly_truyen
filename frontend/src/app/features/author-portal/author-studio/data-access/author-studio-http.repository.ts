@@ -14,9 +14,7 @@ export class AuthorStudioHttpRepository implements AuthorStudioRepository {
 
   getDashboard(): Observable<AuthorStudioDashboard> {
     return this.http
-      .get<ApiSuccessEnvelope<AuthorStudioDashboard>>(
-        `${this.config.apiBaseUrl}/author/dashboard`,
-      )
+      .get<ApiSuccessEnvelope<AuthorStudioDashboard>>(`${this.config.apiBaseUrl}/author/dashboard`)
       .pipe(map((response) => response.data));
   }
 }

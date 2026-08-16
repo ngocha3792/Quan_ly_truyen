@@ -37,9 +37,7 @@ export class ChapterTitleValueObject {
 export class ChapterContentValueObject {
   private constructor(readonly value: string) {}
 
-  static create(
-    raw: string | null | undefined,
-  ): ChapterContentValueObject {
+  static create(raw: string | null | undefined): ChapterContentValueObject {
     if (raw === null || raw === undefined) {
       return new ChapterContentValueObject('');
     }

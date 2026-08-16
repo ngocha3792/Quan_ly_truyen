@@ -31,7 +31,9 @@ export class ReaderEngagementApiClient {
   }
 
   removeLibrary(storyId: string): Observable<void> {
-    return this.http.delete<void>(`${this.config.apiBaseUrl}/library/${encodeURIComponent(storyId)}`);
+    return this.http.delete<void>(
+      `${this.config.apiBaseUrl}/library/${encodeURIComponent(storyId)}`,
+    );
   }
 
   listReadingHistory(): Observable<readonly ReadingHistoryApiItem[]> {
@@ -43,10 +45,10 @@ export class ReaderEngagementApiClient {
     chapterId: string,
     position = 0,
   ): Observable<ReadingHistoryApiItem> {
-    return this.put<ReadingHistoryApiItem>(
-      `/reading-progress/${encodeURIComponent(storyId)}`,
-      { chapterId, position },
-    );
+    return this.put<ReadingHistoryApiItem>(`/reading-progress/${encodeURIComponent(storyId)}`, {
+      chapterId,
+      position,
+    });
   }
 
   removeReadingHistory(storyId: string): Observable<void> {
@@ -60,16 +62,13 @@ export class ReaderEngagementApiClient {
   }
 
   getMyRating(storyId: string): Observable<StoryRatingApiItem | null> {
-    return this.get<StoryRatingApiItem | null>(
-      `/stories/${encodeURIComponent(storyId)}/rating/me`,
-    );
+    return this.get<StoryRatingApiItem | null>(`/stories/${encodeURIComponent(storyId)}/rating/me`);
   }
 
   upsertRating(storyId: string, score: number): Observable<StoryRatingApiItem> {
-    return this.put<StoryRatingApiItem>(
-      `/stories/${encodeURIComponent(storyId)}/rating`,
-      { score },
-    );
+    return this.put<StoryRatingApiItem>(`/stories/${encodeURIComponent(storyId)}/rating`, {
+      score,
+    });
   }
 
   deleteRating(storyId: string): Observable<void> {
@@ -79,11 +78,7 @@ export class ReaderEngagementApiClient {
   }
 
   listStoryComments(storySlug: string, page = 1, pageSize = 20): Observable<StoryCommentApiPage> {
-    return this.listComments(
-      `/stories/${encodeURIComponent(storySlug)}/comments`,
-      page,
-      pageSize,
-    );
+    return this.listComments(`/stories/${encodeURIComponent(storySlug)}/comments`, page, pageSize);
   }
 
   listChapterComments(
@@ -141,7 +136,11 @@ export class ReaderEngagementApiClient {
       .pipe(map((response) => response.data));
   }
 
-  private listComments(path: string, page: number, pageSize: number): Observable<StoryCommentApiPage> {
+  private listComments(
+    path: string,
+    page: number,
+    pageSize: number,
+  ): Observable<StoryCommentApiPage> {
     const params = new HttpParams().set('page', page).set('pageSize', pageSize);
     return this.http
       .get<ApiSuccessEnvelope<StoryCommentApiPage>>(`${this.config.apiBaseUrl}${path}`, { params })

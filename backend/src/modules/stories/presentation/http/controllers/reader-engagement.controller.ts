@@ -151,8 +151,12 @@ export class ReaderEngagementController {
   @Delete('reading-history')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PermissionCode.READING_HISTORY_MANAGE_OWN)
-  async clearHistory(@CurrentUserId() userId: string | undefined): Promise<void> {
-    await this.clearHistoryCommand.execute(new ClearReadingHistoryCommand(userId));
+  async clearHistory(
+    @CurrentUserId() userId: string | undefined,
+  ): Promise<void> {
+    await this.clearHistoryCommand.execute(
+      new ClearReadingHistoryCommand(userId),
+    );
   }
 
   @Get('stories/:storyId/rating/me')
@@ -161,7 +165,9 @@ export class ReaderEngagementController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
   ): Promise<StoryRatingResultDto | null> {
-    return this.getRatingQuery.execute(new GetMyStoryRatingQuery(userId, storyId));
+    return this.getRatingQuery.execute(
+      new GetMyStoryRatingQuery(userId, storyId),
+    );
   }
 
   @Put('stories/:storyId/rating')

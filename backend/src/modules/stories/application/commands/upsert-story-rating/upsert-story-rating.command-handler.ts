@@ -19,7 +19,9 @@ export class UpsertStoryRatingCommandHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(command: UpsertStoryRatingCommand): Promise<StoryRatingResultDto> {
+  async execute(
+    command: UpsertStoryRatingCommand,
+  ): Promise<StoryRatingResultDto> {
     if (!ReaderEngagementPolicy.isValidRating(command.score)) {
       throw new InvalidRatingScoreException();
     }

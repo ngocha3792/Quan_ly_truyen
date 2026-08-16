@@ -19,7 +19,9 @@ describe('GetAuthorChapterQueryHandler', () => {
 
   it('yêu cầu authenticated author UUID hợp lệ', async () => {
     await expect(
-      handler.execute(new GetAuthorChapterQuery(undefined, STORY_ID, CHAPTER_ID)),
+      handler.execute(
+        new GetAuthorChapterQuery(undefined, STORY_ID, CHAPTER_ID),
+      ),
     ).rejects.toBeInstanceOf(AuthenticationRequiredException);
     expect(persistence.findOwnedById).not.toHaveBeenCalled();
   });

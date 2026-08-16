@@ -21,7 +21,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         <app-studio-icon name="menu" [size]="20"></app-studio-icon>
       </button>
 
-
       <a class="notification-button" routerLink="/thong-bao" aria-label="Thông báo">
         <app-studio-icon name="bell" [size]="21"></app-studio-icon>
 

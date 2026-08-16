@@ -17,8 +17,6 @@ const SSR_PUBLIC_ROUTES = [
 ] as const;
 
 export const serverRoutes: ServerRoute[] = [
-  ...SSR_PUBLIC_ROUTES.map(
-    (path): ServerRoute => ({ path, renderMode: RenderMode.Server }),
-  ),
+  ...SSR_PUBLIC_ROUTES.map((path): ServerRoute => ({ path, renderMode: RenderMode.Server })),
   { path: '**', renderMode: RenderMode.Client },
 ];

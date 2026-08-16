@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { StoryTagOptionDto } from '../../dto';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { ListStoryTagsQuery } from './list-story-tags.query';
 
 @Injectable()

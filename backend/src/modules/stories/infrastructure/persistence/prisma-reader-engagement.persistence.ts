@@ -170,9 +170,7 @@ const COMMENT_SELECT = {
 type CommentRow = Prisma.CommentGetPayload<{ select: typeof COMMENT_SELECT }>;
 
 @Injectable()
-export class PrismaReaderEngagementPersistence
-  implements ReaderEngagementPersistencePort
-{
+export class PrismaReaderEngagementPersistence implements ReaderEngagementPersistencePort {
   constructor(private readonly prisma: PrismaService) {}
 
   async listLibrary(userId: string): Promise<readonly LibraryEntryResultDto[]> {
@@ -224,10 +222,10 @@ export class PrismaReaderEngagementPersistence
         const startedAt =
           status === LibraryStatus.READING && !current?.startedAt
             ? input.updatedAt
-            : current?.startedAt ?? null;
+            : (current?.startedAt ?? null);
         const completedAt =
           status === LibraryStatus.COMPLETED
-            ? current?.completedAt ?? input.updatedAt
+            ? (current?.completedAt ?? input.updatedAt)
             : null;
 
         const entry = await tx.libraryEntry.upsert({
@@ -244,8 +242,12 @@ export class PrismaReaderEngagementPersistence
             updatedAt: input.updatedAt,
           },
           update: {
-            ...(input.status !== undefined ? { status, startedAt, completedAt } : {}),
-            ...(input.isFavorite !== undefined ? { isFavorite: input.isFavorite } : {}),
+            ...(input.status !== undefined
+              ? { status, startedAt, completedAt }
+              : {}),
+            ...(input.isFavorite !== undefined
+              ? { isFavorite: input.isFavorite }
+              : {}),
             updatedAt: input.updatedAt,
           },
           select: LIBRARY_ENTRY_SELECT,
@@ -386,7 +388,8 @@ export class PrismaReaderEngagementPersistence
         });
 
         const incomingChapterNumber = chapter.number.toNumber();
-        const existingChapterNumber = existing?.currentChapter?.number.toNumber();
+        const existingChapterNumber =
+          existing?.currentChapter?.number.toNumber();
         const shouldAdvance =
           existingChapterNumber === undefined ||
           incomingChapterNumber >= existingChapterNumber;
@@ -400,14 +403,14 @@ export class PrismaReaderEngagementPersistence
           : Number(existing?.progressPercent ?? computedPercent);
         const currentChapterId = shouldAdvance
           ? chapter.id
-          : existing?.currentChapterId ?? chapter.id;
+          : (existing?.currentChapterId ?? chapter.id);
         const effectiveReadAt =
           existing?.lastReadAt && existing.lastReadAt > input.readAt
             ? existing.lastReadAt
             : input.readAt;
         const completedAt =
           progressPercent >= 100
-            ? library?.completedAt ?? effectiveReadAt
+            ? (library?.completedAt ?? effectiveReadAt)
             : null;
 
         await tx.readingProgress.upsert({
@@ -468,7 +471,10 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async removeReadingHistoryEntry(userId: string, storyId: string): Promise<void> {
+  async removeReadingHistoryEntry(
+    userId: string,
+    storyId: string,
+  ): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.readingProgress.deleteMany({ where: { userId, storyId } });
@@ -535,7 +541,9 @@ export class PrismaReaderEngagementPersistence
     }
   }
 
-  async upsertRating(input: UpsertStoryRatingInput): Promise<UpsertStoryRatingResult> {
+  async upsertRating(
+    input: UpsertStoryRatingInput,
+  ): Promise<UpsertStoryRatingResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         if (!(await lockPublicStory(tx, input.storyId))) {
@@ -645,7 +653,8 @@ export class PrismaReaderEngagementPersistence
             page: input.page,
             pageSize: input.pageSize,
             totalItems,
-            totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize),
+            totalPages:
+              totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize),
           },
         },
       };
@@ -819,7 +828,7 @@ function toReaderStorySummary(row: ReaderStoryRow): ReaderStorySummaryDto {
     cover.purpose === MediaPurpose.STORY_COVER &&
     cover.status === MediaStatus.READY &&
     cover.resourceType === MediaResourceType.IMAGE
-      ? cover.secureUrl ?? cover.publicUrl
+      ? (cover.secureUrl ?? cover.publicUrl)
       : null;
 
   return {
@@ -829,7 +838,9 @@ function toReaderStorySummary(row: ReaderStoryRow): ReaderStorySummaryDto {
     author: row.author.penName,
     coverUrl,
     categories: row.categories.map(({ category }) => category.name),
-    latestChapterNumber: row.chapters[0] ? Number(row.chapters[0].number) : null,
+    latestChapterNumber: row.chapters[0]
+      ? Number(row.chapters[0].number)
+      : null,
     chapterCount: row.chapterCount,
   };
 }
@@ -853,7 +864,9 @@ function toLibraryEntryDto(row: LibraryEntryRow): LibraryEntryResultDto {
   };
 }
 
-function toReadingHistoryDto(row: ReadingHistoryRow): ReadingHistoryEntryResultDto {
+function toReadingHistoryDto(
+  row: ReadingHistoryRow,
+): ReadingHistoryEntryResultDto {
   return {
     story: toReaderStorySummary(row.story),
     currentChapter: row.currentChapter
@@ -889,7 +902,7 @@ function toCommentDto(row: CommentRow): StoryCommentResultDto {
     avatar.purpose === MediaPurpose.AVATAR &&
     avatar.status === MediaStatus.READY &&
     avatar.resourceType === MediaResourceType.IMAGE
-      ? avatar.secureUrl ?? avatar.publicUrl
+      ? (avatar.secureUrl ?? avatar.publicUrl)
       : null;
 
   return {

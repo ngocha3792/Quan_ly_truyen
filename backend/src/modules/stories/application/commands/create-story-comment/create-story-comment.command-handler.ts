@@ -20,7 +20,9 @@ export class CreateStoryCommentCommandHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(command: CreateStoryCommentCommand): Promise<StoryCommentResultDto> {
+  async execute(
+    command: CreateStoryCommentCommand,
+  ): Promise<StoryCommentResultDto> {
     const body = ReaderEngagementPolicy.normalizeCommentBody(command.body);
     if (!ReaderEngagementPolicy.isValidCommentBody(body)) {
       throw new InvalidCommentBodyException();

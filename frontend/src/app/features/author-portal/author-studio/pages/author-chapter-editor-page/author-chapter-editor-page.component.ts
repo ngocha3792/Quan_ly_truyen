@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -39,7 +47,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     effect(() => {
       const chapter = this.store.chapter();
       if (chapter) {
-        this.form.patchValue({ title: chapter.title, content: chapter.content }, { emitEvent: false });
+        this.form.patchValue(
+          { title: chapter.title, content: chapter.content },
+          { emitEvent: false },
+        );
       }
       if (this.store.story() && !this.isEditable()) this.form.disable({ emitEvent: false });
       else this.form.enable({ emitEvent: false });

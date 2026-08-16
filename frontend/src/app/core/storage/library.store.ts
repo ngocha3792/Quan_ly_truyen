@@ -1,6 +1,6 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, EMPTY, finalize, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, Observable, tap } from 'rxjs';
 
 import { AuthStore } from '../auth/auth.store';
 import { ReaderEngagementApiClient } from '../http/reader-engagement-api.client';
@@ -48,17 +48,19 @@ export class LibraryStore {
     this.idsState.set(next);
     this.error.set(null);
 
-    const request$ = added
+    const request$: Observable<unknown> = added
       ? this.api.upsertLibrary(storyId)
       : this.api.removeLibrary(storyId);
 
-    request$.pipe(
-      catchError(() => {
-        this.idsState.set(previous);
-        this.error.set('Không thể cập nhật thư viện. Vui lòng thử lại.');
-        return EMPTY;
-      }),
-    ).subscribe();
+    request$
+      .pipe(
+        catchError(() => {
+          this.idsState.set(previous);
+          this.error.set('Không thể cập nhật thư viện. Vui lòng thử lại.');
+          return EMPTY;
+        }),
+      )
+      .subscribe();
 
     return added;
   }
@@ -68,15 +70,18 @@ export class LibraryStore {
 
     this.syncInFlight.set(true);
     this.error.set(null);
-    this.api.listLibrary().pipe(
-      tap((entries) => {
-        this.idsState.set(new Set(entries.map((entry) => entry.story.id)));
-      }),
-      catchError(() => {
-        this.error.set('Không thể đồng bộ thư viện.');
-        return EMPTY;
-      }),
-      finalize(() => this.syncInFlight.set(false)),
-    ).subscribe();
+    this.api
+      .listLibrary()
+      .pipe(
+        tap((entries) => {
+          this.idsState.set(new Set(entries.map((entry) => entry.story.id)));
+        }),
+        catchError(() => {
+          this.error.set('Không thể đồng bộ thư viện.');
+          return EMPTY;
+        }),
+        finalize(() => this.syncInFlight.set(false)),
+      )
+      .subscribe();
   }
 }

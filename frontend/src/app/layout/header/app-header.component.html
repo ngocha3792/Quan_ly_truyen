@@ -320,7 +320,9 @@
                 </small>
               </div>
 
-              <span>{{ story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương' }}</span>
+              <span>{{
+                story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương'
+              }}</span>
             </a>
           } @empty {
             <div class="no-result">Không tìm thấy truyện phù hợp.</div>

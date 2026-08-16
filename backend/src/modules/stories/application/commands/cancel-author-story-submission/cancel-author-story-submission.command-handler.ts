@@ -7,10 +7,7 @@ import {
   StoryNotFoundException,
   StorySubmissionNotPendingException,
 } from '../../../domain';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { CancelAuthorStorySubmissionCommand } from './cancel-author-story-submission.command';
 
 @Injectable()

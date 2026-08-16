@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { PublicStoryPageDto } from '../../dto';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { InvalidStoryFieldException } from '../../../domain';
 import { ListPublicStoriesQuery } from './list-public-stories.query';
 
@@ -15,7 +12,7 @@ export class ListPublicStoriesQueryHandler {
     private readonly persistence: StoryPersistencePort,
   ) {}
 
-  execute(query: ListPublicStoriesQuery): Promise<PublicStoryPageDto> {
+  async execute(query: ListPublicStoriesQuery): Promise<PublicStoryPageDto> {
     if (
       query.yearFrom !== undefined &&
       query.yearTo !== undefined &&

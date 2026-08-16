@@ -61,8 +61,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'the-loai',
     title: 'Thể loại truyện - TruyenHub',
     data: {
-      seoDescription:
-        'Khám phá truyện theo thể loại và tìm các chủ đề đọc phù hợp trên TruyenHub.',
+      seoDescription: 'Khám phá truyện theo thể loại và tìm các chủ đề đọc phù hợp trên TruyenHub.',
     },
     providers: provideGenreDiscovery(),
     loadComponent: () =>
@@ -87,8 +86,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'cap-nhat',
     title: 'Cập nhật truyện mới - TruyenHub',
     data: {
-      seoDescription:
-        'Theo dõi các truyện và chương mới được cập nhật gần đây trên TruyenHub.',
+      seoDescription: 'Theo dõi các truyện và chương mới được cập nhật gần đây trên TruyenHub.',
     },
     providers: provideStoryUpdates(),
     loadComponent: () =>
@@ -100,8 +98,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'gioi-thieu',
     title: 'Giới thiệu - TruyenHub',
     data: {
-      seoDescription:
-        'Tìm hiểu về TruyenHub và trải nghiệm đọc, quản lý truyện trên nền tảng.',
+      seoDescription: 'Tìm hiểu về TruyenHub và trải nghiệm đọc, quản lý truyện trên nền tảng.',
     },
     loadComponent: () =>
       import('../features/public/static/pages/about-page/about-page.component').then(
@@ -112,8 +109,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'dieu-khoan',
     title: 'Điều khoản sử dụng - TruyenHub',
     data: {
-      seoDescription:
-        'Điều khoản sử dụng dịch vụ và các nguyên tắc áp dụng khi sử dụng TruyenHub.',
+      seoDescription: 'Điều khoản sử dụng dịch vụ và các nguyên tắc áp dụng khi sử dụng TruyenHub.',
     },
     loadComponent: () =>
       import('../features/public/static/pages/terms-page/terms-page.component').then(
@@ -124,8 +120,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'quyen-rieng-tu',
     title: 'Chính sách quyền riêng tư - TruyenHub',
     data: {
-      seoDescription:
-        'Chính sách quyền riêng tư và cách TruyenHub xử lý dữ liệu người dùng.',
+      seoDescription: 'Chính sách quyền riêng tư và cách TruyenHub xử lý dữ liệu người dùng.',
     },
     loadComponent: () =>
       import('../features/public/static/pages/privacy-page/privacy-page.component').then(
@@ -136,8 +131,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'cong-dong',
     title: 'Liên hệ hỗ trợ - TruyenHub',
     data: {
-      seoDescription:
-        'Thông tin hỗ trợ và các kênh liên hệ dành cho người dùng TruyenHub.',
+      seoDescription: 'Thông tin hỗ trợ và các kênh liên hệ dành cho người dùng TruyenHub.',
     },
     loadComponent: () =>
       import('../features/public/static/pages/support-page/support-page.component').then(
@@ -148,8 +142,7 @@ export const PUBLIC_ROUTES: Routes = [
     path: 'tac-gia',
     title: 'Tác giả nổi bật - TruyenHub',
     data: {
-      seoDescription:
-        'Khám phá tác giả và các tác phẩm nổi bật đang được xuất bản trên TruyenHub.',
+      seoDescription: 'Khám phá tác giả và các tác phẩm nổi bật đang được xuất bản trên TruyenHub.',
     },
     loadComponent: () =>
       import('../features/public/author-directory/pages/author-directory-page/author-directory-page.component').then(

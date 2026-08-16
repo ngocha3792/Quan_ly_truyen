@@ -5,7 +5,12 @@
   </div>
 
   <div class="comment-input-box">
-    <textarea #commentInput placeholder="Viết bình luận của bạn..." rows="2" maxlength="4000"></textarea>
+    <textarea
+      #commentInput
+      placeholder="Viết bình luận của bạn..."
+      rows="2"
+      maxlength="4000"
+    ></textarea>
     <button type="button" [disabled]="submitting()" (click)="submit(commentInput)">
       {{ submitting() ? 'Đang gửi...' : 'Gửi' }}
     </button>

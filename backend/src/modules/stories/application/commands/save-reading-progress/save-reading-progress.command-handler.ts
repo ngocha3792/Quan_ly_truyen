@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { ChapterNotFoundException, StoryNotFoundException } from '../../../domain';
+import {
+  ChapterNotFoundException,
+  StoryNotFoundException,
+} from '../../../domain';
 import type { ReadingHistoryEntryResultDto } from '../../dto';
 import {
   READER_ENGAGEMENT_PERSISTENCE_PORT,
@@ -16,7 +19,9 @@ export class SaveReadingProgressCommandHandler {
     private readonly persistence: ReaderEngagementPersistencePort,
   ) {}
 
-  async execute(command: SaveReadingProgressCommand): Promise<ReadingHistoryEntryResultDto> {
+  async execute(
+    command: SaveReadingProgressCommand,
+  ): Promise<ReadingHistoryEntryResultDto> {
     const result = await this.persistence.saveReadingProgress({
       userId: requireReaderUserId(command.userId),
       storyId: command.storyId,

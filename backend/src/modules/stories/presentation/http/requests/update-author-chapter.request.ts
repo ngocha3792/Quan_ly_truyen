@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 import { ChapterDraftPolicy } from '../../../domain';
 

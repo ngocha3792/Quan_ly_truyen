@@ -181,7 +181,7 @@ const PUBLIC_STORY_STATUSES = [
 
 @Injectable()
 export class PrismaStoryPersistence implements StoryPersistencePort {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async listOwned(userId: string): Promise<readonly StoryRecord[]> {
     try {
@@ -237,9 +237,9 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
         attempt === 0
           ? baseSlug
           : createUniqueSlug(baseSlug, storyId.slice(0, 8)).slice(
-            0,
-            StoryDraftPolicy.SLUG_MAX_LENGTH,
-          );
+              0,
+              StoryDraftPolicy.SLUG_MAX_LENGTH,
+            );
 
       try {
         return await this.prisma.$transaction(async (tx) => {
@@ -281,30 +281,30 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
               updatedAt: input.createdAt,
               ...(input.categoryIds.length > 0
                 ? {
-                  categories: {
-                    create: input.categoryIds.map((categoryId, index) => ({
-                      isPrimary: index === 0,
-                      category: {
-                        connect: {
-                          id: categoryId,
+                    categories: {
+                      create: input.categoryIds.map((categoryId, index) => ({
+                        isPrimary: index === 0,
+                        category: {
+                          connect: {
+                            id: categoryId,
+                          },
                         },
-                      },
-                    })),
-                  },
-                }
+                      })),
+                    },
+                  }
                 : {}),
               ...(input.tagIds.length > 0
                 ? {
-                  tags: {
-                    create: input.tagIds.map((tagId) => ({
-                      tag: {
-                        connect: {
-                          id: tagId,
+                    tags: {
+                      create: input.tagIds.map((tagId) => ({
+                        tag: {
+                          connect: {
+                            id: tagId,
+                          },
                         },
-                      },
-                    })),
-                  },
-                }
+                      })),
+                    },
+                  }
                 : {}),
             },
             select: STORY_SELECT,
@@ -397,7 +397,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
             };
           }
 
-          if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(current.status)) {
+          if (
+            !(
+              [StoryStatus.DRAFT, StoryStatus.REJECTED] as StoryStatus[]
+            ).includes(current.status)
+          ) {
             return {
               status: 'not_draft',
             };
@@ -466,64 +470,64 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
             data: {
               ...(titleChanged
                 ? {
-                  title: input.title,
-                  slug: nextSlug,
-                }
+                    title: input.title,
+                    slug: nextSlug,
+                  }
                 : {}),
               ...(synopsisChanged
                 ? {
-                  synopsis: input.synopsis,
-                }
+                    synopsis: input.synopsis,
+                  }
                 : {}),
               ...(categoriesChanged && input.categoryIds !== undefined
                 ? {
-                  categories: {
-                    deleteMany: {},
-                    ...(input.categoryIds.length > 0
-                      ? {
-                        create: input.categoryIds.map(
-                          (categoryId, index) => ({
-                            isPrimary: index === 0,
-                            category: {
-                              connect: {
-                                id: categoryId,
-                              },
-                            },
-                          }),
-                        ),
-                      }
-                      : {}),
-                  },
-                }
+                    categories: {
+                      deleteMany: {},
+                      ...(input.categoryIds.length > 0
+                        ? {
+                            create: input.categoryIds.map(
+                              (categoryId, index) => ({
+                                isPrimary: index === 0,
+                                category: {
+                                  connect: {
+                                    id: categoryId,
+                                  },
+                                },
+                              }),
+                            ),
+                          }
+                        : {}),
+                    },
+                  }
                 : {}),
               ...(tagsChanged && input.tagIds !== undefined
                 ? {
-                  tags: {
-                    deleteMany: {},
-                    ...(input.tagIds.length > 0
-                      ? {
-                        create: input.tagIds.map((tagId) => ({
-                          tag: {
-                            connect: {
-                              id: tagId,
-                            },
-                          },
-                        })),
-                      }
-                      : {}),
-                  },
-                }
+                    tags: {
+                      deleteMany: {},
+                      ...(input.tagIds.length > 0
+                        ? {
+                            create: input.tagIds.map((tagId) => ({
+                              tag: {
+                                connect: {
+                                  id: tagId,
+                                },
+                              },
+                            })),
+                          }
+                        : {}),
+                    },
+                  }
                 : {}),
               ...(coverChanged
                 ? {
-                  coverMediaId: input.coverMediaId,
-                }
+                    coverMediaId: input.coverMediaId,
+                  }
                 : {}),
               ...(current.status === StoryStatus.REJECTED
                 ? {
-                  status: StoryStatus.DRAFT,
-                  visibility: StoryVisibility.PRIVATE,
-                }
+                    status: StoryStatus.DRAFT,
+                    visibility: StoryVisibility.PRIVATE,
+                  }
                 : {}),
               version: {
                 increment: 1,
@@ -595,11 +599,7 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
   ): Promise<DeleteAuthorStoryResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const locked = await lockOwnedStoryRow(
-          tx,
-          input.storyId,
-          input.userId,
-        );
+        const locked = await lockOwnedStoryRow(tx, input.storyId, input.userId);
 
         if (!locked) {
           return {
@@ -622,7 +622,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
           };
         }
 
-        if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(current.status)) {
+        if (
+          !(
+            [StoryStatus.DRAFT, StoryStatus.REJECTED] as StoryStatus[]
+          ).includes(current.status)
+        ) {
           return {
             status: 'not_draft',
           };
@@ -721,7 +725,11 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
         if (!story) {
           return { status: 'not_found' };
         }
-        if (![StoryStatus.DRAFT, StoryStatus.REJECTED].includes(story.status)) {
+        if (
+          !(
+            [StoryStatus.DRAFT, StoryStatus.REJECTED] as StoryStatus[]
+          ).includes(story.status)
+        ) {
           return { status: 'not_draft' };
         }
 
@@ -1203,7 +1211,7 @@ async function getStoryPublicationMissing(
   });
   if (!activeCategory) missing.push('category');
 
-  const chapterRows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const chapterRows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id" FROM "chapters"
     WHERE "story_id" = ${story.id}::uuid
       AND "deleted_at" IS NULL
@@ -1219,7 +1227,7 @@ async function lockSubmissionRow(
   tx: Prisma.TransactionClient,
   submissionId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id" FROM "story_submissions"
     WHERE "id" = ${submissionId}::uuid
     FOR UPDATE
@@ -1229,18 +1237,18 @@ async function lockSubmissionRow(
 
 type TaxonomyValidationResult =
   | {
-    readonly status: 'valid';
-  }
+      readonly status: 'valid';
+    }
   | {
-    readonly status: 'invalid_categories';
+      readonly status: 'invalid_categories';
 
-    readonly invalidIds: readonly string[];
-  }
+      readonly invalidIds: readonly string[];
+    }
   | {
-    readonly status: 'invalid_tags';
+      readonly status: 'invalid_tags';
 
-    readonly invalidIds: readonly string[];
-  };
+      readonly invalidIds: readonly string[];
+    };
 
 async function validateTaxonomy(
   tx: Prisma.TransactionClient,
@@ -1377,7 +1385,7 @@ async function lockOwnedStoryRow(
   storyId: string,
   userId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id"
     FROM "stories"
     WHERE "id" = ${storyId}::uuid
@@ -1393,7 +1401,7 @@ async function lockStoryRow(
   tx: Prisma.TransactionClient,
   storyId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id"
     FROM "stories"
     WHERE "id" = ${storyId}::uuid
@@ -1407,7 +1415,7 @@ async function lockMediaAssetRow(
   tx: Prisma.TransactionClient,
   mediaAssetId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id"
     FROM "media_assets"
     WHERE "id" = ${mediaAssetId}::uuid
@@ -1563,11 +1571,7 @@ function buildPublicStoryOrderBy(
         { id: 'desc' },
       ];
     case 'chapter-count':
-      return [
-        { chapterCount: 'desc' },
-        { updatedAt: 'desc' },
-        { id: 'desc' },
-      ];
+      return [{ chapterCount: 'desc' }, { updatedAt: 'desc' }, { id: 'desc' }];
     case 'oldest':
       return [{ publishedAt: 'asc' }, { id: 'asc' }];
     case 'latest':
@@ -1679,7 +1683,6 @@ function bigintToSafeNumber(value: bigint): number {
   }
   return Number(value);
 }
-
 
 function getPublicStoryCoverUrl(story: PublicStoryRow): string | null {
   const cover = story.coverMedia;

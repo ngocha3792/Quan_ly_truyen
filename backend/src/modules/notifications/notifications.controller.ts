@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+} from '@nestjs/common';
 import { IsBoolean, IsOptional } from 'class-validator';
 
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
@@ -49,7 +58,8 @@ export class NotificationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async setRead(
     @CurrentUserId() userId: string | undefined,
-    @Param('notificationId', new ParseUUIDPipe({ version: '4' })) notificationId: string,
+    @Param('notificationId', new ParseUUIDPipe({ version: '4' }))
+    notificationId: string,
     @Body() request: SetNotificationFlagRequest,
   ): Promise<void> {
     await this.notifications.setRead(userId, notificationId, request.value);
@@ -59,7 +69,8 @@ export class NotificationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async setSaved(
     @CurrentUserId() userId: string | undefined,
-    @Param('notificationId', new ParseUUIDPipe({ version: '4' })) notificationId: string,
+    @Param('notificationId', new ParseUUIDPipe({ version: '4' }))
+    notificationId: string,
     @Body() request: SetNotificationFlagRequest,
   ): Promise<void> {
     await this.notifications.setSaved(userId, notificationId, request.value);
@@ -67,7 +78,9 @@ export class NotificationsController {
 
   @Patch('read-all')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async markAllAsRead(@CurrentUserId() userId: string | undefined): Promise<void> {
+  async markAllAsRead(
+    @CurrentUserId() userId: string | undefined,
+  ): Promise<void> {
     await this.notifications.markAllAsRead(userId);
   }
 

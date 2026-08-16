@@ -9,10 +9,7 @@ import {
   StorySubmissionNotPendingException,
   StorySubmissionSelfReviewException,
 } from '../../../domain';
-import {
-  STORY_PERSISTENCE_PORT,
-  type StoryPersistencePort,
-} from '../../ports';
+import { STORY_PERSISTENCE_PORT, type StoryPersistencePort } from '../../ports';
 import { RejectStorySubmissionCommand } from './reject-story-submission.command';
 
 @Injectable()

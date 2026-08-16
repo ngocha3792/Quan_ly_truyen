@@ -44,9 +44,7 @@ export class AppShellComponent implements OnInit {
     const description = snapshot.data['seoDescription'];
 
     const title =
-      typeof snapshot.title === 'string'
-        ? snapshot.title
-        : 'TruyenHub - Đọc truyện online';
+      typeof snapshot.title === 'string' ? snapshot.title : 'TruyenHub - Đọc truyện online';
     const canonicalPath = this.router.url.split(/[?#]/, 1)[0] || '/';
 
     if (typeof description !== 'string' || !description.trim()) {

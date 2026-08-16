@@ -6,5 +6,5 @@ export class SubmitAuthorStoryCommand {
     readonly ipAddress: string | undefined,
     readonly userAgent: string | undefined,
     readonly requestId: string | undefined,
-  ) { }
+  ) {}
 }

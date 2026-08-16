@@ -116,7 +116,7 @@ const PUBLIC_STORY_STATUSES = [
 
 @Injectable()
 export class PrismaChapterPersistence implements ChapterPersistencePort {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async listOwnedByStory(
     userId: string,
@@ -397,15 +397,15 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           data: {
             ...(titleChanged
               ? {
-                title: nextTitle,
-                slug: nextSlug,
-              }
+                  title: nextTitle,
+                  slug: nextSlug,
+                }
               : {}),
             ...(contentChanged
               ? {
-                content: nextContent,
-                wordCount: nextWordCount,
-              }
+                  content: nextContent,
+                  wordCount: nextWordCount,
+                }
               : {}),
             updatedById: input.userId,
             updatedAt: input.updatedAt,
@@ -805,7 +805,7 @@ async function lockAndFindOwnedStory(
   tx: Prisma.TransactionClient,
   storyId: string,
   userId: string,
-): Promise<{ readonly id: string; readonly status: StoryStatus; } | null> {
+): Promise<{ readonly id: string; readonly status: StoryStatus } | null> {
   const locked = await lockOwnedStoryRow(tx, storyId, userId);
 
   if (!locked) {
@@ -830,7 +830,7 @@ async function lockOwnedStoryRow(
   storyId: string,
   userId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id"
     FROM "stories"
     WHERE "id" = ${storyId}::uuid
@@ -847,7 +847,7 @@ async function lockChapterRowForStory(
   chapterId: string,
   storyId: string,
 ): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string; }>>(Prisma.sql`
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT "id"
     FROM "chapters"
     WHERE "id" = ${chapterId}::uuid

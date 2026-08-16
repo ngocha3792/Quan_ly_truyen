@@ -37,8 +37,7 @@ export class ChapterReaderPageComponent implements OnInit {
     if (!view) return;
 
     const chapterLabel = view.chapter.title.trim() || `Chương ${view.chapter.number}`;
-    const canonicalPath =
-      `/truyen/${encodeURIComponent(view.story.slug)}/chuong/${view.chapter.number}`;
+    const canonicalPath = `/truyen/${encodeURIComponent(view.story.slug)}/chuong/${view.chapter.number}`;
 
     this.seo.apply({
       title: `${view.story.title} - ${chapterLabel} | TruyenHub`,

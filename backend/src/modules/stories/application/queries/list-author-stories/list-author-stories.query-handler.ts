@@ -15,7 +15,9 @@ export class ListAuthorStoriesQueryHandler {
     private readonly persistence: StoryPersistencePort,
   ) {}
 
-  async execute(query: ListAuthorStoriesQuery): Promise<readonly StoryResultDto[]> {
+  async execute(
+    query: ListAuthorStoriesQuery,
+  ): Promise<readonly StoryResultDto[]> {
     const userId = requireAuthorUserId(query.userId);
     const stories = await this.persistence.listOwned(userId);
 
@@ -27,7 +29,8 @@ function requireAuthorUserId(userId: string | undefined): string {
   if (!userId || !isUuidV4(userId)) {
     throw new AuthenticationRequiredException({
       code: 'STORY_AUTHENTICATION_REQUIRED',
-      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
+      message:
+        'Bạn cần đăng nhập bằng tài khoản tác giả để xem truyện của mình',
     });
   }
 

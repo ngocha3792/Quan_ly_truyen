@@ -1,7 +1,4 @@
-import type {
-  PublicStoryDto,
-  PublicStoryPageDto,
-} from '../../../application';
+import type { PublicStoryDto, PublicStoryPageDto } from '../../../application';
 
 export interface PublicStoryChapterSummaryResponse {
   readonly id: string;

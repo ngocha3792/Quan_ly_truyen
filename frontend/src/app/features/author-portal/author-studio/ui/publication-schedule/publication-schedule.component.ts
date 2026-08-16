@@ -19,7 +19,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
           Lịch xuất bản tuần này
         </h2>
-
       </header>
 
       <div class="schedule-list">

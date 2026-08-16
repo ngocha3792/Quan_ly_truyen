@@ -6,7 +6,10 @@ import { isUuidV4 } from '@/common/utils';
 import { ChapterNotFoundException } from '../../../domain';
 import type { ChapterResultDto } from '../../dto';
 import { ChapterResultMapper } from '../../mappers';
-import { CHAPTER_PERSISTENCE_PORT, type ChapterPersistencePort } from '../../ports';
+import {
+  CHAPTER_PERSISTENCE_PORT,
+  type ChapterPersistencePort,
+} from '../../ports';
 import { GetAuthorChapterQuery } from './get-author-chapter.query';
 
 @Injectable()
@@ -36,7 +39,8 @@ function requireAuthorUserId(userId: string | undefined): string {
   if (!userId || !isUuidV4(userId)) {
     throw new AuthenticationRequiredException({
       code: 'CHAPTER_AUTHENTICATION_REQUIRED',
-      message: 'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
+      message:
+        'Bạn cần đăng nhập bằng tài khoản tác giả để xem chương của mình',
     });
   }
 

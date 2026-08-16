@@ -20,7 +20,9 @@
 
     <div class="footer-row">
       <div>
-        <span class="chapter"> {{ story().latestChapter !== null ? 'Ch.' + story().latestChapter : 'Chưa có chương' }} </span>
+        <span class="chapter">
+          {{ story().latestChapter !== null ? 'Ch.' + story().latestChapter : 'Chưa có chương' }}
+        </span>
 
         <span>
           {{ story().updatedAt | relativeTime }}
