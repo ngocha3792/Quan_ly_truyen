@@ -533,7 +533,11 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       })),
     });
     await prisma.authorProfile.create({
-      data: { userId, penName: `media-e2e-${runId}` },
+      data: {
+        userId,
+        penName: `media-e2e-${runId}`,
+        slug: `media-e2e-${runId}`,
+      },
     });
     await prisma.story.create({
       data: {
