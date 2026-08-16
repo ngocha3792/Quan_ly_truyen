@@ -49,7 +49,8 @@ RUN npm run build \
     && test -f dist/main.js \
     && test -f dist/worker.js \
     && test -f dist/healthcheck/worker-heartbeat.healthcheck.js \
-    && test -f dist/healthcheck/recovery-metrics.js
+    && test -f dist/healthcheck/recovery-metrics.js \
+    && cp -r src/generated/prisma/. dist/generated/prisma/
 
 
 FROM dependencies AS production-dependencies
