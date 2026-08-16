@@ -76,19 +76,19 @@ $FrontendImageTag = Get-DotEnvValue `
   -Name 'FRONTEND_IMAGE_TAG'
 
 if ([string]::IsNullOrWhiteSpace($BackendImageName)) {
-  throw 'BACKEND_IMAGE_NAME is missing from .env.production.'
+  throw "BACKEND_IMAGE_NAME is missing from $EnvironmentFilePath."
 }
 
 if ([string]::IsNullOrWhiteSpace($BackendImageTag)) {
-  throw 'BACKEND_IMAGE_TAG is missing from .env.production.'
+  throw "BACKEND_IMAGE_TAG is missing from $EnvironmentFilePath."
 }
 
 if ([string]::IsNullOrWhiteSpace($FrontendImageName)) {
-  throw 'FRONTEND_IMAGE_NAME is missing from .env.production.'
+  throw "FRONTEND_IMAGE_NAME is missing from $EnvironmentFilePath."
 }
 
 if ([string]::IsNullOrWhiteSpace($FrontendImageTag)) {
-  throw 'FRONTEND_IMAGE_TAG is missing from .env.production.'
+  throw "FRONTEND_IMAGE_TAG is missing from $EnvironmentFilePath."
 }
 
 function Assert-ImmutableApplicationImageTag {
@@ -168,10 +168,42 @@ function Invoke-DockerCompose {
   }
 }
 
+$ObservabilityProjectName = Get-DotEnvValue `
+  -Path $EnvironmentFilePath `
+  -Name 'OBSERVABILITY_COMPOSE_PROJECT_NAME'
+
+$ObservabilityCompose = @(
+  'compose',
+  '--env-file', $EnvironmentFilePath
+)
+
+if (-not [string]::IsNullOrWhiteSpace($ObservabilityProjectName)) {
+  $ObservabilityCompose += @('--project-name', $ObservabilityProjectName)
+}
+
+$ObservabilityCompose += @('-f', 'ops/observability/docker-compose.observability.yml')
+
+function Invoke-ObservabilityCompose {
+  param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Arguments
+  )
+
+  & docker @ObservabilityCompose @Arguments
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "docker compose observability failed: $($Arguments -join ' ')"
+  }
+}
+
 Write-Host '[1/8] Validating Docker Compose configuration...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose config --quiet
+
+if (-not $SkipObservability) {
+  Invoke-ObservabilityCompose config --quiet
+}
 
 if ($UseLocalBuild) {
   Write-Host (
@@ -258,14 +290,7 @@ if (-not $SkipObservability) {
   Write-Host '[7b/8] Starting observability stack...' `
     -ForegroundColor Cyan
 
-  & docker compose `
-    --env-file .env.production `
-    -f ops/observability/docker-compose.observability.yml `
-    up -d
-
-  if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to start the observability stack.'
-  }
+  Invoke-ObservabilityCompose up -d
 }
 
 if (-not $SkipPostdeployGate) {

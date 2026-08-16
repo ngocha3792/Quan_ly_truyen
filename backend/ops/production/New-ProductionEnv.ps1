@@ -232,8 +232,24 @@ $DkimEnabledValue = if ($EnableDkim) { 'true' } else { 'false' }
 $DkimKeyBase64 = if ($EnableDkim) {
   [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $DkimPrivateKeyPath)))
 }
+$ResolvedObservabilityProjectName = "${ResolvedComposeProjectName}-observability"
+$ResolvedObservabilityBackendNetwork = "${ResolvedComposeProjectName}-backend"
+
+if ($EnvironmentName -eq 'production') {
+  $AlertmanagerHostPort = 9093
+  $PrometheusHostPort = 9090
+  $LokiHostPort = 3100
+  $TempoHostPort = 3200
+  $AlloyHostPort = 12345
+  $GrafanaHostPort = 3001
+}
 else {
-  ''
+  $AlertmanagerHostPort = 19093
+  $PrometheusHostPort = 19090
+  $LokiHostPort = 13100
+  $TempoHostPort = 13200
+  $AlloyHostPort = 22345
+  $GrafanaHostPort = 13001
 }
 
 $Content = @"
@@ -241,6 +257,14 @@ PRODUCTION_ENV_FILE=$(Get-QuotedEnvValue $ComposeEnvironmentFile)
 COMPOSE_PROJECT_NAME=$(Get-QuotedEnvValue $ResolvedComposeProjectName)
 DEPLOYMENT_ENVIRONMENT=$EnvironmentName
 RELEASE_SHA=$(Get-QuotedEnvValue $BackendImageTag)
+OBSERVABILITY_COMPOSE_PROJECT_NAME=$(Get-QuotedEnvValue $ResolvedObservabilityProjectName)
+OBSERVABILITY_BACKEND_NETWORK=$(Get-QuotedEnvValue $ResolvedObservabilityBackendNetwork)
+ALERTMANAGER_HOST_PORT=$AlertmanagerHostPort
+PROMETHEUS_HOST_PORT=$PrometheusHostPort
+LOKI_HOST_PORT=$LokiHostPort
+TEMPO_HOST_PORT=$TempoHostPort
+ALLOY_HOST_PORT=$AlloyHostPort
+GRAFANA_HOST_PORT=$GrafanaHostPort
 
 NODE_IMAGE=node:24.15.0-bookworm-slim
 FRONTEND_NODE_IMAGE=node:24.15.0-alpine

@@ -95,13 +95,13 @@ try {
       $PreviousSourceSha -and
       -not $SkipProductionBackup) {
     Write-Host '[release] Creating verified pre-deploy backup...' -ForegroundColor Cyan
-    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1')
+    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1') -EnvironmentFile $EnvironmentFilePath
 
     if ($LASTEXITCODE -ne 0) {
       throw 'Pre-deploy PostgreSQL backup failed.'
     }
 
-    & (Join-Path $PSScriptRoot 'Test-RecoveryReadiness.ps1')
+    & (Join-Path $PSScriptRoot 'Test-RecoveryReadiness.ps1') -EnvironmentFile $EnvironmentFilePath
 
     if ($LASTEXITCODE -ne 0) {
       throw 'Recovery readiness gate failed before production deploy.'

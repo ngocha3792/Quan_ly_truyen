@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+  [string]$EnvironmentFile = '.env.production',
   [switch]$KeepArtifacts
 )
 
@@ -13,17 +14,21 @@ $BackendRoot =
 
 Set-Location $BackendRoot
 
-$EnvironmentFile =
-  Join-Path $BackendRoot '.env.production'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
 
 if (
   -not (
     Test-Path `
-      -LiteralPath $EnvironmentFile `
+      -LiteralPath $EnvironmentFilePath `
       -PathType Leaf
   )
 ) {
-  throw '.env.production is missing.'
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 function Get-EnvValue {
@@ -33,7 +38,7 @@ function Get-EnvValue {
   )
 
   $Line =
-    Get-Content -LiteralPath $EnvironmentFile |
+    Get-Content -LiteralPath $EnvironmentFilePath |
     Where-Object {
       $_ -match "^$([regex]::Escape($Name))="
     } |
@@ -71,15 +76,12 @@ function Invoke-Compose {
   )
 
   & docker compose `
-    --env-file .env.production `
+    --env-file $EnvironmentFilePath `
     -f compose.production.yml `
     @Arguments
 
   if ($LASTEXITCODE -ne 0) {
-    throw (
-      "docker compose failed: {0}" -f
-      ($Arguments -join ' ')
-    )
+    throw ("docker compose failed: {0}" -f ($Arguments -join ' '))
   }
 }
 
@@ -211,10 +213,7 @@ try {
         -PathType Leaf
     )
   ) {
-    throw (
-      "Restored checksum file missing: {0}" -f
-      $ChecksumPath
-    )
+    throw ("Restored checksum file missing: {0}" -f $ChecksumPath)
   }
 
   $ExpectedHash =
@@ -246,6 +245,7 @@ try {
 
   & (Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1') `
     -BackupFile $Dump.FullName `
+    -EnvironmentFile $EnvironmentFilePath `
     -SkipAgeCheck |
   Out-Null
 
@@ -338,7 +338,7 @@ SELECT json_build_object(
 '@
 
   & docker compose `
-    --env-file .env.production `
+    --env-file $EnvironmentFilePath `
     -f compose.production.yml `
     --profile maintenance `
     --profile restore-drill `
@@ -394,15 +394,12 @@ SELECT json_build_object(
     -Destination $RestoreStatusPath `
     -Force
 
-  Write-Host (
-    "RESTORE DRILL PASSED: {0}" -f
-    $Dump.Name
-  ) -ForegroundColor Green
+  Write-Host ("RESTORE DRILL PASSED: {0}" -f $Dump.Name) -ForegroundColor Green
 }
 finally {
   if ($DrillStarted) {
     & docker compose `
-      --env-file .env.production `
+      --env-file $EnvironmentFilePath `
       -f compose.production.yml `
       --profile restore-drill `
       rm `

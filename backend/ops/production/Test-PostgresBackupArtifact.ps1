@@ -3,6 +3,8 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$BackupFile,
 
+  [string]$EnvironmentFile = '.env.production',
+
   [ValidateRange(1, 87600)]
   [int]$MaxAgeHours = 48,
 
@@ -17,8 +19,15 @@ $ErrorActionPreference = 'Stop'
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $BackendRoot
 
-if (-not (Test-Path -LiteralPath '.env.production' -PathType Leaf)) {
-  throw '.env.production is missing.'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
+
+if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 if ($MinimumBytes -lt 1) {
@@ -41,8 +50,8 @@ $Age = [DateTime]::UtcNow - $Backup.LastWriteTimeUtc
 
 if (-not $SkipAgeCheck -and $Age.TotalHours -gt $MaxAgeHours) {
   throw (
-    'Backup is older than the allowed age. AgeHours={0:N2} MaxAgeHours={1}' -f
-      $Age.TotalHours,
+    'Backup is older than the allowed age. AgeHours={0:N2} MaxAgeHours={1}' -f `
+      $Age.TotalHours, `
       $MaxAgeHours
   )
 }
@@ -66,7 +75,7 @@ $ContainerBackupPath = '/verify/backup.dump'
 $Mount = "${ResolvedBackup}:${ContainerBackupPath}:ro"
 
 & docker compose `
-  --env-file .env.production `
+  --env-file $EnvironmentFilePath `
   -f compose.production.yml `
   --profile maintenance `
   run `

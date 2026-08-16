@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$EnvironmentFile = '.env.production'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -7,13 +9,20 @@ $ErrorActionPreference = 'Stop'
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $BackendRoot
 
-if (-not (Test-Path -LiteralPath '.env.production' -PathType Leaf)) {
-  throw '.env.production is missing.'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
+
+if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 $Base = @(
   'compose',
-  '--env-file', '.env.production',
+  '--env-file', $EnvironmentFilePath,
   '-f', 'compose.production.yml',
   '--profile', 'maintenance',
   'run', '--rm'

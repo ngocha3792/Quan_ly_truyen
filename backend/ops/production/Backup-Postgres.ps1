@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$EnvironmentFile = '.env.production'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -11,17 +13,21 @@ $BackendRoot =
 
 Set-Location $BackendRoot
 
-$EnvironmentFile =
-  Join-Path $BackendRoot '.env.production'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
 
 if (
   -not (
     Test-Path `
-      -LiteralPath $EnvironmentFile `
+      -LiteralPath $EnvironmentFilePath `
       -PathType Leaf
   )
 ) {
-  throw '.env.production is missing.'
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 function Get-EnvValue {
@@ -31,7 +37,7 @@ function Get-EnvValue {
   )
 
   $Line =
-    Get-Content -LiteralPath $EnvironmentFile |
+    Get-Content -LiteralPath $EnvironmentFilePath |
     Where-Object {
       $_ -match "^$([regex]::Escape($Name))="
     } |
@@ -69,7 +75,7 @@ function Invoke-Compose {
   )
 
   & docker compose `
-    --env-file .env.production `
+    --env-file $EnvironmentFilePath `
     -f compose.production.yml `
     @Arguments
 
@@ -167,6 +173,7 @@ $Verification = & (
   Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1'
 ) `
   -BackupFile $LatestDump.FullName `
+  -EnvironmentFile $EnvironmentFilePath `
   -MaxAgeHours 2
 
 Write-Host (
@@ -187,11 +194,11 @@ function Write-BackupStatus {
       'backup-last-success.json'
 
   $Status = [ordered]@{
-    version = 1
-    completedAt = [DateTime]::UtcNow.ToString('o')
-    dumpFile = $LatestDump.Name
-    sizeBytes = [long]$Verification.SizeBytes
-    sha256 = [string]$Verification.Sha256
+    version         = 1
+    completedAt     = [DateTime]::UtcNow.ToString('o')
+    dumpFile        = $LatestDump.Name
+    sizeBytes       = [long]$Verification.SizeBytes
+    sha256          = [string]$Verification.Sha256
     offsiteVerified = $OffsiteVerified
   }
 
@@ -264,7 +271,7 @@ Write-Host `
   -ForegroundColor Cyan
 
 & docker compose `
-  --env-file .env.production `
+  --env-file $EnvironmentFilePath `
   -f compose.production.yml `
   --profile maintenance `
   run `

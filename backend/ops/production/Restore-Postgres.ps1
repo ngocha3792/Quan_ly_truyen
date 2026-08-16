@@ -6,6 +6,8 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$ConfirmDatabaseName,
 
+  [string]$EnvironmentFile = '.env.production',
+
   [switch]$SkipSafetyBackup
 )
 
@@ -15,49 +17,72 @@ $ErrorActionPreference = 'Stop'
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $BackendRoot
 
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
+
+if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
+}
+
 function Get-EnvValue {
   param([Parameter(Mandatory = $true)][string]$Name)
 
-  $Line = Get-Content -LiteralPath '.env.production' |
+  $Line = Get-Content -LiteralPath $EnvironmentFilePath |
     Where-Object { $_ -match "^$([regex]::Escape($Name))=" } |
     Select-Object -Last 1
 
   if (-not $Line) {
-    throw "Missing $Name in .env.production"
+    throw "Missing $Name in $EnvironmentFilePath"
   }
 
-  return $Line.Substring($Name.Length + 1)
-}
+  $Value = $Line.Substring($Name.Length + 1).Trim()
 
-if (-not (Test-Path -LiteralPath '.env.production' -PathType Leaf)) {
-  throw '.env.production is missing.'
+  if (
+    ($Value.StartsWith("'") -and $Value.EndsWith("'")) -or
+    ($Value.StartsWith('"') -and $Value.EndsWith('"'))
+  ) {
+    return $Value.Substring(1, $Value.Length - 2)
+  }
+
+  return $Value
 }
 
 $ResolvedBackup = (Resolve-Path -LiteralPath $BackupFile).Path
 $DatabaseName = Get-EnvValue -Name 'POSTGRES_DB'
 $PostgresUser = Get-EnvValue -Name 'POSTGRES_USER'
+$EnvironmentName = Get-EnvValue -Name 'DEPLOYMENT_ENVIRONMENT'
 
-if ($ConfirmDatabaseName -cne $DatabaseName) {
-  throw "Confirmation mismatch. Expected database name: $DatabaseName"
+if ([string]::IsNullOrWhiteSpace($EnvironmentName)) {
+  $EnvironmentName = 'production'
 }
 
+if ($ConfirmDatabaseName -cne $DatabaseName) {
+  throw "Confirmation mismatch for target environment '$EnvironmentName'. Expected database name: $DatabaseName"
+}
+
+Write-Host "Target environment: $EnvironmentName | Target database: $DatabaseName" -ForegroundColor Yellow
 Write-Host 'Validating backup checksum and archive structure...' -ForegroundColor Cyan
 
 & (Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1') `
   -BackupFile $ResolvedBackup `
+  -EnvironmentFile $EnvironmentFilePath `
   -SkipAgeCheck |
 Out-Null
 
-if (-not $PSCmdlet.ShouldProcess($DatabaseName, "Restore from $ResolvedBackup")) {
+if (-not $PSCmdlet.ShouldProcess("$DatabaseName ($EnvironmentName)", "Restore from $ResolvedBackup")) {
   return
 }
 
 if (-not $SkipSafetyBackup) {
-  & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1')
+  & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1') -EnvironmentFile $EnvironmentFilePath
 }
 
 $ComposePrefix = @(
-  'compose', '--env-file', '.env.production', '-f', 'compose.production.yml'
+  'compose', '--env-file', $EnvironmentFilePath, '-f', 'compose.production.yml'
 )
 
 Write-Host 'Stopping traffic and background processing...' -ForegroundColor Yellow

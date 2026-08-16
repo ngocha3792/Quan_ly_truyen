@@ -109,7 +109,7 @@ try {
 
   if ($EnvironmentName -eq 'production') {
     Write-Host '[rollback] Creating safety backup before application rollback...' -ForegroundColor Cyan
-    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1')
+    & (Join-Path $PSScriptRoot 'Backup-Postgres.ps1') -EnvironmentFile $EnvironmentFilePath
 
     if ($LASTEXITCODE -ne 0) {
       throw 'Safety backup failed; rollback aborted.'

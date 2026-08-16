@@ -97,17 +97,58 @@ Khi phải restore production thật:
 
 ## Staging release flow
 
-Staging chạy cùng production Compose nhưng bắt buộc dùng project name, domain, database volume và secret riêng. Tối thiểu `.env.staging` phải có:
+Staging chạy cùng Docker host với Production nhưng bắt buộc bảo đảm cô lập hoàn toàn (Multi-environment Invariant):
+
+| Thành phần | Production | Staging |
+|---|---|---|
+| Environment File | `.env.production` | `.env.staging` |
+| Main Compose Project | `quan-ly-truyen-production` | `quan-ly-truyen-staging` |
+| Backend Network | `quan-ly-truyen-production-backend` | `quan-ly-truyen-staging-backend` |
+| Observability Project | `quan-ly-truyen-production-observability` | `quan-ly-truyen-staging-observability` |
+| Alertmanager Port | `127.0.0.1:9093` | `127.0.0.1:19093` |
+| Prometheus Port | `127.0.0.1:9090` | `127.0.0.1:19090` |
+| Loki Port | `127.0.0.1:3100` | `127.0.0.1:13100` |
+| Tempo Port | `127.0.0.1:3200` | `127.0.0.1:13200` |
+| Alloy Port | `127.0.0.1:12345` | `127.0.0.1:22345` |
+| Grafana Port | `127.0.0.1:3001` | `127.0.0.1:13001` |
+| Log Filtering (Alloy) | `TARGET_COMPOSE_PROJECT=quan-ly-truyen-production` | `TARGET_COMPOSE_PROJECT=quan-ly-truyen-staging` |
+| Deployment State | `ops/production/.deployment-state/production` | `ops/production/.deployment-state/staging` |
+
+Tối thiểu `.env.staging` phải có:
 
 ```text
 PRODUCTION_ENV_FILE=.env.staging
 COMPOSE_PROJECT_NAME=quan-ly-truyen-staging
 DEPLOYMENT_ENVIRONMENT=staging
+OBSERVABILITY_COMPOSE_PROJECT_NAME=quan-ly-truyen-staging-observability
+OBSERVABILITY_BACKEND_NETWORK=quan-ly-truyen-staging-backend
+ALERTMANAGER_HOST_PORT=19093
+PROMETHEUS_HOST_PORT=19090
+LOKI_HOST_PORT=13100
+TEMPO_HOST_PORT=13200
+ALLOY_HOST_PORT=22345
+GRAFANA_HOST_PORT=13001
 APP_DOMAIN=staging.example.com
 APP_PUBLIC_URL=https://staging.example.com
 ```
 
 Không dùng chung `DEPLOY_PATH`, `.env`, PostgreSQL volume hoặc `ops/production/secrets` giữa GitHub Environment `staging` và `production`.
+
+### Kiểm tra cấu hình và cách ly trước khi deploy
+
+```powershell
+# Kiểm tra cô lập tự động
+npm run ci:deployment-isolation
+
+# Kiểm tra cú pháp Compose Staging
+npm run docker:staging:config:example
+npm run observability:staging:config:example
+
+# Kiểm tra container, network, volume trên server
+docker compose ls
+docker network ls
+docker volume ls
+```
 
 Release thủ công trên host:
 
@@ -118,7 +159,7 @@ Release thủ công trên host:
   -DeploymentMode Registry
 ```
 
-`Invoke-Release.ps1` cập nhật đồng thời backend/frontend image tag, serialize deployment bằng lock file, chạy production gate, external smoke test và ghi trạng thái vào `ops/production/.deployment-state/staging`.
+`Invoke-Release.ps1` cập nhật đồng thời backend/frontend image tag, serialize deployment bằng lock file, chạy production gate, external smoke test và ghi trạng thái vào `ops/production/.deployment-state/staging`. Mọi tác vụ backup và recovery liên quan đều nhận `-EnvironmentFile .env.staging` tương ứng.
 
 ## GitHub deployment environments
 

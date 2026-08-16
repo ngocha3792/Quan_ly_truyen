@@ -345,9 +345,21 @@ jobs:
             config --quiet
 
           docker compose \
+            --env-file ops/production/compose.validation.staging.env.example \
+            -f compose.production.yml \
+            config --quiet
+
+          docker compose \
             --env-file ops/production/compose.validation.env.example \
             -f ops/observability/docker-compose.observability.yml \
             config --quiet
+
+          docker compose \
+            --env-file ops/production/compose.validation.staging.env.example \
+            -f ops/observability/docker-compose.observability.yml \
+            config --quiet
+
+          npm run ci:deployment-isolation
 
           if grep -RInE '(^|[[:space:]])image:[[:space:]].*:latest([[:space:]]|$|[}])' \
             compose.production.yml \

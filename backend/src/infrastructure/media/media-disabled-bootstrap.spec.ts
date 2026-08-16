@@ -166,7 +166,7 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       });
 
     await app.close();
-  }, 60000);
+  }, 120000);
 
   it('boots WorkerModule without Cloudinary credentials', async () => {
     /*

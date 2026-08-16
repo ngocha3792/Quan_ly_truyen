@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$EnvironmentFile = '.env.production'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -7,10 +9,15 @@ $ErrorActionPreference = 'Stop'
 $BackendRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $BackendRoot
 
-$EnvironmentFile = Join-Path $BackendRoot '.env.production'
+$EnvironmentFilePath = if ([IO.Path]::IsPathRooted($EnvironmentFile)) {
+  $EnvironmentFile
+}
+else {
+  Join-Path $BackendRoot $EnvironmentFile
+}
 
-if (-not (Test-Path -LiteralPath $EnvironmentFile -PathType Leaf)) {
-  throw '.env.production is missing.'
+if (-not (Test-Path -LiteralPath $EnvironmentFilePath -PathType Leaf)) {
+  throw "Deployment environment file is missing: $EnvironmentFilePath"
 }
 
 function Get-EnvValue {
@@ -19,7 +26,7 @@ function Get-EnvValue {
     [string]$Name
   )
 
-  $Line = Get-Content -LiteralPath $EnvironmentFile |
+  $Line = Get-Content -LiteralPath $EnvironmentFilePath |
     Where-Object { $_ -match "^$([regex]::Escape($Name))=" } |
     Select-Object -Last 1
 
@@ -101,8 +108,8 @@ $RestoreAgeDays = ($Now - $RestoreCompletedAt).TotalDays
 
 if ($BackupAgeHours -gt [double]$BackupRpoHours) {
   throw (
-    'Backup RPO violated. AgeHours={0:N2} ObjectiveHours={1}' -f
-      $BackupAgeHours,
+    'Backup RPO violated. AgeHours={0:N2} ObjectiveHours={1}' -f `
+      $BackupAgeHours, `
       $BackupRpoHours
   )
 }
@@ -113,15 +120,15 @@ if ($OffsiteEnabled -and $BackupStatus.offsiteVerified -ne $true) {
 
 if ($RestoreAgeDays -gt [double]$RestoreDrillMaxAgeDays) {
   throw (
-    'Restore drill objective violated. AgeDays={0:N2} ObjectiveDays={1}' -f
-      $RestoreAgeDays,
+    'Restore drill objective violated. AgeDays={0:N2} ObjectiveDays={1}' -f `
+      $RestoreAgeDays, `
       $RestoreDrillMaxAgeDays
   )
 }
 
 Write-Host (
-  'Recovery readiness passed. BackupAgeHours={0:N2} RestoreDrillAgeDays={1:N2} OffsiteRequired={2}' -f
-    $BackupAgeHours,
-    $RestoreAgeDays,
+  'Recovery readiness passed. BackupAgeHours={0:N2} RestoreDrillAgeDays={1:N2} OffsiteRequired={2}' -f `
+    $BackupAgeHours, `
+    $RestoreAgeDays, `
     $OffsiteEnabled
 ) -ForegroundColor Green
