@@ -3,7 +3,7 @@ import type { PublicComment } from '../../comments';
 
 export type { ChapterSummary, Story };
 
-export interface StoryComment extends PublicComment {}
+export type StoryComment = PublicComment;
 
 export interface RelatedStoryItem {
   readonly title: string;

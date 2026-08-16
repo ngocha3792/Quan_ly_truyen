@@ -3,7 +3,10 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type Redis from 'ioredis';
 import type { AnalyticsConfig } from '@/config';
-import { RateLimitExceededException, ServiceUnavailableException } from '@/common/exceptions';
+import {
+  RateLimitExceededException,
+  ServiceUnavailableException,
+} from '@/common/exceptions';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import { MetricsService } from '@/infrastructure/observability';
 

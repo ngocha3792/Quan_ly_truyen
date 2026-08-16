@@ -1,13 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
-const baseUrl = process.env.ANALYTICS_LOAD_TEST_BASE_URL ?? 'http://127.0.0.1:3000/api/v1';
+const baseUrl =
+  process.env.ANALYTICS_LOAD_TEST_BASE_URL ?? 'http://127.0.0.1:3000/api/v1';
 const storyId = process.env.ANALYTICS_LOAD_TEST_STORY_ID;
 const chapterId = process.env.ANALYTICS_LOAD_TEST_CHAPTER_ID;
-const eventsPerSecond = Math.max(1, Number(process.env.ANALYTICS_LOAD_TEST_EPS ?? 100));
-const durationSeconds = Math.max(1, Number(process.env.ANALYTICS_LOAD_TEST_SECONDS ?? 30));
+const eventsPerSecond = Math.max(
+  1,
+  Number(process.env.ANALYTICS_LOAD_TEST_EPS ?? 100),
+);
+const durationSeconds = Math.max(
+  1,
+  Number(process.env.ANALYTICS_LOAD_TEST_SECONDS ?? 30),
+);
 
 if (!storyId || !chapterId) {
-  throw new Error('ANALYTICS_LOAD_TEST_STORY_ID and ANALYTICS_LOAD_TEST_CHAPTER_ID are required');
+  throw new Error(
+    'ANALYTICS_LOAD_TEST_STORY_ID and ANALYTICS_LOAD_TEST_CHAPTER_ID are required',
+  );
 }
 
 const anonymousReaderId = randomUUID();
@@ -39,8 +48,21 @@ async function main(): Promise<void> {
     if (sleep > 0) await new Promise((resolve) => setTimeout(resolve, sleep));
   }
   latencies.sort((a, b) => a - b);
-  const p95 = latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)] ?? 0;
-  console.log(JSON.stringify({ totalEvents: total, accepted, failed, requests: latencies.length, p95Ms: p95 }, null, 2));
+  const p95 =
+    latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)] ?? 0;
+  console.log(
+    JSON.stringify(
+      {
+        totalEvents: total,
+        accepted,
+        failed,
+        requests: latencies.length,
+        p95Ms: p95,
+      },
+      null,
+      2,
+    ),
+  );
   if (failed > 0) process.exitCode = 1;
 }
 
@@ -53,8 +75,11 @@ async function send(events: unknown[]): Promise<void> {
       body: JSON.stringify({ anonymousReaderId, events }),
     });
     latencies.push(performance.now() - before);
-    if (!response.ok()) { failed += events.length; return; }
-    const body = await response.json() as { data?: { accepted?: number } };
+    if (!response.ok) {
+      failed += events.length;
+      return;
+    }
+    const body = (await response.json()) as { data?: { accepted?: number } };
     accepted += body.data?.accepted ?? events.length;
   } catch {
     latencies.push(performance.now() - before);

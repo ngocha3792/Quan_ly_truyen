@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MetricsService } from '@/infrastructure/observability';
-import { ChapterNotFoundException, StoryNotFoundException } from '../../../domain';
+import {
+  ChapterNotFoundException,
+  StoryNotFoundException,
+} from '../../../domain';
 import { CommentWriteAbuseService } from '@/modules/comments';
 import type { StoryCommentResultDto } from '../../dto';
 import {

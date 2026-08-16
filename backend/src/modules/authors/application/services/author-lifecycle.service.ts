@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AuthorLifecycleStatus as PrismaAuthorLifecycleStatus,
-  Prisma,
-  StoryStatus,
-} from '@/generated/prisma/client';
+import { Prisma, StoryStatus } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
 import {
   AuthorLifecycleNotActiveException,
@@ -23,8 +19,9 @@ export class AuthorLifecycleService {
       select: { lifecycleStatus: true },
     });
     if (!author) throw new AuthorLifecycleNotActiveException('MISSING');
-    if (author.lifecycleStatus !== PrismaAuthorLifecycleStatus.ACTIVE)
+    if (author.lifecycleStatus !== 'ACTIVE') {
       throw new AuthorLifecycleNotActiveException(author.lifecycleStatus);
+    }
   }
 
   async list(input: {
@@ -37,9 +34,7 @@ export class AuthorLifecycleService {
   }): Promise<AdminAuthorListDto> {
     const search = input.search?.trim();
     const where: Prisma.AuthorProfileWhereInput = {
-      ...(input.status
-        ? { lifecycleStatus: input.status as PrismaAuthorLifecycleStatus }
-        : {}),
+      ...(input.status ? { lifecycleStatus: input.status } : {}),
       ...(input.createdFrom || input.createdTo
         ? {
             createdAt: {
@@ -251,9 +246,9 @@ export class AuthorLifecycleService {
         select: { lifecycleStatus: true, statusReason: true },
       });
       if (!current) throw new ManagedAuthorNotFoundException(input.authorId);
-      const nextStatus = input.status as PrismaAuthorLifecycleStatus;
+      const nextStatus = input.status;
       if (
-        current.lifecycleStatus === nextStatus &&
+        String(current.lifecycleStatus) === String(nextStatus) &&
         current.statusReason === reason
       )
         return;

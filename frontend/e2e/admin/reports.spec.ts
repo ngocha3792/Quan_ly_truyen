@@ -20,13 +20,20 @@ test('manager sees immutable evidence, hides comment and resolves report', async
   await expect(page.getByText(REPORT_ROW_TEXT)).toBeVisible();
   await expect(page.getByText('Edited after report')).toBeVisible();
 
-  await page.getByText('Reason (10–2000)').locator('..').getByRole('textbox').first().fill(MODERATION_REASON);
+  await page
+    .getByText('Reason (10–2000)')
+    .locator('..')
+    .getByRole('textbox')
+    .first()
+    .fill(MODERATION_REASON);
   await page.getByRole('button', { name: 'Hide', exact: true }).click();
   await expect(page.getByText('Đã hide comment.')).toBeVisible();
   await expect(page.getByText('HIDDEN', { exact: true })).toBeVisible();
   await expect(page.getByText('HIDE_COMMENT', { exact: true })).toBeVisible();
 
-  await page.getByPlaceholder('Resolution note (ít nhất 10 ký tự)').fill('Đã xác nhận vi phạm và hoàn tất xử lý report.');
+  await page
+    .getByPlaceholder('Resolution note (ít nhất 10 ký tự)')
+    .fill('Đã xác nhận vi phạm và hoàn tất xử lý report.');
   await page.getByRole('button', { name: 'Resolve', exact: true }).click();
   await expect(page.getByText('Đã resolve report.')).toBeVisible();
   await expect(page.getByText(/RESOLVED/).first()).toBeVisible();
@@ -46,11 +53,18 @@ test('manager can hold then restore without corrupting the report workflow', asy
   await expect(page.getByText('RESTORE_COMMENT', { exact: true })).toBeVisible();
 });
 
-test('warning is recorded and ban reuses account lifecycle without deleting the comment', async ({ page }) => {
+test('warning is recorded and ban reuses account lifecycle without deleting the comment', async ({
+  page,
+}) => {
   await openSeededReport(page);
   const reasonBox = page.getByText('Reason (10–2000)').locator('..').getByRole('textbox').first();
   await reasonBox.fill(MODERATION_REASON);
-  await page.getByText('Warning message').locator('..').getByRole('textbox').last().fill('Vui lòng dừng hành vi quấy rối và tuân thủ quy tắc cộng đồng.');
+  await page
+    .getByText('Warning message')
+    .locator('..')
+    .getByRole('textbox')
+    .last()
+    .fill('Vui lòng dừng hành vi quấy rối và tuân thủ quy tắc cộng đồng.');
 
   await page.getByRole('button', { name: 'Warn user', exact: true }).click();
   await expect(page.getByText('Đã gửi cảnh báo bắt buộc.')).toBeVisible();

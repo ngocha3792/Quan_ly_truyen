@@ -36,12 +36,19 @@ export interface AdminAuditLogListResult {
 export interface AdminAuditLogDetail {
   readonly id: string;
   readonly actorId: string | null;
-  readonly actor: { readonly id: string; readonly displayName: string; readonly email: string } | null;
+  readonly actor: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly email: string;
+  } | null;
   readonly action: string;
   readonly entity: { readonly type: string; readonly id: string | null };
   readonly requestId: string | null;
   readonly createdAt: Date;
-  readonly client: { readonly ipAddress: string | null; readonly userAgent: string | null };
+  readonly client: {
+    readonly ipAddress: string | null;
+    readonly userAgent: string | null;
+  };
   readonly oldValues: SafeAuditValue;
   readonly newValues: SafeAuditValue;
   readonly metadata: SafeAuditValue;

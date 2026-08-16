@@ -4,10 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { AuthorFollowApiService } from '../../shared/author-follow/data-access/author-follow-api.service';
 import { AuthorFollowMutation } from '../../shared/author-follow/domain/author-follow.models';
-import {
-  AuthorDirectorySort,
-  AuthorDirectoryView,
-} from '../domain/author-directory.models';
+import { AuthorDirectorySort, AuthorDirectoryView } from '../domain/author-directory.models';
 import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
 
 @Injectable()
@@ -43,12 +40,17 @@ export class AuthorDirectoryStore {
 
     return filtered.sort((first, second) => {
       switch (this.sort()) {
-        case 'followers': return second.followers - first.followers;
-        case 'reads': return second.reads - first.reads;
-        case 'works': return second.works - first.works;
-        case 'name': return first.name.localeCompare(second.name, 'vi');
+        case 'followers':
+          return second.followers - first.followers;
+        case 'reads':
+          return second.reads - first.reads;
+        case 'works':
+          return second.works - first.works;
+        case 'name':
+          return first.name.localeCompare(second.name, 'vi');
         case 'featured':
-        default: return first.featuredRank - second.featuredRank;
+        default:
+          return first.featuredRank - second.featuredRank;
       }
     });
   });
@@ -84,12 +86,26 @@ export class AuthorDirectoryStore {
       .subscribe((view) => this.viewState.set(view));
   }
 
-  setQuery(query: string): void { this.query.set(query); this.page.set(1); }
-  setSort(sort: AuthorDirectorySort): void { this.sort.set(sort); this.page.set(1); }
-  setPage(page: number): void { this.page.set(Math.min(Math.max(page, 1), this.totalPages())); }
-  nextPage(): void { this.setPage(this.page() + 1); }
-  previousPage(): void { this.setPage(this.page() - 1); }
-  isFollowPending(authorId: string): boolean { return this.pendingAuthorIds().includes(authorId); }
+  setQuery(query: string): void {
+    this.query.set(query);
+    this.page.set(1);
+  }
+  setSort(sort: AuthorDirectorySort): void {
+    this.sort.set(sort);
+    this.page.set(1);
+  }
+  setPage(page: number): void {
+    this.page.set(Math.min(Math.max(page, 1), this.totalPages()));
+  }
+  nextPage(): void {
+    this.setPage(this.page() + 1);
+  }
+  previousPage(): void {
+    this.setPage(this.page() - 1);
+  }
+  isFollowPending(authorId: string): boolean {
+    return this.pendingAuthorIds().includes(authorId);
+  }
 
   toggleFollow(authorId: string): void {
     if (!this.auth.isAuthenticated() || this.isFollowPending(authorId)) return;
@@ -122,9 +138,7 @@ export class AuthorDirectoryStore {
           const pending = new Set(this.pendingAuthorIds());
           const visible = new Set(authorIds.filter((id) => !pending.has(id)));
           const followedVisible = new Set(
-            page.items
-              .map((item) => item.author.id)
-              .filter((id) => !pending.has(id)),
+            page.items.map((item) => item.author.id).filter((id) => !pending.has(id)),
           );
           this.followedAuthorIds.update((current) => [
             ...current.filter((id) => !visible.has(id)),

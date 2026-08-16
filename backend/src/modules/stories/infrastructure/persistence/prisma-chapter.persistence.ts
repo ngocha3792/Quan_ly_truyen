@@ -589,7 +589,13 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         }
         const story = await tx.story.findFirst({
           where: { id: input.storyId, authorId: input.userId, deletedAt: null },
-          select: { id: true, status: true, slug: true, title: true, authorId: true },
+          select: {
+            id: true,
+            status: true,
+            slug: true,
+            title: true,
+            authorId: true,
+          },
         });
         if (!story) {
           return { status: 'not_found' };

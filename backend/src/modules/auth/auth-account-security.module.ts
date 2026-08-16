@@ -29,9 +29,10 @@ import {
 } from './presentation/http';
 
 import { AuthCoreModule } from './auth-core.module';
+import { PrismaModule } from '@/infrastructure/database';
 
 @Module({
-  imports: [AuthCoreModule],
+  imports: [AuthCoreModule, PrismaModule],
   controllers: [
     AdminUserSecurityController,
     AuthAccountController,

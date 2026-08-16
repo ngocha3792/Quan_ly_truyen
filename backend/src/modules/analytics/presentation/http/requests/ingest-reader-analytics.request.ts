@@ -22,7 +22,10 @@ export class ReaderAnalyticsEventRequest {
   @IsUUID('4') sessionId!: string;
   @IsUUID('4') storyId!: string;
   @IsOptional() @IsUUID('4') chapterId?: string;
-  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100)
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
   progressPercent?: number;
   @IsOptional() @IsInt() @Min(0) @Max(60) activeSeconds?: number;
   @IsDateString({ strict: true }) occurredAt!: string;

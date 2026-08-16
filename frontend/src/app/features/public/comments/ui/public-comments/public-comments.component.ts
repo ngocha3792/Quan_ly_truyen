@@ -131,11 +131,11 @@ export class PublicCommentsComponent {
   }
 
   protected reactionLabel(type: CommentReactionApiType): string {
-    return ({ LIKE: '👍', LOVE: '❤️', LAUGH: '😂', INSIGHTFUL: '💡' })[type];
+    return { LIKE: '👍', LOVE: '❤️', LAUGH: '😂', INSIGHTFUL: '💡' }[type];
   }
 
   protected reasonLabel(reason: CommentReportReasonApi): string {
-    return ({
+    return {
       SPAM: 'Spam',
       HARASSMENT: 'Quấy rối',
       HATE_SPEECH: 'Nội dung thù ghét',
@@ -144,6 +144,6 @@ export class PublicCommentsComponent {
       COPYRIGHT: 'Bản quyền',
       MISINFORMATION: 'Thông tin sai lệch',
       OTHER: 'Khác',
-    })[reason];
+    }[reason];
   }
 }

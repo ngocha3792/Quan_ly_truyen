@@ -41,7 +41,11 @@ export class AuthorProfileUploadService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  upload(ownerId: string, file: File, purpose: ProfileMediaPurpose): Observable<ConfirmedProfileMedia> {
+  upload(
+    ownerId: string,
+    file: File,
+    purpose: ProfileMediaPurpose,
+  ): Observable<ConfirmedProfileMedia> {
     this.validate(file, purpose);
     return this.createIntent(ownerId, file, purpose).pipe(
       switchMap((intent) =>
@@ -52,7 +56,11 @@ export class AuthorProfileUploadService {
     );
   }
 
-  private createIntent(ownerId: string, file: File, purpose: ProfileMediaPurpose): Observable<UploadIntent> {
+  private createIntent(
+    ownerId: string,
+    file: File,
+    purpose: ProfileMediaPurpose,
+  ): Observable<UploadIntent> {
     return this.http
       .post<ApiSuccessEnvelope<UploadIntent>>(
         `${this.config.apiBaseUrl}/media/upload-intents`,
@@ -82,7 +90,10 @@ export class AuthorProfileUploadService {
     return this.http.post<CloudinaryUploadResponse>(intent.uploadUrl, form);
   }
 
-  private confirm(intent: UploadIntent, result: CloudinaryUploadResponse): Observable<ConfirmedProfileMedia> {
+  private confirm(
+    intent: UploadIntent,
+    result: CloudinaryUploadResponse,
+  ): Observable<ConfirmedProfileMedia> {
     return this.http
       .post<ApiSuccessEnvelope<ConfirmedProfileMedia>>(
         `${this.config.apiBaseUrl}/media/upload-intents/${intent.mediaAssetId}/confirm`,
@@ -99,6 +110,7 @@ export class AuthorProfileUploadService {
   private validate(file: File, purpose: ProfileMediaPurpose): void {
     if (!ALLOWED_TYPES.has(file.type)) throw new Error('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.');
     const max = purpose === 'AVATAR' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
-    if (file.size > max) throw new Error(purpose === 'AVATAR' ? 'Avatar tối đa 5 MB.' : 'Banner tối đa 10 MB.');
+    if (file.size > max)
+      throw new Error(purpose === 'AVATAR' ? 'Avatar tối đa 5 MB.' : 'Banner tối đa 10 MB.');
   }
 }

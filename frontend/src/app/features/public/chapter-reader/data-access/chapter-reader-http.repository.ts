@@ -8,7 +8,11 @@ import {
   PublicChapterReaderApiResponse,
 } from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
-import type { CommentReactionApiType, CommentReportReasonApi, StoryCommentApiItem } from '../../../../core/http/reader-engagement-api.model';
+import type {
+  CommentReactionApiType,
+  CommentReportReasonApi,
+  StoryCommentApiItem,
+} from '../../../../core/http/reader-engagement-api.model';
 import {
   ChapterComment,
   ChapterNavigationItem,
@@ -30,11 +34,15 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     storySlug: string,
     chapterNumber: string,
   ): Observable<{ readonly items: readonly ChapterComment[]; readonly total: number }> {
-    return this.engagement.listChapterComments(storySlug, chapterNumber).pipe(
-      switchMap((page) => this.withViewerReactions(page.items).pipe(
-        map((items) => ({ items, total: page.pagination.totalItems })),
-      )),
-    );
+    return this.engagement
+      .listChapterComments(storySlug, chapterNumber)
+      .pipe(
+        switchMap((page) =>
+          this.withViewerReactions(page.items).pipe(
+            map((items) => ({ items, total: page.pagination.totalItems })),
+          ),
+        ),
+      );
   }
 
   createComment(storyId: string, chapterId: string, body: string): Observable<ChapterComment> {
@@ -54,28 +62,37 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   }
 
   getReplies(rootCommentId: string): Observable<readonly ChapterComment[]> {
-    return this.engagement.listCommentReplies(rootCommentId).pipe(
-      switchMap((page) => this.withViewerReactions(page.items)),
-    );
+    return this.engagement
+      .listCommentReplies(rootCommentId)
+      .pipe(switchMap((page) => this.withViewerReactions(page.items)));
   }
 
   createReply(parentCommentId: string, body: string): Observable<ChapterComment> {
-    return this.engagement.createCommentReply(parentCommentId, body).pipe(
-      map((comment) => this.toChapterComment(comment)),
-    );
+    return this.engagement
+      .createCommentReply(parentCommentId, body)
+      .pipe(map((comment) => this.toChapterComment(comment)));
   }
 
   setReaction(commentId: string, type: CommentReactionApiType) {
-    return this.engagement.setCommentReaction(commentId, type).pipe(
-      map((summary) => ({ viewerReaction: summary.viewerReaction, reactions: summary.reactions })),
-    );
+    return this.engagement
+      .setCommentReaction(commentId, type)
+      .pipe(
+        map((summary) => ({
+          viewerReaction: summary.viewerReaction,
+          reactions: summary.reactions,
+        })),
+      );
   }
 
   clearReaction(commentId: string): Observable<void> {
     return this.engagement.clearCommentReaction(commentId);
   }
 
-  reportComment(commentId: string, reason: CommentReportReasonApi, description?: string): Observable<void> {
+  reportComment(
+    commentId: string,
+    reason: CommentReportReasonApi,
+    description?: string,
+  ): Observable<void> {
     return this.engagement.reportComment(commentId, reason, description).pipe(map(() => undefined));
   }
 
@@ -83,22 +100,35 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     return this.engagement.saveReadingProgress(storyId, chapterId).pipe(map(() => undefined));
   }
 
-  private withViewerReactions(items: readonly StoryCommentApiItem[]): Observable<readonly ChapterComment[]> {
+  private withViewerReactions(
+    items: readonly StoryCommentApiItem[],
+  ): Observable<readonly ChapterComment[]> {
     if (!this.auth.isAuthenticated() || items.length === 0) {
       return of(items.map((comment) => this.toChapterComment(comment)));
     }
-    return this.engagement.getViewerCommentReactions(items.map((item) => item.id)).pipe(
-      map((mine) => items.map((comment) => this.toChapterComment(comment, mine[comment.id] ?? null))),
-    );
+    return this.engagement
+      .getViewerCommentReactions(items.map((item) => item.id))
+      .pipe(
+        map((mine) =>
+          items.map((comment) => this.toChapterComment(comment, mine[comment.id] ?? null)),
+        ),
+      );
   }
 
-  private toChapterComment(comment: StoryCommentApiItem, viewerReaction: CommentReactionApiType | null = null): ChapterComment {
+  private toChapterComment(
+    comment: StoryCommentApiItem,
+    viewerReaction: CommentReactionApiType | null = null,
+  ): ChapterComment {
     return {
       id: comment.id,
       parentId: comment.parentId,
       depth: comment.depth,
       displayState: comment.displayState,
-      author: { id: comment.user.id, name: comment.user.displayName, initials: initials(comment.user.displayName) },
+      author: {
+        id: comment.user.id,
+        name: comment.user.displayName,
+        initials: initials(comment.user.displayName),
+      },
       content: comment.body,
       createdAt: relativeTime(comment.createdAt),
       reactions: comment.reactions,

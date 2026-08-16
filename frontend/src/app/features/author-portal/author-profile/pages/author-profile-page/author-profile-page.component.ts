@@ -17,7 +17,10 @@ import { AuthorProfileStore } from '../../data-access/author-profile.store';
 export class AuthorProfilePageComponent {
   protected readonly store = inject(AuthorProfileStore);
   protected readonly form = new FormGroup({
-    displayName: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2), Validators.maxLength(120)] }),
+    displayName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(2), Validators.maxLength(120)],
+    }),
     bio: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(5000)] }),
     website: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(500)] }),
     facebook: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(500)] }),
@@ -32,7 +35,7 @@ export class AuthorProfilePageComponent {
   constructor() {
     effect(() => {
       const profile = this.store.profile();
-      if (!profile || this.populatedProfileId === profile.id && this.form.dirty) return;
+      if (!profile || (this.populatedProfileId === profile.id && this.form.dirty)) return;
       this.populatedProfileId = profile.id;
       this.form.reset({
         displayName: profile.displayName,
@@ -49,7 +52,10 @@ export class AuthorProfilePageComponent {
   }
 
   protected save(): void {
-    if (this.form.invalid || this.store.saving()) { this.form.markAllAsTouched(); return; }
+    if (this.form.invalid || this.store.saving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const value = this.form.getRawValue();
     this.store.save(
       {
@@ -68,8 +74,14 @@ export class AuthorProfilePageComponent {
     );
   }
 
-  protected avatarSelected(event: Event): void { const file = selectedFile(event); if (file) this.store.uploadAvatar(file); }
-  protected bannerSelected(event: Event): void { const file = selectedFile(event); if (file) this.store.uploadBanner(file); }
+  protected avatarSelected(event: Event): void {
+    const file = selectedFile(event);
+    if (file) this.store.uploadAvatar(file);
+  }
+  protected bannerSelected(event: Event): void {
+    const file = selectedFile(event);
+    if (file) this.store.uploadBanner(file);
+  }
 }
 
 function selectedFile(event: Event): File | null {

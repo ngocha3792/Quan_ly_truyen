@@ -802,9 +802,7 @@ async function prepareModerationFixture(input: {
     data: {
       reporterId: input.reporterId,
       targetType: ReportTargetType.COMMENT,
-      storyId: story.id,
       commentId: comment.id,
-      reportedUserId: input.reportedUserId,
       reason: ReportReason.HARASSMENT,
       description: 'E2E report dùng để kiểm tra immutable evidence và moderation workflow.',
       evidence: {

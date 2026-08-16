@@ -33,8 +33,12 @@ export const METRIC_NAMES = {
   COMMENT_MODERATION_ACTIONS: 'qlt_comment_moderation_actions_total',
   COMMENT_ABUSE_BLOCKS: 'qlt_comment_abuse_blocks_total',
   AUDIT_LOG_READ_REQUESTS: 'qlt_audit_log_read_requests_total',
-  READER_ANALYTICS_EVENTS_RECEIVED: 'qlt_reader_analytics_events_received_total',
-  READER_ANALYTICS_EVENTS_PROCESSED: 'qlt_reader_analytics_events_processed_total',
-  READER_ANALYTICS_EVENTS_REJECTED: 'qlt_reader_analytics_events_rejected_total',
-  READER_ANALYTICS_RECONCILIATION_MISMATCHES: 'qlt_reader_analytics_reconciliation_mismatches_total',
+  READER_ANALYTICS_EVENTS_RECEIVED:
+    'qlt_reader_analytics_events_received_total',
+  READER_ANALYTICS_EVENTS_PROCESSED:
+    'qlt_reader_analytics_events_processed_total',
+  READER_ANALYTICS_EVENTS_REJECTED:
+    'qlt_reader_analytics_events_rejected_total',
+  READER_ANALYTICS_RECONCILIATION_MISMATCHES:
+    'qlt_reader_analytics_reconciliation_mismatches_total',
 } as const;

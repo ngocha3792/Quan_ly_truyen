@@ -56,18 +56,25 @@ function isSensitiveKey(key: string): boolean {
   const normalized = normalizeSensitiveKey(key);
   return (
     SENSITIVE_KEYS.has(normalized) ||
-    /password|token|secret|credential|privatekey|authorization|cookie/.test(normalized)
+    /password|token|secret|credential|privatekey|authorization|cookie/.test(
+      normalized,
+    )
   );
 }
 
 function sanitizeString(value: string, maxLength: number): string {
-  const trimmed = value.length > maxLength ? `${value.slice(0, maxLength)}…${TRUNCATED}` : value;
+  const trimmed =
+    value.length > maxLength
+      ? `${value.slice(0, maxLength)}…${TRUNCATED}`
+      : value;
 
   if (/^\s*(?:Bearer|Basic)\s+\S+/i.test(trimmed)) {
     return REDACTED;
   }
 
-  if (/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/.test(trimmed)) {
+  if (
+    /^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/.test(trimmed)
+  ) {
     return REDACTED;
   }
 
@@ -80,8 +87,10 @@ function sanitizeInternal(
   depth: number,
 ): SafeAuditValue {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return sanitizeString(value, limits.maxStringLength);
-  if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
+  if (typeof value === 'string')
+    return sanitizeString(value, limits.maxStringLength);
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : String(value);
   if (typeof value === 'boolean') return value;
   if (typeof value === 'bigint') return value.toString();
   if (value instanceof Date) return value.toISOString();
@@ -110,7 +119,11 @@ function sanitizeInternal(
     return output;
   }
 
-  return sanitizeString(String(value), limits.maxStringLength);
+  if (typeof value === 'symbol' || typeof value === 'function') {
+    return sanitizeString(value.toString(), limits.maxStringLength);
+  }
+
+  return null;
 }
 
 export function sanitizeAuditPayload(
@@ -120,7 +133,9 @@ export function sanitizeAuditPayload(
   return sanitizeInternal(value, limits, 0);
 }
 
-export function maskAuditIpAddress(value: string | null | undefined): string | null {
+export function maskAuditIpAddress(
+  value: string | null | undefined,
+): string | null {
   if (!value) return null;
 
   const ipv4 = value.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
@@ -135,7 +150,9 @@ export function maskAuditIpAddress(value: string | null | undefined): string | n
   return '[MASKED]';
 }
 
-export function sanitizeAuditUserAgent(value: string | null | undefined): string | null {
+export function sanitizeAuditUserAgent(
+  value: string | null | undefined,
+): string | null {
   if (!value) return null;
   return value.length <= 512 ? value : `${value.slice(0, 512)}…${TRUNCATED}`;
 }

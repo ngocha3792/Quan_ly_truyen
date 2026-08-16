@@ -1,6 +1,8 @@
 import { expect, test } from '../fixtures/public-story-test';
 
-test('browser emits one story view and one chapter view while analytics remains fail-soft', async ({ page }) => {
+test('browser emits one story view and one chapter view while analytics remains fail-soft', async ({
+  page,
+}) => {
   const eventTypes: string[] = [];
   await page.route('**/api/v1/reader-analytics/config', async (route) => {
     await route.fulfill({
@@ -20,7 +22,11 @@ test('browser emits one story view and one chapter view while analytics remains 
   await page.route('**/api/v1/reader-analytics/events', async (route) => {
     const body = route.request().postDataJSON() as { events?: Array<{ type?: string }> };
     for (const event of body.events ?? []) if (event.type) eventTypes.push(event.type);
-    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false }) });
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: false }),
+    });
   });
 
   await page.goto('/truyen/e2e-public-story');

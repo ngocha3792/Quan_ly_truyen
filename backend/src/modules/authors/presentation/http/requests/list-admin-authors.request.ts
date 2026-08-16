@@ -13,7 +13,9 @@ import { AuthorLifecycleStatus } from '../../../domain';
 
 export class ListAdminAuthorsRequest {
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MaxLength(160)
   search?: string;

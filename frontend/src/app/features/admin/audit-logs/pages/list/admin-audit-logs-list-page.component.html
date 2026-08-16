@@ -9,8 +9,12 @@
 
   <form class="filters" (ngSubmit)="applyFilters()">
     <label>Actor ID<input name="actorId" [(ngModel)]="actorId" placeholder="UUID" /></label>
-    <label>Action<input name="action" [(ngModel)]="action" placeholder="user.status.changed" /></label>
-    <label>Entity type<input name="entityType" [(ngModel)]="entityType" placeholder="user" /></label>
+    <label
+      >Action<input name="action" [(ngModel)]="action" placeholder="user.status.changed"
+    /></label>
+    <label
+      >Entity type<input name="entityType" [(ngModel)]="entityType" placeholder="user"
+    /></label>
     <label>Entity ID<input name="entityId" [(ngModel)]="entityId" /></label>
     <label>Request ID<input name="requestId" [(ngModel)]="requestId" /></label>
     <label>From<input name="from" type="datetime-local" [(ngModel)]="from" /></label>
@@ -21,37 +25,66 @@
     </div>
   </form>
 
-  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
   @if (loading()) {
     <p>Đang tải audit timeline...</p>
   } @else if (result(); as data) {
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Request ID</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Entity</th>
+            <th>Request ID</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           @for (item of data.items; track item.id) {
             <tr>
               <td>{{ item.createdAt | date: 'short' }}</td>
               <td>{{ item.actor?.displayName || 'Unknown/deleted actor' }}</td>
-              <td><code>{{ item.action }}</code></td>
-              <td><code>{{ item.entityType }}</code><br />{{ item.entityId || '—' }}</td>
+              <td>
+                <code>{{ item.action }}</code>
+              </td>
+              <td>
+                <code>{{ item.entityType }}</code
+                ><br />{{ item.entityId || '—' }}
+              </td>
               <td>
                 @if (item.requestId) {
-                  <a [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: item.requestId }">{{ item.requestId }}</a>
-                } @else { — }
+                  <a
+                    [routerLink]="['/admin/audit-logs']"
+                    [queryParams]="{ requestId: item.requestId }"
+                    >{{ item.requestId }}</a
+                  >
+                } @else {
+                  —
+                }
               </td>
               <td><a [routerLink]="['/admin/audit-logs', item.id]">Xem</a></td>
             </tr>
           } @empty {
-            <tr><td colspan="6">Không có audit event phù hợp.</td></tr>
+            <tr>
+              <td colspan="6">Không có audit event phù hợp.</td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
     <footer class="pager">
       <button type="button" [disabled]="page <= 1" (click)="go(page - 1)">Trước</button>
-      <span>{{ page }} / {{ data.pagination.totalPages || 1 }} · {{ data.pagination.totalItems }} events</span>
-      <button type="button" [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">Sau</button>
+      <span
+        >{{ page }} / {{ data.pagination.totalPages || 1 }} ·
+        {{ data.pagination.totalItems }} events</span
+      >
+      <button type="button" [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">
+        Sau
+      </button>
     </footer>
   }
 </main>

@@ -15,7 +15,12 @@ export interface AuthorProfileListRecord {
   readonly totalReadCount: bigint;
   readonly storyCount: number;
   readonly user: {
-    readonly avatarMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
+    readonly avatarMedia: {
+      readonly secureUrl: string | null;
+      readonly publicUrl: string | null;
+      readonly status: string;
+      readonly deletedAt: Date | null;
+    } | null;
   };
   readonly stories: readonly {
     readonly categories: readonly {
@@ -47,7 +52,12 @@ export interface AuthorProfileDetailRecord {
   readonly biography: string | null;
   readonly socialLinks: unknown;
   readonly websiteUrl: string | null;
-  readonly bannerMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
+  readonly bannerMedia: {
+    readonly secureUrl: string | null;
+    readonly publicUrl: string | null;
+    readonly status: string;
+    readonly deletedAt: Date | null;
+  } | null;
   readonly verificationStatus: string;
   readonly verifiedAt: Date | null;
   readonly followerCount: number;
@@ -56,7 +66,12 @@ export interface AuthorProfileDetailRecord {
   readonly createdAt: Date;
   readonly user: {
     readonly displayName: string;
-    readonly avatarMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
+    readonly avatarMedia: {
+      readonly secureUrl: string | null;
+      readonly publicUrl: string | null;
+      readonly status: string;
+      readonly deletedAt: Date | null;
+    } | null;
   };
   readonly stories: readonly {
     readonly id: string;

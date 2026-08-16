@@ -1,7 +1,32 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
-import { ClientIp, CurrentUserId, RequestId, RequirePermissions, UserAgent } from '@/common/decorators';
+import {
+  IsDateString,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+import {
+  ClientIp,
+  CurrentUserId,
+  RequestId,
+  RequirePermissions,
+  UserAgent,
+} from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import { AuthenticationRequiredException } from '@/common/exceptions';
@@ -17,7 +42,8 @@ class ListAdminReportsRequest {
   @IsOptional() @IsDateString() createdTo?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
-  @IsOptional() @IsIn(['createdAt', 'status', 'reason']) sort: 'createdAt' | 'status' | 'reason' = 'createdAt';
+  @IsOptional() @IsIn(['createdAt', 'status', 'reason']) sort:
+    'createdAt' | 'status' | 'reason' = 'createdAt';
   @IsOptional() @IsIn(['asc', 'desc']) direction: 'asc' | 'desc' = 'desc';
 }
 
@@ -37,7 +63,9 @@ export class AdminReportsController {
       reason: request.reason,
       reporter: request.reporter,
       reportedUser: request.reportedUser,
-      createdFrom: request.createdFrom ? new Date(request.createdFrom) : undefined,
+      createdFrom: request.createdFrom
+        ? new Date(request.createdFrom)
+        : undefined,
       createdTo: request.createdTo ? new Date(request.createdTo) : undefined,
       page: request.page,
       pageSize: request.pageSize,
@@ -47,7 +75,9 @@ export class AdminReportsController {
   }
 
   @Get(':reportId')
-  detail(@Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string) {
+  detail(
+    @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
+  ) {
     return this.moderation.getReport(reportId);
   }
 
@@ -62,7 +92,9 @@ export class AdminReportsController {
     @Body() request: CloseReportRequest,
   ) {
     return this.moderation.resolveReport({
-      actorId: this.actor(actorId), reportId, note: request.note,
+      actorId: this.actor(actorId),
+      reportId,
+      note: request.note,
       audit: { ipAddress, userAgent, requestId },
     });
   }
@@ -78,7 +110,9 @@ export class AdminReportsController {
     @Body() request: CloseReportRequest,
   ) {
     return this.moderation.rejectReport({
-      actorId: this.actor(actorId), reportId, note: request.note,
+      actorId: this.actor(actorId),
+      reportId,
+      note: request.note,
       audit: { ipAddress, userAgent, requestId },
     });
   }

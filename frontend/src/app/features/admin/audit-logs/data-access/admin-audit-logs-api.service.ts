@@ -21,7 +21,13 @@ export class AdminAuditLogsApiService {
       .set('pageSize', input.pageSize ?? 20);
 
     for (const [key, value] of Object.entries(input)) {
-      if (key === 'page' || key === 'pageSize' || value === undefined || value === null || value === '') {
+      if (
+        key === 'page' ||
+        key === 'pageSize' ||
+        value === undefined ||
+        value === null ||
+        value === ''
+      ) {
         continue;
       }
       params = params.set(key, String(value));

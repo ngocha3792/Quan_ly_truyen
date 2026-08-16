@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Header, Patch, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Patch,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ClientIp,
   CurrentUserId,
@@ -7,7 +14,10 @@ import {
   UserAgent,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
-import { AuthorProfileService, type AuthorProfileView } from '../../../application/services/author-profile.service';
+import {
+  AuthorProfileService,
+  type AuthorProfileView,
+} from '../../../application/services/author-profile.service';
 import { UpdateAuthorProfileRequest } from '../requests/update-author-profile.request';
 
 @Controller('author/profile')

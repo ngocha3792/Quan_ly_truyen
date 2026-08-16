@@ -1,4 +1,8 @@
-import { hasFlag, readArgument, readPositiveInteger } from '../shared/script-arguments';
+import {
+  hasFlag,
+  readArgument,
+  readPositiveInteger,
+} from '../shared/script-arguments';
 import { createScriptPrismaClient } from '../shared/prisma-client';
 import { runScript } from '../shared/script-runner';
 
@@ -23,9 +27,7 @@ void runScript({
         select: { userId: true, followerCount: true },
         orderBy: { userId: 'asc' },
         take: Math.min(batchSize, limit - scanned),
-        ...(cursor
-          ? { cursor: { userId: cursor }, skip: 1 }
-          : {}),
+        ...(cursor ? { cursor: { userId: cursor }, skip: 1 } : {}),
       });
       if (authors.length === 0) break;
 
@@ -34,7 +36,9 @@ void runScript({
         where: { authorId: { in: authors.map((author) => author.userId) } },
         _count: { _all: true },
       });
-      const counts = new Map(grouped.map((row) => [row.authorId, row._count._all]));
+      const counts = new Map(
+        grouped.map((row) => [row.authorId, row._count._all]),
+      );
 
       for (const author of authors) {
         const expected = counts.get(author.userId) ?? 0;

@@ -18,17 +18,32 @@
     <p class="state">Đang tải thống kê…</p>
   } @else if (overview(); as data) {
     <div class="summary-grid">
-      <article><span>Lượt xem</span><strong>{{ formatNumber(data.totals.views) }}</strong></article>
-      <article><span>Độc giả</span><strong>{{ formatNumber(data.totals.uniqueReaders) }}</strong></article>
-      <article><span>Bắt đầu đọc</span><strong>{{ formatNumber(data.totals.readingStarts) }}</strong></article>
-      <article><span>Hoàn thành</span><strong>{{ formatNumber(data.totals.completions) }}</strong></article>
-      <article><span>Tỷ lệ hoàn thành</span><strong>{{ formatRate(data.totals.completionRate) }}</strong></article>
-      <article><span>Thời gian đọc</span><strong>{{ formatDuration(data.totals.readingSeconds) }}</strong></article>
+      <article>
+        <span>Lượt xem</span><strong>{{ formatNumber(data.totals.views) }}</strong>
+      </article>
+      <article>
+        <span>Độc giả</span><strong>{{ formatNumber(data.totals.uniqueReaders) }}</strong>
+      </article>
+      <article>
+        <span>Bắt đầu đọc</span><strong>{{ formatNumber(data.totals.readingStarts) }}</strong>
+      </article>
+      <article>
+        <span>Hoàn thành</span><strong>{{ formatNumber(data.totals.completions) }}</strong>
+      </article>
+      <article>
+        <span>Tỷ lệ hoàn thành</span><strong>{{ formatRate(data.totals.completionRate) }}</strong>
+      </article>
+      <article>
+        <span>Thời gian đọc</span><strong>{{ formatDuration(data.totals.readingSeconds) }}</strong>
+      </article>
     </div>
 
     <article class="panel">
       <div class="panel-heading">
-        <div><h2>Xu hướng lượt xem</h2><p>{{ data.range.from }} → {{ data.range.to }} · {{ data.range.timeZone }}</p></div>
+        <div>
+          <h2>Xu hướng lượt xem</h2>
+          <p>{{ data.range.from }} → {{ data.range.to }} · {{ data.range.timeZone }}</p>
+        </div>
       </div>
       <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày">
         @for (point of data.series; track point.date) {
@@ -48,11 +63,26 @@
         } @else {
           <div class="table-scroll">
             <table>
-              <thead><tr><th>Truyện</th><th>Views</th><th>Readers</th><th>Starts</th><th>Completed</th><th>Completion</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Truyện</th>
+                  <th>Views</th>
+                  <th>Readers</th>
+                  <th>Starts</th>
+                  <th>Completed</th>
+                  <th>Completion</th>
+                </tr>
+              </thead>
               <tbody>
                 @for (story of storyData.items; track story.id) {
                   <tr>
-                    <td><a [routerLink]="['/author-studio/thong-ke/truyen', story.id]" [queryParams]="{ days: days() }">{{ story.title }}</a></td>
+                    <td>
+                      <a
+                        [routerLink]="['/author-studio/thong-ke/truyen', story.id]"
+                        [queryParams]="{ days: days() }"
+                        >{{ story.title }}</a
+                      >
+                    </td>
                     <td>{{ formatNumber(story.views) }}</td>
                     <td>{{ formatNumber(story.uniqueReaders) }}</td>
                     <td>{{ formatNumber(story.readingStarts) }}</td>

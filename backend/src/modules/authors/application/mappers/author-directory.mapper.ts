@@ -39,8 +39,11 @@ export class AuthorDirectoryMapper {
           description: AuthorDirectoryMapper.summary(author.biography),
           verified: author.verificationStatus === 'VERIFIED',
           avatarUrl:
-            author.user.avatarMedia?.status === 'READY' && !author.user.avatarMedia.deletedAt
-              ? author.user.avatarMedia.secureUrl ?? author.user.avatarMedia.publicUrl ?? null
+            author.user.avatarMedia?.status === 'READY' &&
+            !author.user.avatarMedia.deletedAt
+              ? (author.user.avatarMedia.secureUrl ??
+                author.user.avatarMedia.publicUrl ??
+                null)
               : null,
           worksLabel: AuthorDirectoryMapper.formatCompact(author.storyCount),
           readsLabel: AuthorDirectoryMapper.formatCompact(

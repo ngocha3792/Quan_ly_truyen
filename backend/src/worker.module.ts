@@ -24,7 +24,14 @@ const queueWorkersEnabled =
     MediaModule,
 
     ...(queueWorkersEnabled
-      ? [RedisModule, QueueModule.register(), OutboxModule, MailModule, NotificationsWorkerModule, AnalyticsWorkerModule]
+      ? [
+          RedisModule,
+          QueueModule.register(),
+          OutboxModule,
+          MailModule,
+          NotificationsWorkerModule,
+          AnalyticsWorkerModule,
+        ]
       : []),
   ],
   providers: [

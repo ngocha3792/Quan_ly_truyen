@@ -39,7 +39,8 @@ export class ReaderAnalyticsIngestionService {
     private readonly identity: AnalyticsIdentityService,
     private readonly limiter: AnalyticsRateLimiterService,
     private readonly metrics: MetricsService,
-    @Optional() @InjectQueue(QUEUE_NAMES.ANALYTICS)
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.ANALYTICS)
     private readonly queue?: Queue,
   ) {}
 
@@ -114,7 +115,11 @@ export class ReaderAnalyticsIngestionService {
     const newest = now + 5 * 60 * 1000;
     for (const event of events) {
       const occurredAt = new Date(event.occurredAt).getTime();
-      if (!Number.isFinite(occurredAt) || occurredAt < oldest || occurredAt > newest) {
+      if (
+        !Number.isFinite(occurredAt) ||
+        occurredAt < oldest ||
+        occurredAt > newest
+      ) {
         this.metrics.recordReaderAnalyticsRejected('timestamp');
         throw new InvalidInputException({
           code: 'ANALYTICS_INVALID_OCCURRED_AT',
@@ -128,14 +133,21 @@ export class ReaderAnalyticsIngestionService {
         });
       }
       if (event.type === ReaderAnalyticsEventType.STORY_VIEW) {
-        if (event.chapterId || event.progressPercent !== undefined || event.activeSeconds !== undefined) {
+        if (
+          event.chapterId ||
+          event.progressPercent !== undefined ||
+          event.activeSeconds !== undefined
+        ) {
           throw this.invalidShape(event.type);
         }
         continue;
       }
       if (!event.chapterId) throw this.invalidShape(event.type);
       if (event.type === ReaderAnalyticsEventType.READING_PROGRESS) {
-        if (event.progressPercent === undefined || event.activeSeconds === undefined) {
+        if (
+          event.progressPercent === undefined ||
+          event.activeSeconds === undefined
+        ) {
           throw this.invalidShape(event.type);
         }
       }
@@ -161,10 +173,14 @@ export class ReaderAnalyticsIngestionService {
     });
   }
 
-  private async resolveCanonicalContext(events: readonly ReaderAnalyticsEventRequest[]) {
+  private async resolveCanonicalContext(
+    events: readonly ReaderAnalyticsEventRequest[],
+  ) {
     const storyIds = [...new Set(events.map((event) => event.storyId))];
     const chapterIds = [
-      ...new Set(events.flatMap((event) => (event.chapterId ? [event.chapterId] : []))),
+      ...new Set(
+        events.flatMap((event) => (event.chapterId ? [event.chapterId] : [])),
+      ),
     ];
     const [stories, chapters] = await Promise.all([
       this.prisma.story.findMany({
@@ -196,7 +212,9 @@ export class ReaderAnalyticsIngestionService {
       }),
     ]);
     const storySet = new Set(stories.map((story) => story.id));
-    const chapterMap = new Map(chapters.map((chapter) => [chapter.id, chapter.storyId]));
+    const chapterMap = new Map(
+      chapters.map((chapter) => [chapter.id, chapter.storyId]),
+    );
 
     return events.map((event) => {
       if (!storySet.has(event.storyId)) {

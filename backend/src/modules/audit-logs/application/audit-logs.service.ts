@@ -9,7 +9,11 @@ import {
   sanitizeAuditUserAgent,
 } from '../domain';
 import { PrismaAuditLogRepository } from '../infrastructure';
-import type { AdminAuditLogDetail, AdminAuditLogListResult, ListAuditLogsInput } from './audit-log.models';
+import type {
+  AdminAuditLogDetail,
+  AdminAuditLogListResult,
+  ListAuditLogsInput,
+} from './audit-log.models';
 
 @Injectable()
 export class AuditLogsService {
@@ -20,7 +24,8 @@ export class AuditLogsService {
 
   async list(input: ListAuditLogsInput): Promise<AdminAuditLogListResult> {
     try {
-      if (input.from && input.to && input.from > input.to) throw new AuditInvalidDateRangeException();
+      if (input.from && input.to && input.from > input.to)
+        throw new AuditInvalidDateRangeException();
 
       const result = await this.repository.list(input);
       this.metrics.recordAuditLogRead('list', 'success');

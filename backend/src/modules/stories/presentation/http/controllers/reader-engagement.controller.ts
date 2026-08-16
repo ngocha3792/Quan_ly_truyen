@@ -12,7 +12,11 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { ClientIp, CurrentUserId, RequirePermissions } from '@/common/decorators';
+import {
+  ClientIp,
+  CurrentUserId,
+  RequirePermissions,
+} from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 
@@ -207,7 +211,13 @@ export class ReaderEngagementController {
     @Body() request: CreateStoryCommentRequest,
   ): Promise<StoryCommentResultDto> {
     return this.createCommentCommand.execute(
-      new CreateStoryCommentCommand(userId, storyId, request.body, undefined, ipAddress),
+      new CreateStoryCommentCommand(
+        userId,
+        storyId,
+        request.body,
+        undefined,
+        ipAddress,
+      ),
     );
   }
 
@@ -222,7 +232,13 @@ export class ReaderEngagementController {
     @Body() request: CreateStoryCommentRequest,
   ): Promise<StoryCommentResultDto> {
     return this.createCommentCommand.execute(
-      new CreateStoryCommentCommand(userId, storyId, request.body, chapterId, ipAddress),
+      new CreateStoryCommentCommand(
+        userId,
+        storyId,
+        request.body,
+        chapterId,
+        ipAddress,
+      ),
     );
   }
 

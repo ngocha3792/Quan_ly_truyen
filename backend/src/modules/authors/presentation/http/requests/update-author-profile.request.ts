@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsObject, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 
 export class AuthorSocialLinksRequest {
   @IsOptional() @IsString() @MaxLength(500) website?: string | null;
@@ -15,6 +22,9 @@ export class UpdateAuthorProfileRequest {
   @IsOptional() @IsString() @MaxLength(5000) bio?: string | null;
   @IsOptional() @IsUUID('4') avatarMediaId?: string | null;
   @IsOptional() @IsUUID('4') bannerMediaId?: string | null;
-  @IsOptional() @IsObject() @ValidateNested() @Type(() => AuthorSocialLinksRequest)
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => AuthorSocialLinksRequest)
   socialLinks?: AuthorSocialLinksRequest;
 }

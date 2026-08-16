@@ -1,8 +1,117 @@
-<main class="admin-detail"><a routerLink="/admin/reports">← Reports</a>@if(error()){<p class="error">{{error()}}</p>}@if(message()){<p class="message">{{message()}}</p>}@if(loading()){<p>Đang tải...</p>}@else if(detail();as d){
-<header><div><p class="eyebrow">Admin · Moderation</p><h1>{{d.reason}}</h1><p>{{d.status}} · {{d.createdAt|date:'medium'}}</p></div></header>
-<div class="grid"><section class="card"><h2>Reported content</h2>@if(evidenceBody()){<pre class="content">{{evidenceBody()}}</pre>}@else{<pre>{{evidenceText()}}</pre>}</section><section class="card"><h2>Current comment</h2>@if(d.currentComment){<p class="status">{{d.currentComment.moderationStatus}}</p><pre class="content">{{d.currentComment.body}}</pre>@if(editedAfterReport()){<strong class="warning">Edited after report</strong>}}@else{<p>Comment không còn khả dụng.</p>}</section></div>
-<section class="card"><h2>Context</h2><p>Story: {{d.story?.title||'—'}} @if(d.chapter){ · {{d.chapter.title}} }</p><p>Reporter: {{d.reporter?.displayName||'—'}} · Reported user: {{d.reportedUser?.displayName||'—'}} ({{d.reportedUser?.status||'—'}})</p><p>Related reports: {{d.relatedReportCount}} · Recent moderation: {{d.recentUserModerationCount}}</p><p>{{d.description||'Không có mô tả.'}}</p></section>
-<section class="card"><h2>Moderation actions</h2><label>Reason (10–2000)</label><textarea rows="3" maxlength="2000" [(ngModel)]="reason"></textarea><div class="actions">@if(canModerate()){<button [disabled]="mutating()" (click)="moderate('hold')">Hold</button><button [disabled]="mutating()" (click)="moderate('hide')">Hide</button><button [disabled]="mutating()" (click)="moderate('restore')">Restore</button><button class="danger" [disabled]="mutating()" (click)="moderate('remove')">Remove</button>}@if(canBan()){<button class="danger" [disabled]="mutating()" (click)="ban()">Ban user</button>}</div>@if(canWarn()){<label>Warning message</label><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea><button [disabled]="mutating()" (click)="warn()">Warn user</button>}</section>
-<section class="card"><h2>Report decision</h2><textarea rows="3" maxlength="2000" [(ngModel)]="decisionNote" placeholder="Resolution note (ít nhất 10 ký tự)"></textarea><div class="actions"><button [disabled]="mutating()||d.status==='RESOLVED'||d.status==='REJECTED'" (click)="closeReport('resolve')">Resolve</button><button [disabled]="mutating()||d.status==='RESOLVED'||d.status==='REJECTED'" (click)="closeReport('reject')">Reject</button></div></section>
-<section class="card"><h2>Moderation history</h2>@for(action of d.moderationActions;track action.id){<div class="history"><strong>{{action.action}}</strong><span>{{action.createdAt|date:'short'}}</span><p>{{action.reason||'—'}}</p></div>}@empty{<p>Chưa có action.</p>}</section>
-}</main>
+<main class="admin-detail">
+  <a routerLink="/admin/reports">← Reports</a>
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="message">{{ message() }}</p>
+  }
+  @if (loading()) {
+    <p>Đang tải...</p>
+  } @else if (detail(); as d) {
+    <header>
+      <div>
+        <p class="eyebrow">Admin · Moderation</p>
+        <h1>{{ d.reason }}</h1>
+        <p>{{ d.status }} · {{ d.createdAt | date: 'medium' }}</p>
+      </div>
+    </header>
+    <div class="grid">
+      <section class="card">
+        <h2>Reported content</h2>
+        @if (evidenceBody()) {
+          <pre class="content">{{ evidenceBody() }}</pre>
+        } @else {
+          <pre>{{ evidenceText() }}</pre>
+        }
+      </section>
+      <section class="card">
+        <h2>Current comment</h2>
+        @if (d.currentComment) {
+          <p class="status">{{ d.currentComment.moderationStatus }}</p>
+          <pre class="content">{{ d.currentComment.body }}</pre>
+          @if (editedAfterReport()) {
+            <strong class="warning">Edited after report</strong>
+          }
+        } @else {
+          <p>Comment không còn khả dụng.</p>
+        }
+      </section>
+    </div>
+    <section class="card">
+      <h2>Context</h2>
+      <p>
+        Story: {{ d.story?.title || '—' }}
+        @if (d.chapter) {
+          · {{ d.chapter.title }}
+        }
+      </p>
+      <p>
+        Reporter: {{ d.reporter?.displayName || '—' }} · Reported user:
+        {{ d.reportedUser?.displayName || '—' }} ({{ d.reportedUser?.status || '—' }})
+      </p>
+      <p>
+        Related reports: {{ d.relatedReportCount }} · Recent moderation:
+        {{ d.recentUserModerationCount }}
+      </p>
+      <p>{{ d.description || 'Không có mô tả.' }}</p>
+    </section>
+    <section class="card">
+      <h2>Moderation actions</h2>
+      <label>Reason (10–2000)</label
+      ><textarea rows="3" maxlength="2000" [(ngModel)]="reason"></textarea>
+      <div class="actions">
+        @if (canModerate()) {
+          <button [disabled]="mutating()" (click)="moderate('hold')">Hold</button
+          ><button [disabled]="mutating()" (click)="moderate('hide')">Hide</button
+          ><button [disabled]="mutating()" (click)="moderate('restore')">Restore</button
+          ><button class="danger" [disabled]="mutating()" (click)="moderate('remove')">
+            Remove
+          </button>
+        }
+        @if (canBan()) {
+          <button class="danger" [disabled]="mutating()" (click)="ban()">Ban user</button>
+        }
+      </div>
+      @if (canWarn()) {
+        <label>Warning message</label
+        ><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea
+        ><button [disabled]="mutating()" (click)="warn()">Warn user</button>
+      }
+    </section>
+    <section class="card">
+      <h2>Report decision</h2>
+      <textarea
+        rows="3"
+        maxlength="2000"
+        [(ngModel)]="decisionNote"
+        placeholder="Resolution note (ít nhất 10 ký tự)"
+      ></textarea>
+      <div class="actions">
+        <button
+          [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
+          (click)="closeReport('resolve')"
+        >
+          Resolve</button
+        ><button
+          [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
+          (click)="closeReport('reject')"
+        >
+          Reject
+        </button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Moderation history</h2>
+      @for (action of d.moderationActions; track action.id) {
+        <div class="history">
+          <strong>{{ action.action }}</strong
+          ><span>{{ action.createdAt | date: 'short' }}</span>
+          <p>{{ action.reason || '—' }}</p>
+        </div>
+      } @empty {
+        <p>Chưa có action.</p>
+      }
+    </section>
+  }
+</main>

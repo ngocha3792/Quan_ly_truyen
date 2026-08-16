@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
 import { ReaderEngagementApiClient } from './reader-engagement-api.client';
@@ -82,14 +83,18 @@ function comment(id: string): StoryCommentApiItem {
     storyId: 'story-1',
     chapterId: null,
     parentId: null,
+    depth: 0,
     body: 'Xin chào',
+    displayState: 'VISIBLE',
     user: {
       id: 'user-1',
       displayName: 'Reader',
       avatarUrl: null,
     },
     likeCount: 0,
+    reactions: { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
     replyCount: 0,
+    threadReplyCount: 0,
     editedAt: null,
     createdAt: '2026-08-15T12:00:00.000Z',
     updatedAt: '2026-08-15T12:00:00.000Z',

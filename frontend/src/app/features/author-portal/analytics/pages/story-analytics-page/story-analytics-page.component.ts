@@ -36,8 +36,12 @@ export class StoryAnalyticsPageComponent {
       });
   }
 
-  protected formatNumber(value: number): string { return new Intl.NumberFormat('vi-VN').format(value); }
-  protected formatRate(value: number | null): string { return value === null ? '—' : `${(value * 100).toFixed(1)}%`; }
+  protected formatNumber(value: number): string {
+    return new Intl.NumberFormat('vi-VN').format(value);
+  }
+  protected formatRate(value: number | null): string {
+    return value === null ? '—' : `${(value * 100).toFixed(1)}%`;
+  }
   protected formatDuration(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -52,11 +56,17 @@ export class StoryAnalyticsPageComponent {
   private load(storyId: string, from: string, to: string): void {
     this.loading.set(true);
     this.error.set(null);
-    this.api.story(storyId, from, to).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data) => this.data.set(data),
-      error: () => { this.error.set('Không thể tải thống kê truyện này.'); this.loading.set(false); },
-      complete: () => this.loading.set(false),
-    });
+    this.api
+      .story(storyId, from, to)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => this.data.set(data),
+        error: () => {
+          this.error.set('Không thể tải thống kê truyện này.');
+          this.loading.set(false);
+        },
+        complete: () => this.loading.set(false),
+      });
   }
 }
 
@@ -66,4 +76,6 @@ function dateRange(days: number): { from: string; to: string } {
   from.setUTCDate(from.getUTCDate() - (days - 1));
   return { from: toIso(from), to: toIso(to) };
 }
-function toIso(value: Date): string { return value.toISOString().slice(0, 10); }
+function toIso(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}

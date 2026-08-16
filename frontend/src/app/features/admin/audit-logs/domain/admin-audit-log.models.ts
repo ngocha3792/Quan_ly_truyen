@@ -37,7 +37,11 @@ export interface AdminAuditChange {
 export interface AdminAuditLogDetail {
   readonly id: string;
   readonly actorId: string | null;
-  readonly actor: { readonly id: string; readonly displayName: string; readonly email: string } | null;
+  readonly actor: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly email: string;
+  } | null;
   readonly action: string;
   readonly entity: { readonly type: string; readonly id: string | null };
   readonly requestId: string | null;

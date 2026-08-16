@@ -17,21 +17,27 @@ export class AuthorAnalyticsHttpService {
 
   overview(from: string, to: string): Observable<AuthorAnalyticsOverview> {
     return this.http
-      .get<ApiSuccessEnvelope<AuthorAnalyticsOverview>>(`${this.config.apiBaseUrl}/author/analytics/overview`, {
-        params: new HttpParams().set('from', from).set('to', to),
-      })
+      .get<ApiSuccessEnvelope<AuthorAnalyticsOverview>>(
+        `${this.config.apiBaseUrl}/author/analytics/overview`,
+        {
+          params: new HttpParams().set('from', from).set('to', to),
+        },
+      )
       .pipe(map((response) => response.data));
   }
 
   stories(from: string, to: string, page = 1, pageSize = 20): Observable<StoryAnalyticsList> {
     return this.http
-      .get<ApiSuccessEnvelope<StoryAnalyticsList>>(`${this.config.apiBaseUrl}/author/analytics/stories`, {
-        params: new HttpParams()
-          .set('from', from)
-          .set('to', to)
-          .set('page', page)
-          .set('pageSize', pageSize),
-      })
+      .get<ApiSuccessEnvelope<StoryAnalyticsList>>(
+        `${this.config.apiBaseUrl}/author/analytics/stories`,
+        {
+          params: new HttpParams()
+            .set('from', from)
+            .set('to', to)
+            .set('page', page)
+            .set('pageSize', pageSize),
+        },
+      )
       .pipe(map((response) => response.data));
   }
 

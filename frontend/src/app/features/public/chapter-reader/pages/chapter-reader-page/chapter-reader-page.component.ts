@@ -11,7 +11,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { SeoService } from '../../../../../core/seo/seo.service';
-import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../../core/http/reader-engagement-api.model';
+import type {
+  CommentReactionApiType,
+  CommentReportReasonApi,
+} from '../../../../../core/http/reader-engagement-api.model';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
@@ -106,19 +109,32 @@ export class ChapterReaderPageComponent implements OnInit {
     this.store.deleteComment(commentId);
   }
 
-  protected loadReplies(rootCommentId: string): void { this.store.loadReplies(rootCommentId); }
+  protected loadReplies(rootCommentId: string): void {
+    this.store.loadReplies(rootCommentId);
+  }
 
-  protected reply(event: { readonly rootId: string; readonly parentId: string; readonly body: string }): void {
+  protected reply(event: {
+    readonly rootId: string;
+    readonly parentId: string;
+    readonly body: string;
+  }): void {
     if (!this.requireLogin()) return;
     this.store.reply(event.rootId, event.parentId, event.body);
   }
 
-  protected react(event: { readonly commentId: string; readonly type: CommentReactionApiType }): void {
+  protected react(event: {
+    readonly commentId: string;
+    readonly type: CommentReactionApiType;
+  }): void {
     if (!this.requireLogin()) return;
     this.store.react(event.commentId, event.type);
   }
 
-  protected report(event: { readonly commentId: string; readonly reason: CommentReportReasonApi; readonly description?: string }): void {
+  protected report(event: {
+    readonly commentId: string;
+    readonly reason: CommentReportReasonApi;
+    readonly description?: string;
+  }): void {
     if (!this.requireLogin()) return;
     this.store.report(event.commentId, event.reason, event.description);
   }

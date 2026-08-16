@@ -646,11 +646,19 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
             replies: {
               some: {
                 OR: [
-                  { moderationStatus: ModerationStatus.VISIBLE, deletedAt: null },
+                  {
+                    moderationStatus: ModerationStatus.VISIBLE,
+                    deletedAt: null,
+                  },
                   {
                     moderationStatus: ModerationStatus.DELETED,
                     deletedAt: { not: null },
-                    replies: { some: { moderationStatus: ModerationStatus.VISIBLE, deletedAt: null } },
+                    replies: {
+                      some: {
+                        moderationStatus: ModerationStatus.VISIBLE,
+                        deletedAt: null,
+                      },
+                    },
                   },
                 ],
               },
@@ -670,27 +678,48 @@ export class PrismaReaderEngagementPersistence implements ReaderEngagementPersis
         }),
       ]);
 
-      const reactionRows = rows.length === 0 ? [] : await this.prisma.commentReaction.groupBy({
-        by: ['commentId', 'type'],
-        where: { commentId: { in: rows.map((row) => row.id) } },
-        _count: { _all: true },
-      });
-      const reactions = new Map<string, { LIKE: number; LOVE: number; LAUGH: number; INSIGHTFUL: number }>();
+      const reactionRows =
+        rows.length === 0
+          ? []
+          : await this.prisma.commentReaction.groupBy({
+              by: ['commentId', 'type'],
+              where: { commentId: { in: rows.map((row) => row.id) } },
+              _count: { _all: true },
+            });
+      const reactions = new Map<
+        string,
+        { LIKE: number; LOVE: number; LAUGH: number; INSIGHTFUL: number }
+      >();
       for (const item of reactionRows) {
-        const counts = reactions.get(item.commentId) ?? { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 };
+        const counts = reactions.get(item.commentId) ?? {
+          LIKE: 0,
+          LOVE: 0,
+          LAUGH: 0,
+          INSIGHTFUL: 0,
+        };
         counts[item.type] = item._count._all;
         reactions.set(item.commentId, counts);
       }
-      const threadCounts = await countVisibleThreadReplies(this.prisma, rows.map((row) => row.id));
+      const threadCounts = await countVisibleThreadReplies(
+        this.prisma,
+        rows.map((row) => row.id),
+      );
 
       return {
         status: 'found',
         page: {
-          items: rows.map((row) => toCommentDto(
-            row,
-            reactions.get(row.id) ?? { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
-            threadCounts.get(row.id) ?? row.replyCount,
-          )),
+          items: rows.map((row) =>
+            toCommentDto(
+              row,
+              reactions.get(row.id) ?? {
+                LIKE: 0,
+                LOVE: 0,
+                LAUGH: 0,
+                INSIGHTFUL: 0,
+              },
+              threadCounts.get(row.id) ?? row.replyCount,
+            ),
+          ),
           pagination: {
             page: input.page,
             pageSize: input.pageSize,
@@ -938,7 +967,12 @@ function toRatingDto(row: {
 
 function toCommentDto(
   row: CommentRow,
-  reactions: { LIKE: number; LOVE: number; LAUGH: number; INSIGHTFUL: number } = { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
+  reactions: {
+    LIKE: number;
+    LOVE: number;
+    LAUGH: number;
+    INSIGHTFUL: number;
+  } = { LIKE: 0, LOVE: 0, LAUGH: 0, INSIGHTFUL: 0 },
   threadReplyCount = row.replyCount,
 ): StoryCommentResultDto {
   const avatar = row.user.avatarMedia;
@@ -957,8 +991,14 @@ function toCommentDto(
     chapterId: row.chapterId,
     parentId: row.parentId,
     depth: 0,
-    body: row.moderationStatus === ModerationStatus.DELETED || row.deletedAt ? '' : row.body,
-    displayState: row.moderationStatus === ModerationStatus.DELETED || row.deletedAt ? 'DELETED' : 'VISIBLE',
+    body:
+      row.moderationStatus === ModerationStatus.DELETED || row.deletedAt
+        ? ''
+        : row.body,
+    displayState:
+      row.moderationStatus === ModerationStatus.DELETED || row.deletedAt
+        ? 'DELETED'
+        : 'VISIBLE',
     user: {
       id: row.user.id,
       displayName: row.user.displayName,
@@ -1068,7 +1108,9 @@ async function countVisibleThreadReplies(
   rootIds: readonly string[],
 ): Promise<Map<string, number>> {
   if (rootIds.length === 0) return new Map();
-  const rows = await prisma.$queryRaw<Array<{ rootId: string; count: bigint }>>(Prisma.sql`
+  const rows = await prisma.$queryRaw<
+    Array<{ rootId: string; count: bigint }>
+  >(Prisma.sql`
     SELECT roots."id" AS "rootId", COUNT(descendants."id")::bigint AS "count"
     FROM "comments" roots
     LEFT JOIN "comments" direct

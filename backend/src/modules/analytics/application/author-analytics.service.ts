@@ -1,10 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AnalyticsConfig } from '@/config';
-import { AuthenticationRequiredException, InvalidInputException, ResourceNotFoundException } from '@/common/exceptions';
+import {
+  AuthenticationRequiredException,
+  InvalidInputException,
+  ResourceNotFoundException,
+} from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database';
 import { completionRate, safeBigInt } from '../domain/analytics-metrics.util';
-import { addUtcDays, analyticsDate, dateKeyFromUtcDate, parseAnalyticsDate } from '../domain/analytics-time.util';
+import {
+  addUtcDays,
+  analyticsDate,
+  dateKeyFromUtcDate,
+  parseAnalyticsDate,
+} from '../domain/analytics-time.util';
 
 interface ResolvedRange {
   from: Date;
@@ -93,7 +102,10 @@ export class AuthorAnalyticsService {
     const ids = stories.map((story) => story.id);
     const stats = ids.length
       ? await this.prisma.storyDailyStat.findMany({
-          where: { storyId: { in: ids }, date: { gte: range.from, lte: range.to } },
+          where: {
+            storyId: { in: ids },
+            date: { gte: range.from, lte: range.to },
+          },
           select: {
             storyId: true,
             viewCount: true,
@@ -183,13 +195,16 @@ export class AuthorAnalyticsService {
     ]);
     const totals = this.sumRows(daily);
     const byDate = new Map(
-      daily.map((row) => [dateKeyFromUtcDate(row.date), this.withRate({
-        views: safeBigInt(row.viewCount),
-        uniqueReaders: row.uniqueReaders,
-        readingStarts: row.readingStartCount,
-        completions: row.completionCount,
-        readingSeconds: safeBigInt(row.readingSeconds),
-      })]),
+      daily.map((row) => [
+        dateKeyFromUtcDate(row.date),
+        this.withRate({
+          views: safeBigInt(row.viewCount),
+          uniqueReaders: row.uniqueReaders,
+          readingStarts: row.readingStartCount,
+          completions: row.completionCount,
+          readingSeconds: safeBigInt(row.readingSeconds),
+        }),
+      ]),
     );
     return {
       story,
@@ -237,7 +252,8 @@ export class AuthorAnalyticsService {
     const today = analyticsDate(new Date(), this.analytics.timeZone);
     const toDate = to ? this.strictDate(to) : today;
     const fromDate = from ? this.strictDate(from) : addUtcDays(toDate, -29);
-    const days = Math.floor((toDate.getTime() - fromDate.getTime()) / 86_400_000) + 1;
+    const days =
+      Math.floor((toDate.getTime() - fromDate.getTime()) / 86_400_000) + 1;
     if (days < 1 || days > 365) {
       throw new InvalidInputException({
         code: 'ANALYTICS_INVALID_DATE_RANGE',
@@ -268,20 +284,31 @@ export class AuthorAnalyticsService {
   }
 
   private emptyTotals() {
-    return { views: 0, uniqueReaders: 0, readingStarts: 0, completions: 0, readingSeconds: 0 };
+    return {
+      views: 0,
+      uniqueReaders: 0,
+      readingStarts: 0,
+      completions: 0,
+      readingSeconds: 0,
+    };
   }
 
   private withRate<T extends MutableAnalyticsTotals>(value: T) {
-    return { ...value, completionRate: completionRate(value.completions, value.readingStarts) };
+    return {
+      ...value,
+      completionRate: completionRate(value.completions, value.readingStarts),
+    };
   }
 
-  private sumRows(rows: readonly {
-    viewCount: bigint;
-    uniqueReaders: number;
-    readingStartCount: number;
-    completionCount: number;
-    readingSeconds: bigint;
-  }[]) {
+  private sumRows(
+    rows: readonly {
+      viewCount: bigint;
+      uniqueReaders: number;
+      readingStartCount: number;
+      completionCount: number;
+      readingSeconds: bigint;
+    }[],
+  ) {
     return rows.reduce((sum, row) => {
       sum.views += safeBigInt(row.viewCount);
       sum.uniqueReaders += row.uniqueReaders;
@@ -294,7 +321,11 @@ export class AuthorAnalyticsService {
 
   private dateKeys(range: ResolvedRange): string[] {
     const keys: string[] = [];
-    for (let current = range.from; current <= range.to; current = addUtcDays(current, 1)) {
+    for (
+      let current = range.from;
+      current <= range.to;
+      current = addUtcDays(current, 1)
+    ) {
       keys.push(dateKeyFromUtcDate(current));
     }
     return keys;

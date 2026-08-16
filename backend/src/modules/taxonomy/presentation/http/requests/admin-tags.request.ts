@@ -14,7 +14,9 @@ import { normalizeTaxonomyName } from '../../../domain';
 
 export class ListAdminTagsRequest {
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MaxLength(120)
   q?: string;
@@ -35,7 +37,7 @@ export class ListAdminTagsRequest {
 }
 
 export class CreateTagRequest {
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? normalizeTaxonomyName(value) : value,
   )
   @IsString()

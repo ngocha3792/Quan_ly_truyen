@@ -67,12 +67,18 @@ export class AuthorDetailMapper {
         joinedAt: String(author.createdAt.getFullYear()),
         verified: author.verificationStatus === 'VERIFIED',
         avatarUrl:
-          author.user.avatarMedia?.status === 'READY' && !author.user.avatarMedia.deletedAt
-            ? author.user.avatarMedia.secureUrl ?? author.user.avatarMedia.publicUrl ?? null
+          author.user.avatarMedia?.status === 'READY' &&
+          !author.user.avatarMedia.deletedAt
+            ? (author.user.avatarMedia.secureUrl ??
+              author.user.avatarMedia.publicUrl ??
+              null)
             : null,
         bannerUrl:
-          author.bannerMedia?.status === 'READY' && !author.bannerMedia.deletedAt
-            ? author.bannerMedia.secureUrl ?? author.bannerMedia.publicUrl ?? null
+          author.bannerMedia?.status === 'READY' &&
+          !author.bannerMedia.deletedAt
+            ? (author.bannerMedia.secureUrl ??
+              author.bannerMedia.publicUrl ??
+              null)
             : null,
         socialLinks: {
           website: author.websiteUrl,

@@ -25,7 +25,11 @@ export class AbuseRateLimiterService {
     return this.number('COMMENT_MAX_LINKS', 3);
   }
 
-  async consume(scope: Scope, userId: string, ipAddress?: string): Promise<void> {
+  async consume(
+    scope: Scope,
+    userId: string,
+    ipAddress?: string,
+  ): Promise<void> {
     if (!this.enabled()) return;
     if (!this.redis) throw new AbuseProtectionUnavailableException();
 
@@ -37,9 +41,15 @@ export class AbuseRateLimiterService {
       for (const subject of subjects) {
         for (const bucket of buckets) {
           const key = `abuse:${scope}:${subject}:${bucket.windowSeconds}`;
-          const result = await this.consumeKey(key, bucket.limit, bucket.windowSeconds);
+          const result = await this.consumeKey(
+            key,
+            bucket.limit,
+            bucket.windowSeconds,
+          );
           if (!result.allowed) {
-            this.metrics.recordCommentAbuseBlock(scope === 'comment-write' ? 'comment' : scope);
+            this.metrics.recordCommentAbuseBlock(
+              scope === 'comment-write' ? 'comment' : scope,
+            );
             throw new RateLimitExceededException({
               code: 'COMMENT_ABUSE_RATE_LIMITED',
               message: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.',
@@ -57,25 +67,47 @@ export class AbuseRateLimiterService {
   }
 
   private enabled(): boolean {
-    return this.config.get<boolean>('COMMENT_ABUSE_RATE_LIMIT_ENABLED') ?? false;
+    return (
+      this.config.get<boolean>('COMMENT_ABUSE_RATE_LIMIT_ENABLED') ?? false
+    );
   }
 
-  private buckets(scope: Scope): readonly { limit: number; windowSeconds: number }[] {
+  private buckets(
+    scope: Scope,
+  ): readonly { limit: number; windowSeconds: number }[] {
     if (scope === 'comment-write') {
       return [
-        { limit: this.number('COMMENT_WRITE_MINUTE_LIMIT', 10), windowSeconds: 60 },
-        { limit: this.number('COMMENT_WRITE_HOUR_LIMIT', 50), windowSeconds: 3600 },
+        {
+          limit: this.number('COMMENT_WRITE_MINUTE_LIMIT', 10),
+          windowSeconds: 60,
+        },
+        {
+          limit: this.number('COMMENT_WRITE_HOUR_LIMIT', 50),
+          windowSeconds: 3600,
+        },
       ];
     }
     if (scope === 'reaction') {
       return [
-        { limit: this.number('COMMENT_REACTION_MINUTE_LIMIT', 30), windowSeconds: 60 },
-        { limit: this.number('COMMENT_REACTION_HOUR_LIMIT', 300), windowSeconds: 3600 },
+        {
+          limit: this.number('COMMENT_REACTION_MINUTE_LIMIT', 30),
+          windowSeconds: 60,
+        },
+        {
+          limit: this.number('COMMENT_REACTION_HOUR_LIMIT', 300),
+          windowSeconds: 3600,
+        },
       ];
     }
     return [
-      { limit: this.number('COMMENT_REPORT_HOUR_LIMIT', 5), windowSeconds: 3600 },
-      { limit: this.number('COMMENT_REPORT_DAY_LIMIT', 20), windowSeconds: 86_400 },
+      {
+        limit: this.number('COMMENT_REPORT_HOUR_LIMIT', 5),
+        windowSeconds: 3600,
+      },
+      {
+        limit: this.number('COMMENT_REPORT_DAY_LIMIT', 20),
+        windowSeconds: 86_400,
+      },
     ];
   }
 
@@ -90,7 +122,12 @@ export class AbuseRateLimiterService {
       local ttl = redis.call('TTL', KEYS[1])
       return { current, ttl }
     `;
-    const raw = (await this.redis!.eval(script, 1, key, String(windowSeconds))) as [number, number];
+    const raw = (await this.redis!.eval(
+      script,
+      1,
+      key,
+      String(windowSeconds),
+    )) as [number, number];
     const count = Number(raw[0]);
     const ttl = Math.max(1, Number(raw[1]) || windowSeconds);
     return { allowed: count <= limit, retryAfterSeconds: ttl };

@@ -11,7 +11,9 @@ describe('AuditRedactionPolicy', () => {
       passwordHash: 'DO_NOT_LEAK_1',
       nested: {
         refresh_token: 'DO_NOT_LEAK_2',
-        sessions: [{ MFA_SECRET: 'DO_NOT_LEAK_3', refreshTokenHash: 'DO_NOT_LEAK_4' }],
+        sessions: [
+          { MFA_SECRET: 'DO_NOT_LEAK_3', refreshTokenHash: 'DO_NOT_LEAK_4' },
+        ],
       },
     };
 
@@ -28,7 +30,9 @@ describe('AuditRedactionPolicy', () => {
     expect(sanitizeAuditPayload({ header: 'Bearer abc.def.ghi' })).toEqual({
       header: AUDIT_REDACTED_VALUE,
     });
-    expect(sanitizeAuditPayload({ tokenish: 'aaaaaaaaaaa.bbbbbbbbbbb.ccccccccccc' })).toEqual({
+    expect(
+      sanitizeAuditPayload({ tokenish: 'aaaaaaaaaaa.bbbbbbbbbbb.ccccccccccc' }),
+    ).toEqual({
       tokenish: AUDIT_REDACTED_VALUE,
     });
   });
@@ -44,7 +48,9 @@ describe('AuditRedactionPolicy', () => {
     const result = sanitizeAuditPayload({
       long: 'x'.repeat(100_000),
       array: Array.from({ length: 10_000 }, (_, index) => index),
-      object: Object.fromEntries(Array.from({ length: 500 }, (_, index) => [`key-${index}`, index])),
+      object: Object.fromEntries(
+        Array.from({ length: 500 }, (_, index) => [`key-${index}`, index]),
+      ),
       deep,
     });
     const serialized = JSON.stringify(result);
@@ -53,7 +59,9 @@ describe('AuditRedactionPolicy', () => {
   });
 
   it('does not allow stored __proto__ keys to mutate the sanitizer output prototype', () => {
-    const input = JSON.parse('{"__proto__":{"polluted":true},"safe":"value"}') as unknown;
+    const input = JSON.parse(
+      '{"__proto__":{"polluted":true},"safe":"value"}',
+    ) as unknown;
     const result = sanitizeAuditPayload(input) as Record<string, unknown>;
     expect(Object.getPrototypeOf(result)).toBeNull();
     expect(result.safe).toBe('value');

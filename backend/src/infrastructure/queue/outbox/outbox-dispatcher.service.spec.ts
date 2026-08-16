@@ -101,9 +101,13 @@ describe('OutboxDispatcherService', () => {
   });
 
   it('routes notification aggregate events to the notifications queue', async () => {
-    const notifications = { add: jest.fn().mockResolvedValue({ id: 'notification-job' }) };
+    const notifications = {
+      add: jest.fn().mockResolvedValue({ id: 'notification-job' }),
+    };
     const routedService = createService(prisma, queue, notifications);
-    prisma.$queryRaw.mockResolvedValue([claimed('notification-event-1', TOKEN_A)]);
+    prisma.$queryRaw.mockResolvedValue([
+      claimed('notification-event-1', TOKEN_A),
+    ]);
     prisma.outboxEvent.findMany.mockResolvedValue([
       event({
         id: 'notification-event-1',
@@ -363,7 +367,7 @@ describe('OutboxDispatcherService', () => {
     );
   });
 
-  it.each(['media', 'notifications', 'analytics'])(
+  it.each(['media', 'analytics'])(
     'rejects %s because no processor consumes that queue',
     async (aggregateType) => {
       prisma.$queryRaw.mockResolvedValue([claimed('unsupported', TOKEN_A)]);

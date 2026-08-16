@@ -21,7 +21,9 @@ export class CommentWriteAbuseService {
     const body = CommentPolicy.validateBody(input.body, this.limiter.maxLinks);
     await this.limiter.consume('comment-write', input.userId, input.ipAddress);
 
-    const from = new Date(Date.now() - this.limiter.duplicateWindowSeconds * 1000);
+    const from = new Date(
+      Date.now() - this.limiter.duplicateWindowSeconds * 1000,
+    );
     const recent = await this.prisma.comment.findMany({
       where: {
         userId: input.userId,
@@ -36,7 +38,11 @@ export class CommentWriteAbuseService {
       select: { body: true },
     });
     const fingerprint = CommentPolicy.fingerprint(body);
-    if (recent.some((item) => CommentPolicy.fingerprint(item.body) === fingerprint)) {
+    if (
+      recent.some(
+        (item) => CommentPolicy.fingerprint(item.body) === fingerprint,
+      )
+    ) {
       throw new CommentDuplicateRecentException();
     }
     return body;

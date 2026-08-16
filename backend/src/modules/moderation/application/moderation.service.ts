@@ -23,7 +23,10 @@ import {
   ReportAlreadyClosedException,
   ReportNotFoundException,
 } from '../domain';
-import type { AdminReportListQuery, CommentModerationOperation } from './moderation.models';
+import type {
+  AdminReportListQuery,
+  CommentModerationOperation,
+} from './moderation.models';
 
 interface AuditContext {
   readonly ipAddress?: string;
@@ -49,19 +52,48 @@ export class ModerationService {
       ...(query.status ? { status: query.status as ReportStatus } : {}),
       ...(query.reason ? { reason: query.reason as ReportReason } : {}),
       ...(query.createdFrom || query.createdTo
-        ? { createdAt: { ...(query.createdFrom ? { gte: query.createdFrom } : {}), ...(query.createdTo ? { lte: query.createdTo } : {}) } }
+        ? {
+            createdAt: {
+              ...(query.createdFrom ? { gte: query.createdFrom } : {}),
+              ...(query.createdTo ? { lte: query.createdTo } : {}),
+            },
+          }
         : {}),
       ...(searchReporter
-        ? { reporter: { OR: [{ displayName: { contains: searchReporter, mode: 'insensitive' } }, { email: { contains: searchReporter, mode: 'insensitive' } }] } }
+        ? {
+            reporter: {
+              OR: [
+                {
+                  displayName: {
+                    contains: searchReporter,
+                    mode: 'insensitive',
+                  },
+                },
+                { email: { contains: searchReporter, mode: 'insensitive' } },
+              ],
+            },
+          }
         : {}),
       ...(searchReported
-        ? { reportedUser: { OR: [{ displayName: { contains: searchReported, mode: 'insensitive' } }, { email: { contains: searchReported, mode: 'insensitive' } }] } }
+        ? {
+            reportedUser: {
+              OR: [
+                {
+                  displayName: {
+                    contains: searchReported,
+                    mode: 'insensitive',
+                  },
+                },
+                { email: { contains: searchReported, mode: 'insensitive' } },
+              ],
+            },
+          }
         : {}),
     };
     const direction = query.direction ?? 'desc';
     const primary = query.sort ?? 'createdAt';
     const orderBy: Prisma.ReportOrderByWithRelationInput[] = [
-      { [primary]: direction } as Prisma.ReportOrderByWithRelationInput,
+      { [primary]: direction },
       ...(primary === 'createdAt' ? [] : [{ createdAt: 'desc' as const }]),
       { id: 'desc' },
     ];
@@ -93,11 +125,18 @@ export class ModerationService {
         createdAt: row.createdAt.toISOString(),
         reporter: row.reporter,
         reportedUser: row.reportedUser,
-        comment: row.comment ? { id: row.comment.id, excerpt: this.excerpt(row.comment.body) } : null,
+        comment: row.comment
+          ? { id: row.comment.id, excerpt: this.excerpt(row.comment.body) }
+          : null,
         story: row.story,
         chapter: row.chapter,
       })),
-      pagination: { page, pageSize, totalItems, totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize) },
+      pagination: {
+        page,
+        pageSize,
+        totalItems,
+        totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize),
+      },
     };
   }
 
@@ -115,7 +154,9 @@ export class ModerationService {
         updatedAt: true,
         resolvedAt: true,
         reporter: { select: { id: true, displayName: true, email: true } },
-        reportedUser: { select: { id: true, displayName: true, email: true, status: true } },
+        reportedUser: {
+          select: { id: true, displayName: true, email: true, status: true },
+        },
         comment: {
           select: {
             id: true,
@@ -134,17 +175,29 @@ export class ModerationService {
         moderationActions: {
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           take: 50,
-          select: { id: true, actorId: true, action: true, reason: true, metadata: true, createdAt: true },
+          select: {
+            id: true,
+            actorId: true,
+            action: true,
+            reason: true,
+            metadata: true,
+            createdAt: true,
+          },
         },
       },
     });
     if (!report) throw new ReportNotFoundException(reportId);
     const relatedReportCount = report.comment
-      ? await this.prisma.report.count({ where: { commentId: report.comment.id } })
+      ? await this.prisma.report.count({
+          where: { commentId: report.comment.id },
+        })
       : 0;
     const recentUserModerationCount = report.reportedUser
       ? await this.prisma.moderationAction.count({
-          where: { targetUserId: report.reportedUser.id, createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) } },
+          where: {
+            targetUserId: report.reportedUser.id,
+            createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) },
+          },
         })
       : 0;
     return {
@@ -163,16 +216,37 @@ export class ModerationService {
       comment: undefined,
       relatedReportCount,
       recentUserModerationCount,
-      moderationActions: report.moderationActions.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
+      moderationActions: report.moderationActions.map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+      })),
     };
   }
 
-  resolveReport(input: { actorId: string; reportId: string; note: string; audit: AuditContext }) {
-    return this.closeReport({ ...input, status: ReportStatus.RESOLVED, auditAction: 'comment.report.resolved' });
+  resolveReport(input: {
+    actorId: string;
+    reportId: string;
+    note: string;
+    audit: AuditContext;
+  }) {
+    return this.closeReport({
+      ...input,
+      status: ReportStatus.RESOLVED,
+      auditAction: 'comment.report.resolved',
+    });
   }
 
-  rejectReport(input: { actorId: string; reportId: string; note: string; audit: AuditContext }) {
-    return this.closeReport({ ...input, status: ReportStatus.REJECTED, auditAction: 'comment.report.rejected' });
+  rejectReport(input: {
+    actorId: string;
+    reportId: string;
+    note: string;
+    audit: AuditContext;
+  }) {
+    return this.closeReport({
+      ...input,
+      status: ReportStatus.REJECTED,
+      auditAction: 'comment.report.rejected',
+    });
   }
 
   async moderateComment(input: {
@@ -187,23 +261,42 @@ export class ModerationService {
     const result = await this.prisma.$transaction(async (tx) => {
       const comment = await this.lockComment(tx, input.commentId);
       if (!comment) throw new CommentNotFoundException(input.commentId);
-      if (comment.deletedAt || comment.moderationStatus === 'deleted' || comment.moderationStatus === 'removed') {
-        throw new InvalidCommentModerationTransitionException(comment.moderationStatus.toUpperCase(), input.operation.toUpperCase());
+      if (
+        comment.deletedAt ||
+        comment.moderationStatus === 'deleted' ||
+        comment.moderationStatus === 'removed'
+      ) {
+        throw new InvalidCommentModerationTransitionException(
+          comment.moderationStatus.toUpperCase(),
+          input.operation.toUpperCase(),
+        );
       }
       await this.assertReportMatches(tx, input.reportId, comment.id);
 
       const next = this.nextStatus(comment.moderationStatus, input.operation);
       const ancestorsPublic = await this.areAncestorsPublic(tx, comment.id);
-      const oldPublic = ancestorsPublic && comment.moderationStatus === 'visible' && !comment.deletedAt;
+      const oldPublic =
+        ancestorsPublic &&
+        comment.moderationStatus === 'visible' &&
+        !comment.deletedAt;
       const newPublic = ancestorsPublic && next === ModerationStatus.VISIBLE;
 
-      const visibleDescendants = oldPublic !== newPublic
-        ? await this.countPublicDescendants(tx, comment.id)
-        : 0;
-      await tx.comment.update({ where: { id: comment.id }, data: { moderationStatus: next } });
+      const visibleDescendants =
+        oldPublic !== newPublic
+          ? await this.countPublicDescendants(tx, comment.id)
+          : 0;
+      await tx.comment.update({
+        where: { id: comment.id },
+        data: { moderationStatus: next },
+      });
       if (oldPublic !== newPublic) {
         const amount = 1 + visibleDescendants;
-        await this.adjustPublicCounters(tx, comment.storyId, comment.chapterId, newPublic ? amount : -amount);
+        await this.adjustPublicCounters(
+          tx,
+          comment.storyId,
+          comment.chapterId,
+          newPublic ? amount : -amount,
+        );
       }
 
       const action = this.actionFor(input.operation);
@@ -212,12 +305,12 @@ export class ModerationService {
           actorId: input.actorId,
           reportId: input.reportId,
           commentId: comment.id,
-          storyId: comment.storyId,
-          chapterId: comment.chapterId,
-          targetUserId: comment.userId,
           action,
           reason,
-          metadata: { previousStatus: comment.moderationStatus.toUpperCase(), newStatus: next },
+          metadata: {
+            previousStatus: comment.moderationStatus.toUpperCase(),
+            newStatus: next,
+          },
         },
       });
       await tx.auditLog.create({
@@ -226,7 +319,9 @@ export class ModerationService {
           action: this.auditActionFor(input.operation),
           entityType: 'comment',
           entityId: comment.id,
-          oldValues: { moderationStatus: comment.moderationStatus.toUpperCase() },
+          oldValues: {
+            moderationStatus: comment.moderationStatus.toUpperCase(),
+          },
           newValues: { moderationStatus: next },
           metadata: { reason, reportId: input.reportId ?? null },
           ...input.audit,
@@ -248,7 +343,8 @@ export class ModerationService {
   }) {
     const reason = this.reason(input.reason);
     const message = input.message.normalize('NFKC').trim();
-    if (message.length < 10 || message.length > 1000) throw new InvalidWarningMessageException();
+    if (message.length < 10 || message.length > 1000)
+      throw new InvalidWarningMessageException();
     const result = await this.prisma.$transaction(async (tx) => {
       const comment = await this.lockComment(tx, input.commentId);
       if (!comment) throw new CommentNotFoundException(input.commentId);
@@ -258,9 +354,6 @@ export class ModerationService {
           actorId: input.actorId,
           reportId: input.reportId,
           commentId: comment.id,
-          storyId: comment.storyId,
-          chapterId: comment.chapterId,
-          targetUserId: comment.userId,
           action: ModerationActionType.WARN_USER,
           reason,
           metadata: { delivery: 'in_app_mandatory' },
@@ -279,17 +372,25 @@ export class ModerationService {
       await tx.auditLog.create({
         data: {
           actorId: input.actorId,
-          action: 'comment.moderation.warned_user',
+          action: 'comment.moderation.user_warned',
           entityType: 'comment',
           entityId: comment.id,
-          metadata: { targetUserId: comment.userId, reason, reportId: input.reportId ?? null },
+          metadata: {
+            targetUserId: comment.userId,
+            reason,
+            reportId: input.reportId ?? null,
+          },
           ...input.audit,
         },
       });
-      return { success: true as const };
+      return { commentId: comment.id, warnedUserId: comment.userId };
     });
     this.metrics.recordCommentModeration('warn');
-    return result;
+    return {
+      success: true as const,
+      commentId: result.commentId,
+      warnedUserId: result.warnedUserId,
+    };
   }
 
   async banUser(input: {
@@ -302,13 +403,23 @@ export class ModerationService {
     const reason = this.reason(input.reason);
     const comment = await this.prisma.comment.findUnique({
       where: { id: input.commentId },
-      select: { id: true, userId: true, storyId: true, chapterId: true },
+      select: {
+        id: true,
+        userId: true,
+        storyId: true,
+        chapterId: true,
+        moderationStatus: true,
+      },
     });
     if (!comment) throw new CommentNotFoundException(input.commentId);
     if (input.reportId) {
-      const report = await this.prisma.report.findUnique({ where: { id: input.reportId }, select: { commentId: true } });
+      const report = await this.prisma.report.findUnique({
+        where: { id: input.reportId },
+        select: { commentId: true },
+      });
       if (!report) throw new ReportNotFoundException(input.reportId);
-      if (report.commentId !== comment.id) throw new ModerationReportMismatchException();
+      if (report.commentId !== comment.id)
+        throw new ModerationReportMismatchException();
     }
 
     // Reuse Phase 1 user lifecycle: this performs last-admin/self protection, session revocation and auth invalidation.
@@ -330,9 +441,6 @@ export class ModerationService {
           actorId: input.actorId,
           reportId: input.reportId,
           commentId: comment.id,
-          storyId: comment.storyId,
-          chapterId: comment.chapterId,
-          targetUserId: comment.userId,
           action: ModerationActionType.BAN_USER,
           reason,
         },
@@ -343,7 +451,11 @@ export class ModerationService {
           action: 'comment.moderation.user_banned',
           entityType: 'comment',
           entityId: comment.id,
-          metadata: { targetUserId: comment.userId, reason, reportId: input.reportId ?? null },
+          metadata: {
+            targetUserId: comment.userId,
+            reason,
+            reportId: input.reportId ?? null,
+          },
           ...input.audit,
         },
       });
@@ -356,24 +468,33 @@ export class ModerationService {
     actorId: string;
     reportId: string;
     note: string;
-    status: ReportStatus.RESOLVED | ReportStatus.REJECTED;
+    status: typeof ReportStatus.RESOLVED | typeof ReportStatus.REJECTED;
     auditAction: string;
     audit: AuditContext;
   }) {
     const note = input.note.normalize('NFKC').trim();
-    if (note.length < 10 || note.length > 2000) throw new InvalidReportResolutionException();
+    if (note.length < 10 || note.length > 2000)
+      throw new InvalidReportResolutionException();
     return this.prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<Array<{ id: string; status: string; commentId: string | null }>>(Prisma.sql`
+      const rows = await tx.$queryRaw<
+        Array<{ id: string; status: string; commentId: string | null }>
+      >(Prisma.sql`
         SELECT "id", "status"::text AS "status", "comment_id" AS "commentId"
         FROM "reports" WHERE "id" = ${input.reportId}::uuid FOR UPDATE
       `);
       const report = rows[0];
       if (!report) throw new ReportNotFoundException(input.reportId);
-      if (!['open', 'in_review'].includes(report.status)) throw new ReportAlreadyClosedException();
+      if (!['open', 'in_review'].includes(report.status))
+        throw new ReportAlreadyClosedException();
       const now = new Date();
       await tx.report.update({
         where: { id: report.id },
-        data: { status: input.status, resolutionNote: note, resolvedAt: now, assignedToId: input.actorId },
+        data: {
+          status: input.status,
+          resolutionNote: note,
+          resolvedAt: now,
+          assignedToId: input.actorId,
+        },
       });
       await tx.auditLog.create({
         data: {
@@ -387,11 +508,19 @@ export class ModerationService {
           ...input.audit,
         },
       });
-      return { id: report.id, status: input.status, resolvedAt: now.toISOString(), resolutionNote: note };
+      return {
+        id: report.id,
+        status: input.status,
+        resolvedAt: now.toISOString(),
+        resolutionNote: note,
+      };
     });
   }
 
-  private nextStatus(current: string, operation: CommentModerationOperation): ModerationStatus {
+  private nextStatus(
+    current: string,
+    operation: CommentModerationOperation,
+  ): ModerationStatus {
     const table: Record<CommentModerationOperation, readonly string[]> = {
       hold: ['visible'],
       hide: ['visible', 'pending'],
@@ -399,47 +528,87 @@ export class ModerationService {
       remove: ['visible', 'pending', 'hidden'],
     };
     if (!table[operation].includes(current)) {
-      throw new InvalidCommentModerationTransitionException(current.toUpperCase(), operation.toUpperCase());
+      throw new InvalidCommentModerationTransitionException(
+        current.toUpperCase(),
+        operation.toUpperCase(),
+      );
     }
     switch (operation) {
-      case 'hold': return ModerationStatus.PENDING;
-      case 'hide': return ModerationStatus.HIDDEN;
-      case 'restore': return ModerationStatus.VISIBLE;
-      case 'remove': return ModerationStatus.REMOVED;
+      case 'hold':
+        return ModerationStatus.PENDING;
+      case 'hide':
+        return ModerationStatus.HIDDEN;
+      case 'restore':
+        return ModerationStatus.VISIBLE;
+      case 'remove':
+        return ModerationStatus.REMOVED;
     }
   }
 
   private auditActionFor(operation: CommentModerationOperation): string {
     switch (operation) {
-      case 'hold': return 'comment.moderation.held';
-      case 'hide': return 'comment.moderation.hidden';
-      case 'restore': return 'comment.moderation.restored';
-      case 'remove': return 'comment.moderation.removed';
+      case 'hold':
+        return 'comment.moderation.held';
+      case 'hide':
+        return 'comment.moderation.hidden';
+      case 'restore':
+        return 'comment.moderation.restored';
+      case 'remove':
+        return 'comment.moderation.removed';
     }
   }
 
-  private actionFor(operation: CommentModerationOperation): ModerationActionType {
+  private actionFor(
+    operation: CommentModerationOperation,
+  ): ModerationActionType {
     switch (operation) {
-      case 'hold': return ModerationActionType.HOLD_COMMENT;
-      case 'hide': return ModerationActionType.HIDE_COMMENT;
-      case 'restore': return ModerationActionType.RESTORE_COMMENT;
-      case 'remove': return ModerationActionType.DELETE_COMMENT;
+      case 'hold':
+        return ModerationActionType.HOLD_COMMENT;
+      case 'hide':
+        return ModerationActionType.HIDE_COMMENT;
+      case 'restore':
+        return ModerationActionType.RESTORE_COMMENT;
+      case 'remove':
+        return ModerationActionType.DELETE_COMMENT;
     }
   }
 
-  private async assertReportMatches(tx: Prisma.TransactionClient, reportId: string | undefined, commentId: string) {
+  private async assertReportMatches(
+    tx: Prisma.TransactionClient,
+    reportId: string | undefined,
+    commentId: string,
+  ) {
     if (!reportId) return;
-    const report = await tx.report.findUnique({ where: { id: reportId }, select: { commentId: true } });
+    const report = await tx.report.findUnique({
+      where: { id: reportId },
+      select: { commentId: true },
+    });
     if (!report) throw new ReportNotFoundException(reportId);
-    if (report.commentId !== commentId) throw new ModerationReportMismatchException();
+    if (report.commentId !== commentId)
+      throw new ModerationReportMismatchException();
   }
 
-  private async lockComment(tx: Prisma.TransactionClient, commentId: string): Promise<{
-    id: string; storyId: string; chapterId: string | null; userId: string; moderationStatus: string; deletedAt: Date | null;
+  private async lockComment(
+    tx: Prisma.TransactionClient,
+    commentId: string,
+  ): Promise<{
+    id: string;
+    storyId: string;
+    chapterId: string | null;
+    userId: string;
+    moderationStatus: string;
+    deletedAt: Date | null;
   } | null> {
-    const rows = await tx.$queryRaw<Array<{
-      id: string; storyId: string; chapterId: string | null; userId: string; moderationStatus: string; deletedAt: Date | null;
-    }>>(Prisma.sql`
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        storyId: string;
+        chapterId: string | null;
+        userId: string;
+        moderationStatus: string;
+        deletedAt: Date | null;
+      }>
+    >(Prisma.sql`
       SELECT "id", "story_id" AS "storyId", "chapter_id" AS "chapterId", "user_id" AS "userId",
              "moderation_status"::text AS "moderationStatus", "deleted_at" AS "deletedAt"
       FROM "comments" WHERE "id" = ${commentId}::uuid FOR UPDATE
@@ -447,7 +616,10 @@ export class ModerationService {
     return rows[0] ?? null;
   }
 
-  private async areAncestorsPublic(tx: Prisma.TransactionClient, commentId: string): Promise<boolean> {
+  private async areAncestorsPublic(
+    tx: Prisma.TransactionClient,
+    commentId: string,
+  ): Promise<boolean> {
     const rows = await tx.$queryRaw<Array<{ blocked: bigint }>>(Prisma.sql`
       WITH RECURSIVE ancestors AS (
         SELECT parent."id", parent."parent_id", parent."moderation_status", parent."deleted_at"
@@ -470,7 +642,10 @@ export class ModerationService {
     return Number(rows[0]?.blocked ?? 0n) === 0;
   }
 
-  private async countPublicDescendants(tx: Prisma.TransactionClient, commentId: string): Promise<number> {
+  private async countPublicDescendants(
+    tx: Prisma.TransactionClient,
+    commentId: string,
+  ): Promise<number> {
     const rows = await tx.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
       WITH RECURSIVE thread AS (
         SELECT c."id", c."moderation_status", c."deleted_at", 1 AS depth
@@ -498,23 +673,38 @@ export class ModerationService {
   ) {
     if (delta === 0) return;
     if (delta > 0) {
-      await tx.story.update({ where: { id: storyId }, data: { commentCount: { increment: delta } } });
-      if (chapterId) await tx.chapter.update({ where: { id: chapterId }, data: { commentCount: { increment: delta } } });
+      await tx.story.update({
+        where: { id: storyId },
+        data: { commentCount: { increment: delta } },
+      });
+      if (chapterId)
+        await tx.chapter.update({
+          where: { id: chapterId },
+          data: { commentCount: { increment: delta } },
+        });
       return;
     }
     const amount = Math.abs(delta);
-    await tx.$executeRaw(Prisma.sql`UPDATE "stories" SET "comment_count" = GREATEST("comment_count" - ${amount}, 0) WHERE "id" = ${storyId}::uuid`);
-    if (chapterId) await tx.$executeRaw(Prisma.sql`UPDATE "chapters" SET "comment_count" = GREATEST("comment_count" - ${amount}, 0) WHERE "id" = ${chapterId}::uuid`);
+    await tx.$executeRaw(
+      Prisma.sql`UPDATE "stories" SET "comment_count" = GREATEST("comment_count" - ${amount}, 0) WHERE "id" = ${storyId}::uuid`,
+    );
+    if (chapterId)
+      await tx.$executeRaw(
+        Prisma.sql`UPDATE "chapters" SET "comment_count" = GREATEST("comment_count" - ${amount}, 0) WHERE "id" = ${chapterId}::uuid`,
+      );
   }
 
   private reason(value: string): string {
     const normalized = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
-    if (normalized.length < 10 || normalized.length > 2000) throw new InvalidModerationReasonException();
+    if (normalized.length < 10 || normalized.length > 2000)
+      throw new InvalidModerationReasonException();
     return normalized;
   }
 
   private excerpt(value: string): string {
     const normalized = value.replace(/\s+/g, ' ').trim();
-    return normalized.length <= 200 ? normalized : `${normalized.slice(0, 197)}...`;
+    return normalized.length <= 200
+      ? normalized
+      : `${normalized.slice(0, 197)}...`;
   }
 }

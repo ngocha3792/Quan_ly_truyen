@@ -4,10 +4,7 @@ import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
-import {
-  AuthorFollowMutation,
-  FollowingAuthorsPage,
-} from '../domain/author-follow.models';
+import { AuthorFollowMutation, FollowingAuthorsPage } from '../domain/author-follow.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthorFollowApiService {

@@ -45,13 +45,17 @@ test('author edits canonical public profile without changing slug', async ({ pag
   await expect(page).toHaveURL(new RegExp(`/tac-gia/${AUTHOR_SLUG}$`));
   await expect(page.getByRole('heading', { name: 'E2E Phase Five Author' })).toBeVisible();
   await expect(page.getByText('Tiểu sử được cập nhật từ Author Studio Phase 5.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Website' })).toHaveAttribute('href', 'https://example.com/e2e-author');
+  await expect(page.getByRole('link', { name: 'Website' })).toHaveAttribute(
+    'href',
+    'https://example.com/e2e-author',
+  );
 });
 
 async function logout(page: import('@playwright/test').Page): Promise<void> {
   const cookies = await page.context().cookies();
   const csrf = cookies.find((cookie) => cookie.name === 'csrf_token');
-  if (csrf) await page.request.post('/api/v1/auth/logout', { headers: { 'x-csrf-token': csrf.value } });
+  if (csrf)
+    await page.request.post('/api/v1/auth/logout', { headers: { 'x-csrf-token': csrf.value } });
   await page.context().clearCookies();
   await page.evaluate(() => window.localStorage.clear()).catch(() => undefined);
 }

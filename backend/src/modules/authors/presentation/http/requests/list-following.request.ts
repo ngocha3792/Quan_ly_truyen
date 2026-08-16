@@ -7,8 +7,15 @@ export class ListFollowingRequest {
 
   @IsOptional()
   @Transform(({ value }) => {
-    if (Array.isArray(value)) return value.flatMap((item) => String(item).split(',')).map((item) => item.trim()).filter(Boolean);
-    return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+    if (Array.isArray(value))
+      return value
+        .flatMap((item) => String(item).split(','))
+        .map((item) => item.trim())
+        .filter(Boolean);
+    return String(value ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
   })
   @IsArray()
   @IsUUID('4', { each: true })

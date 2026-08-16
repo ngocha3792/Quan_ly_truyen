@@ -444,20 +444,39 @@ export class MetricsService implements OnModuleDestroy {
     if (this.enabled) this.redisErrors.inc({ operation });
   }
 
-  recordCommentOperation(operation: 'create' | 'reply' | 'update' | 'delete'): void {
+  recordCommentOperation(
+    operation: 'create' | 'reply' | 'update' | 'delete',
+  ): void {
     if (this.enabled) this.commentOperations.inc({ operation });
   }
 
-  recordCommentReaction(operation: 'set' | 'remove', type: 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL' | 'none'): void {
+  recordCommentReaction(
+    operation: 'set' | 'remove',
+    type: 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL' | 'none',
+  ): void {
     if (this.enabled) this.commentReactions.inc({ operation, type });
   }
 
   recordCommentReport(reason: string): void {
-    const allowed = ['SPAM', 'HARASSMENT', 'HATE_SPEECH', 'SEXUAL_CONTENT', 'VIOLENCE', 'COPYRIGHT', 'MISINFORMATION', 'OTHER'];
-    if (this.enabled) this.commentReports.inc({ reason: allowed.includes(reason) ? reason : 'OTHER' });
+    const allowed = [
+      'SPAM',
+      'HARASSMENT',
+      'HATE_SPEECH',
+      'SEXUAL_CONTENT',
+      'VIOLENCE',
+      'COPYRIGHT',
+      'MISINFORMATION',
+      'OTHER',
+    ];
+    if (this.enabled)
+      this.commentReports.inc({
+        reason: allowed.includes(reason) ? reason : 'OTHER',
+      });
   }
 
-  recordCommentModeration(action: 'hold' | 'hide' | 'restore' | 'remove' | 'warn' | 'ban'): void {
+  recordCommentModeration(
+    action: 'hold' | 'hide' | 'restore' | 'remove' | 'warn' | 'ban',
+  ): void {
     if (this.enabled) this.commentModerationActions.inc({ action });
   }
 
@@ -465,7 +484,10 @@ export class MetricsService implements OnModuleDestroy {
     if (this.enabled) this.commentAbuseBlocks.inc({ scope });
   }
 
-  recordAuditLogRead(operation: 'list' | 'detail', result: 'success' | 'error'): void {
+  recordAuditLogRead(
+    operation: 'list' | 'detail',
+    result: 'success' | 'error',
+  ): void {
     if (this.enabled) this.auditLogReadRequests.inc({ operation, result });
   }
 
@@ -487,11 +509,13 @@ export class MetricsService implements OnModuleDestroy {
     operation: 'queue' | 'aggregate' | 'reconcile' | 'cleanup',
     result: 'success' | 'failed' | 'skipped',
   ): void {
-    if (this.enabled) this.readerAnalyticsEventsProcessed.inc({ operation, result });
+    if (this.enabled)
+      this.readerAnalyticsEventsProcessed.inc({ operation, result });
   }
 
   recordReaderAnalyticsRejected(
-    reason: 'timestamp' | 'shape' | 'story' | 'context' | 'rate_limit' | 'other',
+    reason:
+      'timestamp' | 'shape' | 'story' | 'context' | 'rate_limit' | 'other',
   ): void {
     if (this.enabled) this.readerAnalyticsEventsRejected.inc({ reason });
   }
@@ -499,7 +523,8 @@ export class MetricsService implements OnModuleDestroy {
   recordReaderAnalyticsReconciliationMismatch(
     scope: 'story' | 'chapter' | 'lifetime',
   ): void {
-    if (this.enabled) this.readerAnalyticsReconciliationMismatches.inc({ scope });
+    if (this.enabled)
+      this.readerAnalyticsReconciliationMismatches.inc({ scope });
   }
 
   setDependencyHealth(
@@ -536,10 +561,9 @@ function normalizeStatusCode(statusCode: number): HttpStatusCode {
 }
 
 function normalizeOutboxEvent(eventType: string): string {
-  return [
-    'mail.send.v1',
-    'notification.author-chapter-published.v1',
-  ].includes(eventType)
+  return ['mail.send.v1', 'notification.author-chapter-published.v1'].includes(
+    eventType,
+  )
     ? eventType
     : 'unknown';
 }

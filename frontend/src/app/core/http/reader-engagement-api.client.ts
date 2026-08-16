@@ -183,7 +183,9 @@ export class ReaderEngagementApiClient {
       )
       .pipe(
         map((response) => response.data),
-        tap(() => { if (this.commentRetryKeys.get(identity) === key) this.commentRetryKeys.delete(identity); }),
+        tap(() => {
+          if (this.commentRetryKeys.get(identity) === key) this.commentRetryKeys.delete(identity);
+        }),
       );
   }
 

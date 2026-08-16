@@ -13,7 +13,9 @@ const USERS = {
   c: 'e2e.comment-c@truyenhub.test',
 } as const;
 
-test('reader thread, reaction, report and deleted tombstone journey stays consistent', async ({ page }, testInfo) => {
+test('reader thread, reaction, report and deleted tombstone journey stays consistent', async ({
+  page,
+}, testInfo) => {
   await login(page, USERS.a, `${testInfo.title}-a`);
   await page.goto(STORY_URL);
   const comments = page.locator('app-public-comments');
@@ -50,7 +52,9 @@ test('reader thread, reaction, report and deleted tombstone journey stays consis
   await reply.getByRole('button', { name: 'Phản hồi', exact: true }).click();
   await rootThread.getByPlaceholder('Viết phản hồi...').fill(DEPTH_TWO_BODY);
   await rootThread.getByRole('button', { name: 'Gửi phản hồi', exact: true }).click();
-  const depthTwo = rootThread.locator('.comment-item.reply.depth-two').filter({ hasText: DEPTH_TWO_BODY });
+  const depthTwo = rootThread
+    .locator('.comment-item.reply.depth-two')
+    .filter({ hasText: DEPTH_TWO_BODY });
   await expect(depthTwo).toBeVisible();
   await expect(depthTwo.getByRole('button', { name: 'Phản hồi', exact: true })).toHaveCount(0);
 
@@ -62,9 +66,13 @@ test('reader thread, reaction, report and deleted tombstone journey stays consis
   await reply.getByRole('button', { name: 'Báo cáo', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('combobox').selectOption('HARASSMENT');
-  await dialog.getByRole('textbox').fill('Phản hồi này có nội dung quấy rối cần moderator xem xét.');
+  await dialog
+    .getByRole('textbox')
+    .fill('Phản hồi này có nội dung quấy rối cần moderator xem xét.');
   await dialog.getByRole('button', { name: 'Gửi báo cáo', exact: true }).click();
-  await expect(comments.getByText('Cảm ơn bạn đã báo cáo. Nhóm kiểm duyệt sẽ xem xét.')).toBeVisible();
+  await expect(
+    comments.getByText('Cảm ơn bạn đã báo cáo. Nhóm kiểm duyệt sẽ xem xét.'),
+  ).toBeVisible();
 
   await switchUser(page, USERS.a, `${testInfo.title}-a3`);
   await page.goto(STORY_URL);
@@ -77,12 +85,20 @@ test('reader thread, reaction, report and deleted tombstone journey stays consis
   await expect(rootThread.getByText(DEPTH_TWO_BODY)).toBeVisible();
 });
 
-async function switchUser(page: import('@playwright/test').Page, email: string, device: string): Promise<void> {
+async function switchUser(
+  page: import('@playwright/test').Page,
+  email: string,
+  device: string,
+): Promise<void> {
   await logout(page);
   await login(page, email, device);
 }
 
-async function login(page: import('@playwright/test').Page, email: string, device: string): Promise<void> {
+async function login(
+  page: import('@playwright/test').Page,
+  email: string,
+  device: string,
+): Promise<void> {
   const response = await page.request.post('/api/v1/auth/login', {
     data: {
       identifier: email,

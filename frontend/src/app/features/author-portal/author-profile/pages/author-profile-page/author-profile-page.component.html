@@ -10,43 +10,98 @@
     }
   </header>
 
-  @if (store.error(); as error) { <p class="error" role="alert">{{ error }}</p> }
+  @if (store.error(); as error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
   @if (store.profile(); as profile) {
     <div class="media-grid">
       <article>
         <h2>Avatar</h2>
-        @if (profile.avatar) { <img class="avatar" [src]="profile.avatar.url" [alt]="profile.displayName" /> }
-        @else { <div class="avatar placeholder">{{ profile.displayName.slice(0, 2) }}</div> }
-        <label class="file-button">{{ store.uploading() === 'avatar' ? 'Đang tải…' : 'Đổi avatar' }}<input type="file" accept="image/jpeg,image/png,image/webp" [disabled]="store.uploading() !== null" (change)="avatarSelected($event)" /></label>
-        @if (profile.avatar) { <button type="button" class="link-button" (click)="store.clearAvatar()">Gỡ avatar</button> }
+        @if (profile.avatar) {
+          <img class="avatar" [src]="profile.avatar.url" [alt]="profile.displayName" />
+        } @else {
+          <div class="avatar placeholder">{{ profile.displayName.slice(0, 2) }}</div>
+        }
+        <label class="file-button"
+          >{{ store.uploading() === 'avatar' ? 'Đang tải…' : 'Đổi avatar'
+          }}<input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            [disabled]="store.uploading() !== null"
+            (change)="avatarSelected($event)"
+        /></label>
+        @if (profile.avatar) {
+          <button type="button" class="link-button" (click)="store.clearAvatar()">Gỡ avatar</button>
+        }
       </article>
       <article>
         <h2>Banner</h2>
-        @if (profile.banner) { <img class="banner" [src]="profile.banner.url" alt="Banner tác giả" /> }
-        @else { <div class="banner placeholder">Chưa có banner</div> }
-        <label class="file-button">{{ store.uploading() === 'banner' ? 'Đang tải…' : 'Đổi banner' }}<input type="file" accept="image/jpeg,image/png,image/webp" [disabled]="store.uploading() !== null" (change)="bannerSelected($event)" /></label>
-        @if (profile.banner) { <button type="button" class="link-button" (click)="store.clearBanner()">Gỡ banner</button> }
+        @if (profile.banner) {
+          <img class="banner" [src]="profile.banner.url" alt="Banner tác giả" />
+        } @else {
+          <div class="banner placeholder">Chưa có banner</div>
+        }
+        <label class="file-button"
+          >{{ store.uploading() === 'banner' ? 'Đang tải…' : 'Đổi banner'
+          }}<input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            [disabled]="store.uploading() !== null"
+            (change)="bannerSelected($event)"
+        /></label>
+        @if (profile.banner) {
+          <button type="button" class="link-button" (click)="store.clearBanner()">Gỡ banner</button>
+        }
       </article>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="save()">
       <label>Tên tác giả<input formControlName="displayName" maxlength="120" /></label>
-      <label>URL hồ sơ<input [value]="'/tac-gia/' + profile.slug" readonly /><small>URL hồ sơ không thay đổi khi bạn đổi tên tác giả.</small></label>
-      <label class="wide">Tiểu sử<textarea formControlName="bio" rows="7" maxlength="5000"></textarea><small>{{ form.controls.bio.value.length }}/5000</small></label>
+      <label
+        >URL hồ sơ<input [value]="'/tac-gia/' + profile.slug" readonly /><small
+          >URL hồ sơ không thay đổi khi bạn đổi tên tác giả.</small
+        ></label
+      >
+      <label class="wide"
+        >Tiểu sử<textarea formControlName="bio" rows="7" maxlength="5000"></textarea
+        ><small>{{ form.controls.bio.value.length }}/5000</small></label
+      >
 
       <fieldset class="wide">
         <legend>Liên kết</legend>
         <div class="links-grid">
-          <label>Website<input formControlName="website" type="url" placeholder="https://…" /></label>
-          <label>Facebook<input formControlName="facebook" type="url" placeholder="https://facebook.com/…" /></label>
-          <label>Instagram<input formControlName="instagram" type="url" placeholder="https://instagram.com/…" /></label>
+          <label
+            >Website<input formControlName="website" type="url" placeholder="https://…"
+          /></label>
+          <label
+            >Facebook<input
+              formControlName="facebook"
+              type="url"
+              placeholder="https://facebook.com/…"
+          /></label>
+          <label
+            >Instagram<input
+              formControlName="instagram"
+              type="url"
+              placeholder="https://instagram.com/…"
+          /></label>
           <label>X<input formControlName="x" type="url" placeholder="https://x.com/…" /></label>
-          <label>YouTube<input formControlName="youtube" type="url" placeholder="https://youtube.com/…" /></label>
-          <label>TikTok<input formControlName="tiktok" type="url" placeholder="https://tiktok.com/…" /></label>
+          <label
+            >YouTube<input formControlName="youtube" type="url" placeholder="https://youtube.com/…"
+          /></label>
+          <label
+            >TikTok<input formControlName="tiktok" type="url" placeholder="https://tiktok.com/…"
+          /></label>
         </div>
       </fieldset>
 
-      <div class="actions wide"><button type="submit" [disabled]="form.invalid || store.saving()">{{ store.saving() ? 'Đang lưu…' : 'Lưu hồ sơ' }}</button></div>
+      <div class="actions wide">
+        <button type="submit" [disabled]="form.invalid || store.saving()">
+          {{ store.saving() ? 'Đang lưu…' : 'Lưu hồ sơ' }}
+        </button>
+      </div>
     </form>
-  } @else if (store.loading()) { <p>Đang tải hồ sơ…</p> }
+  } @else if (store.loading()) {
+    <p>Đang tải hồ sơ…</p>
+  }
 </section>

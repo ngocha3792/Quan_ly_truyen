@@ -51,7 +51,11 @@ describe('Phase 5 author profile, follows and notifications', () => {
         {
           provide: TracePropagationService,
           useValue: {
-            runWithQueueContext: (_telemetry: unknown, _context: unknown, work: () => unknown) => work(),
+            runWithQueueContext: (
+              _telemetry: unknown,
+              _context: unknown,
+              work: () => unknown,
+            ) => work(),
           },
         },
       ],
@@ -65,7 +69,10 @@ describe('Phase 5 author profile, follows and notifications', () => {
   });
 
   afterEach(async () => cleanup());
-  afterAll(async () => { await cleanup(); await moduleRef.close(); });
+  afterAll(async () => {
+    await cleanup();
+    await moduleRef.close();
+  });
 
   it('updates canonical author profile fields, keeps slug stable and validates owned media', async () => {
     const authorId = await createAuthor('profile');
@@ -78,7 +85,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
       where: { userId: authorId },
       data: { socialLinks: { country: 'VN', legacyKey: 'keep-me' } },
     });
-    const before = await prisma.authorProfile.findUniqueOrThrow({ where: { userId: authorId } });
+    const before = await prisma.authorProfile.findUniqueOrThrow({
+      where: { userId: authorId },
+    });
 
     const updated = await profiles.update({
       userId: authorId,
@@ -86,7 +95,10 @@ describe('Phase 5 author profile, follows and notifications', () => {
       bio: 'Tiểu sử tác giả',
       avatarMediaId: avatar.id,
       bannerMediaId: banner.id,
-      socialLinks: { website: 'https://example.test/me', facebook: 'https://facebook.com/example' },
+      socialLinks: {
+        website: 'https://example.test/me',
+        facebook: 'https://facebook.com/example',
+      },
       audit: { requestId: unique('request') },
     });
 
@@ -94,16 +106,28 @@ describe('Phase 5 author profile, follows and notifications', () => {
     expect(updated.slug).toBe(before.slug);
     expect(updated.avatar?.id).toBe(avatar.id);
     expect(updated.banner?.id).toBe(banner.id);
-    const persisted = await prisma.authorProfile.findUniqueOrThrow({ where: { userId: authorId } });
-    expect((persisted.socialLinks as Record<string, unknown>)['country']).toBe('VN');
-    expect((persisted.socialLinks as Record<string, unknown>)['legacyKey']).toBe('keep-me');
-    expect(await prisma.auditLog.count({ where: { actorId: authorId, action: 'author.profile.updated' } })).toBe(1);
+    const persisted = await prisma.authorProfile.findUniqueOrThrow({
+      where: { userId: authorId },
+    });
+    expect((persisted.socialLinks as Record<string, unknown>)['country']).toBe(
+      'VN',
+    );
+    expect(
+      (persisted.socialLinks as Record<string, unknown>)['legacyKey'],
+    ).toBe('keep-me');
+    expect(
+      await prisma.auditLog.count({
+        where: { actorId: authorId, action: 'author.profile.updated' },
+      }),
+    ).toBe(1);
 
-    await expect(profiles.update({
-      userId: authorId,
-      avatarMediaId: foreignAvatar.id,
-      audit: {},
-    })).rejects.toMatchObject({ code: 'AUTHOR_AVATAR_INVALID' });
+    await expect(
+      profiles.update({
+        userId: authorId,
+        avatarMediaId: foreignAvatar.id,
+        audit: {},
+      }),
+    ).rejects.toMatchObject({ code: 'AUTHOR_AVATAR_INVALID' });
   });
 
   it('keeps display-name uniqueness race-safe at the database boundary', async () => {
@@ -123,11 +147,15 @@ describe('Phase 5 author profile, follows and notifications', () => {
       }),
     ]);
 
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    const rejected = results.find((result) => result.status === 'rejected');
-    expect(rejected).toMatchObject({
-      status: 'rejected',
-      reason: expect.objectContaining({ code: 'AUTHOR_DISPLAY_NAME_UNAVAILABLE' }),
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    const rejected = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    expect(rejected).toBeDefined();
+    expect(rejected?.reason).toMatchObject({
+      code: 'AUTHOR_DISPLAY_NAME_UNAVAILABLE',
     });
   });
 
@@ -142,34 +170,62 @@ describe('Phase 5 author profile, follows and notifications', () => {
 
     expect(first.isFollowing).toBe(true);
     expect(second.isFollowing).toBe(true);
-    expect(await prisma.userFollowAuthor.count({ where: { userId: readerId, authorId } })).toBe(1);
-    expect((await prisma.authorProfile.findUniqueOrThrow({ where: { userId: authorId } })).followerCount).toBe(1);
+    expect(
+      await prisma.userFollowAuthor.count({
+        where: { userId: readerId, authorId },
+      }),
+    ).toBe(1);
+    expect(
+      (
+        await prisma.authorProfile.findUniqueOrThrow({
+          where: { userId: authorId },
+        })
+      ).followerCount,
+    ).toBe(1);
 
     await follows.unfollow(readerId, authorId);
     await follows.unfollow(readerId, authorId);
-    expect(await prisma.userFollowAuthor.count({ where: { userId: readerId, authorId } })).toBe(0);
-    expect((await prisma.authorProfile.findUniqueOrThrow({ where: { userId: authorId } })).followerCount).toBe(0);
+    expect(
+      await prisma.userFollowAuthor.count({
+        where: { userId: readerId, authorId },
+      }),
+    ).toBe(0);
+    expect(
+      (
+        await prisma.authorProfile.findUniqueOrThrow({
+          where: { userId: authorId },
+        })
+      ).followerCount,
+    ).toBe(0);
   });
 
   it('blocks new follows to suspended authors while allowing an existing relation to be removed', async () => {
     const authorId = await createAuthor('suspended-author');
     const readerId = await createUser('suspended-reader');
     await follows.follow(readerId, authorId);
-    await prisma.authorProfile.update({ where: { userId: authorId }, data: { lifecycleStatus: AuthorLifecycleStatus.SUSPENDED } });
+    await prisma.authorProfile.update({
+      where: { userId: authorId },
+      data: { lifecycleStatus: AuthorLifecycleStatus.SUSPENDED },
+    });
 
     const otherReader = await createUser('other-reader');
-    await expect(follows.follow(otherReader, authorId)).rejects.toMatchObject({ code: 'AUTHOR_NOT_FOLLOWABLE' });
-    await expect(follows.unfollow(readerId, authorId)).resolves.toMatchObject({ isFollowing: false });
+    await expect(follows.follow(otherReader, authorId)).rejects.toMatchObject({
+      code: 'AUTHOR_NOT_FOLLOWABLE',
+    });
+    await expect(follows.unfollow(readerId, authorId)).resolves.toMatchObject({
+      isFollowing: false,
+    });
   });
 
   it('reconciles outgoing and incoming author follows during account deletion', async () => {
-    const deletion = new PrismaAccountDeletionPersistence(
-      prisma,
-      { write: jest.fn().mockResolvedValue(undefined) } as never,
-    );
+    const deletion = new PrismaAccountDeletionPersistence(prisma, {
+      write: jest.fn().mockResolvedValue(undefined),
+    } as never);
 
     const targetAuthor = await createAuthor('delete-target');
-    const deletingReader = await createUser('delete-reader', { passwordHash: 'phase5-reader-hash' });
+    const deletingReader = await createUser('delete-reader', {
+      passwordHash: 'phase5-reader-hash',
+    });
     const readerSession = await createSession(deletingReader);
     await follows.follow(deletingReader, targetAuthor);
 
@@ -182,10 +238,16 @@ describe('Phase 5 author profile, follows and notifications', () => {
       }),
     ).resolves.toMatchObject({ status: 'deleted' });
     await expect(
-      prisma.userFollowAuthor.count({ where: { userId: deletingReader, authorId: targetAuthor } }),
+      prisma.userFollowAuthor.count({
+        where: { userId: deletingReader, authorId: targetAuthor },
+      }),
     ).resolves.toBe(0);
     expect(
-      (await prisma.authorProfile.findUniqueOrThrow({ where: { userId: targetAuthor } })).followerCount,
+      (
+        await prisma.authorProfile.findUniqueOrThrow({
+          where: { userId: targetAuthor },
+        })
+      ).followerCount,
     ).toBe(0);
 
     const deletingAuthor = await createAuthor('delete-author');
@@ -218,24 +280,28 @@ describe('Phase 5 author profile, follows and notifications', () => {
   it('emits exactly one follower outbox event only when a draft chapter publishes successfully', async () => {
     const authorId = await createAuthor('publish-author');
     const marker = unique('published-story').toLowerCase();
-    const story = await prisma.story.create({ data: {
-      authorId,
-      title: 'Published story',
-      slug: marker,
-      synopsis: 'Phase 5 outbox integration',
-      status: StoryStatus.PUBLISHED,
-      visibility: 'PUBLIC',
-      publishedAt: new Date(),
-    } });
-    const chapter = await prisma.chapter.create({ data: {
-      storyId: story.id,
-      createdById: authorId,
-      updatedById: authorId,
-      number: '1',
-      title: 'Chương 1',
-      slug: 'chuong-1',
-      content: 'Nội dung chương',
-    } });
+    const story = await prisma.story.create({
+      data: {
+        authorId,
+        title: 'Published story',
+        slug: marker,
+        synopsis: 'Phase 5 outbox integration',
+        status: StoryStatus.PUBLISHED,
+        visibility: 'PUBLIC',
+        publishedAt: new Date(),
+      },
+    });
+    const chapter = await prisma.chapter.create({
+      data: {
+        storyId: story.id,
+        createdById: authorId,
+        updatedById: authorId,
+        number: '1',
+        title: 'Chương 1',
+        slug: 'chuong-1',
+        content: 'Nội dung chương',
+      },
+    });
     const publishedAt = new Date();
 
     const first = await chapters.publish({
@@ -264,7 +330,11 @@ describe('Phase 5 author profile, follows and notifications', () => {
       audit: {},
     });
     expect(second.status).toBe('not_draft');
-    await expect(prisma.outboxEvent.count({ where: { idempotencyKey: `author-chapter-published:${chapter.id}` } })).resolves.toBe(1);
+    await expect(
+      prisma.outboxEvent.count({
+        where: { idempotencyKey: `author-chapter-published:${chapter.id}` },
+      }),
+    ).resolves.toBe(1);
   });
 
   it('fans out only to eligible current followers and deduplicates worker retries', async () => {
@@ -274,12 +344,28 @@ describe('Phase 5 author profile, follows and notifications', () => {
     const afterPublish = await createUser('late');
     const publishedAt = new Date(Date.now() - 60_000);
 
-    await prisma.userFollowAuthor.createMany({ data: [
-      { userId: eligible, authorId, createdAt: new Date(publishedAt.getTime() - 60_000) },
-      { userId: disabled, authorId, createdAt: new Date(publishedAt.getTime() - 60_000) },
-      { userId: afterPublish, authorId, createdAt: new Date(publishedAt.getTime() + 10_000) },
-    ] });
-    await prisma.notificationPreference.create({ data: { userId: disabled, newChapterEnabled: false } });
+    await prisma.userFollowAuthor.createMany({
+      data: [
+        {
+          userId: eligible,
+          authorId,
+          createdAt: new Date(publishedAt.getTime() - 60_000),
+        },
+        {
+          userId: disabled,
+          authorId,
+          createdAt: new Date(publishedAt.getTime() - 60_000),
+        },
+        {
+          userId: afterPublish,
+          authorId,
+          createdAt: new Date(publishedAt.getTime() + 10_000),
+        },
+      ],
+    });
+    await prisma.notificationPreference.create({
+      data: { userId: disabled, newChapterEnabled: false },
+    });
 
     const payload: AuthorChapterPublishedNotificationV1 = {
       version: 1,
@@ -292,23 +378,39 @@ describe('Phase 5 author profile, follows and notifications', () => {
       chapterTitle: 'Chương mới',
       publishedAt: publishedAt.toISOString(),
     };
-    const envelope: OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1> = {
-      aggregateType: 'notifications',
-      aggregateId: payload.chapterId,
-      eventType: AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
-      payload,
-      outboxEventId: randomUUID(),
-      createdAt: new Date().toISOString(),
-      telemetry: {} as OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>['telemetry'],
-    };
-    const job = { name: AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT, data: envelope } as Job<OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>>;
+    const envelope: OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1> =
+      {
+        aggregateType: 'notifications',
+        aggregateId: payload.chapterId,
+        eventType: AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
+        payload,
+        outboxEventId: randomUUID(),
+        createdAt: new Date().toISOString(),
+        telemetry:
+          {} as OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>['telemetry'],
+      };
+    const job = {
+      name: AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
+      data: envelope,
+    } as Job<OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>>;
 
     await fanout.process(job);
     await fanout.process(job);
 
-    expect(await prisma.notification.count({ where: { userId: eligible, dedupeKey: `new-chapter:${payload.chapterId}:${eligible}` } })).toBe(1);
-    expect(await prisma.notification.count({ where: { userId: disabled } })).toBe(0);
-    expect(await prisma.notification.count({ where: { userId: afterPublish } })).toBe(0);
+    expect(
+      await prisma.notification.count({
+        where: {
+          userId: eligible,
+          dedupeKey: `new-chapter:${payload.chapterId}:${eligible}`,
+        },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.notification.count({ where: { userId: disabled } }),
+    ).toBe(0);
+    expect(
+      await prisma.notification.count({ where: { userId: afterPublish } }),
+    ).toBe(0);
   });
 
   it('fans out across cursor batches larger than the worker batch size', async () => {
@@ -355,26 +457,36 @@ describe('Phase 5 author profile, follows and notifications', () => {
         payload,
         outboxEventId: randomUUID(),
         createdAt: new Date().toISOString(),
-        telemetry: {} as OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>['telemetry'],
+        telemetry:
+          {} as OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>['telemetry'],
       },
     } as Job<OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>>;
 
-    await expect(fanout.process(job)).resolves.toEqual({ inserted: 501, eligible: 501 });
+    await expect(fanout.process(job)).resolves.toEqual({
+      inserted: 501,
+      eligible: 501,
+    });
     await expect(
-      prisma.notification.count({ where: { dedupeKey: { startsWith: `new-chapter:${payload.chapterId}:` } } }),
+      prisma.notification.count({
+        where: {
+          dedupeKey: { startsWith: `new-chapter:${payload.chapterId}:` },
+        },
+      }),
     ).resolves.toBe(501);
   });
 
   async function createAuthor(prefix: string): Promise<string> {
     const userId = await createUser(prefix);
     const marker = unique(`pen-${prefix}`).toLowerCase();
-    await prisma.authorProfile.create({ data: {
-      userId,
-      penName: marker,
-      slug: marker,
-      verificationStatus: AuthorVerificationStatus.VERIFIED,
-      lifecycleStatus: AuthorLifecycleStatus.ACTIVE,
-    } });
+    await prisma.authorProfile.create({
+      data: {
+        userId,
+        penName: marker,
+        slug: marker,
+        verificationStatus: AuthorVerificationStatus.VERIFIED,
+        lifecycleStatus: AuthorLifecycleStatus.ACTIVE,
+      },
+    });
     return userId;
   }
 
@@ -383,13 +495,15 @@ describe('Phase 5 author profile, follows and notifications', () => {
     options: { passwordHash?: string } = {},
   ): Promise<string> {
     const marker = unique(prefix).toLowerCase();
-    const user = await prisma.user.create({ data: {
-      email: `${marker}@example.test`,
-      username: marker.slice(0, 45),
-      displayName: marker,
-      status: AccountStatus.ACTIVE,
-      passwordHash: options.passwordHash,
-    } });
+    const user = await prisma.user.create({
+      data: {
+        email: `${marker}@example.test`,
+        username: marker.slice(0, 45),
+        displayName: marker,
+        status: AccountStatus.ACTIVE,
+        passwordHash: options.passwordHash,
+      },
+    });
     createdUserIds.add(user.id);
     return user.id;
   }
@@ -406,15 +520,17 @@ describe('Phase 5 author profile, follows and notifications', () => {
   }
 
   async function createMedia(userId: string, purpose: MediaPurpose) {
-    return prisma.mediaAsset.create({ data: {
-      uploaderId: userId,
-      purpose,
-      status: MediaStatus.READY,
-      resourceType: MediaResourceType.IMAGE,
-      storageProvider: 'test',
-      secureUrl: `https://cdn.example.test/${unique('media')}.webp`,
-      readyAt: new Date(),
-    } });
+    return prisma.mediaAsset.create({
+      data: {
+        uploaderId: userId,
+        purpose,
+        status: MediaStatus.READY,
+        resourceType: MediaResourceType.IMAGE,
+        storageProvider: 'test',
+        secureUrl: `https://cdn.example.test/${unique('media')}.webp`,
+        readyAt: new Date(),
+      },
+    });
   }
 
   async function cleanup(): Promise<void> {
@@ -422,21 +538,40 @@ describe('Phase 5 author profile, follows and notifications', () => {
       where: { email: { contains: runId } },
       select: { id: true },
     });
-    const ids = [...new Set([...createdUserIds, ...users.map((item) => item.id)])];
+    const ids = [
+      ...new Set([...createdUserIds, ...users.map((item) => item.id)]),
+    ];
     if (!ids.length) return;
     await prisma.auditLog.deleteMany({ where: { actorId: { in: ids } } });
     await prisma.notification.deleteMany({ where: { userId: { in: ids } } });
-    await prisma.notificationPreference.deleteMany({ where: { userId: { in: ids } } });
-    await prisma.userFollowAuthor.deleteMany({ where: { OR: [{ userId: { in: ids } }, { authorId: { in: ids } }] } });
-    const chapters = await prisma.chapter.findMany({ where: { story: { authorId: { in: ids } } }, select: { id: true } });
+    await prisma.notificationPreference.deleteMany({
+      where: { userId: { in: ids } },
+    });
+    await prisma.userFollowAuthor.deleteMany({
+      where: { OR: [{ userId: { in: ids } }, { authorId: { in: ids } }] },
+    });
+    const chapters = await prisma.chapter.findMany({
+      where: { story: { authorId: { in: ids } } },
+      select: { id: true },
+    });
     if (chapters.length) {
-      await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: chapters.map((item) => item.id) }, aggregateType: 'notifications' } });
+      await prisma.outboxEvent.deleteMany({
+        where: {
+          aggregateId: { in: chapters.map((item) => item.id) },
+          aggregateType: 'notifications',
+        },
+      });
     }
     await prisma.story.deleteMany({ where: { authorId: { in: ids } } });
-    await prisma.mediaAsset.updateMany({ where: { uploaderId: { in: ids } }, data: { deletedAt: new Date(), uploaderId: null } });
+    await prisma.mediaAsset.updateMany({
+      where: { uploaderId: { in: ids } },
+      data: { deletedAt: new Date(), uploaderId: null },
+    });
     await prisma.authorProfile.deleteMany({ where: { userId: { in: ids } } });
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
-    await prisma.mediaAsset.deleteMany({ where: { secureUrl: { contains: runId } } });
+    await prisma.mediaAsset.deleteMany({
+      where: { secureUrl: { contains: runId } },
+    });
     createdUserIds.clear();
   }
 });

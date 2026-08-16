@@ -64,7 +64,12 @@ import {
 } from './presentation/http';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule, CommentsModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    AuthorsModule,
+    CommentsModule,
+  ],
   controllers: [
     PublicStoriesController,
     PublicStoryCommentsController,

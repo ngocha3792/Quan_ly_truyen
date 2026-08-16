@@ -47,7 +47,10 @@ export class AdminAuditLogsController {
   }
 
   @Get(':auditLogId')
-  detail(@Param('auditLogId', new ParseUUIDPipe({ version: '4' })) auditLogId: string) {
+  detail(
+    @Param('auditLogId', new ParseUUIDPipe({ version: '4' }))
+    auditLogId: string,
+  ) {
     return this.auditLogs.detail(auditLogId);
   }
 }

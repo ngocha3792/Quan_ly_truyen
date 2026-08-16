@@ -1,6 +1,8 @@
 <main class="audit-detail">
   <a routerLink="/admin/audit-logs">← Audit Logs</a>
-  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
   @if (loading()) {
     <p>Đang tải audit event...</p>
   } @else if (detail(); as d) {
@@ -13,22 +15,43 @@
     <section class="summary card">
       <h2>Summary</h2>
       <dl>
-        <dt>Audit ID</dt><dd><code>{{ d.id }}</code> <button type="button" (click)="copy(d.id)">Copy</button></dd>
-        <dt>Actor</dt><dd>
-          @if (d.actor) { <a [routerLink]="['/admin/users', d.actor.id]">{{ d.actor.displayName }}</a> · {{ d.actor.email }} }
-          @else { Unknown/deleted actor }
-          @if (d.actorId) { <br /><code>{{ d.actorId }}</code> <button type="button" (click)="copy(d.actorId)">Copy</button> }
+        <dt>Audit ID</dt>
+        <dd>
+          <code>{{ d.id }}</code> <button type="button" (click)="copy(d.id)">Copy</button>
         </dd>
-        <dt>Entity</dt><dd>
+        <dt>Actor</dt>
+        <dd>
+          @if (d.actor) {
+            <a [routerLink]="['/admin/users', d.actor.id]">{{ d.actor.displayName }}</a> ·
+            {{ d.actor.email }}
+          } @else {
+            Unknown/deleted actor
+          }
+          @if (d.actorId) {
+            <br /><code>{{ d.actorId }}</code>
+            <button type="button" (click)="copy(d.actorId)">Copy</button>
+          }
+        </dd>
+        <dt>Entity</dt>
+        <dd>
           <code>{{ d.entity.type }}</code> · <code>{{ d.entity.id || '—' }}</code>
-          @if (entityLink(d); as link) { <a [routerLink]="link">Mở entity</a> }
-          @if (d.entity.id) { <button type="button" (click)="copy(d.entity.id)">Copy</button> }
+          @if (entityLink(d); as link) {
+            <a [routerLink]="link">Mở entity</a>
+          }
+          @if (d.entity.id) {
+            <button type="button" (click)="copy(d.entity.id)">Copy</button>
+          }
         </dd>
-        <dt>Request ID</dt><dd>
+        <dt>Request ID</dt>
+        <dd>
           @if (d.requestId) {
-            <a [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: d.requestId }">{{ d.requestId }}</a>
+            <a [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: d.requestId }">{{
+              d.requestId
+            }}</a>
             <button type="button" (click)="copy(d.requestId)">Copy</button>
-          } @else { — }
+          } @else {
+            —
+          }
         </dd>
       </dl>
     </section>
@@ -39,8 +62,14 @@
     </section>
 
     <section class="payload-grid">
-      <article class="card"><h2>Before</h2><app-audit-json-viewer [value]="d.oldValues" /></article>
-      <article class="card"><h2>After</h2><app-audit-json-viewer [value]="d.newValues" /></article>
+      <article class="card">
+        <h2>Before</h2>
+        <app-audit-json-viewer [value]="d.oldValues" />
+      </article>
+      <article class="card">
+        <h2>After</h2>
+        <app-audit-json-viewer [value]="d.newValues" />
+      </article>
     </section>
 
     <section class="card">
@@ -51,8 +80,10 @@
     <section class="card">
       <h2>Request Context</h2>
       <dl>
-        <dt>IP</dt><dd>{{ d.client.ipAddress || '—' }}</dd>
-        <dt>User-Agent</dt><dd class="ua">{{ d.client.userAgent || '—' }}</dd>
+        <dt>IP</dt>
+        <dd>{{ d.client.ipAddress || '—' }}</dd>
+        <dt>User-Agent</dt>
+        <dd class="ua">{{ d.client.userAgent || '—' }}</dd>
       </dl>
     </section>
   }

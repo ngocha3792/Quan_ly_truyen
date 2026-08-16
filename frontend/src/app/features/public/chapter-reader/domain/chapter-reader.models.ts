@@ -21,9 +21,9 @@ export interface ChapterDetail {
   readonly views: number;
 }
 
-export interface ChapterCommentAuthor extends PublicCommentAuthor {}
+export type ChapterCommentAuthor = PublicCommentAuthor;
 
-export interface ChapterComment extends PublicComment {}
+export type ChapterComment = PublicComment;
 
 export interface ChapterReaderView {
   readonly story: ChapterStory;

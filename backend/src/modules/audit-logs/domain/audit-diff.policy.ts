@@ -10,14 +10,22 @@ export interface AuditChange {
   readonly after: SafeAuditValue | null;
 }
 
-const isRecord = (value: SafeAuditValue): value is { readonly [key: string]: SafeAuditValue } =>
+const isRecord = (
+  value: SafeAuditValue,
+): value is { readonly [key: string]: SafeAuditValue } =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-function equivalent(left: SafeAuditValue | undefined, right: SafeAuditValue | undefined): boolean {
+function equivalent(
+  left: SafeAuditValue | undefined,
+  right: SafeAuditValue | undefined,
+): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function bothRedacted(left: SafeAuditValue | undefined, right: SafeAuditValue | undefined): boolean {
+function bothRedacted(
+  left: SafeAuditValue | undefined,
+  right: SafeAuditValue | undefined,
+): boolean {
   return left === AUDIT_REDACTED_VALUE && right === AUDIT_REDACTED_VALUE;
 }
 
@@ -33,7 +41,12 @@ export function diffSanitizedAuditValues(
     right: SafeAuditValue | undefined,
     path: string,
   ): void => {
-    if (changes.length >= maxEntries || equivalent(left, right) || bothRedacted(left, right)) return;
+    if (
+      changes.length >= maxEntries ||
+      equivalent(left, right) ||
+      bothRedacted(left, right)
+    )
+      return;
 
     if (left === undefined) {
       changes.push({ path, type: 'added', before: null, after: right ?? null });
@@ -53,7 +66,12 @@ export function diffSanitizedAuditValues(
       return;
     }
 
-    changes.push({ path: path || '$', type: 'changed', before: left, after: right });
+    changes.push({
+      path: path || '$',
+      type: 'changed',
+      before: left,
+      after: right,
+    });
   };
 
   visit(before, after, '');

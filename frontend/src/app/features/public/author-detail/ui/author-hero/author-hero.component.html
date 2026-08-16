@@ -87,15 +87,43 @@
       </span>
     </div>
 
-
-    @if (profile.socialLinks.website || profile.socialLinks.facebook || profile.socialLinks.instagram || profile.socialLinks.x || profile.socialLinks.youtube || profile.socialLinks.tiktok) {
+    @if (
+      profile.socialLinks.website ||
+      profile.socialLinks.facebook ||
+      profile.socialLinks.instagram ||
+      profile.socialLinks.x ||
+      profile.socialLinks.youtube ||
+      profile.socialLinks.tiktok
+    ) {
       <div class="author-social-links" aria-label="Liên kết tác giả">
-        @if (profile.socialLinks.website) { <a [href]="profile.socialLinks.website" target="_blank" rel="noopener noreferrer">Website</a> }
-        @if (profile.socialLinks.facebook) { <a [href]="profile.socialLinks.facebook" target="_blank" rel="noopener noreferrer">Facebook</a> }
-        @if (profile.socialLinks.instagram) { <a [href]="profile.socialLinks.instagram" target="_blank" rel="noopener noreferrer">Instagram</a> }
-        @if (profile.socialLinks.x) { <a [href]="profile.socialLinks.x" target="_blank" rel="noopener noreferrer">X</a> }
-        @if (profile.socialLinks.youtube) { <a [href]="profile.socialLinks.youtube" target="_blank" rel="noopener noreferrer">YouTube</a> }
-        @if (profile.socialLinks.tiktok) { <a [href]="profile.socialLinks.tiktok" target="_blank" rel="noopener noreferrer">TikTok</a> }
+        @if (profile.socialLinks.website) {
+          <a [href]="profile.socialLinks.website" target="_blank" rel="noopener noreferrer"
+            >Website</a
+          >
+        }
+        @if (profile.socialLinks.facebook) {
+          <a [href]="profile.socialLinks.facebook" target="_blank" rel="noopener noreferrer"
+            >Facebook</a
+          >
+        }
+        @if (profile.socialLinks.instagram) {
+          <a [href]="profile.socialLinks.instagram" target="_blank" rel="noopener noreferrer"
+            >Instagram</a
+          >
+        }
+        @if (profile.socialLinks.x) {
+          <a [href]="profile.socialLinks.x" target="_blank" rel="noopener noreferrer">X</a>
+        }
+        @if (profile.socialLinks.youtube) {
+          <a [href]="profile.socialLinks.youtube" target="_blank" rel="noopener noreferrer"
+            >YouTube</a
+          >
+        }
+        @if (profile.socialLinks.tiktok) {
+          <a [href]="profile.socialLinks.tiktok" target="_blank" rel="noopener noreferrer"
+            >TikTok</a
+          >
+        }
       </div>
     }
 

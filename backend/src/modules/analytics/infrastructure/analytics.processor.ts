@@ -27,7 +27,8 @@ export class AnalyticsProcessor extends WorkerHost {
       ? job.data.eventIds.filter((id): id is string => typeof id === 'string')
       : [];
     const processed = await this.aggregation.processEventIds(ids);
-    if (processed > 0) await this.reconciliation.recomputeUniqueReadersForEvents(ids);
+    if (processed > 0)
+      await this.reconciliation.recomputeUniqueReadersForEvents(ids);
     return { processed };
   }
 }

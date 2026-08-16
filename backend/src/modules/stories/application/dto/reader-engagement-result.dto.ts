@@ -58,7 +58,12 @@ export interface StoryCommentResultDto {
   readonly displayState: 'VISIBLE' | 'DELETED';
   readonly user: StoryCommentUserDto;
   readonly likeCount: number;
-  readonly reactions: { readonly LIKE: number; readonly LOVE: number; readonly LAUGH: number; readonly INSIGHTFUL: number };
+  readonly reactions: {
+    readonly LIKE: number;
+    readonly LOVE: number;
+    readonly LAUGH: number;
+    readonly INSIGHTFUL: number;
+  };
   readonly replyCount: number;
   readonly threadReplyCount: number;
   readonly editedAt: string | null;

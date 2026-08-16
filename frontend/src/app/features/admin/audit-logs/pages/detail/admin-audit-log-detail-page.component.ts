@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -35,11 +42,16 @@ export class AdminAuditLogDetailPageComponent implements OnInit {
     const id = detail.entity.id;
     if (!id) return null;
     switch (detail.entity.type.toLowerCase()) {
-      case 'user': return ['/admin/users', id];
-      case 'author': return ['/admin/authors', id];
-      case 'report': return ['/admin/reports', id];
-      case 'story_submission': return ['/admin/story-submissions', id];
-      default: return null;
+      case 'user':
+        return ['/admin/users', id];
+      case 'author':
+        return ['/admin/authors', id];
+      case 'report':
+        return ['/admin/reports', id];
+      case 'story_submission':
+        return ['/admin/story-submissions', id];
+      default:
+        return null;
     }
   }
 
@@ -51,8 +63,12 @@ export class AdminAuditLogDetailPageComponent implements OnInit {
     if (!this.id) return;
     this.loading.set(true);
     this.error.set('');
-    this.api.detail(this.id)
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
+    this.api
+      .detail(this.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
       .subscribe({
         next: (detail) => this.detail.set(detail),
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),

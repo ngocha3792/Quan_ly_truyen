@@ -15,12 +15,14 @@ import { normalizeTaxonomyName } from '../../../domain';
 
 export class ListAdminCategoriesRequest {
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MaxLength(120)
   q?: string;
   @IsOptional()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
   @IsBoolean()
@@ -46,7 +48,7 @@ export class ListAdminCategoriesRequest {
 }
 
 export class CreateCategoryRequest {
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? normalizeTaxonomyName(value) : value,
   )
   @IsString()
@@ -75,7 +77,7 @@ export class CreateCategoryRequest {
 
 export class UpdateCategoryRequest {
   @IsOptional()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? normalizeTaxonomyName(value) : value,
   )
   @IsString()

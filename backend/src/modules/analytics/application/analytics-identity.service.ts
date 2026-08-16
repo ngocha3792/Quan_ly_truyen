@@ -8,7 +8,8 @@ export class AnalyticsIdentityService {
   private readonly secret: string;
 
   constructor(config: ConfigService) {
-    this.secret = config.getOrThrow<AnalyticsConfig>('analytics').identityHmacSecret;
+    this.secret =
+      config.getOrThrow<AnalyticsConfig>('analytics').identityHmacSecret;
   }
 
   hashAuthenticated(userId: string): string {

@@ -102,11 +102,7 @@ export class ReaderAnalyticsService {
         });
         lastProgress = Math.max(lastProgress, progress);
       }
-      if (
-        started &&
-        !completed &&
-        progress >= this.config.completionThresholdPercent
-      ) {
+      if (started && !completed && progress >= this.config.completionThresholdPercent) {
         completed = true;
         this.enqueue({
           type: 'READING_COMPLETED',

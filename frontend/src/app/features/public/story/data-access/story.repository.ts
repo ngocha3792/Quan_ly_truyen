@@ -1,5 +1,8 @@
 import { Observable } from 'rxjs';
-import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../core/http/reader-engagement-api.model';
+import type {
+  CommentReactionApiType,
+  CommentReportReasonApi,
+} from '../../../../core/http/reader-engagement-api.model';
 import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
 
 export abstract class StoryDetailRepository {
@@ -16,7 +19,17 @@ export abstract class StoryDetailRepository {
   abstract deleteComment(commentId: string): Observable<void>;
   abstract getReplies(rootCommentId: string): Observable<readonly StoryComment[]>;
   abstract createReply(parentCommentId: string, body: string): Observable<StoryComment>;
-  abstract setReaction(commentId: string, type: CommentReactionApiType): Observable<{ readonly viewerReaction: CommentReactionApiType | null; readonly reactions: Readonly<Record<CommentReactionApiType, number>> }>;
+  abstract setReaction(
+    commentId: string,
+    type: CommentReactionApiType,
+  ): Observable<{
+    readonly viewerReaction: CommentReactionApiType | null;
+    readonly reactions: Readonly<Record<CommentReactionApiType, number>>;
+  }>;
   abstract clearReaction(commentId: string): Observable<void>;
-  abstract reportComment(commentId: string, reason: CommentReportReasonApi, description?: string): Observable<void>;
+  abstract reportComment(
+    commentId: string,
+    reason: CommentReportReasonApi,
+    description?: string,
+  ): Observable<void>;
 }

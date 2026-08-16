@@ -10,7 +10,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import {
   ClientIp,
   CurrentUserId,
@@ -19,7 +25,10 @@ import {
 } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
-import { AuthenticationRequiredException, InvalidInputException } from '@/common/exceptions';
+import {
+  AuthenticationRequiredException,
+  InvalidInputException,
+} from '@/common/exceptions';
 import { ReactionType, ReportReason } from '@/generated/prisma/client';
 import { CommentsService } from '../../application';
 
@@ -55,7 +64,8 @@ export class CommentsController {
   createReply(
     @CurrentUserId() userId: string | undefined,
     @ClientIp() ipAddress: string | undefined,
-    @Param('parentCommentId', new ParseUUIDPipe({ version: '4' })) parentCommentId: string,
+    @Param('parentCommentId', new ParseUUIDPipe({ version: '4' }))
+    parentCommentId: string,
     @Body() request: CreateReplyRequest,
   ) {
     return this.comments.createReply({
@@ -69,11 +79,16 @@ export class CommentsController {
   @Get(':rootCommentId/replies')
   @Public()
   listReplies(
-    @Param('rootCommentId', new ParseUUIDPipe({ version: '4' })) rootCommentId: string,
+    @Param('rootCommentId', new ParseUUIDPipe({ version: '4' }))
+    rootCommentId: string,
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '20',
   ) {
-    return this.comments.listReplies(rootCommentId, this.positiveInt(page, 1), this.positiveInt(pageSize, 20));
+    return this.comments.listReplies(
+      rootCommentId,
+      this.positiveInt(page, 1),
+      this.positiveInt(pageSize, 20),
+    );
   }
 
   @Post(':commentId/reactions')
@@ -100,7 +115,11 @@ export class CommentsController {
     @ClientIp() ipAddress: string | undefined,
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
   ): Promise<void> {
-    await this.comments.clearReaction({ userId: this.user(userId), commentId, ipAddress });
+    await this.comments.clearReaction({
+      userId: this.user(userId),
+      commentId,
+      ipAddress,
+    });
   }
 
   @Get('reactions/me')
@@ -109,9 +128,23 @@ export class CommentsController {
     @CurrentUserId() userId: string | undefined,
     @Query('commentIds') rawCommentIds = '',
   ) {
-    const ids = rawCommentIds.split(',').map((value) => value.trim()).filter(Boolean);
-    if (ids.length > 50 || ids.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))) {
-      throw new InvalidInputException({ code: 'COMMENT_REACTION_BATCH_INVALID', message: 'Danh sách commentIds không hợp lệ hoặc vượt quá 50 phần tử' });
+    const ids = rawCommentIds
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (
+      ids.length > 50 ||
+      ids.some(
+        (id) =>
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            id,
+          ),
+      )
+    ) {
+      throw new InvalidInputException({
+        code: 'COMMENT_REACTION_BATCH_INVALID',
+        message: 'Danh sách commentIds không hợp lệ hoặc vượt quá 50 phần tử',
+      });
     }
     return this.comments.viewerReactions(this.user(userId), ids);
   }

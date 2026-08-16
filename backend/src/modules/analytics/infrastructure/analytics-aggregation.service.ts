@@ -56,9 +56,15 @@ export class AnalyticsAggregationService {
             readingSeconds: BigInt(delta.readingSeconds),
           },
           update: {
-            ...(delta.views ? { viewCount: { increment: BigInt(delta.views) } } : {}),
-            ...(delta.starts ? { readingStartCount: { increment: delta.starts } } : {}),
-            ...(delta.completions ? { completionCount: { increment: delta.completions } } : {}),
+            ...(delta.views
+              ? { viewCount: { increment: BigInt(delta.views) } }
+              : {}),
+            ...(delta.starts
+              ? { readingStartCount: { increment: delta.starts } }
+              : {}),
+            ...(delta.completions
+              ? { completionCount: { increment: delta.completions } }
+              : {}),
             ...(delta.readingSeconds
               ? { readingSeconds: { increment: BigInt(delta.readingSeconds) } }
               : {}),
@@ -81,10 +87,16 @@ export class AnalyticsAggregationService {
               ...(event.type === ReaderAnalyticsEventType.CHAPTER_VIEW
                 ? { viewCount: { increment: 1n } }
                 : {}),
-              ...(delta.starts ? { readingStartCount: { increment: delta.starts } } : {}),
-              ...(delta.completions ? { completionCount: { increment: delta.completions } } : {}),
+              ...(delta.starts
+                ? { readingStartCount: { increment: delta.starts } }
+                : {}),
+              ...(delta.completions
+                ? { completionCount: { increment: delta.completions } }
+                : {}),
               ...(delta.readingSeconds
-                ? { readingSeconds: { increment: BigInt(delta.readingSeconds) } }
+                ? {
+                    readingSeconds: { increment: BigInt(delta.readingSeconds) },
+                  }
                 : {}),
             },
           });

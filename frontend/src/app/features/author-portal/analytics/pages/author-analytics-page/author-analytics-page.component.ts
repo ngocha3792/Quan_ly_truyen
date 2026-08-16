@@ -70,17 +70,19 @@ export class AuthorAnalyticsPageComponent {
     forkJoin({
       overview: this.api.overview(from, to),
       stories: this.api.stories(from, to),
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ overview, stories }) => {
-        this.overview.set(overview);
-        this.stories.set(stories);
-      },
-      error: () => {
-        this.error.set('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
-        this.loading.set(false);
-      },
-      complete: () => this.loading.set(false),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ overview, stories }) => {
+          this.overview.set(overview);
+          this.stories.set(stories);
+        },
+        error: () => {
+          this.error.set('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
+          this.loading.set(false);
+        },
+        complete: () => this.loading.set(false),
+      });
   }
 }
 

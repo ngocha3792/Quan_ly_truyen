@@ -182,7 +182,7 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment(googleOAuth)).not.toThrow();
     expect(() =>
       validateEnvironment({ ...googleOAuth, REDIS_ENABLED: 'false' }),
-    ).toThrow('OAuth is enabled');
+    ).toThrow('REDIS_ENABLED must be true');
     expect(() =>
       validateEnvironment({
         ...googleOAuth,

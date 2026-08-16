@@ -1,7 +1,10 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
-import { AccountStatus, AuthorLifecycleStatus, Prisma } from '@/generated/prisma/client';
+import {
+  AccountStatus,
+  AuthorLifecycleStatus,
+} from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
 import { TracePropagationService } from '@/infrastructure/observability';
 import {
@@ -43,7 +46,9 @@ export class NotificationsFanoutProcessor extends WorkerHost {
     job: Job<OutboxQueueEnvelope<AuthorChapterPublishedNotificationV1>>,
   ): Promise<{ inserted: number; eligible: number }> {
     if (job.name !== AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT) {
-      throw new UnrecoverableError(`Unsupported notification event: ${job.name}`);
+      throw new UnrecoverableError(
+        `Unsupported notification event: ${job.name}`,
+      );
     }
     const payload = this.validatePayload(job.data.payload);
     const publishedAt = new Date(payload.publishedAt);
@@ -140,7 +145,7 @@ export class NotificationsFanoutProcessor extends WorkerHost {
                   'chuong',
                   payload.chapterNumber,
                 ],
-              } as Prisma.InputJsonObject,
+              },
             })),
             skipDuplicates: true,
           })
@@ -162,7 +167,9 @@ export class NotificationsFanoutProcessor extends WorkerHost {
     return { inserted: insertedTotal, eligible: eligibleTotal };
   }
 
-  private validatePayload(value: unknown): AuthorChapterPublishedNotificationV1 {
+  private validatePayload(
+    value: unknown,
+  ): AuthorChapterPublishedNotificationV1 {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new UnrecoverableError('Invalid chapter notification payload');
     }
@@ -179,7 +186,9 @@ export class NotificationsFanoutProcessor extends WorkerHost {
     ] as const;
     if (
       item['version'] !== 1 ||
-      required.some((key) => typeof item[key] !== 'string' || !String(item[key]).trim()) ||
+      required.some(
+        (key) => typeof item[key] !== 'string' || !String(item[key]).trim(),
+      ) ||
       Number.isNaN(Date.parse(String(item['publishedAt'])))
     ) {
       throw new UnrecoverableError('Invalid chapter notification payload');

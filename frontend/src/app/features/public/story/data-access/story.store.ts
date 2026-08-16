@@ -1,7 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, EMPTY, finalize, map, of, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
 import { AuthStore } from '../../../../core/auth/auth.store';
-import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../core/http/reader-engagement-api.model';
+import type {
+  CommentReactionApiType,
+  CommentReportReasonApi,
+} from '../../../../core/http/reader-engagement-api.model';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
 import { StoryDetailRepository } from './story.repository';
@@ -145,49 +148,62 @@ export class StoryDetailStore {
   }
 
   deleteComment(commentId: string): void {
-    this.repository.deleteComment(commentId).pipe(
-      switchMap(() => {
-        const story = this.story();
-        return story ? this.repository.getComments(story.slug) : of([]);
-      }),
-      tap((comments) => this.comments.set(comments)),
-      catchError(() => {
-        this.commentMessage.set('Không thể xóa bình luận.');
-        return EMPTY;
-      }),
-    ).subscribe();
+    this.repository
+      .deleteComment(commentId)
+      .pipe(
+        switchMap(() => {
+          const story = this.story();
+          return story ? this.repository.getComments(story.slug) : of([]);
+        }),
+        tap((comments) => this.comments.set(comments)),
+        catchError(() => {
+          this.commentMessage.set('Không thể xóa bình luận.');
+          return EMPTY;
+        }),
+      )
+      .subscribe();
   }
 
   loadReplies(rootCommentId: string): void {
-    this.repository.getReplies(rootCommentId).pipe(
-      tap((replies) => this.comments.update((items) =>
-        this.updateComment(items, rootCommentId, (comment) => ({ ...comment, replies })),
-      )),
-      catchError((error) => {
-        this.commentMessage.set(getApiErrorMessage(error, 'Không thể tải phản hồi.'));
-        return EMPTY;
-      }),
-    ).subscribe();
+    this.repository
+      .getReplies(rootCommentId)
+      .pipe(
+        tap((replies) =>
+          this.comments.update((items) =>
+            this.updateComment(items, rootCommentId, (comment) => ({ ...comment, replies })),
+          ),
+        ),
+        catchError((error) => {
+          this.commentMessage.set(getApiErrorMessage(error, 'Không thể tải phản hồi.'));
+          return EMPTY;
+        }),
+      )
+      .subscribe();
   }
 
   reply(rootCommentId: string, parentCommentId: string, body: string): void {
     const normalized = body.trim();
     if (!normalized || this.commentPending()) return;
     this.commentPending.set(true);
-    this.repository.createReply(parentCommentId, normalized).pipe(
-      tap((reply) => this.comments.update((items) =>
-        this.updateComment(items, rootCommentId, (root) => ({
-          ...root,
-          replies: [...root.replies, reply],
-          threadReplyCount: root.threadReplyCount + 1,
-        })),
-      )),
-      catchError((error) => {
-        this.commentMessage.set(getApiErrorMessage(error, 'Không thể gửi phản hồi.'));
-        return EMPTY;
-      }),
-      finalize(() => this.commentPending.set(false)),
-    ).subscribe();
+    this.repository
+      .createReply(parentCommentId, normalized)
+      .pipe(
+        tap((reply) =>
+          this.comments.update((items) =>
+            this.updateComment(items, rootCommentId, (root) => ({
+              ...root,
+              replies: [...root.replies, reply],
+              threadReplyCount: root.threadReplyCount + 1,
+            })),
+          ),
+        ),
+        catchError((error) => {
+          this.commentMessage.set(getApiErrorMessage(error, 'Không thể gửi phản hồi.'));
+          return EMPTY;
+        }),
+        finalize(() => this.commentPending.set(false)),
+      )
+      .subscribe();
   }
 
   react(commentId: string, type: CommentReactionApiType): void {
@@ -195,40 +211,58 @@ export class StoryDetailStore {
     if (!current || current.displayState !== 'VISIBLE') return;
     const snapshot = this.comments();
     const clearing = current.viewerReaction === type;
-    this.comments.set(this.updateComment(snapshot, commentId, (comment) =>
-      this.optimisticReaction(comment, clearing ? null : type),
-    ));
-    const request = clearing
+    this.comments.set(
+      this.updateComment(snapshot, commentId, (comment) =>
+        this.optimisticReaction(comment, clearing ? null : type),
+      ),
+    );
+    const request$: Observable<{
+      readonly viewerReaction: CommentReactionApiType | null;
+      readonly reactions: Readonly<Record<CommentReactionApiType, number>>;
+    } | null> = clearing
       ? this.repository.clearReaction(commentId).pipe(map(() => null))
       : this.repository.setReaction(commentId, type);
-    request.pipe(
-      tap((summary) => {
-        if (!summary) return;
-        this.comments.update((items) => this.updateComment(items, commentId, (comment) => ({
-          ...comment, viewerReaction: summary.viewerReaction, reactions: summary.reactions,
-        })));
-      }),
-      catchError((error) => {
-        this.comments.set(snapshot);
-        this.commentMessage.set(getApiErrorMessage(error, 'Không thể cập nhật cảm xúc.'));
-        return EMPTY;
-      }),
-    ).subscribe();
+    request$
+      .pipe(
+        tap((summary) => {
+          if (!summary) return;
+          this.comments.update((items) =>
+            this.updateComment(items, commentId, (comment) => ({
+              ...comment,
+              viewerReaction: summary.viewerReaction,
+              reactions: summary.reactions,
+            })),
+          );
+        }),
+        catchError((error) => {
+          this.comments.set(snapshot);
+          this.commentMessage.set(getApiErrorMessage(error, 'Không thể cập nhật cảm xúc.'));
+          return EMPTY;
+        }),
+      )
+      .subscribe();
   }
 
   report(commentId: string, reason: CommentReportReasonApi, description?: string): void {
-    this.repository.reportComment(commentId, reason, description).pipe(
-      tap(() => this.commentMessage.set('Cảm ơn bạn đã báo cáo. Nhóm kiểm duyệt sẽ xem xét.')),
-      catchError((error) => {
-        this.commentMessage.set(getApiErrorMessage(error, 'Không thể gửi báo cáo.'));
-        return EMPTY;
-      }),
-    ).subscribe();
+    this.repository
+      .reportComment(commentId, reason, description)
+      .pipe(
+        tap(() => this.commentMessage.set('Cảm ơn bạn đã báo cáo. Nhóm kiểm duyệt sẽ xem xét.')),
+        catchError((error) => {
+          this.commentMessage.set(getApiErrorMessage(error, 'Không thể gửi báo cáo.'));
+          return EMPTY;
+        }),
+      )
+      .subscribe();
   }
 
-  private optimisticReaction(comment: StoryComment, next: CommentReactionApiType | null): StoryComment {
+  private optimisticReaction(
+    comment: StoryComment,
+    next: CommentReactionApiType | null,
+  ): StoryComment {
     const counts = { ...comment.reactions };
-    if (comment.viewerReaction) counts[comment.viewerReaction] = Math.max(0, counts[comment.viewerReaction] - 1);
+    if (comment.viewerReaction)
+      counts[comment.viewerReaction] = Math.max(0, counts[comment.viewerReaction] - 1);
     if (next) counts[next] = counts[next] + 1;
     return { ...comment, viewerReaction: next, reactions: counts };
   }
@@ -241,7 +275,10 @@ export class StoryDetailStore {
     return items.map((item) => {
       if (item.id === id) return update(item);
       if (item.replies.some((reply) => reply.id === id)) {
-        return { ...item, replies: item.replies.map((reply) => reply.id === id ? update(reply) : reply) };
+        return {
+          ...item,
+          replies: item.replies.map((reply) => (reply.id === id ? update(reply) : reply)),
+        };
       }
       return item;
     });

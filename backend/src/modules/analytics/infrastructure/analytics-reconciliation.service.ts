@@ -4,7 +4,10 @@ import { Prisma } from '@/generated/prisma/client';
 import type { AnalyticsConfig } from '@/config';
 import { PrismaService } from '@/infrastructure/database';
 import { MetricsService } from '@/infrastructure/observability';
-import { analyticsDateKey, parseAnalyticsDate } from '../domain/analytics-time.util';
+import {
+  analyticsDateKey,
+  parseAnalyticsDate,
+} from '../domain/analytics-time.util';
 
 interface StoryAggregateRow {
   storyId: string;
@@ -35,14 +38,20 @@ export class AnalyticsReconciliationService {
     this.analytics = config.getOrThrow<AnalyticsConfig>('analytics');
   }
 
-  async recomputeUniqueReadersForEvents(eventIds: readonly string[]): Promise<void> {
+  async recomputeUniqueReadersForEvents(
+    eventIds: readonly string[],
+  ): Promise<void> {
     if (eventIds.length === 0) return;
     const rows = await this.prisma.readerAnalyticsEvent.findMany({
       where: { id: { in: [...eventIds] }, processedAt: { not: null } },
       select: { occurredAt: true },
     });
     const dates = [
-      ...new Set(rows.map((row) => analyticsDateKey(row.occurredAt, this.analytics.timeZone))),
+      ...new Set(
+        rows.map((row) =>
+          analyticsDateKey(row.occurredAt, this.analytics.timeZone),
+        ),
+      ),
     ];
     for (const dateKey of dates) await this.recomputeUniqueReaders(dateKey);
   }
@@ -50,7 +59,9 @@ export class AnalyticsReconciliationService {
   async recomputeUniqueReaders(dateKey: string): Promise<void> {
     const date = parseAnalyticsDate(dateKey);
     const [storyRows, chapterRows] = await Promise.all([
-      this.prisma.$queryRaw<Pick<StoryAggregateRow, 'storyId' | 'uniqueReaders'>[]>(Prisma.sql`
+      this.prisma.$queryRaw<
+        Pick<StoryAggregateRow, 'storyId' | 'uniqueReaders'>[]
+      >(Prisma.sql`
         SELECT "story_id" AS "storyId", COUNT(DISTINCT "viewer_key_hash")::bigint AS "uniqueReaders"
         FROM "reader_analytics_events"
         WHERE "processed_at" IS NOT NULL
@@ -58,7 +69,9 @@ export class AnalyticsReconciliationService {
           AND ("occurred_at" AT TIME ZONE ${this.analytics.timeZone})::date = ${dateKey}::date
         GROUP BY "story_id"
       `),
-      this.prisma.$queryRaw<Pick<ChapterAggregateRow, 'chapterId' | 'uniqueReaders'>[]>(Prisma.sql`
+      this.prisma.$queryRaw<
+        Pick<ChapterAggregateRow, 'chapterId' | 'uniqueReaders'>[]
+      >(Prisma.sql`
         SELECT "chapter_id" AS "chapterId", COUNT(DISTINCT "viewer_key_hash")::bigint AS "uniqueReaders"
         FROM "reader_analytics_events"
         WHERE "processed_at" IS NOT NULL
@@ -70,19 +83,33 @@ export class AnalyticsReconciliationService {
     ]);
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.storyDailyStat.updateMany({ where: { date }, data: { uniqueReaders: 0 } });
-      await tx.chapterDailyStat.updateMany({ where: { date }, data: { uniqueReaders: 0 } });
+      await tx.storyDailyStat.updateMany({
+        where: { date },
+        data: { uniqueReaders: 0 },
+      });
+      await tx.chapterDailyStat.updateMany({
+        where: { date },
+        data: { uniqueReaders: 0 },
+      });
       for (const row of storyRows) {
         await tx.storyDailyStat.upsert({
           where: { storyId_date: { storyId: row.storyId, date } },
-          create: { storyId: row.storyId, date, uniqueReaders: Number(row.uniqueReaders) },
+          create: {
+            storyId: row.storyId,
+            date,
+            uniqueReaders: Number(row.uniqueReaders),
+          },
           update: { uniqueReaders: Number(row.uniqueReaders) },
         });
       }
       for (const row of chapterRows) {
         await tx.chapterDailyStat.upsert({
           where: { chapterId_date: { chapterId: row.chapterId, date } },
-          create: { chapterId: row.chapterId, date, uniqueReaders: Number(row.uniqueReaders) },
+          create: {
+            chapterId: row.chapterId,
+            date,
+            uniqueReaders: Number(row.uniqueReaders),
+          },
           update: { uniqueReaders: Number(row.uniqueReaders) },
         });
       }
@@ -106,20 +133,37 @@ export class AnalyticsReconciliationService {
       return false;
     }
     const date = parseAnalyticsDate(dateKey);
-    const [storyRows, chapterRows, storedStories, storedChapters] = await Promise.all([
-      this.storyAggregates(dateKey),
-      this.chapterAggregates(dateKey),
-      this.prisma.storyDailyStat.findMany({ where: { date } }),
-      this.prisma.chapterDailyStat.findMany({ where: { date } }),
-    ]);
+    const [storyRows, chapterRows, storedStories, storedChapters] =
+      await Promise.all([
+        this.storyAggregates(dateKey),
+        this.chapterAggregates(dateKey),
+        this.prisma.storyDailyStat.findMany({ where: { date } }),
+        this.prisma.chapterDailyStat.findMany({ where: { date } }),
+      ]);
     const storyExpected = new Map(storyRows.map((row) => [row.storyId, row]));
-    const chapterExpected = new Map(chapterRows.map((row) => [row.chapterId, row]));
-    if (storedStories.some((row) => !this.storyMatches(row, storyExpected.get(row.storyId))) ||
-        storyRows.some((row) => !storedStories.some((stored) => stored.storyId === row.storyId))) {
+    const chapterExpected = new Map(
+      chapterRows.map((row) => [row.chapterId, row]),
+    );
+    if (
+      storedStories.some(
+        (row) => !this.storyMatches(row, storyExpected.get(row.storyId)),
+      ) ||
+      storyRows.some(
+        (row) =>
+          !storedStories.some((stored) => stored.storyId === row.storyId),
+      )
+    ) {
       this.metrics.recordReaderAnalyticsReconciliationMismatch('story');
     }
-    if (storedChapters.some((row) => !this.chapterMatches(row, chapterExpected.get(row.chapterId))) ||
-        chapterRows.some((row) => !storedChapters.some((stored) => stored.chapterId === row.chapterId))) {
+    if (
+      storedChapters.some(
+        (row) => !this.chapterMatches(row, chapterExpected.get(row.chapterId)),
+      ) ||
+      chapterRows.some(
+        (row) =>
+          !storedChapters.some((stored) => stored.chapterId === row.chapterId),
+      )
+    ) {
       this.metrics.recordReaderAnalyticsReconciliationMismatch('chapter');
     }
     await this.prisma.$transaction(async (tx) => {
@@ -174,7 +218,10 @@ export class AnalyticsReconciliationService {
     });
     if (rows.length === 0) return 0;
     const deleted = await this.prisma.readerAnalyticsEvent.deleteMany({
-      where: { id: { in: rows.map((row) => row.id) }, processedAt: { not: null } },
+      where: {
+        id: { in: rows.map((row) => row.id) },
+        processedAt: { not: null },
+      },
     });
     this.metrics.recordReaderAnalyticsProcessed('cleanup', 'success');
     return deleted.count;
@@ -214,25 +261,41 @@ export class AnalyticsReconciliationService {
   }
 
   private storyMatches(
-    stored: { viewCount: bigint; uniqueReaders: number; readingStartCount: number; completionCount: number; readingSeconds: bigint },
+    stored: {
+      viewCount: bigint;
+      uniqueReaders: number;
+      readingStartCount: number;
+      completionCount: number;
+      readingSeconds: bigint;
+    },
     expected?: StoryAggregateRow,
   ): boolean {
-    return stored.viewCount === (expected?.views ?? 0n) &&
+    return (
+      stored.viewCount === (expected?.views ?? 0n) &&
       stored.uniqueReaders === Number(expected?.uniqueReaders ?? 0n) &&
       stored.readingStartCount === Number(expected?.starts ?? 0n) &&
       stored.completionCount === Number(expected?.completions ?? 0n) &&
-      stored.readingSeconds === (expected?.readingSeconds ?? 0n);
+      stored.readingSeconds === (expected?.readingSeconds ?? 0n)
+    );
   }
 
   private chapterMatches(
-    stored: { viewCount: bigint; uniqueReaders: number; readingStartCount: number; completionCount: number; readingSeconds: bigint },
+    stored: {
+      viewCount: bigint;
+      uniqueReaders: number;
+      readingStartCount: number;
+      completionCount: number;
+      readingSeconds: bigint;
+    },
     expected?: ChapterAggregateRow,
   ): boolean {
-    return stored.viewCount === (expected?.views ?? 0n) &&
+    return (
+      stored.viewCount === (expected?.views ?? 0n) &&
       stored.uniqueReaders === Number(expected?.uniqueReaders ?? 0n) &&
       stored.readingStartCount === Number(expected?.starts ?? 0n) &&
       stored.completionCount === Number(expected?.completions ?? 0n) &&
-      stored.readingSeconds === (expected?.readingSeconds ?? 0n);
+      stored.readingSeconds === (expected?.readingSeconds ?? 0n)
+    );
   }
 
   private storyCreate(row: StoryAggregateRow, date: Date) {
@@ -247,9 +310,13 @@ export class AnalyticsReconciliationService {
     };
   }
   private storyUpdate(row: StoryAggregateRow) {
-    const { storyId: _storyId, ...data } = this.storyCreate(row, new Date(0));
-    const { date: _date, ...update } = data;
-    return update;
+    return {
+      viewCount: row.views,
+      uniqueReaders: Number(row.uniqueReaders),
+      readingStartCount: Number(row.starts),
+      completionCount: Number(row.completions),
+      readingSeconds: row.readingSeconds,
+    };
   }
   private chapterCreate(row: ChapterAggregateRow, date: Date) {
     return {
@@ -263,8 +330,12 @@ export class AnalyticsReconciliationService {
     };
   }
   private chapterUpdate(row: ChapterAggregateRow) {
-    const { chapterId: _chapterId, ...data } = this.chapterCreate(row, new Date(0));
-    const { date: _date, ...update } = data;
-    return update;
+    return {
+      viewCount: row.views,
+      uniqueReaders: Number(row.uniqueReaders),
+      readingStartCount: Number(row.starts),
+      completionCount: Number(row.completions),
+      readingSeconds: row.readingSeconds,
+    };
   }
 }

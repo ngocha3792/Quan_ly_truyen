@@ -7,7 +7,10 @@ export interface AnalyticsTotals {
   readingSeconds: number;
 }
 
-export function completionRate(completions: number, starts: number): number | null {
+export function completionRate(
+  completions: number,
+  starts: number,
+): number | null {
   if (starts <= 0) return null;
   return Math.round((completions / starts) * 10_000) / 10_000;
 }

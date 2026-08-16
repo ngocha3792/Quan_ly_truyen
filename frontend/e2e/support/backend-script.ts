@@ -4,15 +4,15 @@ import path from 'node:path';
 
 let cachedBackendDirectory: string | undefined;
 
-export function runBackendScript(script: string): void {
-  const cwd = resolveBackendDirectory();
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+export function runBackendScript(script: string, cwd = resolveBackendDirectory()): void {
+  const isWindows = process.platform === 'win32';
+  const command = isWindows ? 'cmd.exe' : 'npm';
+  const args = isWindows ? ['/d', '/s', '/c', 'npm', 'run', script] : ['run', script];
 
-  const result = spawnSync(npmCommand, ['run', script], {
+  const result = spawnSync(command, args, {
     cwd,
     env: process.env,
     stdio: 'inherit',
-    shell: false,
   });
 
   if (result.error) {
@@ -20,9 +20,7 @@ export function runBackendScript(script: string): void {
   }
 
   if (result.status !== 0) {
-    throw new Error(
-      `Backend script "${script}" thất bại với exit code ${result.status ?? 'unknown'}.`,
-    );
+    throw new Error(`Backend script "${script}" failed with exit code ${result.status}`);
   }
 }
 

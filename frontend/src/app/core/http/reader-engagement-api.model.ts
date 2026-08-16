@@ -44,9 +44,16 @@ export interface StoryRatingApiItem {
   readonly updatedAt: string;
 }
 
-
 export type CommentReactionApiType = 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL';
-export type CommentReportReasonApi = 'SPAM' | 'HARASSMENT' | 'HATE_SPEECH' | 'SEXUAL_CONTENT' | 'VIOLENCE' | 'COPYRIGHT' | 'MISINFORMATION' | 'OTHER';
+export type CommentReportReasonApi =
+  | 'SPAM'
+  | 'HARASSMENT'
+  | 'HATE_SPEECH'
+  | 'SEXUAL_CONTENT'
+  | 'VIOLENCE'
+  | 'COPYRIGHT'
+  | 'MISINFORMATION'
+  | 'OTHER';
 
 export interface CommentReactionSummaryApi {
   readonly commentId: string;

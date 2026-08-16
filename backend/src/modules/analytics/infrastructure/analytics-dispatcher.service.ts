@@ -9,7 +9,9 @@ import { MetricsService } from '@/infrastructure/observability';
 import { QUEUE_NAMES } from '@/infrastructure/queue';
 
 @Injectable()
-export class AnalyticsDispatcherService implements OnModuleInit, OnModuleDestroy {
+export class AnalyticsDispatcherService
+  implements OnModuleInit, OnModuleDestroy
+{
   private timer?: NodeJS.Timeout;
   private running = false;
   private readonly analytics: AnalyticsConfig;
@@ -50,8 +52,15 @@ export class AnalyticsDispatcherService implements OnModuleInit, OnModuleDestroy
       });
       if (rows.length === 0) return;
       const ids = rows.map((row) => row.id);
-      for (let offset = 0; offset < ids.length; offset += this.analytics.processingBatchSize) {
-        const batchIds = ids.slice(offset, offset + this.analytics.processingBatchSize);
+      for (
+        let offset = 0;
+        offset < ids.length;
+        offset += this.analytics.processingBatchSize
+      ) {
+        const batchIds = ids.slice(
+          offset,
+          offset + this.analytics.processingBatchSize,
+        );
         await this.queue.add(
           'reader-analytics-batch',
           { eventIds: batchIds },

@@ -44,7 +44,10 @@ export interface FollowingListView {
 export class AuthorFollowService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async follow(userId: string, authorId: string): Promise<AuthorFollowMutationView> {
+  async follow(
+    userId: string,
+    authorId: string,
+  ): Promise<AuthorFollowMutationView> {
     if (userId === authorId) {
       throw new ResourceConflictException({
         code: 'AUTHOR_SELF_FOLLOW_NOT_ALLOWED',
@@ -81,12 +84,18 @@ export class AuthorFollowService {
         data: [{ userId, authorId }],
         skipDuplicates: true,
       });
-      const followersCount = await this.reconcileLockedAuthorCount(tx, authorId);
+      const followersCount = await this.reconcileLockedAuthorCount(
+        tx,
+        authorId,
+      );
       return { authorId, isFollowing: true, followersCount };
     });
   }
 
-  async unfollow(userId: string, authorId: string): Promise<AuthorFollowMutationView> {
+  async unfollow(
+    userId: string,
+    authorId: string,
+  ): Promise<AuthorFollowMutationView> {
     return this.prisma.$transaction(async (tx) => {
       await this.lockAuthor(tx, authorId);
       const target = await tx.authorProfile.findUnique({
@@ -96,7 +105,10 @@ export class AuthorFollowService {
       if (!target) throw this.notFound(authorId);
 
       await tx.userFollowAuthor.deleteMany({ where: { userId, authorId } });
-      const followersCount = await this.reconcileLockedAuthorCount(tx, authorId);
+      const followersCount = await this.reconcileLockedAuthorCount(
+        tx,
+        authorId,
+      );
       return { authorId, isFollowing: false, followersCount };
     });
   }
@@ -109,7 +121,9 @@ export class AuthorFollowService {
   }): Promise<FollowingListView> {
     const page = Math.max(1, input.page);
     const pageSize = Math.min(Math.max(input.pageSize, 1), 100);
-    const authorIds = input.authorIds?.length ? [...new Set(input.authorIds)] : undefined;
+    const authorIds = input.authorIds?.length
+      ? [...new Set(input.authorIds)]
+      : undefined;
     if (authorIds && authorIds.length > 50) {
       throw new InvalidInputException({
         code: 'FOLLOW_AUTHOR_IDS_LIMIT_EXCEEDED',
@@ -164,9 +178,11 @@ export class AuthorFollowService {
           avatarUrl:
             row.author.user.avatarMedia?.deletedAt === null &&
             row.author.user.avatarMedia.status === 'READY'
-              ? row.author.user.avatarMedia.secureUrl ?? row.author.user.avatarMedia.publicUrl
+              ? (row.author.user.avatarMedia.secureUrl ??
+                row.author.user.avatarMedia.publicUrl)
               : null,
-          verified: row.author.verificationStatus === AuthorVerificationStatus.VERIFIED,
+          verified:
+            row.author.verificationStatus === AuthorVerificationStatus.VERIFIED,
           followersCount: row.author.followerCount,
         },
         followedAt: row.createdAt.toISOString(),
@@ -180,8 +196,13 @@ export class AuthorFollowService {
     };
   }
 
-  private async lockActiveFollower(tx: Prisma.TransactionClient, userId: string): Promise<void> {
-    const rows = await tx.$queryRaw<Array<{ id: string; status: string; deleted_at: Date | null }>>(Prisma.sql`
+  private async lockActiveFollower(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<void> {
+    const rows = await tx.$queryRaw<
+      Array<{ id: string; status: string; deleted_at: Date | null }>
+    >(Prisma.sql`
       SELECT id, status, deleted_at
       FROM "users"
       WHERE id = ${userId}::uuid
@@ -196,7 +217,10 @@ export class AuthorFollowService {
     }
   }
 
-  private async lockAuthor(tx: Prisma.TransactionClient, authorId: string): Promise<void> {
+  private async lockAuthor(
+    tx: Prisma.TransactionClient,
+    authorId: string,
+  ): Promise<void> {
     const rows = await tx.$queryRaw<Array<{ user_id: string }>>(Prisma.sql`
       SELECT "user_id" FROM "author_profiles"
       WHERE "user_id" = ${authorId}::uuid

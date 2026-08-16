@@ -2,7 +2,10 @@ import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import { AuthorAnalyticsService } from '../../application/author-analytics.service';
-import { AnalyticsDateRangeRequest, AnalyticsStoriesRequest } from './requests/analytics-date-range.request';
+import {
+  AnalyticsDateRangeRequest,
+  AnalyticsStoriesRequest,
+} from './requests/analytics-date-range.request';
 
 @Controller('author/analytics')
 @RequirePermissions(PermissionCode.ANALYTICS_READ)

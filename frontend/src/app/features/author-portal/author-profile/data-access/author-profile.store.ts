@@ -2,7 +2,10 @@ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap } from 'rxjs';
 
-import { EditableAuthorProfile, UpdateEditableAuthorProfile } from '../domain/author-profile.models';
+import {
+  EditableAuthorProfile,
+  UpdateEditableAuthorProfile,
+} from '../domain/author-profile.models';
 import { AuthorProfileRepository } from '../domain/author-profile.repository';
 import { AuthorProfileUploadService } from './author-profile-upload.service';
 
@@ -21,11 +24,17 @@ export class AuthorProfileStore {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.repository.get().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (profile) => this.profile.set(profile),
-      error: () => { this.error.set('Không thể tải hồ sơ tác giả.'); this.loading.set(false); },
-      complete: () => this.loading.set(false),
-    });
+    this.repository
+      .get()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => this.profile.set(profile),
+        error: () => {
+          this.error.set('Không thể tải hồ sơ tác giả.');
+          this.loading.set(false);
+        },
+        complete: () => this.loading.set(false),
+      });
   }
 
   save(
@@ -35,38 +44,57 @@ export class AuthorProfileStore {
     if (this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
-    this.repository.update(input).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (profile) => {
-        this.profile.set(profile);
-        onSuccess?.(profile);
-      },
-      error: (error: unknown) => { this.error.set(readApiMessage(error, 'Không thể lưu hồ sơ tác giả.')); this.saving.set(false); },
-      complete: () => this.saving.set(false),
-    });
+    this.repository
+      .update(input)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          this.profile.set(profile);
+          onSuccess?.(profile);
+        },
+        error: (error: unknown) => {
+          this.error.set(readApiMessage(error, 'Không thể lưu hồ sơ tác giả.'));
+          this.saving.set(false);
+        },
+        complete: () => this.saving.set(false),
+      });
   }
 
-  uploadAvatar(file: File): void { this.uploadAndAttach(file, 'avatar'); }
-  uploadBanner(file: File): void { this.uploadAndAttach(file, 'banner'); }
-  clearAvatar(): void { this.save({ avatarMediaId: null }); }
-  clearBanner(): void { this.save({ bannerMediaId: null }); }
+  uploadAvatar(file: File): void {
+    this.uploadAndAttach(file, 'avatar');
+  }
+  uploadBanner(file: File): void {
+    this.uploadAndAttach(file, 'banner');
+  }
+  clearAvatar(): void {
+    this.save({ avatarMediaId: null });
+  }
+  clearBanner(): void {
+    this.save({ bannerMediaId: null });
+  }
 
   private uploadAndAttach(file: File, kind: 'avatar' | 'banner'): void {
     const profile = this.profile();
     if (!profile || this.uploading()) return;
     this.uploading.set(kind);
     this.error.set(null);
-    const purpose = kind === 'avatar' ? 'AVATAR' as const : 'AUTHOR_BANNER' as const;
+    const purpose = kind === 'avatar' ? ('AVATAR' as const) : ('AUTHOR_BANNER' as const);
     this.uploads
       .upload(profile.id, file, purpose)
       .pipe(
         switchMap((media) =>
-          this.repository.update(kind === 'avatar' ? { avatarMediaId: media.id } : { bannerMediaId: media.id }),
+          this.repository.update(
+            kind === 'avatar' ? { avatarMediaId: media.id } : { bannerMediaId: media.id },
+          ),
         ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (canonical) => this.profile.set(canonical),
-        error: (error: unknown) => { this.error.set(readApiMessage(error, 'Không thể tải ảnh lên.')); this.uploading.set(null); },
+        error: (error: unknown) => {
+          this.error.set(readApiMessage(error, 'Không thể tải ảnh lên.'));
+          this.uploading.set(null);
+        },
         complete: () => this.uploading.set(null),
       });
   }

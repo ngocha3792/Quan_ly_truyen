@@ -53,9 +53,10 @@ export function getApiErrorMessage(
     const retryAfterSeconds = readRetryAfterSeconds(body);
 
     if (error.status === 429 && retryAfterSeconds !== null) {
-      const message = typeof backendMessage === 'string' && backendMessage.trim()
-        ? backendMessage.trim()
-        : 'Bạn thao tác quá nhanh.';
+      const message =
+        typeof backendMessage === 'string' && backendMessage.trim()
+          ? backendMessage.trim()
+          : 'Bạn thao tác quá nhanh.';
       return `${message} Vui lòng thử lại sau ${retryAfterSeconds} giây.`;
     }
 

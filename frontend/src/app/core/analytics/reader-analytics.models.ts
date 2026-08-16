@@ -1,9 +1,5 @@
 export type ReaderAnalyticsEventType =
-  | 'STORY_VIEW'
-  | 'CHAPTER_VIEW'
-  | 'READING_STARTED'
-  | 'READING_PROGRESS'
-  | 'READING_COMPLETED';
+  'STORY_VIEW' | 'CHAPTER_VIEW' | 'READING_STARTED' | 'READING_PROGRESS' | 'READING_COMPLETED';
 
 export interface ReaderAnalyticsEvent {
   readonly eventId: string;

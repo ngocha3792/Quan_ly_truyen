@@ -11,7 +11,9 @@ test('manager can investigate user lifecycle and correlate the same request', as
   const userRow = page.getByRole('row').filter({ hasText: 'user.status.changed' });
   await expect(userRow).toBeVisible();
   await expect(page.getByRole('row').filter({ hasText: 'user.sessions.revoked' })).toBeVisible();
-  await expect(page.getByRole('row').filter({ hasText: 'comment.moderation.hidden' })).toBeVisible();
+  await expect(
+    page.getByRole('row').filter({ hasText: 'comment.moderation.hidden' }),
+  ).toBeVisible();
 
   await userRow.getByRole('link', { name: 'Xem' }).click();
   await expect(page.getByRole('heading', { name: 'user.status.changed' })).toBeVisible();
@@ -25,13 +27,16 @@ test('manager can investigate user lifecycle and correlate the same request', as
   await expect(page.getByRole('row').filter({ hasText: 'user.sessions.revoked' })).toBeVisible();
 });
 
-test('historical unsafe audit payload is redacted in both network response and DOM', async ({ page }) => {
+test('historical unsafe audit payload is redacted in both network response and DOM', async ({
+  page,
+}) => {
   await page.goto(`/admin/audit-logs?requestId=${UNSAFE_REQUEST}`);
   const row = page.getByRole('row').filter({ hasText: 'audit.security.regression' });
   await expect(row).toBeVisible();
 
-  const responsePromise = page.waitForResponse((response) =>
-    response.url().includes('/api/v1/admin/audit-logs/') && response.request().method() === 'GET',
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/admin/audit-logs/') && response.request().method() === 'GET',
   );
   await row.getByRole('link', { name: 'Xem' }).click();
   const response = await responsePromise;

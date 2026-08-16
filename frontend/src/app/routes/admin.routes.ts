@@ -17,15 +17,9 @@ const categoryManagementGuards = [
   permissionGuard(AUTH_PERMISSIONS.CATEGORY_MANAGE),
 ];
 
-const reportReviewGuards = [
-  authenticatedGuard,
-  permissionGuard(AUTH_PERMISSIONS.REPORT_REVIEW),
-];
+const reportReviewGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.REPORT_REVIEW)];
 
-const auditLogReadGuards = [
-  authenticatedGuard,
-  permissionGuard(AUTH_PERMISSIONS.AUDIT_LOG_READ),
-];
+const auditLogReadGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.AUDIT_LOG_READ)];
 
 const authorApplicationGuards = [
   authenticatedGuard,
