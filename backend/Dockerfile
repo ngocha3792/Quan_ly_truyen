@@ -106,8 +106,13 @@ CMD ["node", "dist/main.js"]
 
 FROM build AS migrate
 
-ENV NODE_ENV=production
-ENV HOME=/tmp
+ENV NODE_ENV=production \
+    HOME=/tmp \
+    PATH="/app/node_modules/.bin:${PATH}"
+
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn* /usr/local/bin/corepack /root/.npm \
+    && printf '#!/usr/bin/env node\nconst fs=require("fs"),path=require("path"),{spawnSync}=require("child_process"),args=process.argv.slice(2);\nconst env={...process.env,PATH:"/app/node_modules/.bin:"+process.env.PATH};\nif(args[0]==="run"&&args[1]){\n  const pkg=JSON.parse(fs.readFileSync("/app/package.json","utf8")),script=pkg.scripts?.[args[1]];\n  if(!script){console.error(`npm ERR! Missing script: "${args[1]}"`);process.exit(1);}\n  const extra=args.slice(2).filter(a=>a!=="--").join(" "),cmd=extra?`${script} ${extra}`:script;\n  const res=spawnSync(cmd,{shell:true,stdio:"inherit",env,cwd:"/app"});\n  process.exit(res.status??0);\n}\nconst res=spawnSync(args[0],args.slice(1),{shell:true,stdio:"inherit",env,cwd:"/app"});\nprocess.exit(res.status??0);\n' > /usr/local/bin/npm \
+    && chmod +x /usr/local/bin/npm
 
 USER node
 
