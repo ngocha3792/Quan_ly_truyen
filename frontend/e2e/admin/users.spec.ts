@@ -1,5 +1,4 @@
 import { expect, test } from '../fixtures/managed-admin-test';
-import { clickAndAcceptDialog } from '../support/native-dialog';
 
 const TARGET_EMAIL = 'e2e.managed-user@truyenhub.test';
 
@@ -29,13 +28,9 @@ test('manager suspend rồi activate user end-to-end', async ({ page }) => {
   await page.goto('/admin/users');
 
   await expect(
-    page.getByRole(
-      'heading',
-
-      {
-        name: 'Quản lý người dùng',
-      },
-    ),
+    page.getByRole('heading', {
+      name: 'Quản lý người dùng',
+    }),
   ).toBeVisible();
 
   await page
@@ -58,49 +53,30 @@ test('manager suspend rồi activate user end-to-end', async ({ page }) => {
   await expect(row).toBeVisible();
 
   await row
-    .getByRole(
-      'link',
-
-      {
-        name: 'Chi tiết',
-      },
-    )
+    .getByRole('link', {
+      name: 'Chi tiết',
+    })
     .click();
 
   await expect(
-    page.getByRole(
-      'heading',
-
-      {
-        name: 'Chi tiết người dùng',
-      },
-    ),
+    page.getByRole('heading', {
+      name: 'Chi tiết người dùng',
+    }),
   ).toBeVisible();
 
-  await clickAndAcceptDialog(
-    page,
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Tạm khóa',
-      },
-    ),
-    'Tạm khóa',
-  );
+  await page
+    .getByRole('button', {
+      name: 'Tạm khóa',
+    })
+    .click();
 
   await expect(page.getByText(/Tài khoản đã bị tạm khóa/)).toBeVisible();
 
-  await clickAndAcceptDialog(
-    page,
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Kích hoạt',
-      },
-    ),
-  );
+  await page
+    .getByRole('button', {
+      name: 'Kích hoạt',
+    })
+    .click();
 
   await expect(page.getByText(/Tài khoản đã được kích hoạt/)).toBeVisible();
 });
@@ -126,58 +102,36 @@ test('manager cấp rồi gỡ ADMIN role end-to-end', async ({ page }) => {
   });
 
   await row
-    .getByRole(
-      'link',
-
-      {
-        name: 'Chi tiết',
-      },
-    )
+    .getByRole('link', {
+      name: 'Chi tiết',
+    })
     .click();
 
-  await clickAndAcceptDialog(
-    page,
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Cấp quyền ADMIN',
-      },
-    ),
-  );
+  await page
+    .getByRole('button', {
+      name: 'Cấp quyền ADMIN',
+    })
+    .click();
 
   await expect(page.getByText(/Đã cấp quyền ADMIN/)).toBeVisible();
 
   await expect(
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Gỡ quyền ADMIN',
-      },
-    ),
+    page.getByRole('button', {
+      name: 'Gỡ quyền ADMIN',
+    }),
   ).toBeVisible();
 
-  await clickAndAcceptDialog(
-    page,
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Gỡ quyền ADMIN',
-      },
-    ),
-  );
+  await page
+    .getByRole('button', {
+      name: 'Gỡ quyền ADMIN',
+    })
+    .click();
 
   await expect(page.getByText(/Đã gỡ quyền ADMIN/)).toBeVisible();
 
   await expect(
-    page.getByRole(
-      'button',
-
-      {
-        name: 'Cấp quyền ADMIN',
-      },
-    ),
+    page.getByRole('button', {
+      name: 'Cấp quyền ADMIN',
+    }),
   ).toBeVisible();
 });
