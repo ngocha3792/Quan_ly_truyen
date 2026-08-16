@@ -155,35 +155,79 @@ export class PrismaAccountDeletionPersistence implements AccountDeletionPersiste
         }
 
         /*
-         * AuthorProfile không thể hard-delete
-         * vì Story.author dùng onDelete: Restrict.
+         * Phase 5 follow relationships.
          *
-         * Vì vậy anonymize profile nhưng giữ
-         * row để truyện cũ vẫn còn integrity.
+         * User row ở trên đã bị compare-and-swap update/lock. AuthorFollowService
+         * cũng lock follower User trước khi tạo follow mới, nên outgoing follows
+         * của account này ổn định từ thời điểm này. Thu thập target trước, sau đó
+         * lock TẤT CẢ AuthorProfile bị ảnh hưởng theo thứ tự UUID ổn định để tránh
+         * deadlock giữa hai account-deletion/follow transactions chạy đồng thời.
          */
-        await tx.authorProfile.updateMany({
-          where: {
-            userId: input.userId,
-          },
-
-          data: {
-            penName: `deleted_${compactUserId}`,
-
-            slug: `deleted-${compactUserId}`,
-
-            biography: null,
-
-            verificationStatus: AuthorVerificationStatus.PENDING,
-
-            verifiedAt: null,
-
-            websiteUrl: null,
-
-            socialLinks: Prisma.DbNull,
-
-            bannerMediaId: null,
-          },
+        const outgoingFollows = await tx.userFollowAuthor.findMany({
+          where: { userId: input.userId },
+          select: { authorId: true },
         });
+        const ownAuthor = await tx.authorProfile.findUnique({
+          where: { userId: input.userId },
+          select: { userId: true },
+        });
+        const affectedAuthorIds = [
+          ...new Set([
+            ...outgoingFollows.map((item) => item.authorId),
+            ...(ownAuthor ? [ownAuthor.userId] : []),
+          ]),
+        ].sort();
+
+        for (const authorId of affectedAuthorIds) {
+          await tx.$queryRaw(Prisma.sql`
+            SELECT "user_id"
+            FROM "author_profiles"
+            WHERE "user_id" = ${authorId}::uuid
+            FOR UPDATE
+          `);
+        }
+
+        await tx.userFollowAuthor.deleteMany({
+          where: { userId: input.userId },
+        });
+
+        for (const authorId of [
+          ...new Set(outgoingFollows.map((item) => item.authorId)),
+        ]) {
+          if (ownAuthor?.userId === authorId) continue;
+          const followerCount = await tx.userFollowAuthor.count({
+            where: { authorId },
+          });
+          await tx.authorProfile.updateMany({
+            where: { userId: authorId },
+            data: { followerCount },
+          });
+        }
+
+        if (ownAuthor) {
+          await tx.userFollowAuthor.deleteMany({
+            where: { authorId: input.userId },
+          });
+
+          /*
+           * AuthorProfile không thể hard-delete vì Story.author dùng
+           * onDelete: Restrict. Anonymize row nhưng giữ referential integrity.
+           */
+          await tx.authorProfile.update({
+            where: { userId: input.userId },
+            data: {
+              penName: `deleted_${compactUserId}`,
+              slug: `deleted-${compactUserId}`,
+              biography: null,
+              verificationStatus: AuthorVerificationStatus.PENDING,
+              verifiedAt: null,
+              websiteUrl: null,
+              socialLinks: Prisma.DbNull,
+              bannerMediaId: null,
+              followerCount: 0,
+            },
+          });
+        }
 
         /*
          * Nếu user là contributor,

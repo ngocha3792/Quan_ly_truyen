@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
+import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { LibraryStore } from '../../../../../core/storage/library.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
 import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../../core/http/reader-engagement-api.model';
@@ -42,6 +43,8 @@ export class StoryDetailComponent implements OnInit {
   protected readonly store = inject(StoryDetailStore);
   protected readonly library = inject(LibraryStore);
   private readonly seo = inject(SeoService);
+  private readonly analytics = inject(ReaderAnalyticsService);
+  private trackedStoryId: string | null = null;
 
   private readonly seoEffect = effect(() => {
     const story = this.store.story();
@@ -71,12 +74,18 @@ export class StoryDetailComponent implements OnInit {
       author: { '@type': 'Person', name: story.author },
       url: this.seo.absoluteUrl(canonicalPath),
     });
+
+    if (this.trackedStoryId !== story.id) {
+      this.trackedStoryId = story.id;
+      this.analytics.storyView(story.id);
+    }
   });
 
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.seo.removeStructuredData('story'));
 
     const sub = this.route.paramMap.subscribe((params) => {
+      this.trackedStoryId = null;
       const slug = params.get('slug') ?? '';
       if (slug) this.store.loadStory(slug);
     });

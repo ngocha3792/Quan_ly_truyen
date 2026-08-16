@@ -1,0 +1,37 @@
+<section class="story-analytics">
+  <a routerLink="/author-studio/thong-ke" class="back">← Quay lại thống kê</a>
+  @if (error()) {
+    <p class="state error">{{ error() }}</p>
+  } @else if (loading() && !data()) {
+    <p class="state">Đang tải…</p>
+  } @else if (data(); as analytics) {
+    <header><p>Thống kê truyện</p><h1>{{ analytics.story.title }}</h1><span>{{ analytics.range.from }} → {{ analytics.range.to }} · {{ analytics.range.timeZone }}</span></header>
+    <div class="summary-grid">
+      <article><span>Views</span><strong>{{ formatNumber(analytics.totals.views) }}</strong></article>
+      <article><span>Readers</span><strong>{{ formatNumber(analytics.totals.uniqueReaders) }}</strong></article>
+      <article><span>Starts</span><strong>{{ formatNumber(analytics.totals.readingStarts) }}</strong></article>
+      <article><span>Completed</span><strong>{{ formatNumber(analytics.totals.completions) }}</strong></article>
+      <article><span>Completion</span><strong>{{ formatRate(analytics.totals.completionRate) }}</strong></article>
+      <article><span>Reading time</span><strong>{{ formatDuration(analytics.totals.readingSeconds) }}</strong></article>
+    </div>
+    <article class="panel">
+      <h2>Xu hướng</h2>
+      <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày">
+        @for (point of analytics.series; track point.date) {
+          <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'"><div class="bar" [style.height.%]="barHeight(point.views)"></div><span>{{ point.date.slice(5) }}</span></div>
+        }
+      </div>
+    </article>
+    <article class="panel">
+      <h2>Theo chương</h2>
+      @if (analytics.chapters.length === 0) { <p class="state">Chưa có chương.</p> }
+      @else {
+        <div class="table-scroll"><table><thead><tr><th>Chương</th><th>Views</th><th>Readers</th><th>Starts</th><th>Completed</th><th>Completion</th></tr></thead><tbody>
+          @for (chapter of analytics.chapters; track chapter.id) {
+            <tr><td>Chương {{ chapter.number }}@if (chapter.title) { — {{ chapter.title }} }</td><td>{{ formatNumber(chapter.views) }}</td><td>{{ formatNumber(chapter.uniqueReaders) }}</td><td>{{ formatNumber(chapter.readingStarts) }}</td><td>{{ formatNumber(chapter.completions) }}</td><td>{{ formatRate(chapter.completionRate) }}</td></tr>
+          }
+        </tbody></table></div>
+      }
+    </article>
+  }
+</section>

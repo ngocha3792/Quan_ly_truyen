@@ -9,6 +9,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../../../core/auth/auth.store';
+import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { SeoService } from '../../../../../core/seo/seo.service';
 import type { CommentReactionApiType, CommentReportReasonApi } from '../../../../../core/http/reader-engagement-api.model';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
@@ -31,6 +32,9 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(ChapterReaderStore);
   private readonly seo = inject(SeoService);
+  private readonly analytics = inject(ReaderAnalyticsService);
+  private trackedChapterId: string | null = null;
+  private stopAnalyticsSession: (() => void) | null = null;
 
   private readonly seoEffect = effect(() => {
     const view = this.store.view();
@@ -55,12 +59,31 @@ export class ChapterReaderPageComponent implements OnInit {
       datePublished: view.chapter.publishedAt,
       url: this.seo.absoluteUrl(canonicalPath),
     });
+
+    if (this.trackedChapterId !== view.chapter.id) {
+      this.stopAnalyticsSession?.();
+      this.trackedChapterId = view.chapter.id;
+      const sessionId = this.analytics.newSessionId();
+      this.analytics.chapterView(view.story.id, view.chapter.id, sessionId);
+      this.stopAnalyticsSession = this.analytics.startChapterSession({
+        storyId: view.story.id,
+        chapterId: view.chapter.id,
+        sessionId,
+      });
+    }
   });
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => this.seo.removeStructuredData('chapter'));
+    this.destroyRef.onDestroy(() => {
+      this.seo.removeStructuredData('chapter');
+      this.stopAnalyticsSession?.();
+      this.stopAnalyticsSession = null;
+    });
 
     const subscription = this.route.paramMap.subscribe((params) => {
+      this.stopAnalyticsSession?.();
+      this.stopAnalyticsSession = null;
+      this.trackedChapterId = null;
       const storySlug = params.get('storySlug') ?? '';
       const chapterNumber = params.get('chapterNumber') ?? '';
       if (storySlug && chapterNumber) this.store.load(storySlug, chapterNumber);

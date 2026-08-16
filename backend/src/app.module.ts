@@ -30,6 +30,8 @@ import { NotificationsModule } from './modules/notifications';
 import { StoriesModule } from './modules/stories';
 import { TaxonomyModule } from './modules/taxonomy';
 import { ModerationModule } from './modules/moderation';
+import { AuditLogsModule } from './modules/audit-logs';
+import { AnalyticsModule } from './modules/analytics';
 @Module({
   imports: [
     AppConfigModule,
@@ -41,6 +43,8 @@ import { ModerationModule } from './modules/moderation';
     StoriesModule,
     TaxonomyModule,
     ModerationModule,
+    AuditLogsModule,
+    AnalyticsModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

@@ -60,6 +60,8 @@ export class OutboxDispatcherService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     @InjectQueue(QUEUE_NAMES.MAIL) private readonly mailQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
+    private readonly notificationQueue: Queue,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
     private readonly propagation: TracePropagationService,
@@ -314,6 +316,7 @@ export class OutboxDispatcherService {
   private resolveTargetQueue(aggregateType: string): Queue | null {
     const queueMap: Record<string, Queue> = {
       mail: this.mailQueue,
+      notifications: this.notificationQueue,
     };
 
     return queueMap[aggregateType.toLowerCase()] ?? null;

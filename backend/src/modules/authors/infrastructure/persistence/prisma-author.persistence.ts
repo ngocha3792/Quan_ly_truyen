@@ -46,6 +46,11 @@ export class PrismaAuthorPersistence implements AuthorPersistencePort {
         followerCount: true,
         totalReadCount: true,
         storyCount: true,
+        user: {
+          select: {
+            avatarMedia: { select: { secureUrl: true, publicUrl: true, status: true, deletedAt: true } },
+          },
+        },
         stories: {
           where: {
             status: { in: [...PUBLIC_STORY_STATUSES] },
@@ -129,6 +134,8 @@ export class PrismaAuthorPersistence implements AuthorPersistencePort {
         slug: true,
         biography: true,
         socialLinks: true,
+        websiteUrl: true,
+        bannerMedia: { select: { secureUrl: true, publicUrl: true, status: true, deletedAt: true } },
         verificationStatus: true,
         verifiedAt: true,
         followerCount: true,
@@ -138,6 +145,7 @@ export class PrismaAuthorPersistence implements AuthorPersistencePort {
         user: {
           select: {
             displayName: true,
+            avatarMedia: { select: { secureUrl: true, publicUrl: true, status: true, deletedAt: true } },
           },
         },
         stories: {

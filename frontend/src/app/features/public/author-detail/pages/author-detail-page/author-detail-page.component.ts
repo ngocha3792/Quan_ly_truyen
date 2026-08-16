@@ -6,8 +6,9 @@ import {
   inject,
   OnInit,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { AuthStore } from '../../../../../core/auth/auth.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
 
 import { provideAuthorDetail } from '../../data-access/author-detail.providers';
@@ -42,6 +43,8 @@ import { AuthorWorksComponent } from '../../ui/author-works/author-works.compone
 })
 export class AuthorDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly store = inject(AuthorDetailStore);
@@ -79,6 +82,16 @@ export class AuthorDetailPageComponent implements OnInit {
       knowsAbout: view.featuredWorks.flatMap((work) => work.genres),
     });
   });
+
+  protected toggleFollow(): void {
+    if (!this.auth.isAuthenticated()) {
+      void this.router.navigate(['/dang-nhap'], {
+        queryParams: { returnUrl: this.router.url },
+      });
+      return;
+    }
+    this.store.toggleFollow();
+  }
 
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.seo.removeStructuredData('author'));

@@ -8,6 +8,7 @@ import {
   AccountStatus,
   AuthorApplicationStatus,
   AuthorLifecycleStatus,
+  AuthorVerificationStatus,
   ChapterStatus,
   MediaPurpose,
   MediaStatus,
@@ -127,6 +128,8 @@ async function main():
     'report.review',
 
     'moderation.execute',
+
+    'audit-log.read',
   ];
 
   const permissions =
@@ -332,6 +335,8 @@ async function main():
     reportedUserId: target.id,
     reporterId: lifecycleAuthorId,
   });
+
+  await prepareAuditLogFixtures({ actorId: manager.id, targetUserId: target.id });
 
   await prepareAuthorApplicant({
     email:
@@ -554,6 +559,12 @@ async function prepareLifecycleAuthor(
       lifecycleStatus:
         AuthorLifecycleStatus.ACTIVE,
 
+      verificationStatus:
+        AuthorVerificationStatus.VERIFIED,
+
+      verifiedAt:
+        new Date(),
+
       statusReason:
         null,
 
@@ -580,9 +591,24 @@ async function prepareLifecycleAuthor(
       lifecycleStatus:
         AuthorLifecycleStatus.ACTIVE,
 
+      verificationStatus:
+        AuthorVerificationStatus.VERIFIED,
+
+      verifiedAt:
+        new Date(),
+
       storyCount:
         2,
     },
+  });
+
+  await prisma.userFollowAuthor.deleteMany({
+    where: { authorId: user.id },
+  });
+
+  await prisma.authorProfile.update({
+    where: { userId: user.id },
+    data: { followerCount: 0 },
   });
 
   const pendingStory =
@@ -794,6 +820,72 @@ async function prepareModerationFixture(input: {
       },
       createdAt: reportCreatedAt,
     },
+  });
+}
+
+async function prepareAuditLogFixtures(input: {
+  actorId: string;
+  targetUserId: string;
+}): Promise<void> {
+  const correlationRequestId = 'e2e-audit-correlation-request';
+  const unsafeRequestId = 'e2e-audit-secret-regression-request';
+
+  await prisma.auditLog.deleteMany({
+    where: { requestId: { in: [correlationRequestId, unsafeRequestId] } },
+  });
+
+  const moderationComment = await prisma.comment.findFirst({
+    where: { body: 'E2E moderation current edited content' },
+    select: { id: true },
+  });
+
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        actorId: input.actorId,
+        action: 'user.status.changed',
+        entityType: 'user',
+        entityId: input.targetUserId,
+        requestId: correlationRequestId,
+        oldValues: { status: 'ACTIVE' },
+        newValues: { status: 'SUSPENDED' },
+        metadata: { reason: 'E2E seeded lifecycle audit event' },
+        ipAddress: '203.0.113.42',
+        userAgent: 'Playwright audit fixture',
+      },
+      {
+        actorId: input.actorId,
+        action: 'user.sessions.revoked',
+        entityType: 'user',
+        entityId: input.targetUserId,
+        requestId: correlationRequestId,
+        metadata: { revokedSessionCount: 2 },
+      },
+      ...(moderationComment
+        ? [{
+            actorId: input.actorId,
+            action: 'comment.moderation.hidden',
+            entityType: 'comment',
+            entityId: moderationComment.id,
+            requestId: correlationRequestId,
+            oldValues: { moderationStatus: 'VISIBLE' },
+            newValues: { moderationStatus: 'HIDDEN' },
+            metadata: { reason: 'E2E seeded moderation audit event' },
+          }]
+        : []),
+      {
+        actorId: input.actorId,
+        action: 'audit.security.regression',
+        entityType: 'user',
+        entityId: input.targetUserId,
+        requestId: unsafeRequestId,
+        oldValues: { passwordHash: 'DO_NOT_LEAK_1' },
+        newValues: { nested: { refreshToken: 'DO_NOT_LEAK_2' } },
+        metadata: { mfaSecret: 'DO_NOT_LEAK_3', header: 'Bearer DO_NOT_LEAK_4' },
+        ipAddress: '203.0.113.42',
+        userAgent: 'Playwright unsafe historical audit fixture',
+      },
+    ],
   });
 }
 

@@ -30,6 +30,32 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
           ),
       },
       {
+        path: 'ho-so',
+        title: 'Hồ sơ tác giả - TruyenHub',
+        loadComponent: () =>
+          import('../features/author-portal/author-profile/pages/author-profile-page/author-profile-page.component').then(
+            (module) => module.AuthorProfilePageComponent,
+          ),
+      },
+      {
+        path: 'thong-ke',
+        canActivate: [permissionGuard(AUTH_PERMISSIONS.ANALYTICS_READ)],
+        title: 'Thống kê độc giả - TruyenHub',
+        loadComponent: () =>
+          import('../features/author-portal/analytics/pages/author-analytics-page/author-analytics-page.component').then(
+            (module) => module.AuthorAnalyticsPageComponent,
+          ),
+      },
+      {
+        path: 'thong-ke/truyen/:storyId',
+        canActivate: [permissionGuard(AUTH_PERMISSIONS.ANALYTICS_READ)],
+        title: 'Thống kê truyện - TruyenHub',
+        loadComponent: () =>
+          import('../features/author-portal/analytics/pages/story-analytics-page/story-analytics-page.component').then(
+            (module) => module.StoryAnalyticsPageComponent,
+          ),
+      },
+      {
         path: 'truyen/tao-moi',
         title: 'Tạo truyện - TruyenHub',
         loadComponent: () =>

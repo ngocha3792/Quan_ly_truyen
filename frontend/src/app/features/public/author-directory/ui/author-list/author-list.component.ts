@@ -20,6 +20,9 @@ export class AuthorListComponent {
   @Input()
   followedAuthorIds: readonly string[] = [];
 
+  @Input()
+  pendingAuthorIds: readonly string[] = [];
+
   @Output()
   readonly followToggle = new EventEmitter<string>();
 }

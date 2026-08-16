@@ -1,0 +1,12 @@
+.audit-detail { width: min(1100px, calc(100% - 2rem)); margin: 2rem auto 4rem; display: grid; gap: 1rem; }
+.eyebrow { margin: 0; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; }
+h1 { overflow-wrap: anywhere; }
+.card { border: 1px solid var(--border-color, #d5d5d5); border-radius: 0.9rem; padding: 1rem; min-width: 0; }
+.payload-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+dl { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.6rem 1rem; margin: 0; }
+dt { font-weight: 700; }
+dd { margin: 0; overflow-wrap: anywhere; }
+dd button, dd a { margin-left: 0.5rem; }
+.ua { white-space: pre-wrap; }
+.error { color: var(--danger-color, #a40000); }
+@media (max-width: 760px) { .payload-grid { grid-template-columns: 1fr; } dl { grid-template-columns: 1fr; } }

@@ -234,6 +234,36 @@ export class MetricsService implements OnModuleDestroy {
     labelNames: ['scope'] as const,
     registers: [this.registry],
   });
+  private readonly auditLogReadRequests = new Counter({
+    name: METRIC_NAMES.AUDIT_LOG_READ_REQUESTS,
+    help: 'Audit log read requests by bounded operation and result',
+    labelNames: ['operation', 'result'] as const,
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsEventsReceived = new Counter({
+    name: METRIC_NAMES.READER_ANALYTICS_EVENTS_RECEIVED,
+    help: 'Reader analytics events accepted by bounded event type',
+    labelNames: ['type'] as const,
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsEventsProcessed = new Counter({
+    name: METRIC_NAMES.READER_ANALYTICS_EVENTS_PROCESSED,
+    help: 'Reader analytics processing outcomes',
+    labelNames: ['operation', 'result'] as const,
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsEventsRejected = new Counter({
+    name: METRIC_NAMES.READER_ANALYTICS_EVENTS_REJECTED,
+    help: 'Reader analytics rejected events by bounded reason',
+    labelNames: ['reason'] as const,
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsReconciliationMismatches = new Counter({
+    name: METRIC_NAMES.READER_ANALYTICS_RECONCILIATION_MISMATCHES,
+    help: 'Reader analytics reconciliation mismatches',
+    labelNames: ['scope'] as const,
+    registers: [this.registry],
+  });
   private readonly dependencyHealth = new Gauge({
     name: METRIC_NAMES.DEPENDENCY_HEALTH,
     help: 'Dependency health (1 up/configured, 0 down, -1 disabled)',
@@ -435,6 +465,43 @@ export class MetricsService implements OnModuleDestroy {
     if (this.enabled) this.commentAbuseBlocks.inc({ scope });
   }
 
+  recordAuditLogRead(operation: 'list' | 'detail', result: 'success' | 'error'): void {
+    if (this.enabled) this.auditLogReadRequests.inc({ operation, result });
+  }
+
+  recordReaderAnalyticsReceived(type: string): void {
+    if (!this.enabled) return;
+    const normalized = [
+      'STORY_VIEW',
+      'CHAPTER_VIEW',
+      'READING_STARTED',
+      'READING_PROGRESS',
+      'READING_COMPLETED',
+    ].includes(type)
+      ? type.toLowerCase()
+      : 'unknown';
+    this.readerAnalyticsEventsReceived.inc({ type: normalized });
+  }
+
+  recordReaderAnalyticsProcessed(
+    operation: 'queue' | 'aggregate' | 'reconcile' | 'cleanup',
+    result: 'success' | 'failed' | 'skipped',
+  ): void {
+    if (this.enabled) this.readerAnalyticsEventsProcessed.inc({ operation, result });
+  }
+
+  recordReaderAnalyticsRejected(
+    reason: 'timestamp' | 'shape' | 'story' | 'context' | 'rate_limit' | 'other',
+  ): void {
+    if (this.enabled) this.readerAnalyticsEventsRejected.inc({ reason });
+  }
+
+  recordReaderAnalyticsReconciliationMismatch(
+    scope: 'story' | 'chapter' | 'lifetime',
+  ): void {
+    if (this.enabled) this.readerAnalyticsReconciliationMismatches.inc({ scope });
+  }
+
   setDependencyHealth(
     dependency:
       'database' | 'redis' | 'mail' | 'cloudinary' | 'queue' | 'queue-worker',
@@ -469,7 +536,12 @@ function normalizeStatusCode(statusCode: number): HttpStatusCode {
 }
 
 function normalizeOutboxEvent(eventType: string): string {
-  return eventType === 'mail.send.v1' ? eventType : 'unknown';
+  return [
+    'mail.send.v1',
+    'notification.author-chapter-published.v1',
+  ].includes(eventType)
+    ? eventType
+    : 'unknown';
 }
 
 function normalizeMailTemplate(template: string): MailTemplate {

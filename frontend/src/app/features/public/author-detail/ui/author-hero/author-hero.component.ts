@@ -21,6 +21,9 @@ export class AuthorHeroComponent {
   @Input()
   followerLabel = '';
 
+  @Input()
+  followPending = false;
+
   @Output()
   readonly followToggle = new EventEmitter<void>();
 }

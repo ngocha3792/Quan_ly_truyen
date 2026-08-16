@@ -9,6 +9,8 @@ import { MediaModule } from './infrastructure/media';
 import { ObservabilityModule } from './infrastructure/observability';
 import { QueueModule } from './infrastructure/queue';
 import { OutboxModule } from './infrastructure/queue/outbox';
+import { NotificationsWorkerModule } from './modules/notifications';
+import { AnalyticsWorkerModule } from './modules/analytics';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -22,7 +24,7 @@ const queueWorkersEnabled =
     MediaModule,
 
     ...(queueWorkersEnabled
-      ? [RedisModule, QueueModule.register(), OutboxModule, MailModule]
+      ? [RedisModule, QueueModule.register(), OutboxModule, MailModule, NotificationsWorkerModule, AnalyticsWorkerModule]
       : []),
   ],
   providers: [

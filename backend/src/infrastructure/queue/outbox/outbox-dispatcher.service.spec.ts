@@ -4,7 +4,10 @@ import { readFileSync } from 'node:fs';
 import { ConfigService } from '@nestjs/config';
 
 import { OutboxStatus } from '@/generated/prisma/enums';
-import { SEND_MAIL_JOB } from '@/infrastructure/queue/contracts';
+import {
+  AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
+  SEND_MAIL_JOB,
+} from '@/infrastructure/queue/contracts';
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
 
 const TOKEN_A = '11111111-1111-4111-8111-111111111111';
@@ -94,6 +97,34 @@ describe('OutboxDispatcherService', () => {
           count: 1000,
         },
       },
+    );
+  });
+
+  it('routes notification aggregate events to the notifications queue', async () => {
+    const notifications = { add: jest.fn().mockResolvedValue({ id: 'notification-job' }) };
+    const routedService = createService(prisma, queue, notifications);
+    prisma.$queryRaw.mockResolvedValue([claimed('notification-event-1', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      event({
+        id: 'notification-event-1',
+        aggregateType: 'notifications',
+        aggregateId: 'chapter-1',
+        eventType: AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
+        payload: { version: 1 },
+      }),
+    ]);
+
+    await expect(routedService.dispatchBatch()).resolves.toBe(1);
+
+    expect(queue.add).not.toHaveBeenCalled();
+    expect(notifications.add).toHaveBeenCalledWith(
+      AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
+      expect.objectContaining({
+        aggregateType: 'notifications',
+        aggregateId: 'chapter-1',
+        outboxEventId: 'notification-event-1',
+      }),
+      { jobId: 'outbox-notification-event-1' },
     );
   });
 
@@ -366,7 +397,11 @@ describe('OutboxDispatcherService', () => {
   });
 });
 
-function createService(prisma: object, queue: object): OutboxDispatcherService {
+function createService(
+  prisma: object,
+  queue: object,
+  notificationQueue: object = queue,
+): OutboxDispatcherService {
   const config = new ConfigService({
     queue: {
       enabled: true,
@@ -410,6 +445,7 @@ function createService(prisma: object, queue: object): OutboxDispatcherService {
     prisma as never,
     config,
     queue as never,
+    notificationQueue as never,
     metrics as never,
     tracing as never,
     propagation as never,

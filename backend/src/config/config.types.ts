@@ -297,6 +297,20 @@ export interface MailConfig {
     allowLegacyPlaintextRead: boolean;
   };
 }
+export interface AnalyticsConfig {
+  enabled: boolean;
+  timeZone: string;
+  identityHmacSecret: string;
+  rawEventRetentionDays: number;
+  maxBatchSize: number;
+  completionThresholdPercent: number;
+  progressHeartbeatSeconds: number;
+  rateLimitPerMinute: number;
+  rateLimitPerHour: number;
+  dispatcherBatchSize: number;
+  processingBatchSize: number;
+}
+
 export interface ProductionGateConfig {
   /**
    * Folder chứa Prisma migration trong image production.

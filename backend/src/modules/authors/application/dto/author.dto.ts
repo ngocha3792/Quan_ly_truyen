@@ -8,6 +8,7 @@ export interface AuthorDirectoryItemDto {
   readonly genre: string;
   readonly description: string;
   readonly verified: boolean;
+  readonly avatarUrl?: string | null;
   readonly worksLabel: string;
   readonly readsLabel: string;
   readonly followersLabel: string;
@@ -61,11 +62,22 @@ export interface AuthorDetailDto {
     readonly penName: string;
     readonly joinedAt: string;
     readonly verified: boolean;
+    readonly avatarUrl: string | null;
+    readonly bannerUrl: string | null;
+    readonly socialLinks: {
+      readonly website: string | null;
+      readonly facebook: string | null;
+      readonly instagram: string | null;
+      readonly x: string | null;
+      readonly youtube: string | null;
+      readonly tiktok: string | null;
+    };
     readonly biography: readonly string[];
   };
   readonly statistics: {
     readonly totalWorks: number;
     readonly followers: string;
+    readonly followersCount: number;
     readonly totalReads: string;
     readonly averageRating: string;
   };

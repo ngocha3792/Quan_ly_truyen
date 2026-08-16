@@ -1,3 +1,5 @@
 export * from './public-authors.controller';
 export * from './author-dashboard.controller';
 export * from './admin-authors.controller';
+export * from './author-profile.controller';
+export * from './author-follow.controller';

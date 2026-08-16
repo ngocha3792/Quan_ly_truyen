@@ -342,6 +342,16 @@ export class StudioSidebarComponent {
       route: '/author-studio/truyen',
       icon: 'book',
     },
+    {
+      label: 'Hồ sơ tác giả',
+      route: '/author-studio/ho-so',
+      icon: 'user',
+    },
+    {
+      label: 'Thống kê',
+      route: '/author-studio/thong-ke',
+      icon: 'chart',
+    },
   ];
 
   protected get experiencePercent(): number {

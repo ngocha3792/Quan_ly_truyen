@@ -18,7 +18,8 @@
             [profile]="view.profile"
             [following]="store.isFollowing()"
             [followerLabel]="store.followerLabel()"
-            (followToggle)="store.toggleFollow()"
+            [followPending]="store.followPending()"
+            (followToggle)="toggleFollow()"
           ></app-author-hero>
 
           <app-author-stats [statistics]="view.statistics"></app-author-stats>

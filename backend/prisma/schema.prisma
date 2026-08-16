@@ -281,6 +281,16 @@ enum InboundWebhookStatus {
   @@map("inbound_webhook_status")
 }
 
+enum ReaderAnalyticsEventType {
+  STORY_VIEW        @map("story_view")
+  CHAPTER_VIEW      @map("chapter_view")
+  READING_STARTED   @map("reading_started")
+  READING_PROGRESS  @map("reading_progress")
+  READING_COMPLETED @map("reading_completed")
+
+  @@map("reader_analytics_event_type")
+}
+
 // ============================================================
 // IDENTITY, AUTHENTICATION, AUTHORIZATION
 // ============================================================
@@ -326,6 +336,7 @@ model User {
   ratings                    Rating[]
   libraryEntries             LibraryEntry[]
   storyFollows               StoryFollow[]
+  authorFollows              UserFollowAuthor[]          @relation("UserAuthorFollows")
   readingProgresses          ReadingProgress[]
   readingSessions            ReadingSession[]
   readingBookmarks           ReadingBookmark[]
@@ -703,6 +714,7 @@ model AuthorProfile {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   bannerMedia MediaAsset? @relation("AuthorBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
   stories     Story[]
+  followers   UserFollowAuthor[] @relation("AuthorFollowers")
 
   @@index([verificationStatus])
   @@index([lifecycleStatus, createdAt])
@@ -710,6 +722,21 @@ model AuthorProfile {
   @@index([followerCount])
   @@index([totalReadCount])
   @@map("author_profiles")
+}
+
+
+model UserFollowAuthor {
+  userId    String   @map("user_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User          @relation("UserAuthorFollows", fields: [userId], references: [id], onDelete: Cascade)
+  author AuthorProfile @relation("AuthorFollowers", fields: [authorId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, authorId], map: "user_follow_authors_pkey")
+  @@index([userId, createdAt], map: "user_follow_authors_user_created_at_idx")
+  @@index([authorId, userId], map: "user_follow_authors_author_user_idx")
+  @@map("user_follow_authors")
 }
 
 model MediaAsset {
@@ -830,6 +857,7 @@ model Story {
   reports           Report[]           @relation("StoryReports")
   moderationActions ModerationAction[] @relation("ModerationStory")
   dailyStats        StoryDailyStat[]
+  analyticsEvents   ReaderAnalyticsEvent[]
 
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])
@@ -956,6 +984,7 @@ model Chapter {
   reports           Report[]           @relation("ChapterReports")
   moderationActions ModerationAction[] @relation("ModerationChapter")
   dailyStats        ChapterDailyStat[]
+  analyticsEvents   ReaderAnalyticsEvent[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])
@@ -1252,6 +1281,7 @@ model ModerationAction {
 
 model Notification {
   id        String    @id @default(uuid()) @db.Uuid
+  dedupeKey String?   @unique(map: "notifications_dedupe_key_unique") @map("dedupe_key") @db.VarChar(255)
   userId    String    @map("user_id") @db.Uuid
   type      String    @db.VarChar(100)
   title     String    @db.VarChar(255)
@@ -1300,9 +1330,12 @@ model AuditLog {
 
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
+  @@index([createdAt])
   @@index([actorId, createdAt])
+  @@index([action, createdAt])
   @@index([entityType, entityId, createdAt])
   @@index([requestId])
+  @@index([requestId, createdAt])
   @@map("audit_logs")
 }
 
@@ -1352,6 +1385,39 @@ model InboundWebhookEvent {
 }
 
 // ============================================================
+// READER ANALYTICS INGESTION
+// ============================================================
+
+model ReaderAnalyticsEvent {
+  id              String                   @id @default(uuid()) @db.Uuid
+  eventId         String                   @unique(map: "reader_analytics_events_event_id_unique") @map("event_id") @db.Uuid
+  type            ReaderAnalyticsEventType
+  version         Int                      @default(1)
+  viewerKeyHash   String                   @map("viewer_key_hash") @db.VarChar(64)
+  sessionId       String                   @map("session_id") @db.Uuid
+  storyId         String                   @map("story_id") @db.Uuid
+  chapterId       String?                  @map("chapter_id") @db.Uuid
+  progressPercent Decimal?                 @map("progress_percent") @db.Decimal(5, 2)
+  activeSeconds   Int?                     @map("active_seconds")
+  occurredAt      DateTime                 @map("occurred_at") @db.Timestamptz(3)
+  receivedAt      DateTime                 @default(now()) @map("received_at") @db.Timestamptz(3)
+  queuedAt        DateTime?                @map("queued_at") @db.Timestamptz(3)
+  processedAt     DateTime?                @map("processed_at") @db.Timestamptz(3)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([processedAt, receivedAt], map: "reader_analytics_events_processing_idx")
+  @@index([storyId, occurredAt], map: "reader_analytics_events_story_occurred_idx")
+  @@index([chapterId, occurredAt], map: "reader_analytics_events_chapter_occurred_idx")
+  @@index([viewerKeyHash, occurredAt], map: "reader_analytics_events_viewer_occurred_idx")
+  @@index([type, occurredAt], map: "reader_analytics_events_type_occurred_idx")
+  @@index([queuedAt, receivedAt], map: "reader_analytics_events_queue_recovery_idx")
+  @@map("reader_analytics_events")
+}
+
+// ============================================================
 // AGGREGATED ANALYTICS
 // ============================================================
 
@@ -1360,6 +1426,8 @@ model StoryDailyStat {
   date           DateTime @db.Date
   viewCount      BigInt   @default(0) @map("view_count")
   uniqueReaders  Int      @default(0) @map("unique_readers")
+  readingStartCount Int    @default(0) @map("reading_start_count")
+  completionCount Int      @default(0) @map("completion_count")
   followCount    Int      @default(0) @map("follow_count")
   ratingCount    Int      @default(0) @map("rating_count")
   commentCount   Int      @default(0) @map("comment_count")
@@ -1378,6 +1446,7 @@ model ChapterDailyStat {
   date            DateTime @db.Date
   viewCount       BigInt   @default(0) @map("view_count")
   uniqueReaders   Int      @default(0) @map("unique_readers")
+  readingStartCount Int    @default(0) @map("reading_start_count")
   completionCount Int      @default(0) @map("completion_count")
   readingSeconds  BigInt   @default(0) @map("reading_seconds")
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

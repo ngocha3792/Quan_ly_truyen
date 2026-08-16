@@ -14,6 +14,9 @@ export interface AuthorProfileListRecord {
   readonly followerCount: number;
   readonly totalReadCount: bigint;
   readonly storyCount: number;
+  readonly user: {
+    readonly avatarMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
+  };
   readonly stories: readonly {
     readonly categories: readonly {
       readonly category: { readonly name: string };
@@ -43,13 +46,18 @@ export interface AuthorProfileDetailRecord {
   readonly slug: string;
   readonly biography: string | null;
   readonly socialLinks: unknown;
+  readonly websiteUrl: string | null;
+  readonly bannerMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
   readonly verificationStatus: string;
   readonly verifiedAt: Date | null;
   readonly followerCount: number;
   readonly totalReadCount: bigint;
   readonly storyCount: number;
   readonly createdAt: Date;
-  readonly user: { readonly displayName: string };
+  readonly user: {
+    readonly displayName: string;
+    readonly avatarMedia: { readonly secureUrl: string | null; readonly publicUrl: string | null; readonly status: string; readonly deletedAt: Date | null } | null;
+  };
   readonly stories: readonly {
     readonly id: string;
     readonly slug: string;

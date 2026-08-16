@@ -31,7 +31,8 @@
           main
           [authors]="store.authors()"
           [followedAuthorIds]="store.followedAuthorIds()"
-          (followToggle)="store.toggleFollow($event)"
+          [pendingAuthorIds]="store.pendingAuthorIdsForView()"
+          (followToggle)="toggleFollow($event)"
         />
 
         <app-pagination

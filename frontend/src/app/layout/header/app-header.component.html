@@ -172,6 +172,11 @@
                 <span>Lịch sử đọc</span>
               </a>
 
+              <a routerLink="/dang-theo-doi" (click)="closeProfile()">
+                <app-icon name="user" [size]="18"></app-icon>
+                <span>Tác giả đang theo dõi</span>
+              </a>
+
               <!-- THÔNG BÁO -->
               <a routerLink="/thong-bao" (click)="closeProfile()">
                 <app-icon name="bell" [size]="18"></app-icon>
@@ -233,6 +238,13 @@
                 <a routerLink="/admin/reports" (click)="closeProfile()">
                   <app-icon name="shield" [size]="18"></app-icon>
                   <span>Reports</span>
+                </a>
+              }
+
+              @if (canReadAuditLogs()) {
+                <a routerLink="/admin/audit-logs" (click)="closeProfile()">
+                  <app-icon name="shield" [size]="18"></app-icon>
+                  <span>Audit Logs</span>
                 </a>
               }
 
@@ -311,6 +323,10 @@
 
         <a routerLink="/lich-su" routerLinkActive="active" (click)="closeMobileMenu()">
           Lịch sử đọc
+        </a>
+
+        <a routerLink="/dang-theo-doi" routerLinkActive="active" (click)="closeMobileMenu()">
+          Tác giả đang theo dõi
         </a>
 
         <a routerLink="/thong-bao" routerLinkActive="active" (click)="closeMobileMenu()">

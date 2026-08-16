@@ -34,6 +34,7 @@ export const AUTH_PERMISSIONS = {
   RATING_CREATE: 'rating.create',
   RATING_UPDATE_OWN: 'rating.update.own',
   LIBRARY_MANAGE_OWN: 'library.manage.own',
+  FOLLOW_MANAGE_OWN: 'follow.manage.own',
 
   READING_HISTORY_MANAGE_OWN: 'reading-history.manage.own',
 
@@ -48,6 +49,8 @@ export const AUTH_PERMISSIONS = {
 
   CATEGORY_MANAGE: 'category.manage',
   TAG_MANAGE: 'tag.manage',
+  AUDIT_LOG_READ: 'audit-log.read',
+  ANALYTICS_READ: 'analytics.read',
 } as const;
 
 export type AuthPermission = (typeof AUTH_PERMISSIONS)[keyof typeof AUTH_PERMISSIONS];

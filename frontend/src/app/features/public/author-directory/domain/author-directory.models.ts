@@ -8,6 +8,7 @@ export interface AuthorDirectoryItem {
   readonly genre: string;
   readonly description: string;
   readonly verified: boolean;
+  readonly avatarUrl?: string | null;
 
   readonly worksLabel: string;
   readonly readsLabel: string;

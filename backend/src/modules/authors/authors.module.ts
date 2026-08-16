@@ -5,7 +5,9 @@ import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
   AUTHOR_PERSISTENCE_PORT,
+  AuthorFollowService,
   AuthorLifecycleService,
+  AuthorProfileService,
   GetAuthorDashboardQueryHandler,
   GetAuthorDetailQueryHandler,
   GetAuthorDirectoryQueryHandler,
@@ -13,6 +15,8 @@ import {
 import { PrismaAuthorPersistence } from './infrastructure';
 import {
   ActiveAuthorGuard,
+  AuthorFollowController,
+  AuthorProfileController,
   AdminAuthorsController,
   AuthorDashboardController,
   PublicAuthorsController,
@@ -35,12 +39,16 @@ const queryHandlers = [
   imports: [PrismaModule, AuthAuthorizationModule],
   controllers: [
     PublicAuthorsController,
+    AuthorProfileController,
+    AuthorFollowController,
     AuthorDashboardController,
     AdminAuthorsController,
   ],
   providers: [
     PrismaAuthorPersistence,
+    AuthorFollowService,
     AuthorLifecycleService,
+    AuthorProfileService,
     ActiveAuthorGuard,
     ...portProviders,
     ...queryHandlers,

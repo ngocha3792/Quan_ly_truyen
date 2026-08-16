@@ -92,6 +92,20 @@ groups:
         annotations:
           summary: A queue has been waiting more than five minutes
           runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenAnalyticsQueueLag
+        expr: qlt_queue_oldest_waiting_age_seconds{queue="analytics"} > 600
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Reader analytics processing lag has exceeded ten minutes
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenAnalyticsProcessingFailures
+        expr: sum(rate(qlt_reader_analytics_events_processed_total{result="failed"}[10m])) > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Reader analytics processing is failing persistently
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
       - alert: QuanLyTruyenBackupStatusMissing
         expr: qlt_recovery_status_file_valid{kind="backup"} != 1
         for: 10m

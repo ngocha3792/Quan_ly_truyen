@@ -589,7 +589,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         }
         const story = await tx.story.findFirst({
           where: { id: input.storyId, authorId: input.userId, deletedAt: null },
-          select: { id: true, status: true },
+          select: { id: true, status: true, slug: true, title: true, authorId: true },
         });
         if (!story) {
           return { status: 'not_found' };
@@ -653,6 +653,29 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             ipAddress: input.audit.ipAddress,
             userAgent: input.audit.userAgent,
             requestId: input.audit.requestId,
+            createdAt: input.publishedAt,
+          },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            idempotencyKey: `author-chapter-published:${current.id}`,
+            aggregateType: 'notifications',
+            aggregateId: current.id,
+            eventType: 'notification.author-chapter-published.v1',
+            payload: {
+              version: 1,
+              authorId: story.authorId,
+              storyId: story.id,
+              storySlug: story.slug,
+              storyTitle: story.title,
+              chapterId: updated.id,
+              chapterNumber: updated.number.toString(),
+              chapterTitle: updated.title,
+              publishedAt: input.publishedAt.toISOString(),
+            },
+            metadata: {
+              requestId: input.audit.requestId ?? null,
+            },
             createdAt: input.publishedAt,
           },
         });

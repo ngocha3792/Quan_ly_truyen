@@ -10,12 +10,23 @@ export interface AuthorProfile {
   readonly penName: string;
   readonly joinedAt: string;
   readonly verified: boolean;
+  readonly avatarUrl: string | null;
+  readonly bannerUrl: string | null;
+  readonly socialLinks: {
+    readonly website: string | null;
+    readonly facebook: string | null;
+    readonly instagram: string | null;
+    readonly x: string | null;
+    readonly youtube: string | null;
+    readonly tiktok: string | null;
+  };
   readonly biography: readonly string[];
 }
 
 export interface AuthorStatistics {
   readonly totalWorks: number;
   readonly followers: string;
+  readonly followersCount: number;
   readonly totalReads: string;
   readonly averageRating: string;
 }

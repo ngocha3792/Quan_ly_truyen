@@ -528,6 +528,67 @@ export class EnvironmentVariables {
   @IsEnum(['all', 'queue', 'cloudinary-webhook'])
   WORKER_ROLE: 'all' | 'queue' | 'cloudinary-webhook' = 'all';
 
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  ANALYTICS_ENABLED = false;
+
+  @IsString()
+  @IsNotEmpty()
+  ANALYTICS_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
+  @IsString()
+  @MinLength(32)
+  ANALYTICS_IDENTITY_HMAC_SECRET =
+    'development-analytics-identity-secret-change-me';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30))
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  ANALYTICS_RAW_EVENT_RETENTION_DAYS = 30;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 50))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  ANALYTICS_MAX_BATCH_SIZE = 50;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 90))
+  @IsInt()
+  @Min(50)
+  @Max(100)
+  ANALYTICS_COMPLETION_THRESHOLD_PERCENT = 90;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 15))
+  @IsInt()
+  @Min(5)
+  @Max(60)
+  ANALYTICS_PROGRESS_HEARTBEAT_SECONDS = 15;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 120))
+  @IsInt()
+  @Min(1)
+  @Max(5000)
+  ANALYTICS_RATE_LIMIT_PER_MINUTE = 120;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 600))
+  @IsInt()
+  @Min(1)
+  @Max(50000)
+  ANALYTICS_RATE_LIMIT_PER_HOUR = 600;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 200))
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  ANALYTICS_DISPATCHER_BATCH_SIZE = 200;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 200))
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  ANALYTICS_PROCESSING_BATCH_SIZE = 200;
+
   @IsEnum(['closed', 'open'])
   IDEMPOTENCY_FAILURE_MODE: 'closed' | 'open' = 'closed';
 
@@ -1013,6 +1074,22 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
 
   if (config.QUEUE_ENABLED && !config.REDIS_ENABLED) {
     throw new Error('REDIS_ENABLED must be true when QUEUE_ENABLED=true');
+  }
+
+  if (config.ANALYTICS_ENABLED && (!config.QUEUE_ENABLED || !config.REDIS_ENABLED)) {
+    throw new Error(
+      'QUEUE_ENABLED and REDIS_ENABLED must be true when ANALYTICS_ENABLED=true',
+    );
+  }
+
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    config.ANALYTICS_ENABLED
+  ) {
+    assertProductionSecret(
+      'ANALYTICS_IDENTITY_HMAC_SECRET',
+      config.ANALYTICS_IDENTITY_HMAC_SECRET,
+    );
   }
 
   if (config.NODE_ENV === AppEnvironment.PRODUCTION && !config.REDIS_ENABLED) {

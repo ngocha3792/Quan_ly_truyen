@@ -15,6 +15,42 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'tags_name_lower_unique',
 
+  'audit_logs_created_at_idx',
+
+  'audit_logs_actor_id_created_at_idx',
+
+  'audit_logs_action_created_at_idx',
+
+  'audit_logs_entity_type_entity_id_created_at_idx',
+
+  'audit_logs_request_id_created_at_idx',
+
+  'user_follow_authors_pkey',
+
+  'user_follow_authors_user_created_at_idx',
+
+  'user_follow_authors_author_user_idx',
+
+  'notifications_dedupe_key_unique',
+
+  'reader_analytics_events_event_id_unique',
+
+  'reader_analytics_events_processing_idx',
+
+  'reader_analytics_events_story_occurred_idx',
+
+  'reader_analytics_events_chapter_occurred_idx',
+
+  'reader_analytics_events_viewer_occurred_idx',
+
+  'reader_analytics_events_type_occurred_idx',
+
+  'reader_analytics_events_queue_recovery_idx',
+
+  'reader_analytics_started_session_unique',
+
+  'reader_analytics_completed_session_unique',
+
   'story_categories_one_primary_per_story',
 
   'story_submissions_one_pending_per_story',
@@ -97,6 +133,14 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'chapters_counters_non_negative',
 
   'reading_bookmarks_position_non_negative',
+
+  'reader_analytics_events_progress_valid',
+
+  'reader_analytics_events_active_seconds_valid',
+
+  'reader_analytics_events_version_valid',
+
+  'reader_analytics_events_context_valid',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

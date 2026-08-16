@@ -21,6 +21,15 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
       ),
   },
   {
+    path: 'dang-theo-doi',
+    title: 'Tác giả đang theo dõi - TruyenHub',
+    canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.FOLLOW_MANAGE_OWN)],
+    loadComponent: () =>
+      import('../features/account/following/pages/following-page/following-page.component').then(
+        (module) => module.FollowingPageComponent,
+      ),
+  },
+  {
     path: 'thong-bao',
     title: 'Thông báo - TruyenHub',
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.NOTIFICATION_MANAGE_OWN)],

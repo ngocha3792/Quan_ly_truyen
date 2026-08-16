@@ -298,3 +298,43 @@
     opacity: 0.55;
   }
 }
+
+
+.hero-banner-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.32;
+}
+
+.author-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.author-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.author-social-links a {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.author-social-links a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.follow-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}

@@ -42,6 +42,15 @@ describe('MetricsService', () => {
     expect(rendered).toContain('template="unknown"');
   });
 
+  it('records audit reads with bounded operation/result labels only', async () => {
+    const service = new MetricsService(config);
+    service.recordAuditLogRead('list', 'success');
+    service.recordAuditLogRead('detail', 'error');
+    const rendered = await service.render();
+    expect(rendered).toContain('qlt_audit_log_read_requests_total{operation="list",result="success"');
+    expect(rendered).toContain('qlt_audit_log_read_requests_total{operation="detail",result="error"');
+  });
+
   it('creates an isolated registry without duplicate registration', () => {
     expect(() => new MetricsService(config)).not.toThrow();
     expect(() => new MetricsService(config)).not.toThrow();

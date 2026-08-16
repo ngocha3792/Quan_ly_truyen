@@ -3,7 +3,11 @@
     <article class="author-row">
       <a class="author-main" [routerLink]="['/tac-gia', author.slug]">
         <div class="author-avatar">
-          {{ author.initials }}
+          @if (author.avatarUrl) {
+            <img [src]="author.avatarUrl" [alt]="author.name" />
+          } @else {
+            {{ author.initials }}
+          }
 
           @if (author.verified) {
             <span class="verified" title="Tác giả đã xác minh">
@@ -81,6 +85,7 @@
         class="follow-button"
         type="button"
         [class.follow-button--active]="followedAuthorIds.includes(author.id)"
+        [disabled]="pendingAuthorIds.includes(author.id)"
         (click)="followToggle.emit(author.id)"
       >
         @if (followedAuthorIds.includes(author.id)) {

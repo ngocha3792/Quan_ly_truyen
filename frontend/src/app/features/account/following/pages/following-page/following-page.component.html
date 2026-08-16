@@ -1,0 +1,24 @@
+<main class="following-page">
+  <header><div><p>Theo dõi</p><h1>Tác giả đang theo dõi</h1></div><a routerLink="/tac-gia">Khám phá tác giả</a></header>
+  <section class="following-list">
+    @for (item of items(); track item.author.id) {
+      <article>
+        <a class="author" [routerLink]="['/tac-gia', item.author.slug]">
+          @if (item.author.avatarUrl) { <img [src]="item.author.avatarUrl" [alt]="item.author.displayName" /> }
+          @else { <span class="avatar-placeholder">{{ item.author.displayName.slice(0, 2) }}</span> }
+          <div><strong>{{ item.author.displayName }}</strong><small>{{ item.author.followersCount }} người theo dõi · Theo dõi từ {{ item.followedAt }}</small></div>
+        </a>
+        <button type="button" [disabled]="pending().includes(item.author.id)" (click)="unfollow(item.author.id)">Bỏ theo dõi</button>
+      </article>
+    } @empty {
+      @if (!loading()) { <p class="empty">Bạn chưa theo dõi tác giả nào.</p> }
+    }
+  </section>
+  @if (totalPages() > 1) {
+    <nav class="pagination" aria-label="Phân trang">
+      <button type="button" [disabled]="page() <= 1 || loading()" (click)="load(page() - 1)">Trước</button>
+      <span>{{ page() }} / {{ totalPages() }}</span>
+      <button type="button" [disabled]="page() >= totalPages() || loading()" (click)="load(page() + 1)">Sau</button>
+    </nav>
+  }
+</main>

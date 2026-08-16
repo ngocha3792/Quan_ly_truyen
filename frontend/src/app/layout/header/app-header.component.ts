@@ -76,6 +76,10 @@ export class AppHeaderComponent {
     this.hasPermission(AUTH_PERMISSIONS.REPORT_REVIEW),
   );
 
+  protected readonly canReadAuditLogs = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.AUDIT_LOG_READ),
+  );
+
   protected readonly query = signal('');
 
   protected readonly searchOpen = signal(false);

@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthStore } from '../../../../../core/auth/auth.store';
 
 import {
   BreadcrumbComponent,
@@ -48,6 +50,8 @@ import { AuthorListComponent } from '../../ui/author-list/author-list.component'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorDirectoryPageComponent implements OnInit {
+  private readonly auth = inject(AuthStore);
+  private readonly router = inject(Router);
   protected readonly store = inject(AuthorDirectoryStore);
 
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
@@ -62,6 +66,14 @@ export class AuthorDirectoryPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.store.load();
+  }
+
+  protected toggleFollow(authorId: string): void {
+    if (!this.auth.isAuthenticated()) {
+      void this.router.navigate(['/dang-nhap'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
+    this.store.toggleFollow(authorId);
   }
 
   protected handleSortChange(sort: AuthorDirectorySort): void {

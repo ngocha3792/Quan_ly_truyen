@@ -1,0 +1,70 @@
+<section class="analytics-page">
+  <header class="analytics-header">
+    <div>
+      <p class="eyebrow">Author Studio</p>
+      <h1>Thống kê độc giả</h1>
+      <p>Dữ liệu tổng hợp theo múi giờ analytics và có thể chậm vài phút.</p>
+    </div>
+    <div class="range-tabs" aria-label="Khoảng thời gian">
+      <button type="button" [class.active]="days() === 7" (click)="setDays(7)">7 ngày</button>
+      <button type="button" [class.active]="days() === 30" (click)="setDays(30)">30 ngày</button>
+      <button type="button" [class.active]="days() === 90" (click)="setDays(90)">90 ngày</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="state error">{{ error() }}</p>
+  } @else if (loading() && !overview()) {
+    <p class="state">Đang tải thống kê…</p>
+  } @else if (overview(); as data) {
+    <div class="summary-grid">
+      <article><span>Lượt xem</span><strong>{{ formatNumber(data.totals.views) }}</strong></article>
+      <article><span>Độc giả</span><strong>{{ formatNumber(data.totals.uniqueReaders) }}</strong></article>
+      <article><span>Bắt đầu đọc</span><strong>{{ formatNumber(data.totals.readingStarts) }}</strong></article>
+      <article><span>Hoàn thành</span><strong>{{ formatNumber(data.totals.completions) }}</strong></article>
+      <article><span>Tỷ lệ hoàn thành</span><strong>{{ formatRate(data.totals.completionRate) }}</strong></article>
+      <article><span>Thời gian đọc</span><strong>{{ formatDuration(data.totals.readingSeconds) }}</strong></article>
+    </div>
+
+    <article class="panel">
+      <div class="panel-heading">
+        <div><h2>Xu hướng lượt xem</h2><p>{{ data.range.from }} → {{ data.range.to }} · {{ data.range.timeZone }}</p></div>
+      </div>
+      <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày">
+        @for (point of data.series; track point.date) {
+          <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'">
+            <div class="bar" [style.height.%]="barHeight(point.views)"></div>
+            <span>{{ point.date.slice(5) }}</span>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-heading"><h2>Theo truyện</h2></div>
+      @if (stories(); as storyData) {
+        @if (storyData.items.length === 0) {
+          <p class="state">Chưa có dữ liệu đọc trong khoảng thời gian này.</p>
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Truyện</th><th>Views</th><th>Readers</th><th>Starts</th><th>Completed</th><th>Completion</th></tr></thead>
+              <tbody>
+                @for (story of storyData.items; track story.id) {
+                  <tr>
+                    <td><a [routerLink]="['/author-studio/thong-ke/truyen', story.id]" [queryParams]="{ days: days() }">{{ story.title }}</a></td>
+                    <td>{{ formatNumber(story.views) }}</td>
+                    <td>{{ formatNumber(story.uniqueReaders) }}</td>
+                    <td>{{ formatNumber(story.readingStarts) }}</td>
+                    <td>{{ formatNumber(story.completions) }}</td>
+                    <td>{{ formatRate(story.completionRate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </article>
+  }
+</section>

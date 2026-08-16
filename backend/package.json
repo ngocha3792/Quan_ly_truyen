@@ -40,7 +40,7 @@
     "test:auth:e2e": "npm run test:auth:prepare && jest --config ./test/jest-auth-e2e.json --runInBand",
     "test:auth:all": "npm run test:auth:unit && npm run test:auth:integration && npm run test:auth:e2e",
     "ci:unit": "npm run lint:check && npm run typecheck:scripts && npm run build && npm test -- --runInBand",
-    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:taxonomy:integration && npm run test:comments:integration && npm run test:e2e",
+    "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:authors-phase5:integration && npm run test:taxonomy:integration && npm run test:comments:integration && npm run test:e2e && npm run test:audit:integration && npm run test:analytics:integration",
     "quality:check": "npm run format:check && npm run lint:check && npm run typecheck:scripts && npm run db:validate && npm run build && npm test -- --runInBand",
     "ci": "npm run env:check && npm run quality:check",
     "postinstall": "prisma generate --config prisma.config.ts",
@@ -123,7 +123,17 @@
     "test:taxonomy:integration": "npm run test:taxonomy:prepare && jest --config ./test/jest-taxonomy-integration.json --runInBand",
     "db:taxonomy:preflight": "tsx scripts/database/preflight-taxonomy-names.ts",
     "test:comments:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
-    "test:comments:integration": "npm run test:comments:prepare && jest --config ./test/jest-comments-moderation-integration.json --runInBand"
+    "test:comments:integration": "npm run test:comments:prepare && jest --config ./test/jest-comments-moderation-integration.json --runInBand",
+    "test:audit:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "test:audit:integration": "npm run test:audit:prepare && jest --config ./test/jest-audit-logs-integration.json --runInBand",
+    "maintenance:author-followers": "tsx scripts/maintenance/reconcile-author-follower-counts.ts",
+    "test:authors-phase5:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "test:authors-phase5:integration": "npm run test:authors-phase5:prepare && jest --config ./test/jest-author-follow-integration.json --runInBand",
+    "maintenance:reader-analytics": "tsx scripts/maintenance/reconcile-reader-analytics.ts",
+    "maintenance:reader-analytics-backfill": "tsx scripts/maintenance/backfill-reader-analytics.ts",
+    "test:analytics:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+    "test:analytics:integration": "npm run test:analytics:prepare && jest --config ./test/jest-reader-analytics-integration.json --runInBand",
+    "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

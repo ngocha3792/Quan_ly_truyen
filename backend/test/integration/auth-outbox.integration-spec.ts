@@ -186,6 +186,8 @@ describe('Auth outbox to BullMQ integration', () => {
 
       queue,
 
+      queue,
+
       metrics as never,
 
       tracing as never,

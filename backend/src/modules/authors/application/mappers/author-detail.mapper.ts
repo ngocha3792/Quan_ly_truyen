@@ -66,11 +66,28 @@ export class AuthorDetailMapper {
         penName: author.penName,
         joinedAt: String(author.createdAt.getFullYear()),
         verified: author.verificationStatus === 'VERIFIED',
+        avatarUrl:
+          author.user.avatarMedia?.status === 'READY' && !author.user.avatarMedia.deletedAt
+            ? author.user.avatarMedia.secureUrl ?? author.user.avatarMedia.publicUrl ?? null
+            : null,
+        bannerUrl:
+          author.bannerMedia?.status === 'READY' && !author.bannerMedia.deletedAt
+            ? author.bannerMedia.secureUrl ?? author.bannerMedia.publicUrl ?? null
+            : null,
+        socialLinks: {
+          website: author.websiteUrl,
+          facebook: AuthorDetailMapper.stringValue(socialLinks['facebook']),
+          instagram: AuthorDetailMapper.stringValue(socialLinks['instagram']),
+          x: AuthorDetailMapper.stringValue(socialLinks['x']),
+          youtube: AuthorDetailMapper.stringValue(socialLinks['youtube']),
+          tiktok: AuthorDetailMapper.stringValue(socialLinks['tiktok']),
+        },
         biography: AuthorDetailMapper.biography(author.biography),
       },
       statistics: {
         totalWorks: author.storyCount,
         followers: AuthorDetailMapper.formatCompact(author.followerCount),
+        followersCount: author.followerCount,
         totalReads: AuthorDetailMapper.formatCompact(author.totalReadCount),
         averageRating: `${weightedRating.toFixed(1)}/10`,
       },

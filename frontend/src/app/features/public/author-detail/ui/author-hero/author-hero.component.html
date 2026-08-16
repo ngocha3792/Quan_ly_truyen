@@ -1,5 +1,8 @@
 <section class="author-hero">
   <div class="hero-landscape" aria-hidden="true">
+    @if (profile.bannerUrl) {
+      <img class="hero-banner-image" [src]="profile.bannerUrl" alt="" />
+    }
     <span class="moon"></span>
     <span class="mountain mountain--1"></span>
     <span class="mountain mountain--2"></span>
@@ -8,7 +11,11 @@
   </div>
 
   <div class="author-avatar">
-    <span>{{ profile.initials }}</span>
+    @if (profile.avatarUrl) {
+      <img class="author-avatar-image" [src]="profile.avatarUrl" [alt]="profile.name" />
+    } @else {
+      <span>{{ profile.initials }}</span>
+    }
 
     @if (profile.verified) {
       <span class="verified-badge" title="Tác giả đã xác minh">
@@ -80,11 +87,24 @@
       </span>
     </div>
 
+
+    @if (profile.socialLinks.website || profile.socialLinks.facebook || profile.socialLinks.instagram || profile.socialLinks.x || profile.socialLinks.youtube || profile.socialLinks.tiktok) {
+      <div class="author-social-links" aria-label="Liên kết tác giả">
+        @if (profile.socialLinks.website) { <a [href]="profile.socialLinks.website" target="_blank" rel="noopener noreferrer">Website</a> }
+        @if (profile.socialLinks.facebook) { <a [href]="profile.socialLinks.facebook" target="_blank" rel="noopener noreferrer">Facebook</a> }
+        @if (profile.socialLinks.instagram) { <a [href]="profile.socialLinks.instagram" target="_blank" rel="noopener noreferrer">Instagram</a> }
+        @if (profile.socialLinks.x) { <a [href]="profile.socialLinks.x" target="_blank" rel="noopener noreferrer">X</a> }
+        @if (profile.socialLinks.youtube) { <a [href]="profile.socialLinks.youtube" target="_blank" rel="noopener noreferrer">YouTube</a> }
+        @if (profile.socialLinks.tiktok) { <a [href]="profile.socialLinks.tiktok" target="_blank" rel="noopener noreferrer">TikTok</a> }
+      </div>
+    }
+
     <div class="hero-actions">
       <button
         class="follow-button"
         type="button"
         [class.follow-button--active]="following"
+        [disabled]="followPending"
         (click)="followToggle.emit()"
       >
         <svg viewBox="0 0 24 24">

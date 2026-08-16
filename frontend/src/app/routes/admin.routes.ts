@@ -22,12 +22,35 @@ const reportReviewGuards = [
   permissionGuard(AUTH_PERMISSIONS.REPORT_REVIEW),
 ];
 
+const auditLogReadGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.AUDIT_LOG_READ),
+];
+
 const authorApplicationGuards = [
   authenticatedGuard,
   permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
 ];
 
 export const ADMIN_ROUTES: Routes = [
+  {
+    path: 'admin/audit-logs',
+    title: 'Audit Logs - TruyenHub',
+    canActivate: auditLogReadGuards,
+    loadComponent: () =>
+      import('../features/admin/audit-logs/pages/list/admin-audit-logs-list-page.component').then(
+        (module) => module.AdminAuditLogsListPageComponent,
+      ),
+  },
+  {
+    path: 'admin/audit-logs/:id',
+    title: 'Chi tiết Audit Log - TruyenHub',
+    canActivate: auditLogReadGuards,
+    loadComponent: () =>
+      import('../features/admin/audit-logs/pages/detail/admin-audit-log-detail-page.component').then(
+        (module) => module.AdminAuditLogDetailPageComponent,
+      ),
+  },
   {
     path: 'admin/reports',
     title: 'Báo cáo bình luận - TruyenHub',

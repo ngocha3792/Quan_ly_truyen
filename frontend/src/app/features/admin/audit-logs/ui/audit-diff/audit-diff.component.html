@@ -1,0 +1,24 @@
+@if (changes.length === 0) {
+  <p class="empty">Không có before/after snapshot thay đổi được ghi nhận.</p>
+} @else {
+  <div class="changes">
+    @for (change of changes; track change.path + ':' + change.type) {
+      <article class="change">
+        <header>
+          <code>{{ change.path }}</code>
+          <span>{{ change.type }}</span>
+        </header>
+        <div class="values">
+          <div>
+            <strong>Before</strong>
+            <pre>{{ format(change.before) }}</pre>
+          </div>
+          <div>
+            <strong>After</strong>
+            <pre>{{ format(change.after) }}</pre>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+}
