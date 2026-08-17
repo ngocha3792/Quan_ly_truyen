@@ -28,5 +28,7 @@ test('manager xem queue, mở submission và reject với lý do', async ({ page
   await dialog.getByRole('button', { name: 'Xác nhận từ chối' }).click();
 
   await expect(page.getByText('Đã từ chối truyện.')).toBeVisible();
-  await expect(page.getByText('REJECTED', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('app-admin-story-status-badge').getByText('REJECTED', { exact: true }),
+  ).toBeVisible();
 });

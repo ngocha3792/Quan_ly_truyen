@@ -74,14 +74,12 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   }
 
   setReaction(commentId: string, type: CommentReactionApiType) {
-    return this.engagement
-      .setCommentReaction(commentId, type)
-      .pipe(
-        map((summary) => ({
-          viewerReaction: summary.viewerReaction,
-          reactions: summary.reactions,
-        })),
-      );
+    return this.engagement.setCommentReaction(commentId, type).pipe(
+      map((summary) => ({
+        viewerReaction: summary.viewerReaction,
+        reactions: summary.reactions,
+      })),
+    );
   }
 
   clearReaction(commentId: string): Observable<void> {

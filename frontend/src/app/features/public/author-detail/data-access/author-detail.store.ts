@@ -1,4 +1,4 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
@@ -20,6 +20,22 @@ export class AuthorDetailStore {
   readonly isFollowing = signal(false);
   readonly followPending = signal(false);
 
+  constructor() {
+    effect(() => {
+      const view = this.viewState();
+      const authenticated = this.auth.isAuthenticated();
+
+      if (!view) return;
+      if (!authenticated) {
+        this.isFollowing.set(false);
+        return;
+      }
+      if (this.followPending()) return;
+
+      this.hydrateFollowState(view.profile.id);
+    });
+  }
+
   readonly followerLabel = computed(() => {
     const view = this.viewState();
     if (!view) return '';
@@ -34,7 +50,6 @@ export class AuthorDetailStore {
       .subscribe((view) => {
         this.viewState.set(view);
         this.isFollowing.set(false);
-        this.hydrateFollowState(view.profile.id);
       });
   }
 

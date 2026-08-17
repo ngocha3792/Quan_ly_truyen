@@ -41,7 +41,7 @@
     "test:auth:all": "npm run test:auth:unit && npm run test:auth:integration && npm run test:auth:e2e",
     "ci:unit": "npm run lint:check && npm run typecheck:scripts && npm run build && npm test -- --runInBand",
     "ci:integration": "npm run test:users:integration && npm run test:author-applications:integration && npm run test:auth:integration && npm run test:auth:e2e && npm run test:stories:integration && npm run test:authors-phase5:integration && npm run test:taxonomy:integration && npm run test:comments:integration && npm run test:e2e && npm run test:audit:integration && npm run test:analytics:integration",
-    "quality:check": "npm run format:check && npm run lint:check && npm run typecheck:scripts && npm run db:validate && npm run build && npm test -- --runInBand",
+    "quality:check": "npm run format:check && npm run lint:check && npm run typecheck:scripts && npm run architecture:check && npm run db:validate && npm run build && npm test -- --runInBand",
     "ci": "npm run env:check && npm run quality:check",
     "postinstall": "prisma generate --config prisma.config.ts",
     "db:seed": "tsx prisma/seed.ts",
@@ -133,7 +133,8 @@
     "maintenance:reader-analytics-backfill": "tsx scripts/maintenance/backfill-reader-analytics.ts",
     "test:analytics:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
     "test:analytics:integration": "npm run test:analytics:prepare && jest --config ./test/jest-reader-analytics-integration.json --runInBand",
-    "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts"
+    "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts",
+    "architecture:check": "node scripts/architecture/check-boundaries.mjs"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

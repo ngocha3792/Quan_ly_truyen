@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { resolveAuthGuardState } from '../../../../../core/auth/auth-guard.util';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { SeoService } from '../../../../../core/seo/seo.service';
@@ -95,18 +96,15 @@ export class ChapterReaderPageComponent implements OnInit {
   }
 
   protected addComment(body: string): void {
-    if (!this.requireLogin()) return;
-    this.store.addComment(body);
+    this.runAuthenticated(() => this.store.addComment(body));
   }
 
   protected editComment(event: { readonly id: string; readonly body: string }): void {
-    if (!this.requireLogin()) return;
-    this.store.editComment(event.id, event.body);
+    this.runAuthenticated(() => this.store.editComment(event.id, event.body));
   }
 
   protected deleteComment(commentId: string): void {
-    if (!this.requireLogin()) return;
-    this.store.deleteComment(commentId);
+    this.runAuthenticated(() => this.store.deleteComment(commentId));
   }
 
   protected loadReplies(rootCommentId: string): void {
@@ -118,16 +116,14 @@ export class ChapterReaderPageComponent implements OnInit {
     readonly parentId: string;
     readonly body: string;
   }): void {
-    if (!this.requireLogin()) return;
-    this.store.reply(event.rootId, event.parentId, event.body);
+    this.runAuthenticated(() => this.store.reply(event.rootId, event.parentId, event.body));
   }
 
   protected react(event: {
     readonly commentId: string;
     readonly type: CommentReactionApiType;
   }): void {
-    if (!this.requireLogin()) return;
-    this.store.react(event.commentId, event.type);
+    this.runAuthenticated(() => this.store.react(event.commentId, event.type));
   }
 
   protected report(event: {
@@ -135,15 +131,23 @@ export class ChapterReaderPageComponent implements OnInit {
     readonly reason: CommentReportReasonApi;
     readonly description?: string;
   }): void {
-    if (!this.requireLogin()) return;
-    this.store.report(event.commentId, event.reason, event.description);
+    this.runAuthenticated(() =>
+      this.store.report(event.commentId, event.reason, event.description),
+    );
   }
 
-  private requireLogin(): boolean {
-    if (this.auth.isAuthenticated()) return true;
-    void this.router.navigate(['/dang-nhap'], {
-      queryParams: { returnUrl: this.router.url },
+  private runAuthenticated(action: () => void): void {
+    const returnUrl = this.router.url;
+    resolveAuthGuardState(this.auth).subscribe((resolution) => {
+      if (resolution.kind === 'authenticated') {
+        action();
+        return;
+      }
+
+      void this.router.navigate(
+        [resolution.kind === 'anonymous' ? '/dang-nhap' : '/tam-thoi-khong-the-xac-thuc'],
+        { queryParams: { returnUrl } },
+      );
     });
-    return false;
   }
 }

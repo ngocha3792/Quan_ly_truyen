@@ -12,7 +12,12 @@ test('manager merges duplicate tag and source disappears', async ({ page }) => {
   await sourceRow.getByRole('button', { name: 'Merge' }).click();
 
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Merge into').selectOption({ label: /E2E Science Fiction/ });
+  const mergeSelect = dialog.getByLabel('Merge into');
+  const targetOption = mergeSelect.locator('option').filter({ hasText: 'E2E Science Fiction' });
+  await expect(targetOption).toHaveCount(1);
+  const targetValue = await targetOption.getAttribute('value');
+  expect(targetValue).toBeTruthy();
+  await mergeSelect.selectOption(targetValue!);
   await dialog.getByRole('button', { name: 'Hợp nhất' }).click();
 
   await expect(page.getByText(/Đã hợp nhất "E2E Sci Fi" vào "E2E Science Fiction"/)).toBeVisible();

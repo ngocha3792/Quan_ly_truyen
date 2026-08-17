@@ -6,7 +6,11 @@
       <p>Thông tin này xuất hiện trên trang tác giả công khai.</p>
     </div>
     @if (store.profile(); as profile) {
-      <a [routerLink]="['/tac-gia', profile.slug]">Xem hồ sơ công khai</a>
+      @if (store.saving()) {
+        <span aria-disabled="true">Đang lưu hồ sơ…</span>
+      } @else {
+        <a [routerLink]="['/tac-gia', profile.slug]">Xem hồ sơ công khai</a>
+      }
     }
   </header>
 

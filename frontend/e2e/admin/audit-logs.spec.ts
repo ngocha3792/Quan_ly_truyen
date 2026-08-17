@@ -17,9 +17,12 @@ test('manager can investigate user lifecycle and correlate the same request', as
 
   await userRow.getByRole('link', { name: 'Xem' }).click();
   await expect(page.getByRole('heading', { name: 'user.status.changed' })).toBeVisible();
-  await expect(page.getByText('Before')).toBeVisible();
-  await expect(page.getByText('ACTIVE', { exact: true })).toBeVisible();
-  await expect(page.getByText('SUSPENDED', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Before', exact: true })).toBeVisible();
+  const changes = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: 'Changes', exact: true }),
+  });
+  await expect(changes.locator('pre').filter({ hasText: 'ACTIVE' })).toBeVisible();
+  await expect(changes.locator('pre').filter({ hasText: 'SUSPENDED' })).toBeVisible();
   await expect(page.getByText('203.0.113.xxx')).toBeVisible();
 
   await page.getByRole('link', { name: CORRELATION_REQUEST }).click();

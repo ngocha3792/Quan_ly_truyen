@@ -36,10 +36,11 @@ test('author edits canonical public profile without changing slug', async ({ pag
   await page.goto('/author-studio/ho-so');
   await expect(page.getByRole('heading', { name: 'Hồ sơ tác giả' })).toBeVisible();
 
-  await page.getByLabel('Tên tác giả').fill('E2E Phase Five Author');
-  await page.getByLabel('Tiểu sử').fill('Tiểu sử được cập nhật từ Author Studio Phase 5.');
-  await page.getByLabel('Website').fill('https://example.com/e2e-author');
+  await page.getByLabel('Tên tác giả', { exact: true }).fill('E2E Phase Five Author');
+  await page.getByLabel(/^Tiểu sử/u).fill('Tiểu sử được cập nhật từ Author Studio Phase 5.');
+  await page.getByLabel('Website', { exact: true }).fill('https://example.com/e2e-author');
   await page.getByRole('button', { name: 'Lưu hồ sơ' }).click();
+  await expect(page.getByRole('button', { name: 'Lưu hồ sơ' })).toBeEnabled();
 
   await page.getByRole('link', { name: 'Xem hồ sơ công khai' }).click();
   await expect(page).toHaveURL(new RegExp(`/tac-gia/${AUTHOR_SLUG}$`));

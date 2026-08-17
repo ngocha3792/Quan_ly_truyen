@@ -11,7 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
+import { finalize, Observable, switchMap } from 'rxjs';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import {
   AUTH_PERMISSIONS,
@@ -119,13 +119,14 @@ export class AdminReportDetailPageComponent implements OnInit {
     this.error.set('');
     request
       .pipe(
+        switchMap(() => this.api.detail(this.reportId)),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.mutating.set(false)),
       )
       .subscribe({
-        next: () => {
+        next: (detail) => {
+          this.detail.set(detail);
           this.message.set(message);
-          this.load();
         },
         error: (e: unknown) => this.error.set(getApiErrorMessage(e)),
       });

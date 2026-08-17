@@ -40,11 +40,24 @@ export class StoryDetailStore {
         }),
         switchMap((story) => {
           if (!story) return of(null);
-          this.repository
-            .getComments(story.slug)
+          this.auth
+            .ensureInitialized()
             .pipe(
-              tap((comments) => this.comments.set(comments)),
-              catchError(() => of([])),
+              switchMap((authState) =>
+                this.repository.getComments(story.slug).pipe(
+                  tap((comments) => this.comments.set(comments)),
+                  switchMap(() =>
+                    authState === 'authenticated'
+                      ? this.repository.getMyRating(story.id).pipe(
+                          tap((score) => this.ratingScore.set(score)),
+                          catchError(() => of(null)),
+                        )
+                      : of(null),
+                  ),
+                  catchError(() => of(null)),
+                ),
+              ),
+              catchError(() => of(null)),
             )
             .subscribe();
           this.repository
@@ -54,15 +67,6 @@ export class StoryDetailStore {
               catchError(() => of([])),
             )
             .subscribe();
-          if (this.auth.isAuthenticated()) {
-            this.repository
-              .getMyRating(story.id)
-              .pipe(
-                tap((score) => this.ratingScore.set(score)),
-                catchError(() => of(null)),
-              )
-              .subscribe();
-          }
           return of(story);
         }),
         catchError((err) => {

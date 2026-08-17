@@ -1,0 +1,38 @@
+--- a/frontend/e2e/admin/reports.spec.ts
++++ b/frontend/e2e/admin/reports.spec.ts
+@@ -59,7 +59,18 @@
+   page.once('dialog', (dialog) => void dialog.accept());
+   await page.getByRole('button', { name: 'Ban user', exact: true }).click();
+   await expect(page.getByText('Đã ban user và invalidate quyền truy cập.')).toBeVisible();
+-  await expect(page.getByText(/Reported user:.*\(BANNED\)/)).toBeVisible();
++  const reportId = page.url().split('/').pop()!;
++  await expect.poll(async () => {
++    const response = await page.request.get(`/api/v1/admin/reports/${reportId}`);
++    if (!response.ok()) return `HTTP_${response.status()}`;
++    const payload = (await response.json()) as {
++      data?: {
++        reportedUser?: { status?: string } | null;
++        currentComment?: { user?: { status?: string } } | null;
++      };
++    };
++    return payload.data?.reportedUser?.status ?? payload.data?.currentComment?.user?.status ?? null;
++  }).toBe('BANNED');
+   await expect(page.getByText(REPORT_ROW_TEXT)).toBeVisible();
+   await expect(page.getByText('BAN_USER', { exact: true })).toBeVisible();
+ });
+--- a/frontend/e2e/admin/taxonomy.spec.ts
++++ b/frontend/e2e/admin/taxonomy.spec.ts
+@@ -12,7 +12,12 @@
+   await sourceRow.getByRole('button', { name: 'Merge' }).click();
+ 
+   const dialog = page.getByRole('dialog');
+-  await dialog.getByLabel('Merge into').selectOption({ label: 'E2E Science Fiction' });
++  const mergeSelect = dialog.getByLabel('Merge into');
++  const targetOption = mergeSelect.locator('option').filter({ hasText: 'E2E Science Fiction' });
++  await expect(targetOption).toHaveCount(1);
++  const targetValue = await targetOption.getAttribute('value');
++  expect(targetValue).toBeTruthy();
++  await mergeSelect.selectOption(targetValue!);
+   await dialog.getByRole('button', { name: 'Hợp nhất' }).click();
+ 
+   await expect(page.getByText(/Đã hợp nhất "E2E Sci Fi" vào "E2E Science Fiction"/)).toBeVisible();

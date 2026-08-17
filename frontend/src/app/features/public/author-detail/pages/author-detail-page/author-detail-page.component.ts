@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { resolveAuthGuardState } from '../../../../../core/auth/auth-guard.util';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
 
@@ -84,13 +85,18 @@ export class AuthorDetailPageComponent implements OnInit {
   });
 
   protected toggleFollow(): void {
-    if (!this.auth.isAuthenticated()) {
-      void this.router.navigate(['/dang-nhap'], {
-        queryParams: { returnUrl: this.router.url },
-      });
-      return;
-    }
-    this.store.toggleFollow();
+    const returnUrl = this.router.url;
+    resolveAuthGuardState(this.auth).subscribe((resolution) => {
+      if (resolution.kind === 'authenticated') {
+        this.store.toggleFollow();
+        return;
+      }
+
+      void this.router.navigate(
+        [resolution.kind === 'anonymous' ? '/dang-nhap' : '/tam-thoi-khong-the-xac-thuc'],
+        { queryParams: { returnUrl } },
+      );
+    });
   }
 
   ngOnInit(): void {

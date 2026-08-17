@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { resolveAuthGuardState } from '../../../../../core/auth/auth-guard.util';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 
 import {
@@ -69,11 +70,18 @@ export class AuthorDirectoryPageComponent implements OnInit {
   }
 
   protected toggleFollow(authorId: string): void {
-    if (!this.auth.isAuthenticated()) {
-      void this.router.navigate(['/dang-nhap'], { queryParams: { returnUrl: this.router.url } });
-      return;
-    }
-    this.store.toggleFollow(authorId);
+    const returnUrl = this.router.url;
+    resolveAuthGuardState(this.auth).subscribe((resolution) => {
+      if (resolution.kind === 'authenticated') {
+        this.store.toggleFollow(authorId);
+        return;
+      }
+
+      void this.router.navigate(
+        [resolution.kind === 'anonymous' ? '/dang-nhap' : '/tam-thoi-khong-the-xac-thuc'],
+        { queryParams: { returnUrl } },
+      );
+    });
   }
 
   protected handleSortChange(sort: AuthorDirectorySort): void {

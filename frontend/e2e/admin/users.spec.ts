@@ -181,5 +181,5 @@ test('manager xem và revoke session của user end-to-end', async ({ page }) =>
       .filter({ hasText: 'E2E Target Browser' })
       .getByText('REVOKED', { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('USER_SESSION_REVOKED', { exact: true })).toBeVisible();
+  await expect(page.getByText('USER_SESSION_REVOKED', { exact: true }).first()).toBeVisible();
 });

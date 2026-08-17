@@ -71,9 +71,27 @@ test('warning is recorded and ban reuses account lifecycle without deleting the 
   await expect(page.getByText('WARN_USER', { exact: true })).toBeVisible();
 
   page.once('dialog', (dialog) => void dialog.accept());
+  const detailReloadPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      /\/api\/v1\/admin\/reports\/[^/?]+(?:\?.*)?$/.test(response.url()) &&
+      response.status() === 200,
+  );
+
   await page.getByRole('button', { name: 'Ban user', exact: true }).click();
+
+  const detailReloadResponse = await detailReloadPromise;
+  const detailPayload = await detailReloadResponse.json();
+  const detail = detailPayload.data ?? detailPayload;
+
+  expect(
+    detail.reportedUser?.status ??
+      detail.currentComment?.user?.status ??
+      detail.comment?.user?.status,
+  ).toBe('BANNED');
+
   await expect(page.getByText('Đã ban user và invalidate quyền truy cập.')).toBeVisible();
-  await expect(page.getByText(/Reported user:.*\(BANNED\)/)).toBeVisible();
+
   await expect(page.getByText(REPORT_ROW_TEXT)).toBeVisible();
   await expect(page.getByText('BAN_USER', { exact: true })).toBeVisible();
 });

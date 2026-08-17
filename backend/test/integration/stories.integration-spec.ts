@@ -15,6 +15,9 @@ import {
   SubmissionStatus,
 } from '@/generated/prisma/client';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
+import { PrismaLibraryPersistence } from '@/modules/libraries/infrastructure';
+import { PrismaRatingPersistence } from '@/modules/ratings/infrastructure';
+import { PrismaReadingHistoryPersistence } from '@/modules/reading-history/infrastructure';
 import {
   PrismaChapterPersistence,
   PrismaReaderEngagementPersistence,
@@ -27,6 +30,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
   let stories: PrismaStoryPersistence;
   let chapters: PrismaChapterPersistence;
   let engagement: PrismaReaderEngagementPersistence;
+  let libraries: PrismaLibraryPersistence;
+  let ratings: PrismaRatingPersistence;
+  let readingHistory: PrismaReadingHistoryPersistence;
 
   const runId = randomUUID();
   const compactRunId = runId.replaceAll('-', '');
@@ -39,6 +45,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         PrismaStoryPersistence,
         PrismaChapterPersistence,
         PrismaReaderEngagementPersistence,
+        PrismaLibraryPersistence,
+        PrismaRatingPersistence,
+        PrismaReadingHistoryPersistence,
       ],
     }).compile();
 
@@ -48,6 +57,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     stories = moduleRef.get(PrismaStoryPersistence);
     chapters = moduleRef.get(PrismaChapterPersistence);
     engagement = moduleRef.get(PrismaReaderEngagementPersistence);
+    libraries = moduleRef.get(PrismaLibraryPersistence);
+    ratings = moduleRef.get(PrismaRatingPersistence);
+    readingHistory = moduleRef.get(PrismaReadingHistoryPersistence);
   });
 
   afterEach(async () => {
@@ -385,13 +397,13 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     });
 
     const libraryResults = await Promise.all([
-      engagement.upsertLibraryEntry({
+      libraries.upsert({
         userId: reader.id,
         storyId: story.id,
         isFavorite: true,
         updatedAt: new Date(),
       }),
-      engagement.upsertLibraryEntry({
+      libraries.upsert({
         userId: reader.id,
         storyId: story.id,
         isFavorite: true,
@@ -410,14 +422,14 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     const olderReadAt = new Date(Date.now() - 1_000);
     const newerReadAt = new Date();
     const progressResults = await Promise.all([
-      engagement.saveReadingProgress({
+      readingHistory.saveProgress({
         userId: reader.id,
         storyId: story.id,
         chapterId: chapter.id,
         position: 0,
         readAt: olderReadAt,
       }),
-      engagement.saveReadingProgress({
+      readingHistory.saveProgress({
         userId: reader.id,
         storyId: story.id,
         chapterId: nextChapter.id,
@@ -442,7 +454,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(savedProgress.lastReadAt.getTime()).toBe(newerReadAt.getTime());
     expect(Number(savedProgress.progressPercent)).toBe(100);
 
-    await engagement.saveReadingProgress({
+    await readingHistory.saveProgress({
       userId: reader.id,
       storyId: story.id,
       chapterId: nextChapter.id,
@@ -477,13 +489,13 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ).resolves.toBe(1);
 
     const ratings = await Promise.all([
-      engagement.upsertRating({
+      ratings.upsert({
         userId: reader.id,
         storyId: story.id,
         score: 5,
         updatedAt: new Date(),
       }),
-      engagement.upsertRating({
+      ratings.upsert({
         userId: secondReader.id,
         storyId: story.id,
         score: 4,
@@ -499,13 +511,13 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(Number(ratedStory.ratingAverage)).toBe(4.5);
 
     await Promise.all([
-      engagement.upsertRating({
+      ratings.upsert({
         userId: reader.id,
         storyId: story.id,
         score: 3,
         updatedAt: new Date(),
       }),
-      engagement.deleteRating(reader.id, story.id),
+      ratings.deleteMine(reader.id, story.id),
     ]);
     const activeRatings = await prisma.rating.aggregate({
       where: {

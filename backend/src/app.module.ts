@@ -28,6 +28,9 @@ import { AuthorApplicationsModule } from './modules/author-applications';
 import { AuthorsModule } from './modules/authors';
 import { NotificationsModule } from './modules/notifications';
 import { StoriesModule } from './modules/stories';
+import { RatingsModule } from './modules/ratings';
+import { LibrariesModule } from './modules/libraries';
+import { ReadingHistoryModule } from './modules/reading-history';
 import { TaxonomyModule } from './modules/taxonomy';
 import { ModerationModule } from './modules/moderation';
 import { AuditLogsModule } from './modules/audit-logs';
@@ -41,6 +44,9 @@ import { AnalyticsModule } from './modules/analytics';
     AuthorsModule,
     NotificationsModule,
     StoriesModule,
+    RatingsModule,
+    LibrariesModule,
+    ReadingHistoryModule,
     TaxonomyModule,
     ModerationModule,
     AuditLogsModule,
