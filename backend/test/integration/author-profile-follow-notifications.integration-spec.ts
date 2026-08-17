@@ -23,7 +23,7 @@ import {
   AuthorFollowService,
   AuthorProfileService,
 } from '@/modules/authors/application/services';
-import { PrismaChapterPersistence } from '@/modules/stories/infrastructure/persistence/prisma-chapter.persistence';
+import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
 import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
 import { PrismaAccountDeletionPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence';
 

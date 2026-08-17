@@ -10,9 +10,6 @@ const MODULES_ROOT = join(ROOT, 'src', 'modules');
 const LEGACY_APPLICATION_VIOLATIONS = new Set([
   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/database',
   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/observability',
-  'src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command-handler.ts::@/infrastructure/observability',
-  'src/modules/stories/application/commands/create-story-comment/create-story-comment.command-handler.ts::@/infrastructure/observability',
-  'src/modules/stories/application/commands/update-story-comment/update-story-comment.command-handler.ts::@/infrastructure/observability',
   'src/modules/audit-logs/application/audit-logs.service.ts::@/infrastructure/observability',
   'src/modules/audit-logs/application/audit-logs.service.ts::../infrastructure',
   'src/modules/authors/application/services/author-lifecycle.service.ts::@/infrastructure/database',

@@ -18,18 +18,16 @@ import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { PrismaLibraryPersistence } from '@/modules/libraries/infrastructure';
 import { PrismaRatingPersistence } from '@/modules/ratings/infrastructure';
 import { PrismaReadingHistoryPersistence } from '@/modules/reading-history/infrastructure';
-import {
-  PrismaChapterPersistence,
-  PrismaReaderEngagementPersistence,
-  PrismaStoryPersistence,
-} from '@/modules/stories/infrastructure';
+import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
+import { PrismaCommentPersistence } from '@/modules/comments/infrastructure';
+import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
 
 describe('Stories PostgreSQL race and ownership invariants', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
   let stories: PrismaStoryPersistence;
   let chapters: PrismaChapterPersistence;
-  let engagement: PrismaReaderEngagementPersistence;
+  let engagement: PrismaCommentPersistence;
   let libraries: PrismaLibraryPersistence;
   let ratings: PrismaRatingPersistence;
   let readingHistory: PrismaReadingHistoryPersistence;
@@ -44,7 +42,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       providers: [
         PrismaStoryPersistence,
         PrismaChapterPersistence,
-        PrismaReaderEngagementPersistence,
+        PrismaCommentPersistence,
         PrismaLibraryPersistence,
         PrismaRatingPersistence,
         PrismaReadingHistoryPersistence,
@@ -56,7 +54,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     prisma = moduleRef.get(PrismaService);
     stories = moduleRef.get(PrismaStoryPersistence);
     chapters = moduleRef.get(PrismaChapterPersistence);
-    engagement = moduleRef.get(PrismaReaderEngagementPersistence);
+    engagement = moduleRef.get(PrismaCommentPersistence);
     libraries = moduleRef.get(PrismaLibraryPersistence);
     ratings = moduleRef.get(PrismaRatingPersistence);
     readingHistory = moduleRef.get(PrismaReadingHistoryPersistence);

@@ -1,0 +1,1931 @@
+diff --git a/backend/docs/architecture/backend.md b/backend/docs/architecture/backend.md
+index 23dc41b..91cdab2 100644
+--- a/backend/docs/architecture/backend.md
++++ b/backend/docs/architecture/backend.md
+@@ -94,3 +94,30 @@ The guard rejects new `domain -> framework/infrastructure` and `application -> i
+ ## Refactor rule
+ 
+ Architectural refactors preserve externally observable behavior unless a separate feature change explicitly says otherwise. Keep HTTP routes, request/response contracts, authorization behavior, and database schema stable during module extraction.
++
++## Folder policy: structure is semantic, not a checklist
++
++The four top-level layers (`application`, `domain`, `infrastructure`, `presentation`) are the architectural boundary. Their child folders are created only when the module has code with that responsibility.
++
++Examples:
++
++- Create `domain/entities` only when the module has domain entities. Do not add placeholder entities just to fill the tree.
++- Create `domain/events` only when the module publishes domain events.
++- Create `domain/repositories` only when a domain-level repository abstraction is genuinely required. Most persistence needs in this codebase are application ports under `application/ports`.
++- Create `infrastructure/cache` or `infrastructure/search` only when the module owns a cache/search adapter.
++- Create `application/mappers` only when there is an actual mapping boundary.
++- Never commit empty folders or `.gitkeep` files purely to make every module visually identical.
++
++A healthy module can therefore be smaller than the full reference tree while still following the same architecture. The reference tree describes allowed responsibilities, not mandatory empty directories.
++
++## Migration status
++
++The incremental extraction currently separates these responsibilities from `stories`:
++
++- ratings -> `modules/ratings`
++- libraries -> `modules/libraries`
++- reading history -> `modules/reading-history`
++- comments -> `modules/comments`
++- chapter lifecycle and public chapter reader -> `modules/chapters`
++
++`StoriesModule` now owns story lifecycle/publication/metadata only. Legacy internals inside other modules are cleaned in later passes without changing HTTP contracts or the Prisma schema.
+diff --git a/backend/scripts/architecture/check-boundaries.mjs b/backend/scripts/architecture/check-boundaries.mjs
+index 40baec7..54a9da8 100644
+--- a/backend/scripts/architecture/check-boundaries.mjs
++++ b/backend/scripts/architecture/check-boundaries.mjs
+@@ -10,9 +10,6 @@ const MODULES_ROOT = join(ROOT, 'src', 'modules');
+ const LEGACY_APPLICATION_VIOLATIONS = new Set([
+   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/database',
+   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/observability',
+-  'src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command-handler.ts::@/infrastructure/observability',
+-  'src/modules/stories/application/commands/create-story-comment/create-story-comment.command-handler.ts::@/infrastructure/observability',
+-  'src/modules/stories/application/commands/update-story-comment/update-story-comment.command-handler.ts::@/infrastructure/observability',
+   'src/modules/audit-logs/application/audit-logs.service.ts::@/infrastructure/observability',
+   'src/modules/audit-logs/application/audit-logs.service.ts::../infrastructure',
+   'src/modules/authors/application/services/author-lifecycle.service.ts::@/infrastructure/database',
+diff --git a/backend/src/app.module.ts b/backend/src/app.module.ts
+index 25ab120..bd89e0d 100644
+--- a/backend/src/app.module.ts
++++ b/backend/src/app.module.ts
+@@ -31,6 +31,8 @@ import { StoriesModule } from './modules/stories';
+ import { RatingsModule } from './modules/ratings';
+ import { LibrariesModule } from './modules/libraries';
+ import { ReadingHistoryModule } from './modules/reading-history';
++import { CommentsModule } from './modules/comments';
++import { ChaptersModule } from './modules/chapters';
+ import { TaxonomyModule } from './modules/taxonomy';
+ import { ModerationModule } from './modules/moderation';
+ import { AuditLogsModule } from './modules/audit-logs';
+@@ -47,6 +49,8 @@ import { AnalyticsModule } from './modules/analytics';
+     RatingsModule,
+     LibrariesModule,
+     ReadingHistoryModule,
++    CommentsModule,
++    ChaptersModule,
+     TaxonomyModule,
+     ModerationModule,
+     AuditLogsModule,
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts b/backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+similarity index 96%
+rename from backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+rename to backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+index 4a350bb..032e09f 100644
+--- a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
++++ b/backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.spec.ts
+@@ -1,6 +1,6 @@
+ import { AuthenticationRequiredException } from '@/common/exceptions';
+ 
+-import { StoryNotFoundException } from '../../../domain';
++import { ChapterStoryNotFoundException } from '../../../domain';
+ import { CreateAuthorChapterCommand } from './create-author-chapter.command';
+ import { CreateAuthorChapterCommandHandler } from './create-author-chapter.command-handler';
+ 
+@@ -99,7 +99,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
+ 
+     await expect(
+       handler.execute(createCommand(USER_ID)),
+-    ).rejects.toBeInstanceOf(StoryNotFoundException);
++    ).rejects.toBeInstanceOf(ChapterStoryNotFoundException);
+   });
+ });
+ 
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts b/backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+similarity index 95%
+rename from backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+rename to backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+index 56bb7ba..d67187a 100644
+--- a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
++++ b/backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command-handler.ts
+@@ -7,7 +7,7 @@ import {
+   ChapterContentValueObject,
+   ChapterTitleValueObject,
+   countChapterWords,
+-  StoryNotFoundException,
++  ChapterStoryNotFoundException,
+   ChapterStoryPendingReviewException,
+ } from '../../../domain';
+ import type { ChapterResultDto } from '../../dto';
+@@ -53,7 +53,7 @@ export class CreateAuthorChapterCommandHandler {
+         throw new ChapterStoryPendingReviewException();
+       case 'story_not_found':
+       default:
+-        throw new StoryNotFoundException(command.storyId);
++        throw new ChapterStoryNotFoundException(command.storyId);
+     }
+   }
+ }
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command.ts b/backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/create-author-chapter/create-author-chapter.command.ts
+rename to backend/src/modules/chapters/application/commands/create-author-chapter/create-author-chapter.command.ts
+diff --git a/backend/src/modules/stories/application/commands/create-author-chapter/index.ts b/backend/src/modules/chapters/application/commands/create-author-chapter/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/create-author-chapter/index.ts
+rename to backend/src/modules/chapters/application/commands/create-author-chapter/index.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts b/backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts
+rename to backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command-handler.spec.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts b/backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts
+rename to backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command-handler.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command.ts b/backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-author-chapter/delete-author-chapter.command.ts
+rename to backend/src/modules/chapters/application/commands/delete-author-chapter/delete-author-chapter.command.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-author-chapter/index.ts b/backend/src/modules/chapters/application/commands/delete-author-chapter/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-author-chapter/index.ts
+rename to backend/src/modules/chapters/application/commands/delete-author-chapter/index.ts
+diff --git a/backend/src/modules/chapters/application/commands/index.ts b/backend/src/modules/chapters/application/commands/index.ts
+new file mode 100644
+index 0000000..c48c48e
+--- /dev/null
++++ b/backend/src/modules/chapters/application/commands/index.ts
+@@ -0,0 +1,4 @@
++export * from './create-author-chapter';
++export * from './update-author-chapter';
++export * from './delete-author-chapter';
++export * from './publish-author-chapter';
+diff --git a/backend/src/modules/stories/application/commands/publish-author-chapter/index.ts b/backend/src/modules/chapters/application/commands/publish-author-chapter/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/publish-author-chapter/index.ts
+rename to backend/src/modules/chapters/application/commands/publish-author-chapter/index.ts
+diff --git a/backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command-handler.spec.ts b/backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command-handler.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command-handler.spec.ts
+rename to backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command-handler.spec.ts
+diff --git a/backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command-handler.ts b/backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command-handler.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command-handler.ts
+rename to backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command-handler.ts
+diff --git a/backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command.ts b/backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/publish-author-chapter/publish-author-chapter.command.ts
+rename to backend/src/modules/chapters/application/commands/publish-author-chapter/publish-author-chapter.command.ts
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/index.ts b/backend/src/modules/chapters/application/commands/update-author-chapter/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-author-chapter/index.ts
+rename to backend/src/modules/chapters/application/commands/update-author-chapter/index.ts
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts b/backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts
+rename to backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command-handler.spec.ts
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.ts b/backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command-handler.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command-handler.ts
+rename to backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command-handler.ts
+diff --git a/backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command.ts b/backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-author-chapter/update-author-chapter.command.ts
+rename to backend/src/modules/chapters/application/commands/update-author-chapter/update-author-chapter.command.ts
+diff --git a/backend/src/modules/stories/application/dto/chapter-result.dto.ts b/backend/src/modules/chapters/application/dto/chapter-result.dto.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/dto/chapter-result.dto.ts
+rename to backend/src/modules/chapters/application/dto/chapter-result.dto.ts
+diff --git a/backend/src/modules/stories/application/dto/chapter-summary-result.dto.ts b/backend/src/modules/chapters/application/dto/chapter-summary-result.dto.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/dto/chapter-summary-result.dto.ts
+rename to backend/src/modules/chapters/application/dto/chapter-summary-result.dto.ts
+diff --git a/backend/src/modules/chapters/application/dto/index.ts b/backend/src/modules/chapters/application/dto/index.ts
+new file mode 100644
+index 0000000..8e83cdb
+--- /dev/null
++++ b/backend/src/modules/chapters/application/dto/index.ts
+@@ -0,0 +1,3 @@
++export * from './chapter-result.dto';
++export * from './chapter-summary-result.dto';
++export * from './public-chapter-reader-result.dto';
+diff --git a/backend/src/modules/stories/application/dto/public-chapter-reader-result.dto.ts b/backend/src/modules/chapters/application/dto/public-chapter-reader-result.dto.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/dto/public-chapter-reader-result.dto.ts
+rename to backend/src/modules/chapters/application/dto/public-chapter-reader-result.dto.ts
+diff --git a/backend/src/modules/chapters/application/index.ts b/backend/src/modules/chapters/application/index.ts
+new file mode 100644
+index 0000000..e15658b
+--- /dev/null
++++ b/backend/src/modules/chapters/application/index.ts
+@@ -0,0 +1,5 @@
++export * from './commands';
++export * from './queries';
++export * from './dto';
++export * from './mappers';
++export * from './ports';
+diff --git a/backend/src/modules/stories/application/mappers/chapter-result.mapper.ts b/backend/src/modules/chapters/application/mappers/chapter-result.mapper.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/mappers/chapter-result.mapper.ts
+rename to backend/src/modules/chapters/application/mappers/chapter-result.mapper.ts
+diff --git a/backend/src/modules/stories/application/mappers/chapter-summary-result.mapper.ts b/backend/src/modules/chapters/application/mappers/chapter-summary-result.mapper.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/mappers/chapter-summary-result.mapper.ts
+rename to backend/src/modules/chapters/application/mappers/chapter-summary-result.mapper.ts
+diff --git a/backend/src/modules/chapters/application/mappers/index.ts b/backend/src/modules/chapters/application/mappers/index.ts
+new file mode 100644
+index 0000000..d8ea426
+--- /dev/null
++++ b/backend/src/modules/chapters/application/mappers/index.ts
+@@ -0,0 +1,2 @@
++export * from './chapter-result.mapper';
++export * from './chapter-summary-result.mapper';
+diff --git a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts b/backend/src/modules/chapters/application/ports/chapter.persistence.port.ts
+similarity index 92%
+rename from backend/src/modules/stories/application/ports/chapter.persistence.port.ts
+rename to backend/src/modules/chapters/application/ports/chapter.persistence.port.ts
+index 8595cff..e9b42de 100644
+--- a/backend/src/modules/stories/application/ports/chapter.persistence.port.ts
++++ b/backend/src/modules/chapters/application/ports/chapter.persistence.port.ts
+@@ -1,8 +1,13 @@
+ import type { PublicChapterReaderDto } from '../dto';
+-import type { StoryAuditContext } from './story.persistence.port';
+ 
+ export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
+ 
++export interface ChapterAuditContext {
++  readonly ipAddress?: string;
++  readonly userAgent?: string;
++  readonly requestId?: string;
++}
++
+ export interface ChapterRecord {
+   readonly id: string;
+ 
+@@ -65,7 +70,7 @@ export interface CreateAuthorChapterInput {
+ 
+   readonly createdAt: Date;
+ 
+-  readonly audit: StoryAuditContext;
++  readonly audit: ChapterAuditContext;
+ }
+ 
+ export type CreateAuthorChapterResult =
+@@ -96,7 +101,7 @@ export interface UpdateAuthorChapterInput {
+ 
+   readonly updatedAt: Date;
+ 
+-  readonly audit: StoryAuditContext;
++  readonly audit: ChapterAuditContext;
+ }
+ 
+ export type UpdateAuthorChapterResult =
+@@ -124,7 +129,7 @@ export interface DeleteAuthorChapterInput {
+ 
+   readonly deletedAt: Date;
+ 
+-  readonly audit: StoryAuditContext;
++  readonly audit: ChapterAuditContext;
+ }
+ 
+ export type DeleteAuthorChapterResult =
+@@ -150,7 +155,7 @@ export interface PublishAuthorChapterInput {
+ 
+   readonly publishedAt: Date;
+ 
+-  readonly audit: StoryAuditContext;
++  readonly audit: ChapterAuditContext;
+ }
+ 
+ export type PublishAuthorChapterResult =
+diff --git a/backend/src/modules/chapters/application/ports/index.ts b/backend/src/modules/chapters/application/ports/index.ts
+new file mode 100644
+index 0000000..3040d7e
+--- /dev/null
++++ b/backend/src/modules/chapters/application/ports/index.ts
+@@ -0,0 +1 @@
++export * from './chapter.persistence.port';
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts b/backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts
+rename to backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query-handler.spec.ts
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.ts b/backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query-handler.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query-handler.ts
+rename to backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query-handler.ts
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query.ts b/backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-author-chapter/get-author-chapter.query.ts
+rename to backend/src/modules/chapters/application/queries/get-author-chapter/get-author-chapter.query.ts
+diff --git a/backend/src/modules/stories/application/queries/get-author-chapter/index.ts b/backend/src/modules/chapters/application/queries/get-author-chapter/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-author-chapter/index.ts
+rename to backend/src/modules/chapters/application/queries/get-author-chapter/index.ts
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts b/backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts
+rename to backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.spec.ts
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts b/backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts
+rename to backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query-handler.ts
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts b/backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts
+rename to backend/src/modules/chapters/application/queries/get-public-chapter-reader/get-public-chapter-reader.query.ts
+diff --git a/backend/src/modules/stories/application/queries/get-public-chapter-reader/index.ts b/backend/src/modules/chapters/application/queries/get-public-chapter-reader/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/get-public-chapter-reader/index.ts
+rename to backend/src/modules/chapters/application/queries/get-public-chapter-reader/index.ts
+diff --git a/backend/src/modules/chapters/application/queries/index.ts b/backend/src/modules/chapters/application/queries/index.ts
+new file mode 100644
+index 0000000..75b4427
+--- /dev/null
++++ b/backend/src/modules/chapters/application/queries/index.ts
+@@ -0,0 +1,3 @@
++export * from './get-author-chapter';
++export * from './list-author-chapters';
++export * from './get-public-chapter-reader';
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/index.ts b/backend/src/modules/chapters/application/queries/list-author-chapters/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-author-chapters/index.ts
+rename to backend/src/modules/chapters/application/queries/list-author-chapters/index.ts
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts b/backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+similarity index 93%
+rename from backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+rename to backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+index 360abae..1d172d2 100644
+--- a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
++++ b/backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.spec.ts
+@@ -1,6 +1,6 @@
+ import { AuthenticationRequiredException } from '@/common/exceptions';
+ 
+-import { StoryNotFoundException } from '../../../domain';
++import { ChapterStoryNotFoundException } from '../../../domain';
+ import { ListAuthorChaptersQuery } from './list-author-chapters.query';
+ import { ListAuthorChaptersQueryHandler } from './list-author-chapters.query-handler';
+ 
+@@ -28,7 +28,7 @@ describe('ListAuthorChaptersQueryHandler', () => {
+ 
+     await expect(
+       handler.execute(new ListAuthorChaptersQuery(USER_ID, STORY_ID)),
+-    ).rejects.toBeInstanceOf(StoryNotFoundException);
++    ).rejects.toBeInstanceOf(ChapterStoryNotFoundException);
+   });
+ 
+   it('map chapter summaries mà không cần load content', async () => {
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts b/backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+similarity index 91%
+rename from backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+rename to backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+index 0c76a7f..113e211 100644
+--- a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
++++ b/backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query-handler.ts
+@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
+ import { AuthenticationRequiredException } from '@/common/exceptions';
+ import { isUuidV4 } from '@/common/utils';
+ 
+-import { StoryNotFoundException } from '../../../domain';
++import { ChapterStoryNotFoundException } from '../../../domain';
+ import type { ChapterSummaryResultDto } from '../../dto';
+ import { ChapterSummaryResultMapper } from '../../mappers';
+ import {
+@@ -29,7 +29,7 @@ export class ListAuthorChaptersQueryHandler {
+     );
+ 
+     if (result === null) {
+-      throw new StoryNotFoundException(query.storyId);
++      throw new ChapterStoryNotFoundException(query.storyId);
+     }
+ 
+     return result.map((chapter) => ChapterSummaryResultMapper.toDto(chapter));
+diff --git a/backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query.ts b/backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-author-chapters/list-author-chapters.query.ts
+rename to backend/src/modules/chapters/application/queries/list-author-chapters/list-author-chapters.query.ts
+diff --git a/backend/src/modules/chapters/chapters.module.ts b/backend/src/modules/chapters/chapters.module.ts
+new file mode 100644
+index 0000000..aaa85b5
+--- /dev/null
++++ b/backend/src/modules/chapters/chapters.module.ts
+@@ -0,0 +1,39 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthorsModule } from '@/modules/authors';
++import {
++  CHAPTER_PERSISTENCE_PORT,
++  CreateAuthorChapterCommandHandler,
++  DeleteAuthorChapterCommandHandler,
++  GetAuthorChapterQueryHandler,
++  GetPublicChapterReaderQueryHandler,
++  ListAuthorChaptersQueryHandler,
++  PublishAuthorChapterCommandHandler,
++  UpdateAuthorChapterCommandHandler,
++} from './application';
++import { PrismaChapterPersistence } from './infrastructure';
++import {
++  AuthorChaptersController,
++  PublicChaptersController,
++} from './presentation';
++
++@Module({
++  imports: [PrismaModule, AuthorsModule],
++  controllers: [AuthorChaptersController, PublicChaptersController],
++  providers: [
++    CreateAuthorChapterCommandHandler,
++    UpdateAuthorChapterCommandHandler,
++    DeleteAuthorChapterCommandHandler,
++    ListAuthorChaptersQueryHandler,
++    GetAuthorChapterQueryHandler,
++    PublishAuthorChapterCommandHandler,
++    GetPublicChapterReaderQueryHandler,
++    PrismaChapterPersistence,
++    {
++      provide: CHAPTER_PERSISTENCE_PORT,
++      useExisting: PrismaChapterPersistence,
++    },
++  ],
++  exports: [CHAPTER_PERSISTENCE_PORT],
++})
++export class ChaptersModule {}
+diff --git a/backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts b/backend/src/modules/chapters/domain/exceptions/chapter.exceptions.ts
+similarity index 88%
+rename from backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts
+rename to backend/src/modules/chapters/domain/exceptions/chapter.exceptions.ts
+index 54a6c1d..57fdabb 100644
+--- a/backend/src/modules/stories/domain/exceptions/chapter.exceptions.ts
++++ b/backend/src/modules/chapters/domain/exceptions/chapter.exceptions.ts
+@@ -16,6 +16,17 @@ export class InvalidChapterFieldException extends InvalidInputException {
+   }
+ }
+ 
++export class ChapterStoryNotFoundException extends ResourceNotFoundException {
++  constructor(storyId?: string) {
++    super({
++      code: 'STORY_NOT_FOUND',
++      resource: 'truyện',
++      ...(storyId ? { identifier: storyId } : {}),
++      message: 'Không tìm thấy truyện',
++    });
++  }
++}
++
+ export class ChapterNotFoundException extends ResourceNotFoundException {
+   constructor(chapterId?: string) {
+     super({
+diff --git a/backend/src/modules/chapters/domain/exceptions/index.ts b/backend/src/modules/chapters/domain/exceptions/index.ts
+new file mode 100644
+index 0000000..09ce85d
+--- /dev/null
++++ b/backend/src/modules/chapters/domain/exceptions/index.ts
+@@ -0,0 +1 @@
++export * from './chapter.exceptions';
+diff --git a/backend/src/modules/chapters/domain/index.ts b/backend/src/modules/chapters/domain/index.ts
+new file mode 100644
+index 0000000..e3e3e02
+--- /dev/null
++++ b/backend/src/modules/chapters/domain/index.ts
+@@ -0,0 +1,3 @@
++export * from './exceptions';
++export * from './policies';
++export * from './value-objects';
+diff --git a/backend/src/modules/stories/domain/policies/chapter-draft.policy.ts b/backend/src/modules/chapters/domain/policies/chapter-draft.policy.ts
+similarity index 100%
+rename from backend/src/modules/stories/domain/policies/chapter-draft.policy.ts
+rename to backend/src/modules/chapters/domain/policies/chapter-draft.policy.ts
+diff --git a/backend/src/modules/chapters/domain/policies/index.ts b/backend/src/modules/chapters/domain/policies/index.ts
+new file mode 100644
+index 0000000..8b70e35
+--- /dev/null
++++ b/backend/src/modules/chapters/domain/policies/index.ts
+@@ -0,0 +1 @@
++export * from './chapter-draft.policy';
+diff --git a/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.spec.ts b/backend/src/modules/chapters/domain/value-objects/chapter-fields.value-object.spec.ts
+similarity index 100%
+rename from backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.spec.ts
+rename to backend/src/modules/chapters/domain/value-objects/chapter-fields.value-object.spec.ts
+diff --git a/backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.ts b/backend/src/modules/chapters/domain/value-objects/chapter-fields.value-object.ts
+similarity index 100%
+rename from backend/src/modules/stories/domain/value-objects/chapter-fields.value-object.ts
+rename to backend/src/modules/chapters/domain/value-objects/chapter-fields.value-object.ts
+diff --git a/backend/src/modules/chapters/domain/value-objects/index.ts b/backend/src/modules/chapters/domain/value-objects/index.ts
+new file mode 100644
+index 0000000..9322d19
+--- /dev/null
++++ b/backend/src/modules/chapters/domain/value-objects/index.ts
+@@ -0,0 +1 @@
++export * from './chapter-fields.value-object';
+diff --git a/backend/src/modules/chapters/index.ts b/backend/src/modules/chapters/index.ts
+new file mode 100644
+index 0000000..e65abaf
+--- /dev/null
++++ b/backend/src/modules/chapters/index.ts
+@@ -0,0 +1 @@
++export * from './chapters.module';
+diff --git a/backend/src/modules/chapters/infrastructure/index.ts b/backend/src/modules/chapters/infrastructure/index.ts
+new file mode 100644
+index 0000000..ca18ac1
+--- /dev/null
++++ b/backend/src/modules/chapters/infrastructure/index.ts
+@@ -0,0 +1 @@
++export * from './persistence';
+diff --git a/backend/src/modules/chapters/infrastructure/persistence/index.ts b/backend/src/modules/chapters/infrastructure/persistence/index.ts
+new file mode 100644
+index 0000000..4a36fa2
+--- /dev/null
++++ b/backend/src/modules/chapters/infrastructure/persistence/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-chapter.persistence';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts b/backend/src/modules/chapters/infrastructure/persistence/prisma-chapter.persistence.ts
+similarity index 100%
+rename from backend/src/modules/stories/infrastructure/persistence/prisma-chapter.persistence.ts
+rename to backend/src/modules/chapters/infrastructure/persistence/prisma-chapter.persistence.ts
+diff --git a/backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts b/backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/controllers/author-chapters.controller.ts
+rename to backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts
+diff --git a/backend/src/modules/chapters/presentation/http/controllers/chapter-idempotency-hardening.spec.ts b/backend/src/modules/chapters/presentation/http/controllers/chapter-idempotency-hardening.spec.ts
+new file mode 100644
+index 0000000..d64d779
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/controllers/chapter-idempotency-hardening.spec.ts
+@@ -0,0 +1,27 @@
++import { IDEMPOTENT_KEY } from '@/common/constants';
++import type { IdempotencyMetadata } from '@/common/decorators';
++import { AuthorChaptersController } from './author-chapters.controller';
++
++const EXPECTED = {
++  required: true,
++  ttlSeconds: 86_400,
++} satisfies IdempotencyMetadata;
++
++describe('Chapters HTTP idempotency hardening', () => {
++  it('create chapter requires an idempotency key', () => {
++    expect(
++      readMetadata(
++        // eslint-disable-next-line @typescript-eslint/unbound-method
++        AuthorChaptersController.prototype.create,
++      ),
++    ).toEqual(EXPECTED);
++  });
++});
++
++function readMetadata(
++  target: (...args: never[]) => unknown,
++): IdempotencyMetadata | undefined {
++  return Reflect.getMetadata(IDEMPOTENT_KEY, target) as
++    | IdempotencyMetadata
++    | undefined;
++}
+diff --git a/backend/src/modules/chapters/presentation/http/controllers/index.ts b/backend/src/modules/chapters/presentation/http/controllers/index.ts
+new file mode 100644
+index 0000000..36fa28f
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/controllers/index.ts
+@@ -0,0 +1,2 @@
++export * from './author-chapters.controller';
++export * from './public-chapters.controller';
+diff --git a/backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts b/backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts
+new file mode 100644
+index 0000000..b81285c
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts
+@@ -0,0 +1,30 @@
++import { Controller, Get, Param } from '@nestjs/common';
++import { Public } from '@/common/decorators';
++import {
++  GetPublicChapterReaderQuery,
++  GetPublicChapterReaderQueryHandler,
++} from '../../../application';
++import {
++  type PublicChapterReaderResponse,
++  toPublicChapterReaderResponse,
++} from '../responses';
++
++@Controller('stories')
++@Public()
++export class PublicChaptersController {
++  constructor(
++    private readonly getChapterReader: GetPublicChapterReaderQueryHandler,
++  ) {}
++
++  @Get(':storySlug/chapters/:chapterNumber')
++  async chapterReader(
++    @Param('storySlug') storySlug: string,
++    @Param('chapterNumber') chapterNumber: string,
++  ): Promise<PublicChapterReaderResponse> {
++    const result = await this.getChapterReader.execute(
++      new GetPublicChapterReaderQuery(storySlug, chapterNumber),
++    );
++
++    return toPublicChapterReaderResponse(result);
++  }
++}
+diff --git a/backend/src/modules/chapters/presentation/http/index.ts b/backend/src/modules/chapters/presentation/http/index.ts
+new file mode 100644
+index 0000000..853da3f
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/index.ts
+@@ -0,0 +1,3 @@
++export * from './controllers';
++export * from './requests';
++export * from './responses';
+diff --git a/backend/src/modules/stories/presentation/http/requests/create-author-chapter.request.ts b/backend/src/modules/chapters/presentation/http/requests/create-author-chapter.request.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/requests/create-author-chapter.request.ts
+rename to backend/src/modules/chapters/presentation/http/requests/create-author-chapter.request.ts
+diff --git a/backend/src/modules/chapters/presentation/http/requests/index.ts b/backend/src/modules/chapters/presentation/http/requests/index.ts
+new file mode 100644
+index 0000000..1aab0a8
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/requests/index.ts
+@@ -0,0 +1,2 @@
++export * from './create-author-chapter.request';
++export * from './update-author-chapter.request';
+diff --git a/backend/src/modules/stories/presentation/http/requests/update-author-chapter.request.ts b/backend/src/modules/chapters/presentation/http/requests/update-author-chapter.request.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/requests/update-author-chapter.request.ts
+rename to backend/src/modules/chapters/presentation/http/requests/update-author-chapter.request.ts
+diff --git a/backend/src/modules/stories/presentation/http/responses/chapter-summary.response.ts b/backend/src/modules/chapters/presentation/http/responses/chapter-summary.response.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/responses/chapter-summary.response.ts
+rename to backend/src/modules/chapters/presentation/http/responses/chapter-summary.response.ts
+diff --git a/backend/src/modules/stories/presentation/http/responses/chapter.response.ts b/backend/src/modules/chapters/presentation/http/responses/chapter.response.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/responses/chapter.response.ts
+rename to backend/src/modules/chapters/presentation/http/responses/chapter.response.ts
+diff --git a/backend/src/modules/chapters/presentation/http/responses/index.ts b/backend/src/modules/chapters/presentation/http/responses/index.ts
+new file mode 100644
+index 0000000..3dc082e
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/http/responses/index.ts
+@@ -0,0 +1,3 @@
++export * from './chapter.response';
++export * from './chapter-summary.response';
++export * from './public-chapter-reader.response';
+diff --git a/backend/src/modules/stories/presentation/http/responses/public-chapter-reader.response.ts b/backend/src/modules/chapters/presentation/http/responses/public-chapter-reader.response.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/responses/public-chapter-reader.response.ts
+rename to backend/src/modules/chapters/presentation/http/responses/public-chapter-reader.response.ts
+diff --git a/backend/src/modules/chapters/presentation/index.ts b/backend/src/modules/chapters/presentation/index.ts
+new file mode 100644
+index 0000000..c202386
+--- /dev/null
++++ b/backend/src/modules/chapters/presentation/index.ts
+@@ -0,0 +1 @@
++export * from './http';
+diff --git a/backend/src/modules/stories/application/commands/create-story-comment/create-story-comment.command-handler.ts b/backend/src/modules/comments/application/commands/create-story-comment/create-story-comment.command-handler.ts
+similarity index 61%
+rename from backend/src/modules/stories/application/commands/create-story-comment/create-story-comment.command-handler.ts
+rename to backend/src/modules/comments/application/commands/create-story-comment/create-story-comment.command-handler.ts
+index 1305689..728ac03 100644
+--- a/backend/src/modules/stories/application/commands/create-story-comment/create-story-comment.command-handler.ts
++++ b/backend/src/modules/comments/application/commands/create-story-comment/create-story-comment.command-handler.ts
+@@ -1,25 +1,27 @@
+ import { Inject, Injectable } from '@nestjs/common';
+-import { MetricsService } from '@/infrastructure/observability';
+ import {
+-  ChapterNotFoundException,
+-  StoryNotFoundException,
++  CommentChapterNotFoundException,
++  CommentStoryNotFoundException,
+ } from '../../../domain';
+-import { CommentWriteAbuseService } from '@/modules/comments';
++import { CommentWriteAbuseService } from '../../comment-write-abuse.service';
+ import type { StoryCommentResultDto } from '../../dto';
+ import {
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  type ReaderEngagementPersistencePort,
++  COMMENT_METRICS_PORT,
++  COMMENT_PERSISTENCE_PORT,
++  type CommentMetricsPort,
++  type CommentPersistencePort,
+ } from '../../ports';
+-import { requireReaderUserId } from '../../reader-engagement.util';
++import { requireReaderUserId } from '../../comment-auth.util';
+ import { CreateStoryCommentCommand } from './create-story-comment.command';
+ 
+ @Injectable()
+ export class CreateStoryCommentCommandHandler {
+   constructor(
+-    @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
+-    private readonly persistence: ReaderEngagementPersistencePort,
++    @Inject(COMMENT_PERSISTENCE_PORT)
++    private readonly persistence: CommentPersistencePort,
+     private readonly abuse: CommentWriteAbuseService,
+-    private readonly metrics: MetricsService,
++    @Inject(COMMENT_METRICS_PORT)
++    private readonly metrics: CommentMetricsPort,
+   ) {}
+ 
+   async execute(
+@@ -44,13 +46,13 @@ export class CreateStoryCommentCommandHandler {
+ 
+     switch (result.status) {
+       case 'created':
+-        this.metrics.recordCommentOperation('create');
++        this.metrics.recordOperation('create');
+         return result.comment;
+       case 'chapter_not_found':
+-        throw new ChapterNotFoundException(command.chapterId);
++        throw new CommentChapterNotFoundException(command.chapterId);
+       case 'story_not_found':
+       default:
+-        throw new StoryNotFoundException(command.storyId);
++        throw new CommentStoryNotFoundException(command.storyId);
+     }
+   }
+ }
+diff --git a/backend/src/modules/stories/application/commands/create-story-comment/create-story-comment.command.ts b/backend/src/modules/comments/application/commands/create-story-comment/create-story-comment.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/create-story-comment/create-story-comment.command.ts
+rename to backend/src/modules/comments/application/commands/create-story-comment/create-story-comment.command.ts
+diff --git a/backend/src/modules/stories/application/commands/create-story-comment/index.ts b/backend/src/modules/comments/application/commands/create-story-comment/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/create-story-comment/index.ts
+rename to backend/src/modules/comments/application/commands/create-story-comment/index.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command-handler.ts b/backend/src/modules/comments/application/commands/delete-story-comment/delete-story-comment.command-handler.ts
+similarity index 61%
+rename from backend/src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command-handler.ts
+rename to backend/src/modules/comments/application/commands/delete-story-comment/delete-story-comment.command-handler.ts
+index fff4132..0ffee24 100644
+--- a/backend/src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command-handler.ts
++++ b/backend/src/modules/comments/application/commands/delete-story-comment/delete-story-comment.command-handler.ts
+@@ -1,19 +1,21 @@
+ import { Inject, Injectable } from '@nestjs/common';
+-import { MetricsService } from '@/infrastructure/observability';
+ import { CommentNotFoundException } from '../../../domain';
+ import {
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  type ReaderEngagementPersistencePort,
++  COMMENT_METRICS_PORT,
++  COMMENT_PERSISTENCE_PORT,
++  type CommentMetricsPort,
++  type CommentPersistencePort,
+ } from '../../ports';
+-import { requireReaderUserId } from '../../reader-engagement.util';
++import { requireReaderUserId } from '../../comment-auth.util';
+ import { DeleteStoryCommentCommand } from './delete-story-comment.command';
+ 
+ @Injectable()
+ export class DeleteStoryCommentCommandHandler {
+   constructor(
+-    @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
+-    private readonly persistence: ReaderEngagementPersistencePort,
+-    private readonly metrics: MetricsService,
++    @Inject(COMMENT_PERSISTENCE_PORT)
++    private readonly persistence: CommentPersistencePort,
++    @Inject(COMMENT_METRICS_PORT)
++    private readonly metrics: CommentMetricsPort,
+   ) {}
+ 
+   async execute(command: DeleteStoryCommentCommand): Promise<void> {
+@@ -25,6 +27,6 @@ export class DeleteStoryCommentCommandHandler {
+     if (result.status === 'not_found') {
+       throw new CommentNotFoundException(command.commentId);
+     }
+-    this.metrics.recordCommentOperation('delete');
++    this.metrics.recordOperation('delete');
+   }
+ }
+diff --git a/backend/src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command.ts b/backend/src/modules/comments/application/commands/delete-story-comment/delete-story-comment.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-story-comment/delete-story-comment.command.ts
+rename to backend/src/modules/comments/application/commands/delete-story-comment/delete-story-comment.command.ts
+diff --git a/backend/src/modules/stories/application/commands/delete-story-comment/index.ts b/backend/src/modules/comments/application/commands/delete-story-comment/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/delete-story-comment/index.ts
+rename to backend/src/modules/comments/application/commands/delete-story-comment/index.ts
+diff --git a/backend/src/modules/comments/application/commands/index.ts b/backend/src/modules/comments/application/commands/index.ts
+new file mode 100644
+index 0000000..390335a
+--- /dev/null
++++ b/backend/src/modules/comments/application/commands/index.ts
+@@ -0,0 +1,3 @@
++export * from './create-story-comment';
++export * from './update-story-comment';
++export * from './delete-story-comment';
+diff --git a/backend/src/modules/stories/application/commands/update-story-comment/index.ts b/backend/src/modules/comments/application/commands/update-story-comment/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-story-comment/index.ts
+rename to backend/src/modules/comments/application/commands/update-story-comment/index.ts
+diff --git a/backend/src/modules/stories/application/commands/update-story-comment/update-story-comment.command-handler.ts b/backend/src/modules/comments/application/commands/update-story-comment/update-story-comment.command-handler.ts
+similarity index 60%
+rename from backend/src/modules/stories/application/commands/update-story-comment/update-story-comment.command-handler.ts
+rename to backend/src/modules/comments/application/commands/update-story-comment/update-story-comment.command-handler.ts
+index a7ad796..d57410d 100644
+--- a/backend/src/modules/stories/application/commands/update-story-comment/update-story-comment.command-handler.ts
++++ b/backend/src/modules/comments/application/commands/update-story-comment/update-story-comment.command-handler.ts
+@@ -1,31 +1,33 @@
+ import { Inject, Injectable } from '@nestjs/common';
+-import { MetricsService } from '@/infrastructure/observability';
+ import {
+   CommentNotFoundException,
+   InvalidCommentBodyException,
+-  ReaderEngagementPolicy,
++  CommentPolicy,
+ } from '../../../domain';
+ import type { StoryCommentResultDto } from '../../dto';
+ import {
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  type ReaderEngagementPersistencePort,
++  COMMENT_METRICS_PORT,
++  COMMENT_PERSISTENCE_PORT,
++  type CommentMetricsPort,
++  type CommentPersistencePort,
+ } from '../../ports';
+-import { requireReaderUserId } from '../../reader-engagement.util';
++import { requireReaderUserId } from '../../comment-auth.util';
+ import { UpdateStoryCommentCommand } from './update-story-comment.command';
+ 
+ @Injectable()
+ export class UpdateStoryCommentCommandHandler {
+   constructor(
+-    @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
+-    private readonly persistence: ReaderEngagementPersistencePort,
+-    private readonly metrics: MetricsService,
++    @Inject(COMMENT_PERSISTENCE_PORT)
++    private readonly persistence: CommentPersistencePort,
++    @Inject(COMMENT_METRICS_PORT)
++    private readonly metrics: CommentMetricsPort,
+   ) {}
+ 
+   async execute(
+     command: UpdateStoryCommentCommand,
+   ): Promise<StoryCommentResultDto> {
+-    const body = ReaderEngagementPolicy.normalizeCommentBody(command.body);
+-    if (!ReaderEngagementPolicy.isValidCommentBody(body)) {
++    const body = command.body.trim();
++    if (body.length < 1 || body.length > CommentPolicy.MAX_LENGTH) {
+       throw new InvalidCommentBodyException();
+     }
+ 
+@@ -38,7 +40,7 @@ export class UpdateStoryCommentCommandHandler {
+     if (result.status === 'not_found') {
+       throw new CommentNotFoundException(command.commentId);
+     }
+-    this.metrics.recordCommentOperation('update');
++    this.metrics.recordOperation('update');
+     return result.comment;
+   }
+ }
+diff --git a/backend/src/modules/stories/application/commands/update-story-comment/update-story-comment.command.ts b/backend/src/modules/comments/application/commands/update-story-comment/update-story-comment.command.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/commands/update-story-comment/update-story-comment.command.ts
+rename to backend/src/modules/comments/application/commands/update-story-comment/update-story-comment.command.ts
+diff --git a/backend/src/modules/stories/application/reader-engagement.util.ts b/backend/src/modules/comments/application/comment-auth.util.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/reader-engagement.util.ts
+rename to backend/src/modules/comments/application/comment-auth.util.ts
+diff --git a/backend/src/modules/comments/application/comments.service.ts b/backend/src/modules/comments/application/comments.service.ts
+index c9ccd78..8af586a 100644
+--- a/backend/src/modules/comments/application/comments.service.ts
++++ b/backend/src/modules/comments/application/comments.service.ts
+@@ -31,7 +31,7 @@ import type {
+   ReactionName,
+   ReactionSummaryView,
+   ReportReasonName,
+-} from './comment.models';
++} from './dto/comment.models';
+ 
+ const REACTION_NAMES: readonly ReactionName[] = [
+   'LIKE',
+diff --git a/backend/src/modules/stories/application/dto/reader-engagement-result.dto.ts b/backend/src/modules/comments/application/dto/comment-result.dto.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/dto/reader-engagement-result.dto.ts
+rename to backend/src/modules/comments/application/dto/comment-result.dto.ts
+diff --git a/backend/src/modules/comments/application/comment.models.ts b/backend/src/modules/comments/application/dto/comment.models.ts
+similarity index 100%
+rename from backend/src/modules/comments/application/comment.models.ts
+rename to backend/src/modules/comments/application/dto/comment.models.ts
+diff --git a/backend/src/modules/comments/application/dto/index.ts b/backend/src/modules/comments/application/dto/index.ts
+new file mode 100644
+index 0000000..f90e32e
+--- /dev/null
++++ b/backend/src/modules/comments/application/dto/index.ts
+@@ -0,0 +1,2 @@
++export * from './comment-result.dto';
++export * from './comment.models';
+diff --git a/backend/src/modules/comments/application/index.ts b/backend/src/modules/comments/application/index.ts
+index be6566b..5f46ff7 100644
+--- a/backend/src/modules/comments/application/index.ts
++++ b/backend/src/modules/comments/application/index.ts
+@@ -1,4 +1,9 @@
+-export * from './comment.models';
+ export * from './comments.service';
+ export * from './comment-write-abuse.service';
+ export * from './abuse-rate-limiter.service';
++
++export * from './commands';
++export * from './queries';
++export * from './dto';
++export * from './ports';
++export * from './comment-auth.util';
+diff --git a/backend/src/modules/comments/application/ports/comment-metrics.port.ts b/backend/src/modules/comments/application/ports/comment-metrics.port.ts
+new file mode 100644
+index 0000000..02ce00a
+--- /dev/null
++++ b/backend/src/modules/comments/application/ports/comment-metrics.port.ts
+@@ -0,0 +1,5 @@
++export const COMMENT_METRICS_PORT = Symbol('COMMENT_METRICS_PORT');
++
++export interface CommentMetricsPort {
++  recordOperation(operation: 'create' | 'update' | 'delete'): void;
++}
+diff --git a/backend/src/modules/stories/application/ports/reader-engagement.persistence.port.ts b/backend/src/modules/comments/application/ports/comment.persistence.port.ts
+similarity index 89%
+rename from backend/src/modules/stories/application/ports/reader-engagement.persistence.port.ts
+rename to backend/src/modules/comments/application/ports/comment.persistence.port.ts
+index 675c909..51702ab 100644
+--- a/backend/src/modules/stories/application/ports/reader-engagement.persistence.port.ts
++++ b/backend/src/modules/comments/application/ports/comment.persistence.port.ts
+@@ -1,11 +1,9 @@
+ import type {
+   StoryCommentPageResultDto,
+   StoryCommentResultDto,
+-} from '../dto/reader-engagement-result.dto';
++} from '../dto/comment-result.dto';
+ 
+-export const READER_ENGAGEMENT_PERSISTENCE_PORT = Symbol(
+-  'READER_ENGAGEMENT_PERSISTENCE_PORT',
+-);
++export const COMMENT_PERSISTENCE_PORT = Symbol('COMMENT_PERSISTENCE_PORT');
+ 
+ export interface CreateStoryCommentInput {
+   readonly userId: string;
+@@ -52,7 +50,7 @@ export type ListCommentsResult =
+   | { readonly status: 'story_not_found' }
+   | { readonly status: 'chapter_not_found' };
+ 
+-export interface ReaderEngagementPersistencePort {
++export interface CommentPersistencePort {
+   listComments(input: ListCommentsInput): Promise<ListCommentsResult>;
+   createComment(
+     input: CreateStoryCommentInput,
+diff --git a/backend/src/modules/comments/application/ports/index.ts b/backend/src/modules/comments/application/ports/index.ts
+new file mode 100644
+index 0000000..7348883
+--- /dev/null
++++ b/backend/src/modules/comments/application/ports/index.ts
+@@ -0,0 +1,2 @@
++export * from './comment.persistence.port';
++export * from './comment-metrics.port';
+diff --git a/backend/src/modules/comments/application/queries/index.ts b/backend/src/modules/comments/application/queries/index.ts
+new file mode 100644
+index 0000000..383847b
+--- /dev/null
++++ b/backend/src/modules/comments/application/queries/index.ts
+@@ -0,0 +1,2 @@
++export * from './list-story-comments';
++export * from './list-chapter-comments';
+diff --git a/backend/src/modules/stories/application/queries/list-chapter-comments/index.ts b/backend/src/modules/comments/application/queries/list-chapter-comments/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-chapter-comments/index.ts
+rename to backend/src/modules/comments/application/queries/list-chapter-comments/index.ts
+diff --git a/backend/src/modules/stories/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts b/backend/src/modules/comments/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts
+similarity index 68%
+rename from backend/src/modules/stories/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts
+rename to backend/src/modules/comments/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts
+index 1dd9e02..87d244c 100644
+--- a/backend/src/modules/stories/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts
++++ b/backend/src/modules/comments/application/queries/list-chapter-comments/list-chapter-comments.query-handler.ts
+@@ -1,20 +1,20 @@
+ import { Inject, Injectable } from '@nestjs/common';
+ import {
+-  ChapterNotFoundException,
+-  StoryNotFoundException,
++  CommentChapterNotFoundException,
++  CommentStoryNotFoundException,
+ } from '../../../domain';
+ import type { StoryCommentPageResultDto } from '../../dto';
+ import {
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  type ReaderEngagementPersistencePort,
++  COMMENT_PERSISTENCE_PORT,
++  type CommentPersistencePort,
+ } from '../../ports';
+ import { ListChapterCommentsQuery } from './list-chapter-comments.query';
+ 
+ @Injectable()
+ export class ListChapterCommentsQueryHandler {
+   constructor(
+-    @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
+-    private readonly persistence: ReaderEngagementPersistencePort,
++    @Inject(COMMENT_PERSISTENCE_PORT)
++    private readonly persistence: CommentPersistencePort,
+   ) {}
+ 
+   async execute(
+@@ -27,10 +27,10 @@ export class ListChapterCommentsQueryHandler {
+       pageSize: query.pageSize,
+     });
+     if (result.status === 'story_not_found') {
+-      throw new StoryNotFoundException(query.storySlug);
++      throw new CommentStoryNotFoundException(query.storySlug);
+     }
+     if (result.status === 'chapter_not_found') {
+-      throw new ChapterNotFoundException(query.chapterNumber);
++      throw new CommentChapterNotFoundException(query.chapterNumber);
+     }
+     return result.page;
+   }
+diff --git a/backend/src/modules/stories/application/queries/list-chapter-comments/list-chapter-comments.query.ts b/backend/src/modules/comments/application/queries/list-chapter-comments/list-chapter-comments.query.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-chapter-comments/list-chapter-comments.query.ts
+rename to backend/src/modules/comments/application/queries/list-chapter-comments/list-chapter-comments.query.ts
+diff --git a/backend/src/modules/stories/application/queries/list-story-comments/index.ts b/backend/src/modules/comments/application/queries/list-story-comments/index.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-story-comments/index.ts
+rename to backend/src/modules/comments/application/queries/list-story-comments/index.ts
+diff --git a/backend/src/modules/stories/application/queries/list-story-comments/list-story-comments.query-handler.ts b/backend/src/modules/comments/application/queries/list-story-comments/list-story-comments.query-handler.ts
+similarity index 67%
+rename from backend/src/modules/stories/application/queries/list-story-comments/list-story-comments.query-handler.ts
+rename to backend/src/modules/comments/application/queries/list-story-comments/list-story-comments.query-handler.ts
+index d4d62ac..3df5553 100644
+--- a/backend/src/modules/stories/application/queries/list-story-comments/list-story-comments.query-handler.ts
++++ b/backend/src/modules/comments/application/queries/list-story-comments/list-story-comments.query-handler.ts
+@@ -1,17 +1,17 @@
+ import { Inject, Injectable } from '@nestjs/common';
+-import { StoryNotFoundException } from '../../../domain';
++import { CommentStoryNotFoundException } from '../../../domain';
+ import type { StoryCommentPageResultDto } from '../../dto';
+ import {
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  type ReaderEngagementPersistencePort,
++  COMMENT_PERSISTENCE_PORT,
++  type CommentPersistencePort,
+ } from '../../ports';
+ import { ListStoryCommentsQuery } from './list-story-comments.query';
+ 
+ @Injectable()
+ export class ListStoryCommentsQueryHandler {
+   constructor(
+-    @Inject(READER_ENGAGEMENT_PERSISTENCE_PORT)
+-    private readonly persistence: ReaderEngagementPersistencePort,
++    @Inject(COMMENT_PERSISTENCE_PORT)
++    private readonly persistence: CommentPersistencePort,
+   ) {}
+ 
+   async execute(
+@@ -23,7 +23,7 @@ export class ListStoryCommentsQueryHandler {
+       pageSize: query.pageSize,
+     });
+     if (result.status !== 'found') {
+-      throw new StoryNotFoundException(query.storySlug);
++      throw new CommentStoryNotFoundException(query.storySlug);
+     }
+     return result.page;
+   }
+diff --git a/backend/src/modules/stories/application/queries/list-story-comments/list-story-comments.query.ts b/backend/src/modules/comments/application/queries/list-story-comments/list-story-comments.query.ts
+similarity index 100%
+rename from backend/src/modules/stories/application/queries/list-story-comments/list-story-comments.query.ts
+rename to backend/src/modules/comments/application/queries/list-story-comments/list-story-comments.query.ts
+diff --git a/backend/src/modules/comments/comments.module.ts b/backend/src/modules/comments/comments.module.ts
+index 09f49ff..e7cd3a1 100644
+--- a/backend/src/modules/comments/comments.module.ts
++++ b/backend/src/modules/comments/comments.module.ts
+@@ -3,18 +3,52 @@ import { RedisModule } from '@/infrastructure/cache/redis/redis.module';
+ import { PrismaModule } from '@/infrastructure/database';
+ import {
+   AbuseRateLimiterService,
++  COMMENT_METRICS_PORT,
++  COMMENT_PERSISTENCE_PORT,
+   CommentsService,
+   CommentWriteAbuseService,
++  CreateStoryCommentCommandHandler,
++  DeleteStoryCommentCommandHandler,
++  ListChapterCommentsQueryHandler,
++  ListStoryCommentsQueryHandler,
++  UpdateStoryCommentCommandHandler,
+ } from './application';
+-import { CommentsController } from './presentation/http/comments.controller';
++import {
++  MetricsCommentMetricsAdapter,
++  PrismaCommentPersistence,
++} from './infrastructure';
++import {
++  CommentsController,
++  CommentWriteController,
++  PublicCommentsController,
++} from './presentation';
+ 
+ @Module({
+   imports: [PrismaModule, RedisModule],
+-  controllers: [CommentsController],
++  controllers: [
++    CommentsController,
++    CommentWriteController,
++    PublicCommentsController,
++  ],
+   providers: [
+     CommentsService,
+     AbuseRateLimiterService,
+     CommentWriteAbuseService,
++    CreateStoryCommentCommandHandler,
++    UpdateStoryCommentCommandHandler,
++    DeleteStoryCommentCommandHandler,
++    ListStoryCommentsQueryHandler,
++    ListChapterCommentsQueryHandler,
++    PrismaCommentPersistence,
++    MetricsCommentMetricsAdapter,
++    {
++      provide: COMMENT_PERSISTENCE_PORT,
++      useExisting: PrismaCommentPersistence,
++    },
++    {
++      provide: COMMENT_METRICS_PORT,
++      useExisting: MetricsCommentMetricsAdapter,
++    },
+   ],
+   exports: [AbuseRateLimiterService, CommentWriteAbuseService],
+ })
+diff --git a/backend/src/modules/comments/domain/comment.exceptions.ts b/backend/src/modules/comments/domain/comment.exceptions.ts
+index 457ceb7..ac89f7e 100644
+--- a/backend/src/modules/comments/domain/comment.exceptions.ts
++++ b/backend/src/modules/comments/domain/comment.exceptions.ts
+@@ -5,6 +5,38 @@ import {
+   ServiceUnavailableException,
+ } from '@/common/exceptions';
+ 
++export class InvalidCommentBodyException extends InvalidInputException {
++  constructor() {
++    super({
++      code: 'COMMENT_INVALID_BODY',
++      message: 'Nội dung bình luận phải có từ 1 đến 4000 ký tự',
++      details: { field: 'body' },
++    });
++  }
++}
++
++export class CommentStoryNotFoundException extends ResourceNotFoundException {
++  constructor(id?: string) {
++    super({
++      code: 'STORY_NOT_FOUND',
++      resource: 'truyện',
++      identifier: id,
++      message: 'Không tìm thấy truyện',
++    });
++  }
++}
++
++export class CommentChapterNotFoundException extends ResourceNotFoundException {
++  constructor(id?: string) {
++    super({
++      code: 'CHAPTER_NOT_FOUND',
++      resource: 'chương',
++      identifier: id,
++      message: 'Không tìm thấy chương',
++    });
++  }
++}
++
+ export class CommentNotFoundException extends ResourceNotFoundException {
+   constructor(id?: string) {
+     super({
+diff --git a/backend/src/modules/comments/infrastructure/index.ts b/backend/src/modules/comments/infrastructure/index.ts
+new file mode 100644
+index 0000000..599a775
+--- /dev/null
++++ b/backend/src/modules/comments/infrastructure/index.ts
+@@ -0,0 +1,2 @@
++export * from './persistence';
++export * from './observability';
+diff --git a/backend/src/modules/comments/infrastructure/observability/index.ts b/backend/src/modules/comments/infrastructure/observability/index.ts
+new file mode 100644
+index 0000000..6916f15
+--- /dev/null
++++ b/backend/src/modules/comments/infrastructure/observability/index.ts
+@@ -0,0 +1 @@
++export * from './metrics-comment-metrics.adapter';
+diff --git a/backend/src/modules/comments/infrastructure/observability/metrics-comment-metrics.adapter.ts b/backend/src/modules/comments/infrastructure/observability/metrics-comment-metrics.adapter.ts
+new file mode 100644
+index 0000000..1e3f452
+--- /dev/null
++++ b/backend/src/modules/comments/infrastructure/observability/metrics-comment-metrics.adapter.ts
+@@ -0,0 +1,12 @@
++import { Injectable } from '@nestjs/common';
++import { MetricsService } from '@/infrastructure/observability';
++import type { CommentMetricsPort } from '../../application';
++
++@Injectable()
++export class MetricsCommentMetricsAdapter implements CommentMetricsPort {
++  constructor(private readonly metrics: MetricsService) {}
++
++  recordOperation(operation: 'create' | 'update' | 'delete'): void {
++    this.metrics.recordCommentOperation(operation);
++  }
++}
+diff --git a/backend/src/modules/comments/infrastructure/persistence/index.ts b/backend/src/modules/comments/infrastructure/persistence/index.ts
+new file mode 100644
+index 0000000..b0e4f09
+--- /dev/null
++++ b/backend/src/modules/comments/infrastructure/persistence/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-comment.persistence';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/prisma-reader-engagement.persistence.ts b/backend/src/modules/comments/infrastructure/persistence/prisma-comment.persistence.ts
+similarity index 99%
+rename from backend/src/modules/stories/infrastructure/persistence/prisma-reader-engagement.persistence.ts
+rename to backend/src/modules/comments/infrastructure/persistence/prisma-comment.persistence.ts
+index 3b1387c..0e8e9e8 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/prisma-reader-engagement.persistence.ts
++++ b/backend/src/modules/comments/infrastructure/persistence/prisma-comment.persistence.ts
+@@ -19,7 +19,7 @@ import type {
+   DeleteStoryCommentResult,
+   ListCommentsInput,
+   ListCommentsResult,
+-  ReaderEngagementPersistencePort,
++  CommentPersistencePort,
+   StoryCommentResultDto,
+   UpdateStoryCommentInput,
+   UpdateStoryCommentResult,
+@@ -72,7 +72,7 @@ const COMMENT_SELECT = {
+ type CommentRow = Prisma.CommentGetPayload<{ select: typeof COMMENT_SELECT }>;
+ 
+ @Injectable()
+-export class PrismaReaderEngagementPersistence implements ReaderEngagementPersistencePort {
++export class PrismaCommentPersistence implements CommentPersistencePort {
+   constructor(private readonly prisma: PrismaService) {}
+ 
+   async listComments(input: ListCommentsInput): Promise<ListCommentsResult> {
+diff --git a/backend/src/modules/stories/presentation/http/controllers/reader-engagement.controller.ts b/backend/src/modules/comments/presentation/http/controllers/comment-write.controller.ts
+similarity index 98%
+rename from backend/src/modules/stories/presentation/http/controllers/reader-engagement.controller.ts
+rename to backend/src/modules/comments/presentation/http/controllers/comment-write.controller.ts
+index 89fda24..7b860f4 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/reader-engagement.controller.ts
++++ b/backend/src/modules/comments/presentation/http/controllers/comment-write.controller.ts
+@@ -33,7 +33,7 @@ import {
+ } from '../requests';
+ 
+ @Controller()
+-export class ReaderEngagementController {
++export class CommentWriteController {
+   constructor(
+     private readonly createCommentCommand: CreateStoryCommentCommandHandler,
+     private readonly updateCommentCommand: UpdateStoryCommentCommandHandler,
+diff --git a/backend/src/modules/comments/presentation/http/comments.controller.ts b/backend/src/modules/comments/presentation/http/controllers/comments.controller.ts
+similarity index 87%
+rename from backend/src/modules/comments/presentation/http/comments.controller.ts
+rename to backend/src/modules/comments/presentation/http/controllers/comments.controller.ts
+index 3467573..e43b239 100644
+--- a/backend/src/modules/comments/presentation/http/comments.controller.ts
++++ b/backend/src/modules/comments/presentation/http/controllers/comments.controller.ts
+@@ -10,13 +10,6 @@ import {
+   Post,
+   Query,
+ } from '@nestjs/common';
+-import {
+-  IsEnum,
+-  IsOptional,
+-  IsString,
+-  MaxLength,
+-  MinLength,
+-} from 'class-validator';
+ import {
+   ClientIp,
+   CurrentUserId,
+@@ -29,30 +22,13 @@ import {
+   AuthenticationRequiredException,
+   InvalidInputException,
+ } from '@/common/exceptions';
+-import { ReactionType, ReportReason } from '@/generated/prisma/client';
+-import { CommentsService } from '../../application';
+-
+-class CreateReplyRequest {
+-  @IsString()
+-  @MinLength(1)
+-  @MaxLength(4000)
+-  body!: string;
+-}
+-
+-class SetReactionRequest {
+-  @IsEnum(ReactionType)
+-  type!: keyof typeof ReactionType;
+-}
+-
+-class CreateCommentReportRequest {
+-  @IsEnum(ReportReason)
+-  reason!: keyof typeof ReportReason;
++import { CommentsService } from '../../../application';
+ 
+-  @IsOptional()
+-  @IsString()
+-  @MaxLength(2000)
+-  description?: string;
+-}
++import {
++  CreateCommentReportRequest,
++  CreateReplyRequest,
++  SetReactionRequest,
++} from '../requests';
+ 
+ @Controller('comments')
+ export class CommentsController {
+diff --git a/backend/src/modules/comments/presentation/http/controllers/index.ts b/backend/src/modules/comments/presentation/http/controllers/index.ts
+new file mode 100644
+index 0000000..d46ae52
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/controllers/index.ts
+@@ -0,0 +1,3 @@
++export * from './comments.controller';
++export * from './comment-write.controller';
++export * from './public-comments.controller';
+diff --git a/backend/src/modules/stories/presentation/http/controllers/public-story-comments.controller.ts b/backend/src/modules/comments/presentation/http/controllers/public-comments.controller.ts
+similarity index 96%
+rename from backend/src/modules/stories/presentation/http/controllers/public-story-comments.controller.ts
+rename to backend/src/modules/comments/presentation/http/controllers/public-comments.controller.ts
+index 8305a34..50f1869 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/public-story-comments.controller.ts
++++ b/backend/src/modules/comments/presentation/http/controllers/public-comments.controller.ts
+@@ -11,7 +11,7 @@ import { ListStoryCommentsRequest } from '../requests';
+ 
+ @Controller('stories')
+ @Public()
+-export class PublicStoryCommentsController {
++export class PublicCommentsController {
+   constructor(
+     private readonly listStoryComments: ListStoryCommentsQueryHandler,
+     private readonly listChapterComments: ListChapterCommentsQueryHandler,
+diff --git a/backend/src/modules/comments/presentation/http/index.ts b/backend/src/modules/comments/presentation/http/index.ts
+new file mode 100644
+index 0000000..876664b
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/index.ts
+@@ -0,0 +1,2 @@
++export * from './controllers';
++export * from './requests';
+diff --git a/backend/src/modules/comments/presentation/http/requests/create-comment-report.request.ts b/backend/src/modules/comments/presentation/http/requests/create-comment-report.request.ts
+new file mode 100644
+index 0000000..968598c
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/requests/create-comment-report.request.ts
+@@ -0,0 +1,12 @@
++import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
++import { ReportReason } from '@/generated/prisma/client';
++
++export class CreateCommentReportRequest {
++  @IsEnum(ReportReason)
++  reason!: keyof typeof ReportReason;
++
++  @IsOptional()
++  @IsString()
++  @MaxLength(2000)
++  description?: string;
++}
+diff --git a/backend/src/modules/comments/presentation/http/requests/create-reply.request.ts b/backend/src/modules/comments/presentation/http/requests/create-reply.request.ts
+new file mode 100644
+index 0000000..71eacf2
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/requests/create-reply.request.ts
+@@ -0,0 +1,9 @@
++import { IsString, MaxLength, MinLength } from 'class-validator';
++import { CommentPolicy } from '../../../domain';
++
++export class CreateReplyRequest {
++  @IsString()
++  @MinLength(1)
++  @MaxLength(CommentPolicy.MAX_LENGTH)
++  body!: string;
++}
+diff --git a/backend/src/modules/stories/presentation/http/requests/create-story-comment.request.ts b/backend/src/modules/comments/presentation/http/requests/create-story-comment.request.ts
+similarity index 57%
+rename from backend/src/modules/stories/presentation/http/requests/create-story-comment.request.ts
+rename to backend/src/modules/comments/presentation/http/requests/create-story-comment.request.ts
+index 12c0376..16d80cc 100644
+--- a/backend/src/modules/stories/presentation/http/requests/create-story-comment.request.ts
++++ b/backend/src/modules/comments/presentation/http/requests/create-story-comment.request.ts
+@@ -1,9 +1,9 @@
+ import { IsString, MaxLength, MinLength } from 'class-validator';
+-import { ReaderEngagementPolicy } from '../../../domain';
++import { CommentPolicy } from '../../../domain';
+ 
+ export class CreateStoryCommentRequest {
+   @IsString()
+   @MinLength(1)
+-  @MaxLength(ReaderEngagementPolicy.COMMENT_MAX_LENGTH)
++  @MaxLength(CommentPolicy.MAX_LENGTH)
+   body!: string;
+ }
+diff --git a/backend/src/modules/comments/presentation/http/requests/index.ts b/backend/src/modules/comments/presentation/http/requests/index.ts
+new file mode 100644
+index 0000000..57b6b86
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/requests/index.ts
+@@ -0,0 +1,6 @@
++export * from './create-story-comment.request';
++export * from './update-story-comment.request';
++export * from './list-story-comments.request';
++export * from './create-reply.request';
++export * from './set-reaction.request';
++export * from './create-comment-report.request';
+diff --git a/backend/src/modules/stories/presentation/http/requests/list-story-comments.request.ts b/backend/src/modules/comments/presentation/http/requests/list-story-comments.request.ts
+similarity index 100%
+rename from backend/src/modules/stories/presentation/http/requests/list-story-comments.request.ts
+rename to backend/src/modules/comments/presentation/http/requests/list-story-comments.request.ts
+diff --git a/backend/src/modules/comments/presentation/http/requests/set-reaction.request.ts b/backend/src/modules/comments/presentation/http/requests/set-reaction.request.ts
+new file mode 100644
+index 0000000..20df398
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/http/requests/set-reaction.request.ts
+@@ -0,0 +1,7 @@
++import { IsEnum } from 'class-validator';
++import { ReactionType } from '@/generated/prisma/client';
++
++export class SetReactionRequest {
++  @IsEnum(ReactionType)
++  type!: keyof typeof ReactionType;
++}
+diff --git a/backend/src/modules/stories/presentation/http/requests/update-story-comment.request.ts b/backend/src/modules/comments/presentation/http/requests/update-story-comment.request.ts
+similarity index 57%
+rename from backend/src/modules/stories/presentation/http/requests/update-story-comment.request.ts
+rename to backend/src/modules/comments/presentation/http/requests/update-story-comment.request.ts
+index c0fd8a1..81f16b0 100644
+--- a/backend/src/modules/stories/presentation/http/requests/update-story-comment.request.ts
++++ b/backend/src/modules/comments/presentation/http/requests/update-story-comment.request.ts
+@@ -1,9 +1,9 @@
+ import { IsString, MaxLength, MinLength } from 'class-validator';
+-import { ReaderEngagementPolicy } from '../../../domain';
++import { CommentPolicy } from '../../../domain';
+ 
+ export class UpdateStoryCommentRequest {
+   @IsString()
+   @MinLength(1)
+-  @MaxLength(ReaderEngagementPolicy.COMMENT_MAX_LENGTH)
++  @MaxLength(CommentPolicy.MAX_LENGTH)
+   body!: string;
+ }
+diff --git a/backend/src/modules/comments/presentation/index.ts b/backend/src/modules/comments/presentation/index.ts
+new file mode 100644
+index 0000000..c202386
+--- /dev/null
++++ b/backend/src/modules/comments/presentation/index.ts
+@@ -0,0 +1 @@
++export * from './http';
+diff --git a/backend/src/modules/stories/application/commands/index.ts b/backend/src/modules/stories/application/commands/index.ts
+index d233374..8f52513 100644
+--- a/backend/src/modules/stories/application/commands/index.ts
++++ b/backend/src/modules/stories/application/commands/index.ts
+@@ -1,14 +1,7 @@
+-export * from './create-author-chapter';
+ export * from './create-author-story';
+-export * from './delete-author-chapter';
+ export * from './delete-author-story';
+-export * from './update-author-chapter';
+ export * from './update-author-story';
+ export * from './submit-author-story';
+ export * from './cancel-author-story-submission';
+ export * from './approve-story-submission';
+ export * from './reject-story-submission';
+-export * from './publish-author-chapter';
+-export * from './create-story-comment';
+-export * from './update-story-comment';
+-export * from './delete-story-comment';
+diff --git a/backend/src/modules/stories/application/dto/index.ts b/backend/src/modules/stories/application/dto/index.ts
+index 29c4c38..365f990 100644
+--- a/backend/src/modules/stories/application/dto/index.ts
++++ b/backend/src/modules/stories/application/dto/index.ts
+@@ -1,7 +1,3 @@
+-export * from './chapter-result.dto';
+ export * from './story-result.dto';
+ export * from './story-taxonomy-result.dto';
+ export * from './public-story-result.dto';
+-export * from './public-chapter-reader-result.dto';
+-export * from './chapter-summary-result.dto';
+-export * from './reader-engagement-result.dto';
+diff --git a/backend/src/modules/stories/application/mappers/index.ts b/backend/src/modules/stories/application/mappers/index.ts
+index 375aea1..5755cfb 100644
+--- a/backend/src/modules/stories/application/mappers/index.ts
++++ b/backend/src/modules/stories/application/mappers/index.ts
+@@ -1,3 +1 @@
+-export * from './chapter-result.mapper';
+ export * from './story-result.mapper';
+-export * from './chapter-summary-result.mapper';
+diff --git a/backend/src/modules/stories/application/ports/index.ts b/backend/src/modules/stories/application/ports/index.ts
+index a28a0bb..752c349 100644
+--- a/backend/src/modules/stories/application/ports/index.ts
++++ b/backend/src/modules/stories/application/ports/index.ts
+@@ -1,4 +1,2 @@
+-export * from './chapter.persistence.port';
+ export * from './story.persistence.port';
+-export * from './reader-engagement.persistence.port';
+ export * from './story-moderation.reader.port';
+diff --git a/backend/src/modules/stories/application/queries/index.ts b/backend/src/modules/stories/application/queries/index.ts
+index 0a05ee7..b56fb32 100644
+--- a/backend/src/modules/stories/application/queries/index.ts
++++ b/backend/src/modules/stories/application/queries/index.ts
+@@ -2,10 +2,5 @@ export * from './get-public-story-detail';
+ export * from './list-public-stories';
+ export * from './list-story-categories';
+ export * from './list-story-tags';
+-export * from './get-public-chapter-reader';
+-export * from './get-author-chapter';
+ export * from './get-author-story';
+-export * from './list-author-chapters';
+ export * from './list-author-stories';
+-export * from './list-story-comments';
+-export * from './list-chapter-comments';
+diff --git a/backend/src/modules/stories/domain/exceptions/index.ts b/backend/src/modules/stories/domain/exceptions/index.ts
+index f77d1a1..d96aae8 100644
+--- a/backend/src/modules/stories/domain/exceptions/index.ts
++++ b/backend/src/modules/stories/domain/exceptions/index.ts
+@@ -1,3 +1 @@
+-export * from './chapter.exceptions';
+ export * from './story.exceptions';
+-export * from './reader-engagement.exceptions';
+diff --git a/backend/src/modules/stories/domain/exceptions/reader-engagement.exceptions.ts b/backend/src/modules/stories/domain/exceptions/reader-engagement.exceptions.ts
+deleted file mode 100644
+index ef48dcf..0000000
+--- a/backend/src/modules/stories/domain/exceptions/reader-engagement.exceptions.ts
++++ /dev/null
+@@ -1,25 +0,0 @@
+-import {
+-  InvalidInputException,
+-  ResourceNotFoundException,
+-} from '@/common/exceptions';
+-
+-export class InvalidCommentBodyException extends InvalidInputException {
+-  constructor() {
+-    super({
+-      code: 'COMMENT_INVALID_BODY',
+-      message: 'Nội dung bình luận phải có từ 1 đến 4000 ký tự',
+-      details: { field: 'body' },
+-    });
+-  }
+-}
+-
+-export class CommentNotFoundException extends ResourceNotFoundException {
+-  constructor(commentId?: string) {
+-    super({
+-      code: 'COMMENT_NOT_FOUND',
+-      resource: 'bình luận',
+-      ...(commentId ? { identifier: commentId } : {}),
+-      message: 'Không tìm thấy bình luận',
+-    });
+-  }
+-}
+diff --git a/backend/src/modules/stories/domain/policies/index.ts b/backend/src/modules/stories/domain/policies/index.ts
+index e34fb05..5fb01f4 100644
+--- a/backend/src/modules/stories/domain/policies/index.ts
++++ b/backend/src/modules/stories/domain/policies/index.ts
+@@ -1,3 +1 @@
+-export * from './chapter-draft.policy';
+ export * from './story-draft.policy';
+-export * from './reader-engagement.policy';
+diff --git a/backend/src/modules/stories/domain/policies/reader-engagement.policy.spec.ts b/backend/src/modules/stories/domain/policies/reader-engagement.policy.spec.ts
+deleted file mode 100644
+index 35be35e..0000000
+--- a/backend/src/modules/stories/domain/policies/reader-engagement.policy.spec.ts
++++ /dev/null
+@@ -1,20 +0,0 @@
+-import { ReaderEngagementPolicy } from './reader-engagement.policy';
+-
+-describe('ReaderEngagementPolicy', () => {
+-  it('normalizes comment whitespace and enforces the configured limit', () => {
+-    expect(ReaderEngagementPolicy.normalizeCommentBody('  nội dung  ')).toBe(
+-      'nội dung',
+-    );
+-    expect(ReaderEngagementPolicy.isValidCommentBody('   ')).toBe(false);
+-    expect(
+-      ReaderEngagementPolicy.isValidCommentBody(
+-        'a'.repeat(ReaderEngagementPolicy.COMMENT_MAX_LENGTH),
+-      ),
+-    ).toBe(true);
+-    expect(
+-      ReaderEngagementPolicy.isValidCommentBody(
+-        'a'.repeat(ReaderEngagementPolicy.COMMENT_MAX_LENGTH + 1),
+-      ),
+-    ).toBe(false);
+-  });
+-});
+diff --git a/backend/src/modules/stories/domain/policies/reader-engagement.policy.ts b/backend/src/modules/stories/domain/policies/reader-engagement.policy.ts
+deleted file mode 100644
+index 87fa11e..0000000
+--- a/backend/src/modules/stories/domain/policies/reader-engagement.policy.ts
++++ /dev/null
+@@ -1,14 +0,0 @@
+-export class ReaderEngagementPolicy {
+-  static readonly COMMENT_MAX_LENGTH = 4000;
+-
+-  static normalizeCommentBody(value: string): string {
+-    return value.trim();
+-  }
+-
+-  static isValidCommentBody(value: string): boolean {
+-    const normalized = this.normalizeCommentBody(value);
+-    return (
+-      normalized.length >= 1 && normalized.length <= this.COMMENT_MAX_LENGTH
+-    );
+-  }
+-}
+diff --git a/backend/src/modules/stories/domain/value-objects/index.ts b/backend/src/modules/stories/domain/value-objects/index.ts
+index d2798a1..a55d0be 100644
+--- a/backend/src/modules/stories/domain/value-objects/index.ts
++++ b/backend/src/modules/stories/domain/value-objects/index.ts
+@@ -1,2 +1 @@
+-export * from './chapter-fields.value-object';
+ export * from './story-fields.value-object';
+diff --git a/backend/src/modules/stories/infrastructure/persistence/index.ts b/backend/src/modules/stories/infrastructure/persistence/index.ts
+index 6c51db8..ce1dec9 100644
+--- a/backend/src/modules/stories/infrastructure/persistence/index.ts
++++ b/backend/src/modules/stories/infrastructure/persistence/index.ts
+@@ -1,4 +1,2 @@
+-export * from './prisma-chapter.persistence';
+ export * from './prisma-story.persistence';
+-export * from './prisma-reader-engagement.persistence';
+ export * from './prisma-story-moderation.reader';
+diff --git a/backend/src/modules/stories/presentation/http/controllers/index.ts b/backend/src/modules/stories/presentation/http/controllers/index.ts
+index 1fc1e08..1c48582 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/index.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/index.ts
+@@ -1,8 +1,5 @@
+-export * from './author-chapters.controller';
+ export * from './author-stories.controller';
+ export * from './story-metadata.controller';
+ export * from './admin-story-publication.controller';
+ export * from './public-stories.controller';
+-export * from './reader-engagement.controller';
+-export * from './public-story-comments.controller';
+ export * from './admin-story-moderation.controller';
+diff --git a/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+index 263ed9d..3b0b6df 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts
+@@ -3,8 +3,6 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
+ import { Public } from '@/common/decorators';
+ 
+ import {
+-  GetPublicChapterReaderQuery,
+-  GetPublicChapterReaderQueryHandler,
+   GetPublicStoryDetailQuery,
+   GetPublicStoryDetailQueryHandler,
+   ListPublicStoriesQuery,
+@@ -12,10 +10,8 @@ import {
+ } from '../../../application';
+ import { ListPublicStoriesRequest } from '../requests';
+ import {
+-  type PublicChapterReaderResponse,
+   type PublicStoryPageResponse,
+   type PublicStoryResponse,
+-  toPublicChapterReaderResponse,
+   toPublicStoryPageResponse,
+   toPublicStoryResponse,
+ } from '../responses';
+@@ -26,7 +22,6 @@ export class PublicStoriesController {
+   constructor(
+     private readonly listStories: ListPublicStoriesQueryHandler,
+     private readonly getStoryDetail: GetPublicStoryDetailQueryHandler,
+-    private readonly getChapterReader: GetPublicChapterReaderQueryHandler,
+   ) {}
+ 
+   @Get()
+@@ -49,18 +44,6 @@ export class PublicStoriesController {
+     return toPublicStoryPageResponse(result);
+   }
+ 
+-  @Get(':storySlug/chapters/:chapterNumber')
+-  async chapterReader(
+-    @Param('storySlug') storySlug: string,
+-    @Param('chapterNumber') chapterNumber: string,
+-  ): Promise<PublicChapterReaderResponse> {
+-    const result = await this.getChapterReader.execute(
+-      new GetPublicChapterReaderQuery(storySlug, chapterNumber),
+-    );
+-
+-    return toPublicChapterReaderResponse(result);
+-  }
+-
+   @Get(':slug')
+   async detail(@Param('slug') slug: string): Promise<PublicStoryResponse> {
+     const result = await this.getStoryDetail.execute(
+diff --git a/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts b/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts
+index 3cf206f..8162209 100644
+--- a/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts
++++ b/backend/src/modules/stories/presentation/http/controllers/story-idempotency-hardening.spec.ts
+@@ -1,7 +1,5 @@
+ import { IDEMPOTENT_KEY } from '@/common/constants';
+ import type { IdempotencyMetadata } from '@/common/decorators';
+-
+-import { AuthorChaptersController } from './author-chapters.controller';
+ import { AuthorStoriesController } from './author-stories.controller';
+ 
+ const EXPECTED = {
+@@ -18,20 +16,12 @@ describe('Stories HTTP idempotency hardening', () => {
+       ),
+     ).toEqual(EXPECTED);
+   });
+-
+-  it('create chapter requires an idempotency key', () => {
+-    expect(
+-      readMetadata(
+-        // eslint-disable-next-line @typescript-eslint/unbound-method
+-        AuthorChaptersController.prototype.create,
+-      ),
+-    ).toEqual(EXPECTED);
+-  });
+ });
+ 
+ function readMetadata(
+   target: (...args: never[]) => unknown,
+ ): IdempotencyMetadata | undefined {
+   return Reflect.getMetadata(IDEMPOTENT_KEY, target) as
+-    IdempotencyMetadata | undefined;
++    | IdempotencyMetadata
++    | undefined;
+ }
+diff --git a/backend/src/modules/stories/presentation/http/requests/index.ts b/backend/src/modules/stories/presentation/http/requests/index.ts
+index abcede9..8e8c0f9 100644
+--- a/backend/src/modules/stories/presentation/http/requests/index.ts
++++ b/backend/src/modules/stories/presentation/http/requests/index.ts
+@@ -1,11 +1,6 @@
+-export * from './create-author-chapter.request';
+ export * from './create-author-story.request';
+-export * from './update-author-chapter.request';
+ export * from './update-author-story.request';
+ export * from './submit-author-story.request';
+ export * from './reject-story-submission.request';
+ export * from './list-public-stories.request';
+-export * from './create-story-comment.request';
+-export * from './update-story-comment.request';
+-export * from './list-story-comments.request';
+ export * from './list-admin-story-submissions.request';
+diff --git a/backend/src/modules/stories/presentation/http/responses/index.ts b/backend/src/modules/stories/presentation/http/responses/index.ts
+index 7b70fad..1214368 100644
+--- a/backend/src/modules/stories/presentation/http/responses/index.ts
++++ b/backend/src/modules/stories/presentation/http/responses/index.ts
+@@ -1,7 +1,4 @@
+-export * from './chapter.response';
+ export * from './story.response';
+ export * from './story-publication.response';
+ export * from './public-story.response';
+-export * from './public-chapter-reader.response';
+-export * from './chapter-summary.response';
+ export * from './admin-story-submission.response';
+diff --git a/backend/src/modules/stories/stories.module.ts b/backend/src/modules/stories/stories.module.ts
+index 037c89a..1ecf17b 100644
+--- a/backend/src/modules/stories/stories.module.ts
++++ b/backend/src/modules/stories/stories.module.ts
+@@ -3,69 +3,41 @@ import { Module } from '@nestjs/common';
+ import { PrismaModule } from '@/infrastructure/database';
+ import { AuthAuthorizationModule } from '@/modules/auth';
+ import { AuthorsModule } from '@/modules/authors';
+-import { CommentsModule } from '@/modules/comments';
+ 
+ import {
+   ApproveStorySubmissionCommandHandler,
+   CancelAuthorStorySubmissionCommandHandler,
+-  CHAPTER_PERSISTENCE_PORT,
+-  CreateAuthorChapterCommandHandler,
+   CreateAuthorStoryCommandHandler,
+-  CreateStoryCommentCommandHandler,
+-  DeleteAuthorChapterCommandHandler,
+   DeleteAuthorStoryCommandHandler,
+-  DeleteStoryCommentCommandHandler,
+-  GetAuthorChapterQueryHandler,
+   GetAuthorStoryQueryHandler,
+-  GetPublicChapterReaderQueryHandler,
+   GetPublicStoryDetailQueryHandler,
+-  ListAuthorChaptersQueryHandler,
+   ListAuthorStoriesQueryHandler,
+-  ListChapterCommentsQueryHandler,
+   ListPublicStoriesQueryHandler,
+   ListStoryCategoriesQueryHandler,
+-  ListStoryCommentsQueryHandler,
+   ListStoryTagsQueryHandler,
+-  PublishAuthorChapterCommandHandler,
+-  READER_ENGAGEMENT_PERSISTENCE_PORT,
+-  STORY_MODERATION_READER_PORT,
+   RejectStorySubmissionCommandHandler,
++  STORY_MODERATION_READER_PORT,
+   STORY_PERSISTENCE_PORT,
+   SubmitAuthorStoryCommandHandler,
+-  UpdateAuthorChapterCommandHandler,
+   UpdateAuthorStoryCommandHandler,
+-  UpdateStoryCommentCommandHandler,
+ } from './application';
+ import {
+-  PrismaChapterPersistence,
+-  PrismaReaderEngagementPersistence,
+   PrismaStoryModerationReader,
+   PrismaStoryPersistence,
+ } from './infrastructure';
+ import {
+   AdminStoryModerationController,
+   AdminStoryPublicationController,
+-  AuthorChaptersController,
+   AuthorStoriesController,
+   PublicStoriesController,
+-  PublicStoryCommentsController,
+-  ReaderEngagementController,
+   StoryMetadataController,
+ } from './presentation/http';
+ 
+ @Module({
+-  imports: [
+-    PrismaModule,
+-    AuthAuthorizationModule,
+-    AuthorsModule,
+-    CommentsModule,
+-  ],
++  imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule],
+   controllers: [
+     PublicStoriesController,
+-    PublicStoryCommentsController,
+-    ReaderEngagementController,
+     AuthorStoriesController,
+-    AuthorChaptersController,
+     StoryMetadataController,
+     AdminStoryModerationController,
+     AdminStoryPublicationController,
+@@ -76,42 +48,20 @@ import {
+     DeleteAuthorStoryCommandHandler,
+     ListAuthorStoriesQueryHandler,
+     GetAuthorStoryQueryHandler,
+-    CreateAuthorChapterCommandHandler,
+-    UpdateAuthorChapterCommandHandler,
+-    DeleteAuthorChapterCommandHandler,
+-    ListAuthorChaptersQueryHandler,
+-    GetAuthorChapterQueryHandler,
+-    PublishAuthorChapterCommandHandler,
+     SubmitAuthorStoryCommandHandler,
+     CancelAuthorStorySubmissionCommandHandler,
+     ApproveStorySubmissionCommandHandler,
+     RejectStorySubmissionCommandHandler,
+     ListPublicStoriesQueryHandler,
+     GetPublicStoryDetailQueryHandler,
+-    GetPublicChapterReaderQueryHandler,
+     ListStoryCategoriesQueryHandler,
+     ListStoryTagsQueryHandler,
+-    ListStoryCommentsQueryHandler,
+-    ListChapterCommentsQueryHandler,
+-    CreateStoryCommentCommandHandler,
+-    UpdateStoryCommentCommandHandler,
+-    DeleteStoryCommentCommandHandler,
+     PrismaStoryPersistence,
+-    PrismaChapterPersistence,
+-    PrismaReaderEngagementPersistence,
+     PrismaStoryModerationReader,
+     {
+       provide: STORY_PERSISTENCE_PORT,
+       useExisting: PrismaStoryPersistence,
+     },
+-    {
+-      provide: CHAPTER_PERSISTENCE_PORT,
+-      useExisting: PrismaChapterPersistence,
+-    },
+-    {
+-      provide: READER_ENGAGEMENT_PERSISTENCE_PORT,
+-      useExisting: PrismaReaderEngagementPersistence,
+-    },
+     {
+       provide: STORY_MODERATION_READER_PORT,
+       useExisting: PrismaStoryModerationReader,
+diff --git a/backend/test/integration/author-profile-follow-notifications.integration-spec.ts b/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
+index a8b5bf1..fe3d4f4 100644
+--- a/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
++++ b/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
+@@ -23,7 +23,7 @@ import {
+   AuthorFollowService,
+   AuthorProfileService,
+ } from '@/modules/authors/application/services';
+-import { PrismaChapterPersistence } from '@/modules/stories/infrastructure/persistence/prisma-chapter.persistence';
++import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
+ import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
+ import { PrismaAccountDeletionPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence';
+ 
+diff --git a/backend/test/integration/stories.integration-spec.ts b/backend/test/integration/stories.integration-spec.ts
+index b2b43bb..4ea3d94 100644
+--- a/backend/test/integration/stories.integration-spec.ts
++++ b/backend/test/integration/stories.integration-spec.ts
+@@ -18,18 +18,16 @@ import { PrismaModule, PrismaService } from '@/infrastructure/database';
+ import { PrismaLibraryPersistence } from '@/modules/libraries/infrastructure';
+ import { PrismaRatingPersistence } from '@/modules/ratings/infrastructure';
+ import { PrismaReadingHistoryPersistence } from '@/modules/reading-history/infrastructure';
+-import {
+-  PrismaChapterPersistence,
+-  PrismaReaderEngagementPersistence,
+-  PrismaStoryPersistence,
+-} from '@/modules/stories/infrastructure';
++import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
++import { PrismaCommentPersistence } from '@/modules/comments/infrastructure';
++import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
+ 
+ describe('Stories PostgreSQL race and ownership invariants', () => {
+   let moduleRef: TestingModule;
+   let prisma: PrismaService;
+   let stories: PrismaStoryPersistence;
+   let chapters: PrismaChapterPersistence;
+-  let engagement: PrismaReaderEngagementPersistence;
++  let engagement: PrismaCommentPersistence;
+   let libraries: PrismaLibraryPersistence;
+   let ratings: PrismaRatingPersistence;
+   let readingHistory: PrismaReadingHistoryPersistence;
+@@ -44,7 +42,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
+       providers: [
+         PrismaStoryPersistence,
+         PrismaChapterPersistence,
+-        PrismaReaderEngagementPersistence,
++        PrismaCommentPersistence,
+         PrismaLibraryPersistence,
+         PrismaRatingPersistence,
+         PrismaReadingHistoryPersistence,
+@@ -56,7 +54,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
+     prisma = moduleRef.get(PrismaService);
+     stories = moduleRef.get(PrismaStoryPersistence);
+     chapters = moduleRef.get(PrismaChapterPersistence);
+-    engagement = moduleRef.get(PrismaReaderEngagementPersistence);
++    engagement = moduleRef.get(PrismaCommentPersistence);
+     libraries = moduleRef.get(PrismaLibraryPersistence);
+     ratings = moduleRef.get(PrismaRatingPersistence);
+     readingHistory = moduleRef.get(PrismaReadingHistoryPersistence);

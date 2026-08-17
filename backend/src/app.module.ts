@@ -31,6 +31,8 @@ import { StoriesModule } from './modules/stories';
 import { RatingsModule } from './modules/ratings';
 import { LibrariesModule } from './modules/libraries';
 import { ReadingHistoryModule } from './modules/reading-history';
+import { CommentsModule } from './modules/comments';
+import { ChaptersModule } from './modules/chapters';
 import { TaxonomyModule } from './modules/taxonomy';
 import { ModerationModule } from './modules/moderation';
 import { AuditLogsModule } from './modules/audit-logs';
@@ -47,6 +49,8 @@ import { AnalyticsModule } from './modules/analytics';
     RatingsModule,
     LibrariesModule,
     ReadingHistoryModule,
+    CommentsModule,
+    ChaptersModule,
     TaxonomyModule,
     ModerationModule,
     AuditLogsModule,

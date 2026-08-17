@@ -94,3 +94,30 @@ The guard rejects new `domain -> framework/infrastructure` and `application -> i
 ## Refactor rule
 
 Architectural refactors preserve externally observable behavior unless a separate feature change explicitly says otherwise. Keep HTTP routes, request/response contracts, authorization behavior, and database schema stable during module extraction.
+
+## Folder policy: structure is semantic, not a checklist
+
+The four top-level layers (`application`, `domain`, `infrastructure`, `presentation`) are the architectural boundary. Their child folders are created only when the module has code with that responsibility.
+
+Examples:
+
+- Create `domain/entities` only when the module has domain entities. Do not add placeholder entities just to fill the tree.
+- Create `domain/events` only when the module publishes domain events.
+- Create `domain/repositories` only when a domain-level repository abstraction is genuinely required. Most persistence needs in this codebase are application ports under `application/ports`.
+- Create `infrastructure/cache` or `infrastructure/search` only when the module owns a cache/search adapter.
+- Create `application/mappers` only when there is an actual mapping boundary.
+- Never commit empty folders or `.gitkeep` files purely to make every module visually identical.
+
+A healthy module can therefore be smaller than the full reference tree while still following the same architecture. The reference tree describes allowed responsibilities, not mandatory empty directories.
+
+## Migration status
+
+The incremental extraction currently separates these responsibilities from `stories`:
+
+- ratings -> `modules/ratings`
+- libraries -> `modules/libraries`
+- reading history -> `modules/reading-history`
+- comments -> `modules/comments`
+- chapter lifecycle and public chapter reader -> `modules/chapters`
+
+`StoriesModule` now owns story lifecycle/publication/metadata only. Legacy internals inside other modules are cleaned in later passes without changing HTTP contracts or the Prisma schema.

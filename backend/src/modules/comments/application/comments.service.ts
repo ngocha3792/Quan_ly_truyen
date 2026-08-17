@@ -31,7 +31,7 @@ import type {
   ReactionName,
   ReactionSummaryView,
   ReportReasonName,
-} from './comment.models';
+} from './dto/comment.models';
 
 const REACTION_NAMES: readonly ReactionName[] = [
   'LIKE',

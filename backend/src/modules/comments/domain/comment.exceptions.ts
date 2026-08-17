@@ -5,6 +5,38 @@ import {
   ServiceUnavailableException,
 } from '@/common/exceptions';
 
+export class InvalidCommentBodyException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'COMMENT_INVALID_BODY',
+      message: 'Nội dung bình luận phải có từ 1 đến 4000 ký tự',
+      details: { field: 'body' },
+    });
+  }
+}
+
+export class CommentStoryNotFoundException extends ResourceNotFoundException {
+  constructor(id?: string) {
+    super({
+      code: 'STORY_NOT_FOUND',
+      resource: 'truyện',
+      identifier: id,
+      message: 'Không tìm thấy truyện',
+    });
+  }
+}
+
+export class CommentChapterNotFoundException extends ResourceNotFoundException {
+  constructor(id?: string) {
+    super({
+      code: 'CHAPTER_NOT_FOUND',
+      resource: 'chương',
+      identifier: id,
+      message: 'Không tìm thấy chương',
+    });
+  }
+}
+
 export class CommentNotFoundException extends ResourceNotFoundException {
   constructor(id?: string) {
     super({
