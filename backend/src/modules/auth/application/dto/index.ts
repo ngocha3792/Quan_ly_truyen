@@ -16,3 +16,6 @@ export * from './security-overview-result.dto';
 export * from './validate-password-reset-token-result.dto';
 export * from './recovery-email-status-result.dto';
 export * from './security-questions-result.dto';
+export * from './admin-user-security.dto';
+export * from './oauth.dto';
+export * from './mfa.dto';

@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthenticationRequiredException } from '@/common/exceptions';
-import { AuthorLifecycleService } from '../../../application/services';
+import { AssertActiveAuthorQuery, AssertActiveAuthorQueryHandler } from '../../../application';
 
 interface RequestWithUser {
   method?: string;
@@ -8,7 +8,7 @@ interface RequestWithUser {
 }
 @Injectable()
 export class ActiveAuthorGuard implements CanActivate {
-  constructor(private readonly lifecycle: AuthorLifecycleService) {}
+  constructor(private readonly assertActiveAuthor: AssertActiveAuthorQueryHandler) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     if (
@@ -21,7 +21,7 @@ export class ActiveAuthorGuard implements CanActivate {
         code: 'AUTHOR_LIFECYCLE_AUTH_REQUIRED',
         message: 'Bạn cần đăng nhập bằng tài khoản tác giả',
       });
-    await this.lifecycle.assertActiveAuthor(userId);
+    await this.assertActiveAuthor.execute(new AssertActiveAuthorQuery(userId));
     return true;
   }
 }

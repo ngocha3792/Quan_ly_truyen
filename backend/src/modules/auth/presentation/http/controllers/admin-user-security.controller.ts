@@ -2,7 +2,18 @@ import { Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import { AuthenticationRequiredException } from '@/common/exceptions';
-import { AdminUserSecurityService } from '../../../application/services';
+import {
+  ListAdminSecurityEventsQuery,
+  ListAdminSecurityEventsQueryHandler,
+  ListAdminUserSessionsQuery,
+  ListAdminUserSessionsQueryHandler,
+  RevokeAdminUserSessionCommand,
+  RevokeAdminUserSessionCommandHandler,
+  RevokeAllAdminUserSessionsCommand,
+  RevokeAllAdminUserSessionsCommandHandler,
+  UnlockAdminUserCommand,
+  UnlockAdminUserCommandHandler,
+} from '../../../application';
 import {
   toAdminSecurityEventResponse,
   toAdminSessionResponse,
@@ -11,7 +22,13 @@ import {
 } from '../responses';
 @Controller('admin/users/:userId')
 export class AdminUserSecurityController {
-  constructor(private readonly security: AdminUserSecurityService) {}
+  constructor(
+    private readonly listSessions: ListAdminUserSessionsQueryHandler,
+    private readonly listSecurityEvents: ListAdminSecurityEventsQueryHandler,
+    private readonly revokeSession: RevokeAdminUserSessionCommandHandler,
+    private readonly revokeAllSessions: RevokeAllAdminUserSessionsCommandHandler,
+    private readonly unlockUser: UnlockAdminUserCommandHandler,
+  ) {}
   @Get('sessions')
   @RequirePermissions(
     PermissionCode.USER_MANAGE,
@@ -20,7 +37,7 @@ export class AdminUserSecurityController {
   async sessions(
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ): Promise<readonly AdminSessionResponse[]> {
-    return (await this.security.listSessions(userId)).map(
+    return (await this.listSessions.execute(new ListAdminUserSessionsQuery(userId))).map(
       toAdminSessionResponse,
     );
   }
@@ -34,11 +51,7 @@ export class AdminUserSecurityController {
     @Param('sessionId', new ParseUUIDPipe({ version: '4' })) sessionId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    await this.security.revokeSession({
-      actorUserId: this.actor(actor),
-      userId,
-      sessionId,
-    });
+    await this.revokeSession.execute(new RevokeAdminUserSessionCommand(this.actor(actor), userId, sessionId));
     return { success: true as const };
   }
   @Post('sessions/revoke-all')
@@ -50,10 +63,7 @@ export class AdminUserSecurityController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    const revokedCount = await this.security.revokeAllSessions({
-      actorUserId: this.actor(actor),
-      userId,
-    });
+    const revokedCount = await this.revokeAllSessions.execute(new RevokeAllAdminUserSessionsCommand(this.actor(actor), userId));
     return { success: true as const, revokedCount };
   }
   @Post('unlock')
@@ -65,7 +75,7 @@ export class AdminUserSecurityController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    await this.security.unlock({ actorUserId: this.actor(actor), userId });
+    await this.unlockUser.execute(new UnlockAdminUserCommand(this.actor(actor), userId));
     return { success: true as const };
   }
   @Get('security-events')
@@ -76,7 +86,7 @@ export class AdminUserSecurityController {
   async events(
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ): Promise<readonly AdminSecurityEventResponse[]> {
-    return (await this.security.listSecurityEvents(userId)).map(
+    return (await this.listSecurityEvents.execute(new ListAdminSecurityEventsQuery(userId))).map(
       toAdminSecurityEventResponse,
     );
   }

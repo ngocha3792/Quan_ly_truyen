@@ -30,7 +30,7 @@ import {
 
 import type { RecoveryEmailStatusResultDto } from '../../../application';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import {
   RemoveRecoveryEmailRequest,
@@ -53,7 +53,7 @@ export class RecoveryEmailSecurityController {
 
     private readonly removeCommandHandler: RemoveRecoveryEmailCommandHandler,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Get()

@@ -1,22 +1,28 @@
 import { Module } from '@nestjs/common';
+
 import { PrismaModule } from '@/infrastructure/database';
 import { UsersModule } from '@/modules/users';
+
 import {
   MODERATION_METRICS_PORT,
   MODERATION_PERSISTENCE_PORT,
-  ModerationService,
+  BanUserCommandHandler,
+  ModerateCommentCommandHandler,
+  WarnUserCommandHandler,
 } from './application';
-import { AdminCommentModerationController } from './presentation/http/admin-comment-moderation.controller';
 import {
   MetricsModerationAdapter,
   PrismaModerationPersistence,
 } from './infrastructure';
+import { AdminCommentModerationController } from './presentation/http/controllers';
 
 @Module({
   imports: [PrismaModule, UsersModule],
   controllers: [AdminCommentModerationController],
   providers: [
-    ModerationService,
+    BanUserCommandHandler,
+    ModerateCommentCommandHandler,
+    WarnUserCommandHandler,
     PrismaModerationPersistence,
     MetricsModerationAdapter,
     {

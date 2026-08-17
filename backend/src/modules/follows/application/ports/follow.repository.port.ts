@@ -2,7 +2,7 @@ import type {
   AuthorFollowMutationView,
   FollowingListView,
   ListFollowingInput,
-} from '../follow.models';
+} from '../dto';
 
 export const FOLLOW_REPOSITORY = Symbol.for('modules.follows.repository');
 

@@ -2,6 +2,11 @@ import { Module } from '@nestjs/common';
 
 import {
   ADMIN_USER_SECURITY_PERSISTENCE_PORT,
+  ListAdminUserSessionsQueryHandler,
+  ListAdminSecurityEventsQueryHandler,
+  RevokeAdminUserSessionCommandHandler,
+  RevokeAllAdminUserSessionsCommandHandler,
+  UnlockAdminUserCommandHandler,
   DeleteAccountCommandHandler,
   GetCurrentUserQueryHandler,
   GetRecoveryEmailStatusQueryHandler,
@@ -19,7 +24,6 @@ import {
   UpdateSecurityQuestionsCommandHandler,
   VerifyRecoveryEmailCommandHandler,
 } from './application';
-import { AdminUserSecurityService } from './application/services';
 import {
   AdminUserSecurityController,
   AuthAccountController,
@@ -44,7 +48,11 @@ import { PrismaAdminUserSecurityPersistence } from './infrastructure';
     MfaSecurityController,
   ],
   providers: [
-    AdminUserSecurityService,
+    ListAdminUserSessionsQueryHandler,
+    ListAdminSecurityEventsQueryHandler,
+    RevokeAdminUserSessionCommandHandler,
+    RevokeAllAdminUserSessionsCommandHandler,
+    UnlockAdminUserCommandHandler,
     PrismaAdminUserSecurityPersistence,
     {
       provide: ADMIN_USER_SECURITY_PERSISTENCE_PORT,

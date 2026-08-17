@@ -13,7 +13,7 @@ import type {
 import { AuthAccountStatus } from '../../../../domain/enums';
 
 import {
-  AccessAuthorizationCacheService,
+  RedisAccessAuthorizationCacheAdapter,
   type AccessAuthorizationSnapshot,
 } from '../../../cache';
 
@@ -22,7 +22,7 @@ export class PrismaAccessSessionReader implements AccessSessionReaderPort {
   constructor(
     private readonly prisma: PrismaService,
 
-    private readonly authorizationCache: AccessAuthorizationCacheService,
+    private readonly authorizationCache: RedisAccessAuthorizationCacheAdapter,
 
     private readonly metrics: MetricsService,
   ) {}

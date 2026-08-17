@@ -1,4 +1,4 @@
-export * from './access-authorization-cache.service';
+export * from './redis-access-authorization-cache.adapter';
 
 export * from './redis-email-verification-cooldown';
 

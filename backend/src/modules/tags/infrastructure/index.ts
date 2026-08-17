@@ -1,1 +1,1 @@
-export * from './prisma-tag.repository';
+export * from './persistence';

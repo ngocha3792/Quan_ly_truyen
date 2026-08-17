@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { LibraryStoryNotFoundException } from '../../../domain';
 import type { LibraryEntryResultDto } from '../../dto';
-import { requireLibraryUserId } from '../../library-auth.util';
+import { requireLibraryUserId } from '../../../domain/policies/library-auth.policy';
 import {
   LIBRARY_PERSISTENCE_PORT,
   type LibraryPersistencePort,

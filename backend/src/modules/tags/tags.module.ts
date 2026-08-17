@@ -1,7 +1,16 @@
 import { Module } from '@nestjs/common';
+
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
-import { TagsService, TAG_REPOSITORY } from './application';
+
+import {
+  TAG_REPOSITORY,
+  CreateTagCommandHandler,
+  DeleteTagCommandHandler,
+  ListTagsQueryHandler,
+  MergeTagsCommandHandler,
+  UpdateTagCommandHandler,
+} from './application';
 import { PrismaTagRepository } from './infrastructure';
 import { AdminTagsController } from './presentation/http/controllers';
 
@@ -9,10 +18,13 @@ import { AdminTagsController } from './presentation/http/controllers';
   imports: [PrismaModule, AuthAuthorizationModule],
   controllers: [AdminTagsController],
   providers: [
-    TagsService,
+    ListTagsQueryHandler,
+    CreateTagCommandHandler,
+    UpdateTagCommandHandler,
+    DeleteTagCommandHandler,
+    MergeTagsCommandHandler,
     PrismaTagRepository,
     { provide: TAG_REPOSITORY, useExisting: PrismaTagRepository },
   ],
-  exports: [TagsService],
 })
 export class TagsModule {}

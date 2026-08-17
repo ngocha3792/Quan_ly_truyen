@@ -31,7 +31,7 @@ import type {
 
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaRecoveryEmailPersistence implements RecoveryEmailPersistencePort {
@@ -40,7 +40,7 @@ export class PrismaRecoveryEmailPersistence implements RecoveryEmailPersistenceP
 
     private readonly outboxWriter: OutboxWriterService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findCredentialByUserId(

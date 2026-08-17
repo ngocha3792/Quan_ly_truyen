@@ -45,7 +45,7 @@ import { LoginRequest } from '../requests';
 
 import type { LoginResponse, RefreshTokenResponse } from '../responses';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import { RefreshCookieCsrfGuard } from '../guards';
 
@@ -62,7 +62,7 @@ export class AuthTokenController {
 
     private readonly revokeAccessTokenCommandHandler: RevokeAccessTokenCommandHandler,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Post('login')

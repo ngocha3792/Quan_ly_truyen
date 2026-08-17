@@ -1,0 +1,2 @@
+import { Inject, Injectable } from '@nestjs/common'; import { TAG_REPOSITORY, type TagRepositoryPort } from '../../ports'; import { DeleteTagCommand } from './delete-tag.command';
+@Injectable() export class DeleteTagCommandHandler { constructor(@Inject(TAG_REPOSITORY) private readonly repository: TagRepositoryPort) {} execute(command: DeleteTagCommand) { return this.repository.delete(command.id, command.audit); } }

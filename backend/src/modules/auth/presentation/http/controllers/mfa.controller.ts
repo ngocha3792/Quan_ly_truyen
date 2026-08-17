@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   Res,
 } from '@nestjs/common';
@@ -13,7 +14,7 @@ import { ClientIp, Public, UserAgent } from '@/common/decorators';
 
 import { InvalidInputException } from '@/common/exceptions';
 
-import { MfaService } from '../../../infrastructure';
+import { MFA_PORT, type MfaPort } from '../../../application/ports';
 
 import {
   ConfirmMfaPreAuthEnrollmentRequest,
@@ -21,14 +22,15 @@ import {
   VerifyMfaPreAuthRequest,
 } from '../requests';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 @Controller('auth/mfa')
 export class MfaController {
   constructor(
-    private readonly mfa: MfaService,
+    @Inject(MFA_PORT)
+    private readonly mfa: MfaPort,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Post('enrollment')
@@ -168,7 +170,7 @@ export class MfaController {
 }
 
 function loginResponse(
-  result: Awaited<ReturnType<MfaService['verifyPreAuth']>>,
+  result: Awaited<ReturnType<MfaPort['verifyPreAuth']>>,
 
   recoveryCodes?: readonly string[],
 ) {

@@ -1,29 +1,15 @@
-import type { CommentModerationOperation } from '../moderation.models';
+import type {
+  CommentDatabaseModerationStatus,
+  CommentModerationActionName,
+  CommentModerationOperation,
+  CommentModerationStatusName,
+} from '../../domain';
 
 export interface ModerationAuditContext {
   readonly ipAddress?: string;
   readonly userAgent?: string;
   readonly requestId?: string;
 }
-
-export type CommentDatabaseModerationStatus =
-  | 'visible'
-  | 'pending'
-  | 'hidden'
-  | 'removed'
-  | 'deleted';
-
-export type CommentModerationStatusName =
-  | 'VISIBLE'
-  | 'PENDING'
-  | 'HIDDEN'
-  | 'REMOVED';
-
-export type CommentModerationActionName =
-  | 'HOLD_COMMENT'
-  | 'HIDE_COMMENT'
-  | 'RESTORE_COMMENT'
-  | 'DELETE_COMMENT';
 
 export type ModerationPersistenceFailure =
   | { readonly status: 'comment_not_found' }

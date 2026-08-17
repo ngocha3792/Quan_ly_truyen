@@ -4,7 +4,7 @@ import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
-  GetNotificationViewCommandHandler,
+  GetNotificationViewQueryHandler,
   MarkAllNotificationsReadCommandHandler,
   NOTIFICATION_PERSISTENCE_PORT,
   SetNotificationReadCommandHandler,
@@ -21,8 +21,8 @@ const portProviders = [
   },
 ];
 
-const commandHandlers = [
-  GetNotificationViewCommandHandler,
+const applicationHandlers = [
+  GetNotificationViewQueryHandler,
   SetNotificationReadCommandHandler,
   SetNotificationSavedCommandHandler,
   MarkAllNotificationsReadCommandHandler,
@@ -35,7 +35,7 @@ const commandHandlers = [
   providers: [
     PrismaNotificationPersistence,
     ...portProviders,
-    ...commandHandlers,
+    ...applicationHandlers,
   ],
 })
 export class NotificationsModule {}

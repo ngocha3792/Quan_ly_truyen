@@ -11,7 +11,12 @@ import {
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import {
-  FollowsService,
+  FollowAuthorCommand,
+  FollowAuthorCommandHandler,
+  ListFollowingQuery,
+  ListFollowingQueryHandler,
+  UnfollowAuthorCommand,
+  UnfollowAuthorCommandHandler,
   type AuthorFollowMutationView,
   type FollowingListView,
 } from '../../../application';
@@ -20,14 +25,18 @@ import { ListFollowingRequest } from '../requests/list-following.request';
 @Controller()
 @RequirePermissions(PermissionCode.FOLLOW_MANAGE_OWN)
 export class AuthorFollowController {
-  constructor(private readonly follows: FollowsService) {}
+  constructor(
+    private readonly followAuthor: FollowAuthorCommandHandler,
+    private readonly unfollowAuthor: UnfollowAuthorCommandHandler,
+    private readonly listFollowing: ListFollowingQueryHandler,
+  ) {}
 
   @Post('authors/:authorId/follow')
   follow(
     @CurrentUserId() userId: string | undefined,
     @Param('authorId', new ParseUUIDPipe({ version: '4' })) authorId: string,
   ): Promise<AuthorFollowMutationView> {
-    return this.follows.follow(this.requireUserId(userId), authorId);
+    return this.followAuthor.execute(new FollowAuthorCommand(this.requireUserId(userId), authorId));
   }
 
   @Delete('authors/:authorId/follow')
@@ -35,7 +44,7 @@ export class AuthorFollowController {
     @CurrentUserId() userId: string | undefined,
     @Param('authorId', new ParseUUIDPipe({ version: '4' })) authorId: string,
   ): Promise<AuthorFollowMutationView> {
-    return this.follows.unfollow(this.requireUserId(userId), authorId);
+    return this.unfollowAuthor.execute(new UnfollowAuthorCommand(this.requireUserId(userId), authorId));
   }
 
   @Get('me/following')
@@ -43,12 +52,9 @@ export class AuthorFollowController {
     @CurrentUserId() userId: string | undefined,
     @Query() query: ListFollowingRequest,
   ): Promise<FollowingListView> {
-    return this.follows.list({
-      userId: this.requireUserId(userId),
-      page: query.page,
-      pageSize: query.pageSize,
-      authorIds: query.authorIds,
-    });
+    return this.listFollowing.execute(new ListFollowingQuery({
+      userId: this.requireUserId(userId), page: query.page, pageSize: query.pageSize, authorIds: query.authorIds,
+    }));
   }
 
   private requireUserId(userId: string | undefined): string {

@@ -1,3 +1,4 @@
-export * from './tag.models';
-export * from './tags.service';
+export * from './commands';
+export * from './queries';
+export * from './dto';
 export * from './ports/tag.repository.port';

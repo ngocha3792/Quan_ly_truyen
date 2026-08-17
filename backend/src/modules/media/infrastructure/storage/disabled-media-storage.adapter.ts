@@ -5,7 +5,7 @@ import type {
 } from '../../application/ports/media-storage.port';
 import type { SignedUploadParameters } from '../../application/ports/signed-upload.interface';
 import type { StoredMedia } from '../../application/ports/stored-media.interface';
-import { MediaStorageDisabledException } from '../../application/errors/media.exceptions';
+import { MediaStorageDisabledException } from '../../domain/exceptions/media.exceptions';
 
 @Injectable()
 export class DisabledMediaStorageAdapter implements MediaStoragePort {

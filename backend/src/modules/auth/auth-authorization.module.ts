@@ -4,18 +4,18 @@ import { AUTHORIZATION_INVALIDATION_PORT } from '@/common/interfaces/auth';
 
 import { CacheModule } from '@/infrastructure/cache';
 
-import { AccessAuthorizationCacheService } from './infrastructure';
+import { RedisAccessAuthorizationCacheAdapter } from './infrastructure';
 
 @Module({
   imports: [CacheModule],
 
   providers: [
-    AccessAuthorizationCacheService,
+    RedisAccessAuthorizationCacheAdapter,
 
     {
       provide: AUTHORIZATION_INVALIDATION_PORT,
 
-      useExisting: AccessAuthorizationCacheService,
+      useExisting: RedisAccessAuthorizationCacheAdapter,
     },
   ],
 
@@ -23,7 +23,7 @@ import { AccessAuthorizationCacheService } from './infrastructure';
     /*
      * Auth nội bộ vẫn cần get/set snapshot.
      */
-    AccessAuthorizationCacheService,
+    RedisAccessAuthorizationCacheAdapter,
 
     /*
      * Module bên ngoài chỉ cần biết port này.

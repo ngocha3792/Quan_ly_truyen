@@ -10,7 +10,7 @@ import { AppConfigModule } from '@/config';
 
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 
-import { AuthAuditWriterService } from '@/modules/auth/infrastructure/audit';
+import { PrismaAuthAuditWriterAdapter } from '@/modules/auth/infrastructure/audit';
 
 import { PrismaSessionManagementPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories';
 
@@ -30,7 +30,7 @@ describe('Auth Session Management PostgreSQL', () => {
       providers: [
         RequestContextStore,
 
-        AuthAuditWriterService,
+        PrismaAuthAuditWriterAdapter,
 
         PrismaSessionManagementPersistence,
       ],

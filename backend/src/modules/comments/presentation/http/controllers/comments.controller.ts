@@ -22,7 +22,14 @@ import {
   AuthenticationRequiredException,
   InvalidInputException,
 } from '@/common/exceptions';
-import { CommentsService } from '../../../application';
+import {
+  ClearCommentReactionCommand, ClearCommentReactionCommandHandler,
+  CreateCommentReplyCommand, CreateCommentReplyCommandHandler,
+  CreateCommentReportCommand, CreateCommentReportCommandHandler,
+  GetViewerCommentReactionsQuery, GetViewerCommentReactionsQueryHandler,
+  ListCommentRepliesQuery, ListCommentRepliesQueryHandler,
+  SetCommentReactionCommand, SetCommentReactionCommandHandler,
+} from '../../../application';
 
 import {
   CreateCommentReportRequest,
@@ -32,7 +39,14 @@ import {
 
 @Controller('comments')
 export class CommentsController {
-  constructor(private readonly comments: CommentsService) {}
+  constructor(
+    private readonly createReplyHandler: CreateCommentReplyCommandHandler,
+    private readonly listRepliesHandler: ListCommentRepliesQueryHandler,
+    private readonly setReactionHandler: SetCommentReactionCommandHandler,
+    private readonly clearReactionHandler: ClearCommentReactionCommandHandler,
+    private readonly viewerReactionsHandler: GetViewerCommentReactionsQueryHandler,
+    private readonly createReportHandler: CreateCommentReportCommandHandler,
+  ) {}
 
   @Post(':parentCommentId/replies')
   @Idempotent({ required: true, ttlSeconds: 86_400 })
@@ -44,12 +58,12 @@ export class CommentsController {
     parentCommentId: string,
     @Body() request: CreateReplyRequest,
   ) {
-    return this.comments.createReply({
+    return this.createReplyHandler.execute(new CreateCommentReplyCommand({
       userId: this.user(userId),
       parentCommentId,
       body: request.body,
       ipAddress,
-    });
+    }));
   }
 
   @Get(':rootCommentId/replies')
@@ -60,11 +74,9 @@ export class CommentsController {
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '20',
   ) {
-    return this.comments.listReplies(
-      rootCommentId,
-      this.positiveInt(page, 1),
-      this.positiveInt(pageSize, 20),
-    );
+    return this.listRepliesHandler.execute(new ListCommentRepliesQuery(
+      rootCommentId, this.positiveInt(page, 1), this.positiveInt(pageSize, 20),
+    ));
   }
 
   @Post(':commentId/reactions')
@@ -75,12 +87,12 @@ export class CommentsController {
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() request: SetReactionRequest,
   ) {
-    return this.comments.setReaction({
+    return this.setReactionHandler.execute(new SetCommentReactionCommand({
       userId: this.user(userId),
       commentId,
       type: request.type,
       ipAddress,
-    });
+    }));
   }
 
   @Delete(':commentId/reactions')
@@ -91,11 +103,11 @@ export class CommentsController {
     @ClientIp() ipAddress: string | undefined,
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
   ): Promise<void> {
-    await this.comments.clearReaction({
+    await this.clearReactionHandler.execute(new ClearCommentReactionCommand({
       userId: this.user(userId),
       commentId,
       ipAddress,
-    });
+    }));
   }
 
   @Get('reactions/me')
@@ -122,7 +134,7 @@ export class CommentsController {
         message: 'Danh sách commentIds không hợp lệ hoặc vượt quá 50 phần tử',
       });
     }
-    return this.comments.viewerReactions(this.user(userId), ids);
+    return this.viewerReactionsHandler.execute(new GetViewerCommentReactionsQuery(this.user(userId), ids));
   }
 
   @Post(':commentId/report')
@@ -134,13 +146,13 @@ export class CommentsController {
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() request: CreateCommentReportRequest,
   ) {
-    return this.comments.createReport({
+    return this.createReportHandler.execute(new CreateCommentReportCommand({
       userId: this.user(userId),
       commentId,
       reason: request.reason,
       description: request.description,
       ipAddress,
-    });
+    }));
   }
 
   private user(value: string | undefined): string {

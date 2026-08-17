@@ -22,7 +22,7 @@ import {
   SessionRevocationReason,
 } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaLoginPersistence implements LoginPersistencePort {
@@ -33,7 +33,7 @@ export class PrismaLoginPersistence implements LoginPersistencePort {
 
     configService: ConfigService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {
     const config = configService.getOrThrow<AuthConfig>('auth');
 

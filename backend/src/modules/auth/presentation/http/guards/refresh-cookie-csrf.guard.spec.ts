@@ -256,7 +256,7 @@ describe('RefreshCookieCsrfGuard', () => {
     expect(csrfTokenService.assertValid).not.toHaveBeenCalled();
   });
 
-  it('lets CsrfTokenService report a missing CSRF cookie', () => {
+  it('lets CsrfTokenAdapter report a missing CSRF cookie', () => {
     const context = createContext({
       cookie: 'refresh_token=refresh-value',
 

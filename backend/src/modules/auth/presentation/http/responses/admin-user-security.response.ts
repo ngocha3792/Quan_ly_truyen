@@ -1,7 +1,7 @@
 import type {
   AdminSecurityEventView,
   AdminSessionView,
-} from '../../../application/services';
+} from '../../../application/dto';
 export interface AdminSessionResponse {
   sessionId: string;
   createdAt: string;

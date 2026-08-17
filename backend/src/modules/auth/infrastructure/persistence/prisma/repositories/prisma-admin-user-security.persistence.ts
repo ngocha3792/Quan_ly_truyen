@@ -6,7 +6,7 @@ import type {
   AdminUserSecurityPersistencePort,
   AdminUserSecuritySessionRecord,
 } from '../../../../application';
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaAdminUserSecurityPersistence
@@ -14,7 +14,7 @@ export class PrismaAdminUserSecurityPersistence
 {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async userExists(userId: string): Promise<boolean> {

@@ -6,3 +6,5 @@ export * from './validate-password-reset-token';
 export * from './get-security-overview';
 export * from './get-recovery-email-status';
 export * from './security-questions';
+export * from './list-admin-user-sessions';
+export * from './list-admin-security-events';

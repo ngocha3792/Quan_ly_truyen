@@ -1,2 +1,3 @@
-export * from './tag-name.util';
-export * from './tag.exceptions';
+export * from './exceptions';
+export * from './repositories';
+export * from './value-objects';

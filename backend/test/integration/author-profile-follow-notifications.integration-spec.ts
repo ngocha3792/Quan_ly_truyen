@@ -19,8 +19,19 @@ import {
   type AuthorChapterPublishedNotificationV1,
   type OutboxQueueEnvelope,
 } from '@/infrastructure/queue/contracts';
-import { AuthorProfileService } from '@/modules/authors/application/services';
-import { FollowsService, FOLLOW_REPOSITORY } from '@/modules/follows/application';
+import {
+  AUTHOR_PROFILE_PERSISTENCE_PORT,
+  UpdateAuthorProfileCommand,
+  UpdateAuthorProfileCommandHandler,
+} from '@/modules/authors/application';
+import { PrismaAuthorProfilePersistence } from '@/modules/authors/infrastructure';
+import {
+  FOLLOW_REPOSITORY,
+  FollowAuthorCommand,
+  FollowAuthorCommandHandler,
+  UnfollowAuthorCommand,
+  UnfollowAuthorCommandHandler,
+} from '@/modules/follows/application';
 import { PrismaFollowRepository } from '@/modules/follows/infrastructure';
 import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
 import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
@@ -34,8 +45,9 @@ const unique = (prefix: string) => `${prefix}-${runId}-${++sequence}`;
 describe('Phase 5 author profile, follows and notifications', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let profiles: AuthorProfileService;
-  let follows: FollowsService;
+  let updateProfile: UpdateAuthorProfileCommandHandler;
+  let followAuthor: FollowAuthorCommandHandler;
+  let unfollowAuthor: UnfollowAuthorCommandHandler;
   let fanout: NotificationsFanoutProcessor;
   let chapters: PrismaChapterPersistence;
 
@@ -43,10 +55,16 @@ describe('Phase 5 author profile, follows and notifications', () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
       providers: [
-        AuthorProfileService,
+        PrismaAuthorProfilePersistence,
+        {
+          provide: AUTHOR_PROFILE_PERSISTENCE_PORT,
+          useExisting: PrismaAuthorProfilePersistence,
+        },
+        UpdateAuthorProfileCommandHandler,
         PrismaFollowRepository,
         { provide: FOLLOW_REPOSITORY, useExisting: PrismaFollowRepository },
-        FollowsService,
+        FollowAuthorCommandHandler,
+        UnfollowAuthorCommandHandler,
         PrismaChapterPersistence,
         NotificationsFanoutProcessor,
         {
@@ -63,8 +81,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    profiles = moduleRef.get(AuthorProfileService);
-    follows = moduleRef.get(FollowsService);
+    updateProfile = moduleRef.get(UpdateAuthorProfileCommandHandler);
+    followAuthor = moduleRef.get(FollowAuthorCommandHandler);
+    unfollowAuthor = moduleRef.get(UnfollowAuthorCommandHandler);
     fanout = moduleRef.get(NotificationsFanoutProcessor);
     chapters = moduleRef.get(PrismaChapterPersistence);
   });
@@ -90,7 +109,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
       where: { userId: authorId },
     });
 
-    const updated = await profiles.update({
+    const updated = await updateProfile.execute(new UpdateAuthorProfileCommand({
       userId: authorId,
       displayName: '  Kiếm   Khách  ',
       bio: 'Tiểu sử tác giả',
@@ -101,7 +120,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
         facebook: 'https://facebook.com/example',
       },
       audit: { requestId: unique('request') },
-    });
+    }));
 
     expect(updated.displayName).toBe('Kiếm Khách');
     expect(updated.slug).toBe(before.slug);
@@ -123,11 +142,11 @@ describe('Phase 5 author profile, follows and notifications', () => {
     ).toBe(1);
 
     await expect(
-      profiles.update({
+      updateProfile.execute(new UpdateAuthorProfileCommand({
         userId: authorId,
         avatarMediaId: foreignAvatar.id,
         audit: {},
-      }),
+      })),
     ).rejects.toMatchObject({ code: 'AUTHOR_AVATAR_INVALID' });
   });
 
@@ -136,16 +155,16 @@ describe('Phase 5 author profile, follows and notifications', () => {
     const secondAuthor = await createAuthor('name-race-b');
 
     const results = await Promise.allSettled([
-      profiles.update({
+      updateProfile.execute(new UpdateAuthorProfileCommand({
         userId: firstAuthor,
         displayName: 'Phase Five Shared Name',
         audit: {},
-      }),
-      profiles.update({
+      })),
+      updateProfile.execute(new UpdateAuthorProfileCommand({
         userId: secondAuthor,
         displayName: '  PHASE   FIVE SHARED NAME  ',
         audit: {},
-      }),
+      })),
     ]);
 
     expect(
@@ -165,8 +184,8 @@ describe('Phase 5 author profile, follows and notifications', () => {
     const readerId = await createUser('follow-reader');
 
     const [first, second] = await Promise.all([
-      follows.follow(readerId, authorId),
-      follows.follow(readerId, authorId),
+      followAuthor.execute(new FollowAuthorCommand(readerId, authorId)),
+      followAuthor.execute(new FollowAuthorCommand(readerId, authorId)),
     ]);
 
     expect(first.isFollowing).toBe(true);
@@ -184,8 +203,8 @@ describe('Phase 5 author profile, follows and notifications', () => {
       ).followerCount,
     ).toBe(1);
 
-    await follows.unfollow(readerId, authorId);
-    await follows.unfollow(readerId, authorId);
+    await unfollowAuthor.execute(new UnfollowAuthorCommand(readerId, authorId));
+    await unfollowAuthor.execute(new UnfollowAuthorCommand(readerId, authorId));
     expect(
       await prisma.userFollowAuthor.count({
         where: { userId: readerId, authorId },
@@ -203,17 +222,17 @@ describe('Phase 5 author profile, follows and notifications', () => {
   it('blocks new follows to suspended authors while allowing an existing relation to be removed', async () => {
     const authorId = await createAuthor('suspended-author');
     const readerId = await createUser('suspended-reader');
-    await follows.follow(readerId, authorId);
+    await followAuthor.execute(new FollowAuthorCommand(readerId, authorId));
     await prisma.authorProfile.update({
       where: { userId: authorId },
       data: { lifecycleStatus: AuthorLifecycleStatus.SUSPENDED },
     });
 
     const otherReader = await createUser('other-reader');
-    await expect(follows.follow(otherReader, authorId)).rejects.toMatchObject({
+    await expect(followAuthor.execute(new FollowAuthorCommand(otherReader, authorId))).rejects.toMatchObject({
       code: 'AUTHOR_NOT_FOLLOWABLE',
     });
-    await expect(follows.unfollow(readerId, authorId)).resolves.toMatchObject({
+    await expect(unfollowAuthor.execute(new UnfollowAuthorCommand(readerId, authorId))).resolves.toMatchObject({
       isFollowing: false,
     });
   });
@@ -228,7 +247,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
       passwordHash: 'phase5-reader-hash',
     });
     const readerSession = await createSession(deletingReader);
-    await follows.follow(deletingReader, targetAuthor);
+    await followAuthor.execute(new FollowAuthorCommand(deletingReader, targetAuthor));
 
     await expect(
       deletion.deleteAccount({
@@ -258,7 +277,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
     });
     const authorSession = await createSession(deletingAuthor);
     const remainingReader = await createUser('remaining-reader');
-    await follows.follow(remainingReader, deletingAuthor);
+    await followAuthor.execute(new FollowAuthorCommand(remainingReader, deletingAuthor));
 
     await expect(
       deletion.deleteAccount({

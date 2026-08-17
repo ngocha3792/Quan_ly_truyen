@@ -3,7 +3,7 @@ import type {
   AdminTagList,
   ListTagsInput,
   TagAuditContext,
-} from '../tag.models';
+} from '../dto';
 
 export const TAG_REPOSITORY = Symbol.for('modules.tags.repository');
 

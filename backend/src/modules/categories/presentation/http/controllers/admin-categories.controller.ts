@@ -19,7 +19,16 @@ import {
   UserAgent,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
-import { CategoriesService } from '../../../application';
+import {
+  CreateCategoryCommand,
+  CreateCategoryCommandHandler,
+  DeleteCategoryCommand,
+  DeleteCategoryCommandHandler,
+  ListCategoriesQuery,
+  ListCategoriesQueryHandler,
+  UpdateCategoryCommand,
+  UpdateCategoryCommandHandler,
+} from '../../../application';
 import {
   CreateCategoryRequest,
   ListAdminCategoriesRequest,
@@ -29,11 +38,16 @@ import {
 @Controller('admin/categories')
 @RequirePermissions(PermissionCode.CATEGORY_MANAGE)
 export class AdminCategoriesController {
-  constructor(private readonly categories: CategoriesService) {}
+  constructor(
+    private readonly listCategories: ListCategoriesQueryHandler,
+    private readonly createCategory: CreateCategoryCommandHandler,
+    private readonly updateCategory: UpdateCategoryCommandHandler,
+    private readonly deleteCategory: DeleteCategoryCommandHandler,
+  ) {}
 
   @Get()
   list(@Query() request: ListAdminCategoriesRequest) {
-    return this.categories.list(request);
+    return this.listCategories.execute(new ListCategoriesQuery(request));
   }
 
   @Post()
@@ -44,12 +58,9 @@ export class AdminCategoriesController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
-    return this.categories.create(request, {
-      actorId,
-      ipAddress,
-      userAgent,
-      requestId,
-    });
+    return this.createCategory.execute(
+      new CreateCategoryCommand(request, { actorId, ipAddress, userAgent, requestId }),
+    );
   }
 
   @Patch(':categoryId')
@@ -62,12 +73,9 @@ export class AdminCategoriesController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
-    return this.categories.update(categoryId, request, {
-      actorId,
-      ipAddress,
-      userAgent,
-      requestId,
-    });
+    return this.updateCategory.execute(
+      new UpdateCategoryCommand(categoryId, request, { actorId, ipAddress, userAgent, requestId }),
+    );
   }
 
   @Delete(':categoryId')
@@ -80,11 +88,8 @@ export class AdminCategoriesController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ): Promise<void> {
-    await this.categories.delete(categoryId, {
-      actorId,
-      ipAddress,
-      userAgent,
-      requestId,
-    });
+    await this.deleteCategory.execute(
+      new DeleteCategoryCommand(categoryId, { actorId, ipAddress, userAgent, requestId }),
+    );
   }
 }

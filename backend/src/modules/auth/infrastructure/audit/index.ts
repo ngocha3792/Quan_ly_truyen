@@ -1,1 +1,1 @@
-export * from './auth-audit-writer.service';
+export * from './prisma-auth-audit-writer.adapter';

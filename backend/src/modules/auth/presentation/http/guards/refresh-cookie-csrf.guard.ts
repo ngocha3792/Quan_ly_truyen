@@ -1,6 +1,6 @@
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
 
@@ -14,7 +14,7 @@ import type { AuthConfig, CorsConfig } from '@/config';
 
 import { InvalidRefreshTokenException } from '../../../domain/exceptions';
 
-import { CsrfTokenService } from '../../../infrastructure/security';
+import { CSRF_TOKEN_PORT, type CsrfTokenPort } from '../../../application/ports';
 
 import { readCookieFromHeader } from '../cookies';
 
@@ -27,7 +27,8 @@ export class RefreshCookieCsrfGuard implements CanActivate {
   constructor(
     configService: ConfigService,
 
-    private readonly csrfTokenService: CsrfTokenService,
+    @Inject(CSRF_TOKEN_PORT)
+    private readonly csrfTokenService: CsrfTokenPort,
   ) {
     this.authConfig = configService.getOrThrow<AuthConfig>('auth');
 
@@ -88,7 +89,7 @@ export class RefreshCookieCsrfGuard implements CanActivate {
 
     /*
      * Missing CSRF cookie được chuyển tiếp dưới dạng undefined
-     * để CsrfTokenService trả AUTH_CSRF_TOKEN_REQUIRED.
+     * để CsrfTokenAdapter trả AUTH_CSRF_TOKEN_REQUIRED.
      */
     if (
       csrfCookie.status === 'malformed' ||

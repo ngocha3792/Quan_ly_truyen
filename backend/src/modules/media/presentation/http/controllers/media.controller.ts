@@ -8,13 +8,22 @@ import {
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
+
 import { CurrentUser, Permissions } from '@/common/decorators/auth';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
-import { MediaCleanupService } from '../../../application/media-cleanup.service';
-import { MediaQueryService } from '../../../application/media-query.service';
-import { MediaService } from '../../../application/media.service';
+
+import {
+  ConfirmMediaUploadCommand,
+  ConfirmMediaUploadCommandHandler,
+  CreateMediaUploadIntentCommand,
+  CreateMediaUploadIntentCommandHandler,
+  DeleteMediaCommand,
+  DeleteMediaCommandHandler,
+  GetMediaQuery,
+  GetMediaQueryHandler,
+} from '../../../application';
 import { ConfirmMediaUploadDto } from '../dto/confirm-media-upload.dto';
 import { CreateMediaUploadIntentDto } from '../dto/create-media-upload-intent.dto';
 import {
@@ -25,9 +34,10 @@ import {
 @Controller('media')
 export class MediaController {
   constructor(
-    private readonly mediaService: MediaService,
-    private readonly queryService: MediaQueryService,
-    private readonly cleanupService: MediaCleanupService,
+    private readonly createIntentHandler: CreateMediaUploadIntentCommandHandler,
+    private readonly confirmUploadHandler: ConfirmMediaUploadCommandHandler,
+    private readonly getMediaHandler: GetMediaQueryHandler,
+    private readonly deleteMediaHandler: DeleteMediaCommandHandler,
   ) {}
 
   @Post('upload-intents')
@@ -37,7 +47,9 @@ export class MediaController {
     @CurrentUser() principal: AuthPrincipal,
     @Body() dto: CreateMediaUploadIntentDto,
   ) {
-    return this.mediaService.createUploadIntent({ principal, ...dto });
+    return this.createIntentHandler.execute(
+      new CreateMediaUploadIntentCommand({ principal, ...dto }),
+    );
   }
 
   @Post('upload-intents/:mediaAssetId/confirm')
@@ -47,12 +59,11 @@ export class MediaController {
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
     @Body() dto: ConfirmMediaUploadDto,
   ): Promise<MediaResponseDto> {
-    const media = await this.mediaService.confirmUpload({
-      principal,
-      mediaAssetId,
-      dto,
-    });
-    return toMediaResponse(media, this.queryService.getDeliveryUrl(media));
+    const media = await this.confirmUploadHandler.execute(
+      new ConfirmMediaUploadCommand(principal, mediaAssetId, dto),
+    );
+
+    return toMediaResponse(media, this.getMediaHandler.deliveryUrl(media));
   }
 
   @Get(':mediaAssetId')
@@ -60,11 +71,11 @@ export class MediaController {
     @CurrentUser() principal: AuthPrincipal,
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
   ): Promise<MediaResponseDto> {
-    const media = await this.queryService.getAccessibleById(
-      mediaAssetId,
-      principal,
+    const media = await this.getMediaHandler.execute(
+      new GetMediaQuery(mediaAssetId, principal),
     );
-    return toMediaResponse(media, this.queryService.getDeliveryUrl(media));
+
+    return toMediaResponse(media, this.getMediaHandler.deliveryUrl(media));
   }
 
   @Delete(':mediaAssetId')
@@ -73,6 +84,8 @@ export class MediaController {
     @CurrentUser() principal: AuthPrincipal,
     @Param('mediaAssetId', ParseUUIDPipe) mediaAssetId: string,
   ): Promise<void> {
-    await this.cleanupService.deleteById(mediaAssetId, principal);
+    await this.deleteMediaHandler.execute(
+      new DeleteMediaCommand(mediaAssetId, principal),
+    );
   }
 }

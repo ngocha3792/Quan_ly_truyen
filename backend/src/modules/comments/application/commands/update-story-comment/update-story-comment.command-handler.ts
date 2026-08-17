@@ -11,7 +11,7 @@ import {
   type CommentMetricsPort,
   type CommentPersistencePort,
 } from '../../ports';
-import { requireReaderUserId } from '../../comment-auth.util';
+import { requireReaderUserId } from '../../../domain/policies/comment-auth.policy';
 import { UpdateStoryCommentCommand } from './update-story-comment.command';
 
 @Injectable()

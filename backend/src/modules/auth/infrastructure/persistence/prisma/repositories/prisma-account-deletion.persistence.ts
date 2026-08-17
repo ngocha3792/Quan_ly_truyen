@@ -21,14 +21,14 @@ import {
   SessionRevocationReason,
 } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaAccountDeletionPersistence implements AccountDeletionPersistencePort {
   constructor(
     private readonly prisma: PrismaService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findCredentialByUserId(

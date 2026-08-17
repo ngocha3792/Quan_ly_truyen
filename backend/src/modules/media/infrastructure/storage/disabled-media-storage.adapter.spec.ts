@@ -1,5 +1,5 @@
 import { DisabledMediaStorageAdapter } from './disabled-media-storage.adapter';
-import { MEDIA_ERROR_CODES } from '../../application/errors/media-error-codes';
+import { MEDIA_ERROR_CODES } from '../../domain/exceptions/media-error-codes';
 
 describe('DisabledMediaStorageAdapter', () => {
   it('returns a stable non-retryable service-unavailable exception', () => {

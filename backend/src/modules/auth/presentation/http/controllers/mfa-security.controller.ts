@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   Res,
 } from '@nestjs/common';
@@ -20,7 +21,7 @@ import {
 
 import { Idempotent } from '@/common/decorators/interceptor';
 
-import { MfaService } from '../../../infrastructure';
+import { MFA_PORT, type MfaPort } from '../../../application/ports';
 
 import {
   BeginMfaSettingsEnrollmentRequest,
@@ -28,14 +29,15 @@ import {
   VerifyMfaSensitiveActionRequest,
 } from '../requests';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 @Controller('auth/security/mfa')
 export class MfaSecurityController {
   constructor(
-    private readonly mfa: MfaService,
+    @Inject(MFA_PORT)
+    private readonly mfa: MfaPort,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Get()

@@ -4,7 +4,7 @@ import {
   RATING_PERSISTENCE_PORT,
   type RatingPersistencePort,
 } from '../../ports';
-import { requireRatingUserId } from '../../rating-auth.util';
+import { requireRatingUserId } from '../../../domain/policies/rating-auth.policy';
 import { DeleteRatingCommand } from './delete-rating.command';
 
 @Injectable()

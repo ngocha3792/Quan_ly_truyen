@@ -1,48 +1,44 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative, resolve, sep } from 'node:path';
 import process from 'node:process';
 
 const ROOT = resolve(process.cwd());
 const MODULES_ROOT = join(ROOT, 'src', 'modules');
 
-// Temporary baseline for legacy violations. Refactors must delete entries from this
-// list; new violations are rejected immediately.
-const LEGACY_APPLICATION_VIOLATIONS = new Set([
-  'src/modules/media/application/media-cleanup.service.ts::@/generated/prisma/client',
-  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/database/prisma',
-  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/observability',
-  'src/modules/media/application/media-ownership-authorization.service.ts::@/generated/prisma/client',
-  'src/modules/media/application/media-ownership-authorization.service.ts::@/infrastructure/database/prisma',
-  'src/modules/media/application/media-query.service.ts::@/generated/prisma/client',
-  'src/modules/media/application/media-query.service.ts::@/infrastructure/database/prisma',
-  'src/modules/media/application/media.service.ts::@/generated/prisma/client',
-  'src/modules/media/application/media.service.ts::@/infrastructure/database/prisma',
-  'src/modules/media/application/policies/media-upload-policy.registry.ts::@/generated/prisma/client',
-  'src/modules/media/application/ports/media-storage.port.ts::@/generated/prisma/client',
-  'src/modules/authors/application/services/author-lifecycle.service.ts::@/infrastructure/database',
-  'src/modules/authors/application/services/author-profile.service.ts::@/infrastructure/database',
-  'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/cache/redis/redis.constants',
-  'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/observability',
-  'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/database',
-  'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/observability',
-  'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/queue',
-  'src/modules/analytics/application/author-analytics.service.ts::@/infrastructure/database',
-  'src/modules/comments/application/comments.service.ts::@/infrastructure/database',
-  'src/modules/comments/application/comments.service.ts::@/infrastructure/observability',
-  'src/modules/comments/application/comments.service.ts::@/generated/prisma/client',
-  'src/modules/authors/application/services/author-profile.service.ts::@/generated/prisma/client',
-  'src/modules/authors/application/services/author-lifecycle.service.ts::@/generated/prisma/client',
-  'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/generated/prisma/client',
-]);
-
-
-const LEGACY_CROSS_MODULE_VIOLATIONS = new Set([
-]);
+const REQUIRED_MODULE_DIRECTORIES = [
+  'application/commands',
+  'application/dto',
+  'application/mappers',
+  'application/ports',
+  'application/queries',
+  'domain/entities',
+  'domain/enums',
+  'domain/events',
+  'domain/exceptions',
+  'domain/policies',
+  'domain/repositories',
+  'domain/value-objects',
+  'infrastructure/cache',
+  'infrastructure/persistence',
+  'infrastructure/search',
+  'presentation/http/controllers',
+  'presentation/http/requests',
+  'presentation/http/responses',
+];
 
 const importPattern = /(?:from\s+|import\s*\(\s*)['"]([^'"]+)['"]/g;
 
 function toPosix(path) {
   return path.split(sep).join('/');
+}
+
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function listTypescriptFiles(directory) {
@@ -53,16 +49,20 @@ async function listTypescriptFiles(directory) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await listTypescriptFiles(path)));
-    } else if (
-      entry.isFile() &&
-      extname(entry.name) === '.ts' &&
-      !entry.name.endsWith('.spec.ts')
-    ) {
+    } else if (entry.isFile() && extname(entry.name) === '.ts') {
       files.push(path);
     }
   }
 
   return files;
+}
+
+async function listModuleNames() {
+  const entries = await readdir(MODULES_ROOT, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 }
 
 function isInfrastructureImport(specifier) {
@@ -73,26 +73,96 @@ function isInfrastructureImport(specifier) {
 }
 
 function isGeneratedPrismaImport(specifier) {
-  return specifier === '@/generated/prisma/client';
+  return specifier.startsWith('@/generated/prisma');
 }
 
+const moduleNames = await listModuleNames();
 const files = await listTypescriptFiles(MODULES_ROOT);
 const violations = [];
-const seenLegacy = new Set();
-const seenCrossModuleLegacy = new Set();
+
+for (const moduleName of moduleNames) {
+  const moduleRoot = join(MODULES_ROOT, moduleName);
+
+  for (const requiredDirectory of REQUIRED_MODULE_DIRECTORIES) {
+    const fullPath = join(moduleRoot, ...requiredDirectory.split('/'));
+    if (!(await pathExists(fullPath))) {
+      violations.push({
+        file: `src/modules/${moduleName}`,
+        specifier: requiredDirectory,
+        reason: 'required module directory is missing',
+      });
+    }
+  }
+
+  const presentationHttpRoot = join(moduleRoot, 'presentation', 'http');
+  if (await pathExists(presentationHttpRoot)) {
+    const httpEntries = await readdir(presentationHttpRoot, { withFileTypes: true });
+    for (const entry of httpEntries) {
+      if (!entry.isFile() || extname(entry.name) !== '.ts' || entry.name === 'index.ts') {
+        continue;
+      }
+
+      if (entry.name.endsWith('.controller.ts')) {
+        violations.push({
+          file: `src/modules/${moduleName}/presentation/http/${entry.name}`,
+          specifier: 'presentation/http/controllers',
+          reason: 'controllers must live inside presentation/http/controllers',
+        });
+      } else if (entry.name.endsWith('.request.ts')) {
+        violations.push({
+          file: `src/modules/${moduleName}/presentation/http/${entry.name}`,
+          specifier: 'presentation/http/requests',
+          reason: 'request models must live inside presentation/http/requests',
+        });
+      } else if (entry.name.endsWith('.response.ts')) {
+        violations.push({
+          file: `src/modules/${moduleName}/presentation/http/${entry.name}`,
+          specifier: 'presentation/http/responses',
+          reason: 'response models must live inside presentation/http/responses',
+        });
+      }
+    }
+  }
+
+  const legacyServicesDirectory = join(moduleRoot, 'application', 'services');
+  if (await pathExists(legacyServicesDirectory)) {
+    violations.push({
+      file: `src/modules/${moduleName}/application/services`,
+      specifier: 'application/services',
+      reason: 'service-centric application folders are forbidden; use commands/queries/ports',
+    });
+  }
+}
 
 for (const file of files) {
   const rel = toPosix(relative(ROOT, file));
   const source = await readFile(file, 'utf8');
   const imports = [...source.matchAll(importPattern)].map((match) => match[1]);
 
+  const isSpec = rel.endsWith('.spec.ts');
   const isDomain = rel.includes('/domain/');
   const isApplication = rel.includes('/application/');
+  const isPresentation = rel.includes('/presentation/');
   const moduleMatch = rel.match(/^src\/modules\/([^/]+)\//);
   const sourceModule = moduleMatch?.[1];
 
+  if (
+    isApplication &&
+    !isSpec &&
+    (rel.includes('/application/services/') || rel.endsWith('.service.ts'))
+  ) {
+    violations.push({
+      file: rel,
+      specifier: rel,
+      reason: 'application use cases must be commands/queries, not *Service classes',
+    });
+  }
+
+  if (isSpec) {
+    continue;
+  }
+
   for (const specifier of imports) {
-    const key = `${rel}::${specifier}`;
     const crossModuleMatch = specifier.match(/^@\/modules\/([^/]+)(\/.*)$/);
 
     if (
@@ -100,16 +170,11 @@ for (const file of files) {
       crossModuleMatch &&
       crossModuleMatch[1] !== sourceModule
     ) {
-      if (LEGACY_CROSS_MODULE_VIOLATIONS.has(key)) {
-        seenCrossModuleLegacy.add(key);
-      } else {
-        violations.push({
-          file: rel,
-          specifier,
-          reason:
-            'modules must import another module through its public root contract',
-        });
-      }
+      violations.push({
+        file: rel,
+        specifier,
+        reason: 'modules must import another module through its public root contract',
+      });
     }
 
     if (isDomain) {
@@ -131,32 +196,22 @@ for (const file of files) {
       isApplication &&
       (isInfrastructureImport(specifier) || isGeneratedPrismaImport(specifier))
     ) {
-      if (LEGACY_APPLICATION_VIOLATIONS.has(key)) {
-        seenLegacy.add(key);
-      } else {
-        violations.push({
-          file: rel,
-          specifier,
-          reason: 'application must depend on ports, not infrastructure/Prisma',
-        });
-      }
+      violations.push({
+        file: rel,
+        specifier,
+        reason: 'application must depend on ports, not infrastructure/Prisma',
+      });
+      continue;
+    }
+
+    if (isPresentation && isInfrastructureImport(specifier)) {
+      violations.push({
+        file: rel,
+        specifier,
+        reason: 'presentation must call application contracts, not infrastructure adapters',
+      });
     }
   }
-}
-
-const staleBaseline = [...LEGACY_APPLICATION_VIOLATIONS].filter(
-  (entry) => !seenLegacy.has(entry),
-);
-const staleCrossModuleBaseline = [...LEGACY_CROSS_MODULE_VIOLATIONS].filter(
-  (entry) => !seenCrossModuleLegacy.has(entry),
-);
-
-if (staleBaseline.length > 0 || staleCrossModuleBaseline.length > 0) {
-  console.error('\nArchitecture baseline contains stale entries. Remove them:');
-  for (const entry of [...staleBaseline, ...staleCrossModuleBaseline].sort()) {
-    console.error(`  - ${entry}`);
-  }
-  process.exitCode = 1;
 }
 
 if (violations.length > 0) {
@@ -167,10 +222,8 @@ if (violations.length > 0) {
     );
   }
   process.exitCode = 1;
-}
-
-if (!process.exitCode) {
+} else {
   console.log(
-    `Architecture boundaries OK (${LEGACY_APPLICATION_VIOLATIONS.size + LEGACY_CROSS_MODULE_VIOLATIONS.size} legacy violations tracked).`,
+    `Architecture boundaries OK (${moduleNames.length} modules, canonical folders enforced, 0 legacy exceptions).`,
   );
 }

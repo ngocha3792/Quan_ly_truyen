@@ -15,7 +15,7 @@ import {
   RefreshTokenReuseDetectedException,
 } from '../../../domain/exceptions';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import { AuthTokenController } from './auth-token.controller';
 
@@ -75,7 +75,7 @@ describe('AuthTokenController', () => {
       setOAuthStateCookie: jest.fn(),
 
       clearOAuthStateCookie: jest.fn(),
-    } as unknown as AuthCookieService;
+    } as unknown as AuthCookieManager;
 
     controller = new AuthTokenController(
       loginHandler,

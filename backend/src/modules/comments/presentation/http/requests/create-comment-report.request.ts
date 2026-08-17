@@ -1,9 +1,13 @@
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ReportReason } from '@/generated/prisma/client';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
+import {
+  COMMENT_REPORT_REASONS,
+  type ReportReasonName,
+} from '../../../domain';
 
 export class CreateCommentReportRequest {
-  @IsEnum(ReportReason)
-  reason!: keyof typeof ReportReason;
+  @IsIn(COMMENT_REPORT_REASONS)
+  reason!: ReportReasonName;
 
   @IsOptional()
   @IsString()

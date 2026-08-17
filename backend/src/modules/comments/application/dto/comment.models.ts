@@ -1,14 +1,8 @@
+import type { ReactionName, ReportReasonName } from '../../domain';
+
+export type { ReactionName, ReportReasonName } from '../../domain';
+
 export type CommentDisplayState = 'VISIBLE' | 'DELETED';
-export type ReactionName = 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL';
-export type ReportReasonName =
-  | 'SPAM'
-  | 'HARASSMENT'
-  | 'HATE_SPEECH'
-  | 'SEXUAL_CONTENT'
-  | 'VIOLENCE'
-  | 'COPYRIGHT'
-  | 'MISINFORMATION'
-  | 'OTHER';
 
 export interface CommentView {
   readonly id: string;

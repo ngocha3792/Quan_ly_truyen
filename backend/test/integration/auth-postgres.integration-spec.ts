@@ -40,7 +40,7 @@ import {
   ChangeEmailUrlBuilder,
 } from '@/modules/auth/infrastructure/mail';
 
-import { AuthAuditWriterService } from '@/modules/auth/infrastructure/audit';
+import { PrismaAuthAuditWriterAdapter } from '@/modules/auth/infrastructure/audit';
 
 import {
   PrismaEmailVerificationPersistence,
@@ -78,7 +78,7 @@ describe('Auth PostgreSQL persistence', () => {
         RequestContextStore,
 
         TracePropagationService,
-        AuthAuditWriterService,
+        PrismaAuthAuditWriterAdapter,
 
         PrismaLoginPersistence,
 

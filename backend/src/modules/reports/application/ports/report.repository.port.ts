@@ -1,7 +1,7 @@
 import type {
   AdminReportListQuery,
   CloseReportPersistenceInput,
-} from '../report.models';
+} from '../dto';
 
 export const REPORT_REPOSITORY = Symbol.for('modules.reports.repository');
 

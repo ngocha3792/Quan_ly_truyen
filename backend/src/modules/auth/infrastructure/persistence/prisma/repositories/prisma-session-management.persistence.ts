@@ -15,7 +15,7 @@ import type {
 
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaSessionManagementPersistence implements SessionManagementPersistencePort {
@@ -26,7 +26,7 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
 
     configService: ConfigService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {
     const config = configService.getOrThrow<AuthConfig>('auth');
 

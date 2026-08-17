@@ -1,3 +1,4 @@
-export * from './follow.models';
-export * from './follows.service';
+export * from './commands';
+export * from './queries';
+export * from './dto';
 export * from './ports/follow.repository.port';

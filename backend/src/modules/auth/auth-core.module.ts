@@ -3,6 +3,7 @@ import { PassportModule } from '@nestjs/passport';
 
 import {
   ACCESS_SESSION_READER_PORT,
+  CSRF_TOKEN_PORT,
   ACCOUNT_DELETION_PERSISTENCE_PORT,
   AUTH_AUDIT_READER_PORT,
   AUTH_TOKEN_ISSUER_PORT,
@@ -16,7 +17,10 @@ import {
   JWT_BLACKLIST_PORT,
   LOGIN_PERSISTENCE_PORT,
   LOGIN_RATE_LIMITER_PORT,
+  MFA_PORT,
   MFA_CHALLENGE_PORT,
+  OAUTH_FLOW_PORT,
+  OAUTH_HANDOFF_PORT,
   PASSWORD_HASHER_PORT,
   PASSWORD_RESET_COOLDOWN_PORT,
   PASSWORD_RESET_PERSISTENCE_PORT,
@@ -34,16 +38,16 @@ import {
   ValidateAccessTokenQueryHandler,
 } from './application';
 import {
-  AuthAuditWriterService,
+  PrismaAuthAuditWriterAdapter,
   ChangeEmailUrlBuilder,
-  CsrfTokenService,
+  CsrfTokenAdapter,
   EmailVerificationUrlBuilder,
   JwtAccessStrategy,
   JwtAuthTokenIssuer,
   JwtRefreshTokenVerifier,
-  MfaSecretCipherService,
-  MfaService,
-  OAuthFlowService,
+  MfaSecretCipherAdapter,
+  MfaAdapter,
+  OAuthFlowAdapter,
   OAuthHandoffStore,
   PasswordResetUrlBuilder,
   PrismaAccessSessionReader,
@@ -68,9 +72,9 @@ import {
   RedisLoginRateLimiter,
   RedisMfaChallengeStore,
   RedisPasswordResetCooldown,
-  TotpService,
+  TotpAdapter,
 } from './infrastructure';
-import { AuthCookieService } from './presentation/http';
+import { AuthCookieManager } from './presentation/http';
 
 import {
   generateSecureToken,
@@ -114,6 +118,10 @@ const idGeneratorProvider = {
 };
 
 const portProviders = [
+  { provide: CSRF_TOKEN_PORT, useExisting: CsrfTokenAdapter },
+  { provide: MFA_PORT, useExisting: MfaAdapter },
+  { provide: OAUTH_FLOW_PORT, useExisting: OAuthFlowAdapter },
+  { provide: OAUTH_HANDOFF_PORT, useExisting: OAuthHandoffStore },
   { provide: MFA_CHALLENGE_PORT, useExisting: RedisMfaChallengeStore },
   {
     provide: RECOVERY_EMAIL_PERSISTENCE_PORT,
@@ -191,6 +199,10 @@ const portProviders = [
 ];
 
 const portTokens = [
+  CSRF_TOKEN_PORT,
+  MFA_PORT,
+  OAUTH_FLOW_PORT,
+  OAUTH_HANDOFF_PORT,
   MFA_CHALLENGE_PORT,
   RECOVERY_EMAIL_PERSISTENCE_PORT,
   CHANGE_PASSWORD_PERSISTENCE_PORT,
@@ -228,15 +240,15 @@ const portTokens = [
     OutboxCoreModule,
   ],
   providers: [
-    CsrfTokenService,
-    AuthCookieService,
-    AuthAuditWriterService,
+    CsrfTokenAdapter,
+    AuthCookieManager,
+    PrismaAuthAuditWriterAdapter,
     RedisMfaChallengeStore,
     PrismaMfaPersistence,
-    MfaSecretCipherService,
-    TotpService,
-    MfaService,
-    OAuthFlowService,
+    MfaSecretCipherAdapter,
+    TotpAdapter,
+    MfaAdapter,
+    OAuthFlowAdapter,
     OAuthHandoffStore,
     PrismaRecoveryEmailPersistence,
     PrismaAuthAuditReader,
@@ -269,11 +281,11 @@ const portTokens = [
   ],
   exports: [
     PassportModule,
-    CsrfTokenService,
-    AuthCookieService,
-    AuthAuditWriterService,
-    MfaService,
-    OAuthFlowService,
+    CsrfTokenAdapter,
+    AuthCookieManager,
+    PrismaAuthAuditWriterAdapter,
+    MfaAdapter,
+    OAuthFlowAdapter,
     OAuthHandoffStore,
     ValidateAccessTokenQueryHandler,
     ...portTokens,

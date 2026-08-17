@@ -1,4 +1,4 @@
-import type { MediaAsset } from '@/generated/prisma/client';
+import type { MediaAssetDto } from '../../../application';
 
 export interface MediaResponseDto {
   id: string;
@@ -15,7 +15,7 @@ export interface MediaResponseDto {
 }
 
 export function toMediaResponse(
-  media: MediaAsset,
+  media: MediaAssetDto,
   deliveryUrl: string | null,
 ): MediaResponseDto {
   return {

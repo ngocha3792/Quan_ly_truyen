@@ -6,7 +6,7 @@ import {
   type CommentMetricsPort,
   type CommentPersistencePort,
 } from '../../ports';
-import { requireReaderUserId } from '../../comment-auth.util';
+import { requireReaderUserId } from '../../../domain/policies/comment-auth.policy';
 import { DeleteStoryCommentCommand } from './delete-story-comment.command';
 
 @Injectable()

@@ -1,1 +1,2 @@
-export * from './report.exceptions';
+export * from './exceptions';
+export * from './repositories';

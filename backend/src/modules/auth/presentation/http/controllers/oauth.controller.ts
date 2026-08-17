@@ -5,6 +5,7 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Post,
   Query,
@@ -22,12 +23,14 @@ import { isAppException } from '@/common/exceptions';
 import type { AuthConfig } from '@/config';
 
 import {
-  OAuthFlowService,
-  OAuthHandoffStore,
-  type OAuthHandoffResult,
-} from '../../../infrastructure';
+  OAUTH_FLOW_PORT,
+  OAUTH_HANDOFF_PORT,
+  type OAuthFlowPort,
+  type OAuthHandoffPort,
+} from '../../../application/ports';
+import type { OAuthHandoffResultDto } from '../../../application/dto';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import { OAuthFinalizeRequest } from '../requests';
 
@@ -38,11 +41,13 @@ export class OAuthController {
   constructor(
     configService: ConfigService,
 
-    private readonly oauth: OAuthFlowService,
+    @Inject(OAUTH_FLOW_PORT)
+    private readonly oauth: OAuthFlowPort,
 
-    private readonly handoffs: OAuthHandoffStore,
+    @Inject(OAUTH_HANDOFF_PORT)
+    private readonly handoffs: OAuthHandoffPort,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {
     this.authConfig = configService.getOrThrow<AuthConfig>('auth');
   }
@@ -165,7 +170,7 @@ export class OAuthController {
       /*
        * Không trả accessToken ra HTML/URL.
        *
-       * OAuthFlowService đã tạo session.
+       * OAuthFlowAdapter đã tạo session.
        * Browser chỉ nhận refresh cookie.
        */
       const handoff = await this.handoffs.issue({
@@ -216,7 +221,7 @@ export class OAuthController {
       passthrough: true,
     })
     response: Response,
-  ): Promise<OAuthHandoffResult> {
+  ): Promise<OAuthHandoffResultDto> {
     this.authCookies.setNoStoreHeaders(response);
 
     return this.handoffs.consume(request.handoff);
@@ -259,7 +264,7 @@ export class OAuthController {
   }
 }
 
-function toHandoffError(error: unknown): OAuthHandoffResult {
+function toHandoffError(error: unknown): OAuthHandoffResultDto {
   if (isAppException(error)) {
     const challenge = readMfaChallenge(
       error.code,

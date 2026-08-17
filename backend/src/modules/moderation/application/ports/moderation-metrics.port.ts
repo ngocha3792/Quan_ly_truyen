@@ -1,4 +1,4 @@
-import type { CommentModerationOperation } from '../moderation.models';
+import type { CommentModerationOperation } from '../../domain';
 
 export type ModerationMetricOperation = CommentModerationOperation | 'warn' | 'ban';
 

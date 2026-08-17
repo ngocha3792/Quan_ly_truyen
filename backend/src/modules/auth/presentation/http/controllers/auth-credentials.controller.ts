@@ -58,7 +58,7 @@ import type {
   VerifyEmailResponse,
 } from '../responses';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 @Controller('auth')
 export class AuthCredentialsController {
@@ -80,7 +80,7 @@ export class AuthCredentialsController {
 
     private readonly confirmEmailChangeCommandHandler: ConfirmEmailChangeCommandHandler,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Post('register')

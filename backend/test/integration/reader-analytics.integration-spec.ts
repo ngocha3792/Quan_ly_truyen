@@ -14,12 +14,16 @@ import {
 } from '@/generated/prisma/client';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { MetricsService } from '@/infrastructure/observability';
-import { AnalyticsAggregationService } from '@/modules/analytics/infrastructure/analytics-aggregation.service';
-import { AnalyticsReconciliationService } from '@/modules/analytics/infrastructure/analytics-reconciliation.service';
-import { AnalyticsIdentityService } from '@/modules/analytics/application/analytics-identity.service';
-import { ReaderAnalyticsIngestionService } from '@/modules/analytics/application/reader-analytics-ingestion.service';
-import { AuthorAnalyticsService } from '@/modules/analytics/application/author-analytics.service';
-import { analyticsDateKey } from '@/modules/analytics/domain/analytics-time.util';
+import {
+  PrismaAnalyticsAggregationAdapter,
+  PrismaAnalyticsReconciliationAdapter,
+} from '@/modules/analytics/infrastructure';
+import {
+  HmacAnalyticsIdentityAdapter,
+  PrismaAuthorAnalyticsReader,
+  PrismaReaderAnalyticsIngestionAdapter,
+} from '@/modules/analytics/infrastructure';
+import { analyticsDateKey } from '@/modules/analytics/domain/value-objects/analytics-time';
 
 const runId = randomUUID().replaceAll('-', '').slice(0, 10);
 let seq = 0;
@@ -28,20 +32,20 @@ const unique = (prefix: string) => `${prefix}-${runId}-${++seq}`;
 describe('Phase 6 reader analytics', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let aggregate: AnalyticsAggregationService;
-  let reconcile: AnalyticsReconciliationService;
-  let identity: AnalyticsIdentityService;
-  let authorAnalytics: AuthorAnalyticsService;
+  let aggregate: PrismaAnalyticsAggregationAdapter;
+  let reconcile: PrismaAnalyticsReconciliationAdapter;
+  let identity: HmacAnalyticsIdentityAdapter;
+  let authorAnalytics: PrismaAuthorAnalyticsReader;
   const createdUsers = new Set<string>();
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
       providers: [
-        AnalyticsAggregationService,
-        AnalyticsReconciliationService,
-        AnalyticsIdentityService,
-        AuthorAnalyticsService,
+        PrismaAnalyticsAggregationAdapter,
+        PrismaAnalyticsReconciliationAdapter,
+        HmacAnalyticsIdentityAdapter,
+        PrismaAuthorAnalyticsReader,
         {
           provide: MetricsService,
           useValue: {
@@ -53,10 +57,10 @@ describe('Phase 6 reader analytics', () => {
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    aggregate = moduleRef.get(AnalyticsAggregationService);
-    reconcile = moduleRef.get(AnalyticsReconciliationService);
-    identity = moduleRef.get(AnalyticsIdentityService);
-    authorAnalytics = moduleRef.get(AuthorAnalyticsService);
+    aggregate = moduleRef.get(PrismaAnalyticsAggregationAdapter);
+    reconcile = moduleRef.get(PrismaAnalyticsReconciliationAdapter);
+    identity = moduleRef.get(HmacAnalyticsIdentityAdapter);
+    authorAnalytics = moduleRef.get(PrismaAuthorAnalyticsReader);
   });
 
   afterEach(async () => cleanup());
@@ -97,13 +101,13 @@ describe('Phase 6 reader analytics', () => {
           ? analyticsConfig
           : actualConfig.getOrThrow<T>(key)) as T,
     } as ConfigService;
-    const localIdentity = new AnalyticsIdentityService(fakeConfig);
+    const localIdentity = new HmacAnalyticsIdentityAdapter(fakeConfig);
     const metrics = {
       recordReaderAnalyticsReceived: jest.fn(),
       recordReaderAnalyticsRejected: jest.fn(),
       recordReaderAnalyticsProcessed: jest.fn(),
     } as unknown as MetricsService;
-    const ingestion = new ReaderAnalyticsIngestionService(
+    const ingestion = new PrismaReaderAnalyticsIngestionAdapter(
       prisma,
       fakeConfig,
       localIdentity,

@@ -5,13 +5,19 @@ import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
   AUTHOR_PERSISTENCE_PORT,
-  AuthorLifecycleService,
-  AuthorProfileService,
+  AUTHOR_LIFECYCLE_PERSISTENCE_PORT,
+  AUTHOR_PROFILE_PERSISTENCE_PORT,
+  AssertActiveAuthorQueryHandler,
+  ChangeAuthorStatusCommandHandler,
+  GetAdminAuthorDetailQueryHandler,
+  GetAuthorProfileQueryHandler,
+  ListAdminAuthorsQueryHandler,
+  UpdateAuthorProfileCommandHandler,
   GetAuthorDashboardQueryHandler,
   GetAuthorDetailQueryHandler,
   GetAuthorDirectoryQueryHandler,
 } from './application';
-import { PrismaAuthorPersistence } from './infrastructure';
+import { PrismaAuthorLifecyclePersistence, PrismaAuthorPersistence, PrismaAuthorProfilePersistence } from './infrastructure';
 import {
   ActiveAuthorGuard,
   AdminAuthorsController,
@@ -43,12 +49,20 @@ const queryHandlers = [
   ],
   providers: [
     PrismaAuthorPersistence,
-    AuthorLifecycleService,
-    AuthorProfileService,
+    PrismaAuthorLifecyclePersistence,
+    PrismaAuthorProfilePersistence,
+    AssertActiveAuthorQueryHandler,
+    ListAdminAuthorsQueryHandler,
+    GetAdminAuthorDetailQueryHandler,
+    ChangeAuthorStatusCommandHandler,
+    GetAuthorProfileQueryHandler,
+    UpdateAuthorProfileCommandHandler,
     ActiveAuthorGuard,
     ...portProviders,
+    { provide: AUTHOR_LIFECYCLE_PERSISTENCE_PORT, useExisting: PrismaAuthorLifecyclePersistence },
+    { provide: AUTHOR_PROFILE_PERSISTENCE_PORT, useExisting: PrismaAuthorProfilePersistence },
     ...queryHandlers,
   ],
-  exports: [AuthorLifecycleService, ActiveAuthorGuard],
+  exports: [AssertActiveAuthorQueryHandler, ActiveAuthorGuard],
 })
 export class AuthorsModule {}

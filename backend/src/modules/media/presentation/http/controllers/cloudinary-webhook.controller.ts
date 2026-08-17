@@ -10,11 +10,16 @@ import type { Request } from 'express';
 import { Public } from '@/common/decorators/auth';
 import { InvalidInputException } from '@/common/exceptions';
 
-import { CloudinaryWebhookService } from '../../../infrastructure/cloudinary/cloudinary-webhook.service';
+import {
+  ProcessMediaWebhookCommand,
+  ProcessMediaWebhookCommandHandler,
+} from '../../../application';
 
 @Controller('webhooks/cloudinary')
 export class CloudinaryWebhookController {
-  constructor(private readonly webhookService: CloudinaryWebhookService) {}
+  constructor(
+    private readonly processWebhook: ProcessMediaWebhookCommandHandler,
+  ) {}
 
   @Post()
   @Public()
@@ -30,11 +35,13 @@ export class CloudinaryWebhookController {
       });
     }
 
-    await this.webhookService.handle({
-      rawBody: request.rawBody,
-      timestamp,
-      signature,
-    });
+    await this.processWebhook.execute(
+      new ProcessMediaWebhookCommand({
+        rawBody: request.rawBody,
+        timestamp,
+        signature,
+      }),
+    );
 
     return { received: true };
   }

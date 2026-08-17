@@ -15,7 +15,7 @@ import { InMemoryIdempotencyStore } from '@/infrastructure/idempotency/in-memory
 import type { AcquireIdempotencyResult } from '@/infrastructure/idempotency/idempotency-store.interface';
 import { CloudinaryWebhookInboxProcessor } from '@/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
 import { CLOUDINARY_CLIENT } from '@/modules/media/infrastructure/cloudinary/cloudinary.constants';
-import { CloudinaryUrlService } from '@/modules/media/infrastructure/cloudinary/cloudinary-url.service';
+import { CloudinaryUrlAdapter } from '@/modules/media/infrastructure/cloudinary/cloudinary-url.adapter';
 import {
   MEDIA_STORAGE,
   type ConfirmUploadInput,
@@ -117,7 +117,7 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       .useValue(storage)
       .overrideProvider(CLOUDINARY_CLIENT)
       .useValue(cloudinary)
-      .overrideProvider(CloudinaryUrlService)
+      .overrideProvider(CloudinaryUrlAdapter)
       .useValue({
         build: (input: { publicId: string }) => storage.buildUrl(input),
       })

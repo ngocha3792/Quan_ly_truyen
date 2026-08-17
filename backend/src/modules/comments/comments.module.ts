@@ -1,26 +1,37 @@
 import { Module } from '@nestjs/common';
+
 import { RedisModule } from '@/infrastructure/cache/redis/redis.module';
 import { PrismaModule } from '@/infrastructure/database';
+
 import {
-  AbuseRateLimiterService,
+  COMMENT_ABUSE_GUARD_PORT,
   COMMENT_ABUSE_METRICS_PORT,
   COMMENT_ABUSE_RATE_LIMIT_STORE_PORT,
+  COMMENT_INTERACTION_PERSISTENCE_PORT,
   COMMENT_METRICS_PORT,
   COMMENT_PERSISTENCE_PORT,
+  COMMENT_WRITE_GUARD_PORT,
   RECENT_COMMENT_READER_PORT,
-  CommentsService,
-  CommentWriteAbuseService,
+  ClearCommentReactionCommandHandler,
+  CreateCommentReplyCommandHandler,
+  CreateCommentReportCommandHandler,
   CreateStoryCommentCommandHandler,
   DeleteStoryCommentCommandHandler,
+  GetViewerCommentReactionsQueryHandler,
   ListChapterCommentsQueryHandler,
+  ListCommentRepliesQueryHandler,
   ListStoryCommentsQueryHandler,
+  SetCommentReactionCommandHandler,
   UpdateStoryCommentCommandHandler,
 } from './application';
 import {
+  CommentWriteGuardAdapter,
   MetricsCommentAbuseAdapter,
   MetricsCommentMetricsAdapter,
+  PrismaCommentInteractionPersistence,
   PrismaCommentPersistence,
   PrismaRecentCommentReader,
+  RedisCommentAbuseGuardAdapter,
   RedisCommentAbuseRateLimitStoreAdapter,
 } from './infrastructure';
 import {
@@ -37,22 +48,40 @@ import {
     PublicCommentsController,
   ],
   providers: [
-    CommentsService,
-    AbuseRateLimiterService,
-    CommentWriteAbuseService,
     CreateStoryCommentCommandHandler,
-    UpdateStoryCommentCommandHandler,
+    CreateCommentReplyCommandHandler,
+    SetCommentReactionCommandHandler,
+    ClearCommentReactionCommandHandler,
+    CreateCommentReportCommandHandler,
     DeleteStoryCommentCommandHandler,
+    UpdateStoryCommentCommandHandler,
+    ListCommentRepliesQueryHandler,
+    GetViewerCommentReactionsQueryHandler,
     ListStoryCommentsQueryHandler,
     ListChapterCommentsQueryHandler,
     PrismaCommentPersistence,
+    PrismaCommentInteractionPersistence,
     PrismaRecentCommentReader,
+    RedisCommentAbuseGuardAdapter,
+    RedisCommentAbuseRateLimitStoreAdapter,
+    CommentWriteGuardAdapter,
     MetricsCommentMetricsAdapter,
     MetricsCommentAbuseAdapter,
-    RedisCommentAbuseRateLimitStoreAdapter,
     {
       provide: COMMENT_PERSISTENCE_PORT,
       useExisting: PrismaCommentPersistence,
+    },
+    {
+      provide: COMMENT_INTERACTION_PERSISTENCE_PORT,
+      useExisting: PrismaCommentInteractionPersistence,
+    },
+    {
+      provide: COMMENT_ABUSE_GUARD_PORT,
+      useExisting: RedisCommentAbuseGuardAdapter,
+    },
+    {
+      provide: COMMENT_WRITE_GUARD_PORT,
+      useExisting: CommentWriteGuardAdapter,
     },
     {
       provide: COMMENT_METRICS_PORT,
@@ -71,6 +100,5 @@ import {
       useExisting: MetricsCommentAbuseAdapter,
     },
   ],
-  exports: [AbuseRateLimiterService, CommentWriteAbuseService],
 })
 export class CommentsModule {}

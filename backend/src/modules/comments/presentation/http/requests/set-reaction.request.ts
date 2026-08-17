@@ -1,7 +1,11 @@
-import { IsEnum } from 'class-validator';
-import { ReactionType } from '@/generated/prisma/client';
+import { IsIn } from 'class-validator';
+
+import {
+  COMMENT_REACTION_TYPES,
+  type ReactionName,
+} from '../../../domain';
 
 export class SetReactionRequest {
-  @IsEnum(ReactionType)
-  type!: keyof typeof ReactionType;
+  @IsIn(COMMENT_REACTION_TYPES)
+  type!: ReactionName;
 }

@@ -1,4 +1,6 @@
-export type MediaStorageResourceType = 'image' | 'video' | 'raw';
+import type { MediaStorageResourceType } from '../../domain/value-objects/media-storage-resource-type';
+
+export type { MediaStorageResourceType } from '../../domain/value-objects/media-storage-resource-type';
 
 export interface StoredMedia {
   provider: 'cloudinary';

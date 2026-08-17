@@ -18,7 +18,7 @@ import {
   SessionRevocationReason,
 } from '../../domain/enums';
 
-import { AuthAuditWriterService } from '../audit';
+import { PrismaAuthAuditWriterAdapter } from '../audit';
 
 export type MfaCredentialSource = 'general' | 'legacy-admin';
 
@@ -53,7 +53,7 @@ export class PrismaMfaPersistence {
   constructor(
     private readonly prisma: PrismaService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findAccount(userId: string): Promise<LoginAccountRecord | null> {

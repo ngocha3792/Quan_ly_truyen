@@ -22,7 +22,7 @@ import { SessionRevocationReason } from '../../../../domain/enums';
 import { PasswordResetUrlBuilder } from '../../../mail';
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaPasswordResetPersistence implements PasswordResetPersistencePort {
@@ -32,7 +32,7 @@ export class PrismaPasswordResetPersistence implements PasswordResetPersistenceP
     private readonly outboxWriter: OutboxWriterService,
 
     private readonly resetUrlBuilder: PasswordResetUrlBuilder,
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async request(

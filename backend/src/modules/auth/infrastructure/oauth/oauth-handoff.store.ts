@@ -14,35 +14,13 @@ import type { AuthConfig } from '@/config';
 
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 
+import type { OAuthHandoffPort } from '../../application/ports';
+import type { OAuthHandoffResultDto } from '../../application/dto';
 import { OAuthFlowInvalidException } from '../../domain/exceptions';
 
-export interface OAuthHandoffMfaChallenge {
-  mfaTicket: string;
-
-  mode: 'enroll' | 'verify';
-
-  expiresAt: string;
-}
-
-export type OAuthHandoffResult =
-  | {
-      status: 'success';
-    }
-  | {
-      status: 'mfa';
-
-      challenge: OAuthHandoffMfaChallenge;
-    }
-  | {
-      status: 'error';
-
-      code: string;
-
-      message: string;
-    };
 
 @Injectable()
-export class OAuthHandoffStore {
+export class OAuthHandoffStore implements OAuthHandoffPort {
   private readonly config: AuthConfig;
 
   constructor(
@@ -54,7 +32,7 @@ export class OAuthHandoffStore {
     this.config = configService.getOrThrow<AuthConfig>('auth');
   }
 
-  async issue(result: OAuthHandoffResult): Promise<string> {
+  async issue(result: OAuthHandoffResultDto): Promise<string> {
     const handoff = randomBytes(32).toString('base64url');
 
     await this.requireRedis().set(
@@ -72,7 +50,7 @@ export class OAuthHandoffStore {
     return handoff;
   }
 
-  async consume(handoff: string): Promise<OAuthHandoffResult> {
+  async consume(handoff: string): Promise<OAuthHandoffResultDto> {
     const normalized = handoff.trim();
 
     if (!/^[A-Za-z0-9_-]{32,512}$/u.test(normalized)) {
@@ -91,7 +69,7 @@ export class OAuthHandoffStore {
     }
 
     try {
-      const result = JSON.parse(raw) as OAuthHandoffResult;
+      const result = JSON.parse(raw) as OAuthHandoffResultDto;
 
       if (
         result.status !== 'success' &&

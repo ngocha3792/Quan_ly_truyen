@@ -16,3 +16,6 @@ export * from './confirm-email-change';
 export * from './delete-account';
 export * from './recovery-email';
 export * from './security-questions';
+export * from './revoke-admin-user-session';
+export * from './revoke-all-admin-user-sessions';
+export * from './unlock-admin-user';

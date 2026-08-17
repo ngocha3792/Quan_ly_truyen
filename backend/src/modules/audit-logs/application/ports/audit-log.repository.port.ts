@@ -1,4 +1,4 @@
-import type { ListAuditLogsInput } from '../audit-log.models';
+import type { ListAuditLogsInput } from '../dto';
 
 export interface AuditLogListRecord {
   readonly id: string;

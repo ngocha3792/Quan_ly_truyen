@@ -6,7 +6,10 @@ import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import {
   AUDIT_LOG_METRICS_PORT,
   AUDIT_LOG_REPOSITORY_PORT,
-  AuditLogsService,
+  GetAuditLogDetailQuery,
+  GetAuditLogDetailQueryHandler,
+  ListAuditLogsQuery,
+  ListAuditLogsQueryHandler,
 } from '@/modules/audit-logs/application';
 import { PrismaAuditLogRepository } from '@/modules/audit-logs/infrastructure';
 
@@ -17,7 +20,8 @@ const unique = (prefix: string) => `${prefix}-${runId}-${++sequence}`;
 describe('Audit log PostgreSQL read-side', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let auditLogs: AuditLogsService;
+  let listAuditLogs: ListAuditLogsQueryHandler;
+  let getAuditLogDetail: GetAuditLogDetailQueryHandler;
   let actorId: string;
 
   beforeAll(async () => {
@@ -25,7 +29,8 @@ describe('Audit log PostgreSQL read-side', () => {
       imports: [AppConfigModule, PrismaModule],
       providers: [
         PrismaAuditLogRepository,
-        AuditLogsService,
+        GetAuditLogDetailQueryHandler,
+        ListAuditLogsQueryHandler,
         {
           provide: AUDIT_LOG_REPOSITORY_PORT,
           useExisting: PrismaAuditLogRepository,
@@ -38,7 +43,8 @@ describe('Audit log PostgreSQL read-side', () => {
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    auditLogs = moduleRef.get(AuditLogsService);
+    listAuditLogs = moduleRef.get(ListAuditLogsQueryHandler);
+    getAuditLogDetail = moduleRef.get(GetAuditLogDetailQueryHandler);
   });
 
   beforeEach(async () => {
@@ -88,7 +94,7 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
 
-    const result = await auditLogs.list({
+    const result = await listAuditLogs.execute(new ListAuditLogsQuery({
       actorId,
       entityType: 'user',
       entityId,
@@ -97,7 +103,7 @@ describe('Audit log PostgreSQL read-side', () => {
       to: new Date(second.createdAt.getTime() + 1_000),
       page: 1,
       pageSize: 20,
-    });
+    }));
 
     expect(result.items.map((item) => item.id)).toEqual([second.id, first.id]);
     expect(result.pagination.totalItems).toBe(2);
@@ -131,7 +137,7 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
 
-    const detail = await auditLogs.detail(row.id);
+    const detail = await getAuditLogDetail.execute(new GetAuditLogDetailQuery(row.id));
     const serialized = JSON.stringify(detail);
     for (const secret of [
       'DO_NOT_LEAK_1',
@@ -159,7 +165,7 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
     await prisma.user.delete({ where: { id: actorId } });
-    const detail = await auditLogs.detail(row.id);
+    const detail = await getAuditLogDetail.execute(new GetAuditLogDetailQuery(row.id));
     expect(detail.action).toBe('future.some.action');
     expect(detail.entity.type).toBe('future_entity');
     expect(detail.actor).toBeNull();
@@ -167,12 +173,12 @@ describe('Audit log PostgreSQL read-side', () => {
 
   it('rejects reversed date ranges', async () => {
     await expect(
-      auditLogs.list({
+      listAuditLogs.execute(new ListAuditLogsQuery({
         from: new Date('2026-08-16T12:00:00Z'),
         to: new Date('2026-08-15T12:00:00Z'),
         page: 1,
         pageSize: 20,
-      }),
+      })),
     ).rejects.toMatchObject({ code: 'AUDIT_INVALID_DATE_RANGE' });
   });
 

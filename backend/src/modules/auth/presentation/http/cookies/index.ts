@@ -1,3 +1,3 @@
-export * from './auth-cookie.service';
+export * from './auth-cookie.manager';
 
 export * from './cookie-header-reader';

@@ -4,7 +4,7 @@ import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
 
 import { timingSafeStringEqual } from '@/common/utils/timing-safe-string-equal.util';
 import { InvalidInputException, StorageException } from '@/common/exceptions';
-import { MEDIA_ERROR_CODES } from '../../application/errors/media-error-codes';
+import { MEDIA_ERROR_CODES } from '../../domain/exceptions/media-error-codes';
 import { MetricsService } from '@/infrastructure/observability';
 
 import type {
@@ -21,8 +21,8 @@ import type { StoredMedia } from '../../application/ports/stored-media.interface
 import { CLOUDINARY_CLIENT } from './cloudinary.constants';
 import type { CloudinaryClient } from './cloudinary.provider';
 import { mapCloudinaryAsset } from './cloudinary-response.mapper';
-import { CloudinarySignatureService } from './cloudinary-signature.service';
-import { CloudinaryUrlService } from './cloudinary-url.service';
+import { CloudinarySignatureAdapter } from './cloudinary-signature.adapter';
+import { CloudinaryUrlAdapter } from './cloudinary-url.adapter';
 
 @Injectable()
 export class CloudinaryMediaAdapter implements MediaStoragePort {
@@ -30,8 +30,8 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     @Inject(CLOUDINARY_CLIENT)
     private readonly cloudinary: CloudinaryClient | null,
     private readonly configService: ConfigService,
-    private readonly signatureService: CloudinarySignatureService,
-    private readonly urlService: CloudinaryUrlService,
+    private readonly signatureService: CloudinarySignatureAdapter,
+    private readonly urlService: CloudinaryUrlAdapter,
     private readonly metrics: MetricsService,
   ) {}
 

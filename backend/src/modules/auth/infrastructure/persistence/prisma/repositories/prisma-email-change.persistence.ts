@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 import { Prisma, TokenType } from '@/generated/prisma/client';
 
 import { isAppException } from '@/common/exceptions';
@@ -47,7 +47,7 @@ export class PrismaEmailChangePersistence implements EmailChangePersistencePort 
     private readonly outboxWriter: OutboxWriterService,
 
     private readonly urlBuilder: ChangeEmailUrlBuilder,
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findCredentialByUserId(

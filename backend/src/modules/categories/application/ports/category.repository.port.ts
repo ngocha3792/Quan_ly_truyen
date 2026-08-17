@@ -5,7 +5,7 @@ import type {
   CreateCategoryInput,
   ListCategoriesInput,
   UpdateCategoryInput,
-} from '../category.models';
+} from '../dto';
 
 export const CATEGORY_REPOSITORY = Symbol.for('modules.categories.repository');
 

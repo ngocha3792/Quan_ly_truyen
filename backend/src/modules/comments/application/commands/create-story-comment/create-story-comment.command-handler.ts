@@ -3,15 +3,16 @@ import {
   CommentChapterNotFoundException,
   CommentStoryNotFoundException,
 } from '../../../domain';
-import { CommentWriteAbuseService } from '../../comment-write-abuse.service';
 import type { StoryCommentResultDto } from '../../dto';
 import {
   COMMENT_METRICS_PORT,
+  COMMENT_WRITE_GUARD_PORT,
   COMMENT_PERSISTENCE_PORT,
   type CommentMetricsPort,
   type CommentPersistencePort,
+  type CommentWriteGuardPort,
 } from '../../ports';
-import { requireReaderUserId } from '../../comment-auth.util';
+import { requireReaderUserId } from '../../../domain/policies/comment-auth.policy';
 import { CreateStoryCommentCommand } from './create-story-comment.command';
 
 @Injectable()
@@ -19,7 +20,7 @@ export class CreateStoryCommentCommandHandler {
   constructor(
     @Inject(COMMENT_PERSISTENCE_PORT)
     private readonly persistence: CommentPersistencePort,
-    private readonly abuse: CommentWriteAbuseService,
+    @Inject(COMMENT_WRITE_GUARD_PORT) private readonly abuse: CommentWriteGuardPort,
     @Inject(COMMENT_METRICS_PORT)
     private readonly metrics: CommentMetricsPort,
   ) {}

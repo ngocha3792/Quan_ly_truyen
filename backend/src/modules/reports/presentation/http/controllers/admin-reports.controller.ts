@@ -17,17 +17,25 @@ import {
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import { AuthenticationRequiredException } from '@/common/exceptions';
-import { ReportsService } from '../../../application';
+import {
+  GetReportQuery, GetReportQueryHandler, ListReportsQuery, ListReportsQueryHandler,
+  RejectReportCommand, RejectReportCommandHandler, ResolveReportCommand, ResolveReportCommandHandler,
+} from '../../../application';
 import { CloseReportRequest, ListAdminReportsRequest } from '../requests';
 
 @Controller('admin/reports')
 @RequirePermissions(PermissionCode.REPORT_REVIEW)
 export class AdminReportsController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(
+    private readonly listReports: ListReportsQueryHandler,
+    private readonly getReport: GetReportQueryHandler,
+    private readonly resolveReport: ResolveReportCommandHandler,
+    private readonly rejectReport: RejectReportCommandHandler,
+  ) {}
 
   @Get()
   list(@Query() request: ListAdminReportsRequest) {
-    return this.reports.list({
+    return this.listReports.execute(new ListReportsQuery({
       status: request.status,
       reason: request.reason,
       reporter: request.reporter,
@@ -40,14 +48,14 @@ export class AdminReportsController {
       pageSize: request.pageSize,
       sort: request.sort,
       direction: request.direction,
-    });
+    }));
   }
 
   @Get(':reportId')
   detail(
     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
   ) {
-    return this.reports.get(reportId);
+    return this.getReport.execute(new GetReportQuery(reportId));
   }
 
   @Post(':reportId/resolve')
@@ -60,12 +68,7 @@ export class AdminReportsController {
     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
     @Body() request: CloseReportRequest,
   ) {
-    return this.reports.resolve({
-      actorId: this.actor(actorId),
-      reportId,
-      note: request.note,
-      audit: { ipAddress, userAgent, requestId },
-    });
+    return this.resolveReport.execute(new ResolveReportCommand(this.actor(actorId), reportId, request.note, { ipAddress, userAgent, requestId }));
   }
 
   @Post(':reportId/reject')
@@ -78,12 +81,7 @@ export class AdminReportsController {
     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
     @Body() request: CloseReportRequest,
   ) {
-    return this.reports.reject({
-      actorId: this.actor(actorId),
-      reportId,
-      note: request.note,
-      audit: { ipAddress, userAgent, requestId },
-    });
+    return this.rejectReport.execute(new RejectReportCommand(this.actor(actorId), reportId, request.note, { ipAddress, userAgent, requestId }));
   }
 
   private actor(value: string | undefined): string {

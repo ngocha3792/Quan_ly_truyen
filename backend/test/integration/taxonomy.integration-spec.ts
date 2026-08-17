@@ -4,10 +4,26 @@ import { Test } from '@nestjs/testing';
 import { AppConfigModule } from '@/config';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
-import { CategoriesService, CATEGORY_REPOSITORY } from '@/modules/categories/application';
+import {
+  CATEGORY_REPOSITORY,
+  CreateCategoryCommand,
+  CreateCategoryCommandHandler,
+  DeleteCategoryCommand,
+  DeleteCategoryCommandHandler,
+  UpdateCategoryCommand,
+  UpdateCategoryCommandHandler,
+} from '@/modules/categories/application';
 import { normalizeCategoryName } from '@/modules/categories/domain';
 import { PrismaCategoryRepository } from '@/modules/categories/infrastructure';
-import { TagsService, TAG_REPOSITORY } from '@/modules/tags/application';
+import {
+  TAG_REPOSITORY,
+  CreateTagCommand,
+  CreateTagCommandHandler,
+  DeleteTagCommand,
+  DeleteTagCommandHandler,
+  MergeTagsCommand,
+  MergeTagsCommandHandler,
+} from '@/modules/tags/application';
 import { PrismaTagRepository } from '@/modules/tags/infrastructure';
 
 const runId = randomUUID().replaceAll('-', '');
@@ -18,8 +34,12 @@ const unique = (prefix: string) =>
 describe('Taxonomy PostgreSQL invariants', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let categories: CategoriesService;
-  let tags: TagsService;
+  let createCategory: CreateCategoryCommandHandler;
+  let updateCategory: UpdateCategoryCommandHandler;
+  let deleteCategory: DeleteCategoryCommandHandler;
+  let createTag: CreateTagCommandHandler;
+  let deleteTag: DeleteTagCommandHandler;
+  let mergeTags: MergeTagsCommandHandler;
   let stories: PrismaStoryPersistence;
   let actorId: string;
 
@@ -31,15 +51,23 @@ describe('Taxonomy PostgreSQL invariants', () => {
         PrismaTagRepository,
         { provide: CATEGORY_REPOSITORY, useExisting: PrismaCategoryRepository },
         { provide: TAG_REPOSITORY, useExisting: PrismaTagRepository },
-        CategoriesService,
-        TagsService,
+        CreateCategoryCommandHandler,
+        UpdateCategoryCommandHandler,
+        DeleteCategoryCommandHandler,
+        CreateTagCommandHandler,
+        DeleteTagCommandHandler,
+        MergeTagsCommandHandler,
         PrismaStoryPersistence,
       ],
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    categories = moduleRef.get(CategoriesService);
-    tags = moduleRef.get(TagsService);
+    createCategory = moduleRef.get(CreateCategoryCommandHandler);
+    updateCategory = moduleRef.get(UpdateCategoryCommandHandler);
+    deleteCategory = moduleRef.get(DeleteCategoryCommandHandler);
+    createTag = moduleRef.get(CreateTagCommandHandler);
+    deleteTag = moduleRef.get(DeleteTagCommandHandler);
+    mergeTags = moduleRef.get(MergeTagsCommandHandler);
     stories = moduleRef.get(PrismaStoryPersistence);
   });
 
@@ -60,8 +88,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
   it('enforces case-insensitive tag names under concurrent create', async () => {
     const base = unique('RaceTag');
     const results = await Promise.allSettled([
-      tags.create(base, taxAudit()),
-      tags.create(base.toUpperCase(), taxAudit()),
+      createTag.execute(new CreateTagCommand(base, taxAudit())),
+      createTag.execute(new CreateTagCommand(base.toUpperCase(), taxAudit())),
     ]);
     expect(
       results.filter((result) => result.status === 'fulfilled'),
@@ -77,10 +105,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('merges tags atomically and deduplicates StoryTag rows', async () => {
-    const source = await tags.create(unique('Sci Fi'), taxAudit());
-    const target = await tags.create(
-      unique('Science Fiction'),
-      taxAudit(),
+    const source = await createTag.execute(new CreateTagCommand(unique('Sci Fi'), taxAudit()));
+    const target = await createTag.execute(
+      new CreateTagCommand(unique('Science Fiction'), taxAudit()),
     );
     const author = await createAuthor();
     const first = await createStory(author, unique('story-a'));
@@ -93,7 +120,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
       ],
     });
 
-    const result = await tags.merge(source.id, target.id, taxAudit());
+    const result = await mergeTags.execute(new MergeTagsCommand(source.id, target.id, taxAudit()));
     expect(result.merged).toMatchObject({
       movedStoryCount: 1,
       deduplicatedStoryCount: 1,
@@ -112,10 +139,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('blocks hard delete for used taxonomy', async () => {
-    const tag = await tags.create(unique('UsedTag'), taxAudit());
-    const category = await categories.create(
-      { name: unique('UsedCategory') },
-      taxAudit(),
+    const tag = await createTag.execute(new CreateTagCommand(unique('UsedTag'), taxAudit()));
+    const category = await createCategory.execute(
+      new CreateCategoryCommand({ name: unique('UsedCategory') }, taxAudit()),
     );
     const author = await createAuthor();
     const storyId = await createStory(author, unique('story-used'));
@@ -124,11 +150,11 @@ describe('Taxonomy PostgreSQL invariants', () => {
       data: { storyId, categoryId: category.id, isPrimary: true },
     });
 
-    await expect(tags.delete(tag.id, taxAudit())).rejects.toMatchObject({
+    await expect(deleteTag.execute(new DeleteTagCommand(tag.id, taxAudit()))).rejects.toMatchObject({
       code: 'TAG_IN_USE',
     });
     await expect(
-      categories.delete(category.id, taxAudit()),
+      deleteCategory.execute(new DeleteCategoryCommand(category.id, taxAudit())),
     ).rejects.toMatchObject({ code: 'CATEGORY_IN_USE' });
     await expect(
       prisma.storyTag.count({ where: { storyId, tagId: tag.id } }),
@@ -141,9 +167,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('preserves an assigned inactive category on existing story but rejects new attachment', async () => {
-    const category = await categories.create(
-      { name: unique('LegacyCategory') },
-      taxAudit(),
+    const category = await createCategory.execute(
+      new CreateCategoryCommand({ name: unique('LegacyCategory') }, taxAudit()),
     );
     const author = await createAuthor();
     const first = await createStory(author, unique('legacy-story-a'));
@@ -151,7 +176,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
     await prisma.storyCategory.create({
       data: { storyId: first, categoryId: category.id, isPrimary: true },
     });
-    await categories.update(category.id, { isActive: false }, taxAudit());
+    await updateCategory.execute(
+      new UpdateCategoryCommand(category.id, { isActive: false }, taxAudit()),
+    );
 
     const keepExisting = await stories.updateDraft({
       userId: author,
@@ -183,19 +210,24 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('rejects hierarchy cycles and deactivating a parent with active children', async () => {
-    const parent = await categories.create(
-      { name: unique('Parent') },
-      taxAudit(),
+    const parent = await createCategory.execute(
+      new CreateCategoryCommand({ name: unique('Parent') }, taxAudit()),
     );
-    const child = await categories.create(
-      { name: unique('Child'), parentId: parent.id },
-      taxAudit(),
+    const child = await createCategory.execute(
+      new CreateCategoryCommand(
+        { name: unique('Child'), parentId: parent.id },
+        taxAudit(),
+      ),
     );
     await expect(
-      categories.update(parent.id, { isActive: false }, taxAudit()),
+      updateCategory.execute(
+        new UpdateCategoryCommand(parent.id, { isActive: false }, taxAudit()),
+      ),
     ).rejects.toMatchObject({ code: 'CATEGORY_HAS_ACTIVE_CHILDREN' });
     await expect(
-      categories.update(parent.id, { parentId: child.id }, taxAudit()),
+      updateCategory.execute(
+        new UpdateCategoryCommand(parent.id, { parentId: child.id }, taxAudit()),
+      ),
     ).rejects.toMatchObject({ code: 'CATEGORY_HIERARCHY_CYCLE' });
   });
 

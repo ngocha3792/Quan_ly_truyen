@@ -14,8 +14,8 @@ import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 
 import {
-  GetNotificationViewCommand,
-  GetNotificationViewCommandHandler,
+  GetNotificationViewQuery,
+  GetNotificationViewQueryHandler,
   MarkAllNotificationsReadCommand,
   MarkAllNotificationsReadCommandHandler,
   SetNotificationReadCommand,
@@ -40,7 +40,7 @@ import {
 @RequirePermissions(PermissionCode.NOTIFICATION_MANAGE_OWN)
 export class NotificationsController {
   constructor(
-    private readonly getViewHandler: GetNotificationViewCommandHandler,
+    private readonly getViewHandler: GetNotificationViewQueryHandler,
     private readonly setReadHandler: SetNotificationReadCommandHandler,
     private readonly setSavedHandler: SetNotificationSavedCommandHandler,
     private readonly markAllReadHandler: MarkAllNotificationsReadCommandHandler,
@@ -52,7 +52,7 @@ export class NotificationsController {
     @CurrentUserId() userId: string | undefined,
   ): Promise<NotificationViewDto> {
     return this.getViewHandler.execute(
-      new GetNotificationViewCommand(this.requireUserId(userId)),
+      new GetNotificationViewQuery(this.requireUserId(userId)),
     );
   }
 

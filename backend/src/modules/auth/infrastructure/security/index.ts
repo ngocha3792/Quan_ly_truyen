@@ -1,4 +1,4 @@
 export * from './jwt-access.strategy';
 export * from './jwt-auth-token-issuer';
 export * from './jwt-refresh-token-verifier';
-export * from './csrf-token.service';
+export * from './csrf-token.adapter';

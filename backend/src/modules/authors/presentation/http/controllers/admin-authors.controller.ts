@@ -16,7 +16,11 @@ import {
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import { AuthenticationRequiredException } from '@/common/exceptions';
-import { AuthorLifecycleService } from '../../../application/services';
+import {
+  ChangeAuthorStatusCommand, ChangeAuthorStatusCommandHandler,
+  GetAdminAuthorDetailQuery, GetAdminAuthorDetailQueryHandler,
+  ListAdminAuthorsQuery, ListAdminAuthorsQueryHandler,
+} from '../../../application';
 import {
   ListAdminAuthorsRequest,
   UpdateAuthorStatusRequest,
@@ -29,12 +33,16 @@ import type {
 @Controller('admin/authors')
 @RequirePermissions(PermissionCode.AUTHOR_READ)
 export class AdminAuthorsController {
-  constructor(private readonly lifecycle: AuthorLifecycleService) {}
+  constructor(
+    private readonly listAuthors: ListAdminAuthorsQueryHandler,
+    private readonly getAuthorDetail: GetAdminAuthorDetailQueryHandler,
+    private readonly changeAuthorStatus: ChangeAuthorStatusCommandHandler,
+  ) {}
   @Get()
   list(
     @Query() request: ListAdminAuthorsRequest,
   ): Promise<AdminAuthorListResponse> {
-    return this.lifecycle.list({
+    return this.listAuthors.execute(new ListAdminAuthorsQuery({
       search: request.search,
       status: request.status,
       createdFrom: request.createdFrom
@@ -43,13 +51,13 @@ export class AdminAuthorsController {
       createdTo: request.createdTo ? new Date(request.createdTo) : undefined,
       page: request.page,
       pageSize: request.pageSize,
-    });
+    }));
   }
   @Get(':authorId')
   detail(
     @Param('authorId', new ParseUUIDPipe({ version: '4' })) authorId: string,
   ): Promise<AdminAuthorDetailResponse> {
-    return this.lifecycle.detail(authorId);
+    return this.getAuthorDetail.execute(new GetAdminAuthorDetailQuery(authorId));
   }
   @Patch(':authorId/status')
   @RequirePermissions(
@@ -69,7 +77,7 @@ export class AdminAuthorsController {
         code: 'AUTHOR_ADMIN_ACTOR_REQUIRED',
         message: 'Không xác định được quản trị viên hiện tại',
       });
-    return this.lifecycle.changeStatus({
+    return this.changeAuthorStatus.execute(new ChangeAuthorStatusCommand({
       actorUserId,
       authorId,
       status: request.status,
@@ -77,6 +85,6 @@ export class AdminAuthorsController {
       ipAddress,
       userAgent,
       requestId,
-    });
+    }));
   }
 }

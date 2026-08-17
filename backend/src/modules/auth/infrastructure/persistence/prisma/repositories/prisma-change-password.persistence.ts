@@ -5,7 +5,7 @@ import { TokenType } from '@/generated/prisma/client';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 import type {
   ChangePasswordPersistenceInput,
   ChangePasswordPersistencePort,
@@ -27,7 +27,7 @@ class CurrentSessionUnavailableError extends Error {
 export class PrismaChangePasswordPersistence implements ChangePasswordPersistencePort {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findCredentialByUserId(

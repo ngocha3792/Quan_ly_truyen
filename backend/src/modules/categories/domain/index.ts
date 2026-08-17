@@ -1,2 +1,3 @@
-export * from './category-name.util';
-export * from './category.exceptions';
+export * from './exceptions';
+export * from './repositories';
+export * from './value-objects';

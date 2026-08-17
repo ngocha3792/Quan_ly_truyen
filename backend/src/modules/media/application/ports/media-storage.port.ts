@@ -3,7 +3,7 @@ import type {
   MediaStorageResourceType,
   StoredMedia,
 } from './stored-media.interface';
-import { MediaPurpose } from '@/generated/prisma/client';
+import type { MediaPurposeName } from '../dto';
 
 export const MEDIA_STORAGE = Symbol.for(
   'quan-ly-truyen.infrastructure.media-storage',
@@ -11,7 +11,7 @@ export const MEDIA_STORAGE = Symbol.for(
 
 export interface CreateSignedUploadInput {
   mediaAssetId: string;
-  purpose: MediaPurpose;
+  purpose: MediaPurposeName;
   publicId: string;
   assetFolder: string;
   resourceType: MediaStorageResourceType;

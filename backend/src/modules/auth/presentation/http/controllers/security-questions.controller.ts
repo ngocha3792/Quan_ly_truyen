@@ -31,7 +31,7 @@ import type {
   SecurityQuestionsStateResultDto,
 } from '../../../application';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import {
   RemoveSecurityQuestionsRequest,
@@ -54,7 +54,7 @@ export class SecurityQuestionsController {
 
     private readonly removeCommandHandler: RemoveSecurityQuestionsCommandHandler,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
   ) {}
 
   @Get('catalog')

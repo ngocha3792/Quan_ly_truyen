@@ -15,14 +15,14 @@ import type {
 
 import { AuthAuditAction } from '../../../../domain/enums';
 
-import { AuthAuditWriterService } from '../../../audit';
+import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
 export class PrismaSecurityQuestionsPersistence implements SecurityQuestionsPersistencePort {
   constructor(
     private readonly prisma: PrismaService,
 
-    private readonly auditWriter: AuthAuditWriterService,
+    private readonly auditWriter: PrismaAuthAuditWriterAdapter,
   ) {}
 
   async findCredentialByUserId(

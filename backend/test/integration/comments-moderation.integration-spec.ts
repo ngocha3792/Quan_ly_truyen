@@ -7,22 +7,34 @@ import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { MetricsService } from '@/infrastructure/observability';
 import {
-  AbuseRateLimiterService,
+  COMMENT_ABUSE_GUARD_PORT,
   COMMENT_ABUSE_METRICS_PORT,
   COMMENT_ABUSE_RATE_LIMIT_STORE_PORT,
+  COMMENT_INTERACTION_PERSISTENCE_PORT,
+  COMMENT_WRITE_GUARD_PORT,
   RECENT_COMMENT_READER_PORT,
-  CommentsService,
-  CommentWriteAbuseService,
+  CreateCommentReplyCommand,
+  CreateCommentReplyCommandHandler,
+  CreateCommentReportCommand,
+  CreateCommentReportCommandHandler,
+  SetCommentReactionCommand,
+  SetCommentReactionCommandHandler,
 } from '@/modules/comments/application';
 import {
+  CommentWriteGuardAdapter,
   MetricsCommentAbuseAdapter,
+  PrismaCommentInteractionPersistence,
   PrismaRecentCommentReader,
+  RedisCommentAbuseGuardAdapter,
   RedisCommentAbuseRateLimitStoreAdapter,
 } from '@/modules/comments/infrastructure';
 import {
   MODERATION_METRICS_PORT,
   MODERATION_PERSISTENCE_PORT,
-  ModerationService,
+  BanUserCommand,
+  BanUserCommandHandler,
+  ModerateCommentCommand,
+  ModerateCommentCommandHandler,
 } from '@/modules/moderation/application';
 import {
   MetricsModerationAdapter,
@@ -30,7 +42,10 @@ import {
 } from '@/modules/moderation/infrastructure';
 import {
   REPORT_REPOSITORY,
-  ReportsService,
+  RejectReportCommand,
+  RejectReportCommandHandler,
+  ResolveReportCommand,
+  ResolveReportCommandHandler,
 } from '@/modules/reports/application';
 import { PrismaReportRepository } from '@/modules/reports/infrastructure';
 import { USER_MODERATION_PORT } from '@/modules/users';
@@ -43,9 +58,9 @@ const userModerationBan = jest.fn();
 describe('Comment + moderation PostgreSQL invariants', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let comments: CommentsService;
-  let moderation: ModerationService;
-  let reports: ReportsService;
+  let comments: ReturnType<typeof createCommentsFacade>;
+  let moderation: ReturnType<typeof createModerationFacade>;
+  let reports: ReturnType<typeof createReportsFacade>;
   let authorId: string;
   let readerA: string;
   let readerB: string;
@@ -56,16 +71,21 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
       providers: [
-        CommentsService,
-        AbuseRateLimiterService,
-        CommentWriteAbuseService,
+        PrismaCommentInteractionPersistence,
+        RedisCommentAbuseGuardAdapter,
+        CommentWriteGuardAdapter,
+        CreateCommentReplyCommandHandler,
+        SetCommentReactionCommandHandler,
+        CreateCommentReportCommandHandler,
         PrismaRecentCommentReader,
         RedisCommentAbuseRateLimitStoreAdapter,
         MetricsCommentAbuseAdapter,
-        ModerationService,
+        ModerateCommentCommandHandler,
+        BanUserCommandHandler,
         PrismaModerationPersistence,
         MetricsModerationAdapter,
-        ReportsService,
+        ResolveReportCommandHandler,
+        RejectReportCommandHandler,
         PrismaReportRepository,
         { provide: REDIS_CLIENT, useValue: null },
         {
@@ -91,6 +111,18 @@ describe('Comment + moderation PostgreSQL invariants', () => {
           useExisting: MetricsCommentAbuseAdapter,
         },
         {
+          provide: COMMENT_ABUSE_GUARD_PORT,
+          useExisting: RedisCommentAbuseGuardAdapter,
+        },
+        {
+          provide: COMMENT_WRITE_GUARD_PORT,
+          useExisting: CommentWriteGuardAdapter,
+        },
+        {
+          provide: COMMENT_INTERACTION_PERSISTENCE_PORT,
+          useExisting: PrismaCommentInteractionPersistence,
+        },
+        {
           provide: MODERATION_PERSISTENCE_PORT,
           useExisting: PrismaModerationPersistence,
         },
@@ -107,9 +139,19 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    comments = moduleRef.get(CommentsService);
-    moderation = moduleRef.get(ModerationService);
-    reports = moduleRef.get(ReportsService);
+    comments = createCommentsFacade(
+      moduleRef.get(CreateCommentReplyCommandHandler),
+      moduleRef.get(SetCommentReactionCommandHandler),
+      moduleRef.get(CreateCommentReportCommandHandler),
+    );
+    moderation = createModerationFacade(
+      moduleRef.get(ModerateCommentCommandHandler),
+      moduleRef.get(BanUserCommandHandler),
+    );
+    reports = createReportsFacade(
+      moduleRef.get(ResolveReportCommandHandler),
+      moduleRef.get(RejectReportCommandHandler),
+    );
   });
 
   beforeEach(async () => {
@@ -528,3 +570,96 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   }
 });
+
+function createCommentsFacade(
+  replies: CreateCommentReplyCommandHandler,
+  reactions: SetCommentReactionCommandHandler,
+  reports: CreateCommentReportCommandHandler,
+) {
+  return {
+    createReply: (input: ConstructorParameters<typeof CreateCommentReplyCommand>[0]) =>
+      replies.execute(new CreateCommentReplyCommand(input)),
+    setReaction: (input: ConstructorParameters<typeof SetCommentReactionCommand>[0]) =>
+      reactions.execute(new SetCommentReactionCommand(input)),
+    createReport: (input: ConstructorParameters<typeof CreateCommentReportCommand>[0]) =>
+      reports.execute(new CreateCommentReportCommand(input)),
+  };
+}
+
+function createModerationFacade(
+  moderate: ModerateCommentCommandHandler,
+  ban: BanUserCommandHandler,
+) {
+  return {
+    moderateComment: (input: {
+      actorId: string;
+      commentId: string;
+      operation: ConstructorParameters<typeof ModerateCommentCommand>[2];
+      reason: string;
+      reportId?: string;
+      audit: ConstructorParameters<typeof ModerateCommentCommand>[5];
+    }) =>
+      moderate.execute(
+        new ModerateCommentCommand(
+          input.actorId,
+          input.commentId,
+          input.operation,
+          input.reason,
+          input.reportId,
+          input.audit,
+        ),
+      ),
+    banUser: (input: {
+      actorId: string;
+      commentId: string;
+      reason: string;
+      reportId?: string;
+      audit: ConstructorParameters<typeof BanUserCommand>[4];
+    }) =>
+      ban.execute(
+        new BanUserCommand(
+          input.actorId,
+          input.commentId,
+          input.reason,
+          input.reportId,
+          input.audit,
+        ),
+      ),
+  };
+}
+
+function createReportsFacade(
+  resolve: ResolveReportCommandHandler,
+  reject: RejectReportCommandHandler,
+) {
+  return {
+    resolve: (input: {
+      actorId: string;
+      reportId: string;
+      note: string;
+      audit: ConstructorParameters<typeof ResolveReportCommand>[3];
+    }) =>
+      resolve.execute(
+        new ResolveReportCommand(
+          input.actorId,
+          input.reportId,
+          input.note,
+          input.audit,
+        ),
+      ),
+    reject: (input: {
+      actorId: string;
+      reportId: string;
+      note: string;
+      audit: ConstructorParameters<typeof RejectReportCommand>[3];
+    }) =>
+      reject.execute(
+        new RejectReportCommand(
+          input.actorId,
+          input.reportId,
+          input.note,
+          input.audit,
+        ),
+      ),
+  };
+}

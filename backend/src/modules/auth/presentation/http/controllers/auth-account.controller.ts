@@ -44,7 +44,7 @@ import {
 } from '../../../application';
 import type { CurrentUserResultDto } from '../../../application';
 
-import { AuthCookieService } from '../cookies';
+import { AuthCookieManager } from '../cookies';
 
 import type {
   SecurityOverviewResponse,
@@ -69,7 +69,7 @@ export class AuthAccountController {
 
     private readonly revokeOtherSessionsCommandHandler: RevokeOtherSessionsCommandHandler,
 
-    private readonly authCookies: AuthCookieService,
+    private readonly authCookies: AuthCookieManager,
 
     private readonly deleteAccountCommandHandler: DeleteAccountCommandHandler,
     private readonly getSecurityOverviewQueryHandler: GetSecurityOverviewQueryHandler,

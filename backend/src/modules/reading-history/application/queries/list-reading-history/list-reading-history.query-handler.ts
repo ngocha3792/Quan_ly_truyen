@@ -5,7 +5,7 @@ import {
   READING_HISTORY_PERSISTENCE_PORT,
   type ReadingHistoryPersistencePort,
 } from '../../ports';
-import { requireReadingHistoryUserId } from '../../reading-history-auth.util';
+import { requireReadingHistoryUserId } from '../../../domain/policies/reading-history-auth.policy';
 import { ListReadingHistoryQuery } from './list-reading-history.query';
 
 @Injectable()
