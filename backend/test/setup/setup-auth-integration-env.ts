@@ -32,6 +32,8 @@ process.env.QUEUE_PREFIX = `qlt:test:integration:${process.pid}`;
 
 process.env.MAIL_ENABLED = 'false';
 
+process.env.ANALYTICS_ENABLED = 'false';
+
 process.env.FRONTEND_PUBLIC_URL = 'http://localhost:4200';
 
 process.env.JWT_ACCESS_SECRET =

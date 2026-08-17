@@ -62,7 +62,7 @@ describe('Phase 6 reader analytics', () => {
   afterEach(async () => cleanup());
   afterAll(async () => {
     await cleanup();
-    await moduleRef.close();
+    await moduleRef?.close();
   });
 
   it('uses keyed HMAC identities without persisting a raw reader id', () => {

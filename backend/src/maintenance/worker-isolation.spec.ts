@@ -14,6 +14,7 @@ describe('maintenance worker isolation', () => {
 
     'REDIS_ENABLED',
     'QUEUE_ENABLED',
+    'ANALYTICS_ENABLED',
 
     'AUTH_LOGIN_RATE_LIMIT_ENABLED',
     'AUTH_JWT_BLACKLIST_ENABLED',
@@ -55,6 +56,7 @@ describe('maintenance worker isolation', () => {
       REDIS_ENABLED: 'false',
 
       QUEUE_ENABLED: 'false',
+      ANALYTICS_ENABLED: 'false',
 
       /*
        * REDIS_ENABLED=false chỉ hợp lệ khi tất cả chức năng

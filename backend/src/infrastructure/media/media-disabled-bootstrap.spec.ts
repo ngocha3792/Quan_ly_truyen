@@ -27,6 +27,7 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
     'REDIS_ENABLED',
     'QUEUE_ENABLED',
     'MAIL_ENABLED',
+    'ANALYTICS_ENABLED',
 
     'AUTH_LOGIN_RATE_LIMIT_ENABLED',
     'AUTH_JWT_BLACKLIST_ENABLED',
@@ -90,6 +91,7 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       QUEUE_ENABLED: 'false',
 
       MAIL_ENABLED: 'false',
+      ANALYTICS_ENABLED: 'false',
 
       /*
        * Test này cố ý boot ứng dụng khi Redis bị tắt.

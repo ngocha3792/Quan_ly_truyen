@@ -500,6 +500,49 @@ async function resetRoles(
   });
 }
 
+async function deleteAuthorStoryFixtures(authorId: string): Promise<void> {
+  const stories = await prisma.story.findMany({
+    where: { authorId },
+    select: {
+      id: true,
+      chapters: { select: { id: true } },
+      comments: { select: { id: true } },
+    },
+  });
+
+  if (stories.length === 0) return;
+
+  // Moderation/report target FKs use ON DELETE SET NULL while DB checks require
+  // one concrete target. Remove target rows before hard-deleting deterministic E2E stories.
+  const storyIds = stories.map((story) => story.id);
+  const chapterIds = stories.flatMap((story) => story.chapters.map((chapter) => chapter.id));
+  const commentIds = stories.flatMap((story) => story.comments.map((comment) => comment.id));
+
+  await prisma.moderationAction.deleteMany({
+    where: {
+      OR: [
+        { storyId: { in: storyIds } },
+        { chapterId: { in: chapterIds } },
+        { commentId: { in: commentIds } },
+      ],
+    },
+  });
+
+  await prisma.report.deleteMany({
+    where: {
+      OR: [
+        { storyId: { in: storyIds } },
+        { chapterId: { in: chapterIds } },
+        { commentId: { in: commentIds } },
+      ],
+    },
+  });
+
+  await prisma.story.deleteMany({
+    where: { id: { in: storyIds } },
+  });
+}
+
 async function prepareLifecycleAuthor(
   input: {
     passwordHash:
@@ -536,12 +579,7 @@ async function prepareLifecycleAuthor(
     ],
   );
 
-  await prisma.story.deleteMany({
-    where: {
-      authorId:
-        user.id,
-    },
-  });
+  await deleteAuthorStoryFixtures(user.id);
 
   await prisma.authorProfile.upsert({
     where: {
