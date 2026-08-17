@@ -33,7 +33,11 @@ import { LibrariesModule } from './modules/libraries';
 import { ReadingHistoryModule } from './modules/reading-history';
 import { CommentsModule } from './modules/comments';
 import { ChaptersModule } from './modules/chapters';
-import { TaxonomyModule } from './modules/taxonomy';
+import { CategoriesModule } from './modules/categories';
+import { TagsModule } from './modules/tags';
+import { FollowsModule } from './modules/follows';
+import { ReportsModule } from './modules/reports';
+import { MediaModule } from './modules/media';
 import { ModerationModule } from './modules/moderation';
 import { AuditLogsModule } from './modules/audit-logs';
 import { AnalyticsModule } from './modules/analytics';
@@ -51,7 +55,11 @@ import { AnalyticsModule } from './modules/analytics';
     ReadingHistoryModule,
     CommentsModule,
     ChaptersModule,
-    TaxonomyModule,
+    CategoriesModule,
+    TagsModule,
+    FollowsModule,
+    ReportsModule,
+    MediaModule,
     ModerationModule,
     AuditLogsModule,
     AnalyticsModule,

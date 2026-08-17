@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 
-import { MediaCleanupService } from '@/infrastructure/media';
+import { MediaCleanupService } from '@/modules/media';
 
 import { MediaCleanupCommandModule } from '@/maintenance/media-cleanup-command.module';
 

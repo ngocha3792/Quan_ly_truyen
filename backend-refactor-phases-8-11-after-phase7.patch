@@ -1,0 +1,4084 @@
+diff --git a/backend/docs/architecture/backend.md b/backend/docs/architecture/backend.md
+index 91cdab2..c1f0f13 100644
+--- a/backend/docs/architecture/backend.md
++++ b/backend/docs/architecture/backend.md
+@@ -121,3 +121,20 @@ The incremental extraction currently separates these responsibilities from `stor
+ - chapter lifecycle and public chapter reader -> `modules/chapters`
+ 
+ `StoriesModule` now owns story lifecycle/publication/metadata only. Legacy internals inside other modules are cleaned in later passes without changing HTTP contracts or the Prisma schema.
++
++### Module ownership after phases 8-11
++
++The next extraction pass also establishes these ownership boundaries:
++
++- categories -> `modules/categories` (admin category lifecycle and hierarchy)
++- tags -> `modules/tags` (admin tag lifecycle and merge)
++- author follow relationships -> `modules/follows`
++- report review/closure -> `modules/reports`
++- comment/user enforcement actions remain -> `modules/moderation`
++- media upload/query/cleanup/webhook capability -> `modules/media`
++
++`modules/taxonomy` is removed: category and tag only shared a CRUD-shaped implementation, not one business lifecycle. `AuthorFollowService` is removed from `authors`; the author module still owns author profile/lifecycle and follower counters are treated as denormalized data maintained by the follows persistence adapter.
++
++`src/infrastructure/media` is removed. Cloudinary and disabled-storage implementations now live under `modules/media/infrastructure`, while HTTP controllers/DTOs live under `modules/media/presentation` and storage contracts live under `modules/media/application/ports`.
++
++The media module still contains explicitly baselined legacy application-to-Prisma/observability dependencies. Those are intentionally left for the following dependency-cleanup phase instead of hiding a behavior change inside the ownership move. New violations remain rejected by `npm run architecture:check`.
+diff --git a/backend/scripts/architecture/check-boundaries.mjs b/backend/scripts/architecture/check-boundaries.mjs
+index 54a9da8..92c7fc6 100644
+--- a/backend/scripts/architecture/check-boundaries.mjs
++++ b/backend/scripts/architecture/check-boundaries.mjs
+@@ -8,14 +8,23 @@ const MODULES_ROOT = join(ROOT, 'src', 'modules');
+ // Temporary baseline for legacy violations. Refactors must delete entries from this
+ // list; new violations are rejected immediately.
+ const LEGACY_APPLICATION_VIOLATIONS = new Set([
++  'src/modules/media/application/media-cleanup.service.ts::@/generated/prisma/client',
++  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/database/prisma',
++  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/observability',
++  'src/modules/media/application/media-ownership-authorization.service.ts::@/generated/prisma/client',
++  'src/modules/media/application/media-ownership-authorization.service.ts::@/infrastructure/database/prisma',
++  'src/modules/media/application/media-query.service.ts::@/generated/prisma/client',
++  'src/modules/media/application/media-query.service.ts::@/infrastructure/database/prisma',
++  'src/modules/media/application/media.service.ts::@/generated/prisma/client',
++  'src/modules/media/application/media.service.ts::@/infrastructure/database/prisma',
++  'src/modules/media/application/policies/media-upload-policy.registry.ts::@/generated/prisma/client',
++  'src/modules/media/application/ports/media-storage.port.ts::@/generated/prisma/client',
+   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/database',
+   'src/modules/moderation/application/moderation.service.ts::@/infrastructure/observability',
+   'src/modules/audit-logs/application/audit-logs.service.ts::@/infrastructure/observability',
+   'src/modules/audit-logs/application/audit-logs.service.ts::../infrastructure',
+   'src/modules/authors/application/services/author-lifecycle.service.ts::@/infrastructure/database',
+-  'src/modules/authors/application/services/author-follow.service.ts::@/infrastructure/database',
+   'src/modules/authors/application/services/author-profile.service.ts::@/infrastructure/database',
+-  'src/modules/taxonomy/application/taxonomy.service.ts::../infrastructure',
+   'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/cache/redis/redis.constants',
+   'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/observability',
+   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/database',
+@@ -29,12 +38,10 @@ const LEGACY_APPLICATION_VIOLATIONS = new Set([
+   'src/modules/comments/application/comment-write-abuse.service.ts::@/infrastructure/database',
+   'src/modules/comments/application/abuse-rate-limiter.service.ts::@/infrastructure/cache/redis/redis.constants',
+   'src/modules/comments/application/abuse-rate-limiter.service.ts::@/infrastructure/observability',
+-  'src/modules/taxonomy/application/taxonomy.service.ts::@/generated/prisma/client',
+   'src/modules/comments/application/comment-write-abuse.service.ts::@/generated/prisma/client',
+   'src/modules/comments/application/comments.service.ts::@/generated/prisma/client',
+   'src/modules/moderation/application/moderation.service.ts::@/generated/prisma/client',
+   'src/modules/authors/application/services/author-profile.service.ts::@/generated/prisma/client',
+-  'src/modules/authors/application/services/author-follow.service.ts::@/generated/prisma/client',
+   'src/modules/authors/application/services/author-lifecycle.service.ts::@/generated/prisma/client',
+   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/generated/prisma/client',
+ ]);
+@@ -59,7 +66,11 @@ async function listTypescriptFiles(directory) {
+     const path = join(directory, entry.name);
+     if (entry.isDirectory()) {
+       files.push(...(await listTypescriptFiles(path)));
+-    } else if (entry.isFile() && extname(entry.name) === '.ts') {
++    } else if (
++      entry.isFile() &&
++      extname(entry.name) === '.ts' &&
++      !entry.name.endsWith('.spec.ts')
++    ) {
+       files.push(path);
+     }
+   }
+diff --git a/backend/scripts/maintenance/cleanup-expired-media.ts b/backend/scripts/maintenance/cleanup-expired-media.ts
+index 08f1305..c32f47a 100644
+--- a/backend/scripts/maintenance/cleanup-expired-media.ts
++++ b/backend/scripts/maintenance/cleanup-expired-media.ts
+@@ -1,6 +1,6 @@
+ import { NestFactory } from '@nestjs/core';
+ 
+-import { MediaCleanupService } from '@/infrastructure/media';
++import { MediaCleanupService } from '@/modules/media';
+ 
+ import { MediaCleanupCommandModule } from '@/maintenance/media-cleanup-command.module';
+ 
+diff --git a/backend/scripts/maintenance/process-cloudinary-webhooks.ts b/backend/scripts/maintenance/process-cloudinary-webhooks.ts
+index 6db647a..6dbb085 100644
+--- a/backend/scripts/maintenance/process-cloudinary-webhooks.ts
++++ b/backend/scripts/maintenance/process-cloudinary-webhooks.ts
+@@ -1,5 +1,5 @@
+ import { NestFactory } from '@nestjs/core';
+-import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
++import { CloudinaryWebhookInboxProcessor } from '@/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
+ import { CloudinaryWebhookCommandModule } from '@/maintenance/cloudinary-webhook-command.module';
+ 
+ async function main(): Promise<void> {
+diff --git a/backend/src/app.module.ts b/backend/src/app.module.ts
+index bd89e0d..a0ba48d 100644
+--- a/backend/src/app.module.ts
++++ b/backend/src/app.module.ts
+@@ -33,7 +33,11 @@ import { LibrariesModule } from './modules/libraries';
+ import { ReadingHistoryModule } from './modules/reading-history';
+ import { CommentsModule } from './modules/comments';
+ import { ChaptersModule } from './modules/chapters';
+-import { TaxonomyModule } from './modules/taxonomy';
++import { CategoriesModule } from './modules/categories';
++import { TagsModule } from './modules/tags';
++import { FollowsModule } from './modules/follows';
++import { ReportsModule } from './modules/reports';
++import { MediaModule } from './modules/media';
+ import { ModerationModule } from './modules/moderation';
+ import { AuditLogsModule } from './modules/audit-logs';
+ import { AnalyticsModule } from './modules/analytics';
+@@ -51,7 +55,11 @@ import { AnalyticsModule } from './modules/analytics';
+     ReadingHistoryModule,
+     CommentsModule,
+     ChaptersModule,
+-    TaxonomyModule,
++    CategoriesModule,
++    TagsModule,
++    FollowsModule,
++    ReportsModule,
++    MediaModule,
+     ModerationModule,
+     AuditLogsModule,
+     AnalyticsModule,
+diff --git a/backend/src/infrastructure/infrastructure.module.ts b/backend/src/infrastructure/infrastructure.module.ts
+index e08fbdd..90fe5a0 100644
+--- a/backend/src/infrastructure/infrastructure.module.ts
++++ b/backend/src/infrastructure/infrastructure.module.ts
+@@ -4,7 +4,6 @@ import { CacheModule } from './cache';
+ import { PrismaModule } from './database';
+ import { IdempotencyModule } from './idempotency';
+ import { LockModule } from './lock';
+-import { MediaModule } from './media';
+ import { QueueModule } from './queue';
+ 
+ @Module({
+@@ -14,7 +13,6 @@ import { QueueModule } from './queue';
+     LockModule,
+     IdempotencyModule,
+     QueueModule.register(),
+-    MediaModule,
+   ],
+   exports: [
+     PrismaModule,
+@@ -22,7 +20,6 @@ import { QueueModule } from './queue';
+     LockModule,
+     IdempotencyModule,
+     QueueModule,
+-    MediaModule,
+   ],
+ })
+ export class InfrastructureModule {}
+diff --git a/backend/src/infrastructure/media/index.ts b/backend/src/infrastructure/media/index.ts
+deleted file mode 100644
+index 6cd3d99..0000000
+--- a/backend/src/infrastructure/media/index.ts
++++ /dev/null
+@@ -1,10 +0,0 @@
+-export * from './application/media.service';
+-export * from './application/media-query.service';
+-export * from './application/media-cleanup.service';
+-export * from './contracts/media-storage.port';
+-export * from './contracts/signed-upload.interface';
+-export * from './contracts/stored-media.interface';
+-export * from './dto/confirm-media-upload.dto';
+-export * from './policies/media-upload-policy.registry';
+-export * from './cloudinary/cloudinary-url.service';
+-export * from './media.module';
+diff --git a/backend/src/maintenance/cloudinary-webhook-command.module.ts b/backend/src/maintenance/cloudinary-webhook-command.module.ts
+index 188e912..e86e536 100644
+--- a/backend/src/maintenance/cloudinary-webhook-command.module.ts
++++ b/backend/src/maintenance/cloudinary-webhook-command.module.ts
+@@ -1,7 +1,7 @@
+ import { Module } from '@nestjs/common';
+ 
+ import { AppConfigModule } from '@/config';
+-import { MediaModule } from '@/infrastructure/media';
++import { MediaModule } from '@/modules/media';
+ 
+ @Module({ imports: [AppConfigModule, MediaModule] })
+ export class CloudinaryWebhookCommandModule {}
+diff --git a/backend/src/maintenance/media-cleanup-command.module.ts b/backend/src/maintenance/media-cleanup-command.module.ts
+index 0a49144..9f69a56 100644
+--- a/backend/src/maintenance/media-cleanup-command.module.ts
++++ b/backend/src/maintenance/media-cleanup-command.module.ts
+@@ -1,7 +1,7 @@
+ import { Module } from '@nestjs/common';
+ 
+ import { AppConfigModule } from '@/config';
+-import { MediaModule } from '@/infrastructure/media';
++import { MediaModule } from '@/modules/media';
+ 
+ @Module({ imports: [AppConfigModule, MediaModule] })
+ export class MediaCleanupCommandModule {}
+diff --git a/backend/src/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence.ts b/backend/src/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence.ts
+index acf6921..ab235a2 100644
+--- a/backend/src/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence.ts
++++ b/backend/src/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence.ts
+@@ -157,7 +157,7 @@ export class PrismaAccountDeletionPersistence implements AccountDeletionPersiste
+         /*
+          * Phase 5 follow relationships.
+          *
+-         * User row ở trên đã bị compare-and-swap update/lock. AuthorFollowService
++         * User row ở trên đã bị compare-and-swap update/lock. FollowsModule
+          * cũng lock follower User trước khi tạo follow mới, nên outgoing follows
+          * của account này ổn định từ thời điểm này. Thu thập target trước, sau đó
+          * lock TẤT CẢ AuthorProfile bị ảnh hưởng theo thứ tự UUID ổn định để tránh
+diff --git a/backend/src/modules/authors/application/services/index.ts b/backend/src/modules/authors/application/services/index.ts
+index 83a559a..b57da8b 100644
+--- a/backend/src/modules/authors/application/services/index.ts
++++ b/backend/src/modules/authors/application/services/index.ts
+@@ -1,3 +1,2 @@
+ export * from './author-lifecycle.service';
+ export * from './author-profile.service';
+-export * from './author-follow.service';
+diff --git a/backend/src/modules/authors/authors.module.ts b/backend/src/modules/authors/authors.module.ts
+index 53130f5..90f3a34 100644
+--- a/backend/src/modules/authors/authors.module.ts
++++ b/backend/src/modules/authors/authors.module.ts
+@@ -5,7 +5,6 @@ import { AuthAuthorizationModule } from '@/modules/auth';
+ 
+ import {
+   AUTHOR_PERSISTENCE_PORT,
+-  AuthorFollowService,
+   AuthorLifecycleService,
+   AuthorProfileService,
+   GetAuthorDashboardQueryHandler,
+@@ -15,10 +14,9 @@ import {
+ import { PrismaAuthorPersistence } from './infrastructure';
+ import {
+   ActiveAuthorGuard,
+-  AuthorFollowController,
+-  AuthorProfileController,
+   AdminAuthorsController,
+   AuthorDashboardController,
++  AuthorProfileController,
+   PublicAuthorsController,
+ } from './presentation/http';
+ 
+@@ -40,13 +38,11 @@ const queryHandlers = [
+   controllers: [
+     PublicAuthorsController,
+     AuthorProfileController,
+-    AuthorFollowController,
+     AuthorDashboardController,
+     AdminAuthorsController,
+   ],
+   providers: [
+     PrismaAuthorPersistence,
+-    AuthorFollowService,
+     AuthorLifecycleService,
+     AuthorProfileService,
+     ActiveAuthorGuard,
+diff --git a/backend/src/modules/authors/presentation/http/controllers/index.ts b/backend/src/modules/authors/presentation/http/controllers/index.ts
+index 71181f8..26a9982 100644
+--- a/backend/src/modules/authors/presentation/http/controllers/index.ts
++++ b/backend/src/modules/authors/presentation/http/controllers/index.ts
+@@ -2,4 +2,3 @@ export * from './public-authors.controller';
+ export * from './author-dashboard.controller';
+ export * from './admin-authors.controller';
+ export * from './author-profile.controller';
+-export * from './author-follow.controller';
+diff --git a/backend/src/modules/authors/presentation/http/requests/index.ts b/backend/src/modules/authors/presentation/http/requests/index.ts
+index 6289b26..1eb9429 100644
+--- a/backend/src/modules/authors/presentation/http/requests/index.ts
++++ b/backend/src/modules/authors/presentation/http/requests/index.ts
+@@ -1,4 +1,3 @@
+ export * from './list-admin-authors.request';
+ export * from './update-author-status.request';
+ export * from './update-author-profile.request';
+-export * from './list-following.request';
+diff --git a/backend/src/modules/categories/application/categories.service.ts b/backend/src/modules/categories/application/categories.service.ts
+new file mode 100644
+index 0000000..da2efa5
+--- /dev/null
++++ b/backend/src/modules/categories/application/categories.service.ts
+@@ -0,0 +1,48 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { normalizeCategoryName } from '../domain';
++import {
++  CATEGORY_REPOSITORY,
++  type CategoryRepositoryPort,
++} from './ports/category.repository.port';
++import type {
++  CategoryAuditContext,
++  CreateCategoryInput,
++  ListCategoriesInput,
++  UpdateCategoryInput,
++} from './category.models';
++
++@Injectable()
++export class CategoriesService {
++  constructor(
++    @Inject(CATEGORY_REPOSITORY)
++    private readonly repository: CategoryRepositoryPort,
++  ) {}
++
++  list(input: ListCategoriesInput) {
++    return this.repository.list(input);
++  }
++
++  create(input: CreateCategoryInput, audit: CategoryAuditContext) {
++    return this.repository.create(
++      { ...input, name: normalizeCategoryName(input.name) },
++      audit,
++    );
++  }
++
++  update(id: string, input: UpdateCategoryInput, audit: CategoryAuditContext) {
++    return this.repository.update(
++      id,
++      {
++        ...input,
++        ...(input.name === undefined
++          ? {}
++          : { name: normalizeCategoryName(input.name) }),
++      },
++      audit,
++    );
++  }
++
++  delete(id: string, audit: CategoryAuditContext) {
++    return this.repository.delete(id, audit);
++  }
++}
+diff --git a/backend/src/modules/taxonomy/application/taxonomy.models.ts b/backend/src/modules/categories/application/category.models.ts
+similarity index 58%
+rename from backend/src/modules/taxonomy/application/taxonomy.models.ts
+rename to backend/src/modules/categories/application/category.models.ts
+index 9dd8b3d..5227562 100644
+--- a/backend/src/modules/taxonomy/application/taxonomy.models.ts
++++ b/backend/src/modules/categories/application/category.models.ts
+@@ -1,28 +1,10 @@
+-export interface TaxonomyAuditContext {
++export interface CategoryAuditContext {
+   readonly actorId?: string;
+   readonly ipAddress?: string;
+   readonly userAgent?: string;
+   readonly requestId?: string;
+ }
+ 
+-export interface AdminTagItem {
+-  readonly id: string;
+-  readonly name: string;
+-  readonly slug: string;
+-  readonly storyCount: number;
+-  readonly createdAt: Date;
+-}
+-
+-export interface AdminTagList {
+-  readonly items: readonly AdminTagItem[];
+-  readonly pagination: {
+-    readonly page: number;
+-    readonly pageSize: number;
+-    readonly totalItems: number;
+-    readonly totalPages: number;
+-  };
+-}
+-
+ export interface AdminCategoryItem {
+   readonly id: string;
+   readonly name: string;
+@@ -51,3 +33,28 @@ export interface AdminCategoryList {
+     readonly totalPages: number;
+   };
+ }
++
++export interface ListCategoriesInput {
++  readonly q?: string;
++  readonly isActive?: boolean;
++  readonly parentId?: string;
++  readonly page: number;
++  readonly pageSize: number;
++  readonly sort: string;
++}
++
++export interface CreateCategoryInput {
++  readonly name: string;
++  readonly description?: string | null;
++  readonly parentId?: string | null;
++  readonly sortOrder?: number;
++  readonly isActive?: boolean;
++}
++
++export interface UpdateCategoryInput {
++  readonly name?: string;
++  readonly description?: string | null;
++  readonly parentId?: string | null;
++  readonly sortOrder?: number;
++  readonly isActive?: boolean;
++}
+diff --git a/backend/src/modules/categories/application/index.ts b/backend/src/modules/categories/application/index.ts
+new file mode 100644
+index 0000000..41e429e
+--- /dev/null
++++ b/backend/src/modules/categories/application/index.ts
+@@ -0,0 +1,3 @@
++export * from './category.models';
++export * from './categories.service';
++export * from './ports/category.repository.port';
+diff --git a/backend/src/modules/categories/application/ports/category.repository.port.ts b/backend/src/modules/categories/application/ports/category.repository.port.ts
+new file mode 100644
+index 0000000..9278350
+--- /dev/null
++++ b/backend/src/modules/categories/application/ports/category.repository.port.ts
+@@ -0,0 +1,24 @@
++import type {
++  AdminCategoryItem,
++  AdminCategoryList,
++  CategoryAuditContext,
++  CreateCategoryInput,
++  ListCategoriesInput,
++  UpdateCategoryInput,
++} from '../category.models';
++
++export const CATEGORY_REPOSITORY = Symbol.for('modules.categories.repository');
++
++export interface CategoryRepositoryPort {
++  list(input: ListCategoriesInput): Promise<AdminCategoryList>;
++  create(
++    input: CreateCategoryInput,
++    audit: CategoryAuditContext,
++  ): Promise<AdminCategoryItem>;
++  update(
++    id: string,
++    input: UpdateCategoryInput,
++    audit: CategoryAuditContext,
++  ): Promise<AdminCategoryItem>;
++  delete(id: string, audit: CategoryAuditContext): Promise<void>;
++}
+diff --git a/backend/src/modules/categories/categories.module.ts b/backend/src/modules/categories/categories.module.ts
+new file mode 100644
+index 0000000..4325629
+--- /dev/null
++++ b/backend/src/modules/categories/categories.module.ts
+@@ -0,0 +1,18 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++import { CategoriesService, CATEGORY_REPOSITORY } from './application';
++import { PrismaCategoryRepository } from './infrastructure';
++import { AdminCategoriesController } from './presentation/http/controllers';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [AdminCategoriesController],
++  providers: [
++    CategoriesService,
++    PrismaCategoryRepository,
++    { provide: CATEGORY_REPOSITORY, useExisting: PrismaCategoryRepository },
++  ],
++  exports: [CategoriesService],
++})
++export class CategoriesModule {}
+diff --git a/backend/src/modules/taxonomy/domain/taxonomy-name.util.ts b/backend/src/modules/categories/domain/category-name.util.ts
+similarity index 50%
+rename from backend/src/modules/taxonomy/domain/taxonomy-name.util.ts
+rename to backend/src/modules/categories/domain/category-name.util.ts
+index 1283610..bd45127 100644
+--- a/backend/src/modules/taxonomy/domain/taxonomy-name.util.ts
++++ b/backend/src/modules/categories/domain/category-name.util.ts
+@@ -1,3 +1,3 @@
+-export function normalizeTaxonomyName(value: string): string {
++export function normalizeCategoryName(value: string): string {
+   return value.normalize('NFC').trim().replace(/\s+/gu, ' ');
+ }
+diff --git a/backend/src/modules/taxonomy/domain/taxonomy.exceptions.ts b/backend/src/modules/categories/domain/category.exceptions.ts
+similarity index 63%
+rename from backend/src/modules/taxonomy/domain/taxonomy.exceptions.ts
+rename to backend/src/modules/categories/domain/category.exceptions.ts
+index 04f311a..1298093 100644
+--- a/backend/src/modules/taxonomy/domain/taxonomy.exceptions.ts
++++ b/backend/src/modules/categories/domain/category.exceptions.ts
+@@ -1,55 +1,8 @@
+ import {
+-  InvalidInputException,
+   ResourceConflictException,
+   ResourceNotFoundException,
+ } from '@/common/exceptions';
+ 
+-export class TagNotFoundException extends ResourceNotFoundException {
+-  constructor(id: string) {
+-    super({ code: 'TAG_NOT_FOUND', resource: 'tag', identifier: id });
+-  }
+-}
+-
+-export class TagNameAlreadyExistsException extends ResourceConflictException {
+-  constructor(name: string) {
+-    super({
+-      code: 'TAG_NAME_ALREADY_EXISTS',
+-      message: 'Tên tag đã tồn tại',
+-      field: 'name',
+-      value: name,
+-    });
+-  }
+-}
+-
+-export class TagInUseException extends ResourceConflictException {
+-  constructor(storyCount: number) {
+-    super({
+-      code: 'TAG_IN_USE',
+-      message: 'Tag đang được truyện sử dụng',
+-      details: { storyCount },
+-    });
+-  }
+-}
+-
+-export class TagMergeTargetNotFoundException extends ResourceNotFoundException {
+-  constructor(id: string) {
+-    super({
+-      code: 'TAG_MERGE_TARGET_NOT_FOUND',
+-      resource: 'tag đích',
+-      identifier: id,
+-    });
+-  }
+-}
+-
+-export class TagCannotMergeIntoSelfException extends InvalidInputException {
+-  constructor() {
+-    super({
+-      code: 'TAG_CANNOT_MERGE_INTO_SELF',
+-      message: 'Không thể hợp nhất tag vào chính nó',
+-    });
+-  }
+-}
+-
+ export class CategoryNotFoundException extends ResourceNotFoundException {
+   constructor(id: string) {
+     super({ code: 'CATEGORY_NOT_FOUND', resource: 'thể loại', identifier: id });
+@@ -126,11 +79,11 @@ export class CategoryHierarchyCycleException extends ResourceConflictException {
+   }
+ }
+ 
+-export class TaxonomySlugGenerationException extends ResourceConflictException {
+-  constructor(resource: 'tag' | 'category') {
++export class CategorySlugGenerationException extends ResourceConflictException {
++  constructor() {
+     super({
+       code: 'TAXONOMY_SLUG_GENERATION_FAILED',
+-      message: `Không thể tạo slug duy nhất cho ${resource}`,
++      message: 'Không thể tạo slug duy nhất cho category',
+     });
+   }
+ }
+diff --git a/backend/src/modules/categories/domain/index.ts b/backend/src/modules/categories/domain/index.ts
+new file mode 100644
+index 0000000..3b77b82
+--- /dev/null
++++ b/backend/src/modules/categories/domain/index.ts
+@@ -0,0 +1,2 @@
++export * from './category-name.util';
++export * from './category.exceptions';
+diff --git a/backend/src/modules/categories/index.ts b/backend/src/modules/categories/index.ts
+new file mode 100644
+index 0000000..39f9688
+--- /dev/null
++++ b/backend/src/modules/categories/index.ts
+@@ -0,0 +1,3 @@
++export * from './categories.module';
++export * from './application';
++export * from './domain';
+diff --git a/backend/src/modules/categories/infrastructure/index.ts b/backend/src/modules/categories/infrastructure/index.ts
+new file mode 100644
+index 0000000..f4da6ba
+--- /dev/null
++++ b/backend/src/modules/categories/infrastructure/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-category.repository';
+diff --git a/backend/src/modules/taxonomy/application/taxonomy.service.ts b/backend/src/modules/categories/infrastructure/prisma-category.repository.ts
+similarity index 50%
+rename from backend/src/modules/taxonomy/application/taxonomy.service.ts
+rename to backend/src/modules/categories/infrastructure/prisma-category.repository.ts
+index 998bc41..19effde 100644
+--- a/backend/src/modules/taxonomy/application/taxonomy.service.ts
++++ b/backend/src/modules/categories/infrastructure/prisma-category.repository.ts
+@@ -1,5 +1,6 @@
+ import { Injectable } from '@nestjs/common';
+ import { Prisma } from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
+ import { createUniqueSlug, slugify } from '@/common/utils/slug.util';
+ import {
+   CategoryHasActiveChildrenException,
+@@ -10,257 +11,25 @@ import {
+   CategoryNotFoundException,
+   CategoryParentInactiveException,
+   CategoryParentNotFoundException,
+-  normalizeTaxonomyName,
+-  TagCannotMergeIntoSelfException,
+-  TagInUseException,
+-  TagMergeTargetNotFoundException,
+-  TagNameAlreadyExistsException,
+-  TagNotFoundException,
+-  TaxonomySlugGenerationException,
++  CategorySlugGenerationException,
+ } from '../domain';
+-import { PrismaTaxonomyRepository } from '../infrastructure';
+ import type {
+   AdminCategoryItem,
+   AdminCategoryList,
+-  AdminTagItem,
+-  AdminTagList,
+-  TaxonomyAuditContext,
+-} from './taxonomy.models';
++  CategoryAuditContext,
++  CreateCategoryInput,
++  ListCategoriesInput,
++  UpdateCategoryInput,
++} from '../application/category.models';
++import type { CategoryRepositoryPort } from '../application/ports/category.repository.port';
+ 
+ const SLUG_ATTEMPTS = 16;
+ 
+ @Injectable()
+-export class TaxonomyService {
+-  constructor(private readonly repository: PrismaTaxonomyRepository) {}
++export class PrismaCategoryRepository implements CategoryRepositoryPort {
++  constructor(private readonly prisma: PrismaService) {}
+ 
+-  async listTags(input: {
+-    q?: string;
+-    page: number;
+-    pageSize: number;
+-    sort: string;
+-  }): Promise<AdminTagList> {
+-    const where: Prisma.TagWhereInput = input.q
+-      ? {
+-          OR: [
+-            { name: { contains: input.q, mode: 'insensitive' } },
+-            { slug: { contains: input.q, mode: 'insensitive' } },
+-          ],
+-        }
+-      : {};
+-    const orderBy: Prisma.TagOrderByWithRelationInput =
+-      input.sort === 'name:desc'
+-        ? { name: 'desc' }
+-        : input.sort === 'createdAt:asc'
+-          ? { createdAt: 'asc' }
+-          : input.sort === 'createdAt:desc'
+-            ? { createdAt: 'desc' }
+-            : { name: 'asc' };
+-    const [items, totalItems] = await this.repository.prisma.$transaction([
+-      this.repository.prisma.tag.findMany({
+-        where,
+-        orderBy: [orderBy, { id: 'asc' }],
+-        skip: (input.page - 1) * input.pageSize,
+-        take: input.pageSize,
+-        include: { _count: { select: { stories: true } } },
+-      }),
+-      this.repository.prisma.tag.count({ where }),
+-    ]);
+-    return {
+-      items: items.map((item): AdminTagItem => ({
+-        id: item.id,
+-        name: item.name,
+-        slug: item.slug,
+-        storyCount: item._count.stories,
+-        createdAt: item.createdAt,
+-      })),
+-      pagination: page(input.page, input.pageSize, totalItems),
+-    };
+-  }
+-
+-  async createTag(
+-    nameInput: string,
+-    audit: TaxonomyAuditContext,
+-  ): Promise<AdminTagItem> {
+-    const name = normalizeTaxonomyName(nameInput);
+-    const baseSlug = slugify(name, { maxLength: 100 }) || 'tag';
+-    for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt += 1) {
+-      const slug = taxonomySlug(baseSlug, attempt, 100);
+-      try {
+-        return await this.repository.prisma.$transaction(async (tx) => {
+-          const tag = await tx.tag.create({ data: { name, slug } });
+-          await writeAudit(tx, audit, 'tag.created', 'tag', tag.id, undefined, {
+-            name: tag.name,
+-            slug: tag.slug,
+-          });
+-          return { ...tag, storyCount: 0 };
+-        });
+-      } catch (error: unknown) {
+-        if (!isUniqueViolation(error)) throw error;
+-        if (await this.repository.findTagByNormalizedName(name))
+-          throw new TagNameAlreadyExistsException(name);
+-      }
+-    }
+-    throw new TaxonomySlugGenerationException('tag');
+-  }
+-
+-  async updateTag(
+-    id: string,
+-    nameInput: string,
+-    audit: TaxonomyAuditContext,
+-  ): Promise<AdminTagItem> {
+-    const name = normalizeTaxonomyName(nameInput);
+-    try {
+-      return await this.repository.prisma.$transaction(async (tx) => {
+-        const locked = await this.repository.lockTags(tx, [id]);
+-        if (locked.length !== 1) throw new TagNotFoundException(id);
+-        const current = await tx.tag.findUnique({
+-          where: { id },
+-          include: { _count: { select: { stories: true } } },
+-        });
+-        if (!current) throw new TagNotFoundException(id);
+-        const duplicate = await tx.$queryRaw<Array<{ id: string }>>(
+-          Prisma.sql`SELECT "id" FROM "tags" WHERE LOWER("name") = LOWER(${name}) AND "id" <> ${id}::uuid LIMIT 1`,
+-        );
+-        if (duplicate.length > 0) throw new TagNameAlreadyExistsException(name);
+-        const updated = await tx.tag.update({
+-          where: { id },
+-          data: { name },
+-          include: { _count: { select: { stories: true } } },
+-        });
+-        await writeAudit(
+-          tx,
+-          audit,
+-          'tag.updated',
+-          'tag',
+-          id,
+-          { name: current.name },
+-          { name: updated.name },
+-        );
+-        return {
+-          id: updated.id,
+-          name: updated.name,
+-          slug: updated.slug,
+-          storyCount: updated._count.stories,
+-          createdAt: updated.createdAt,
+-        };
+-      });
+-    } catch (error: unknown) {
+-      if (isUniqueViolation(error))
+-        throw new TagNameAlreadyExistsException(name);
+-      throw error;
+-    }
+-  }
+-
+-  async deleteTag(id: string, audit: TaxonomyAuditContext): Promise<void> {
+-    await this.repository.prisma.$transaction(async (tx) => {
+-      const locked = await this.repository.lockTags(tx, [id]);
+-      if (locked.length !== 1) throw new TagNotFoundException(id);
+-      const current = await tx.tag.findUnique({
+-        where: { id },
+-        include: { _count: { select: { stories: true } } },
+-      });
+-      if (!current) throw new TagNotFoundException(id);
+-      if (current._count.stories > 0)
+-        throw new TagInUseException(current._count.stories);
+-      await tx.tag.delete({ where: { id } });
+-      await writeAudit(tx, audit, 'tag.deleted', 'tag', id, {
+-        name: current.name,
+-        slug: current.slug,
+-        storyCount: 0,
+-      });
+-    });
+-  }
+-
+-  async mergeTag(
+-    sourceTagId: string,
+-    targetTagId: string,
+-    audit: TaxonomyAuditContext,
+-  ) {
+-    if (sourceTagId === targetTagId)
+-      throw new TagCannotMergeIntoSelfException();
+-    return this.repository.prisma.$transaction(async (tx) => {
+-      const locked = await this.repository.lockTags(tx, [
+-        sourceTagId,
+-        targetTagId,
+-      ]);
+-      if (!locked.includes(sourceTagId))
+-        throw new TagNotFoundException(sourceTagId);
+-      if (!locked.includes(targetTagId))
+-        throw new TagMergeTargetNotFoundException(targetTagId);
+-      const [source, target, sourceLinks, targetLinks] = await Promise.all([
+-        tx.tag.findUnique({ where: { id: sourceTagId } }),
+-        tx.tag.findUnique({ where: { id: targetTagId } }),
+-        tx.storyTag.findMany({
+-          where: { tagId: sourceTagId },
+-          select: { storyId: true },
+-        }),
+-        tx.storyTag.findMany({
+-          where: { tagId: targetTagId },
+-          select: { storyId: true },
+-        }),
+-      ]);
+-      if (!source) throw new TagNotFoundException(sourceTagId);
+-      if (!target) throw new TagMergeTargetNotFoundException(targetTagId);
+-      const targetStoryIds = new Set(targetLinks.map(({ storyId }) => storyId));
+-      const deduplicatedStoryCount = sourceLinks.filter(({ storyId }) =>
+-        targetStoryIds.has(storyId),
+-      ).length;
+-      const toCreate = sourceLinks.filter(
+-        ({ storyId }) => !targetStoryIds.has(storyId),
+-      );
+-      if (toCreate.length > 0)
+-        await tx.storyTag.createMany({
+-          data: toCreate.map(({ storyId }) => ({
+-            storyId,
+-            tagId: targetTagId,
+-          })),
+-          skipDuplicates: true,
+-        });
+-      await tx.storyTag.deleteMany({ where: { tagId: sourceTagId } });
+-      await tx.tag.delete({ where: { id: sourceTagId } });
+-      const storyCount = await tx.storyTag.count({
+-        where: { tagId: targetTagId },
+-      });
+-      await writeAudit(
+-        tx,
+-        audit,
+-        'tag.merged',
+-        'tag',
+-        sourceTagId,
+-        undefined,
+-        undefined,
+-        {
+-          sourceTag: { id: source.id, name: source.name, slug: source.slug },
+-          targetTagId: target.id,
+-          targetTagName: target.name,
+-          movedStoryCount: toCreate.length,
+-          deduplicatedStoryCount,
+-        },
+-      );
+-      return {
+-        target: {
+-          id: target.id,
+-          name: target.name,
+-          slug: target.slug,
+-          storyCount,
+-        },
+-        merged: {
+-          sourceTagId,
+-          movedStoryCount: toCreate.length,
+-          deduplicatedStoryCount,
+-        },
+-      };
+-    });
+-  }
+-
+-  async listCategories(input: {
+-    q?: string;
+-    isActive?: boolean;
+-    parentId?: string;
+-    page: number;
+-    pageSize: number;
+-    sort: string;
+-  }): Promise<AdminCategoryList> {
++  async list(input: ListCategoriesInput): Promise<AdminCategoryList> {
+     const where: Prisma.CategoryWhereInput = {
+       ...(input.q
+         ? {
+@@ -281,8 +50,8 @@ export class TaxonomyService {
+         : input.sort === 'createdAt:desc'
+           ? [{ createdAt: 'desc' }, { id: 'desc' }]
+           : [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }];
+-    const [items, totalItems] = await this.repository.prisma.$transaction([
+-      this.repository.prisma.category.findMany({
++    const [items, totalItems] = await this.prisma.$transaction([
++      this.prisma.category.findMany({
+         where,
+         orderBy,
+         skip: (input.page - 1) * input.pageSize,
+@@ -292,7 +61,7 @@ export class TaxonomyService {
+           _count: { select: { stories: true, children: true } },
+         },
+       }),
+-      this.repository.prisma.category.count({ where }),
++      this.prisma.category.count({ where }),
+     ]);
+     return {
+       items: items.map(toCategoryItem),
+@@ -300,22 +69,16 @@ export class TaxonomyService {
+     };
+   }
+ 
+-  async createCategory(
+-    input: {
+-      name: string;
+-      description?: string | null;
+-      parentId?: string | null;
+-      sortOrder?: number;
+-      isActive?: boolean;
+-    },
+-    audit: TaxonomyAuditContext,
++  async create(
++    input: CreateCategoryInput,
++    audit: CategoryAuditContext,
+   ): Promise<AdminCategoryItem> {
+-    const name = normalizeTaxonomyName(input.name);
++    const name = input.name;
+     const baseSlug = slugify(name, { maxLength: 120 }) || 'category';
+     for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt += 1) {
+       const slug = taxonomySlug(baseSlug, attempt, 120);
+       try {
+-        return await this.repository.prisma.$transaction(async (tx) => {
++        return await this.prisma.$transaction(async (tx) => {
+           const isActive = input.isActive ?? true;
+           if (input.parentId)
+             await assertParentEligible(tx, input.parentId, isActive);
+@@ -346,30 +109,22 @@ export class TaxonomyService {
+         });
+       } catch (error: unknown) {
+         if (!isUniqueViolation(error)) throw error;
+-        if (await this.repository.findCategoryByNormalizedName(name))
++        if (await this.findByNormalizedName(name))
+           throw new CategoryNameAlreadyExistsException(name);
+       }
+     }
+-    throw new TaxonomySlugGenerationException('category');
++    throw new CategorySlugGenerationException();
+   }
+ 
+-  async updateCategory(
++  async update(
+     id: string,
+-    input: {
+-      name?: string;
+-      description?: string | null;
+-      parentId?: string | null;
+-      sortOrder?: number;
+-      isActive?: boolean;
+-    },
+-    audit: TaxonomyAuditContext,
++    input: UpdateCategoryInput,
++    audit: CategoryAuditContext,
+   ): Promise<AdminCategoryItem> {
+-    const name =
+-      input.name === undefined ? undefined : normalizeTaxonomyName(input.name);
++    const name = input.name;
+     try {
+-      return await this.repository.prisma.$transaction(async (tx) => {
+-        if (!(await this.repository.lockCategory(tx, id)))
+-          throw new CategoryNotFoundException(id);
++      return await this.prisma.$transaction(async (tx) => {
++        if (!(await lockCategory(tx, id))) throw new CategoryNotFoundException(id);
+         const current = await tx.category.findUnique({
+           where: { id },
+           include: {
+@@ -407,15 +162,11 @@ export class TaxonomyService {
+             ...(input.description === undefined
+               ? {}
+               : { description: input.description }),
+-            ...(input.parentId === undefined
+-              ? {}
+-              : { parentId: input.parentId }),
++            ...(input.parentId === undefined ? {} : { parentId: input.parentId }),
+             ...(input.sortOrder === undefined
+               ? {}
+               : { sortOrder: input.sortOrder }),
+-            ...(input.isActive === undefined
+-              ? {}
+-              : { isActive: input.isActive }),
++            ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+           },
+           include: {
+             parent: { select: { id: true, name: true, slug: true } },
+@@ -446,10 +197,9 @@ export class TaxonomyService {
+     }
+   }
+ 
+-  async deleteCategory(id: string, audit: TaxonomyAuditContext): Promise<void> {
+-    await this.repository.prisma.$transaction(async (tx) => {
+-      if (!(await this.repository.lockCategory(tx, id)))
+-        throw new CategoryNotFoundException(id);
++  async delete(id: string, audit: CategoryAuditContext): Promise<void> {
++    await this.prisma.$transaction(async (tx) => {
++      if (!(await lockCategory(tx, id))) throw new CategoryNotFoundException(id);
+       const current = await tx.category.findUnique({
+         where: { id },
+         include: { _count: { select: { stories: true, children: true } } },
+@@ -470,6 +220,13 @@ export class TaxonomyService {
+       );
+     });
+   }
++
++  private async findByNormalizedName(name: string) {
++    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++      SELECT "id" FROM "categories" WHERE LOWER("name") = LOWER(${name}) LIMIT 1
++    `);
++    return rows[0] ?? null;
++  }
+ }
+ 
+ function page(pageNumber: number, pageSize: number, totalItems: number) {
+@@ -480,17 +237,15 @@ function page(pageNumber: number, pageSize: number, totalItems: number) {
+     totalPages: Math.ceil(totalItems / pageSize),
+   };
+ }
+-function taxonomySlug(
+-  base: string,
+-  attempt: number,
+-  maxLength: number,
+-): string {
++
++function taxonomySlug(base: string, attempt: number, maxLength: number): string {
+   if (attempt === 0) return base.slice(0, maxLength).replace(/-+$/u, '');
+   const candidate = createUniqueSlug(base, attempt + 1);
+   if (candidate.length <= maxLength) return candidate;
+   const suffix = `-${attempt + 1}`;
+   return `${base.slice(0, Math.max(1, maxLength - suffix.length)).replace(/-+$/u, '')}${suffix}`;
+ }
++
+ function isUniqueViolation(error: unknown): boolean {
+   return (
+     typeof error === 'object' &&
+@@ -500,6 +255,16 @@ function isUniqueViolation(error: unknown): boolean {
+   );
+ }
+ 
++async function lockCategory(
++  tx: Prisma.TransactionClient,
++  id: string,
++): Promise<boolean> {
++  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++    SELECT "id" FROM "categories" WHERE "id" = ${id}::uuid FOR UPDATE
++  `);
++  return rows.length === 1;
++}
++
+ async function assertParentEligible(
+   tx: Prisma.TransactionClient,
+   parentId: string,
+@@ -581,7 +346,7 @@ function categoryAuditValues(item: {
+ 
+ async function writeAudit(
+   tx: Prisma.TransactionClient,
+-  audit: TaxonomyAuditContext,
++  audit: CategoryAuditContext,
+   action: string,
+   entityType: string,
+   entityId: string,
+diff --git a/backend/src/modules/taxonomy/presentation/http/controllers/admin-categories.controller.ts b/backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts
+similarity index 84%
+rename from backend/src/modules/taxonomy/presentation/http/controllers/admin-categories.controller.ts
+rename to backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts
+index bad5b63..348c03c 100644
+--- a/backend/src/modules/taxonomy/presentation/http/controllers/admin-categories.controller.ts
++++ b/backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts
+@@ -19,7 +19,7 @@ import {
+   UserAgent,
+ } from '@/common/decorators';
+ import { PermissionCode } from '@/common/enums';
+-import { TaxonomyService } from '../../../application';
++import { CategoriesService } from '../../../application';
+ import {
+   CreateCategoryRequest,
+   ListAdminCategoriesRequest,
+@@ -29,11 +29,11 @@ import {
+ @Controller('admin/categories')
+ @RequirePermissions(PermissionCode.CATEGORY_MANAGE)
+ export class AdminCategoriesController {
+-  constructor(private readonly taxonomy: TaxonomyService) {}
++  constructor(private readonly categories: CategoriesService) {}
+ 
+   @Get()
+   list(@Query() request: ListAdminCategoriesRequest) {
+-    return this.taxonomy.listCategories(request);
++    return this.categories.list(request);
+   }
+ 
+   @Post()
+@@ -44,7 +44,7 @@ export class AdminCategoriesController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ) {
+-    return this.taxonomy.createCategory(request, {
++    return this.categories.create(request, {
+       actorId,
+       ipAddress,
+       userAgent,
+@@ -62,7 +62,7 @@ export class AdminCategoriesController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ) {
+-    return this.taxonomy.updateCategory(categoryId, request, {
++    return this.categories.update(categoryId, request, {
+       actorId,
+       ipAddress,
+       userAgent,
+@@ -80,7 +80,7 @@ export class AdminCategoriesController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ): Promise<void> {
+-    await this.taxonomy.deleteCategory(categoryId, {
++    await this.categories.delete(categoryId, {
+       actorId,
+       ipAddress,
+       userAgent,
+diff --git a/backend/src/modules/taxonomy/presentation/http/controllers/index.ts b/backend/src/modules/categories/presentation/http/controllers/index.ts
+similarity index 53%
+rename from backend/src/modules/taxonomy/presentation/http/controllers/index.ts
+rename to backend/src/modules/categories/presentation/http/controllers/index.ts
+index 781d241..9428d3a 100644
+--- a/backend/src/modules/taxonomy/presentation/http/controllers/index.ts
++++ b/backend/src/modules/categories/presentation/http/controllers/index.ts
+@@ -1,2 +1 @@
+-export * from './admin-tags.controller';
+ export * from './admin-categories.controller';
+diff --git a/backend/src/modules/taxonomy/presentation/http/requests/admin-categories.request.ts b/backend/src/modules/categories/presentation/http/requests/admin-categories.request.ts
+similarity index 90%
+rename from backend/src/modules/taxonomy/presentation/http/requests/admin-categories.request.ts
+rename to backend/src/modules/categories/presentation/http/requests/admin-categories.request.ts
+index 93cedac..83d9ebf 100644
+--- a/backend/src/modules/taxonomy/presentation/http/requests/admin-categories.request.ts
++++ b/backend/src/modules/categories/presentation/http/requests/admin-categories.request.ts
+@@ -11,7 +11,7 @@ import {
+   Min,
+   MinLength,
+ } from 'class-validator';
+-import { normalizeTaxonomyName } from '../../../domain';
++import { normalizeCategoryName } from '../../../domain';
+ 
+ export class ListAdminCategoriesRequest {
+   @IsOptional()
+@@ -49,7 +49,7 @@ export class ListAdminCategoriesRequest {
+ 
+ export class CreateCategoryRequest {
+   @Transform(({ value }: { value: unknown }) =>
+-    typeof value === 'string' ? normalizeTaxonomyName(value) : value,
++    typeof value === 'string' ? normalizeCategoryName(value) : value,
+   )
+   @IsString()
+   @MinLength(1)
+@@ -78,7 +78,7 @@ export class CreateCategoryRequest {
+ export class UpdateCategoryRequest {
+   @IsOptional()
+   @Transform(({ value }: { value: unknown }) =>
+-    typeof value === 'string' ? normalizeTaxonomyName(value) : value,
++    typeof value === 'string' ? normalizeCategoryName(value) : value,
+   )
+   @IsString()
+   @MinLength(1)
+diff --git a/backend/src/modules/taxonomy/presentation/http/requests/index.ts b/backend/src/modules/categories/presentation/http/requests/index.ts
+similarity index 53%
+rename from backend/src/modules/taxonomy/presentation/http/requests/index.ts
+rename to backend/src/modules/categories/presentation/http/requests/index.ts
+index 3435b15..d7e7026 100644
+--- a/backend/src/modules/taxonomy/presentation/http/requests/index.ts
++++ b/backend/src/modules/categories/presentation/http/requests/index.ts
+@@ -1,2 +1 @@
+-export * from './admin-tags.request';
+ export * from './admin-categories.request';
+diff --git a/backend/src/modules/follows/application/follow.models.ts b/backend/src/modules/follows/application/follow.models.ts
+new file mode 100644
+index 0000000..4a3904f
+--- /dev/null
++++ b/backend/src/modules/follows/application/follow.models.ts
+@@ -0,0 +1,34 @@
++export interface AuthorFollowMutationView {
++  readonly authorId: string;
++  readonly isFollowing: boolean;
++  readonly followersCount: number;
++}
++
++export interface FollowingItemView {
++  readonly author: {
++    readonly id: string;
++    readonly slug: string;
++    readonly displayName: string;
++    readonly avatarUrl: string | null;
++    readonly verified: boolean;
++    readonly followersCount: number;
++  };
++  readonly followedAt: string;
++}
++
++export interface FollowingListView {
++  readonly items: readonly FollowingItemView[];
++  readonly pagination: {
++    readonly page: number;
++    readonly pageSize: number;
++    readonly totalItems: number;
++    readonly totalPages: number;
++  };
++}
++
++export interface ListFollowingInput {
++  readonly userId: string;
++  readonly page: number;
++  readonly pageSize: number;
++  readonly authorIds?: readonly string[];
++}
+diff --git a/backend/src/modules/follows/application/follows.service.ts b/backend/src/modules/follows/application/follows.service.ts
+new file mode 100644
+index 0000000..bd74811
+--- /dev/null
++++ b/backend/src/modules/follows/application/follows.service.ts
+@@ -0,0 +1,46 @@
++import { Inject, Injectable } from '@nestjs/common';
++import {
++  InvalidInputException,
++  ResourceConflictException,
++} from '@/common/exceptions';
++import {
++  FOLLOW_REPOSITORY,
++  type FollowRepositoryPort,
++} from './ports/follow.repository.port';
++import type { ListFollowingInput } from './follow.models';
++
++@Injectable()
++export class FollowsService {
++  constructor(
++    @Inject(FOLLOW_REPOSITORY) private readonly repository: FollowRepositoryPort,
++  ) {}
++
++  follow(userId: string, authorId: string) {
++    if (userId === authorId) {
++      throw new ResourceConflictException({
++        code: 'AUTHOR_SELF_FOLLOW_NOT_ALLOWED',
++        message: 'Bạn không thể theo dõi chính mình',
++      });
++    }
++    return this.repository.follow(userId, authorId);
++  }
++
++  unfollow(userId: string, authorId: string) {
++    return this.repository.unfollow(userId, authorId);
++  }
++
++  list(input: ListFollowingInput) {
++    const page = Math.max(1, input.page);
++    const pageSize = Math.min(Math.max(input.pageSize, 1), 100);
++    const authorIds = input.authorIds?.length
++      ? [...new Set(input.authorIds)]
++      : undefined;
++    if (authorIds && authorIds.length > 50) {
++      throw new InvalidInputException({
++        code: 'FOLLOW_AUTHOR_IDS_LIMIT_EXCEEDED',
++        message: 'Chỉ được kiểm tra tối đa 50 tác giả mỗi lần',
++      });
++    }
++    return this.repository.list({ ...input, page, pageSize, authorIds });
++  }
++}
+diff --git a/backend/src/modules/follows/application/index.ts b/backend/src/modules/follows/application/index.ts
+new file mode 100644
+index 0000000..855a18a
+--- /dev/null
++++ b/backend/src/modules/follows/application/index.ts
+@@ -0,0 +1,3 @@
++export * from './follow.models';
++export * from './follows.service';
++export * from './ports/follow.repository.port';
+diff --git a/backend/src/modules/follows/application/ports/follow.repository.port.ts b/backend/src/modules/follows/application/ports/follow.repository.port.ts
+new file mode 100644
+index 0000000..7f4c194
+--- /dev/null
++++ b/backend/src/modules/follows/application/ports/follow.repository.port.ts
+@@ -0,0 +1,13 @@
++import type {
++  AuthorFollowMutationView,
++  FollowingListView,
++  ListFollowingInput,
++} from '../follow.models';
++
++export const FOLLOW_REPOSITORY = Symbol.for('modules.follows.repository');
++
++export interface FollowRepositoryPort {
++  follow(userId: string, authorId: string): Promise<AuthorFollowMutationView>;
++  unfollow(userId: string, authorId: string): Promise<AuthorFollowMutationView>;
++  list(input: ListFollowingInput): Promise<FollowingListView>;
++}
+diff --git a/backend/src/modules/follows/domain/index.ts b/backend/src/modules/follows/domain/index.ts
+new file mode 100644
+index 0000000..cc14f9b
+--- /dev/null
++++ b/backend/src/modules/follows/domain/index.ts
+@@ -0,0 +1 @@
++// Follow domain rules currently live in application policies; add entities/value objects here when needed.
+diff --git a/backend/src/modules/follows/follows.module.ts b/backend/src/modules/follows/follows.module.ts
+new file mode 100644
+index 0000000..f18fd49
+--- /dev/null
++++ b/backend/src/modules/follows/follows.module.ts
+@@ -0,0 +1,18 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++import { FOLLOW_REPOSITORY, FollowsService } from './application';
++import { PrismaFollowRepository } from './infrastructure';
++import { AuthorFollowController } from './presentation/http/controllers';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [AuthorFollowController],
++  providers: [
++    FollowsService,
++    PrismaFollowRepository,
++    { provide: FOLLOW_REPOSITORY, useExisting: PrismaFollowRepository },
++  ],
++  exports: [FollowsService],
++})
++export class FollowsModule {}
+diff --git a/backend/src/modules/follows/index.ts b/backend/src/modules/follows/index.ts
+new file mode 100644
+index 0000000..27c1b22
+--- /dev/null
++++ b/backend/src/modules/follows/index.ts
+@@ -0,0 +1,2 @@
++export * from './follows.module';
++export * from './application';
+diff --git a/backend/src/modules/follows/infrastructure/index.ts b/backend/src/modules/follows/infrastructure/index.ts
+new file mode 100644
+index 0000000..ead98a7
+--- /dev/null
++++ b/backend/src/modules/follows/infrastructure/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-follow.repository';
+diff --git a/backend/src/modules/authors/application/services/author-follow.service.ts b/backend/src/modules/follows/infrastructure/prisma-follow.repository.ts
+similarity index 76%
+rename from backend/src/modules/authors/application/services/author-follow.service.ts
+rename to backend/src/modules/follows/infrastructure/prisma-follow.repository.ts
+index f45e4c2..948f2dd 100644
+--- a/backend/src/modules/authors/application/services/author-follow.service.ts
++++ b/backend/src/modules/follows/infrastructure/prisma-follow.repository.ts
+@@ -6,55 +6,25 @@ import {
+   Prisma,
+ } from '@/generated/prisma/client';
+ import {
+-  InvalidInputException,
+   ResourceConflictException,
+   ResourceNotFoundException,
+ } from '@/common/exceptions';
+ import { PrismaService } from '@/infrastructure/database';
+-
+-export interface AuthorFollowMutationView {
+-  readonly authorId: string;
+-  readonly isFollowing: boolean;
+-  readonly followersCount: number;
+-}
+-
+-export interface FollowingItemView {
+-  readonly author: {
+-    readonly id: string;
+-    readonly slug: string;
+-    readonly displayName: string;
+-    readonly avatarUrl: string | null;
+-    readonly verified: boolean;
+-    readonly followersCount: number;
+-  };
+-  readonly followedAt: string;
+-}
+-
+-export interface FollowingListView {
+-  readonly items: readonly FollowingItemView[];
+-  readonly pagination: {
+-    readonly page: number;
+-    readonly pageSize: number;
+-    readonly totalItems: number;
+-    readonly totalPages: number;
+-  };
+-}
++import type {
++  AuthorFollowMutationView,
++  FollowingListView,
++  ListFollowingInput,
++} from '../application/follow.models';
++import type { FollowRepositoryPort } from '../application/ports/follow.repository.port';
+ 
+ @Injectable()
+-export class AuthorFollowService {
++export class PrismaFollowRepository implements FollowRepositoryPort {
+   constructor(private readonly prisma: PrismaService) {}
+ 
+   async follow(
+     userId: string,
+     authorId: string,
+   ): Promise<AuthorFollowMutationView> {
+-    if (userId === authorId) {
+-      throw new ResourceConflictException({
+-        code: 'AUTHOR_SELF_FOLLOW_NOT_ALLOWED',
+-        message: 'Bạn không thể theo dõi chính mình',
+-      });
+-    }
+-
+     return this.prisma.$transaction(async (tx) => {
+       await this.lockActiveFollower(tx, userId);
+       await this.lockAuthor(tx, authorId);
+@@ -113,35 +83,21 @@ export class AuthorFollowService {
+     });
+   }
+ 
+-  async list(input: {
+-    userId: string;
+-    page: number;
+-    pageSize: number;
+-    authorIds?: readonly string[];
+-  }): Promise<FollowingListView> {
+-    const page = Math.max(1, input.page);
+-    const pageSize = Math.min(Math.max(input.pageSize, 1), 100);
+-    const authorIds = input.authorIds?.length
+-      ? [...new Set(input.authorIds)]
+-      : undefined;
+-    if (authorIds && authorIds.length > 50) {
+-      throw new InvalidInputException({
+-        code: 'FOLLOW_AUTHOR_IDS_LIMIT_EXCEEDED',
+-        message: 'Chỉ được kiểm tra tối đa 50 tác giả mỗi lần',
+-      });
+-    }
++  async list(input: ListFollowingInput): Promise<FollowingListView> {
+     const where: Prisma.UserFollowAuthorWhereInput = {
+       userId: input.userId,
+-      ...(authorIds ? { authorId: { in: authorIds } } : {}),
++      ...(input.authorIds?.length
++        ? { authorId: { in: [...input.authorIds] } }
++        : {}),
+     };
+-    const skip = (page - 1) * pageSize;
++    const skip = (input.page - 1) * input.pageSize;
+     const [totalItems, rows] = await Promise.all([
+       this.prisma.userFollowAuthor.count({ where }),
+       this.prisma.userFollowAuthor.findMany({
+         where,
+         orderBy: [{ createdAt: 'desc' }, { authorId: 'desc' }],
+         skip,
+-        take: pageSize,
++        take: input.pageSize,
+         select: {
+           createdAt: true,
+           author: {
+@@ -188,10 +144,10 @@ export class AuthorFollowService {
+         followedAt: row.createdAt.toISOString(),
+       })),
+       pagination: {
+-        page,
+-        pageSize,
++        page: input.page,
++        pageSize: input.pageSize,
+         totalItems,
+-        totalPages: Math.ceil(totalItems / pageSize),
++        totalPages: Math.ceil(totalItems / input.pageSize),
+       },
+     };
+   }
+diff --git a/backend/src/modules/authors/presentation/http/controllers/author-follow.controller.ts b/backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts
+similarity index 91%
+rename from backend/src/modules/authors/presentation/http/controllers/author-follow.controller.ts
+rename to backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts
+index d05fff0..3d172c1 100644
+--- a/backend/src/modules/authors/presentation/http/controllers/author-follow.controller.ts
++++ b/backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts
+@@ -11,16 +11,16 @@ import {
+ import { CurrentUserId, RequirePermissions } from '@/common/decorators';
+ import { PermissionCode } from '@/common/enums';
+ import {
+-  AuthorFollowService,
++  FollowsService,
+   type AuthorFollowMutationView,
+   type FollowingListView,
+-} from '../../../application/services/author-follow.service';
++} from '../../../application';
+ import { ListFollowingRequest } from '../requests/list-following.request';
+ 
+ @Controller()
+ @RequirePermissions(PermissionCode.FOLLOW_MANAGE_OWN)
+ export class AuthorFollowController {
+-  constructor(private readonly follows: AuthorFollowService) {}
++  constructor(private readonly follows: FollowsService) {}
+ 
+   @Post('authors/:authorId/follow')
+   follow(
+diff --git a/backend/src/modules/follows/presentation/http/controllers/index.ts b/backend/src/modules/follows/presentation/http/controllers/index.ts
+new file mode 100644
+index 0000000..fbe2b2b
+--- /dev/null
++++ b/backend/src/modules/follows/presentation/http/controllers/index.ts
+@@ -0,0 +1 @@
++export * from './author-follow.controller';
+diff --git a/backend/src/modules/follows/presentation/http/requests/index.ts b/backend/src/modules/follows/presentation/http/requests/index.ts
+new file mode 100644
+index 0000000..ac61c61
+--- /dev/null
++++ b/backend/src/modules/follows/presentation/http/requests/index.ts
+@@ -0,0 +1 @@
++export * from './list-following.request';
+diff --git a/backend/src/modules/authors/presentation/http/requests/list-following.request.ts b/backend/src/modules/follows/presentation/http/requests/list-following.request.ts
+similarity index 100%
+rename from backend/src/modules/authors/presentation/http/requests/list-following.request.ts
+rename to backend/src/modules/follows/presentation/http/requests/list-following.request.ts
+diff --git a/backend/src/infrastructure/media/media-error-codes.ts b/backend/src/modules/media/application/errors/media-error-codes.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/media-error-codes.ts
+rename to backend/src/modules/media/application/errors/media-error-codes.ts
+diff --git a/backend/src/infrastructure/media/media.exceptions.ts b/backend/src/modules/media/application/errors/media.exceptions.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/media.exceptions.ts
+rename to backend/src/modules/media/application/errors/media.exceptions.ts
+diff --git a/backend/src/infrastructure/media/application/media-cleanup.service.spec.ts b/backend/src/modules/media/application/media-cleanup.service.spec.ts
+similarity index 99%
+rename from backend/src/infrastructure/media/application/media-cleanup.service.spec.ts
+rename to backend/src/modules/media/application/media-cleanup.service.spec.ts
+index cb1246f..d36d584 100644
+--- a/backend/src/infrastructure/media/application/media-cleanup.service.spec.ts
++++ b/backend/src/modules/media/application/media-cleanup.service.spec.ts
+@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
+ 
+ import { MediaResourceType, MediaStatus } from '@/generated/prisma/client';
+ 
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from './errors/media-error-codes';
+ 
+ import { MediaCleanupService } from './media-cleanup.service';
+ 
+diff --git a/backend/src/infrastructure/media/application/media-cleanup.service.ts b/backend/src/modules/media/application/media-cleanup.service.ts
+similarity index 98%
+rename from backend/src/infrastructure/media/application/media-cleanup.service.ts
+rename to backend/src/modules/media/application/media-cleanup.service.ts
+index 5b879b4..0c0f3aa 100644
+--- a/backend/src/infrastructure/media/application/media-cleanup.service.ts
++++ b/backend/src/modules/media/application/media-cleanup.service.ts
+@@ -29,11 +29,11 @@ import {
+ import {
+   MEDIA_STORAGE,
+   MediaStoragePort,
+-} from '../contracts/media-storage.port';
++} from './ports/media-storage.port';
+ 
+-import type { MediaStorageResourceType } from '../contracts/stored-media.interface';
++import type { MediaStorageResourceType } from './ports/stored-media.interface';
+ 
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from './errors/media-error-codes';
+ 
+ import { MediaOwnershipAuthorizationService } from './media-ownership-authorization.service';
+ 
+diff --git a/backend/src/infrastructure/media/application/media-ownership-authorization.service.spec.ts b/backend/src/modules/media/application/media-ownership-authorization.service.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/application/media-ownership-authorization.service.spec.ts
+rename to backend/src/modules/media/application/media-ownership-authorization.service.spec.ts
+diff --git a/backend/src/infrastructure/media/application/media-ownership-authorization.service.ts b/backend/src/modules/media/application/media-ownership-authorization.service.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/application/media-ownership-authorization.service.ts
+rename to backend/src/modules/media/application/media-ownership-authorization.service.ts
+diff --git a/backend/src/infrastructure/media/application/media-query.service.ts b/backend/src/modules/media/application/media-query.service.ts
+similarity index 91%
+rename from backend/src/infrastructure/media/application/media-query.service.ts
+rename to backend/src/modules/media/application/media-query.service.ts
+index d8caf4f..4e753d1 100644
+--- a/backend/src/infrastructure/media/application/media-query.service.ts
++++ b/backend/src/modules/media/application/media-query.service.ts
+@@ -1,4 +1,4 @@
+-import { Injectable } from '@nestjs/common';
++import { Inject, Injectable } from '@nestjs/common';
+ import {
+   MediaAsset,
+   MediaPurpose,
+@@ -11,14 +11,17 @@ import {
+ } from '@/common/exceptions';
+ import type { AuthPrincipal } from '@/common/interfaces/auth';
+ import { PrismaService } from '@/infrastructure/database/prisma';
+-import { CloudinaryUrlService } from '../cloudinary/cloudinary-url.service';
++import {
++  MEDIA_URL_BUILDER,
++  type MediaUrlPort,
++} from './ports/media-url.port';
+ import { MediaOwnershipAuthorizationService } from './media-ownership-authorization.service';
+ 
+ @Injectable()
+ export class MediaQueryService {
+   constructor(
+     private readonly prisma: PrismaService,
+-    private readonly urlService: CloudinaryUrlService,
++    @Inject(MEDIA_URL_BUILDER) private readonly urlService: MediaUrlPort,
+     private readonly ownership: MediaOwnershipAuthorizationService,
+   ) {}
+ 
+diff --git a/backend/src/modules/media/application/media.models.ts b/backend/src/modules/media/application/media.models.ts
+new file mode 100644
+index 0000000..644075f
+--- /dev/null
++++ b/backend/src/modules/media/application/media.models.ts
+@@ -0,0 +1,8 @@
++import type { MediaStorageResourceType } from './ports/stored-media.interface';
++
++export interface ConfirmMediaUploadInput {
++  readonly publicId: string;
++  readonly version: number;
++  readonly signature: string;
++  readonly resourceType: MediaStorageResourceType;
++}
+diff --git a/backend/src/infrastructure/media/application/media.service.spec.ts b/backend/src/modules/media/application/media.service.spec.ts
+similarity index 97%
+rename from backend/src/infrastructure/media/application/media.service.spec.ts
+rename to backend/src/modules/media/application/media.service.spec.ts
+index eded79c..b04e2ef 100644
+--- a/backend/src/infrastructure/media/application/media.service.spec.ts
++++ b/backend/src/modules/media/application/media.service.spec.ts
+@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
+ import { MediaPurpose, MediaStatus } from '@/generated/prisma/client';
+ import { PermissionCode, RoleCode } from '@/common/enums';
+ import { MediaService } from './media.service';
+-import { MediaPublicIdService } from '../policies/media-public-id.service';
++import { MediaPublicIdService } from './policies/media-public-id.service';
+ 
+ describe('MediaService upload intent', () => {
+   const principal = {
+diff --git a/backend/src/infrastructure/media/application/media.service.ts b/backend/src/modules/media/application/media.service.ts
+similarity index 95%
+rename from backend/src/infrastructure/media/application/media.service.ts
+rename to backend/src/modules/media/application/media.service.ts
+index 3d661fa..6ec38a7 100644
+--- a/backend/src/infrastructure/media/application/media.service.ts
++++ b/backend/src/modules/media/application/media.service.ts
+@@ -22,19 +22,19 @@ import { PrismaService } from '@/infrastructure/database/prisma';
+ import {
+   MEDIA_STORAGE,
+   MediaStoragePort,
+-} from '../contracts/media-storage.port';
+-import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
++} from './ports/media-storage.port';
++import type { SignedUploadParameters } from './ports/signed-upload.interface';
+ import type {
+   MediaStorageResourceType,
+   StoredMedia,
+-} from '../contracts/stored-media.interface';
+-import type { ConfirmMediaUploadDto } from '../dto/confirm-media-upload.dto';
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
+-import { MediaPublicIdService } from '../policies/media-public-id.service';
++} from './ports/stored-media.interface';
++import type { ConfirmMediaUploadInput } from './media.models';
++import { MEDIA_ERROR_CODES } from './errors/media-error-codes';
++import { MediaPublicIdService } from './policies/media-public-id.service';
+ import {
+   MEDIA_UPLOAD_POLICIES,
+   MediaUploadPolicy,
+-} from '../policies/media-upload-policy.registry';
++} from './policies/media-upload-policy.registry';
+ import { MediaOwnershipAuthorizationService } from './media-ownership-authorization.service';
+ 
+ export interface CreateMediaUploadIntentInput {
+@@ -131,7 +131,7 @@ export class MediaService {
+   async confirmUpload(input: {
+     principal: AuthPrincipal;
+     mediaAssetId: string;
+-    dto: ConfirmMediaUploadDto;
++    dto: ConfirmMediaUploadInput;
+   }): Promise<MediaAsset> {
+     const media = await this.requireMedia(input.mediaAssetId);
+     this.ownership.assertUploader(input.principal, media.uploaderId);
+diff --git a/backend/src/infrastructure/media/policies/media-public-id.service.spec.ts b/backend/src/modules/media/application/policies/media-public-id.service.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/policies/media-public-id.service.spec.ts
+rename to backend/src/modules/media/application/policies/media-public-id.service.spec.ts
+diff --git a/backend/src/infrastructure/media/policies/media-public-id.service.ts b/backend/src/modules/media/application/policies/media-public-id.service.ts
+similarity index 95%
+rename from backend/src/infrastructure/media/policies/media-public-id.service.ts
+rename to backend/src/modules/media/application/policies/media-public-id.service.ts
+index 1d8464e..651bffd 100644
+--- a/backend/src/infrastructure/media/policies/media-public-id.service.ts
++++ b/backend/src/modules/media/application/policies/media-public-id.service.ts
+@@ -4,7 +4,7 @@ import {
+   UnsupportedMediaTypeException,
+ } from '@/common/exceptions';
+ import type { MediaUploadPolicy } from './media-upload-policy.registry';
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from '../errors/media-error-codes';
+ 
+ @Injectable()
+ export class MediaPublicIdService {
+diff --git a/backend/src/infrastructure/media/policies/media-upload-policy.registry.spec.ts b/backend/src/modules/media/application/policies/media-upload-policy.registry.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/policies/media-upload-policy.registry.spec.ts
+rename to backend/src/modules/media/application/policies/media-upload-policy.registry.spec.ts
+diff --git a/backend/src/infrastructure/media/policies/media-upload-policy.registry.ts b/backend/src/modules/media/application/policies/media-upload-policy.registry.ts
+similarity index 97%
+rename from backend/src/infrastructure/media/policies/media-upload-policy.registry.ts
+rename to backend/src/modules/media/application/policies/media-upload-policy.registry.ts
+index f96037f..b648f28 100644
+--- a/backend/src/infrastructure/media/policies/media-upload-policy.registry.ts
++++ b/backend/src/modules/media/application/policies/media-upload-policy.registry.ts
+@@ -1,6 +1,6 @@
+ import { AUTHOR_APPLICATION_SAMPLE_FILE_POLICY } from '@/common/policies/author-application-sample-file.policy';
+ import { MediaPurpose } from '@/generated/prisma/client';
+-import type { MediaStorageResourceType } from '../contracts/stored-media.interface';
++import type { MediaStorageResourceType } from '../ports/stored-media.interface';
+ 
+ export interface MediaUploadPolicy {
+   resourceType: MediaStorageResourceType;
+diff --git a/backend/src/infrastructure/media/contracts/media-storage.port.ts b/backend/src/modules/media/application/ports/media-storage.port.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/contracts/media-storage.port.ts
+rename to backend/src/modules/media/application/ports/media-storage.port.ts
+diff --git a/backend/src/modules/media/application/ports/media-url.port.ts b/backend/src/modules/media/application/ports/media-url.port.ts
+new file mode 100644
+index 0000000..066f8f0
+--- /dev/null
++++ b/backend/src/modules/media/application/ports/media-url.port.ts
+@@ -0,0 +1,7 @@
++import type { BuildMediaUrlInput } from './media-storage.port';
++
++export const MEDIA_URL_BUILDER = Symbol.for('quan-ly-truyen.modules.media-url-builder');
++
++export interface MediaUrlPort {
++  build(input: BuildMediaUrlInput): string;
++}
+diff --git a/backend/src/infrastructure/media/contracts/signed-upload.interface.ts b/backend/src/modules/media/application/ports/signed-upload.interface.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/contracts/signed-upload.interface.ts
+rename to backend/src/modules/media/application/ports/signed-upload.interface.ts
+diff --git a/backend/src/infrastructure/media/contracts/stored-media.interface.ts b/backend/src/modules/media/application/ports/stored-media.interface.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/contracts/stored-media.interface.ts
+rename to backend/src/modules/media/application/ports/stored-media.interface.ts
+diff --git a/backend/src/modules/media/index.ts b/backend/src/modules/media/index.ts
+new file mode 100644
+index 0000000..b7fa1f2
+--- /dev/null
++++ b/backend/src/modules/media/index.ts
+@@ -0,0 +1,12 @@
++export * from './application/media.service';
++export * from './application/media-query.service';
++export * from './application/media-cleanup.service';
++export * from './application/ports/media-storage.port';
++export * from './application/ports/media-url.port';
++export * from './application/ports/signed-upload.interface';
++export * from './application/ports/stored-media.interface';
++export * from './presentation/http/dto/confirm-media-upload.dto';
++export * from './application/policies/media-upload-policy.registry';
++export * from './infrastructure/cloudinary/cloudinary-url.service';
++export * from './infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
++export * from './media.module';
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-media.adapter.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-media.adapter.ts
+similarity index 95%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-media.adapter.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-media.adapter.ts
+index 6f7881a..43c7e19 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-media.adapter.ts
++++ b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-media.adapter.ts
+@@ -4,7 +4,7 @@ import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
+ 
+ import { timingSafeStringEqual } from '@/common/utils/timing-safe-string-equal.util';
+ import { InvalidInputException, StorageException } from '@/common/exceptions';
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from '../../application/errors/media-error-codes';
+ import { MetricsService } from '@/infrastructure/observability';
+ 
+ import type {
+@@ -14,9 +14,9 @@ import type {
+   DeleteStoredMediaInput,
+   DeleteStoredMediaResult,
+   MediaStoragePort,
+-} from '../contracts/media-storage.port';
+-import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
+-import type { StoredMedia } from '../contracts/stored-media.interface';
++} from '../../application/ports/media-storage.port';
++import type { SignedUploadParameters } from '../../application/ports/signed-upload.interface';
++import type { StoredMedia } from '../../application/ports/stored-media.interface';
+ 
+ import { CLOUDINARY_CLIENT } from './cloudinary.constants';
+ import type { CloudinaryClient } from './cloudinary.provider';
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-response.mapper.spec.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-response.mapper.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-response.mapper.spec.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-response.mapper.spec.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-response.mapper.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-response.mapper.ts
+similarity index 97%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-response.mapper.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-response.mapper.ts
+index 6da961d..7756526 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-response.mapper.ts
++++ b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-response.mapper.ts
+@@ -2,7 +2,7 @@ import { StorageException } from '@/common/exceptions';
+ import type {
+   MediaStorageResourceType,
+   StoredMedia,
+-} from '../contracts/stored-media.interface';
++} from '../../application/ports/stored-media.interface';
+ 
+ export function mapCloudinaryAsset(value: unknown): StoredMedia {
+   if (!value || typeof value !== 'object') throw invalidResponse();
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-signature.service.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-signature.service.ts
+similarity index 85%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-signature.service.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-signature.service.ts
+index 9a7c6e3..71ef31d 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-signature.service.ts
++++ b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-signature.service.ts
+@@ -2,12 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
+ import { ConfigService } from '@nestjs/config';
+ import { InvalidInputException } from '@/common/exceptions';
+ 
+-import type { CreateSignedUploadInput } from '../contracts/media-storage.port';
+-import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
+-import { MEDIA_UPLOAD_POLICIES } from '../policies/media-upload-policy.registry';
++import type { CreateSignedUploadInput } from '../../application/ports/media-storage.port';
++import type { SignedUploadParameters } from '../../application/ports/signed-upload.interface';
++import { MEDIA_UPLOAD_POLICIES } from '../../application/policies/media-upload-policy.registry';
+ import { CLOUDINARY_CLIENT } from './cloudinary.constants';
+ import type { CloudinaryClient } from './cloudinary.provider';
+-import { MediaStorageDisabledException } from '../media.exceptions';
++import { MediaStorageDisabledException } from '../../application/errors/media.exceptions';
+ 
+ @Injectable()
+ export class CloudinarySignatureService {
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-url.service.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-url.service.ts
+similarity index 89%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-url.service.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-url.service.ts
+index 2085d45..2052383 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-url.service.ts
++++ b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-url.service.ts
+@@ -1,12 +1,13 @@
+ import { Inject, Injectable } from '@nestjs/common';
+-import { MediaStorageDisabledException } from '../media.exceptions';
++import { MediaStorageDisabledException } from '../../application/errors/media.exceptions';
+ 
+-import type { BuildMediaUrlInput } from '../contracts/media-storage.port';
++import type { BuildMediaUrlInput } from '../../application/ports/media-storage.port';
++import type { MediaUrlPort } from '../../application/ports/media-url.port';
+ import { CLOUDINARY_CLIENT } from './cloudinary.constants';
+ import type { CloudinaryClient } from './cloudinary.provider';
+ 
+ @Injectable()
+-export class CloudinaryUrlService {
++export class CloudinaryUrlService implements MediaUrlPort {
+   constructor(
+     @Inject(CLOUDINARY_CLIENT)
+     private readonly cloudinary: CloudinaryClient | null,
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor.spec.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor.spec.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor.spec.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker.spec.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.worker.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker.spec.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.worker.spec.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.worker.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.worker.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook-metrics.observer.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-metrics.observer.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook-metrics.observer.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook-metrics.observer.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.spec.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook.service.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.spec.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook.service.spec.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook.service.ts
+similarity index 97%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook.service.ts
+index de152aa..e3a21f4 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook.service.ts
++++ b/backend/src/modules/media/infrastructure/cloudinary/cloudinary-webhook.service.ts
+@@ -5,11 +5,11 @@ import { Prisma } from '@/generated/prisma/client';
+ import { InvalidInputException, StorageException } from '@/common/exceptions';
+ import { PrismaService } from '@/infrastructure/database/prisma';
+ import { MetricsService } from '@/infrastructure/observability';
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from '../../application/errors/media-error-codes';
+ import {
+   CloudinaryWebhookSignatureException,
+   MediaStorageDisabledException,
+-} from '../media.exceptions';
++} from '../../application/errors/media.exceptions';
+ import { CLOUDINARY_CLIENT } from './cloudinary.constants';
+ import type { CloudinaryClient } from './cloudinary.provider';
+ 
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary.constants.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary.constants.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary.constants.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary.constants.ts
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary.provider.ts b/backend/src/modules/media/infrastructure/cloudinary/cloudinary.provider.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary.provider.ts
+rename to backend/src/modules/media/infrastructure/cloudinary/cloudinary.provider.ts
+diff --git a/backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.spec.ts b/backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.spec.ts
+similarity index 86%
+rename from backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.spec.ts
+rename to backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.spec.ts
+index 8d3bf13..9481d70 100644
+--- a/backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.spec.ts
++++ b/backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.spec.ts
+@@ -1,5 +1,5 @@
+ import { DisabledMediaStorageAdapter } from './disabled-media-storage.adapter';
+-import { MEDIA_ERROR_CODES } from '../media-error-codes';
++import { MEDIA_ERROR_CODES } from '../../application/errors/media-error-codes';
+ 
+ describe('DisabledMediaStorageAdapter', () => {
+   it('returns a stable non-retryable service-unavailable exception', () => {
+diff --git a/backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.ts b/backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.ts
+similarity index 67%
+rename from backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.ts
+rename to backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.ts
+index 4e1c493..74eba47 100644
+--- a/backend/src/infrastructure/media/adapters/disabled-media-storage.adapter.ts
++++ b/backend/src/modules/media/infrastructure/storage/disabled-media-storage.adapter.ts
+@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
+ import type {
+   DeleteStoredMediaResult,
+   MediaStoragePort,
+-} from '../contracts/media-storage.port';
+-import type { SignedUploadParameters } from '../contracts/signed-upload.interface';
+-import type { StoredMedia } from '../contracts/stored-media.interface';
+-import { MediaStorageDisabledException } from '../media.exceptions';
++} from '../../application/ports/media-storage.port';
++import type { SignedUploadParameters } from '../../application/ports/signed-upload.interface';
++import type { StoredMedia } from '../../application/ports/stored-media.interface';
++import { MediaStorageDisabledException } from '../../application/errors/media.exceptions';
+ 
+ @Injectable()
+ export class DisabledMediaStorageAdapter implements MediaStoragePort {
+diff --git a/backend/src/infrastructure/media/media-disabled-bootstrap.spec.ts b/backend/src/modules/media/media-disabled-bootstrap.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/media-disabled-bootstrap.spec.ts
+rename to backend/src/modules/media/media-disabled-bootstrap.spec.ts
+diff --git a/backend/src/infrastructure/media/media.module.ts b/backend/src/modules/media/media.module.ts
+similarity index 56%
+rename from backend/src/infrastructure/media/media.module.ts
+rename to backend/src/modules/media/media.module.ts
+index 7ddfbe1..16dc627 100644
+--- a/backend/src/infrastructure/media/media.module.ts
++++ b/backend/src/modules/media/media.module.ts
+@@ -3,22 +3,23 @@ import { Module } from '@nestjs/common';
+ import { PrismaModule } from '@/infrastructure/database/prisma';
+ 
+ import { MediaCleanupService } from './application/media-cleanup.service';
+-import { DisabledMediaStorageAdapter } from './adapters/disabled-media-storage.adapter';
++import { DisabledMediaStorageAdapter } from './infrastructure/storage/disabled-media-storage.adapter';
+ import { MediaQueryService } from './application/media-query.service';
+ import { MediaService } from './application/media.service';
+ import { MediaOwnershipAuthorizationService } from './application/media-ownership-authorization.service';
+-import { CloudinaryMediaAdapter } from './cloudinary/cloudinary-media.adapter';
+-import { cloudinaryProvider } from './cloudinary/cloudinary.provider';
+-import { CloudinarySignatureService } from './cloudinary/cloudinary-signature.service';
+-import { CloudinaryUrlService } from './cloudinary/cloudinary-url.service';
+-import { CloudinaryWebhookController } from './cloudinary/cloudinary-webhook.controller';
+-import { CloudinaryWebhookService } from './cloudinary/cloudinary-webhook.service';
+-import { CloudinaryWebhookInboxProcessor } from './cloudinary/cloudinary-webhook-inbox.processor';
+-import { CloudinaryWebhookMetricsObserver } from './cloudinary/cloudinary-webhook-metrics.observer';
+-import { MEDIA_STORAGE } from './contracts/media-storage.port';
++import { CloudinaryMediaAdapter } from './infrastructure/cloudinary/cloudinary-media.adapter';
++import { cloudinaryProvider } from './infrastructure/cloudinary/cloudinary.provider';
++import { CloudinarySignatureService } from './infrastructure/cloudinary/cloudinary-signature.service';
++import { CloudinaryUrlService } from './infrastructure/cloudinary/cloudinary-url.service';
++import { CloudinaryWebhookController } from './presentation/http/controllers/cloudinary-webhook.controller';
++import { CloudinaryWebhookService } from './infrastructure/cloudinary/cloudinary-webhook.service';
++import { CloudinaryWebhookInboxProcessor } from './infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
++import { CloudinaryWebhookMetricsObserver } from './infrastructure/cloudinary/cloudinary-webhook-metrics.observer';
++import { MEDIA_STORAGE } from './application/ports/media-storage.port';
++import { MEDIA_URL_BUILDER } from './application/ports/media-url.port';
+ import { ConfigService } from '@nestjs/config';
+-import { MediaPublicIdService } from './policies/media-public-id.service';
+-import { MediaController } from './media.controller';
++import { MediaPublicIdService } from './application/policies/media-public-id.service';
++import { MediaController } from './presentation/http/controllers/media.controller';
+ import { ObservabilityModule } from '@/infrastructure/observability';
+ 
+ @Module({
+@@ -35,6 +36,7 @@ import { ObservabilityModule } from '@/infrastructure/observability';
+     DisabledMediaStorageAdapter,
+     MediaPublicIdService,
+     MediaOwnershipAuthorizationService,
++    { provide: MEDIA_URL_BUILDER, useExisting: CloudinaryUrlService },
+     {
+       provide: MEDIA_STORAGE,
+       inject: [
+diff --git a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook.controller.ts b/backend/src/modules/media/presentation/http/controllers/cloudinary-webhook.controller.ts
+similarity index 90%
+rename from backend/src/infrastructure/media/cloudinary/cloudinary-webhook.controller.ts
+rename to backend/src/modules/media/presentation/http/controllers/cloudinary-webhook.controller.ts
+index 7db694d..8ff0487 100644
+--- a/backend/src/infrastructure/media/cloudinary/cloudinary-webhook.controller.ts
++++ b/backend/src/modules/media/presentation/http/controllers/cloudinary-webhook.controller.ts
+@@ -10,7 +10,7 @@ import type { Request } from 'express';
+ import { Public } from '@/common/decorators/auth';
+ import { InvalidInputException } from '@/common/exceptions';
+ 
+-import { CloudinaryWebhookService } from './cloudinary-webhook.service';
++import { CloudinaryWebhookService } from '../../../infrastructure/cloudinary/cloudinary-webhook.service';
+ 
+ @Controller('webhooks/cloudinary')
+ export class CloudinaryWebhookController {
+diff --git a/backend/src/infrastructure/media/media.controller.spec.ts b/backend/src/modules/media/presentation/http/controllers/media.controller.spec.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/media.controller.spec.ts
+rename to backend/src/modules/media/presentation/http/controllers/media.controller.spec.ts
+diff --git a/backend/src/infrastructure/media/media.controller.ts b/backend/src/modules/media/presentation/http/controllers/media.controller.ts
+similarity index 82%
+rename from backend/src/infrastructure/media/media.controller.ts
+rename to backend/src/modules/media/presentation/http/controllers/media.controller.ts
+index 0b2bf90..5ac9001 100644
+--- a/backend/src/infrastructure/media/media.controller.ts
++++ b/backend/src/modules/media/presentation/http/controllers/media.controller.ts
+@@ -12,15 +12,15 @@ import { CurrentUser, Permissions } from '@/common/decorators/auth';
+ import { Idempotent } from '@/common/decorators/interceptor';
+ import { PermissionCode } from '@/common/enums';
+ import type { AuthPrincipal } from '@/common/interfaces/auth';
+-import { MediaCleanupService } from './application/media-cleanup.service';
+-import { MediaQueryService } from './application/media-query.service';
+-import { MediaService } from './application/media.service';
+-import { ConfirmMediaUploadDto } from './dto/confirm-media-upload.dto';
+-import { CreateMediaUploadIntentDto } from './dto/create-media-upload-intent.dto';
++import { MediaCleanupService } from '../../../application/media-cleanup.service';
++import { MediaQueryService } from '../../../application/media-query.service';
++import { MediaService } from '../../../application/media.service';
++import { ConfirmMediaUploadDto } from '../dto/confirm-media-upload.dto';
++import { CreateMediaUploadIntentDto } from '../dto/create-media-upload-intent.dto';
+ import {
+   toMediaResponse,
+   type MediaResponseDto,
+-} from './dto/media-response.dto';
++} from '../dto/media-response.dto';
+ 
+ @Controller('media')
+ export class MediaController {
+diff --git a/backend/src/infrastructure/media/dto/confirm-media-upload.dto.ts b/backend/src/modules/media/presentation/http/dto/confirm-media-upload.dto.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/dto/confirm-media-upload.dto.ts
+rename to backend/src/modules/media/presentation/http/dto/confirm-media-upload.dto.ts
+diff --git a/backend/src/infrastructure/media/dto/create-media-upload-intent.dto.ts b/backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/dto/create-media-upload-intent.dto.ts
+rename to backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts
+diff --git a/backend/src/infrastructure/media/dto/media-response.dto.ts b/backend/src/modules/media/presentation/http/dto/media-response.dto.ts
+similarity index 100%
+rename from backend/src/infrastructure/media/dto/media-response.dto.ts
+rename to backend/src/modules/media/presentation/http/dto/media-response.dto.ts
+diff --git a/backend/src/modules/moderation/application/moderation.models.ts b/backend/src/modules/moderation/application/moderation.models.ts
+index 0f88f46..86a433c 100644
+--- a/backend/src/modules/moderation/application/moderation.models.ts
++++ b/backend/src/modules/moderation/application/moderation.models.ts
+@@ -1,14 +1 @@
+ export type CommentModerationOperation = 'hold' | 'hide' | 'restore' | 'remove';
+-
+-export interface AdminReportListQuery {
+-  readonly status?: string;
+-  readonly reason?: string;
+-  readonly reporter?: string;
+-  readonly reportedUser?: string;
+-  readonly createdFrom?: Date;
+-  readonly createdTo?: Date;
+-  readonly page: number;
+-  readonly pageSize: number;
+-  readonly sort?: 'createdAt' | 'status' | 'reason';
+-  readonly direction?: 'asc' | 'desc';
+-}
+diff --git a/backend/src/modules/moderation/application/moderation.service.ts b/backend/src/modules/moderation/application/moderation.service.ts
+index b4ef28f..60ec2b2 100644
+--- a/backend/src/modules/moderation/application/moderation.service.ts
++++ b/backend/src/modules/moderation/application/moderation.service.ts
+@@ -3,8 +3,6 @@ import {
+   ModerationActionType,
+   ModerationStatus,
+   Prisma,
+-  ReportReason,
+-  ReportStatus,
+ } from '@/generated/prisma/client';
+ import { PrismaService } from '@/infrastructure/database';
+ import { MetricsService } from '@/infrastructure/observability';
+@@ -13,20 +11,15 @@ import {
+   UpdateManagedUserStatusCommandHandler,
+ } from '@/modules/users/application';
+ import { ManagedUserStatus } from '@/modules/users/domain';
++import { ReportNotFoundException } from '@/modules/reports';
+ import { CommentNotFoundException } from '@/modules/comments';
+ import {
+   InvalidCommentModerationTransitionException,
+   InvalidModerationReasonException,
+-  InvalidReportResolutionException,
+   InvalidWarningMessageException,
+   ModerationReportMismatchException,
+-  ReportAlreadyClosedException,
+-  ReportNotFoundException,
+ } from '../domain';
+-import type {
+-  AdminReportListQuery,
+-  CommentModerationOperation,
+-} from './moderation.models';
++import type { CommentModerationOperation } from './moderation.models';
+ 
+ interface AuditContext {
+   readonly ipAddress?: string;
+@@ -42,213 +35,6 @@ export class ModerationService {
+     private readonly metrics: MetricsService,
+   ) {}
+ 
+-  async listReports(query: AdminReportListQuery) {
+-    const page = Math.max(1, query.page);
+-    const pageSize = Math.min(100, Math.max(1, query.pageSize));
+-    const searchReporter = query.reporter?.trim();
+-    const searchReported = query.reportedUser?.trim();
+-    const where: Prisma.ReportWhereInput = {
+-      targetType: 'COMMENT',
+-      ...(query.status ? { status: query.status as ReportStatus } : {}),
+-      ...(query.reason ? { reason: query.reason as ReportReason } : {}),
+-      ...(query.createdFrom || query.createdTo
+-        ? {
+-            createdAt: {
+-              ...(query.createdFrom ? { gte: query.createdFrom } : {}),
+-              ...(query.createdTo ? { lte: query.createdTo } : {}),
+-            },
+-          }
+-        : {}),
+-      ...(searchReporter
+-        ? {
+-            reporter: {
+-              OR: [
+-                {
+-                  displayName: {
+-                    contains: searchReporter,
+-                    mode: 'insensitive',
+-                  },
+-                },
+-                { email: { contains: searchReporter, mode: 'insensitive' } },
+-              ],
+-            },
+-          }
+-        : {}),
+-      ...(searchReported
+-        ? {
+-            reportedUser: {
+-              OR: [
+-                {
+-                  displayName: {
+-                    contains: searchReported,
+-                    mode: 'insensitive',
+-                  },
+-                },
+-                { email: { contains: searchReported, mode: 'insensitive' } },
+-              ],
+-            },
+-          }
+-        : {}),
+-    };
+-    const direction = query.direction ?? 'desc';
+-    const primary = query.sort ?? 'createdAt';
+-    const orderBy: Prisma.ReportOrderByWithRelationInput[] = [
+-      { [primary]: direction },
+-      ...(primary === 'createdAt' ? [] : [{ createdAt: 'desc' as const }]),
+-      { id: 'desc' },
+-    ];
+-    const [totalItems, rows] = await this.prisma.$transaction([
+-      this.prisma.report.count({ where }),
+-      this.prisma.report.findMany({
+-        where,
+-        orderBy,
+-        skip: (page - 1) * pageSize,
+-        take: pageSize,
+-        select: {
+-          id: true,
+-          status: true,
+-          reason: true,
+-          createdAt: true,
+-          reporter: { select: { id: true, displayName: true } },
+-          reportedUser: { select: { id: true, displayName: true } },
+-          comment: { select: { id: true, body: true } },
+-          story: { select: { id: true, title: true } },
+-          chapter: { select: { id: true, title: true } },
+-        },
+-      }),
+-    ]);
+-    return {
+-      items: rows.map((row) => ({
+-        id: row.id,
+-        status: row.status,
+-        reason: row.reason,
+-        createdAt: row.createdAt.toISOString(),
+-        reporter: row.reporter,
+-        reportedUser: row.reportedUser,
+-        comment: row.comment
+-          ? { id: row.comment.id, excerpt: this.excerpt(row.comment.body) }
+-          : null,
+-        story: row.story,
+-        chapter: row.chapter,
+-      })),
+-      pagination: {
+-        page,
+-        pageSize,
+-        totalItems,
+-        totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize),
+-      },
+-    };
+-  }
+-
+-  async getReport(reportId: string) {
+-    const report = await this.prisma.report.findUnique({
+-      where: { id: reportId },
+-      select: {
+-        id: true,
+-        reason: true,
+-        description: true,
+-        status: true,
+-        evidence: true,
+-        resolutionNote: true,
+-        createdAt: true,
+-        updatedAt: true,
+-        resolvedAt: true,
+-        reporter: { select: { id: true, displayName: true, email: true } },
+-        reportedUser: {
+-          select: { id: true, displayName: true, email: true, status: true },
+-        },
+-        comment: {
+-          select: {
+-            id: true,
+-            body: true,
+-            moderationStatus: true,
+-            editedAt: true,
+-            createdAt: true,
+-            deletedAt: true,
+-            storyId: true,
+-            chapterId: true,
+-            user: { select: { id: true, displayName: true, status: true } },
+-          },
+-        },
+-        story: { select: { id: true, slug: true, title: true } },
+-        chapter: { select: { id: true, number: true, title: true } },
+-        moderationActions: {
+-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+-          take: 50,
+-          select: {
+-            id: true,
+-            actorId: true,
+-            action: true,
+-            reason: true,
+-            metadata: true,
+-            createdAt: true,
+-          },
+-        },
+-      },
+-    });
+-    if (!report) throw new ReportNotFoundException(reportId);
+-    const relatedReportCount = report.comment
+-      ? await this.prisma.report.count({
+-          where: { commentId: report.comment.id },
+-        })
+-      : 0;
+-    const recentUserModerationCount = report.reportedUser
+-      ? await this.prisma.moderationAction.count({
+-          where: {
+-            targetUserId: report.reportedUser.id,
+-            createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) },
+-          },
+-        })
+-      : 0;
+-    return {
+-      ...report,
+-      createdAt: report.createdAt.toISOString(),
+-      updatedAt: report.updatedAt.toISOString(),
+-      resolvedAt: report.resolvedAt?.toISOString() ?? null,
+-      currentComment: report.comment
+-        ? {
+-            ...report.comment,
+-            editedAt: report.comment.editedAt?.toISOString() ?? null,
+-            createdAt: report.comment.createdAt.toISOString(),
+-            deletedAt: report.comment.deletedAt?.toISOString() ?? null,
+-          }
+-        : null,
+-      comment: undefined,
+-      relatedReportCount,
+-      recentUserModerationCount,
+-      moderationActions: report.moderationActions.map((item) => ({
+-        ...item,
+-        createdAt: item.createdAt.toISOString(),
+-      })),
+-    };
+-  }
+-
+-  resolveReport(input: {
+-    actorId: string;
+-    reportId: string;
+-    note: string;
+-    audit: AuditContext;
+-  }) {
+-    return this.closeReport({
+-      ...input,
+-      status: ReportStatus.RESOLVED,
+-      auditAction: 'comment.report.resolved',
+-    });
+-  }
+-
+-  rejectReport(input: {
+-    actorId: string;
+-    reportId: string;
+-    note: string;
+-    audit: AuditContext;
+-  }) {
+-    return this.closeReport({
+-      ...input,
+-      status: ReportStatus.REJECTED,
+-      auditAction: 'comment.report.rejected',
+-    });
+-  }
+-
+   async moderateComment(input: {
+     actorId: string;
+     commentId: string;
+@@ -464,59 +250,6 @@ export class ModerationService {
+     return { success: true as const, userId: comment.userId };
+   }
+ 
+-  private async closeReport(input: {
+-    actorId: string;
+-    reportId: string;
+-    note: string;
+-    status: typeof ReportStatus.RESOLVED | typeof ReportStatus.REJECTED;
+-    auditAction: string;
+-    audit: AuditContext;
+-  }) {
+-    const note = input.note.normalize('NFKC').trim();
+-    if (note.length < 10 || note.length > 2000)
+-      throw new InvalidReportResolutionException();
+-    return this.prisma.$transaction(async (tx) => {
+-      const rows = await tx.$queryRaw<
+-        Array<{ id: string; status: string; commentId: string | null }>
+-      >(Prisma.sql`
+-        SELECT "id", "status"::text AS "status", "comment_id" AS "commentId"
+-        FROM "reports" WHERE "id" = ${input.reportId}::uuid FOR UPDATE
+-      `);
+-      const report = rows[0];
+-      if (!report) throw new ReportNotFoundException(input.reportId);
+-      if (!['open', 'in_review'].includes(report.status))
+-        throw new ReportAlreadyClosedException();
+-      const now = new Date();
+-      await tx.report.update({
+-        where: { id: report.id },
+-        data: {
+-          status: input.status,
+-          resolutionNote: note,
+-          resolvedAt: now,
+-          assignedToId: input.actorId,
+-        },
+-      });
+-      await tx.auditLog.create({
+-        data: {
+-          actorId: input.actorId,
+-          action: input.auditAction,
+-          entityType: 'report',
+-          entityId: report.id,
+-          oldValues: { status: report.status.toUpperCase() },
+-          newValues: { status: input.status },
+-          metadata: { commentId: report.commentId },
+-          ...input.audit,
+-        },
+-      });
+-      return {
+-        id: report.id,
+-        status: input.status,
+-        resolvedAt: now.toISOString(),
+-        resolutionNote: note,
+-      };
+-    });
+-  }
+-
+   private nextStatus(
+     current: string,
+     operation: CommentModerationOperation,
+@@ -700,11 +433,4 @@ export class ModerationService {
+       throw new InvalidModerationReasonException();
+     return normalized;
+   }
+-
+-  private excerpt(value: string): string {
+-    const normalized = value.replace(/\s+/g, ' ').trim();
+-    return normalized.length <= 200
+-      ? normalized
+-      : `${normalized.slice(0, 197)}...`;
+-  }
+ }
+diff --git a/backend/src/modules/moderation/domain/moderation.exceptions.ts b/backend/src/modules/moderation/domain/moderation.exceptions.ts
+index 99367d4..bf95021 100644
+--- a/backend/src/modules/moderation/domain/moderation.exceptions.ts
++++ b/backend/src/modules/moderation/domain/moderation.exceptions.ts
+@@ -1,39 +1,8 @@
+ import {
+   InvalidInputException,
+   ResourceConflictException,
+-  ResourceNotFoundException,
+ } from '@/common/exceptions';
+ 
+-export class ReportNotFoundException extends ResourceNotFoundException {
+-  constructor(id?: string) {
+-    super({
+-      code: 'REPORT_NOT_FOUND',
+-      resource: 'báo cáo',
+-      identifier: id,
+-      message: 'Không tìm thấy báo cáo',
+-    });
+-  }
+-}
+-
+-export class ReportAlreadyClosedException extends ResourceConflictException {
+-  constructor() {
+-    super({
+-      code: 'REPORT_ALREADY_CLOSED',
+-      message: 'Báo cáo đã được đóng bởi một moderator khác',
+-    });
+-  }
+-}
+-
+-export class InvalidReportResolutionException extends InvalidInputException {
+-  constructor() {
+-    super({
+-      code: 'REPORT_RESOLUTION_NOTE_REQUIRED',
+-      message: 'Ghi chú xử lý phải có từ 10 đến 2000 ký tự',
+-      details: { field: 'note' },
+-    });
+-  }
+-}
+-
+ export class InvalidCommentModerationTransitionException extends ResourceConflictException {
+   constructor(from: string, to: string) {
+     super({
+diff --git a/backend/src/modules/moderation/moderation.module.ts b/backend/src/modules/moderation/moderation.module.ts
+index 582d049..3a5838a 100644
+--- a/backend/src/modules/moderation/moderation.module.ts
++++ b/backend/src/modules/moderation/moderation.module.ts
+@@ -3,11 +3,10 @@ import { PrismaModule } from '@/infrastructure/database';
+ import { UsersModule } from '@/modules/users';
+ import { ModerationService } from './application';
+ import { AdminCommentModerationController } from './presentation/http/admin-comment-moderation.controller';
+-import { AdminReportsController } from './presentation/http/admin-reports.controller';
+ 
+ @Module({
+   imports: [PrismaModule, UsersModule],
+-  controllers: [AdminReportsController, AdminCommentModerationController],
++  controllers: [AdminCommentModerationController],
+   providers: [ModerationService],
+ })
+ export class ModerationModule {}
+diff --git a/backend/src/modules/reports/application/index.ts b/backend/src/modules/reports/application/index.ts
+new file mode 100644
+index 0000000..9f9fb83
+--- /dev/null
++++ b/backend/src/modules/reports/application/index.ts
+@@ -0,0 +1,3 @@
++export * from './report.models';
++export * from './reports.service';
++export * from './ports/report.repository.port';
+diff --git a/backend/src/modules/reports/application/ports/report.repository.port.ts b/backend/src/modules/reports/application/ports/report.repository.port.ts
+new file mode 100644
+index 0000000..74c84b3
+--- /dev/null
++++ b/backend/src/modules/reports/application/ports/report.repository.port.ts
+@@ -0,0 +1,12 @@
++import type {
++  AdminReportListQuery,
++  CloseReportPersistenceInput,
++} from '../report.models';
++
++export const REPORT_REPOSITORY = Symbol.for('modules.reports.repository');
++
++export interface ReportRepositoryPort {
++  list(query: AdminReportListQuery): Promise<unknown>;
++  get(reportId: string): Promise<unknown>;
++  close(input: CloseReportPersistenceInput): Promise<unknown>;
++}
+diff --git a/backend/src/modules/reports/application/report.models.ts b/backend/src/modules/reports/application/report.models.ts
+new file mode 100644
+index 0000000..0de9ade
+--- /dev/null
++++ b/backend/src/modules/reports/application/report.models.ts
+@@ -0,0 +1,29 @@
++export type ReportCloseStatus = 'RESOLVED' | 'REJECTED';
++
++export interface AdminReportListQuery {
++  readonly status?: string;
++  readonly reason?: string;
++  readonly reporter?: string;
++  readonly reportedUser?: string;
++  readonly createdFrom?: Date;
++  readonly createdTo?: Date;
++  readonly page: number;
++  readonly pageSize: number;
++  readonly sort?: 'createdAt' | 'status' | 'reason';
++  readonly direction?: 'asc' | 'desc';
++}
++
++export interface ReportAuditContext {
++  readonly ipAddress?: string;
++  readonly userAgent?: string;
++  readonly requestId?: string;
++}
++
++export interface CloseReportPersistenceInput {
++  readonly actorId: string;
++  readonly reportId: string;
++  readonly note: string;
++  readonly status: ReportCloseStatus;
++  readonly auditAction: string;
++  readonly audit: ReportAuditContext;
++}
+diff --git a/backend/src/modules/reports/application/reports.service.ts b/backend/src/modules/reports/application/reports.service.ts
+new file mode 100644
+index 0000000..c451c0c
+--- /dev/null
++++ b/backend/src/modules/reports/application/reports.service.ts
+@@ -0,0 +1,62 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { InvalidReportResolutionException } from '../domain';
++import {
++  REPORT_REPOSITORY,
++  type ReportRepositoryPort,
++} from './ports/report.repository.port';
++import type { AdminReportListQuery, ReportAuditContext } from './report.models';
++
++@Injectable()
++export class ReportsService {
++  constructor(
++    @Inject(REPORT_REPOSITORY) private readonly repository: ReportRepositoryPort,
++  ) {}
++
++  list(query: AdminReportListQuery) {
++    return this.repository.list(query);
++  }
++
++  get(reportId: string) {
++    return this.repository.get(reportId);
++  }
++
++  resolve(input: {
++    actorId: string;
++    reportId: string;
++    note: string;
++    audit: ReportAuditContext;
++  }) {
++    return this.close({
++      ...input,
++      status: 'RESOLVED',
++      auditAction: 'comment.report.resolved',
++    });
++  }
++
++  reject(input: {
++    actorId: string;
++    reportId: string;
++    note: string;
++    audit: ReportAuditContext;
++  }) {
++    return this.close({
++      ...input,
++      status: 'REJECTED',
++      auditAction: 'comment.report.rejected',
++    });
++  }
++
++  private close(input: {
++    actorId: string;
++    reportId: string;
++    note: string;
++    status: 'RESOLVED' | 'REJECTED';
++    auditAction: string;
++    audit: ReportAuditContext;
++  }) {
++    const note = input.note.normalize('NFKC').trim();
++    if (note.length < 10 || note.length > 2000)
++      throw new InvalidReportResolutionException();
++    return this.repository.close({ ...input, note });
++  }
++}
+diff --git a/backend/src/modules/reports/domain/index.ts b/backend/src/modules/reports/domain/index.ts
+new file mode 100644
+index 0000000..cdb8fcb
+--- /dev/null
++++ b/backend/src/modules/reports/domain/index.ts
+@@ -0,0 +1 @@
++export * from './report.exceptions';
+diff --git a/backend/src/modules/reports/domain/report.exceptions.ts b/backend/src/modules/reports/domain/report.exceptions.ts
+new file mode 100644
+index 0000000..8fd963e
+--- /dev/null
++++ b/backend/src/modules/reports/domain/report.exceptions.ts
+@@ -0,0 +1,35 @@
++import {
++  InvalidInputException,
++  ResourceConflictException,
++  ResourceNotFoundException,
++} from '@/common/exceptions';
++
++export class ReportNotFoundException extends ResourceNotFoundException {
++  constructor(id?: string) {
++    super({
++      code: 'REPORT_NOT_FOUND',
++      resource: 'báo cáo',
++      identifier: id,
++      message: 'Không tìm thấy báo cáo',
++    });
++  }
++}
++
++export class ReportAlreadyClosedException extends ResourceConflictException {
++  constructor() {
++    super({
++      code: 'REPORT_ALREADY_CLOSED',
++      message: 'Báo cáo đã được đóng bởi một moderator khác',
++    });
++  }
++}
++
++export class InvalidReportResolutionException extends InvalidInputException {
++  constructor() {
++    super({
++      code: 'REPORT_RESOLUTION_NOTE_REQUIRED',
++      message: 'Ghi chú xử lý phải có từ 10 đến 2000 ký tự',
++      details: { field: 'note' },
++    });
++  }
++}
+diff --git a/backend/src/modules/reports/index.ts b/backend/src/modules/reports/index.ts
+new file mode 100644
+index 0000000..68637cd
+--- /dev/null
++++ b/backend/src/modules/reports/index.ts
+@@ -0,0 +1,3 @@
++export * from './reports.module';
++export * from './application';
++export * from './domain';
+diff --git a/backend/src/modules/reports/infrastructure/index.ts b/backend/src/modules/reports/infrastructure/index.ts
+new file mode 100644
+index 0000000..b3e125d
+--- /dev/null
++++ b/backend/src/modules/reports/infrastructure/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-report.repository';
+diff --git a/backend/src/modules/reports/infrastructure/prisma-report.repository.ts b/backend/src/modules/reports/infrastructure/prisma-report.repository.ts
+new file mode 100644
+index 0000000..0159079
+--- /dev/null
++++ b/backend/src/modules/reports/infrastructure/prisma-report.repository.ts
+@@ -0,0 +1,254 @@
++import { Injectable } from '@nestjs/common';
++import {
++  Prisma,
++  ReportReason,
++  ReportStatus,
++} from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
++import {
++  ReportAlreadyClosedException,
++  ReportNotFoundException,
++} from '../domain';
++import type {
++  AdminReportListQuery,
++  CloseReportPersistenceInput,
++} from '../application/report.models';
++import type { ReportRepositoryPort } from '../application/ports/report.repository.port';
++
++@Injectable()
++export class PrismaReportRepository implements ReportRepositoryPort {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async list(query: AdminReportListQuery) {
++    const page = Math.max(1, query.page);
++    const pageSize = Math.min(100, Math.max(1, query.pageSize));
++    const searchReporter = query.reporter?.trim();
++    const searchReported = query.reportedUser?.trim();
++    const where: Prisma.ReportWhereInput = {
++      targetType: 'COMMENT',
++      ...(query.status ? { status: query.status as ReportStatus } : {}),
++      ...(query.reason ? { reason: query.reason as ReportReason } : {}),
++      ...(query.createdFrom || query.createdTo
++        ? {
++            createdAt: {
++              ...(query.createdFrom ? { gte: query.createdFrom } : {}),
++              ...(query.createdTo ? { lte: query.createdTo } : {}),
++            },
++          }
++        : {}),
++      ...(searchReporter
++        ? {
++            reporter: {
++              OR: [
++                {
++                  displayName: {
++                    contains: searchReporter,
++                    mode: 'insensitive',
++                  },
++                },
++                { email: { contains: searchReporter, mode: 'insensitive' } },
++              ],
++            },
++          }
++        : {}),
++      ...(searchReported
++        ? {
++            reportedUser: {
++              OR: [
++                {
++                  displayName: {
++                    contains: searchReported,
++                    mode: 'insensitive',
++                  },
++                },
++                { email: { contains: searchReported, mode: 'insensitive' } },
++              ],
++            },
++          }
++        : {}),
++    };
++    const direction = query.direction ?? 'desc';
++    const primary = query.sort ?? 'createdAt';
++    const orderBy: Prisma.ReportOrderByWithRelationInput[] = [
++      { [primary]: direction },
++      ...(primary === 'createdAt' ? [] : [{ createdAt: 'desc' as const }]),
++      { id: 'desc' },
++    ];
++    const [totalItems, rows] = await this.prisma.$transaction([
++      this.prisma.report.count({ where }),
++      this.prisma.report.findMany({
++        where,
++        orderBy,
++        skip: (page - 1) * pageSize,
++        take: pageSize,
++        select: {
++          id: true,
++          status: true,
++          reason: true,
++          createdAt: true,
++          reporter: { select: { id: true, displayName: true } },
++          reportedUser: { select: { id: true, displayName: true } },
++          comment: { select: { id: true, body: true } },
++          story: { select: { id: true, title: true } },
++          chapter: { select: { id: true, title: true } },
++        },
++      }),
++    ]);
++    return {
++      items: rows.map((row) => ({
++        id: row.id,
++        status: row.status,
++        reason: row.reason,
++        createdAt: row.createdAt.toISOString(),
++        reporter: row.reporter,
++        reportedUser: row.reportedUser,
++        comment: row.comment
++          ? { id: row.comment.id, excerpt: excerpt(row.comment.body) }
++          : null,
++        story: row.story,
++        chapter: row.chapter,
++      })),
++      pagination: {
++        page,
++        pageSize,
++        totalItems,
++        totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize),
++      },
++    };
++  }
++
++  async get(reportId: string) {
++    const report = await this.prisma.report.findUnique({
++      where: { id: reportId },
++      select: {
++        id: true,
++        reason: true,
++        description: true,
++        status: true,
++        evidence: true,
++        resolutionNote: true,
++        createdAt: true,
++        updatedAt: true,
++        resolvedAt: true,
++        reporter: { select: { id: true, displayName: true, email: true } },
++        reportedUser: {
++          select: { id: true, displayName: true, email: true, status: true },
++        },
++        comment: {
++          select: {
++            id: true,
++            body: true,
++            moderationStatus: true,
++            editedAt: true,
++            createdAt: true,
++            deletedAt: true,
++            storyId: true,
++            chapterId: true,
++            user: { select: { id: true, displayName: true, status: true } },
++          },
++        },
++        story: { select: { id: true, slug: true, title: true } },
++        chapter: { select: { id: true, number: true, title: true } },
++        moderationActions: {
++          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
++          take: 50,
++          select: {
++            id: true,
++            actorId: true,
++            action: true,
++            reason: true,
++            metadata: true,
++            createdAt: true,
++          },
++        },
++      },
++    });
++    if (!report) throw new ReportNotFoundException(reportId);
++    const relatedReportCount = report.comment
++      ? await this.prisma.report.count({
++          where: { commentId: report.comment.id },
++        })
++      : 0;
++    const recentUserModerationCount = report.reportedUser
++      ? await this.prisma.moderationAction.count({
++          where: {
++            targetUserId: report.reportedUser.id,
++            createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) },
++          },
++        })
++      : 0;
++    return {
++      ...report,
++      createdAt: report.createdAt.toISOString(),
++      updatedAt: report.updatedAt.toISOString(),
++      resolvedAt: report.resolvedAt?.toISOString() ?? null,
++      currentComment: report.comment
++        ? {
++            ...report.comment,
++            editedAt: report.comment.editedAt?.toISOString() ?? null,
++            createdAt: report.comment.createdAt.toISOString(),
++            deletedAt: report.comment.deletedAt?.toISOString() ?? null,
++          }
++        : null,
++      comment: undefined,
++      relatedReportCount,
++      recentUserModerationCount,
++      moderationActions: report.moderationActions.map((item) => ({
++        ...item,
++        createdAt: item.createdAt.toISOString(),
++      })),
++    };
++  }
++
++  async close(input: CloseReportPersistenceInput) {
++    return this.prisma.$transaction(async (tx) => {
++      const rows = await tx.$queryRaw<
++        Array<{ id: string; status: string; commentId: string | null }>
++      >(Prisma.sql`
++        SELECT "id", "status"::text AS "status", "comment_id" AS "commentId"
++        FROM "reports" WHERE "id" = ${input.reportId}::uuid FOR UPDATE
++      `);
++      const report = rows[0];
++      if (!report) throw new ReportNotFoundException(input.reportId);
++      if (!['open', 'in_review'].includes(report.status))
++        throw new ReportAlreadyClosedException();
++      const now = new Date();
++      const status =
++        input.status === 'RESOLVED' ? ReportStatus.RESOLVED : ReportStatus.REJECTED;
++      await tx.report.update({
++        where: { id: report.id },
++        data: {
++          status,
++          resolutionNote: input.note,
++          resolvedAt: now,
++          assignedToId: input.actorId,
++        },
++      });
++      await tx.auditLog.create({
++        data: {
++          actorId: input.actorId,
++          action: input.auditAction,
++          entityType: 'report',
++          entityId: report.id,
++          oldValues: { status: report.status.toUpperCase() },
++          newValues: { status },
++          metadata: { commentId: report.commentId },
++          ...input.audit,
++        },
++      });
++      return {
++        id: report.id,
++        status,
++        resolvedAt: now.toISOString(),
++        resolutionNote: input.note,
++      };
++    });
++  }
++}
++
++function excerpt(value: string): string {
++  const normalized = value.replace(/\s+/g, ' ').trim();
++  return normalized.length <= 200
++    ? normalized
++    : `${normalized.slice(0, 197)}...`;
++}
+diff --git a/backend/src/modules/moderation/presentation/http/admin-reports.controller.ts b/backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts
+similarity index 63%
+rename from backend/src/modules/moderation/presentation/http/admin-reports.controller.ts
+rename to backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts
+index 498b0fb..8f5ce03 100644
+--- a/backend/src/modules/moderation/presentation/http/admin-reports.controller.ts
++++ b/backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts
+@@ -7,19 +7,6 @@ import {
+   Post,
+   Query,
+ } from '@nestjs/common';
+-import { Type } from 'class-transformer';
+-import {
+-  IsDateString,
+-  IsEnum,
+-  IsIn,
+-  IsInt,
+-  IsOptional,
+-  IsString,
+-  Max,
+-  MaxLength,
+-  Min,
+-  MinLength,
+-} from 'class-validator';
+ import {
+   ClientIp,
+   CurrentUserId,
+@@ -30,35 +17,17 @@ import {
+ import { Idempotent } from '@/common/decorators/interceptor';
+ import { PermissionCode } from '@/common/enums';
+ import { AuthenticationRequiredException } from '@/common/exceptions';
+-import { ReportReason, ReportStatus } from '@/generated/prisma/client';
+-import { ModerationService } from '../../application';
+-
+-class ListAdminReportsRequest {
+-  @IsOptional() @IsEnum(ReportStatus) status?: ReportStatus;
+-  @IsOptional() @IsEnum(ReportReason) reason?: ReportReason;
+-  @IsOptional() @IsString() @MaxLength(160) reporter?: string;
+-  @IsOptional() @IsString() @MaxLength(160) reportedUser?: string;
+-  @IsOptional() @IsDateString() createdFrom?: string;
+-  @IsOptional() @IsDateString() createdTo?: string;
+-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
+-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
+-  @IsOptional() @IsIn(['createdAt', 'status', 'reason']) sort:
+-    'createdAt' | 'status' | 'reason' = 'createdAt';
+-  @IsOptional() @IsIn(['asc', 'desc']) direction: 'asc' | 'desc' = 'desc';
+-}
+-
+-class CloseReportRequest {
+-  @IsString() @MinLength(10) @MaxLength(2000) note!: string;
+-}
++import { ReportsService } from '../../../application';
++import { CloseReportRequest, ListAdminReportsRequest } from '../requests';
+ 
+ @Controller('admin/reports')
+ @RequirePermissions(PermissionCode.REPORT_REVIEW)
+ export class AdminReportsController {
+-  constructor(private readonly moderation: ModerationService) {}
++  constructor(private readonly reports: ReportsService) {}
+ 
+   @Get()
+   list(@Query() request: ListAdminReportsRequest) {
+-    return this.moderation.listReports({
++    return this.reports.list({
+       status: request.status,
+       reason: request.reason,
+       reporter: request.reporter,
+@@ -78,7 +47,7 @@ export class AdminReportsController {
+   detail(
+     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
+   ) {
+-    return this.moderation.getReport(reportId);
++    return this.reports.get(reportId);
+   }
+ 
+   @Post(':reportId/resolve')
+@@ -91,7 +60,7 @@ export class AdminReportsController {
+     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
+     @Body() request: CloseReportRequest,
+   ) {
+-    return this.moderation.resolveReport({
++    return this.reports.resolve({
+       actorId: this.actor(actorId),
+       reportId,
+       note: request.note,
+@@ -109,7 +78,7 @@ export class AdminReportsController {
+     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
+     @Body() request: CloseReportRequest,
+   ) {
+-    return this.moderation.rejectReport({
++    return this.reports.reject({
+       actorId: this.actor(actorId),
+       reportId,
+       note: request.note,
+diff --git a/backend/src/modules/reports/presentation/http/controllers/index.ts b/backend/src/modules/reports/presentation/http/controllers/index.ts
+new file mode 100644
+index 0000000..95eb659
+--- /dev/null
++++ b/backend/src/modules/reports/presentation/http/controllers/index.ts
+@@ -0,0 +1 @@
++export * from './admin-reports.controller';
+diff --git a/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts b/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts
+new file mode 100644
+index 0000000..268a311
+--- /dev/null
++++ b/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts
+@@ -0,0 +1,32 @@
++import { Type } from 'class-transformer';
++import {
++  IsDateString,
++  IsEnum,
++  IsIn,
++  IsInt,
++  IsOptional,
++  IsString,
++  Max,
++  MaxLength,
++  Min,
++  MinLength,
++} from 'class-validator';
++import { ReportReason, ReportStatus } from '@/generated/prisma/client';
++
++export class ListAdminReportsRequest {
++  @IsOptional() @IsEnum(ReportStatus) status?: ReportStatus;
++  @IsOptional() @IsEnum(ReportReason) reason?: ReportReason;
++  @IsOptional() @IsString() @MaxLength(160) reporter?: string;
++  @IsOptional() @IsString() @MaxLength(160) reportedUser?: string;
++  @IsOptional() @IsDateString() createdFrom?: string;
++  @IsOptional() @IsDateString() createdTo?: string;
++  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
++  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
++  @IsOptional() @IsIn(['createdAt', 'status', 'reason']) sort:
++    'createdAt' | 'status' | 'reason' = 'createdAt';
++  @IsOptional() @IsIn(['asc', 'desc']) direction: 'asc' | 'desc' = 'desc';
++}
++
++export class CloseReportRequest {
++  @IsString() @MinLength(10) @MaxLength(2000) note!: string;
++}
+diff --git a/backend/src/modules/reports/presentation/http/requests/index.ts b/backend/src/modules/reports/presentation/http/requests/index.ts
+new file mode 100644
+index 0000000..4eb66b8
+--- /dev/null
++++ b/backend/src/modules/reports/presentation/http/requests/index.ts
+@@ -0,0 +1 @@
++export * from './admin-reports.request';
+diff --git a/backend/src/modules/reports/reports.module.ts b/backend/src/modules/reports/reports.module.ts
+new file mode 100644
+index 0000000..a5a3538
+--- /dev/null
++++ b/backend/src/modules/reports/reports.module.ts
+@@ -0,0 +1,18 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++import { REPORT_REPOSITORY, ReportsService } from './application';
++import { PrismaReportRepository } from './infrastructure';
++import { AdminReportsController } from './presentation/http/controllers';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [AdminReportsController],
++  providers: [
++    ReportsService,
++    PrismaReportRepository,
++    { provide: REPORT_REPOSITORY, useExisting: PrismaReportRepository },
++  ],
++  exports: [ReportsService],
++})
++export class ReportsModule {}
+diff --git a/backend/src/modules/tags/application/index.ts b/backend/src/modules/tags/application/index.ts
+new file mode 100644
+index 0000000..f4be2ab
+--- /dev/null
++++ b/backend/src/modules/tags/application/index.ts
+@@ -0,0 +1,3 @@
++export * from './tag.models';
++export * from './tags.service';
++export * from './ports/tag.repository.port';
+diff --git a/backend/src/modules/tags/application/ports/tag.repository.port.ts b/backend/src/modules/tags/application/ports/tag.repository.port.ts
+new file mode 100644
+index 0000000..1614d04
+--- /dev/null
++++ b/backend/src/modules/tags/application/ports/tag.repository.port.ts
+@@ -0,0 +1,32 @@
++import type {
++  AdminTagItem,
++  AdminTagList,
++  ListTagsInput,
++  TagAuditContext,
++} from '../tag.models';
++
++export const TAG_REPOSITORY = Symbol.for('modules.tags.repository');
++
++export interface TagRepositoryPort {
++  list(input: ListTagsInput): Promise<AdminTagList>;
++  create(name: string, audit: TagAuditContext): Promise<AdminTagItem>;
++  update(id: string, name: string, audit: TagAuditContext): Promise<AdminTagItem>;
++  delete(id: string, audit: TagAuditContext): Promise<void>;
++  merge(
++    sourceTagId: string,
++    targetTagId: string,
++    audit: TagAuditContext,
++  ): Promise<{
++    readonly target: {
++      readonly id: string;
++      readonly name: string;
++      readonly slug: string;
++      readonly storyCount: number;
++    };
++    readonly merged: {
++      readonly sourceTagId: string;
++      readonly movedStoryCount: number;
++      readonly deduplicatedStoryCount: number;
++    };
++  }>;
++}
+diff --git a/backend/src/modules/tags/application/tag.models.ts b/backend/src/modules/tags/application/tag.models.ts
+new file mode 100644
+index 0000000..acd54af
+--- /dev/null
++++ b/backend/src/modules/tags/application/tag.models.ts
+@@ -0,0 +1,31 @@
++export interface TagAuditContext {
++  readonly actorId?: string;
++  readonly ipAddress?: string;
++  readonly userAgent?: string;
++  readonly requestId?: string;
++}
++
++export interface AdminTagItem {
++  readonly id: string;
++  readonly name: string;
++  readonly slug: string;
++  readonly storyCount: number;
++  readonly createdAt: Date;
++}
++
++export interface AdminTagList {
++  readonly items: readonly AdminTagItem[];
++  readonly pagination: {
++    readonly page: number;
++    readonly pageSize: number;
++    readonly totalItems: number;
++    readonly totalPages: number;
++  };
++}
++
++export interface ListTagsInput {
++  readonly q?: string;
++  readonly page: number;
++  readonly pageSize: number;
++  readonly sort: string;
++}
+diff --git a/backend/src/modules/tags/application/tags.service.ts b/backend/src/modules/tags/application/tags.service.ts
+new file mode 100644
+index 0000000..af595d7
+--- /dev/null
++++ b/backend/src/modules/tags/application/tags.service.ts
+@@ -0,0 +1,35 @@
++import { Inject, Injectable } from '@nestjs/common';
++import { normalizeTagName, TagCannotMergeIntoSelfException } from '../domain';
++import {
++  TAG_REPOSITORY,
++  type TagRepositoryPort,
++} from './ports/tag.repository.port';
++import type { ListTagsInput, TagAuditContext } from './tag.models';
++
++@Injectable()
++export class TagsService {
++  constructor(
++    @Inject(TAG_REPOSITORY) private readonly repository: TagRepositoryPort,
++  ) {}
++
++  list(input: ListTagsInput) {
++    return this.repository.list(input);
++  }
++
++  create(nameInput: string, audit: TagAuditContext) {
++    return this.repository.create(normalizeTagName(nameInput), audit);
++  }
++
++  update(id: string, nameInput: string, audit: TagAuditContext) {
++    return this.repository.update(id, normalizeTagName(nameInput), audit);
++  }
++
++  delete(id: string, audit: TagAuditContext) {
++    return this.repository.delete(id, audit);
++  }
++
++  merge(sourceTagId: string, targetTagId: string, audit: TagAuditContext) {
++    if (sourceTagId === targetTagId) throw new TagCannotMergeIntoSelfException();
++    return this.repository.merge(sourceTagId, targetTagId, audit);
++  }
++}
+diff --git a/backend/src/modules/tags/domain/index.ts b/backend/src/modules/tags/domain/index.ts
+new file mode 100644
+index 0000000..e7e7fac
+--- /dev/null
++++ b/backend/src/modules/tags/domain/index.ts
+@@ -0,0 +1,2 @@
++export * from './tag-name.util';
++export * from './tag.exceptions';
+diff --git a/backend/src/modules/tags/domain/tag-name.util.ts b/backend/src/modules/tags/domain/tag-name.util.ts
+new file mode 100644
+index 0000000..69394ce
+--- /dev/null
++++ b/backend/src/modules/tags/domain/tag-name.util.ts
+@@ -0,0 +1,3 @@
++export function normalizeTagName(value: string): string {
++  return value.normalize('NFC').trim().replace(/\s+/gu, ' ');
++}
+diff --git a/backend/src/modules/tags/domain/tag.exceptions.ts b/backend/src/modules/tags/domain/tag.exceptions.ts
+new file mode 100644
+index 0000000..1a49f70
+--- /dev/null
++++ b/backend/src/modules/tags/domain/tag.exceptions.ts
+@@ -0,0 +1,60 @@
++import {
++  InvalidInputException,
++  ResourceConflictException,
++  ResourceNotFoundException,
++} from '@/common/exceptions';
++
++export class TagNotFoundException extends ResourceNotFoundException {
++  constructor(id: string) {
++    super({ code: 'TAG_NOT_FOUND', resource: 'tag', identifier: id });
++  }
++}
++
++export class TagNameAlreadyExistsException extends ResourceConflictException {
++  constructor(name: string) {
++    super({
++      code: 'TAG_NAME_ALREADY_EXISTS',
++      message: 'Tên tag đã tồn tại',
++      field: 'name',
++      value: name,
++    });
++  }
++}
++
++export class TagInUseException extends ResourceConflictException {
++  constructor(storyCount: number) {
++    super({
++      code: 'TAG_IN_USE',
++      message: 'Tag đang được truyện sử dụng',
++      details: { storyCount },
++    });
++  }
++}
++
++export class TagMergeTargetNotFoundException extends ResourceNotFoundException {
++  constructor(id: string) {
++    super({
++      code: 'TAG_MERGE_TARGET_NOT_FOUND',
++      resource: 'tag đích',
++      identifier: id,
++    });
++  }
++}
++
++export class TagCannotMergeIntoSelfException extends InvalidInputException {
++  constructor() {
++    super({
++      code: 'TAG_CANNOT_MERGE_INTO_SELF',
++      message: 'Không thể hợp nhất tag vào chính nó',
++    });
++  }
++}
++
++export class TagSlugGenerationException extends ResourceConflictException {
++  constructor() {
++    super({
++      code: 'TAXONOMY_SLUG_GENERATION_FAILED',
++      message: 'Không thể tạo slug duy nhất cho tag',
++    });
++  }
++}
+diff --git a/backend/src/modules/tags/index.ts b/backend/src/modules/tags/index.ts
+new file mode 100644
+index 0000000..eebca17
+--- /dev/null
++++ b/backend/src/modules/tags/index.ts
+@@ -0,0 +1,3 @@
++export * from './tags.module';
++export * from './application';
++export * from './domain';
+diff --git a/backend/src/modules/tags/infrastructure/index.ts b/backend/src/modules/tags/infrastructure/index.ts
+new file mode 100644
+index 0000000..f39cebc
+--- /dev/null
++++ b/backend/src/modules/tags/infrastructure/index.ts
+@@ -0,0 +1 @@
++export * from './prisma-tag.repository';
+diff --git a/backend/src/modules/tags/infrastructure/prisma-tag.repository.ts b/backend/src/modules/tags/infrastructure/prisma-tag.repository.ts
+new file mode 100644
+index 0000000..18bde80
+--- /dev/null
++++ b/backend/src/modules/tags/infrastructure/prisma-tag.repository.ts
+@@ -0,0 +1,307 @@
++import { Injectable } from '@nestjs/common';
++import { Prisma } from '@/generated/prisma/client';
++import { PrismaService } from '@/infrastructure/database';
++import { createUniqueSlug, slugify } from '@/common/utils/slug.util';
++import {
++  TagInUseException,
++  TagMergeTargetNotFoundException,
++  TagNameAlreadyExistsException,
++  TagNotFoundException,
++  TagSlugGenerationException,
++} from '../domain';
++import type {
++  AdminTagItem,
++  AdminTagList,
++  ListTagsInput,
++  TagAuditContext,
++} from '../application/tag.models';
++import type { TagRepositoryPort } from '../application/ports/tag.repository.port';
++
++const SLUG_ATTEMPTS = 16;
++
++@Injectable()
++export class PrismaTagRepository implements TagRepositoryPort {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async list(input: ListTagsInput): Promise<AdminTagList> {
++    const where: Prisma.TagWhereInput = input.q
++      ? {
++          OR: [
++            { name: { contains: input.q, mode: 'insensitive' } },
++            { slug: { contains: input.q, mode: 'insensitive' } },
++          ],
++        }
++      : {};
++    const orderBy: Prisma.TagOrderByWithRelationInput =
++      input.sort === 'name:desc'
++        ? { name: 'desc' }
++        : input.sort === 'createdAt:asc'
++          ? { createdAt: 'asc' }
++          : input.sort === 'createdAt:desc'
++            ? { createdAt: 'desc' }
++            : { name: 'asc' };
++    const [items, totalItems] = await this.prisma.$transaction([
++      this.prisma.tag.findMany({
++        where,
++        orderBy: [orderBy, { id: 'asc' }],
++        skip: (input.page - 1) * input.pageSize,
++        take: input.pageSize,
++        include: { _count: { select: { stories: true } } },
++      }),
++      this.prisma.tag.count({ where }),
++    ]);
++    return {
++      items: items.map((item): AdminTagItem => ({
++        id: item.id,
++        name: item.name,
++        slug: item.slug,
++        storyCount: item._count.stories,
++        createdAt: item.createdAt,
++      })),
++      pagination: page(input.page, input.pageSize, totalItems),
++    };
++  }
++
++  async create(name: string, audit: TagAuditContext): Promise<AdminTagItem> {
++    const baseSlug = slugify(name, { maxLength: 100 }) || 'tag';
++    for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt += 1) {
++      const slug = taxonomySlug(baseSlug, attempt, 100);
++      try {
++        return await this.prisma.$transaction(async (tx) => {
++          const tag = await tx.tag.create({ data: { name, slug } });
++          await writeAudit(tx, audit, 'tag.created', 'tag', tag.id, undefined, {
++            name: tag.name,
++            slug: tag.slug,
++          });
++          return { ...tag, storyCount: 0 };
++        });
++      } catch (error: unknown) {
++        if (!isUniqueViolation(error)) throw error;
++        if (await this.findByNormalizedName(name))
++          throw new TagNameAlreadyExistsException(name);
++      }
++    }
++    throw new TagSlugGenerationException();
++  }
++
++  async update(
++    id: string,
++    name: string,
++    audit: TagAuditContext,
++  ): Promise<AdminTagItem> {
++    try {
++      return await this.prisma.$transaction(async (tx) => {
++        const locked = await this.lockTags(tx, [id]);
++        if (locked.length !== 1) throw new TagNotFoundException(id);
++        const current = await tx.tag.findUnique({
++          where: { id },
++          include: { _count: { select: { stories: true } } },
++        });
++        if (!current) throw new TagNotFoundException(id);
++        const duplicate = await tx.$queryRaw<Array<{ id: string }>>(
++          Prisma.sql`SELECT "id" FROM "tags" WHERE LOWER("name") = LOWER(${name}) AND "id" <> ${id}::uuid LIMIT 1`,
++        );
++        if (duplicate.length > 0) throw new TagNameAlreadyExistsException(name);
++        const updated = await tx.tag.update({
++          where: { id },
++          data: { name },
++          include: { _count: { select: { stories: true } } },
++        });
++        await writeAudit(
++          tx,
++          audit,
++          'tag.updated',
++          'tag',
++          id,
++          { name: current.name },
++          { name: updated.name },
++        );
++        return {
++          id: updated.id,
++          name: updated.name,
++          slug: updated.slug,
++          storyCount: updated._count.stories,
++          createdAt: updated.createdAt,
++        };
++      });
++    } catch (error: unknown) {
++      if (isUniqueViolation(error)) throw new TagNameAlreadyExistsException(name);
++      throw error;
++    }
++  }
++
++  async delete(id: string, audit: TagAuditContext): Promise<void> {
++    await this.prisma.$transaction(async (tx) => {
++      const locked = await this.lockTags(tx, [id]);
++      if (locked.length !== 1) throw new TagNotFoundException(id);
++      const current = await tx.tag.findUnique({
++        where: { id },
++        include: { _count: { select: { stories: true } } },
++      });
++      if (!current) throw new TagNotFoundException(id);
++      if (current._count.stories > 0)
++        throw new TagInUseException(current._count.stories);
++      await tx.tag.delete({ where: { id } });
++      await writeAudit(tx, audit, 'tag.deleted', 'tag', id, {
++        name: current.name,
++        slug: current.slug,
++        storyCount: 0,
++      });
++    });
++  }
++
++  async merge(
++    sourceTagId: string,
++    targetTagId: string,
++    audit: TagAuditContext,
++  ) {
++    return this.prisma.$transaction(async (tx) => {
++      const locked = await this.lockTags(tx, [sourceTagId, targetTagId]);
++      if (!locked.includes(sourceTagId)) throw new TagNotFoundException(sourceTagId);
++      if (!locked.includes(targetTagId))
++        throw new TagMergeTargetNotFoundException(targetTagId);
++      const [source, target, sourceLinks, targetLinks] = await Promise.all([
++        tx.tag.findUnique({ where: { id: sourceTagId } }),
++        tx.tag.findUnique({ where: { id: targetTagId } }),
++        tx.storyTag.findMany({
++          where: { tagId: sourceTagId },
++          select: { storyId: true },
++        }),
++        tx.storyTag.findMany({
++          where: { tagId: targetTagId },
++          select: { storyId: true },
++        }),
++      ]);
++      if (!source) throw new TagNotFoundException(sourceTagId);
++      if (!target) throw new TagMergeTargetNotFoundException(targetTagId);
++      const targetStoryIds = new Set(targetLinks.map(({ storyId }) => storyId));
++      const deduplicatedStoryCount = sourceLinks.filter(({ storyId }) =>
++        targetStoryIds.has(storyId),
++      ).length;
++      const toCreate = sourceLinks.filter(
++        ({ storyId }) => !targetStoryIds.has(storyId),
++      );
++      if (toCreate.length > 0)
++        await tx.storyTag.createMany({
++          data: toCreate.map(({ storyId }) => ({
++            storyId,
++            tagId: targetTagId,
++          })),
++          skipDuplicates: true,
++        });
++      await tx.storyTag.deleteMany({ where: { tagId: sourceTagId } });
++      await tx.tag.delete({ where: { id: sourceTagId } });
++      const storyCount = await tx.storyTag.count({
++        where: { tagId: targetTagId },
++      });
++      await writeAudit(
++        tx,
++        audit,
++        'tag.merged',
++        'tag',
++        sourceTagId,
++        undefined,
++        undefined,
++        {
++          sourceTag: { id: source.id, name: source.name, slug: source.slug },
++          targetTagId: target.id,
++          targetTagName: target.name,
++          movedStoryCount: toCreate.length,
++          deduplicatedStoryCount,
++        },
++      );
++      return {
++        target: {
++          id: target.id,
++          name: target.name,
++          slug: target.slug,
++          storyCount,
++        },
++        merged: {
++          sourceTagId,
++          movedStoryCount: toCreate.length,
++          deduplicatedStoryCount,
++        },
++      };
++    });
++  }
++
++  private async findByNormalizedName(name: string) {
++    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++      SELECT "id" FROM "tags" WHERE LOWER("name") = LOWER(${name}) LIMIT 1
++    `);
++    return rows[0] ?? null;
++  }
++
++  private async lockTags(
++    tx: Prisma.TransactionClient,
++    ids: readonly string[],
++  ): Promise<readonly string[]> {
++    if (ids.length === 0) return [];
++    const sorted = [...new Set(ids)].sort();
++    if (sorted.length === 1) {
++      const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++        SELECT "id" FROM "tags" WHERE "id" = ${sorted[0]}::uuid FOR UPDATE
++      `);
++      return rows.map(({ id }) => id);
++    }
++    const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
++      SELECT "id" FROM "tags"
++      WHERE "id" IN (${sorted[0]}::uuid, ${sorted[1]}::uuid)
++      ORDER BY "id" FOR UPDATE
++    `);
++    return rows.map(({ id }) => id);
++  }
++}
++
++function page(pageNumber: number, pageSize: number, totalItems: number) {
++  return {
++    page: pageNumber,
++    pageSize,
++    totalItems,
++    totalPages: Math.ceil(totalItems / pageSize),
++  };
++}
++
++function taxonomySlug(base: string, attempt: number, maxLength: number): string {
++  if (attempt === 0) return base.slice(0, maxLength).replace(/-+$/u, '');
++  const candidate = createUniqueSlug(base, attempt + 1);
++  if (candidate.length <= maxLength) return candidate;
++  const suffix = `-${attempt + 1}`;
++  return `${base.slice(0, Math.max(1, maxLength - suffix.length)).replace(/-+$/u, '')}${suffix}`;
++}
++
++function isUniqueViolation(error: unknown): boolean {
++  return (
++    typeof error === 'object' &&
++    error !== null &&
++    'code' in error &&
++    (error as { code?: unknown }).code === 'P2002'
++  );
++}
++
++async function writeAudit(
++  tx: Prisma.TransactionClient,
++  audit: TagAuditContext,
++  action: string,
++  entityType: string,
++  entityId: string,
++  oldValues?: Prisma.InputJsonValue,
++  newValues?: Prisma.InputJsonValue,
++  metadata?: Prisma.InputJsonValue,
++): Promise<void> {
++  await tx.auditLog.create({
++    data: {
++      actorId: audit.actorId,
++      action,
++      entityType,
++      entityId,
++      ...(oldValues === undefined ? {} : { oldValues }),
++      ...(newValues === undefined ? {} : { newValues }),
++      ...(metadata === undefined ? {} : { metadata }),
++      ipAddress: audit.ipAddress,
++      userAgent: audit.userAgent,
++      requestId: audit.requestId,
++    },
++  });
++}
+diff --git a/backend/src/modules/taxonomy/presentation/http/controllers/admin-tags.controller.ts b/backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts
+similarity index 85%
+rename from backend/src/modules/taxonomy/presentation/http/controllers/admin-tags.controller.ts
+rename to backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts
+index d962612..e9ddbf1 100644
+--- a/backend/src/modules/taxonomy/presentation/http/controllers/admin-tags.controller.ts
++++ b/backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts
+@@ -20,7 +20,7 @@ import {
+   UserAgent,
+ } from '@/common/decorators';
+ import { PermissionCode } from '@/common/enums';
+-import { TaxonomyService } from '../../../application';
++import { TagsService } from '../../../application';
+ import {
+   CreateTagRequest,
+   ListAdminTagsRequest,
+@@ -31,11 +31,11 @@ import {
+ @Controller('admin/tags')
+ @RequirePermissions(PermissionCode.TAG_MANAGE)
+ export class AdminTagsController {
+-  constructor(private readonly taxonomy: TaxonomyService) {}
++  constructor(private readonly tags: TagsService) {}
+ 
+   @Get()
+   list(@Query() request: ListAdminTagsRequest) {
+-    return this.taxonomy.listTags(request);
++    return this.tags.list(request);
+   }
+ 
+   @Post()
+@@ -46,7 +46,7 @@ export class AdminTagsController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ) {
+-    return this.taxonomy.createTag(request.name, {
++    return this.tags.create(request.name, {
+       actorId,
+       ipAddress,
+       userAgent,
+@@ -63,7 +63,7 @@ export class AdminTagsController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ) {
+-    return this.taxonomy.updateTag(tagId, request.name, {
++    return this.tags.update(tagId, request.name, {
+       actorId,
+       ipAddress,
+       userAgent,
+@@ -80,7 +80,7 @@ export class AdminTagsController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ): Promise<void> {
+-    await this.taxonomy.deleteTag(tagId, {
++    await this.tags.delete(tagId, {
+       actorId,
+       ipAddress,
+       userAgent,
+@@ -100,7 +100,7 @@ export class AdminTagsController {
+     @UserAgent() userAgent: string | undefined,
+     @RequestId() requestId: string | undefined,
+   ) {
+-    return this.taxonomy.mergeTag(sourceTagId, request.targetTagId, {
++    return this.tags.merge(sourceTagId, request.targetTagId, {
+       actorId,
+       ipAddress,
+       userAgent,
+diff --git a/backend/src/modules/tags/presentation/http/controllers/index.ts b/backend/src/modules/tags/presentation/http/controllers/index.ts
+new file mode 100644
+index 0000000..9c2beb7
+--- /dev/null
++++ b/backend/src/modules/tags/presentation/http/controllers/index.ts
+@@ -0,0 +1 @@
++export * from './admin-tags.controller';
+diff --git a/backend/src/modules/taxonomy/presentation/http/requests/admin-tags.request.ts b/backend/src/modules/tags/presentation/http/requests/admin-tags.request.ts
+similarity index 88%
+rename from backend/src/modules/taxonomy/presentation/http/requests/admin-tags.request.ts
+rename to backend/src/modules/tags/presentation/http/requests/admin-tags.request.ts
+index 3a963f9..3411568 100644
+--- a/backend/src/modules/taxonomy/presentation/http/requests/admin-tags.request.ts
++++ b/backend/src/modules/tags/presentation/http/requests/admin-tags.request.ts
+@@ -10,7 +10,7 @@ import {
+   Min,
+   MinLength,
+ } from 'class-validator';
+-import { normalizeTaxonomyName } from '../../../domain';
++import { normalizeTagName } from '../../../domain';
+ 
+ export class ListAdminTagsRequest {
+   @IsOptional()
+@@ -38,7 +38,7 @@ export class ListAdminTagsRequest {
+ 
+ export class CreateTagRequest {
+   @Transform(({ value }: { value: unknown }) =>
+-    typeof value === 'string' ? normalizeTaxonomyName(value) : value,
++    typeof value === 'string' ? normalizeTagName(value) : value,
+   )
+   @IsString()
+   @MinLength(1)
+diff --git a/backend/src/modules/tags/presentation/http/requests/index.ts b/backend/src/modules/tags/presentation/http/requests/index.ts
+new file mode 100644
+index 0000000..6d14da2
+--- /dev/null
++++ b/backend/src/modules/tags/presentation/http/requests/index.ts
+@@ -0,0 +1 @@
++export * from './admin-tags.request';
+diff --git a/backend/src/modules/tags/tags.module.ts b/backend/src/modules/tags/tags.module.ts
+new file mode 100644
+index 0000000..bc11d2c
+--- /dev/null
++++ b/backend/src/modules/tags/tags.module.ts
+@@ -0,0 +1,18 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '@/infrastructure/database';
++import { AuthAuthorizationModule } from '@/modules/auth';
++import { TagsService, TAG_REPOSITORY } from './application';
++import { PrismaTagRepository } from './infrastructure';
++import { AdminTagsController } from './presentation/http/controllers';
++
++@Module({
++  imports: [PrismaModule, AuthAuthorizationModule],
++  controllers: [AdminTagsController],
++  providers: [
++    TagsService,
++    PrismaTagRepository,
++    { provide: TAG_REPOSITORY, useExisting: PrismaTagRepository },
++  ],
++  exports: [TagsService],
++})
++export class TagsModule {}
+diff --git a/backend/src/modules/taxonomy/application/index.ts b/backend/src/modules/taxonomy/application/index.ts
+deleted file mode 100644
+index 5a46e59..0000000
+--- a/backend/src/modules/taxonomy/application/index.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-export * from './taxonomy.models';
+-export * from './taxonomy.service';
+diff --git a/backend/src/modules/taxonomy/domain/index.ts b/backend/src/modules/taxonomy/domain/index.ts
+deleted file mode 100644
+index ec9dd4d..0000000
+--- a/backend/src/modules/taxonomy/domain/index.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-export * from './taxonomy-name.util';
+-export * from './taxonomy.exceptions';
+diff --git a/backend/src/modules/taxonomy/index.ts b/backend/src/modules/taxonomy/index.ts
+deleted file mode 100644
+index 27bb51d..0000000
+--- a/backend/src/modules/taxonomy/index.ts
++++ /dev/null
+@@ -1 +0,0 @@
+-export * from './taxonomy.module';
+diff --git a/backend/src/modules/taxonomy/infrastructure/index.ts b/backend/src/modules/taxonomy/infrastructure/index.ts
+deleted file mode 100644
+index c4af6f9..0000000
+--- a/backend/src/modules/taxonomy/infrastructure/index.ts
++++ /dev/null
+@@ -1 +0,0 @@
+-export * from './prisma-taxonomy.repository';
+diff --git a/backend/src/modules/taxonomy/infrastructure/prisma-taxonomy.repository.ts b/backend/src/modules/taxonomy/infrastructure/prisma-taxonomy.repository.ts
+deleted file mode 100644
+index 3d216e9..0000000
+--- a/backend/src/modules/taxonomy/infrastructure/prisma-taxonomy.repository.ts
++++ /dev/null
+@@ -1,56 +0,0 @@
+-import { Injectable } from '@nestjs/common';
+-import { Prisma } from '@/generated/prisma/client';
+-import { PrismaService } from '@/infrastructure/database';
+-
+-@Injectable()
+-export class PrismaTaxonomyRepository {
+-  constructor(readonly prisma: PrismaService) {}
+-
+-  async lockTags(
+-    tx: Prisma.TransactionClient,
+-    ids: readonly string[],
+-  ): Promise<readonly string[]> {
+-    if (ids.length === 0) return [];
+-    const sorted = [...new Set(ids)].sort();
+-    if (sorted.length === 1) {
+-      const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+-        SELECT "id" FROM "tags" WHERE "id" = ${sorted[0]}::uuid FOR UPDATE
+-      `);
+-      return rows.map(({ id }) => id);
+-    }
+-    const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+-      SELECT "id" FROM "tags"
+-      WHERE "id" IN (${sorted[0]}::uuid, ${sorted[1]}::uuid)
+-      ORDER BY "id" FOR UPDATE
+-    `);
+-    return rows.map(({ id }) => id);
+-  }
+-
+-  async lockCategory(
+-    tx: Prisma.TransactionClient,
+-    id: string,
+-  ): Promise<boolean> {
+-    const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+-      SELECT "id" FROM "categories" WHERE "id" = ${id}::uuid FOR UPDATE
+-    `);
+-    return rows.length === 1;
+-  }
+-
+-  async findTagByNormalizedName(
+-    name: string,
+-  ): Promise<{ readonly id: string } | null> {
+-    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+-      SELECT "id" FROM "tags" WHERE LOWER("name") = LOWER(${name}) LIMIT 1
+-    `);
+-    return rows[0] ?? null;
+-  }
+-
+-  async findCategoryByNormalizedName(
+-    name: string,
+-  ): Promise<{ readonly id: string } | null> {
+-    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+-      SELECT "id" FROM "categories" WHERE LOWER("name") = LOWER(${name}) LIMIT 1
+-    `);
+-    return rows[0] ?? null;
+-  }
+-}
+diff --git a/backend/src/modules/taxonomy/taxonomy.module.ts b/backend/src/modules/taxonomy/taxonomy.module.ts
+deleted file mode 100644
+index 604d8d1..0000000
+--- a/backend/src/modules/taxonomy/taxonomy.module.ts
++++ /dev/null
+@@ -1,16 +0,0 @@
+-import { Module } from '@nestjs/common';
+-import { PrismaModule } from '@/infrastructure/database';
+-import { AuthAuthorizationModule } from '@/modules/auth';
+-import { TaxonomyService } from './application';
+-import { PrismaTaxonomyRepository } from './infrastructure';
+-import {
+-  AdminCategoriesController,
+-  AdminTagsController,
+-} from './presentation/http/controllers';
+-
+-@Module({
+-  imports: [PrismaModule, AuthAuthorizationModule],
+-  controllers: [AdminTagsController, AdminCategoriesController],
+-  providers: [TaxonomyService, PrismaTaxonomyRepository],
+-})
+-export class TaxonomyModule {}
+diff --git a/backend/src/worker.module.ts b/backend/src/worker.module.ts
+index 5e77989..fbe5017 100644
+--- a/backend/src/worker.module.ts
++++ b/backend/src/worker.module.ts
+@@ -4,8 +4,8 @@ import { AppConfigModule } from './config';
+ import { RedisModule } from './infrastructure/cache/redis/redis.module';
+ import { QueueWorkerHeartbeatService } from './infrastructure/health';
+ import { MailModule } from './infrastructure/mail';
+-import { CloudinaryWebhookInboxWorker } from './infrastructure/media/cloudinary/cloudinary-webhook-inbox.worker';
+-import { MediaModule } from './infrastructure/media';
++import { CloudinaryWebhookInboxWorker } from './modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.worker';
++import { MediaModule } from './modules/media';
+ import { ObservabilityModule } from './infrastructure/observability';
+ import { QueueModule } from './infrastructure/queue';
+ import { OutboxModule } from './infrastructure/queue/outbox';
+diff --git a/backend/test/e2e/media.e2e-spec.ts b/backend/test/e2e/media.e2e-spec.ts
+index e78234a..2c135fd 100644
+--- a/backend/test/e2e/media.e2e-spec.ts
++++ b/backend/test/e2e/media.e2e-spec.ts
+@@ -13,16 +13,16 @@ import type { AppConfig } from '@/config';
+ import { PrismaService } from '@/infrastructure/database/prisma';
+ import { InMemoryIdempotencyStore } from '@/infrastructure/idempotency/in-memory-idempotency.store';
+ import type { AcquireIdempotencyResult } from '@/infrastructure/idempotency/idempotency-store.interface';
+-import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
+-import { CLOUDINARY_CLIENT } from '@/infrastructure/media/cloudinary/cloudinary.constants';
+-import { CloudinaryUrlService } from '@/infrastructure/media/cloudinary/cloudinary-url.service';
++import { CloudinaryWebhookInboxProcessor } from '@/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
++import { CLOUDINARY_CLIENT } from '@/modules/media/infrastructure/cloudinary/cloudinary.constants';
++import { CloudinaryUrlService } from '@/modules/media/infrastructure/cloudinary/cloudinary-url.service';
+ import {
+   MEDIA_STORAGE,
+   type ConfirmUploadInput,
+   type CreateSignedUploadInput,
+   type DeleteStoredMediaInput,
+   type DeleteStoredMediaResult,
+-} from '@/infrastructure/media/contracts/media-storage.port';
++} from '@/modules/media/application/ports/media-storage.port';
+ 
+ const accessSecret = 'e2e-access-secret-at-least-32-characters';
+ 
+diff --git a/backend/test/integration/author-profile-follow-notifications.integration-spec.ts b/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
+index fe3d4f4..93c1c76 100644
+--- a/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
++++ b/backend/test/integration/author-profile-follow-notifications.integration-spec.ts
+@@ -19,10 +19,9 @@ import {
+   type AuthorChapterPublishedNotificationV1,
+   type OutboxQueueEnvelope,
+ } from '@/infrastructure/queue/contracts';
+-import {
+-  AuthorFollowService,
+-  AuthorProfileService,
+-} from '@/modules/authors/application/services';
++import { AuthorProfileService } from '@/modules/authors/application/services';
++import { FollowsService, FOLLOW_REPOSITORY } from '@/modules/follows/application';
++import { PrismaFollowRepository } from '@/modules/follows/infrastructure';
+ import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
+ import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
+ import { PrismaAccountDeletionPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence';
+@@ -36,7 +35,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
+   let moduleRef: TestingModule;
+   let prisma: PrismaService;
+   let profiles: AuthorProfileService;
+-  let follows: AuthorFollowService;
++  let follows: FollowsService;
+   let fanout: NotificationsFanoutProcessor;
+   let chapters: PrismaChapterPersistence;
+ 
+@@ -45,7 +44,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
+       imports: [AppConfigModule, PrismaModule],
+       providers: [
+         AuthorProfileService,
+-        AuthorFollowService,
++        PrismaFollowRepository,
++        { provide: FOLLOW_REPOSITORY, useExisting: PrismaFollowRepository },
++        FollowsService,
+         PrismaChapterPersistence,
+         NotificationsFanoutProcessor,
+         {
+@@ -63,7 +64,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
+     await moduleRef.init();
+     prisma = moduleRef.get(PrismaService);
+     profiles = moduleRef.get(AuthorProfileService);
+-    follows = moduleRef.get(AuthorFollowService);
++    follows = moduleRef.get(FollowsService);
+     fanout = moduleRef.get(NotificationsFanoutProcessor);
+     chapters = moduleRef.get(PrismaChapterPersistence);
+   });
+diff --git a/backend/test/integration/taxonomy.integration-spec.ts b/backend/test/integration/taxonomy.integration-spec.ts
+index db297ea..56de086 100644
+--- a/backend/test/integration/taxonomy.integration-spec.ts
++++ b/backend/test/integration/taxonomy.integration-spec.ts
+@@ -4,9 +4,11 @@ import { Test } from '@nestjs/testing';
+ import { AppConfigModule } from '@/config';
+ import { PrismaModule, PrismaService } from '@/infrastructure/database';
+ import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
+-import { TaxonomyService } from '@/modules/taxonomy/application';
+-import { normalizeTaxonomyName } from '@/modules/taxonomy/domain';
+-import { PrismaTaxonomyRepository } from '@/modules/taxonomy/infrastructure';
++import { CategoriesService, CATEGORY_REPOSITORY } from '@/modules/categories/application';
++import { normalizeCategoryName } from '@/modules/categories/domain';
++import { PrismaCategoryRepository } from '@/modules/categories/infrastructure';
++import { TagsService, TAG_REPOSITORY } from '@/modules/tags/application';
++import { PrismaTagRepository } from '@/modules/tags/infrastructure';
+ 
+ const runId = randomUUID().replaceAll('-', '');
+ let sequence = 0;
+@@ -16,7 +18,8 @@ const unique = (prefix: string) =>
+ describe('Taxonomy PostgreSQL invariants', () => {
+   let moduleRef: TestingModule;
+   let prisma: PrismaService;
+-  let taxonomy: TaxonomyService;
++  let categories: CategoriesService;
++  let tags: TagsService;
+   let stories: PrismaStoryPersistence;
+   let actorId: string;
+ 
+@@ -24,14 +27,19 @@ describe('Taxonomy PostgreSQL invariants', () => {
+     moduleRef = await Test.createTestingModule({
+       imports: [AppConfigModule, PrismaModule],
+       providers: [
+-        PrismaTaxonomyRepository,
+-        TaxonomyService,
++        PrismaCategoryRepository,
++        PrismaTagRepository,
++        { provide: CATEGORY_REPOSITORY, useExisting: PrismaCategoryRepository },
++        { provide: TAG_REPOSITORY, useExisting: PrismaTagRepository },
++        CategoriesService,
++        TagsService,
+         PrismaStoryPersistence,
+       ],
+     }).compile();
+     await moduleRef.init();
+     prisma = moduleRef.get(PrismaService);
+-    taxonomy = moduleRef.get(TaxonomyService);
++    categories = moduleRef.get(CategoriesService);
++    tags = moduleRef.get(TagsService);
+     stories = moduleRef.get(PrismaStoryPersistence);
+   });
+ 
+@@ -45,15 +53,15 @@ describe('Taxonomy PostgreSQL invariants', () => {
+   });
+ 
+   it('normalizes whitespace without forcing display casing', () => {
+-    expect(normalizeTaxonomyName('  Dark   Fantasy  ')).toBe('Dark Fantasy');
+-    expect(normalizeTaxonomyName('dark fantasy')).toBe('dark fantasy');
++    expect(normalizeCategoryName('  Dark   Fantasy  ')).toBe('Dark Fantasy');
++    expect(normalizeCategoryName('dark fantasy')).toBe('dark fantasy');
+   });
+ 
+   it('enforces case-insensitive tag names under concurrent create', async () => {
+     const base = unique('RaceTag');
+     const results = await Promise.allSettled([
+-      taxonomy.createTag(base, taxAudit()),
+-      taxonomy.createTag(base.toUpperCase(), taxAudit()),
++      tags.create(base, taxAudit()),
++      tags.create(base.toUpperCase(), taxAudit()),
+     ]);
+     expect(
+       results.filter((result) => result.status === 'fulfilled'),
+@@ -69,8 +77,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
+   });
+ 
+   it('merges tags atomically and deduplicates StoryTag rows', async () => {
+-    const source = await taxonomy.createTag(unique('Sci Fi'), taxAudit());
+-    const target = await taxonomy.createTag(
++    const source = await tags.create(unique('Sci Fi'), taxAudit());
++    const target = await tags.create(
+       unique('Science Fiction'),
+       taxAudit(),
+     );
+@@ -85,7 +93,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
+       ],
+     });
+ 
+-    const result = await taxonomy.mergeTag(source.id, target.id, taxAudit());
++    const result = await tags.merge(source.id, target.id, taxAudit());
+     expect(result.merged).toMatchObject({
+       movedStoryCount: 1,
+       deduplicatedStoryCount: 1,
+@@ -104,8 +112,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
+   });
+ 
+   it('blocks hard delete for used taxonomy', async () => {
+-    const tag = await taxonomy.createTag(unique('UsedTag'), taxAudit());
+-    const category = await taxonomy.createCategory(
++    const tag = await tags.create(unique('UsedTag'), taxAudit());
++    const category = await categories.create(
+       { name: unique('UsedCategory') },
+       taxAudit(),
+     );
+@@ -116,11 +124,11 @@ describe('Taxonomy PostgreSQL invariants', () => {
+       data: { storyId, categoryId: category.id, isPrimary: true },
+     });
+ 
+-    await expect(taxonomy.deleteTag(tag.id, taxAudit())).rejects.toMatchObject({
++    await expect(tags.delete(tag.id, taxAudit())).rejects.toMatchObject({
+       code: 'TAG_IN_USE',
+     });
+     await expect(
+-      taxonomy.deleteCategory(category.id, taxAudit()),
++      categories.delete(category.id, taxAudit()),
+     ).rejects.toMatchObject({ code: 'CATEGORY_IN_USE' });
+     await expect(
+       prisma.storyTag.count({ where: { storyId, tagId: tag.id } }),
+@@ -133,7 +141,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
+   });
+ 
+   it('preserves an assigned inactive category on existing story but rejects new attachment', async () => {
+-    const category = await taxonomy.createCategory(
++    const category = await categories.create(
+       { name: unique('LegacyCategory') },
+       taxAudit(),
+     );
+@@ -143,7 +151,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
+     await prisma.storyCategory.create({
+       data: { storyId: first, categoryId: category.id, isPrimary: true },
+     });
+-    await taxonomy.updateCategory(category.id, { isActive: false }, taxAudit());
++    await categories.update(category.id, { isActive: false }, taxAudit());
+ 
+     const keepExisting = await stories.updateDraft({
+       userId: author,
+@@ -175,19 +183,19 @@ describe('Taxonomy PostgreSQL invariants', () => {
+   });
+ 
+   it('rejects hierarchy cycles and deactivating a parent with active children', async () => {
+-    const parent = await taxonomy.createCategory(
++    const parent = await categories.create(
+       { name: unique('Parent') },
+       taxAudit(),
+     );
+-    const child = await taxonomy.createCategory(
++    const child = await categories.create(
+       { name: unique('Child'), parentId: parent.id },
+       taxAudit(),
+     );
+     await expect(
+-      taxonomy.updateCategory(parent.id, { isActive: false }, taxAudit()),
++      categories.update(parent.id, { isActive: false }, taxAudit()),
+     ).rejects.toMatchObject({ code: 'CATEGORY_HAS_ACTIVE_CHILDREN' });
+     await expect(
+-      taxonomy.updateCategory(parent.id, { parentId: child.id }, taxAudit()),
++      categories.update(parent.id, { parentId: child.id }, taxAudit()),
+     ).rejects.toMatchObject({ code: 'CATEGORY_HIERARCHY_CYCLE' });
+   });
+ 

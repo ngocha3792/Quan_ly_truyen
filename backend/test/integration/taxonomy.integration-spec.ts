@@ -4,9 +4,11 @@ import { Test } from '@nestjs/testing';
 import { AppConfigModule } from '@/config';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
-import { TaxonomyService } from '@/modules/taxonomy/application';
-import { normalizeTaxonomyName } from '@/modules/taxonomy/domain';
-import { PrismaTaxonomyRepository } from '@/modules/taxonomy/infrastructure';
+import { CategoriesService, CATEGORY_REPOSITORY } from '@/modules/categories/application';
+import { normalizeCategoryName } from '@/modules/categories/domain';
+import { PrismaCategoryRepository } from '@/modules/categories/infrastructure';
+import { TagsService, TAG_REPOSITORY } from '@/modules/tags/application';
+import { PrismaTagRepository } from '@/modules/tags/infrastructure';
 
 const runId = randomUUID().replaceAll('-', '');
 let sequence = 0;
@@ -16,7 +18,8 @@ const unique = (prefix: string) =>
 describe('Taxonomy PostgreSQL invariants', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
-  let taxonomy: TaxonomyService;
+  let categories: CategoriesService;
+  let tags: TagsService;
   let stories: PrismaStoryPersistence;
   let actorId: string;
 
@@ -24,14 +27,19 @@ describe('Taxonomy PostgreSQL invariants', () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
       providers: [
-        PrismaTaxonomyRepository,
-        TaxonomyService,
+        PrismaCategoryRepository,
+        PrismaTagRepository,
+        { provide: CATEGORY_REPOSITORY, useExisting: PrismaCategoryRepository },
+        { provide: TAG_REPOSITORY, useExisting: PrismaTagRepository },
+        CategoriesService,
+        TagsService,
         PrismaStoryPersistence,
       ],
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
-    taxonomy = moduleRef.get(TaxonomyService);
+    categories = moduleRef.get(CategoriesService);
+    tags = moduleRef.get(TagsService);
     stories = moduleRef.get(PrismaStoryPersistence);
   });
 
@@ -45,15 +53,15 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('normalizes whitespace without forcing display casing', () => {
-    expect(normalizeTaxonomyName('  Dark   Fantasy  ')).toBe('Dark Fantasy');
-    expect(normalizeTaxonomyName('dark fantasy')).toBe('dark fantasy');
+    expect(normalizeCategoryName('  Dark   Fantasy  ')).toBe('Dark Fantasy');
+    expect(normalizeCategoryName('dark fantasy')).toBe('dark fantasy');
   });
 
   it('enforces case-insensitive tag names under concurrent create', async () => {
     const base = unique('RaceTag');
     const results = await Promise.allSettled([
-      taxonomy.createTag(base, taxAudit()),
-      taxonomy.createTag(base.toUpperCase(), taxAudit()),
+      tags.create(base, taxAudit()),
+      tags.create(base.toUpperCase(), taxAudit()),
     ]);
     expect(
       results.filter((result) => result.status === 'fulfilled'),
@@ -69,8 +77,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('merges tags atomically and deduplicates StoryTag rows', async () => {
-    const source = await taxonomy.createTag(unique('Sci Fi'), taxAudit());
-    const target = await taxonomy.createTag(
+    const source = await tags.create(unique('Sci Fi'), taxAudit());
+    const target = await tags.create(
       unique('Science Fiction'),
       taxAudit(),
     );
@@ -85,7 +93,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
       ],
     });
 
-    const result = await taxonomy.mergeTag(source.id, target.id, taxAudit());
+    const result = await tags.merge(source.id, target.id, taxAudit());
     expect(result.merged).toMatchObject({
       movedStoryCount: 1,
       deduplicatedStoryCount: 1,
@@ -104,8 +112,8 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('blocks hard delete for used taxonomy', async () => {
-    const tag = await taxonomy.createTag(unique('UsedTag'), taxAudit());
-    const category = await taxonomy.createCategory(
+    const tag = await tags.create(unique('UsedTag'), taxAudit());
+    const category = await categories.create(
       { name: unique('UsedCategory') },
       taxAudit(),
     );
@@ -116,11 +124,11 @@ describe('Taxonomy PostgreSQL invariants', () => {
       data: { storyId, categoryId: category.id, isPrimary: true },
     });
 
-    await expect(taxonomy.deleteTag(tag.id, taxAudit())).rejects.toMatchObject({
+    await expect(tags.delete(tag.id, taxAudit())).rejects.toMatchObject({
       code: 'TAG_IN_USE',
     });
     await expect(
-      taxonomy.deleteCategory(category.id, taxAudit()),
+      categories.delete(category.id, taxAudit()),
     ).rejects.toMatchObject({ code: 'CATEGORY_IN_USE' });
     await expect(
       prisma.storyTag.count({ where: { storyId, tagId: tag.id } }),
@@ -133,7 +141,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('preserves an assigned inactive category on existing story but rejects new attachment', async () => {
-    const category = await taxonomy.createCategory(
+    const category = await categories.create(
       { name: unique('LegacyCategory') },
       taxAudit(),
     );
@@ -143,7 +151,7 @@ describe('Taxonomy PostgreSQL invariants', () => {
     await prisma.storyCategory.create({
       data: { storyId: first, categoryId: category.id, isPrimary: true },
     });
-    await taxonomy.updateCategory(category.id, { isActive: false }, taxAudit());
+    await categories.update(category.id, { isActive: false }, taxAudit());
 
     const keepExisting = await stories.updateDraft({
       userId: author,
@@ -175,19 +183,19 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('rejects hierarchy cycles and deactivating a parent with active children', async () => {
-    const parent = await taxonomy.createCategory(
+    const parent = await categories.create(
       { name: unique('Parent') },
       taxAudit(),
     );
-    const child = await taxonomy.createCategory(
+    const child = await categories.create(
       { name: unique('Child'), parentId: parent.id },
       taxAudit(),
     );
     await expect(
-      taxonomy.updateCategory(parent.id, { isActive: false }, taxAudit()),
+      categories.update(parent.id, { isActive: false }, taxAudit()),
     ).rejects.toMatchObject({ code: 'CATEGORY_HAS_ACTIVE_CHILDREN' });
     await expect(
-      taxonomy.updateCategory(parent.id, { parentId: child.id }, taxAudit()),
+      categories.update(parent.id, { parentId: child.id }, taxAudit()),
     ).rejects.toMatchObject({ code: 'CATEGORY_HIERARCHY_CYCLE' });
   });
 

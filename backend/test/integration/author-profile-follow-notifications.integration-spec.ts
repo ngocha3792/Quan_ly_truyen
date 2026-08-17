@@ -19,10 +19,9 @@ import {
   type AuthorChapterPublishedNotificationV1,
   type OutboxQueueEnvelope,
 } from '@/infrastructure/queue/contracts';
-import {
-  AuthorFollowService,
-  AuthorProfileService,
-} from '@/modules/authors/application/services';
+import { AuthorProfileService } from '@/modules/authors/application/services';
+import { FollowsService, FOLLOW_REPOSITORY } from '@/modules/follows/application';
+import { PrismaFollowRepository } from '@/modules/follows/infrastructure';
 import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
 import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
 import { PrismaAccountDeletionPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence';
@@ -36,7 +35,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
   let profiles: AuthorProfileService;
-  let follows: AuthorFollowService;
+  let follows: FollowsService;
   let fanout: NotificationsFanoutProcessor;
   let chapters: PrismaChapterPersistence;
 
@@ -45,7 +44,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
       imports: [AppConfigModule, PrismaModule],
       providers: [
         AuthorProfileService,
-        AuthorFollowService,
+        PrismaFollowRepository,
+        { provide: FOLLOW_REPOSITORY, useExisting: PrismaFollowRepository },
+        FollowsService,
         PrismaChapterPersistence,
         NotificationsFanoutProcessor,
         {
@@ -63,7 +64,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
     profiles = moduleRef.get(AuthorProfileService);
-    follows = moduleRef.get(AuthorFollowService);
+    follows = moduleRef.get(FollowsService);
     fanout = moduleRef.get(NotificationsFanoutProcessor);
     chapters = moduleRef.get(PrismaChapterPersistence);
   });

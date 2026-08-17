@@ -14,3 +14,4 @@ export * from './prisma-account-deletion.persistence';
 export * from './prisma-security-overview.reader';
 export * from './prisma-recovery-email.persistence';
 export * from './prisma-security-questions.persistence';
+export * from './prisma-admin-user-security.persistence';

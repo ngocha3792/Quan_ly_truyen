@@ -1,20 +1,25 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type Redis from 'ioredis';
 import { RateLimitExceededException } from '@/common/exceptions';
-import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
-import { MetricsService } from '@/infrastructure/observability';
 import { AbuseProtectionUnavailableException } from '../domain';
+import {
+  COMMENT_ABUSE_METRICS_PORT,
+  COMMENT_ABUSE_RATE_LIMIT_STORE_PORT,
+  type CommentAbuseMetricsPort,
+  type CommentAbuseRateLimitStorePort,
+} from './ports';
 
 type Scope = 'comment-write' | 'reaction' | 'report';
 
 @Injectable()
 export class AbuseRateLimiterService {
   constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis | null,
+    @Inject(COMMENT_ABUSE_RATE_LIMIT_STORE_PORT)
+    private readonly store: CommentAbuseRateLimitStorePort,
     private readonly config: ConfigService,
-    private readonly metrics: MetricsService,
+    @Inject(COMMENT_ABUSE_METRICS_PORT)
+    private readonly metrics: CommentAbuseMetricsPort,
   ) {}
 
   get duplicateWindowSeconds(): number {
@@ -31,7 +36,7 @@ export class AbuseRateLimiterService {
     ipAddress?: string,
   ): Promise<void> {
     if (!this.enabled()) return;
-    if (!this.redis) throw new AbuseProtectionUnavailableException();
+    if (!this.store.available) throw new AbuseProtectionUnavailableException();
 
     const buckets = this.buckets(scope);
     const subjects = [`user:${userId}`];
@@ -47,7 +52,7 @@ export class AbuseRateLimiterService {
             bucket.windowSeconds,
           );
           if (!result.allowed) {
-            this.metrics.recordCommentAbuseBlock(
+            this.metrics.recordBlock(
               scope === 'comment-write' ? 'comment' : scope,
             );
             throw new RateLimitExceededException({
@@ -116,21 +121,11 @@ export class AbuseRateLimiterService {
     limit: number,
     windowSeconds: number,
   ): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
-    const script = `
-      local current = redis.call('INCR', KEYS[1])
-      if current == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
-      local ttl = redis.call('TTL', KEYS[1])
-      return { current, ttl }
-    `;
-    const raw = (await this.redis!.eval(
-      script,
-      1,
-      key,
-      String(windowSeconds),
-    )) as [number, number];
-    const count = Number(raw[0]);
-    const ttl = Math.max(1, Number(raw[1]) || windowSeconds);
-    return { allowed: count <= limit, retryAfterSeconds: ttl };
+    const result = await this.store.consume(key, windowSeconds);
+    return {
+      allowed: result.count <= limit,
+      retryAfterSeconds: result.ttlSeconds,
+    };
   }
 
   private number(key: string, fallback: number): number {

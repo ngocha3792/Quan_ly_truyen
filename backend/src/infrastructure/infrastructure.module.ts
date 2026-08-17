@@ -4,7 +4,6 @@ import { CacheModule } from './cache';
 import { PrismaModule } from './database';
 import { IdempotencyModule } from './idempotency';
 import { LockModule } from './lock';
-import { MediaModule } from './media';
 import { QueueModule } from './queue';
 
 @Module({
@@ -14,7 +13,6 @@ import { QueueModule } from './queue';
     LockModule,
     IdempotencyModule,
     QueueModule.register(),
-    MediaModule,
   ],
   exports: [
     PrismaModule,
@@ -22,7 +20,6 @@ import { QueueModule } from './queue';
     LockModule,
     IdempotencyModule,
     QueueModule,
-    MediaModule,
   ],
 })
 export class InfrastructureModule {}

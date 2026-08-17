@@ -13,16 +13,16 @@ import type { AppConfig } from '@/config';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import { InMemoryIdempotencyStore } from '@/infrastructure/idempotency/in-memory-idempotency.store';
 import type { AcquireIdempotencyResult } from '@/infrastructure/idempotency/idempotency-store.interface';
-import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
-import { CLOUDINARY_CLIENT } from '@/infrastructure/media/cloudinary/cloudinary.constants';
-import { CloudinaryUrlService } from '@/infrastructure/media/cloudinary/cloudinary-url.service';
+import { CloudinaryWebhookInboxProcessor } from '@/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
+import { CLOUDINARY_CLIENT } from '@/modules/media/infrastructure/cloudinary/cloudinary.constants';
+import { CloudinaryUrlService } from '@/modules/media/infrastructure/cloudinary/cloudinary-url.service';
 import {
   MEDIA_STORAGE,
   type ConfirmUploadInput,
   type CreateSignedUploadInput,
   type DeleteStoredMediaInput,
   type DeleteStoredMediaResult,
-} from '@/infrastructure/media/contracts/media-storage.port';
+} from '@/modules/media/application/ports/media-storage.port';
 
 const accessSecret = 'e2e-access-secret-at-least-32-characters';
 

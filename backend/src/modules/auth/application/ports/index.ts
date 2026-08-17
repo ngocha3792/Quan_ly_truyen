@@ -24,3 +24,4 @@ export * from './security-overview.reader.port';
 export * from './mfa-challenge.port';
 export * from './recovery-email.persistence.port';
 export * from './security-questions.persistence.port';
+export * from './admin-user-security.persistence.port';

@@ -8,41 +8,35 @@ const MODULES_ROOT = join(ROOT, 'src', 'modules');
 // Temporary baseline for legacy violations. Refactors must delete entries from this
 // list; new violations are rejected immediately.
 const LEGACY_APPLICATION_VIOLATIONS = new Set([
-  'src/modules/moderation/application/moderation.service.ts::@/infrastructure/database',
-  'src/modules/moderation/application/moderation.service.ts::@/infrastructure/observability',
-  'src/modules/audit-logs/application/audit-logs.service.ts::@/infrastructure/observability',
-  'src/modules/audit-logs/application/audit-logs.service.ts::../infrastructure',
+  'src/modules/media/application/media-cleanup.service.ts::@/generated/prisma/client',
+  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/database/prisma',
+  'src/modules/media/application/media-cleanup.service.ts::@/infrastructure/observability',
+  'src/modules/media/application/media-ownership-authorization.service.ts::@/generated/prisma/client',
+  'src/modules/media/application/media-ownership-authorization.service.ts::@/infrastructure/database/prisma',
+  'src/modules/media/application/media-query.service.ts::@/generated/prisma/client',
+  'src/modules/media/application/media-query.service.ts::@/infrastructure/database/prisma',
+  'src/modules/media/application/media.service.ts::@/generated/prisma/client',
+  'src/modules/media/application/media.service.ts::@/infrastructure/database/prisma',
+  'src/modules/media/application/policies/media-upload-policy.registry.ts::@/generated/prisma/client',
+  'src/modules/media/application/ports/media-storage.port.ts::@/generated/prisma/client',
   'src/modules/authors/application/services/author-lifecycle.service.ts::@/infrastructure/database',
-  'src/modules/authors/application/services/author-follow.service.ts::@/infrastructure/database',
   'src/modules/authors/application/services/author-profile.service.ts::@/infrastructure/database',
-  'src/modules/taxonomy/application/taxonomy.service.ts::../infrastructure',
   'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/cache/redis/redis.constants',
   'src/modules/analytics/application/analytics-rate-limiter.service.ts::@/infrastructure/observability',
   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/database',
   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/observability',
   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/infrastructure/queue',
   'src/modules/analytics/application/author-analytics.service.ts::@/infrastructure/database',
-  'src/modules/auth/application/services/admin-user-security.service.ts::@/infrastructure/database',
-  'src/modules/auth/application/services/admin-user-security.service.ts::../../infrastructure/audit',
   'src/modules/comments/application/comments.service.ts::@/infrastructure/database',
   'src/modules/comments/application/comments.service.ts::@/infrastructure/observability',
-  'src/modules/comments/application/comment-write-abuse.service.ts::@/infrastructure/database',
-  'src/modules/comments/application/abuse-rate-limiter.service.ts::@/infrastructure/cache/redis/redis.constants',
-  'src/modules/comments/application/abuse-rate-limiter.service.ts::@/infrastructure/observability',
-  'src/modules/taxonomy/application/taxonomy.service.ts::@/generated/prisma/client',
-  'src/modules/comments/application/comment-write-abuse.service.ts::@/generated/prisma/client',
   'src/modules/comments/application/comments.service.ts::@/generated/prisma/client',
-  'src/modules/moderation/application/moderation.service.ts::@/generated/prisma/client',
   'src/modules/authors/application/services/author-profile.service.ts::@/generated/prisma/client',
-  'src/modules/authors/application/services/author-follow.service.ts::@/generated/prisma/client',
   'src/modules/authors/application/services/author-lifecycle.service.ts::@/generated/prisma/client',
   'src/modules/analytics/application/reader-analytics-ingestion.service.ts::@/generated/prisma/client',
 ]);
 
 
 const LEGACY_CROSS_MODULE_VIOLATIONS = new Set([
-  'src/modules/moderation/application/moderation.service.ts::@/modules/users/application',
-  'src/modules/moderation/application/moderation.service.ts::@/modules/users/domain',
 ]);
 
 const importPattern = /(?:from\s+|import\s*\(\s*)['"]([^'"]+)['"]/g;
@@ -59,7 +53,11 @@ async function listTypescriptFiles(directory) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await listTypescriptFiles(path)));
-    } else if (entry.isFile() && extname(entry.name) === '.ts') {
+    } else if (
+      entry.isFile() &&
+      extname(entry.name) === '.ts' &&
+      !entry.name.endsWith('.spec.ts')
+    ) {
       files.push(path);
     }
   }

@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { MetricsService } from '@/infrastructure/observability';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   AuditInvalidDateRangeException,
   AuditLogNotFoundException,
@@ -8,18 +7,25 @@ import {
   sanitizeAuditPayload,
   sanitizeAuditUserAgent,
 } from '../domain';
-import { PrismaAuditLogRepository } from '../infrastructure';
 import type {
   AdminAuditLogDetail,
   AdminAuditLogListResult,
   ListAuditLogsInput,
 } from './audit-log.models';
+import {
+  AUDIT_LOG_METRICS_PORT,
+  AUDIT_LOG_REPOSITORY_PORT,
+  type AuditLogMetricsPort,
+  type AuditLogRepositoryPort,
+} from './ports';
 
 @Injectable()
 export class AuditLogsService {
   constructor(
-    private readonly repository: PrismaAuditLogRepository,
-    private readonly metrics: MetricsService,
+    @Inject(AUDIT_LOG_REPOSITORY_PORT)
+    private readonly repository: AuditLogRepositoryPort,
+    @Inject(AUDIT_LOG_METRICS_PORT)
+    private readonly metrics: AuditLogMetricsPort,
   ) {}
 
   async list(input: ListAuditLogsInput): Promise<AdminAuditLogListResult> {
@@ -28,7 +34,7 @@ export class AuditLogsService {
         throw new AuditInvalidDateRangeException();
 
       const result = await this.repository.list(input);
-      this.metrics.recordAuditLogRead('list', 'success');
+      this.metrics.recordRead('list', 'success');
       return {
         items: result.items,
         pagination: {
@@ -39,7 +45,7 @@ export class AuditLogsService {
         },
       };
     } catch (error) {
-      this.metrics.recordAuditLogRead('list', 'error');
+      this.metrics.recordRead('list', 'error');
       throw error;
     }
   }
@@ -69,10 +75,10 @@ export class AuditLogsService {
         metadata,
         changes: diffSanitizedAuditValues(oldValues, newValues),
       };
-      this.metrics.recordAuditLogRead('detail', 'success');
+      this.metrics.recordRead('detail', 'success');
       return result;
     } catch (error) {
-      this.metrics.recordAuditLogRead('detail', 'error');
+      this.metrics.recordRead('detail', 'error');
       throw error;
     }
   }

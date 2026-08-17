@@ -18,6 +18,7 @@ import {
   UpdateManagedUserStatusCommandHandler,
   UpdateCurrentUserPreferencesCommandHandler,
   UpdateCurrentUserProfileCommandHandler,
+  UserModerationFacade,
 } from './application';
 
 import {
@@ -26,6 +27,7 @@ import {
 } from './infrastructure';
 
 import { AdminUsersController, UsersController } from './presentation/http';
+import { USER_MODERATION_PORT } from './public';
 
 @Module({
   imports: [PrismaModule, AuthAuthorizationModule],
@@ -50,6 +52,8 @@ import { AdminUsersController, UsersController } from './presentation/http';
     AssignManagedUserRoleCommandHandler,
 
     RemoveManagedUserRoleCommandHandler,
+
+    UserModerationFacade,
 
     PrismaUserProfileRepository,
 
@@ -78,7 +82,12 @@ import { AdminUsersController, UsersController } from './presentation/http';
 
       useExisting: PrismaManagedUserRepository,
     },
+
+    {
+      provide: USER_MODERATION_PORT,
+      useExisting: UserModerationFacade,
+    },
   ],
-  exports: [UpdateManagedUserStatusCommandHandler],
+  exports: [UpdateManagedUserStatusCommandHandler, USER_MODERATION_PORT],
 })
 export class UsersModule {}

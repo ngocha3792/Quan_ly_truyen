@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
-import type { ListAuditLogsInput } from '../application/audit-log.models';
+import type {
+  AuditLogRepositoryPort,
+  ListAuditLogsInput,
+} from '../application';
 
 @Injectable()
-export class PrismaAuditLogRepository {
+export class PrismaAuditLogRepository implements AuditLogRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(input: ListAuditLogsInput) {

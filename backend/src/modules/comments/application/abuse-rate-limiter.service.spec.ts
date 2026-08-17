@@ -1,38 +1,33 @@
 import type { ConfigService } from '@nestjs/config';
-import type Redis from 'ioredis';
+import type {
+  CommentAbuseMetricsPort,
+  CommentAbuseRateLimitStorePort,
+} from './ports';
 import { AbuseRateLimiterService } from './abuse-rate-limiter.service';
 
 describe('AbuseRateLimiterService', () => {
-  const metrics = { recordCommentAbuseBlock: jest.fn() };
+  const metrics: jest.Mocked<CommentAbuseMetricsPort> = {
+    recordBlock: jest.fn(),
+  };
 
-  beforeEach(() => metrics.recordCommentAbuseBlock.mockReset());
+  beforeEach(() => metrics.recordBlock.mockReset());
 
   it('shares the configured comment-write bucket and returns usable retry information', async () => {
     const counters = new Map<string, number>();
-    const redis = {
-      eval: jest.fn(
-        (
-          _script: string,
-          _keyCount: number,
-          key: string,
-          windowSeconds: string,
-        ) => {
-          const next = (counters.get(key) ?? 0) + 1;
-          counters.set(key, next);
-          return Promise.resolve([next, Number(windowSeconds)]);
-        },
-      ),
-    } as unknown as Redis;
+    const store: CommentAbuseRateLimitStorePort = {
+      available: true,
+      consume: jest.fn((key: string, windowSeconds: number) => {
+        const next = (counters.get(key) ?? 0) + 1;
+        counters.set(key, next);
+        return Promise.resolve({ count: next, ttlSeconds: windowSeconds });
+      }),
+    };
     const config = configService({
       COMMENT_ABUSE_RATE_LIMIT_ENABLED: true,
       COMMENT_WRITE_MINUTE_LIMIT: 10,
       COMMENT_WRITE_HOUR_LIMIT: 50,
     });
-    const limiter = new AbuseRateLimiterService(
-      redis,
-      config,
-      metrics as never,
-    );
+    const limiter = new AbuseRateLimiterService(store, config, metrics);
 
     for (let index = 0; index < 10; index += 1) {
       await expect(
@@ -45,14 +40,18 @@ describe('AbuseRateLimiterService', () => {
       code: 'COMMENT_ABUSE_RATE_LIMITED',
       retryAfterSeconds: 60,
     });
-    expect(metrics.recordCommentAbuseBlock).toHaveBeenCalledWith('comment');
+    expect(metrics.recordBlock).toHaveBeenCalledWith('comment');
   });
 
-  it('fails closed when protection is enabled but Redis is unavailable', async () => {
+  it('fails closed when protection is enabled but the backing store is unavailable', async () => {
+    const store: CommentAbuseRateLimitStorePort = {
+      available: false,
+      consume: jest.fn(),
+    };
     const limiter = new AbuseRateLimiterService(
-      null,
+      store,
       configService({ COMMENT_ABUSE_RATE_LIMIT_ENABLED: true }),
-      metrics as never,
+      metrics,
     );
     await expect(limiter.consume('report', 'user-a')).rejects.toMatchObject({
       code: 'ABUSE_PROTECTION_UNAVAILABLE',

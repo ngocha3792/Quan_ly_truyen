@@ -157,7 +157,7 @@ export class PrismaAccountDeletionPersistence implements AccountDeletionPersiste
         /*
          * Phase 5 follow relationships.
          *
-         * User row ở trên đã bị compare-and-swap update/lock. AuthorFollowService
+         * User row ở trên đã bị compare-and-swap update/lock. FollowsModule
          * cũng lock follower User trước khi tạo follow mới, nên outgoing follows
          * của account này ổn định từ thời điểm này. Thu thập target trước, sau đó
          * lock TẤT CẢ AuthorProfile bị ảnh hưởng theo thứ tự UUID ổn định để tránh

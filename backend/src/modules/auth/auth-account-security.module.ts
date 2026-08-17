@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import {
+  ADMIN_USER_SECURITY_PERSISTENCE_PORT,
   DeleteAccountCommandHandler,
   GetCurrentUserQueryHandler,
   GetRecoveryEmailStatusQueryHandler,
@@ -30,6 +31,7 @@ import {
 
 import { AuthCoreModule } from './auth-core.module';
 import { PrismaModule } from '@/infrastructure/database';
+import { PrismaAdminUserSecurityPersistence } from './infrastructure';
 
 @Module({
   imports: [AuthCoreModule, PrismaModule],
@@ -43,6 +45,11 @@ import { PrismaModule } from '@/infrastructure/database';
   ],
   providers: [
     AdminUserSecurityService,
+    PrismaAdminUserSecurityPersistence,
+    {
+      provide: ADMIN_USER_SECURITY_PERSISTENCE_PORT,
+      useExisting: PrismaAdminUserSecurityPersistence,
+    },
     DeleteAccountCommandHandler,
     GetCurrentUserQueryHandler,
     GetSessionsQueryHandler,

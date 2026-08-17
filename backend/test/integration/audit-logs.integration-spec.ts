@@ -3,8 +3,11 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { AppConfigModule } from '@/config';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
-import { MetricsService } from '@/infrastructure/observability';
-import { AuditLogsService } from '@/modules/audit-logs/application';
+import {
+  AUDIT_LOG_METRICS_PORT,
+  AUDIT_LOG_REPOSITORY_PORT,
+  AuditLogsService,
+} from '@/modules/audit-logs/application';
 import { PrismaAuditLogRepository } from '@/modules/audit-logs/infrastructure';
 
 const runId = randomUUID().replaceAll('-', '').slice(0, 12);
@@ -24,8 +27,12 @@ describe('Audit log PostgreSQL read-side', () => {
         PrismaAuditLogRepository,
         AuditLogsService,
         {
-          provide: MetricsService,
-          useValue: { recordAuditLogRead: jest.fn() },
+          provide: AUDIT_LOG_REPOSITORY_PORT,
+          useExisting: PrismaAuditLogRepository,
+        },
+        {
+          provide: AUDIT_LOG_METRICS_PORT,
+          useValue: { recordRead: jest.fn() },
         },
       ],
     }).compile();

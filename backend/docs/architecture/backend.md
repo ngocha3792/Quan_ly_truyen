@@ -121,3 +121,32 @@ The incremental extraction currently separates these responsibilities from `stor
 - chapter lifecycle and public chapter reader -> `modules/chapters`
 
 `StoriesModule` now owns story lifecycle/publication/metadata only. Legacy internals inside other modules are cleaned in later passes without changing HTTP contracts or the Prisma schema.
+
+### Module ownership after phases 8-11
+
+The next extraction pass also establishes these ownership boundaries:
+
+- categories -> `modules/categories` (admin category lifecycle and hierarchy)
+- tags -> `modules/tags` (admin tag lifecycle and merge)
+- author follow relationships -> `modules/follows`
+- report review/closure -> `modules/reports`
+- comment/user enforcement actions remain -> `modules/moderation`
+- media upload/query/cleanup/webhook capability -> `modules/media`
+
+`modules/taxonomy` is removed: category and tag only shared a CRUD-shaped implementation, not one business lifecycle. `AuthorFollowService` is removed from `authors`; the author module still owns author profile/lifecycle and follower counters are treated as denormalized data maintained by the follows persistence adapter.
+
+`src/infrastructure/media` is removed. Cloudinary and disabled-storage implementations now live under `modules/media/infrastructure`, while HTTP controllers/DTOs live under `modules/media/presentation` and storage contracts live under `modules/media/application/ports`.
+
+The media module still contains explicitly baselined legacy application-to-Prisma/observability dependencies. Those are intentionally left for the following dependency-cleanup phase instead of hiding a behavior change inside the ownership move. New violations remain rejected by `npm run architecture:check`.
+
+### Dependency cleanup after phase 11 (phase 12A + phase 13 slice)
+
+The first dependency-cleanup slice removes concrete infrastructure access from these application paths without changing HTTP contracts or the Prisma schema:
+
+- `audit-logs/application` now depends on repository and metrics ports; Prisma and `MetricsService` live behind infrastructure adapters.
+- comment abuse protection now depends on a rate-limit store, metrics port, and recent-comment reader; Redis/Prisma/observability stay in `comments/infrastructure`.
+- `moderation/application` now orchestrates moderation policy through persistence/metrics ports instead of importing Prisma or observability directly.
+- moderation no longer imports private handlers/enums from `users`. `UsersModule` exports the explicit `USER_MODERATION_PORT` public contract and owns the adapter that reuses the managed-user status use case.
+- admin user security now depends on `ADMIN_USER_SECURITY_PERSISTENCE_PORT`; Prisma transaction/audit details live in the auth infrastructure adapter.
+
+The architecture baseline is reduced from 38 to 25 tracked legacy violations. The remaining baseline is intentionally limited to the later cleanup slices for media, authors, analytics, and the legacy comment interaction service. New violations are still rejected immediately.

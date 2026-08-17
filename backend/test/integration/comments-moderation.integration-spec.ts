@@ -8,22 +8,44 @@ import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { MetricsService } from '@/infrastructure/observability';
 import {
   AbuseRateLimiterService,
+  COMMENT_ABUSE_METRICS_PORT,
+  COMMENT_ABUSE_RATE_LIMIT_STORE_PORT,
+  RECENT_COMMENT_READER_PORT,
   CommentsService,
   CommentWriteAbuseService,
 } from '@/modules/comments/application';
-import { ModerationService } from '@/modules/moderation/application';
-import { UpdateManagedUserStatusCommandHandler } from '@/modules/users/application';
+import {
+  MetricsCommentAbuseAdapter,
+  PrismaRecentCommentReader,
+  RedisCommentAbuseRateLimitStoreAdapter,
+} from '@/modules/comments/infrastructure';
+import {
+  MODERATION_METRICS_PORT,
+  MODERATION_PERSISTENCE_PORT,
+  ModerationService,
+} from '@/modules/moderation/application';
+import {
+  MetricsModerationAdapter,
+  PrismaModerationPersistence,
+} from '@/modules/moderation/infrastructure';
+import {
+  REPORT_REPOSITORY,
+  ReportsService,
+} from '@/modules/reports/application';
+import { PrismaReportRepository } from '@/modules/reports/infrastructure';
+import { USER_MODERATION_PORT } from '@/modules/users';
 
 const runId = randomUUID().replaceAll('-', '').slice(0, 12);
 let sequence = 0;
 const unique = (prefix: string) => `${prefix}-${runId}-${++sequence}`;
-const updateUserStatusExecute = jest.fn();
+const userModerationBan = jest.fn();
 
 describe('Comment + moderation PostgreSQL invariants', () => {
   let moduleRef: TestingModule;
   let prisma: PrismaService;
   let comments: CommentsService;
   let moderation: ModerationService;
+  let reports: ReportsService;
   let authorId: string;
   let readerA: string;
   let readerB: string;
@@ -37,7 +59,14 @@ describe('Comment + moderation PostgreSQL invariants', () => {
         CommentsService,
         AbuseRateLimiterService,
         CommentWriteAbuseService,
+        PrismaRecentCommentReader,
+        RedisCommentAbuseRateLimitStoreAdapter,
+        MetricsCommentAbuseAdapter,
         ModerationService,
+        PrismaModerationPersistence,
+        MetricsModerationAdapter,
+        ReportsService,
+        PrismaReportRepository,
         { provide: REDIS_CLIENT, useValue: null },
         {
           provide: MetricsService,
@@ -50,8 +79,29 @@ describe('Comment + moderation PostgreSQL invariants', () => {
           },
         },
         {
-          provide: UpdateManagedUserStatusCommandHandler,
-          useValue: { execute: updateUserStatusExecute },
+          provide: RECENT_COMMENT_READER_PORT,
+          useExisting: PrismaRecentCommentReader,
+        },
+        {
+          provide: COMMENT_ABUSE_RATE_LIMIT_STORE_PORT,
+          useExisting: RedisCommentAbuseRateLimitStoreAdapter,
+        },
+        {
+          provide: COMMENT_ABUSE_METRICS_PORT,
+          useExisting: MetricsCommentAbuseAdapter,
+        },
+        {
+          provide: MODERATION_PERSISTENCE_PORT,
+          useExisting: PrismaModerationPersistence,
+        },
+        {
+          provide: MODERATION_METRICS_PORT,
+          useExisting: MetricsModerationAdapter,
+        },
+        { provide: REPORT_REPOSITORY, useExisting: PrismaReportRepository },
+        {
+          provide: USER_MODERATION_PORT,
+          useValue: { banUser: userModerationBan },
         },
       ],
     }).compile();
@@ -59,12 +109,13 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     prisma = moduleRef.get(PrismaService);
     comments = moduleRef.get(CommentsService);
     moderation = moduleRef.get(ModerationService);
+    reports = moduleRef.get(ReportsService);
   });
 
   beforeEach(async () => {
     process.env.COMMENT_ABUSE_RATE_LIMIT_ENABLED = 'false';
-    updateUserStatusExecute.mockReset();
-    updateUserStatusExecute.mockResolvedValue({});
+    userModerationBan.mockReset();
+    userModerationBan.mockResolvedValue(undefined);
     authorId = await createUser('author');
     readerA = await createUser('reader-a');
     readerB = await createUser('reader-b');
@@ -297,7 +348,7 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     ).resolves.toBeGreaterThanOrEqual(2);
   });
 
-  it('serializes terminal report decisions and routes ban through the Phase 1 lifecycle handler', async () => {
+  it('serializes terminal report decisions and routes ban through the users public moderation port', async () => {
     const target = await prisma.comment.create({
       data: { storyId, userId: readerA, body: 'Severe moderation target' },
     });
@@ -313,13 +364,13 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     });
 
     const decisions = await Promise.allSettled([
-      moderation.resolveReport({
+      reports.resolve({
         actorId: moderatorId,
         reportId: report.id,
         note: 'Đã xác nhận và đóng báo cáo này.',
         audit: { requestId: unique('req') },
       }),
-      moderation.rejectReport({
+      reports.reject({
         actorId: moderatorId,
         reportId: report.id,
         note: 'Không đủ căn cứ để tiếp tục xử lý.',
@@ -340,12 +391,12 @@ describe('Comment + moderation PostgreSQL invariants', () => {
       reportId: report.id,
       audit: { requestId: unique('req') },
     });
-    expect(updateUserStatusExecute).toHaveBeenCalledTimes(1);
-    expect(updateUserStatusExecute).toHaveBeenCalledWith(
+    expect(userModerationBan).toHaveBeenCalledTimes(1);
+    expect(userModerationBan).toHaveBeenCalledWith(
       expect.objectContaining({
         actorUserId: moderatorId,
         targetUserId: readerA,
-        status: 'BANNED',
+        reason: 'Tài khoản vi phạm nghiêm trọng và cần bị khóa.',
       }),
     );
     await expect(

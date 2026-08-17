@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { CloudinaryWebhookInboxProcessor } from '@/infrastructure/media/cloudinary/cloudinary-webhook-inbox.processor';
+import { CloudinaryWebhookInboxProcessor } from '@/modules/media/infrastructure/cloudinary/cloudinary-webhook-inbox.processor';
 import { CloudinaryWebhookCommandModule } from '@/maintenance/cloudinary-webhook-command.module';
 
 async function main(): Promise<void> {
