@@ -1,1 +1,4 @@
-import type { UpdateAuthorProfileInput } from '../../dto'; export class UpdateAuthorProfileCommand { constructor(readonly input:UpdateAuthorProfileInput){} }
+import type { UpdateAuthorProfileInput } from '../../dto';
+export class UpdateAuthorProfileCommand {
+  constructor(readonly input: UpdateAuthorProfileInput) {}
+}

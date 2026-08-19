@@ -1,1 +1,6 @@
-export class UnfollowAuthorCommand { constructor(readonly userId: string, readonly authorId: string) {} }
+export class UnfollowAuthorCommand {
+  constructor(
+    readonly userId: string,
+    readonly authorId: string,
+  ) {}
+}

@@ -10,7 +10,11 @@ export const TAG_REPOSITORY = Symbol.for('modules.tags.repository');
 export interface TagRepositoryPort {
   list(input: ListTagsInput): Promise<AdminTagList>;
   create(name: string, audit: TagAuditContext): Promise<AdminTagItem>;
-  update(id: string, name: string, audit: TagAuditContext): Promise<AdminTagItem>;
+  update(
+    id: string,
+    name: string,
+    audit: TagAuditContext,
+  ): Promise<AdminTagItem>;
   delete(id: string, audit: TagAuditContext): Promise<void>;
   merge(
     sourceTagId: string,

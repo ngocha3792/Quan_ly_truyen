@@ -5,6 +5,7 @@ import {
   NormalizeEmail,
   Trim,
 } from '@/common/decorators/validation';
+import { PasswordPolicy } from '../../../domain';
 
 export class RegisterRequest {
   @NormalizeEmail()
@@ -26,10 +27,16 @@ export class RegisterRequest {
 
   @IsString()
   @IsStrongPassword(
-    {},
     {
-      message:
-        'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
+      minLength: PasswordPolicy.MIN_LENGTH,
+      maxLength: PasswordPolicy.MAX_LENGTH,
+      requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
+      requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
+      requireNumber: PasswordPolicy.REQUIRE_NUMBER,
+      requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
+    },
+    {
+      message: `Mật khẩu phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
     },
   )
   password!: string;

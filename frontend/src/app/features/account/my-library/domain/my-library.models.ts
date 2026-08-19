@@ -1,4 +1,4 @@
-export type LibraryFilter = 'all' | 'reading' | 'following' | 'favorite' | 'completed';
+export type LibraryFilter = 'all' | 'reading' | 'favorite' | 'completed';
 
 export type LibrarySort = 'recent' | 'progress' | 'title' | 'chapter';
 
@@ -22,7 +22,6 @@ export interface LibraryStory {
   readonly lastReadMinutes: number;
 
   readonly isReading: boolean;
-  readonly isFollowing: boolean;
   readonly isFavorite: boolean;
   readonly isCompleted: boolean;
 

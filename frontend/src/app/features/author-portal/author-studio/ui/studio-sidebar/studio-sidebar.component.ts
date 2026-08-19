@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthorStudioProfile, StudioIconName } from '../../domain/author-studio.models';
@@ -16,7 +15,7 @@ interface StudioNavigationItem {
   selector: 'app-studio-sidebar',
   standalone: true,
 
-  imports: [DecimalPipe, RouterLink, RouterLinkActive, StudioIconComponent],
+  imports: [RouterLink, RouterLinkActive, StudioIconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -73,21 +72,6 @@ interface StudioNavigationItem {
         <small>
           {{ profile.penName }}
         </small>
-
-        <div class="experience-heading">
-          <span> Cấp độ {{ profile.level }} </span>
-
-          <span>
-            {{ profile.currentExperience | number }}
-            /
-            {{ profile.requiredExperience | number }}
-            XP
-          </span>
-        </div>
-
-        <div class="experience-track">
-          <span [style.width.%]="experiencePercent"></span>
-        </div>
 
         <a routerLink="/tai-khoan/thong-tin-ca-nhan" (click)="navigated.emit()">
           <app-studio-icon name="user" [size]="16"></app-studio-icon>
@@ -270,31 +254,6 @@ interface StudioNavigationItem {
         font-size: 11px;
       }
 
-      .experience-heading {
-        display: flex;
-        width: 100%;
-        justify-content: space-between;
-        margin-top: 14px;
-        color: #aeb7c9;
-        font-size: 9px;
-      }
-
-      .experience-track {
-        width: 100%;
-        height: 5px;
-        margin-top: 7px;
-        overflow: hidden;
-        border-radius: 999px;
-        background: rgba(117, 128, 157, 0.18);
-      }
-
-      .experience-track span {
-        display: block;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #7c3aed, #c05cff);
-      }
-
       .author-profile-card > a {
         display: grid;
         width: 100%;
@@ -354,14 +313,4 @@ export class StudioSidebarComponent {
     },
   ];
 
-  protected get experiencePercent(): number {
-    if (!this.profile.requiredExperience) {
-      return 0;
-    }
-
-    return Math.min(
-      100,
-      Math.round((this.profile.currentExperience / this.profile.requiredExperience) * 100),
-    );
-  }
 }

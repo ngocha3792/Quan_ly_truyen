@@ -1,1 +1,3 @@
-export class GetAuditLogDetailQuery { constructor(readonly id: string) {} }
+export class GetAuditLogDetailQuery {
+  constructor(readonly id: string) {}
+}

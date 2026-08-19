@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 
-import { CleanupStaleMediaCommand, CleanupStaleMediaCommandHandler } from '@/modules/media';
+import {
+  CleanupStaleMediaCommand,
+  CleanupStaleMediaCommandHandler,
+} from '@/modules/media';
 
 import { MediaCleanupCommandModule } from '@/maintenance/media-cleanup-command.module';
 
@@ -14,7 +17,9 @@ async function main(): Promise<void> {
   );
 
   try {
-    const summary = await app.get(CleanupStaleMediaCommandHandler).execute(new CleanupStaleMediaCommand({ batchSize: 100 }));
+    const summary = await app
+      .get(CleanupStaleMediaCommandHandler)
+      .execute(new CleanupStaleMediaCommand({ batchSize: 100 }));
 
     console.info(
       'Media cleanup completed',

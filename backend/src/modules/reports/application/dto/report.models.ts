@@ -1,8 +1,10 @@
+import type { ReportReasonName, ReportStatusName } from '../../domain';
+
 export type ReportCloseStatus = 'RESOLVED' | 'REJECTED';
 
 export interface AdminReportListQuery {
-  readonly status?: string;
-  readonly reason?: string;
+  readonly status?: ReportStatusName;
+  readonly reason?: ReportReasonName;
   readonly reporter?: string;
   readonly reportedUser?: string;
   readonly createdFrom?: Date;

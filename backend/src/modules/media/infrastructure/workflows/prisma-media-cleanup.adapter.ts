@@ -111,7 +111,10 @@ const REFERENCED_MEDIA_WHERE = {
   ],
 } satisfies Prisma.MediaAssetWhereInput;
 
-import type { CleanupSummary, MediaCleanupOptions } from '../../application/dto';
+import type {
+  CleanupSummary,
+  MediaCleanupOptions,
+} from '../../application/dto';
 import type { MediaCleanupPort } from '../../application/ports';
 
 @Injectable()

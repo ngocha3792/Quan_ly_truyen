@@ -9,9 +9,7 @@ import type {
 import { PrismaAuthAuditWriterAdapter } from '../../../audit';
 
 @Injectable()
-export class PrismaAdminUserSecurityPersistence
-  implements AdminUserSecurityPersistencePort
-{
+export class PrismaAdminUserSecurityPersistence implements AdminUserSecurityPersistencePort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditWriter: PrismaAuthAuditWriterAdapter,

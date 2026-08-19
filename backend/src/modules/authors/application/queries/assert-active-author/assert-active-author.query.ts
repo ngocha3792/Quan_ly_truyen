@@ -1,1 +1,3 @@
-export class AssertActiveAuthorQuery { constructor(readonly userId:string){} }
+export class AssertActiveAuthorQuery {
+  constructor(readonly userId: string) {}
+}

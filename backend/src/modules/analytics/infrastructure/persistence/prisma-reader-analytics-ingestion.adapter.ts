@@ -16,7 +16,11 @@ import { MetricsService } from '@/infrastructure/observability';
 import { QUEUE_NAMES } from '@/infrastructure/queue';
 import { HmacAnalyticsIdentityAdapter } from '../security/hmac-analytics-identity.adapter';
 import { RedisAnalyticsRateLimitAdapter } from '../abuse/redis-analytics-rate-limit.adapter';
-import type { ReaderAnalyticsEventInput, ReaderAnalyticsIngestionInput, ReaderAnalyticsIngestionResult } from '../../application/dto';
+import type {
+  ReaderAnalyticsEventInput,
+  ReaderAnalyticsIngestionInput,
+  ReaderAnalyticsIngestionResult,
+} from '../../application/dto';
 import type { ReaderAnalyticsIngestionPort } from '../../application/ports';
 
 const PUBLIC_STORY_STATUSES = [
@@ -38,7 +42,9 @@ export class PrismaReaderAnalyticsIngestionAdapter implements ReaderAnalyticsIng
     private readonly queue?: Queue,
   ) {}
 
-  async ingest(input: ReaderAnalyticsIngestionInput): Promise<ReaderAnalyticsIngestionResult> {
+  async ingest(
+    input: ReaderAnalyticsIngestionInput,
+  ): Promise<ReaderAnalyticsIngestionResult> {
     const analytics = this.config.getOrThrow<AnalyticsConfig>('analytics');
     if (!analytics.enabled) {
       return { accepted: 0, duplicates: 0, rejected: 0, disabled: true };

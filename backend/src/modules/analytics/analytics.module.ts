@@ -16,7 +16,10 @@ import {
   PrismaReaderAnalyticsIngestionAdapter,
   RedisAnalyticsRateLimitAdapter,
 } from './infrastructure';
-import { AuthorAnalyticsController, ReaderAnalyticsController } from './presentation/http/controllers';
+import {
+  AuthorAnalyticsController,
+  ReaderAnalyticsController,
+} from './presentation/http/controllers';
 
 @Module({
   imports: [PrismaModule, RedisModule],
@@ -30,9 +33,18 @@ import { AuthorAnalyticsController, ReaderAnalyticsController } from './presenta
     GetAuthorAnalyticsOverviewQueryHandler,
     ListAuthorStoryAnalyticsQueryHandler,
     GetAuthorStoryAnalyticsQueryHandler,
-    { provide: ANALYTICS_IDENTITY_PORT, useExisting: HmacAnalyticsIdentityAdapter },
-    { provide: READER_ANALYTICS_INGESTION_PORT, useExisting: PrismaReaderAnalyticsIngestionAdapter },
-    { provide: AUTHOR_ANALYTICS_READER_PORT, useExisting: PrismaAuthorAnalyticsReader },
+    {
+      provide: ANALYTICS_IDENTITY_PORT,
+      useExisting: HmacAnalyticsIdentityAdapter,
+    },
+    {
+      provide: READER_ANALYTICS_INGESTION_PORT,
+      useExisting: PrismaReaderAnalyticsIngestionAdapter,
+    },
+    {
+      provide: AUTHOR_ANALYTICS_READER_PORT,
+      useExisting: PrismaAuthorAnalyticsReader,
+    },
   ],
   exports: [ANALYTICS_IDENTITY_PORT],
 })

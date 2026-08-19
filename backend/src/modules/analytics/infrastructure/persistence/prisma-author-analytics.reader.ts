@@ -8,7 +8,10 @@ import {
   ResourceNotFoundException,
 } from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database';
-import { completionRate, safeBigInt } from '../../domain/policies/analytics-metrics.policy';
+import {
+  completionRate,
+  safeBigInt,
+} from '../../domain/policies/analytics-metrics.policy';
 import {
   addUtcDays,
   analyticsDate,

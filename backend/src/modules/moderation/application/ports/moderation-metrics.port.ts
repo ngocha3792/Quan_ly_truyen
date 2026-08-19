@@ -1,6 +1,7 @@
 import type { CommentModerationOperation } from '../../domain';
 
-export type ModerationMetricOperation = CommentModerationOperation | 'warn' | 'ban';
+export type ModerationMetricOperation =
+  CommentModerationOperation | 'warn' | 'ban';
 
 export interface ModerationMetricsPort {
   record(operation: ModerationMetricOperation): void;

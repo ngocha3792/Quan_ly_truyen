@@ -40,7 +40,7 @@ describe('RedisCommentAbuseGuardAdapter', () => {
       code: 'COMMENT_ABUSE_RATE_LIMITED',
       retryAfterSeconds: 60,
     });
-    expect(metrics.recordBlock).toHaveBeenCalledWith('comment');
+    expect(metrics.recordBlock.mock.calls).toContainEqual(['comment']);
   });
 
   it('fails closed when protection is enabled but the backing store is unavailable', async () => {

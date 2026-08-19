@@ -1,0 +1,1821 @@
+diff --git a/backend/ops/production/PRODUCTION_V1_SCOPE.md b/backend/ops/production/PRODUCTION_V1_SCOPE.md
+index 65e2c78..2e39dc2 100644
+--- a/backend/ops/production/PRODUCTION_V1_SCOPE.md
++++ b/backend/ops/production/PRODUCTION_V1_SCOPE.md
+@@ -27,6 +27,7 @@ The second command is expected to fail until all Production V1 blockers are clos
+ - Account authentication/security and account recovery flows.
+ - Public catalog, story details and chapter reading.
+ - Reading history and reading progress persistence.
++- Persisted chapter bookmarks with cross-session/device hydration.
+ - Reader library.
+ - Comments, reactions, ratings and reporting.
+ - Author follow.
+@@ -37,7 +38,6 @@ The second command is expected to fail until all Production V1 blockers are clos
+ 
+ ### Required but currently blocking production
+ 
+-- **Reader bookmarks**: Prisma schema exists, but bookmark behavior is not persisted end-to-end yet.
+ - **Production media**: V1 needs verified Cloudinary production configuration; the example production configuration intentionally ships disabled.
+ - **Public content review**: terms/privacy/about copy and marketing/history claims require explicit production-owner review.
+ 
+@@ -53,7 +53,7 @@ The following schema or UI concepts may remain in the repository for future work
+ - Story contributor workflow (`StoryContributor`).
+ - Chapter version-history workflow (`ChapterVersion`).
+ - Personalized recommendation claims.
+-- Heuristic author monthly goals and synthetic directional trends.
++- Heuristic author monthly goals and chapter scheduling. Synthetic trends, gamified level/XP and fake comment unread state are not exposed in V1.
+ 
+ Deferred items are protected by source guards where a misleading user-facing exposure previously existed. Persistence fields may remain when removing them would create unnecessary migration churn.
+ 
+diff --git a/backend/ops/production/production-v1.scope.json b/backend/ops/production/production-v1.scope.json
+index bf128df..eda39d0 100644
+--- a/backend/ops/production/production-v1.scope.json
++++ b/backend/ops/production/production-v1.scope.json
+@@ -33,11 +33,10 @@
+     {
+       "id": "reader-bookmarks",
+       "decision": "required",
+-      "readiness": "blocked",
+-      "productionExposure": "pending",
++      "readiness": "ready",
++      "productionExposure": "enabled",
+       "owner": "backend/reading-history + frontend/reader",
+-      "nextPhase": "phase-1",
+-      "blockingReason": "ReadingBookmark exists in Prisma but there is no persisted application/API flow; current UI state is local-only."
++      "notes": "Chapter bookmarks are persisted through application ports and Prisma, loaded on reader/history views, and verified across independent user sessions."
+     },
+     {
+       "id": "reader-library",
+@@ -174,44 +173,63 @@
+       "productionExposure": "hidden",
+       "owner": "planned author analytics",
+       "nextPhase": "post-v1",
+-      "notes": "Heuristic monthly goals and synthetic directional trends are hidden until backed by persisted product semantics."
++      "notes": "Synthetic metric trends, gamified author level/XP and fake comment unread state are not exposed. Monthly goals remain deferred and hidden until backed by persisted product semantics."
+     }
+   ],
+   "sourceGuards": [
+     {
+       "featureId": "story-follow",
+       "path": "frontend/src/app/features/account/reading-history",
+-      "forbidden": ["followedStories"]
++      "forbidden": [
++        "followedStories"
++      ]
+     },
+     {
+       "featureId": "reader-weekly-reading-time",
+       "path": "frontend/src/app/features/account/reading-history",
+-      "forbidden": ["weeklyReadingTime"]
++      "forbidden": [
++        "weeklyReadingTime"
++      ]
+     },
+     {
+       "featureId": "chapter-scheduling",
+       "path": "frontend/src/app/features/author-portal/author-studio/pages",
+-      "forbidden": ["PublicationScheduleComponent", "<app-publication-schedule"]
++      "forbidden": [
++        "PublicationScheduleComponent",
++        "<app-publication-schedule"
++      ]
+     },
+     {
+       "featureId": "chapter-scheduling",
+       "path": "backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts",
+-      "forbidden": ["id: 'pending-chapters'", "title: 'Chương đã lên lịch'"]
++      "forbidden": [
++        "id: 'pending-chapters'",
++        "title: 'Chương đã lên lịch'"
++      ]
+     },
+     {
+       "featureId": "personalized-recommendations",
+       "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",
+-      "forbidden": ["gợi ý cá nhân hóa"]
++      "forbidden": [
++        "gợi ý cá nhân hóa"
++      ]
+     },
+     {
+       "featureId": "author-dashboard-advanced-goals-and-trends",
+       "path": "frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts",
+-      "forbidden": ["metric.trendDirection", "metric.trendValue", "metric.trendLabel"]
++      "forbidden": [
++        "metric.trendDirection",
++        "metric.trendValue",
++        "metric.trendLabel"
++      ]
+     },
+     {
+       "featureId": "author-dashboard-advanced-goals-and-trends",
+       "path": "frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts",
+-      "forbidden": ["Mục tiêu tháng này", "monthlyGoals"]
++      "forbidden": [
++        "Mục tiêu tháng này",
++        "monthlyGoals"
++      ]
+     }
+   ]
+ }
+diff --git a/backend/src/common/enums/permission-code.enum.ts b/backend/src/common/enums/permission-code.enum.ts
+index 45667be..a2517bf 100644
+--- a/backend/src/common/enums/permission-code.enum.ts
++++ b/backend/src/common/enums/permission-code.enum.ts
+@@ -32,6 +32,7 @@ export enum PermissionCode {
+   LIBRARY_MANAGE_OWN = 'library.manage.own',
+   FOLLOW_MANAGE_OWN = 'follow.manage.own',
+   READING_HISTORY_MANAGE_OWN = 'reading-history.manage.own',
++  READING_BOOKMARK_MANAGE_OWN = 'reading-bookmark.manage.own',
+ 
+   REPORT_CREATE = 'report.create',
+   REPORT_REVIEW = 'report.review',
+diff --git a/backend/src/modules/authors/application/dto/author.dto.ts b/backend/src/modules/authors/application/dto/author.dto.ts
+index 4a511cf..5d5826a 100644
+--- a/backend/src/modules/authors/application/dto/author.dto.ts
++++ b/backend/src/modules/authors/application/dto/author.dto.ts
+@@ -147,7 +147,6 @@ export interface AuthorReaderCommentDto {
+   readonly storyTitle: string;
+   readonly content: string;
+   readonly createdAt: string;
+-  readonly unread: boolean;
+ }
+ 
+ export interface AuthorTopStoryDto {
+@@ -173,9 +172,6 @@ export interface AuthorDashboardDto {
+     readonly displayName: string;
+     readonly penName: string;
+     readonly avatarUrl: string;
+-    readonly level: number;
+-    readonly currentExperience: number;
+-    readonly requiredExperience: number;
+     readonly verified: boolean;
+   };
+   readonly unreadNotifications: number;
+@@ -183,9 +179,6 @@ export interface AuthorDashboardDto {
+     readonly id: string;
+     readonly title: string;
+     readonly value: string;
+-    readonly trendValue: string;
+-    readonly trendLabel: string;
+-    readonly trendDirection: 'up' | 'down';
+     readonly icon: 'book' | 'draft' | 'clock' | 'eye' | 'users';
+     readonly tone: 'purple' | 'blue' | 'orange' | 'indigo' | 'pink';
+   }[];
+diff --git a/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts b/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
+index da266d6..2bb2a96 100644
+--- a/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
++++ b/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
+@@ -59,10 +59,6 @@ export class AuthorDashboardMapper {
+     const currentDrafts = stories.filter(
+       (story) => story.status === 'DRAFT',
+     ).length;
+-    const totalChapters = stories.reduce(
+-      (sum, story) => sum + story.chapterCount,
+-      0,
+-    );
+     const views30Days = dailyStats
+       .filter((stat) => stat.date >= start30Days)
+       .reduce(
+@@ -70,12 +66,6 @@ export class AuthorDashboardMapper {
+         0,
+       );
+ 
+-    const directTrend = {
+-      trendValue: 'Trực tiếp',
+-      trendLabel: 'từ hệ thống',
+-      trendDirection: 'up' as const,
+-    };
+-
+     return {
+       profile: {
+         displayName: profile.user.displayName,
+@@ -83,9 +73,6 @@ export class AuthorDashboardMapper {
+         avatarUrl:
+           AuthorDashboardMapper.mediaUrl(profile.user.avatarMedia) ??
+           EMPTY_AVATAR_URL,
+-        level: Math.floor(totalChapters / 50) + 1,
+-        currentExperience: totalChapters % 50,
+-        requiredExperience: 50,
+         verified: profile.verificationStatus === 'VERIFIED',
+       },
+       unreadNotifications,
+@@ -94,7 +81,6 @@ export class AuthorDashboardMapper {
+           id: 'published-stories',
+           title: 'Truyện đang xuất bản',
+           value: AuthorDashboardMapper.formatCompact(publishedStories.length),
+-          ...directTrend,
+           icon: 'book',
+           tone: 'purple',
+         },
+@@ -104,7 +90,6 @@ export class AuthorDashboardMapper {
+           value: AuthorDashboardMapper.formatCompact(
+             currentDrafts + draftChapters.length,
+           ),
+-          ...directTrend,
+           icon: 'draft',
+           tone: 'blue',
+         },
+@@ -112,7 +97,6 @@ export class AuthorDashboardMapper {
+           id: 'views',
+           title: 'Lượt xem 30 ngày',
+           value: AuthorDashboardMapper.formatCompact(views30Days),
+-          ...directTrend,
+           icon: 'eye',
+           tone: 'indigo',
+         },
+@@ -120,7 +104,6 @@ export class AuthorDashboardMapper {
+           id: 'followers',
+           title: 'Người theo dõi',
+           value: AuthorDashboardMapper.formatCompact(profile.followerCount),
+-          ...directTrend,
+           icon: 'users',
+           tone: 'pink',
+         },
+@@ -185,7 +168,6 @@ export class AuthorDashboardMapper {
+           comment.createdAt,
+           now,
+         ),
+-        unread: false,
+       })),
+       topStories: [...stories]
+         .sort((first, second) =>
+diff --git a/backend/src/modules/reading-history/application/commands/index.ts b/backend/src/modules/reading-history/application/commands/index.ts
+index f42b940..2fdb4b6 100644
+--- a/backend/src/modules/reading-history/application/commands/index.ts
++++ b/backend/src/modules/reading-history/application/commands/index.ts
+@@ -1,3 +1,5 @@
+ export * from './clear-reading-history';
+ export * from './remove-reading-history-entry';
+ export * from './save-reading-progress';
++export * from './remove-reading-bookmark';
++export * from './upsert-reading-bookmark';
+diff --git a/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/index.ts b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/index.ts
+new file mode 100644
+index 0000000..aa59024
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/index.ts
+@@ -0,0 +1,2 @@
++export * from './remove-reading-bookmark.command';
++export * from './remove-reading-bookmark.command-handler';
+diff --git a/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command-handler.ts b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command-handler.ts
+new file mode 100644
+index 0000000..73b0e50
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command-handler.ts
+@@ -0,0 +1,23 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { requireReadingHistoryUserId } from '../../../domain/policies/reading-history-auth.policy';
++import {
++  READING_BOOKMARK_PERSISTENCE_PORT,
++  type ReadingBookmarkPersistencePort,
++} from '../../ports';
++import { RemoveReadingBookmarkCommand } from './remove-reading-bookmark.command';
++
++@Injectable()
++export class RemoveReadingBookmarkCommandHandler {
++  constructor(
++    @Inject(READING_BOOKMARK_PERSISTENCE_PORT)
++    private readonly persistence: ReadingBookmarkPersistencePort,
++  ) {}
++
++  async execute(command: RemoveReadingBookmarkCommand): Promise<void> {
++    await this.persistence.removeMine(
++      requireReadingHistoryUserId(command.userId),
++      command.chapterId,
++    );
++  }
++}
+diff --git a/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command.ts b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command.ts
+new file mode 100644
+index 0000000..bfd5e8c
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/remove-reading-bookmark/remove-reading-bookmark.command.ts
+@@ -0,0 +1,6 @@
++export class RemoveReadingBookmarkCommand {
++  constructor(
++    readonly userId: string | undefined,
++    readonly chapterId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/index.ts b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/index.ts
+new file mode 100644
+index 0000000..eb98df6
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/index.ts
+@@ -0,0 +1,2 @@
++export * from './upsert-reading-bookmark.command';
++export * from './upsert-reading-bookmark.command-handler';
+diff --git a/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command-handler.ts b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command-handler.ts
+new file mode 100644
+index 0000000..18942f7
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command-handler.ts
+@@ -0,0 +1,34 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { ReadingHistoryChapterNotFoundException } from '../../../domain';
++import { requireReadingHistoryUserId } from '../../../domain/policies/reading-history-auth.policy';
++import type { ReadingBookmarkResultDto } from '../../dto';
++import {
++  READING_BOOKMARK_PERSISTENCE_PORT,
++  type ReadingBookmarkPersistencePort,
++} from '../../ports';
++import { UpsertReadingBookmarkCommand } from './upsert-reading-bookmark.command';
++
++@Injectable()
++export class UpsertReadingBookmarkCommandHandler {
++  constructor(
++    @Inject(READING_BOOKMARK_PERSISTENCE_PORT)
++    private readonly persistence: ReadingBookmarkPersistencePort,
++  ) {}
++
++  async execute(
++    command: UpsertReadingBookmarkCommand,
++  ): Promise<ReadingBookmarkResultDto> {
++    const result = await this.persistence.upsertMine({
++      userId: requireReadingHistoryUserId(command.userId),
++      chapterId: command.chapterId,
++      position: 0,
++    });
++
++    if (result.status === 'chapter_not_found') {
++      throw new ReadingHistoryChapterNotFoundException(command.chapterId);
++    }
++
++    return result.bookmark;
++  }
++}
+diff --git a/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command.ts b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command.ts
+new file mode 100644
+index 0000000..6259036
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/commands/upsert-reading-bookmark/upsert-reading-bookmark.command.ts
+@@ -0,0 +1,6 @@
++export class UpsertReadingBookmarkCommand {
++  constructor(
++    readonly userId: string | undefined,
++    readonly chapterId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/reading-history/application/dto/index.ts b/backend/src/modules/reading-history/application/dto/index.ts
+index 93c499a..44db1c0 100644
+--- a/backend/src/modules/reading-history/application/dto/index.ts
++++ b/backend/src/modules/reading-history/application/dto/index.ts
+@@ -1 +1,2 @@
+ export * from './reading-history-result.dto';
++export * from './reading-bookmark-result.dto';
+diff --git a/backend/src/modules/reading-history/application/dto/reading-bookmark-result.dto.ts b/backend/src/modules/reading-history/application/dto/reading-bookmark-result.dto.ts
+new file mode 100644
+index 0000000..7cc0406
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/dto/reading-bookmark-result.dto.ts
+@@ -0,0 +1,8 @@
++export interface ReadingBookmarkResultDto {
++  readonly id: string;
++  readonly storyId: string;
++  readonly chapterId: string;
++  readonly position: number;
++  readonly createdAt: string;
++  readonly updatedAt: string;
++}
+diff --git a/backend/src/modules/reading-history/application/ports/index.ts b/backend/src/modules/reading-history/application/ports/index.ts
+index e8cf550..212d684 100644
+--- a/backend/src/modules/reading-history/application/ports/index.ts
++++ b/backend/src/modules/reading-history/application/ports/index.ts
+@@ -1 +1,2 @@
+ export * from './reading-history.persistence.port';
++export * from './reading-bookmark.persistence.port';
+diff --git a/backend/src/modules/reading-history/application/ports/reading-bookmark.persistence.port.ts b/backend/src/modules/reading-history/application/ports/reading-bookmark.persistence.port.ts
+new file mode 100644
+index 0000000..4b6671d
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/ports/reading-bookmark.persistence.port.ts
+@@ -0,0 +1,30 @@
++import type { ReadingBookmarkResultDto } from '../dto';
++
++export const READING_BOOKMARK_PERSISTENCE_PORT = Symbol(
++  'READING_BOOKMARK_PERSISTENCE_PORT',
++);
++
++export interface UpsertReadingBookmarkInput {
++  readonly userId: string;
++  readonly chapterId: string;
++  readonly position: number;
++}
++
++export type UpsertReadingBookmarkResult =
++  | { readonly status: 'saved'; readonly bookmark: ReadingBookmarkResultDto }
++  | { readonly status: 'chapter_not_found' };
++
++export interface ReadingBookmarkPersistencePort {
++  listMine(userId: string): Promise<readonly ReadingBookmarkResultDto[]>;
++
++  getMineByChapter(
++    userId: string,
++    chapterId: string,
++  ): Promise<ReadingBookmarkResultDto | null>;
++
++  upsertMine(
++    input: UpsertReadingBookmarkInput,
++  ): Promise<UpsertReadingBookmarkResult>;
++
++  removeMine(userId: string, chapterId: string): Promise<void>;
++}
+diff --git a/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query-handler.ts b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query-handler.ts
+new file mode 100644
+index 0000000..b61d23f
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query-handler.ts
+@@ -0,0 +1,26 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { requireReadingHistoryUserId } from '../../../domain/policies/reading-history-auth.policy';
++import type { ReadingBookmarkResultDto } from '../../dto';
++import {
++  READING_BOOKMARK_PERSISTENCE_PORT,
++  type ReadingBookmarkPersistencePort,
++} from '../../ports';
++import { GetReadingBookmarkQuery } from './get-reading-bookmark.query';
++
++@Injectable()
++export class GetReadingBookmarkQueryHandler {
++  constructor(
++    @Inject(READING_BOOKMARK_PERSISTENCE_PORT)
++    private readonly persistence: ReadingBookmarkPersistencePort,
++  ) {}
++
++  execute(
++    query: GetReadingBookmarkQuery,
++  ): Promise<ReadingBookmarkResultDto | null> {
++    return this.persistence.getMineByChapter(
++      requireReadingHistoryUserId(query.userId),
++      query.chapterId,
++    );
++  }
++}
+diff --git a/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query.ts b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query.ts
+new file mode 100644
+index 0000000..84294be
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/get-reading-bookmark.query.ts
+@@ -0,0 +1,6 @@
++export class GetReadingBookmarkQuery {
++  constructor(
++    readonly userId: string | undefined,
++    readonly chapterId: string,
++  ) {}
++}
+diff --git a/backend/src/modules/reading-history/application/queries/get-reading-bookmark/index.ts b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/index.ts
+new file mode 100644
+index 0000000..467f829
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/get-reading-bookmark/index.ts
+@@ -0,0 +1,2 @@
++export * from './get-reading-bookmark.query';
++export * from './get-reading-bookmark.query-handler';
+diff --git a/backend/src/modules/reading-history/application/queries/index.ts b/backend/src/modules/reading-history/application/queries/index.ts
+index 032f087..b4e1ed9 100644
+--- a/backend/src/modules/reading-history/application/queries/index.ts
++++ b/backend/src/modules/reading-history/application/queries/index.ts
+@@ -1 +1,3 @@
+ export * from './list-reading-history';
++export * from './get-reading-bookmark';
++export * from './list-reading-bookmarks';
+diff --git a/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/index.ts b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/index.ts
+new file mode 100644
+index 0000000..2269fc7
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/index.ts
+@@ -0,0 +1,2 @@
++export * from './list-reading-bookmarks.query';
++export * from './list-reading-bookmarks.query-handler';
+diff --git a/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query-handler.ts b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query-handler.ts
+new file mode 100644
+index 0000000..f0ac79b
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query-handler.ts
+@@ -0,0 +1,23 @@
++import { Inject, Injectable } from '@nestjs/common';
++
++import { requireReadingHistoryUserId } from '../../../domain/policies/reading-history-auth.policy';
++import type { ReadingBookmarkResultDto } from '../../dto';
++import {
++  READING_BOOKMARK_PERSISTENCE_PORT,
++  type ReadingBookmarkPersistencePort,
++} from '../../ports';
++import { ListReadingBookmarksQuery } from './list-reading-bookmarks.query';
++
++@Injectable()
++export class ListReadingBookmarksQueryHandler {
++  constructor(
++    @Inject(READING_BOOKMARK_PERSISTENCE_PORT)
++    private readonly persistence: ReadingBookmarkPersistencePort,
++  ) {}
++
++  execute(
++    query: ListReadingBookmarksQuery,
++  ): Promise<readonly ReadingBookmarkResultDto[]> {
++    return this.persistence.listMine(requireReadingHistoryUserId(query.userId));
++  }
++}
+diff --git a/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query.ts b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query.ts
+new file mode 100644
+index 0000000..0f697ac
+--- /dev/null
++++ b/backend/src/modules/reading-history/application/queries/list-reading-bookmarks/list-reading-bookmarks.query.ts
+@@ -0,0 +1,3 @@
++export class ListReadingBookmarksQuery {
++  constructor(readonly userId: string | undefined) {}
++}
+diff --git a/backend/src/modules/reading-history/infrastructure/persistence/index.ts b/backend/src/modules/reading-history/infrastructure/persistence/index.ts
+index 5cba639..c00eb30 100644
+--- a/backend/src/modules/reading-history/infrastructure/persistence/index.ts
++++ b/backend/src/modules/reading-history/infrastructure/persistence/index.ts
+@@ -1 +1,2 @@
+ export * from './prisma-reading-history.persistence';
++export * from './prisma-reading-bookmark.persistence';
+diff --git a/backend/src/modules/reading-history/infrastructure/persistence/prisma-reading-bookmark.persistence.ts b/backend/src/modules/reading-history/infrastructure/persistence/prisma-reading-bookmark.persistence.ts
+new file mode 100644
+index 0000000..8e5bc43
+--- /dev/null
++++ b/backend/src/modules/reading-history/infrastructure/persistence/prisma-reading-bookmark.persistence.ts
+@@ -0,0 +1,179 @@
++import { Injectable } from '@nestjs/common';
++
++import {
++  ChapterStatus,
++  Prisma,
++  StoryStatus,
++  StoryVisibility,
++} from '@/generated/prisma/client';
++import { mapPrismaError, PrismaService } from '@/infrastructure/database';
++
++import type {
++  ReadingBookmarkPersistencePort,
++  ReadingBookmarkResultDto,
++  UpsertReadingBookmarkInput,
++  UpsertReadingBookmarkResult,
++} from '../../application';
++
++const PUBLIC_STORY_STATUSES = [
++  StoryStatus.PUBLISHED,
++  StoryStatus.HIATUS,
++  StoryStatus.COMPLETED,
++] as const;
++
++const PUBLIC_STORY_WHERE = {
++  deletedAt: null,
++  visibility: StoryVisibility.PUBLIC,
++  publishedAt: { not: null },
++  status: { in: [...PUBLIC_STORY_STATUSES] },
++} satisfies Prisma.StoryWhereInput;
++
++const PUBLIC_CHAPTER_WHERE = {
++  status: ChapterStatus.PUBLISHED,
++  deletedAt: null,
++  publishedAt: { not: null },
++} satisfies Prisma.ChapterWhereInput;
++
++const BOOKMARK_SELECT = {
++  id: true,
++  storyId: true,
++  chapterId: true,
++  position: true,
++  createdAt: true,
++  updatedAt: true,
++} satisfies Prisma.ReadingBookmarkSelect;
++
++type ReadingBookmarkRow = Prisma.ReadingBookmarkGetPayload<{
++  select: typeof BOOKMARK_SELECT;
++}>;
++
++@Injectable()
++export class PrismaReadingBookmarkPersistence
++  implements ReadingBookmarkPersistencePort
++{
++  constructor(private readonly prisma: PrismaService) {}
++
++  async listMine(
++    userId: string,
++  ): Promise<readonly ReadingBookmarkResultDto[]> {
++    try {
++      const rows = await this.prisma.readingBookmark.findMany({
++        where: {
++          userId,
++          position: 0,
++          story: PUBLIC_STORY_WHERE,
++          chapter: PUBLIC_CHAPTER_WHERE,
++        },
++        orderBy: [{ updatedAt: 'desc' }, { chapterId: 'asc' }],
++        select: BOOKMARK_SELECT,
++      });
++
++      return rows.map(toReadingBookmarkDto);
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'reading-bookmark-list-own',
++        resource: 'Đánh dấu chương',
++      });
++    }
++  }
++
++  async getMineByChapter(
++    userId: string,
++    chapterId: string,
++  ): Promise<ReadingBookmarkResultDto | null> {
++    try {
++      const row = await this.prisma.readingBookmark.findFirst({
++        where: {
++          userId,
++          chapterId,
++          position: 0,
++          story: PUBLIC_STORY_WHERE,
++          chapter: PUBLIC_CHAPTER_WHERE,
++        },
++        select: BOOKMARK_SELECT,
++      });
++
++      return row ? toReadingBookmarkDto(row) : null;
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'reading-bookmark-get-own',
++        resource: 'Đánh dấu chương',
++      });
++    }
++  }
++
++  async upsertMine(
++    input: UpsertReadingBookmarkInput,
++  ): Promise<UpsertReadingBookmarkResult> {
++    try {
++      return await this.prisma.$transaction(async (tx) => {
++        const chapter = await tx.chapter.findFirst({
++          where: {
++            id: input.chapterId,
++            ...PUBLIC_CHAPTER_WHERE,
++            story: PUBLIC_STORY_WHERE,
++          },
++          select: { id: true, storyId: true },
++        });
++
++        if (!chapter) return { status: 'chapter_not_found' as const };
++
++        const bookmark = await tx.readingBookmark.upsert({
++          where: {
++            userId_chapterId_position: {
++              userId: input.userId,
++              chapterId: chapter.id,
++              position: input.position,
++            },
++          },
++          create: {
++            userId: input.userId,
++            storyId: chapter.storyId,
++            chapterId: chapter.id,
++            position: input.position,
++          },
++          update: {
++            storyId: chapter.storyId,
++          },
++          select: BOOKMARK_SELECT,
++        });
++
++        return {
++          status: 'saved' as const,
++          bookmark: toReadingBookmarkDto(bookmark),
++        };
++      });
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'reading-bookmark-upsert-own',
++        resource: 'Đánh dấu chương',
++      });
++    }
++  }
++
++  async removeMine(userId: string, chapterId: string): Promise<void> {
++    try {
++      await this.prisma.readingBookmark.deleteMany({
++        where: { userId, chapterId, position: 0 },
++      });
++    } catch (error: unknown) {
++      throw mapPrismaError(error, {
++        operation: 'reading-bookmark-remove-own',
++        resource: 'Đánh dấu chương',
++      });
++    }
++  }
++}
++
++function toReadingBookmarkDto(
++  row: ReadingBookmarkRow,
++): ReadingBookmarkResultDto {
++  return {
++    id: row.id,
++    storyId: row.storyId,
++    chapterId: row.chapterId,
++    position: row.position,
++    createdAt: row.createdAt.toISOString(),
++    updatedAt: row.updatedAt.toISOString(),
++  };
++}
+diff --git a/backend/src/modules/reading-history/presentation/http/controllers/index.ts b/backend/src/modules/reading-history/presentation/http/controllers/index.ts
+index 53e3ecf..3eb6d4c 100644
+--- a/backend/src/modules/reading-history/presentation/http/controllers/index.ts
++++ b/backend/src/modules/reading-history/presentation/http/controllers/index.ts
+@@ -1 +1,2 @@
+ export * from './reading-history.controller';
++export * from './reading-bookmarks.controller';
+diff --git a/backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts b/backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts
+new file mode 100644
+index 0000000..c028b1f
+--- /dev/null
++++ b/backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts
+@@ -0,0 +1,74 @@
++import {
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  ParseUUIDPipe,
++  Put,
++} from '@nestjs/common';
++
++import { CurrentUserId, RequirePermissions } from '@/common/decorators';
++import { PermissionCode } from '@/common/enums';
++
++import {
++  GetReadingBookmarkQuery,
++  GetReadingBookmarkQueryHandler,
++  ListReadingBookmarksQuery,
++  ListReadingBookmarksQueryHandler,
++  RemoveReadingBookmarkCommand,
++  RemoveReadingBookmarkCommandHandler,
++  UpsertReadingBookmarkCommand,
++  UpsertReadingBookmarkCommandHandler,
++  type ReadingBookmarkResultDto,
++} from '../../../application';
++
++@Controller('reading-bookmarks')
++@RequirePermissions(PermissionCode.READING_BOOKMARK_MANAGE_OWN)
++export class ReadingBookmarksController {
++  constructor(
++    private readonly listBookmarksQuery: ListReadingBookmarksQueryHandler,
++    private readonly getBookmarkQuery: GetReadingBookmarkQueryHandler,
++    private readonly upsertBookmarkCommand: UpsertReadingBookmarkCommandHandler,
++    private readonly removeBookmarkCommand: RemoveReadingBookmarkCommandHandler,
++  ) {}
++
++  @Get()
++  listBookmarks(
++    @CurrentUserId() userId: string | undefined,
++  ): Promise<readonly ReadingBookmarkResultDto[]> {
++    return this.listBookmarksQuery.execute(new ListReadingBookmarksQuery(userId));
++  }
++
++  @Get(':chapterId')
++  getBookmark(
++    @CurrentUserId() userId: string | undefined,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++  ): Promise<ReadingBookmarkResultDto | null> {
++    return this.getBookmarkQuery.execute(
++      new GetReadingBookmarkQuery(userId, chapterId),
++    );
++  }
++
++  @Put(':chapterId')
++  upsertBookmark(
++    @CurrentUserId() userId: string | undefined,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++  ): Promise<ReadingBookmarkResultDto> {
++    return this.upsertBookmarkCommand.execute(
++      new UpsertReadingBookmarkCommand(userId, chapterId),
++    );
++  }
++
++  @Delete(':chapterId')
++  @HttpCode(HttpStatus.NO_CONTENT)
++  async removeBookmark(
++    @CurrentUserId() userId: string | undefined,
++    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
++  ): Promise<void> {
++    await this.removeBookmarkCommand.execute(
++      new RemoveReadingBookmarkCommand(userId, chapterId),
++    );
++  }
++}
+diff --git a/backend/src/modules/reading-history/reading-history.module.ts b/backend/src/modules/reading-history/reading-history.module.ts
+index b178287..c79dcf2 100644
+--- a/backend/src/modules/reading-history/reading-history.module.ts
++++ b/backend/src/modules/reading-history/reading-history.module.ts
+@@ -5,27 +5,47 @@ import { AuthAuthorizationModule } from '@/modules/auth';
+ 
+ import {
+   ClearReadingHistoryCommandHandler,
++  GetReadingBookmarkQueryHandler,
++  ListReadingBookmarksQueryHandler,
+   ListReadingHistoryQueryHandler,
++  READING_BOOKMARK_PERSISTENCE_PORT,
+   READING_HISTORY_PERSISTENCE_PORT,
++  RemoveReadingBookmarkCommandHandler,
+   RemoveReadingHistoryEntryCommandHandler,
+   SaveReadingProgressCommandHandler,
++  UpsertReadingBookmarkCommandHandler,
+ } from './application';
+-import { PrismaReadingHistoryPersistence } from './infrastructure';
+-import { ReadingHistoryController } from './presentation';
++import {
++  PrismaReadingBookmarkPersistence,
++  PrismaReadingHistoryPersistence,
++} from './infrastructure';
++import {
++  ReadingBookmarksController,
++  ReadingHistoryController,
++} from './presentation';
+ 
+ @Module({
+   imports: [PrismaModule, AuthAuthorizationModule],
+-  controllers: [ReadingHistoryController],
++  controllers: [ReadingHistoryController, ReadingBookmarksController],
+   providers: [
+     ListReadingHistoryQueryHandler,
+     SaveReadingProgressCommandHandler,
+     RemoveReadingHistoryEntryCommandHandler,
+     ClearReadingHistoryCommandHandler,
++    ListReadingBookmarksQueryHandler,
++    GetReadingBookmarkQueryHandler,
++    UpsertReadingBookmarkCommandHandler,
++    RemoveReadingBookmarkCommandHandler,
+     PrismaReadingHistoryPersistence,
++    PrismaReadingBookmarkPersistence,
+     {
+       provide: READING_HISTORY_PERSISTENCE_PORT,
+       useExisting: PrismaReadingHistoryPersistence,
+     },
++    {
++      provide: READING_BOOKMARK_PERSISTENCE_PORT,
++      useExisting: PrismaReadingBookmarkPersistence,
++    },
+   ],
+ })
+ export class ReadingHistoryModule {}
+diff --git a/backend/test/e2e/stories-workflow.e2e-spec.ts b/backend/test/e2e/stories-workflow.e2e-spec.ts
+index 29eac51..8f3ef19 100644
+--- a/backend/test/e2e/stories-workflow.e2e-spec.ts
++++ b/backend/test/e2e/stories-workflow.e2e-spec.ts
+@@ -37,6 +37,7 @@ const AUTHOR_PERMISSIONS = [
+   PermissionCode.RATING_UPDATE_OWN,
+   PermissionCode.LIBRARY_MANAGE_OWN,
+   PermissionCode.READING_HISTORY_MANAGE_OWN,
++  PermissionCode.READING_BOOKMARK_MANAGE_OWN,
+ ] as const;
+ 
+ const ADMIN_PERMISSIONS = [
+@@ -57,6 +58,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
+   const adminId = randomUUID();
+   const authorSessionId = randomUUID();
+   const intruderSessionId = randomUUID();
++  const intruderSecondSessionId = randomUUID();
+   const adminSessionId = randomUUID();
+ 
+   let categoryId: string | null = null;
+@@ -294,6 +296,52 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
+       }),
+     ]);
+ 
++    const secondDeviceToken = token(intruderId, intruderSecondSessionId);
++
++    const bookmarkResponse = await request(httpServer())
++      .put(`/api/v1/reading-bookmarks/${chapter.id}`)
++      .set('Authorization', `Bearer ${readerToken}`)
++      .send({})
++      .expect(200);
++    expect(
++      unwrap<{ chapterId: string; storyId: string }>(
++        bookmarkResponse.body as unknown,
++      ),
++    ).toMatchObject({ chapterId: chapter.id, storyId });
++
++    const bookmarkFromSecondDevice = await request(httpServer())
++      .get(`/api/v1/reading-bookmarks/${chapter.id}`)
++      .set('Authorization', `Bearer ${secondDeviceToken}`)
++      .expect(200);
++    expect(
++      unwrap<{ chapterId: string } | null>(
++        bookmarkFromSecondDevice.body as unknown,
++      ),
++    ).toMatchObject({ chapterId: chapter.id });
++
++    const bookmarkListFromSecondDevice = await request(httpServer())
++      .get('/api/v1/reading-bookmarks')
++      .set('Authorization', `Bearer ${secondDeviceToken}`)
++      .expect(200);
++    expect(
++      unwrap<Array<{ chapterId: string }>>(
++        bookmarkListFromSecondDevice.body as unknown,
++      ),
++    ).toEqual([expect.objectContaining({ chapterId: chapter.id })]);
++
++    await request(httpServer())
++      .delete(`/api/v1/reading-bookmarks/${chapter.id}`)
++      .set('Authorization', `Bearer ${secondDeviceToken}`)
++      .expect(204);
++
++    const bookmarkAfterRemoteDelete = await request(httpServer())
++      .get(`/api/v1/reading-bookmarks/${chapter.id}`)
++      .set('Authorization', `Bearer ${readerToken}`)
++      .expect(200);
++    expect(
++      unwrap<unknown>(bookmarkAfterRemoteDelete.body as unknown),
++    ).toBeNull();
++
+     await request(httpServer())
+       .put(`/api/v1/stories/${storyId}/rating`)
+       .set('Authorization', `Bearer ${readerToken}`)
+@@ -580,6 +628,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
+       data: [
+         sessionRow(authorId, authorSessionId),
+         sessionRow(intruderId, intruderSessionId),
++        sessionRow(intruderId, intruderSecondSessionId),
+         sessionRow(adminId, adminSessionId),
+       ],
+     });
+diff --git a/frontend/src/app/core/http/reader-engagement-api.client.spec.ts b/frontend/src/app/core/http/reader-engagement-api.client.spec.ts
+index 2f19cd8..50ddcb0 100644
+--- a/frontend/src/app/core/http/reader-engagement-api.client.spec.ts
++++ b/frontend/src/app/core/http/reader-engagement-api.client.spec.ts
+@@ -45,6 +45,42 @@ describe('ReaderEngagementApiClient', () => {
+     await expect(promise).resolves.toEqual([]);
+   });
+ 
++  it('uses persisted reading-bookmark endpoints', async () => {
++    const bookmark = {
++      id: 'bookmark-1',
++      storyId: 'story-1',
++      chapterId: 'chapter-1',
++      position: 0,
++      createdAt: '2026-08-17T00:00:00.000Z',
++      updatedAt: '2026-08-17T00:00:00.000Z',
++    };
++
++    const savePromise = firstValueFrom(api.upsertReadingBookmark('chapter-1'));
++    const saveRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
++    expect(saveRequest.request.method).toBe('PUT');
++    expect(saveRequest.request.body).toEqual({});
++    saveRequest.flush(successEnvelope(bookmark));
++    await expect(savePromise).resolves.toEqual(bookmark);
++
++    const getPromise = firstValueFrom(api.getReadingBookmark('chapter-1'));
++    const getRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
++    expect(getRequest.request.method).toBe('GET');
++    getRequest.flush(successEnvelope(bookmark));
++    await expect(getPromise).resolves.toEqual(bookmark);
++
++    const listPromise = firstValueFrom(api.listReadingBookmarks());
++    const listRequest = http.expectOne('/api/v1/reading-bookmarks');
++    expect(listRequest.request.method).toBe('GET');
++    listRequest.flush(successEnvelope([bookmark]));
++    await expect(listPromise).resolves.toEqual([bookmark]);
++
++    const removePromise = firstValueFrom(api.removeReadingBookmark('chapter-1'));
++    const removeRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
++    expect(removeRequest.request.method).toBe('DELETE');
++    removeRequest.flush(null);
++    await expect(removePromise).resolves.toBeNull();
++  });
++
+   it('reuses a comment idempotency key after an ambiguous failure', async () => {
+     const first = firstValueFrom(api.createStoryComment('story-1', '  Xin chào  '));
+     const firstRequest = http.expectOne('/api/v1/stories/story-1/comments');
+diff --git a/frontend/src/app/core/http/reader-engagement-api.client.ts b/frontend/src/app/core/http/reader-engagement-api.client.ts
+index 2e0ccdf..0d73868 100644
+--- a/frontend/src/app/core/http/reader-engagement-api.client.ts
++++ b/frontend/src/app/core/http/reader-engagement-api.client.ts
+@@ -7,6 +7,7 @@ import { ApiSuccessEnvelope } from './api-envelope.model';
+ import {
+   LibraryApiStatus,
+   LibraryEntryApiItem,
++  ReadingBookmarkApiItem,
+   ReadingHistoryApiItem,
+   StoryCommentApiItem,
+   StoryCommentApiPage,
+@@ -64,6 +65,29 @@ export class ReaderEngagementApiClient {
+     return this.http.delete<void>(`${this.config.apiBaseUrl}/reading-history`);
+   }
+ 
++  listReadingBookmarks(): Observable<readonly ReadingBookmarkApiItem[]> {
++    return this.get<readonly ReadingBookmarkApiItem[]>('/reading-bookmarks');
++  }
++
++  getReadingBookmark(chapterId: string): Observable<ReadingBookmarkApiItem | null> {
++    return this.get<ReadingBookmarkApiItem | null>(
++      `/reading-bookmarks/${encodeURIComponent(chapterId)}`,
++    );
++  }
++
++  upsertReadingBookmark(chapterId: string): Observable<ReadingBookmarkApiItem> {
++    return this.put<ReadingBookmarkApiItem>(
++      `/reading-bookmarks/${encodeURIComponent(chapterId)}`,
++      {},
++    );
++  }
++
++  removeReadingBookmark(chapterId: string): Observable<void> {
++    return this.http.delete<void>(
++      `${this.config.apiBaseUrl}/reading-bookmarks/${encodeURIComponent(chapterId)}`,
++    );
++  }
++
+   getMyRating(storyId: string): Observable<StoryRatingApiItem | null> {
+     return this.get<StoryRatingApiItem | null>(`/stories/${encodeURIComponent(storyId)}/rating/me`);
+   }
+diff --git a/frontend/src/app/core/http/reader-engagement-api.model.ts b/frontend/src/app/core/http/reader-engagement-api.model.ts
+index b7e2422..7159a90 100644
+--- a/frontend/src/app/core/http/reader-engagement-api.model.ts
++++ b/frontend/src/app/core/http/reader-engagement-api.model.ts
+@@ -38,6 +38,15 @@ export interface ReadingHistoryApiItem {
+   readonly lastReadAt: string;
+ }
+ 
++export interface ReadingBookmarkApiItem {
++  readonly id: string;
++  readonly storyId: string;
++  readonly chapterId: string;
++  readonly position: number;
++  readonly createdAt: string;
++  readonly updatedAt: string;
++}
++
+ export interface StoryRatingApiItem {
+   readonly storyId: string;
+   readonly score: number;
+diff --git a/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.spec.ts b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.spec.ts
+new file mode 100644
+index 0000000..49037ee
+--- /dev/null
++++ b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.spec.ts
+@@ -0,0 +1,103 @@
++import { provideHttpClient } from '@angular/common/http';
++import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
++import { TestBed } from '@angular/core/testing';
++import { firstValueFrom } from 'rxjs';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
++import { ReadingHistoryHttpRepository } from './reading-history-http.repository';
++
++describe('ReadingHistoryHttpRepository', () => {
++  let repository: ReadingHistoryHttpRepository;
++  let http: HttpTestingController;
++
++  beforeEach(() => {
++    TestBed.configureTestingModule({
++      providers: [
++        provideHttpClient(),
++        provideHttpClientTesting(),
++        ReadingHistoryHttpRepository,
++        {
++          provide: APP_RUNTIME_CONFIG,
++          useValue: {
++            apiBaseUrl: '/api/v1',
++            appName: 'TruyenHub',
++            production: false,
++          },
++        },
++      ],
++    });
++
++    repository = TestBed.inject(ReadingHistoryHttpRepository);
++    http = TestBed.inject(HttpTestingController);
++  });
++
++  afterEach(() => {
++    http.verify();
++    TestBed.resetTestingModule();
++  });
++
++  it('hydrates persisted bookmark state together with reading history', async () => {
++    const resultPromise = firstValueFrom(repository.getHistory());
++
++    const historyRequest = http.expectOne('/api/v1/reading-history');
++    const bookmarksRequest = http.expectOne('/api/v1/reading-bookmarks');
++    expect(historyRequest.request.method).toBe('GET');
++    expect(bookmarksRequest.request.method).toBe('GET');
++
++    historyRequest.flush(
++      successEnvelope([
++        {
++          story: {
++            id: 'story-1',
++            slug: 'story-one',
++            title: 'Story One',
++            author: 'Pen Name',
++            coverUrl: null,
++            categories: ['Fantasy'],
++            latestChapterNumber: 3,
++            chapterCount: 3,
++          },
++          currentChapter: {
++            id: 'chapter-2',
++            number: 2,
++            title: 'Second chapter',
++          },
++          position: 0,
++          progressPercent: 66.67,
++          lastReadAt: '2026-08-17T08:00:00.000Z',
++        },
++      ]),
++    );
++    bookmarksRequest.flush(
++      successEnvelope([
++        {
++          id: 'bookmark-1',
++          storyId: 'story-1',
++          chapterId: 'chapter-2',
++          position: 0,
++          createdAt: '2026-08-17T08:01:00.000Z',
++          updatedAt: '2026-08-17T08:01:00.000Z',
++        },
++      ]),
++    );
++
++    const result = await resultPromise;
++    expect(result.history).toHaveLength(1);
++    expect(result.history[0]).toMatchObject({
++      id: 'story-1',
++      chapterId: 'chapter-2',
++      chapterNumber: 2,
++      bookmarked: true,
++    });
++  });
++});
++
++function successEnvelope<T>(data: T) {
++  return {
++    success: true as const,
++    data,
++    requestId: 'bookmark-test-request',
++    timestamp: '2026-08-17T08:00:00.000Z',
++  };
++}
+diff --git a/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
+index c3a27d2..172dd4a 100644
+--- a/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
++++ b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
+@@ -1,5 +1,5 @@
+ import { inject, Injectable } from '@angular/core';
+-import { map, Observable } from 'rxjs';
++import { forkJoin, map, Observable } from 'rxjs';
+ 
+ import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
+ import type { ReadingHistoryApiItem } from '../../../../core/http/reader-engagement-api.model';
+@@ -17,9 +17,15 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
+   private readonly api = inject(ReaderEngagementApiClient);
+ 
+   getHistory(): Observable<ReadingHistoryView> {
+-    return this.api.listReadingHistory().pipe(
+-      map((entries) => {
+-        const history = entries.filter((entry) => entry.currentChapter !== null).map(toHistoryItem);
++    return forkJoin({
++      entries: this.api.listReadingHistory(),
++      bookmarks: this.api.listReadingBookmarks(),
++    }).pipe(
++      map(({ entries, bookmarks }) => {
++        const bookmarkedChapterIds = new Set(bookmarks.map((bookmark) => bookmark.chapterId));
++        const history = entries
++          .filter((entry) => entry.currentChapter !== null)
++          .map((entry) => toHistoryItem(entry, bookmarkedChapterIds));
+         const chaptersRead = entries.reduce((total, entry) => {
+           return total + Math.round((entry.progressPercent / 100) * entry.story.chapterCount);
+         }, 0);
+@@ -47,9 +53,20 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
+   clearHistory(): Observable<void> {
+     return this.api.clearReadingHistory();
+   }
++
++  saveBookmark(chapterId: string): Observable<void> {
++    return this.api.upsertReadingBookmark(chapterId).pipe(map(() => undefined));
++  }
++
++  removeBookmark(chapterId: string): Observable<void> {
++    return this.api.removeReadingBookmark(chapterId);
++  }
+ }
+ 
+-function toHistoryItem(entry: ReadingHistoryApiItem): ReadingHistoryItem {
++function toHistoryItem(
++  entry: ReadingHistoryApiItem,
++  bookmarkedChapterIds: ReadonlySet<string>,
++): ReadingHistoryItem {
+   const chapter = entry.currentChapter!;
+   const lastReadMinutes = minutesSince(entry.lastReadAt);
+   return {
+@@ -58,8 +75,10 @@ function toHistoryItem(entry: ReadingHistoryApiItem): ReadingHistoryItem {
+     title: entry.story.title,
+     author: entry.story.author,
+     genres: entry.story.categories,
++    chapterId: chapter.id,
+     chapterNumber: chapter.number,
+     chapterTitle: chapter.title,
++    bookmarked: bookmarkedChapterIds.has(chapter.id),
+     progress: entry.progressPercent,
+     lastReadLabel: relativeLabel(lastReadMinutes),
+     lastReadMinutes,
+diff --git a/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts b/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
+index ea10cbf..bea9498 100644
+--- a/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
++++ b/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
+@@ -20,7 +20,7 @@ export class ReadingHistoryStore {
+   readonly query = signal('');
+   readonly period = signal<ReadingHistoryPeriod>('all');
+   readonly sort = signal<ReadingHistorySort>('recent');
+-  readonly bookmarkedIds = signal<readonly string[]>([]);
++  readonly bookmarkPendingChapterIds = signal<readonly string[]>([]);
+   readonly syncState = signal<ReadingHistorySyncState>('idle');
+ 
+   readonly filteredHistory = computed(() => {
+@@ -65,10 +65,35 @@ export class ReadingHistoryStore {
+     this.sort.set(sort);
+   }
+ 
+-  toggleBookmark(historyId: string): void {
+-    this.bookmarkedIds.update((ids) =>
+-      ids.includes(historyId) ? ids.filter((id) => id !== historyId) : [...ids, historyId],
+-    );
++  toggleBookmark(chapterId: string): void {
++    const current = this.viewState();
++    if (!current || this.bookmarkPendingChapterIds().includes(chapterId)) return;
++
++    const item = current.history.find((candidate) => candidate.chapterId === chapterId);
++    if (!item) return;
++
++    const previous = item.bookmarked;
++    this.setBookmarkState(chapterId, !previous);
++    this.bookmarkPendingChapterIds.update((ids) => [...ids, chapterId]);
++
++    const request$ = previous
++      ? this.repository.removeBookmark(chapterId)
++      : this.repository.saveBookmark(chapterId);
++
++    request$
++      .pipe(
++        catchError(() => {
++          this.setBookmarkState(chapterId, previous);
++          this.error.set('Không thể cập nhật đánh dấu chương.');
++          return EMPTY;
++        }),
++        finalize(() =>
++          this.bookmarkPendingChapterIds.update((ids) =>
++            ids.filter((id) => id !== chapterId),
++          ),
++        ),
++      )
++      .subscribe();
+   }
+ 
+   clearHistory(): void {
+@@ -90,7 +115,7 @@ export class ReadingHistoryStore {
+               },
+             });
+           }
+-          this.bookmarkedIds.set([]);
++          this.bookmarkPendingChapterIds.set([]);
+         }),
+         catchError(() => {
+           this.error.set('Không thể xóa lịch sử đọc.');
+@@ -127,6 +152,20 @@ export class ReadingHistoryStore {
+       .subscribe();
+   }
+ 
++
++  private setBookmarkState(chapterId: string, bookmarked: boolean): void {
++    this.viewState.update((current) =>
++      current
++        ? {
++            ...current,
++            history: current.history.map((item) =>
++              item.chapterId === chapterId ? { ...item, bookmarked } : item,
++            ),
++          }
++        : current,
++    );
++  }
++
+   private matchesSelectedPeriod(lastReadMinutes: number): boolean {
+     switch (this.period()) {
+       case 'today':
+diff --git a/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts b/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
+index 8bd383e..95e6286 100644
+--- a/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
++++ b/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
+@@ -13,8 +13,10 @@ export interface ReadingHistoryItem {
+   readonly author: string;
+   readonly genres: readonly string[];
+ 
++  readonly chapterId: string;
+   readonly chapterNumber: number;
+   readonly chapterTitle: string;
++  readonly bookmarked: boolean;
+ 
+   readonly progress: number;
+   readonly lastReadLabel: string;
+diff --git a/frontend/src/app/features/account/reading-history/domain/reading-history.repository.ts b/frontend/src/app/features/account/reading-history/domain/reading-history.repository.ts
+index 49da675..fea4a3d 100644
+--- a/frontend/src/app/features/account/reading-history/domain/reading-history.repository.ts
++++ b/frontend/src/app/features/account/reading-history/domain/reading-history.repository.ts
+@@ -4,4 +4,6 @@ import { ReadingHistoryView } from './reading-history.models';
+ export abstract class ReadingHistoryRepository {
+   abstract getHistory(): Observable<ReadingHistoryView>;
+   abstract clearHistory(): Observable<void>;
++  abstract saveBookmark(chapterId: string): Observable<void>;
++  abstract removeBookmark(chapterId: string): Observable<void>;
+ }
+diff --git a/frontend/src/app/features/account/reading-history/pages/reading-history-page/reading-history-page.component.html b/frontend/src/app/features/account/reading-history/pages/reading-history-page/reading-history-page.component.html
+index a2611ea..cee6d87 100644
+--- a/frontend/src/app/features/account/reading-history/pages/reading-history-page/reading-history-page.component.html
++++ b/frontend/src/app/features/account/reading-history/pages/reading-history-page/reading-history-page.component.html
+@@ -33,7 +33,7 @@
+         <app-reading-history-list
+           main
+           [items]="store.filteredHistory()"
+-          [bookmarkedIds]="store.bookmarkedIds()"
++          [bookmarkPendingChapterIds]="store.bookmarkPendingChapterIds()"
+           (bookmarkToggle)="store.toggleBookmark($event)"
+         />
+ 
+diff --git a/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.html b/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.html
+index 67a4c89..ca610c8 100644
+--- a/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.html
++++ b/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.html
+@@ -69,11 +69,13 @@
+       <button
+         class="bookmark-button"
+         type="button"
+-        [class.bookmark-button--active]="bookmarkedIds.includes(item.id)"
++        [class.bookmark-button--active]="item.bookmarked"
+         [attr.aria-label]="
+-          bookmarkedIds.includes(item.id) ? 'Bỏ đánh dấu truyện' : 'Đánh dấu truyện'
++          item.bookmarked ? 'Bỏ đánh dấu chương' : 'Đánh dấu chương'
+         "
+-        (click)="bookmarkToggle.emit(item.id)"
++        [disabled]="bookmarkPendingChapterIds.includes(item.chapterId)"
++        [attr.aria-busy]="bookmarkPendingChapterIds.includes(item.chapterId)"
++        (click)="bookmarkToggle.emit(item.chapterId)"
+       >
+         <svg viewBox="0 0 24 24">
+           <path d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18l-6-4-6 4V4Z"></path>
+diff --git a/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.ts b/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.ts
+index 3d17f9d..162e5b5 100644
+--- a/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.ts
++++ b/frontend/src/app/features/account/reading-history/ui/reading-history-list/reading-history-list.component.ts
+@@ -19,7 +19,7 @@ export class ReadingHistoryListComponent {
+   items: readonly ReadingHistoryItem[] = [];
+ 
+   @Input()
+-  bookmarkedIds: readonly string[] = [];
++  bookmarkPendingChapterIds: readonly string[] = [];
+ 
+   @Output()
+   readonly bookmarkToggle = new EventEmitter<string>();
+diff --git a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts
+index 38d8f6e..c945826 100644
+--- a/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts
++++ b/frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.spec.ts
+@@ -65,9 +65,6 @@ function dashboardView(): AuthorStudioDashboard {
+       displayName: 'Author',
+       penName: 'Pen',
+       avatarUrl: '/assets/images/avatar-placeholder.svg',
+-      level: 1,
+-      currentExperience: 0,
+-      requiredExperience: 50,
+       verified: true,
+     },
+     unreadNotifications: 0,
+diff --git a/frontend/src/app/features/author-portal/author-studio/domain/author-studio.models.ts b/frontend/src/app/features/author-portal/author-studio/domain/author-studio.models.ts
+index 5f745ea..99820af 100644
+--- a/frontend/src/app/features/author-portal/author-studio/domain/author-studio.models.ts
++++ b/frontend/src/app/features/author-portal/author-studio/domain/author-studio.models.ts
+@@ -35,9 +35,6 @@ export interface AuthorStudioProfile {
+   readonly displayName: string;
+   readonly penName: string;
+   readonly avatarUrl: string;
+-  readonly level: number;
+-  readonly currentExperience: number;
+-  readonly requiredExperience: number;
+   readonly verified: boolean;
+ }
+ 
+@@ -45,9 +42,6 @@ export interface AuthorStudioMetric {
+   readonly id: string;
+   readonly title: string;
+   readonly value: string;
+-  readonly trendValue: string;
+-  readonly trendLabel: string;
+-  readonly trendDirection: 'up' | 'down';
+   readonly icon: StudioIconName;
+   readonly tone: StudioMetricTone;
+ }
+@@ -97,7 +91,6 @@ export interface AuthorReaderComment {
+   readonly storyTitle: string;
+   readonly content: string;
+   readonly createdAt: string;
+-  readonly unread: boolean;
+ }
+ 
+ export interface AuthorTopStory {
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/reader-comments/reader-comments.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/reader-comments/reader-comments.component.ts
+index 0e86b40..bde9ac0 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/reader-comments/reader-comments.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/reader-comments/reader-comments.component.ts
+@@ -38,10 +38,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
+ 
+               <p>{{ comment.content }}</p>
+             </div>
+-
+-            @if (comment.unread) {
+-              <span class="unread-dot"></span>
+-            }
+           </article>
+         }
+       </div>
+@@ -161,17 +157,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
+         text-overflow: ellipsis;
+         white-space: nowrap;
+       }
+-
+-      .unread-dot {
+-        position: absolute;
+-        top: 50%;
+-        right: 0;
+-        width: 8px;
+-        height: 8px;
+-        border-radius: 50%;
+-        background: #ef4444;
+-        transform: translateY(-50%);
+-      }
+     `,
+   ],
+ })
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/studio-sidebar/studio-sidebar.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/studio-sidebar/studio-sidebar.component.ts
+index 733c873..474d4d0 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/studio-sidebar/studio-sidebar.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/studio-sidebar/studio-sidebar.component.ts
+@@ -1,5 +1,4 @@
+ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+-import { DecimalPipe } from '@angular/common';
+ import { RouterLink, RouterLinkActive } from '@angular/router';
+ 
+ import { AuthorStudioProfile, StudioIconName } from '../../domain/author-studio.models';
+@@ -16,7 +15,7 @@ interface StudioNavigationItem {
+   selector: 'app-studio-sidebar',
+   standalone: true,
+ 
+-  imports: [DecimalPipe, RouterLink, RouterLinkActive, StudioIconComponent],
++  imports: [RouterLink, RouterLinkActive, StudioIconComponent],
+ 
+   changeDetection: ChangeDetectionStrategy.OnPush,
+ 
+@@ -74,21 +73,6 @@ interface StudioNavigationItem {
+           {{ profile.penName }}
+         </small>
+ 
+-        <div class="experience-heading">
+-          <span> Cấp độ {{ profile.level }} </span>
+-
+-          <span>
+-            {{ profile.currentExperience | number }}
+-            /
+-            {{ profile.requiredExperience | number }}
+-            XP
+-          </span>
+-        </div>
+-
+-        <div class="experience-track">
+-          <span [style.width.%]="experiencePercent"></span>
+-        </div>
+-
+         <a routerLink="/tai-khoan/thong-tin-ca-nhan" (click)="navigated.emit()">
+           <app-studio-icon name="user" [size]="16"></app-studio-icon>
+ 
+@@ -270,31 +254,6 @@ interface StudioNavigationItem {
+         font-size: 11px;
+       }
+ 
+-      .experience-heading {
+-        display: flex;
+-        width: 100%;
+-        justify-content: space-between;
+-        margin-top: 14px;
+-        color: #aeb7c9;
+-        font-size: 9px;
+-      }
+-
+-      .experience-track {
+-        width: 100%;
+-        height: 5px;
+-        margin-top: 7px;
+-        overflow: hidden;
+-        border-radius: 999px;
+-        background: rgba(117, 128, 157, 0.18);
+-      }
+-
+-      .experience-track span {
+-        display: block;
+-        height: 100%;
+-        border-radius: inherit;
+-        background: linear-gradient(90deg, #7c3aed, #c05cff);
+-      }
+-
+       .author-profile-card > a {
+         display: grid;
+         width: 100%;
+@@ -354,14 +313,4 @@ export class StudioSidebarComponent {
+     },
+   ];
+ 
+-  protected get experiencePercent(): number {
+-    if (!this.profile.requiredExperience) {
+-      return 0;
+-    }
+-
+-    return Math.min(
+-      100,
+-      Math.round((this.profile.currentExperience / this.profile.requiredExperience) * 100),
+-    );
+-  }
+ }
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts
+index de849d8..cd624c7 100644
+--- a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts
+@@ -98,6 +98,20 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
+     return this.engagement.saveReadingProgress(storyId, chapterId).pipe(map(() => undefined));
+   }
+ 
++  getBookmark(chapterId: string): Observable<boolean> {
++    return this.engagement
++      .getReadingBookmark(chapterId)
++      .pipe(map((bookmark) => bookmark !== null));
++  }
++
++  saveBookmark(chapterId: string): Observable<void> {
++    return this.engagement.upsertReadingBookmark(chapterId).pipe(map(() => undefined));
++  }
++
++  removeBookmark(chapterId: string): Observable<void> {
++    return this.engagement.removeReadingBookmark(chapterId);
++  }
++
+   private withViewerReactions(
+     items: readonly StoryCommentApiItem[],
+   ): Observable<readonly ChapterComment[]> {
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts
+index c7727b1..9cba11a 100644
+--- a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.repository.ts
+@@ -34,4 +34,7 @@ export abstract class ChapterReaderRepository {
+     description?: string,
+   ): Observable<void>;
+   abstract saveProgress(storyId: string, chapterId: string): Observable<void>;
++  abstract getBookmark(chapterId: string): Observable<boolean>;
++  abstract saveBookmark(chapterId: string): Observable<void>;
++  abstract removeBookmark(chapterId: string): Observable<void>;
+ }
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.spec.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.spec.ts
+new file mode 100644
+index 0000000..06c2b95
+--- /dev/null
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.spec.ts
+@@ -0,0 +1,74 @@
++import { TestBed } from '@angular/core/testing';
++import { of } from 'rxjs';
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++import { AuthStore } from '../../../../core/auth/auth.store';
++import type { ChapterReaderView } from '../domain/chapter-reader.models';
++import { ChapterReaderRepository } from './chapter-reader.repository';
++import { ChapterReaderStore } from './chapter-reader.store';
++
++describe('ChapterReaderStore bookmark hydration', () => {
++  const repository = {
++    getChapter: vi.fn(),
++    getComments: vi.fn(),
++    saveProgress: vi.fn(),
++    getBookmark: vi.fn(),
++  };
++
++  beforeEach(() => {
++    vi.clearAllMocks();
++    repository.getChapter.mockReturnValue(of(chapterView()));
++    repository.getComments.mockReturnValue(of({ items: [], total: 0 }));
++    repository.saveProgress.mockReturnValue(of(undefined));
++    repository.getBookmark.mockReturnValue(of(true));
++
++    TestBed.configureTestingModule({
++      providers: [
++        ChapterReaderStore,
++        { provide: ChapterReaderRepository, useValue: repository },
++        {
++          provide: AuthStore,
++          useValue: {
++            ensureInitialized: () => of('authenticated' as const),
++            isAuthenticated: () => true,
++          },
++        },
++      ],
++    });
++  });
++
++  it('reloads bookmark state from the API instead of keeping local state', () => {
++    const store = TestBed.inject(ChapterReaderStore);
++
++    store.load('story-one', '1');
++    expect(store.bookmarked()).toBe(true);
++    expect(repository.getBookmark).toHaveBeenCalledWith('chapter-1');
++
++    repository.getBookmark.mockReturnValue(of(false));
++    store.load('story-one', '1');
++
++    expect(store.bookmarked()).toBe(false);
++    expect(repository.getBookmark).toHaveBeenCalledTimes(2);
++  });
++});
++
++function chapterView(): ChapterReaderView {
++  return {
++    story: {
++      id: 'story-1',
++      slug: 'story-one',
++      title: 'Story One',
++    },
++    chapter: {
++      id: 'chapter-1',
++      number: 1,
++      title: 'Chapter One',
++      paragraphs: ['Content'],
++      publishedAt: '2026-08-17T00:00:00.000Z',
++      views: 1,
++    },
++    navigation: { previous: null, next: null },
++    comments: [],
++    totalComments: 0,
++  };
++}
+diff --git a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
+index 0504cd7..46eeefa 100644
+--- a/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
++++ b/frontend/src/app/features/public/chapter-reader/data-access/chapter-reader.store.ts
+@@ -1,5 +1,5 @@
+ import { inject, Injectable, signal } from '@angular/core';
+-import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
++import { catchError, EMPTY, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
+ 
+ import { AuthStore } from '../../../../core/auth/auth.store';
+ import type {
+@@ -22,12 +22,14 @@ export class ChapterReaderStore {
+   readonly fontSize = signal(18);
+   readonly lightsOff = signal(false);
+   readonly bookmarked = signal(false);
++  readonly bookmarkPending = signal(false);
+   readonly commentPending = signal(false);
+   readonly commentMessage = signal<string | null>(null);
+ 
+   load(storySlug: string, chapterNumber: string): void {
+     this.loading.set(true);
+     this.error.set(null);
++    this.bookmarked.set(false);
+     this.repository
+       .getChapter(storySlug, chapterNumber)
+       .pipe(
+@@ -37,11 +39,24 @@ export class ChapterReaderStore {
+             .ensureInitialized()
+             .pipe(
+               tap(() => this.loadComments(storySlug, chapterNumber)),
+-              switchMap((result) =>
+-                result === 'authenticated'
+-                  ? this.repository.saveProgress(view.story.id, view.chapter.id)
+-                  : of(undefined),
+-              ),
++              switchMap((result) => {
++                if (result !== 'authenticated') {
++                  this.bookmarked.set(false);
++                  return of(undefined);
++                }
++
++                return forkJoin({
++                  progress: this.repository
++                    .saveProgress(view.story.id, view.chapter.id)
++                    .pipe(catchError(() => of(undefined))),
++                  bookmarked: this.repository
++                    .getBookmark(view.chapter.id)
++                    .pipe(catchError(() => of(false))),
++                }).pipe(
++                  tap(({ bookmarked }) => this.bookmarked.set(bookmarked)),
++                  map(() => undefined),
++                );
++              }),
+               catchError(() => of(undefined)),
+             )
+             .subscribe();
+@@ -262,7 +277,27 @@ export class ChapterReaderStore {
+     this.lightsOff.update((current) => !current);
+   }
+   toggleBookmark(): void {
+-    this.bookmarked.update((current) => !current);
++    const view = this.viewState();
++    if (!view || !this.auth.isAuthenticated() || this.bookmarkPending()) return;
++
++    const previous = this.bookmarked();
++    const next = !previous;
++    this.bookmarked.set(next);
++    this.bookmarkPending.set(true);
++
++    const request$ = next
++      ? this.repository.saveBookmark(view.chapter.id)
++      : this.repository.removeBookmark(view.chapter.id);
++
++    request$
++      .pipe(
++        catchError(() => {
++          this.bookmarked.set(previous);
++          return EMPTY;
++        }),
++        finalize(() => this.bookmarkPending.set(false)),
++      )
++      .subscribe();
+   }
+ 
+   private optimisticReaction(
+diff --git a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
+index ee5011d..f3b8647 100644
+--- a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
++++ b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.html
+@@ -119,11 +119,12 @@
+         [fontSize]="store.fontSize()"
+         [lightsOff]="store.lightsOff()"
+         [bookmarked]="store.bookmarked()"
++        [bookmarkPending]="store.bookmarkPending()"
+         (fontDecrease)="store.decreaseFontSize()"
+         (fontIncrease)="store.increaseFontSize()"
+         (fontReset)="store.resetFontSize()"
+         (lightsToggle)="store.toggleLights()"
+-        (bookmarkToggle)="store.toggleBookmark()"
++        (bookmarkToggle)="toggleBookmark()"
+       ></app-chapter-sidebar>
+     </div>
+   }
+diff --git a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+index 9d10cd9..bcc2b97 100644
+--- a/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
++++ b/frontend/src/app/features/public/chapter-reader/pages/chapter-reader-page/chapter-reader-page.component.ts
+@@ -136,6 +136,10 @@ export class ChapterReaderPageComponent implements OnInit {
+     );
+   }
+ 
++  protected toggleBookmark(): void {
++    this.runAuthenticated(() => this.store.toggleBookmark());
++  }
++
+   private runAuthenticated(action: () => void): void {
+     const returnUrl = this.router.url;
+     resolveAuthGuardState(this.auth).subscribe((resolution) => {
+diff --git a/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.html b/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.html
+index 49e4e2a..f842c7f 100644
+--- a/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.html
++++ b/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.html
+@@ -67,6 +67,8 @@
+       type="button"
+       class="bookmark-button"
+       [class.bookmark-button--active]="bookmarked"
++      [disabled]="bookmarkPending"
++      [attr.aria-busy]="bookmarkPending"
+       (click)="bookmarkToggle.emit()"
+     >
+       <svg viewBox="0 0 24 24">
+@@ -75,7 +77,7 @@
+ 
+       <span>
+         <strong>
+-          {{ bookmarked ? 'Đã đánh dấu chương' : 'Đánh dấu chương này' }}
++          {{ bookmarkPending ? 'Đang lưu...' : bookmarked ? 'Đã đánh dấu chương' : 'Đánh dấu chương này' }}
+         </strong>
+ 
+         <small>
+diff --git a/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.ts b/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.ts
+index 46242ae..1ad6de8 100644
+--- a/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.ts
++++ b/frontend/src/app/features/public/chapter-reader/ui/chapter-sidebar/chapter-sidebar.component.ts
+@@ -24,6 +24,9 @@ export class ChapterSidebarComponent {
+   @Input()
+   bookmarked = false;
+ 
++  @Input()
++  bookmarkPending = false;
++
+   @Output()
+   readonly fontDecrease = new EventEmitter<void>();
+ 

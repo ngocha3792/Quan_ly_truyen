@@ -1,19 +1,62 @@
 import { environment } from '../../../environments/environment';
 import { AppRuntimeConfig } from './app-config.token';
+import { parseAuthClientConfigResponse } from './auth-client-config.parser';
 
 const DEVELOPMENT_API_ORIGIN = 'http://127.0.0.1:3000';
 const DEVELOPMENT_PUBLIC_ORIGIN = 'http://localhost:4200';
+const ROUTE_DISCOVERY_POSITIVE_INTEGER = 1;
 
-export function loadServerAppRuntimeConfig(): AppRuntimeConfig {
+let runtimeConfigPromise: Promise<AppRuntimeConfig> | null = null;
+
+export function loadServerAppRuntimeConfig(): Promise<AppRuntimeConfig> {
+  runtimeConfigPromise ??= fetchServerRuntimeConfig();
+  return runtimeConfigPromise;
+}
+
+export function createRouteDiscoveryRuntimeConfig(): AppRuntimeConfig {
   return {
     apiBaseUrl: `${serverApiOrigin()}${environment.apiBaseUrl}`,
     appName: environment.appName,
     production: environment.production,
+    passwordPolicy: {
+      minimumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,
+      maximumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,
+      maximumBytes: ROUTE_DISCOVERY_POSITIVE_INTEGER,
+      requireLowercase: false,
+      requireUppercase: false,
+      requireNumber: false,
+      requireSymbol: false,
+    },
+    passwordReset: {
+      tokenExpiresInMinutes: ROUTE_DISCOVERY_POSITIVE_INTEGER,
+    },
     csrf: {
       enabled: false,
-      cookieName: 'csrf_token',
-      headerName: 'X-CSRF-Token',
+      cookieName: 'route_discovery',
+      headerName: 'x-route-discovery',
     },
+  };
+}
+
+async function fetchServerRuntimeConfig(): Promise<AppRuntimeConfig> {
+  const apiBaseUrl = `${serverApiOrigin()}${environment.apiBaseUrl}`;
+  const response = await fetch(`${apiBaseUrl}/auth/client-config`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Không thể tải SSR runtime auth config: HTTP ${response.status}`);
+  }
+
+  const parsed = parseAuthClientConfigResponse(await response.json());
+
+  return {
+    apiBaseUrl,
+    appName: environment.appName,
+    production: environment.production,
+    ...parsed,
   };
 }
 

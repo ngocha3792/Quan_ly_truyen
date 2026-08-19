@@ -22,19 +22,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
         <strong>{{ metric.value }}</strong>
       </div>
-
-      <p [class.metric-trend--down]="metric.trendDirection === 'down'">
-        <app-studio-icon
-          [name]="metric.trendDirection === 'up' ? 'arrow-up' : 'arrow-down'"
-          [size]="13"
-        ></app-studio-icon>
-
-        <strong>
-          {{ metric.trendValue }}
-        </strong>
-
-        {{ metric.trendLabel }}
-      </p>
     </article>
   `,
 
@@ -134,26 +121,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      }
-
-      p {
-        display: flex;
-        grid-column: 1 / -1;
-        align-items: center;
-        gap: 4px;
-        margin: 4px 0 0;
-        color: var(--text-muted);
-        font-size: 11px;
-        white-space: nowrap;
-      }
-
-      p strong {
-        color: #4ade80;
-      }
-
-      .metric-trend--down strong,
-      .metric-trend--down {
-        color: #fb5b65;
       }
     `,
   ],

@@ -9,7 +9,10 @@ import {
   InvalidRefreshTokenException,
   OAuthFlowInvalidException,
 } from '../../../domain/exceptions';
-import { CSRF_TOKEN_PORT, type CsrfTokenPort } from '../../../application/ports';
+import {
+  CSRF_TOKEN_PORT,
+  type CsrfTokenPort,
+} from '../../../application/ports';
 
 import { readCookieFromHeader } from './cookie-header-reader';
 

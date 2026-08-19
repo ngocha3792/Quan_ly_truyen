@@ -125,7 +125,8 @@ export class PrismaTagRepository implements TagRepositoryPort {
         };
       });
     } catch (error: unknown) {
-      if (isUniqueViolation(error)) throw new TagNameAlreadyExistsException(name);
+      if (isUniqueViolation(error))
+        throw new TagNameAlreadyExistsException(name);
       throw error;
     }
   }
@@ -157,7 +158,8 @@ export class PrismaTagRepository implements TagRepositoryPort {
   ) {
     return this.prisma.$transaction(async (tx) => {
       const locked = await this.lockTags(tx, [sourceTagId, targetTagId]);
-      if (!locked.includes(sourceTagId)) throw new TagNotFoundException(sourceTagId);
+      if (!locked.includes(sourceTagId))
+        throw new TagNotFoundException(sourceTagId);
       if (!locked.includes(targetTagId))
         throw new TagMergeTargetNotFoundException(targetTagId);
       const [source, target, sourceLinks, targetLinks] = await Promise.all([
@@ -263,7 +265,11 @@ function page(pageNumber: number, pageSize: number, totalItems: number) {
   };
 }
 
-function taxonomySlug(base: string, attempt: number, maxLength: number): string {
+function taxonomySlug(
+  base: string,
+  attempt: number,
+  maxLength: number,
+): string {
   if (attempt === 0) return base.slice(0, maxLength).replace(/-+$/u, '');
   const candidate = createUniqueSlug(base, attempt + 1);
   if (candidate.length <= maxLength) return candidate;

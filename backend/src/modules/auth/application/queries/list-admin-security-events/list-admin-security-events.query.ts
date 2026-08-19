@@ -1,1 +1,3 @@
-export class ListAdminSecurityEventsQuery { constructor(readonly userId:string){} }
+export class ListAdminSecurityEventsQuery {
+  constructor(readonly userId: string) {}
+}

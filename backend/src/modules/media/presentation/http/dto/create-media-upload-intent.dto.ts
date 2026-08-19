@@ -1,5 +1,5 @@
 import {
-  IsEnum,
+  IsIn,
   IsInt,
   IsMimeType,
   IsString,
@@ -7,11 +7,14 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { MediaPurpose } from '@/generated/prisma/client';
+import {
+  MEDIA_PURPOSE_VALUES,
+  type MediaPurposeName,
+} from '../../../application/dto';
 
 export class CreateMediaUploadIntentDto {
-  @IsEnum(MediaPurpose)
-  purpose!: MediaPurpose;
+  @IsIn(MEDIA_PURPOSE_VALUES)
+  purpose!: MediaPurposeName;
 
   @IsUUID()
   ownerId!: string;

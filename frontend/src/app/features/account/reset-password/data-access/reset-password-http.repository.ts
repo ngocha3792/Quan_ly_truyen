@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, throwError } from 'rxjs';
 
 import { AuthApiService } from '../../../../core/auth/auth-api.service';
+import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiErrorEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   ResetPasswordConfig,
@@ -13,21 +14,23 @@ import {
 } from '../domain/reset-password.models';
 import { ResetPasswordRepository } from '../domain/reset-password.repository';
 
-const RESET_PASSWORD_CONFIG: ResetPasswordConfig = {
-  minimumLength: 8,
-  maximumLength: 72,
-  tokenExpiresInMinutes: 15,
-};
 
 @Injectable()
 export class ResetPasswordHttpRepository implements ResetPasswordRepository {
   private readonly authApi = inject(AuthApiService);
+  private readonly runtimeConfig = inject(APP_RUNTIME_CONFIG);
 
   getConfig(): Observable<ResetPasswordConfig> {
-    /*
-     * Backend hiện chưa có password-policy endpoint.
-     */
-    return of(RESET_PASSWORD_CONFIG);
+    return of({
+      minimumLength: this.runtimeConfig.passwordPolicy.minimumLength,
+      maximumLength: this.runtimeConfig.passwordPolicy.maximumLength,
+      maximumBytes: this.runtimeConfig.passwordPolicy.maximumBytes,
+      requireLowercase: this.runtimeConfig.passwordPolicy.requireLowercase,
+      requireUppercase: this.runtimeConfig.passwordPolicy.requireUppercase,
+      requireNumber: this.runtimeConfig.passwordPolicy.requireNumber,
+      requireSymbol: this.runtimeConfig.passwordPolicy.requireSymbol,
+      tokenExpiresInMinutes: this.runtimeConfig.passwordReset.tokenExpiresInMinutes,
+    });
   }
 
   validateToken(request: ResetPasswordTokenRequest): Observable<ResetPasswordTokenValidation> {

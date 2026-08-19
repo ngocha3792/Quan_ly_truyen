@@ -1,6 +1,5 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
 import {
@@ -56,36 +55,20 @@ export class ResetPasswordStore {
 
     this.tokenValidation.set(null);
 
-    forkJoin({
-      config: this.repository.getConfig(),
+    this.repository
+      .getConfig()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((config) => this.config.set(config));
 
-      validation: this.repository.validateToken({
-        token: normalizedToken,
-      }),
-    })
+    this.repository
+      .validateToken({ token: normalizedToken })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ config, validation }) => {
-          this.config.set(config);
-
+        next: (validation) => {
           this.tokenValidation.set(validation);
-
           this.status.set('ready');
         },
-
-        error: (error: unknown) => {
-          /*
-           * Fallback config phải khớp
-           * password policy backend.
-           */
-          this.config.set({
-            minimumLength: 8,
-            maximumLength: 72,
-            tokenExpiresInMinutes: 15,
-          });
-
-          this.handleTokenError(error);
-        },
+        error: (error: unknown) => this.handleTokenError(error),
       });
   }
 

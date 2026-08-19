@@ -19,6 +19,26 @@ env:
   NPM_VERSION: "11.12.1"
 
 jobs:
+  production-scope:
+    name: Product / Production V1 scope contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Verify Production V1 scope contract
+        run: node scripts/verify-production-scope.mjs --mode=contract
+
+      - name: Verify Production V1 FE-BE API contracts
+        run: node scripts/verify-api-contracts.mjs
+
   frontend-quality:
     name: Frontend / quality, tests and build
     runs-on: ubuntu-latest
@@ -870,6 +890,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - production-scope
       - frontend-quality
       - backend-quality
       - backend-integration
@@ -879,6 +900,7 @@ jobs:
     steps:
       - name: Verify all required jobs succeeded
         env:
+          PRODUCTION_SCOPE: ${{ needs.production-scope.result }}
           FRONTEND_QUALITY: ${{ needs.frontend-quality.result }}
           BACKEND_QUALITY: ${{ needs.backend-quality.result }}
           BACKEND_INTEGRATION: ${{ needs.backend-integration.result }}
@@ -888,6 +910,7 @@ jobs:
         shell: bash
         run: |
           for result in \
+            "$PRODUCTION_SCOPE" \
             "$FRONTEND_QUALITY" \
             "$BACKEND_QUALITY" \
             "$BACKEND_INTEGRATION" \

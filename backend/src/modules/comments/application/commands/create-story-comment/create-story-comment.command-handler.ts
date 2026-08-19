@@ -20,7 +20,8 @@ export class CreateStoryCommentCommandHandler {
   constructor(
     @Inject(COMMENT_PERSISTENCE_PORT)
     private readonly persistence: CommentPersistencePort,
-    @Inject(COMMENT_WRITE_GUARD_PORT) private readonly abuse: CommentWriteGuardPort,
+    @Inject(COMMENT_WRITE_GUARD_PORT)
+    private readonly abuse: CommentWriteGuardPort,
     @Inject(COMMENT_METRICS_PORT)
     private readonly metrics: CommentMetricsPort,
   ) {}

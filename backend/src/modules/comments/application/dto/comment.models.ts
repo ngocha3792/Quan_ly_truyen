@@ -1,4 +1,4 @@
-import type { ReactionName, ReportReasonName } from '../../domain';
+import type { ReactionName } from '../../domain';
 
 export type { ReactionName, ReportReasonName } from '../../domain';
 

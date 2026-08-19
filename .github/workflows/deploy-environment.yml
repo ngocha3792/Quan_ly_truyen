@@ -64,6 +64,24 @@ jobs:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
 
+      - name: Setup Node.js for release policy
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Verify Production V1 scope policy
+        shell: bash
+        env:
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+
+          node scripts/verify-production-scope.mjs --mode=contract
+
+          if [[ "${DEPLOY_ENVIRONMENT}" == "production" ]]; then
+            node scripts/verify-production-scope.mjs --mode=release
+          fi
+
       - name: Verify immutable SHA belongs to main
         id: source
         shell: bash

@@ -2,8 +2,7 @@ import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
-import { AuthorFollowApiService } from '../../shared/author-follow/data-access/author-follow-api.service';
-import { AuthorFollowMutation } from '../../shared/author-follow/domain/author-follow.models';
+import { AuthorFollowApiService, AuthorFollowMutation } from '@core/author-follow';
 import { AuthorDetailView } from '../domain/author-detail.models';
 import { AuthorDetailRepository } from '../domain/author-detail.repository';
 

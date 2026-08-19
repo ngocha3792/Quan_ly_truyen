@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { forkJoin, map, Observable } from 'rxjs';
 
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type { ReadingHistoryApiItem } from '../../../../core/http/reader-engagement-api.model';
@@ -17,9 +17,15 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
   private readonly api = inject(ReaderEngagementApiClient);
 
   getHistory(): Observable<ReadingHistoryView> {
-    return this.api.listReadingHistory().pipe(
-      map((entries) => {
-        const history = entries.filter((entry) => entry.currentChapter !== null).map(toHistoryItem);
+    return forkJoin({
+      entries: this.api.listReadingHistory(),
+      bookmarks: this.api.listReadingBookmarks(),
+    }).pipe(
+      map(({ entries, bookmarks }) => {
+        const bookmarkedChapterIds = new Set(bookmarks.map((bookmark) => bookmark.chapterId));
+        const history = entries
+          .filter((entry) => entry.currentChapter !== null)
+          .map((entry) => toHistoryItem(entry, bookmarkedChapterIds));
         const chaptersRead = entries.reduce((total, entry) => {
           return total + Math.round((entry.progressPercent / 100) * entry.story.chapterCount);
         }, 0);
@@ -29,8 +35,6 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
           statistics: {
             storiesRead: String(entries.length),
             chaptersRead: String(chaptersRead),
-            weeklyReadingTime: '—',
-            followedStories: '—',
           },
           continueReading: history.slice(0, 5).map((item) => ({
             id: item.id,
@@ -49,9 +53,20 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
   clearHistory(): Observable<void> {
     return this.api.clearReadingHistory();
   }
+
+  saveBookmark(chapterId: string): Observable<void> {
+    return this.api.upsertReadingBookmark(chapterId).pipe(map(() => undefined));
+  }
+
+  removeBookmark(chapterId: string): Observable<void> {
+    return this.api.removeReadingBookmark(chapterId);
+  }
 }
 
-function toHistoryItem(entry: ReadingHistoryApiItem): ReadingHistoryItem {
+function toHistoryItem(
+  entry: ReadingHistoryApiItem,
+  bookmarkedChapterIds: ReadonlySet<string>,
+): ReadingHistoryItem {
   const chapter = entry.currentChapter!;
   const lastReadMinutes = minutesSince(entry.lastReadAt);
   return {
@@ -60,8 +75,10 @@ function toHistoryItem(entry: ReadingHistoryApiItem): ReadingHistoryItem {
     title: entry.story.title,
     author: entry.story.author,
     genres: entry.story.categories,
+    chapterId: chapter.id,
     chapterNumber: chapter.number,
     chapterTitle: chapter.title,
+    bookmarked: bookmarkedChapterIds.has(chapter.id),
     progress: entry.progressPercent,
     lastReadLabel: relativeLabel(lastReadMinutes),
     lastReadMinutes,

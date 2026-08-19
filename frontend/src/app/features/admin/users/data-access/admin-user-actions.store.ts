@@ -27,8 +27,13 @@ export class AdminUserActionsStore {
     const user = this.requireUser();
     if (!user) return throwError(() => new Error('Không có người dùng để cập nhật.'));
 
+    const request =
+      reason === undefined
+        ? this.api.updateStatus(user.id, status)
+        : this.api.updateStatus(user.id, status, reason);
+
     return this.run(
-      this.api.updateStatus(user.id, status, reason),
+      request,
       status === 'ACTIVE'
         ? 'Tài khoản đã được kích hoạt.'
         : status === 'SUSPENDED'
@@ -67,7 +72,7 @@ export class AdminUserActionsStore {
       takeUntilDestroyed(this.destroyRef),
       tap((updated) => {
         if (revision !== this.lifecycle.revision()) return;
-        this.detailStore.load(updated.id);
+        this.detailStore.replace(updated);
         this.message.set(message);
       }),
       catchError((error: unknown) => {

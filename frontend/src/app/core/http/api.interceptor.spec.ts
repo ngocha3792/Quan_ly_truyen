@@ -30,6 +30,20 @@ describe('apiInterceptor', () => {
 
     production: false,
 
+    passwordPolicy: {
+      minimumLength: 8,
+      maximumLength: 72,
+      maximumBytes: 72,
+      requireLowercase: true,
+      requireUppercase: true,
+      requireNumber: true,
+      requireSymbol: true,
+    },
+
+    passwordReset: {
+      tokenExpiresInMinutes: 15,
+    },
+
     csrf: {
       enabled: true,
 

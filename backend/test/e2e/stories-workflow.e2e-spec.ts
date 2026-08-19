@@ -37,6 +37,7 @@ const AUTHOR_PERMISSIONS = [
   PermissionCode.RATING_UPDATE_OWN,
   PermissionCode.LIBRARY_MANAGE_OWN,
   PermissionCode.READING_HISTORY_MANAGE_OWN,
+  PermissionCode.READING_BOOKMARK_MANAGE_OWN,
 ] as const;
 
 const ADMIN_PERMISSIONS = [
@@ -57,6 +58,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
   const adminId = randomUUID();
   const authorSessionId = randomUUID();
   const intruderSessionId = randomUUID();
+  const intruderSecondSessionId = randomUUID();
   const adminSessionId = randomUUID();
 
   let categoryId: string | null = null;
@@ -293,6 +295,52 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
         story: expect.objectContaining({ id: storyId }) as unknown,
       }),
     ]);
+
+    const secondDeviceToken = token(intruderId, intruderSecondSessionId);
+
+    const bookmarkResponse = await request(httpServer())
+      .put(`/api/v1/reading-bookmarks/${chapter.id}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .send({})
+      .expect(200);
+    expect(
+      unwrap<{ chapterId: string; storyId: string }>(
+        bookmarkResponse.body as unknown,
+      ),
+    ).toMatchObject({ chapterId: chapter.id, storyId });
+
+    const bookmarkFromSecondDevice = await request(httpServer())
+      .get(`/api/v1/reading-bookmarks/${chapter.id}`)
+      .set('Authorization', `Bearer ${secondDeviceToken}`)
+      .expect(200);
+    expect(
+      unwrap<{ chapterId: string } | null>(
+        bookmarkFromSecondDevice.body as unknown,
+      ),
+    ).toMatchObject({ chapterId: chapter.id });
+
+    const bookmarkListFromSecondDevice = await request(httpServer())
+      .get('/api/v1/reading-bookmarks')
+      .set('Authorization', `Bearer ${secondDeviceToken}`)
+      .expect(200);
+    expect(
+      unwrap<Array<{ chapterId: string }>>(
+        bookmarkListFromSecondDevice.body as unknown,
+      ),
+    ).toEqual([expect.objectContaining({ chapterId: chapter.id })]);
+
+    await request(httpServer())
+      .delete(`/api/v1/reading-bookmarks/${chapter.id}`)
+      .set('Authorization', `Bearer ${secondDeviceToken}`)
+      .expect(204);
+
+    const bookmarkAfterRemoteDelete = await request(httpServer())
+      .get(`/api/v1/reading-bookmarks/${chapter.id}`)
+      .set('Authorization', `Bearer ${readerToken}`)
+      .expect(200);
+    expect(
+      unwrap<unknown>(bookmarkAfterRemoteDelete.body as unknown),
+    ).toBeNull();
 
     await request(httpServer())
       .put(`/api/v1/stories/${storyId}/rating`)
@@ -580,6 +628,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       data: [
         sessionRow(authorId, authorSessionId),
         sessionRow(intruderId, intruderSessionId),
+        sessionRow(intruderId, intruderSecondSessionId),
         sessionRow(adminId, adminSessionId),
       ],
     });

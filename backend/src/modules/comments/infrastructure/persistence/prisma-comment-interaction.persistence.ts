@@ -1,5 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { COMMENT_ABUSE_GUARD_PORT, COMMENT_WRITE_GUARD_PORT, type CommentAbuseGuardPort, type CommentInteractionPersistencePort, type CommentWriteGuardPort } from '../../application/ports';
+import {
+  COMMENT_ABUSE_GUARD_PORT,
+  COMMENT_WRITE_GUARD_PORT,
+  type CommentAbuseGuardPort,
+  type CommentInteractionPersistencePort,
+  type CommentWriteGuardPort,
+} from '../../application/ports';
 import {
   MediaPurpose,
   MediaResourceType,
@@ -79,8 +85,10 @@ type CommentViewRow = Prisma.CommentGetPayload<{
 export class PrismaCommentInteractionPersistence implements CommentInteractionPersistencePort {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(COMMENT_ABUSE_GUARD_PORT) private readonly abuse: CommentAbuseGuardPort,
-    @Inject(COMMENT_WRITE_GUARD_PORT) private readonly writeAbuse: CommentWriteGuardPort,
+    @Inject(COMMENT_ABUSE_GUARD_PORT)
+    private readonly abuse: CommentAbuseGuardPort,
+    @Inject(COMMENT_WRITE_GUARD_PORT)
+    private readonly writeAbuse: CommentWriteGuardPort,
     private readonly metrics: MetricsService,
   ) {}
 

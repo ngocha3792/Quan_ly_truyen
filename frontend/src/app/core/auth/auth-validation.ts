@@ -1,3 +1,5 @@
+import type { AuthPasswordPolicyConfig } from '../config/app-config.token';
+import { evaluatePasswordPolicy, passwordPolicyHint } from './password-policy';
 import { RegisterRequest } from './auth.models';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/;
@@ -7,7 +9,10 @@ const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Validate trước ở frontend để cải thiện UX.
  * Backend vẫn là nơi quyết định dữ liệu có hợp lệ hay không.
  */
-export function getRegisterValidationMessage(request: RegisterRequest): string | null {
+export function getRegisterValidationMessage(
+  request: RegisterRequest,
+  passwordPolicy: AuthPasswordPolicyConfig,
+): string | null {
   const email = request.email.trim();
   const username = request.username.trim();
   const displayName = request.displayName.trim();
@@ -29,23 +34,8 @@ export function getRegisterValidationMessage(request: RegisterRequest): string |
     return 'Tên hiển thị phải có độ dài từ 1 đến 120 ký tự.';
   }
 
-  const hasLowercase = /[a-z]/.test(password);
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
-
-  if (
-    password.length < 8 ||
-    password.length > 72 ||
-    !hasLowercase ||
-    !hasUppercase ||
-    !hasNumber ||
-    !hasSpecialCharacter
-  ) {
-    return [
-      'Mật khẩu phải dài 8–72 ký tự,',
-      'gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.',
-    ].join(' ');
+  if (!evaluatePasswordPolicy(password, passwordPolicy).valid) {
+    return passwordPolicyHint(passwordPolicy);
   }
 
   return null;

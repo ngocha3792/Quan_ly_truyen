@@ -204,11 +204,15 @@ for (const file of files) {
       continue;
     }
 
-    if (isPresentation && isInfrastructureImport(specifier)) {
+    if (
+      isPresentation &&
+      (isInfrastructureImport(specifier) || isGeneratedPrismaImport(specifier))
+    ) {
       violations.push({
         file: rel,
         specifier,
-        reason: 'presentation must call application contracts, not infrastructure adapters',
+        reason:
+          'presentation must depend on application/domain contracts, not infrastructure/Prisma',
       });
     }
   }

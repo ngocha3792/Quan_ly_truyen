@@ -69,11 +69,13 @@
       <button
         class="bookmark-button"
         type="button"
-        [class.bookmark-button--active]="bookmarkedIds.includes(item.id)"
+        [class.bookmark-button--active]="item.bookmarked"
         [attr.aria-label]="
-          bookmarkedIds.includes(item.id) ? 'Bỏ đánh dấu truyện' : 'Đánh dấu truyện'
+          item.bookmarked ? 'Bỏ đánh dấu chương' : 'Đánh dấu chương'
         "
-        (click)="bookmarkToggle.emit(item.id)"
+        [disabled]="bookmarkPendingChapterIds.includes(item.chapterId)"
+        [attr.aria-busy]="bookmarkPendingChapterIds.includes(item.chapterId)"
+        (click)="bookmarkToggle.emit(item.chapterId)"
       >
         <svg viewBox="0 0 24 24">
           <path d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18l-6-4-6 4V4Z"></path>

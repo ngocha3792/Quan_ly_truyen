@@ -19,7 +19,7 @@ export class ReadingHistoryListComponent {
   items: readonly ReadingHistoryItem[] = [];
 
   @Input()
-  bookmarkedIds: readonly string[] = [];
+  bookmarkPendingChapterIds: readonly string[] = [];
 
   @Output()
   readonly bookmarkToggle = new EventEmitter<string>();

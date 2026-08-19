@@ -577,12 +577,15 @@ function createCommentsFacade(
   reports: CreateCommentReportCommandHandler,
 ) {
   return {
-    createReply: (input: ConstructorParameters<typeof CreateCommentReplyCommand>[0]) =>
-      replies.execute(new CreateCommentReplyCommand(input)),
-    setReaction: (input: ConstructorParameters<typeof SetCommentReactionCommand>[0]) =>
-      reactions.execute(new SetCommentReactionCommand(input)),
-    createReport: (input: ConstructorParameters<typeof CreateCommentReportCommand>[0]) =>
-      reports.execute(new CreateCommentReportCommand(input)),
+    createReply: (
+      input: ConstructorParameters<typeof CreateCommentReplyCommand>[0],
+    ) => replies.execute(new CreateCommentReplyCommand(input)),
+    setReaction: (
+      input: ConstructorParameters<typeof SetCommentReactionCommand>[0],
+    ) => reactions.execute(new SetCommentReactionCommand(input)),
+    createReport: (
+      input: ConstructorParameters<typeof CreateCommentReportCommand>[0],
+    ) => reports.execute(new CreateCommentReportCommand(input)),
   };
 }
 

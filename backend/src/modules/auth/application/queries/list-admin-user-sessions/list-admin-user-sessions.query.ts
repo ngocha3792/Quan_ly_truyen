@@ -1,1 +1,3 @@
-export class ListAdminUserSessionsQuery { constructor(readonly userId:string){} }
+export class ListAdminUserSessionsQuery {
+  constructor(readonly userId: string) {}
+}

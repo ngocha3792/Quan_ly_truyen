@@ -1,0 +1,1200 @@
+{
+  "schemaVersion": 1,
+  "scope": "Production V1 important user-facing screens",
+  "screens": [
+    {
+      "id": "runtime-auth-entry",
+      "title": "Auth bootstrap / login / register",
+      "frontendRoute": "global bootstrap + auth dialog",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/auth/client-config",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts",
+            "tokens": [
+              "@Controller('auth')",
+              "@Get('client-config')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/config/app-runtime-config.loader.ts",
+              "tokens": [
+                "/auth/client-config",
+                "parseAuthClientConfigResponse"
+              ]
+            },
+            {
+              "file": "frontend/src/app/core/config/app-runtime-config.server.ts",
+              "tokens": [
+                "/auth/client-config",
+                "parseAuthClientConfigResponse"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/auth/login",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-token.controller.ts",
+            "tokens": [
+              "@Controller('auth')",
+              "@Post('login')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/login`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/auth/register",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
+            "tokens": [
+              "@Controller('auth')",
+              "@Post('register')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/register`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/auth/me",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-account.controller.ts",
+            "tokens": [
+              "@Controller('auth')",
+              "@Get('me')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/me`"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "password-recovery",
+      "title": "Forgot / reset password",
+      "frontendRoute": "/quen-mat-khau + /dat-lai-mat-khau",
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/auth/forgot-password",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
+            "tokens": [
+              "@Post('forgot-password')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/forgot-password`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/auth/reset-password/validate",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
+            "tokens": [
+              "@Post('reset-password/validate')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/reset-password/validate`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/auth/reset-password",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
+            "tokens": [
+              "@Post('reset-password')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/auth/auth-api.service.ts",
+              "tokens": [
+                "`${this.baseUrl}/reset-password`"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account-profile",
+      "title": "Account profile / preferences / security",
+      "frontendRoute": "/tai-khoan/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/users/me",
+          "backend": {
+            "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
+            "tokens": [
+              "@Controller('users')",
+              "@Get('me')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
+              "tokens": [
+                "`${this.usersUrl}/me`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/me",
+          "backend": {
+            "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
+            "tokens": [
+              "@Patch('me')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
+              "tokens": [
+                "`${this.usersUrl}/me`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/auth/change-password",
+          "backend": {
+            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
+            "tokens": [
+              "@Post('change-password')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/profile/security/data/account-security-api.service.ts",
+              "tokens": [
+                "`${this.authUrl}/change-password`"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "public-catalog-story",
+      "title": "Public catalog / story detail",
+      "frontendRoute": "/truyen + /truyen/:slug",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/stories",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
+            "tokens": [
+              "@Controller('stories')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/public-stories-api.client.ts",
+              "tokens": [
+                "/stories"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/stories/:slug",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
+            "tokens": [
+              "@Get(':slug')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/public-stories-api.client.ts",
+              "tokens": [
+                "encodeURIComponent(slug)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chapter-reader",
+      "title": "Chapter reader / progress / bookmark",
+      "frontendRoute": "/truyen/:slug/chuong-:chapter",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/stories/:storySlug/chapters/:chapterNumber",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts",
+            "tokens": [
+              "@Get(':storySlug/chapters/:chapterNumber')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts",
+              "tokens": [
+                "getChapter"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/reading-progress/:storyId",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
+            "tokens": [
+              "@Put('reading-progress/:storyId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
+              "tokens": [
+                "/reading-progress/"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/reading-bookmarks/:chapterId",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
+            "tokens": [
+              "@Controller('reading-bookmarks')",
+              "@Get(':chapterId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
+              "tokens": [
+                "getReadingBookmark"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/reading-bookmarks/:chapterId",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
+            "tokens": [
+              "@Put(':chapterId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
+              "tokens": [
+                "upsertReadingBookmark"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/reading-bookmarks/:chapterId",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
+            "tokens": [
+              "@Delete(':chapterId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
+              "tokens": [
+                "removeReadingBookmark"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "my-library",
+      "title": "My Library",
+      "frontendRoute": "/thu-vien",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/library",
+          "backend": {
+            "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
+            "tokens": [
+              "@Get('library')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
+              "tokens": [
+                "listLibrary"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/library/:storyId",
+          "backend": {
+            "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
+            "tokens": [
+              "@Put('library/:storyId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
+              "tokens": [
+                "upsertLibrary"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reading-history",
+      "title": "Reading history",
+      "frontendRoute": "/lich-su-doc",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/reading-history",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
+            "tokens": [
+              "@Get('reading-history')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
+              "tokens": [
+                "listReadingHistory"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/reading-bookmarks",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
+            "tokens": [
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
+              "tokens": [
+                "listReadingBookmarks"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-following",
+      "title": "Follow authors / following list",
+      "frontendRoute": "/dang-theo-doi + public author surfaces",
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/authors/:authorId/follow",
+          "backend": {
+            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
+            "tokens": [
+              "@Post('authors/:authorId/follow')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
+              "tokens": [
+                "/follow"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/authors/:authorId/follow",
+          "backend": {
+            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
+            "tokens": [
+              "@Delete('authors/:authorId/follow')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
+              "tokens": [
+                "/follow"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/me/following",
+          "backend": {
+            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
+            "tokens": [
+              "@Get('me/following')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
+              "tokens": [
+                "/me/following"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "title": "Notifications",
+      "frontendRoute": "/thong-bao",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/notifications",
+          "backend": {
+            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
+            "tokens": [
+              "@Controller('notifications')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
+              "tokens": [
+                "this.baseUrl"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/notifications/:notificationId/read",
+          "backend": {
+            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
+            "tokens": [
+              "@Patch(':notificationId/read')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
+              "tokens": [
+                "/read"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/notifications/settings",
+          "backend": {
+            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
+            "tokens": [
+              "@Patch('settings')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
+              "tokens": [
+                "/settings"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-application",
+      "title": "Author application",
+      "frontendRoute": "/dang-ky-tac-gia",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/author-applications/config",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
+            "tokens": [
+              "@Get('config')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
+              "tokens": [
+                "/config"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/author-applications/me/draft",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
+            "tokens": [
+              "@Put('me/draft')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
+              "tokens": [
+                "/me/draft"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author-applications/me/submit",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
+            "tokens": [
+              "@Post('me/submit')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
+              "tokens": [
+                "/me/submit"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-dashboard-profile",
+      "title": "Author dashboard / profile",
+      "frontendRoute": "/author-studio + /author-studio/profile",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/author/dashboard",
+          "backend": {
+            "file": "backend/src/modules/authors/presentation/http/controllers/author-dashboard.controller.ts",
+            "tokens": [
+              "@Controller('author/dashboard')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts",
+              "tokens": [
+                "/author/dashboard"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/profile",
+          "backend": {
+            "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
+            "tokens": [
+              "@Controller('author/profile')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
+              "tokens": [
+                "/author/profile"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/author/profile",
+          "backend": {
+            "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
+            "tokens": [
+              "@Patch()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
+              "tokens": [
+                "/author/profile"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-story-studio",
+      "title": "Author story / chapter studio",
+      "frontendRoute": "/author-studio/truyen/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/author/stories",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
+            "tokens": [
+              "@Controller('author/stories')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
+              "tokens": [
+                "this.storiesUrl"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
+            "tokens": [
+              "@Post()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
+              "tokens": [
+                "this.storiesUrl, input"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/chapters",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
+            "tokens": [
+              "@Controller('author/stories/:storyId/chapters')",
+              "@Post()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
+              "tokens": [
+                "/chapters`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/chapters/:chapterId/publish",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
+            "tokens": [
+              "@Post(':chapterId/publish')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
+              "tokens": [
+                "/publish`"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-analytics",
+      "title": "Author analytics",
+      "frontendRoute": "/author-studio/analytics/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/author/analytics/overview",
+          "backend": {
+            "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
+            "tokens": [
+              "@Get('overview')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
+              "tokens": [
+                "/author/analytics/overview"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/analytics/stories",
+          "backend": {
+            "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
+            "tokens": [
+              "@Get('stories')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
+              "tokens": [
+                "/author/analytics/stories"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-users",
+      "title": "Admin users",
+      "frontendRoute": "/admin/users/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/users",
+          "backend": {
+            "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
+            "tokens": [
+              "@Controller('admin/users')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
+              "tokens": [
+                "this.baseUrl"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/users/:userId/status",
+          "backend": {
+            "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
+            "tokens": [
+              "@Patch(':userId/status')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
+              "tokens": [
+                "/status"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-authors",
+      "title": "Admin authors",
+      "frontendRoute": "/admin/authors/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/authors",
+          "backend": {
+            "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
+            "tokens": [
+              "@Controller('admin/authors')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
+              "tokens": [
+                "this.baseUrl"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/authors/:authorId/status",
+          "backend": {
+            "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
+            "tokens": [
+              "@Patch(':authorId/status')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
+              "tokens": [
+                "/status"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-story-review",
+      "title": "Admin story review",
+      "frontendRoute": "/admin/stories/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/story-submissions",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-moderation.controller.ts",
+            "tokens": [
+              "@Controller('admin/story-submissions')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
+              "tokens": [
+                "/admin/story-submissions"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/story-submissions/:submissionId/approve",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
+            "tokens": [
+              "@Post(':submissionId/approve')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
+              "tokens": [
+                "/approve"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/story-submissions/:submissionId/reject",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
+            "tokens": [
+              "@Post(':submissionId/reject')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
+              "tokens": [
+                "/reject"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-reports",
+      "title": "Admin reports / moderation",
+      "frontendRoute": "/admin/reports/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/reports",
+          "backend": {
+            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
+            "tokens": [
+              "@Controller('admin/reports')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
+              "tokens": [
+                "this.reportsUrl"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/reports/:reportId/resolve",
+          "backend": {
+            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
+            "tokens": [
+              "@Post(':reportId/resolve')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
+              "tokens": [
+                "resolve"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/reports/:reportId/reject",
+          "backend": {
+            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
+            "tokens": [
+              "@Post(':reportId/reject')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
+              "tokens": [
+                "reject"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-taxonomy",
+      "title": "Admin categories / tags",
+      "frontendRoute": "/admin/categories + /admin/tags",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/categories",
+          "backend": {
+            "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
+            "tokens": [
+              "@Controller('admin/categories')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
+              "tokens": [
+                "/admin/categories"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/categories",
+          "backend": {
+            "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
+            "tokens": [
+              "@Post()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
+              "tokens": [
+                "this.url, input"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/admin/tags",
+          "backend": {
+            "file": "backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts",
+            "tokens": [
+              "@Controller('admin/tags')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/tags/data-access/admin-tags-api.service.ts",
+              "tokens": [
+                "/admin/tags"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-author-applications",
+      "title": "Admin author applications",
+      "frontendRoute": "/admin/author-applications/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/author-applications/admin",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
+            "tokens": [
+              "@Controller('author-applications/admin')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
+              "tokens": [
+                "/author-applications/admin"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author-applications/admin/:applicationId/approve",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
+            "tokens": [
+              "@Post(':applicationId/approve')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
+              "tokens": [
+                "/approve"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author-applications/admin/:applicationId/reject",
+          "backend": {
+            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
+            "tokens": [
+              "@Post(':applicationId/reject')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
+              "tokens": [
+                "/reject"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-audit",
+      "title": "Admin audit logs",
+      "frontendRoute": "/admin/audit-logs/*",
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/audit-logs",
+          "backend": {
+            "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
+            "tokens": [
+              "@Controller('admin/audit-logs')",
+              "@Get()"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
+              "tokens": [
+                "/admin/audit-logs"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/admin/audit-logs/:auditLogId",
+          "backend": {
+            "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
+            "tokens": [
+              "@Get(':auditLogId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
+              "tokens": [
+                "encodeURIComponent(id)"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,9 +4,7 @@ import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import type { CommentAbuseRateLimitStorePort } from '../../application';
 
 @Injectable()
-export class RedisCommentAbuseRateLimitStoreAdapter
-  implements CommentAbuseRateLimitStorePort
-{
+export class RedisCommentAbuseRateLimitStoreAdapter implements CommentAbuseRateLimitStorePort {
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis | null) {}
 
   get available(): boolean {

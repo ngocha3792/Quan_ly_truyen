@@ -16,7 +16,10 @@ import { OAuthProvider } from '@/generated/prisma/client';
 import { REDIS_CLIENT } from '@/infrastructure/cache/redis/redis.constants';
 import { PrismaService } from '@/infrastructure/database';
 
-import type { LoginResultDto, OAuthAuthorizationResultDto } from '../../application/dto';
+import type {
+  LoginResultDto,
+  OAuthAuthorizationResultDto,
+} from '../../application/dto';
 import { LoginResultMapper } from '../../application/mappers';
 import {
   AUTH_TOKEN_ISSUER_PORT,
@@ -54,7 +57,6 @@ interface OAuthStateRecord {
   expiresAt: string;
   client: LoginClientContext;
 }
-
 
 interface OAuthProfile {
   provider: OAuthProvider;

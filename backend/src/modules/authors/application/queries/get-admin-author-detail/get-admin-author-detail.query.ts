@@ -1,1 +1,3 @@
-export class GetAdminAuthorDetailQuery { constructor(readonly authorId:string){} }
+export class GetAdminAuthorDetailQuery {
+  constructor(readonly authorId: string) {}
+}

@@ -84,6 +84,21 @@ Khi phải restore production thật:
 
 `Restore-Postgres.ps1` verify checksum/archive trước khi dừng API/worker và tạo safety backup mặc định trước thao tác destructive. Sau restore phải chạy postdeploy gate và Auth smoke test.
 
+## Production V1 scope gate
+
+Production scope is declared in `ops/production/production-v1.scope.json` and explained in `ops/production/PRODUCTION_V1_SCOPE.md`. The contract is checked in normal CI; production deployment additionally requires every `required` feature to be `ready`.
+
+Run from repository root:
+
+```bash
+node scripts/verify-production-scope.mjs --mode=contract
+node scripts/verify-production-scope.mjs --mode=release
+```
+
+Do not bypass this gate by changing a blocker to `ready` without closing the implementation/configuration requirement. Deferred features may keep future-facing persistence fields, but they must remain hidden from the Production V1 UX.
+
+The initial V1 gate intentionally blocks production for persisted reader bookmarks, verified production media configuration and final public static-content review. Staging can continue to deploy while those blockers are being closed.
+
 ## Auth release checklist
 
 - `LogoutAllCommandHandler` chỉ gọi persistence đúng một lần.

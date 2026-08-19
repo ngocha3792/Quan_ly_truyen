@@ -18,7 +18,6 @@ import type { OAuthHandoffPort } from '../../application/ports';
 import type { OAuthHandoffResultDto } from '../../application/dto';
 import { OAuthFlowInvalidException } from '../../domain/exceptions';
 
-
 @Injectable()
 export class OAuthHandoffStore implements OAuthHandoffPort {
   private readonly config: AuthConfig;

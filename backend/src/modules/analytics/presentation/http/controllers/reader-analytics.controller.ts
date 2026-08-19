@@ -11,7 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import type { AnalyticsConfig } from '@/config';
 import { ClientIp, CurrentUserId, Public } from '@/common/decorators';
 import { OptionalJwtAuthGuard } from '@/common/guards';
-import { IngestReaderAnalyticsCommand, IngestReaderAnalyticsCommandHandler } from '../../../application';
+import {
+  IngestReaderAnalyticsCommand,
+  IngestReaderAnalyticsCommandHandler,
+} from '../../../application';
 import { IngestReaderAnalyticsRequest } from '../requests/ingest-reader-analytics.request';
 
 @Controller('reader-analytics')
@@ -42,11 +45,13 @@ export class ReaderAnalyticsController {
     @ClientIp() ipAddress: string | undefined,
     @Body() request: IngestReaderAnalyticsRequest,
   ) {
-    return this.ingestion.execute(new IngestReaderAnalyticsCommand({
-      userId,
-      anonymousReaderId: request.anonymousReaderId,
-      ipAddress,
-      events: request.events,
-    }));
+    return this.ingestion.execute(
+      new IngestReaderAnalyticsCommand({
+        userId,
+        anonymousReaderId: request.anonymousReaderId,
+        ipAddress,
+        events: request.events,
+      }),
+    );
   }
 }

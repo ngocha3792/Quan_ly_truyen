@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
-import { AuthorFollowApiService } from '../../../../public/shared/author-follow/data-access/author-follow-api.service';
-import { FollowingAuthorItem } from '../../../../public/shared/author-follow/domain/author-follow.models';
+import { AuthorFollowApiService, FollowingAuthorItem } from '@core/author-follow';
 
 @Component({
   selector: 'app-following-page',

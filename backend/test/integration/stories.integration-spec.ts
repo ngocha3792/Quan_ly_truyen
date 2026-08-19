@@ -500,7 +500,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         updatedAt: new Date(),
       }),
     ]);
-    expect(ratingResults.every((result) => result.status === 'updated')).toBe(true);
+    expect(ratingResults.every((result) => result.status === 'updated')).toBe(
+      true,
+    );
     const ratedStory = await prisma.story.findUniqueOrThrow({
       where: { id: story.id },
       select: { ratingCount: true, ratingAverage: true },

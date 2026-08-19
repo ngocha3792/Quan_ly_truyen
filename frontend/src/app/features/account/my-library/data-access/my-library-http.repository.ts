@@ -70,7 +70,6 @@ function toLibraryStory(entry: LibraryEntryApiItem): LibraryStory {
     lastReadLabel: relativeLabel(lastReadMinutes),
     lastReadMinutes,
     isReading: entry.status === 'READING',
-    isFollowing: false,
     isFavorite: entry.isFavorite,
     isCompleted: entry.status === 'COMPLETED',
     coverInitials: initials(entry.story.title),

@@ -136,6 +136,10 @@ export class ChapterReaderPageComponent implements OnInit {
     );
   }
 
+  protected toggleBookmark(): void {
+    this.runAuthenticated(() => this.store.toggleBookmark());
+  }
+
   private runAuthenticated(action: () => void): void {
     const returnUrl = this.router.url;
     resolveAuthGuardState(this.auth).subscribe((resolution) => {

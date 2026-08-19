@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  Prisma,
-  ReportReason,
-  ReportStatus,
-} from '@/generated/prisma/client';
+import { Prisma, ReportStatus } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
 import {
   ReportAlreadyClosedException,
@@ -26,8 +22,8 @@ export class PrismaReportRepository implements ReportRepositoryPort {
     const searchReported = query.reportedUser?.trim();
     const where: Prisma.ReportWhereInput = {
       targetType: 'COMMENT',
-      ...(query.status ? { status: query.status as ReportStatus } : {}),
-      ...(query.reason ? { reason: query.reason as ReportReason } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.reason ? { reason: query.reason } : {}),
       ...(query.createdFrom || query.createdTo
         ? {
             createdAt: {
@@ -214,7 +210,9 @@ export class PrismaReportRepository implements ReportRepositoryPort {
         throw new ReportAlreadyClosedException();
       const now = new Date();
       const status =
-        input.status === 'RESOLVED' ? ReportStatus.RESOLVED : ReportStatus.REJECTED;
+        input.status === 'RESOLVED'
+          ? ReportStatus.RESOLVED
+          : ReportStatus.REJECTED;
       await tx.report.update({
         where: { id: report.id },
         data: {

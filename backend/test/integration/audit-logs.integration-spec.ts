@@ -94,16 +94,18 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
 
-    const result = await listAuditLogs.execute(new ListAuditLogsQuery({
-      actorId,
-      entityType: 'user',
-      entityId,
-      requestId,
-      from: new Date(first.createdAt.getTime() - 1_000),
-      to: new Date(second.createdAt.getTime() + 1_000),
-      page: 1,
-      pageSize: 20,
-    }));
+    const result = await listAuditLogs.execute(
+      new ListAuditLogsQuery({
+        actorId,
+        entityType: 'user',
+        entityId,
+        requestId,
+        from: new Date(first.createdAt.getTime() - 1_000),
+        to: new Date(second.createdAt.getTime() + 1_000),
+        page: 1,
+        pageSize: 20,
+      }),
+    );
 
     expect(result.items.map((item) => item.id)).toEqual([second.id, first.id]);
     expect(result.pagination.totalItems).toBe(2);
@@ -137,7 +139,9 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
 
-    const detail = await getAuditLogDetail.execute(new GetAuditLogDetailQuery(row.id));
+    const detail = await getAuditLogDetail.execute(
+      new GetAuditLogDetailQuery(row.id),
+    );
     const serialized = JSON.stringify(detail);
     for (const secret of [
       'DO_NOT_LEAK_1',
@@ -165,7 +169,9 @@ describe('Audit log PostgreSQL read-side', () => {
       },
     });
     await prisma.user.delete({ where: { id: actorId } });
-    const detail = await getAuditLogDetail.execute(new GetAuditLogDetailQuery(row.id));
+    const detail = await getAuditLogDetail.execute(
+      new GetAuditLogDetailQuery(row.id),
+    );
     expect(detail.action).toBe('future.some.action');
     expect(detail.entity.type).toBe('future_entity');
     expect(detail.actor).toBeNull();
@@ -173,12 +179,14 @@ describe('Audit log PostgreSQL read-side', () => {
 
   it('rejects reversed date ranges', async () => {
     await expect(
-      listAuditLogs.execute(new ListAuditLogsQuery({
-        from: new Date('2026-08-16T12:00:00Z'),
-        to: new Date('2026-08-15T12:00:00Z'),
-        page: 1,
-        pageSize: 20,
-      })),
+      listAuditLogs.execute(
+        new ListAuditLogsQuery({
+          from: new Date('2026-08-16T12:00:00Z'),
+          to: new Date('2026-08-15T12:00:00Z'),
+          page: 1,
+          pageSize: 20,
+        }),
+      ),
     ).rejects.toMatchObject({ code: 'AUDIT_INVALID_DATE_RANGE' });
   });
 

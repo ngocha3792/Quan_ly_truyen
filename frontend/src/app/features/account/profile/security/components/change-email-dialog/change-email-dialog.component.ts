@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
 
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import { APP_RUNTIME_CONFIG } from '../../../../../../core/config/app-config.token';
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
 import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
@@ -75,7 +76,7 @@ interface ChangeEmailForm {
           icon="lock"
           autocomplete="current-password"
           placeholder="Nhập mật khẩu hiện tại"
-          [maxLength]="72"
+          [maxLength]="passwordMaximumLength"
           formControlName="currentPassword"
           [error]="currentPasswordError"
         />
@@ -109,6 +110,8 @@ interface ChangeEmailForm {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangeEmailDialogComponent {
+  protected readonly passwordMaximumLength = inject(APP_RUNTIME_CONFIG).passwordPolicy.maximumLength;
+
   readonly open = input(false);
 
   readonly submitting = input(false);
@@ -129,7 +132,7 @@ export class ChangeEmailDialogComponent {
     currentPassword: new FormControl('', {
       nonNullable: true,
 
-      validators: [Validators.required, Validators.maxLength(72)],
+      validators: [Validators.required, Validators.maxLength(this.passwordMaximumLength)],
     }),
   });
 

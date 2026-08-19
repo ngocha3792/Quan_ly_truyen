@@ -14,7 +14,10 @@ export interface MediaUploadPolicy {
 
 const MB = 1024 * 1024;
 
-export const MEDIA_UPLOAD_POLICIES: Record<MediaPurposeName, MediaUploadPolicy> = {
+export const MEDIA_UPLOAD_POLICIES: Record<
+  MediaPurposeName,
+  MediaUploadPolicy
+> = {
   AVATAR: {
     resourceType: 'image',
     uploadPresetConfigKey: 'cloudinary.uploadPresets.avatar',

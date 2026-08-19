@@ -20,7 +20,7 @@ export class ReadingHistoryStore {
   readonly query = signal('');
   readonly period = signal<ReadingHistoryPeriod>('all');
   readonly sort = signal<ReadingHistorySort>('recent');
-  readonly bookmarkedIds = signal<readonly string[]>([]);
+  readonly bookmarkPendingChapterIds = signal<readonly string[]>([]);
   readonly syncState = signal<ReadingHistorySyncState>('idle');
 
   readonly filteredHistory = computed(() => {
@@ -65,10 +65,35 @@ export class ReadingHistoryStore {
     this.sort.set(sort);
   }
 
-  toggleBookmark(historyId: string): void {
-    this.bookmarkedIds.update((ids) =>
-      ids.includes(historyId) ? ids.filter((id) => id !== historyId) : [...ids, historyId],
-    );
+  toggleBookmark(chapterId: string): void {
+    const current = this.viewState();
+    if (!current || this.bookmarkPendingChapterIds().includes(chapterId)) return;
+
+    const item = current.history.find((candidate) => candidate.chapterId === chapterId);
+    if (!item) return;
+
+    const previous = item.bookmarked;
+    this.setBookmarkState(chapterId, !previous);
+    this.bookmarkPendingChapterIds.update((ids) => [...ids, chapterId]);
+
+    const request$ = previous
+      ? this.repository.removeBookmark(chapterId)
+      : this.repository.saveBookmark(chapterId);
+
+    request$
+      .pipe(
+        catchError(() => {
+          this.setBookmarkState(chapterId, previous);
+          this.error.set('Không thể cập nhật đánh dấu chương.');
+          return EMPTY;
+        }),
+        finalize(() =>
+          this.bookmarkPendingChapterIds.update((ids) =>
+            ids.filter((id) => id !== chapterId),
+          ),
+        ),
+      )
+      .subscribe();
   }
 
   clearHistory(): void {
@@ -87,11 +112,10 @@ export class ReadingHistoryStore {
                 ...current.statistics,
                 storiesRead: '0',
                 chaptersRead: '0',
-                weeklyReadingTime: '—',
               },
             });
           }
-          this.bookmarkedIds.set([]);
+          this.bookmarkPendingChapterIds.set([]);
         }),
         catchError(() => {
           this.error.set('Không thể xóa lịch sử đọc.');
@@ -126,6 +150,20 @@ export class ReadingHistoryStore {
         finalize(() => this.loading.set(false)),
       )
       .subscribe();
+  }
+
+
+  private setBookmarkState(chapterId: string, bookmarked: boolean): void {
+    this.viewState.update((current) =>
+      current
+        ? {
+            ...current,
+            history: current.history.map((item) =>
+              item.chapterId === chapterId ? { ...item, bookmarked } : item,
+            ),
+          }
+        : current,
+    );
   }
 
   private matchesSelectedPeriod(lastReadMinutes: number): boolean {

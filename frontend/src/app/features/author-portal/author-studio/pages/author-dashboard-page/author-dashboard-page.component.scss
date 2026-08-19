@@ -37,7 +37,7 @@
 .metric-grid {
   order: 2;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
@@ -52,7 +52,7 @@ app-dashboard-bottom-panels {
   min-width: 0;
   gap: 1.25rem;
   margin-top: 1.25rem;
-  grid-template-columns: minmax(0, 1.38fr) minmax(380px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
 }
 

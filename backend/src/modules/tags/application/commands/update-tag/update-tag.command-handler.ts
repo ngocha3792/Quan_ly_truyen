@@ -1,2 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common'; import { normalizeTagName } from '../../../domain'; import { TAG_REPOSITORY, type TagRepositoryPort } from '../../ports'; import { UpdateTagCommand } from './update-tag.command';
-@Injectable() export class UpdateTagCommandHandler { constructor(@Inject(TAG_REPOSITORY) private readonly repository: TagRepositoryPort) {} execute(command: UpdateTagCommand) { return this.repository.update(command.id, normalizeTagName(command.name), command.audit); } }
+import { Inject, Injectable } from '@nestjs/common';
+import { normalizeTagName } from '../../../domain';
+import { TAG_REPOSITORY, type TagRepositoryPort } from '../../ports';
+import { UpdateTagCommand } from './update-tag.command';
+@Injectable()
+export class UpdateTagCommandHandler {
+  constructor(
+    @Inject(TAG_REPOSITORY) private readonly repository: TagRepositoryPort,
+  ) {}
+  execute(command: UpdateTagCommand) {
+    return this.repository.update(
+      command.id,
+      normalizeTagName(command.name),
+      command.audit,
+    );
+  }
+}

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthorProfileSocialLinks, AuthorProfileView, UpdateAuthorProfileInput } from '../../application/dto';
+import type {
+  AuthorProfileSocialLinks,
+  AuthorProfileView,
+  UpdateAuthorProfileInput,
+} from '../../application/dto';
 import type { AuthorProfilePersistencePort } from '../../application/ports';
 import {
   AuthorLifecycleStatus,

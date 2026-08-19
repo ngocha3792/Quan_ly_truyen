@@ -82,4 +82,6 @@ export interface ModerationPersistencePort {
   }): Promise<void>;
 }
 
-export const MODERATION_PERSISTENCE_PORT = Symbol('MODERATION_PERSISTENCE_PORT');
+export const MODERATION_PERSISTENCE_PORT = Symbol(
+  'MODERATION_PERSISTENCE_PORT',
+);

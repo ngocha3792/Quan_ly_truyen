@@ -50,12 +50,8 @@ export class ResetPasswordCardComponent implements OnChanges {
   @Input()
   status: ResetPasswordStatus = 'idle';
 
-  @Input()
-  config: ResetPasswordConfig = {
-    minimumLength: 8,
-    maximumLength: 64,
-    tokenExpiresInMinutes: 15,
-  };
+  @Input({ required: true })
+  config!: ResetPasswordConfig;
 
   @Input()
   tokenValidation: ResetPasswordTokenValidation | null = null;
@@ -80,7 +76,7 @@ export class ResetPasswordCardComponent implements OnChanges {
       password: new FormControl('', {
         nonNullable: true,
 
-        validators: [Validators.required, passwordComplexityValidator(8), Validators.maxLength(72)],
+        validators: [Validators.required],
       }),
 
       confirmPassword: new FormControl('', {
@@ -99,7 +95,7 @@ export class ResetPasswordCardComponent implements OnChanges {
       this.passwordControl.setValidators([
         Validators.required,
 
-        passwordComplexityValidator(this.config.minimumLength),
+        passwordComplexityValidator(this.config),
 
         Validators.maxLength(this.config.maximumLength),
       ]);
@@ -154,16 +150,24 @@ export class ResetPasswordCardComponent implements OnChanges {
     return this.passwordControl.value.length >= this.config.minimumLength;
   }
 
+  protected hasMaximumBytes(): boolean {
+    return new TextEncoder().encode(this.passwordControl.value).length <= this.config.maximumBytes;
+  }
+
+  protected hasLowercase(): boolean {
+    return !this.config.requireLowercase || /[a-z]/.test(this.passwordControl.value);
+  }
+
   protected hasUppercase(): boolean {
-    return /[A-Z]/.test(this.passwordControl.value);
+    return !this.config.requireUppercase || /[A-Z]/.test(this.passwordControl.value);
   }
 
   protected hasNumber(): boolean {
-    return /[0-9]/.test(this.passwordControl.value);
+    return !this.config.requireNumber || /[0-9]/.test(this.passwordControl.value);
   }
 
   protected hasSpecialCharacter(): boolean {
-    return /[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]';`~]/.test(this.passwordControl.value);
+    return !this.config.requireSymbol || /[^A-Za-z0-9]/.test(this.passwordControl.value);
   }
 
   protected handleSubmit(): void {

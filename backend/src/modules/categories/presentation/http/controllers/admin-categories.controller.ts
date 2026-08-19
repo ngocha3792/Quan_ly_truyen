@@ -59,7 +59,12 @@ export class AdminCategoriesController {
     @RequestId() requestId: string | undefined,
   ) {
     return this.createCategory.execute(
-      new CreateCategoryCommand(request, { actorId, ipAddress, userAgent, requestId }),
+      new CreateCategoryCommand(request, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
     );
   }
 
@@ -74,7 +79,12 @@ export class AdminCategoriesController {
     @RequestId() requestId: string | undefined,
   ) {
     return this.updateCategory.execute(
-      new UpdateCategoryCommand(categoryId, request, { actorId, ipAddress, userAgent, requestId }),
+      new UpdateCategoryCommand(categoryId, request, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
     );
   }
 
@@ -89,7 +99,12 @@ export class AdminCategoriesController {
     @RequestId() requestId: string | undefined,
   ): Promise<void> {
     await this.deleteCategory.execute(
-      new DeleteCategoryCommand(categoryId, { actorId, ipAddress, userAgent, requestId }),
+      new DeleteCategoryCommand(categoryId, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
     );
   }
 }

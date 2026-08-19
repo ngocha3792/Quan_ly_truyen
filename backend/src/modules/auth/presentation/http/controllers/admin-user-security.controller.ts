@@ -37,9 +37,9 @@ export class AdminUserSecurityController {
   async sessions(
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ): Promise<readonly AdminSessionResponse[]> {
-    return (await this.listSessions.execute(new ListAdminUserSessionsQuery(userId))).map(
-      toAdminSessionResponse,
-    );
+    return (
+      await this.listSessions.execute(new ListAdminUserSessionsQuery(userId))
+    ).map(toAdminSessionResponse);
   }
   @Post('sessions/:sessionId/revoke')
   @RequirePermissions(
@@ -51,7 +51,9 @@ export class AdminUserSecurityController {
     @Param('sessionId', new ParseUUIDPipe({ version: '4' })) sessionId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    await this.revokeSession.execute(new RevokeAdminUserSessionCommand(this.actor(actor), userId, sessionId));
+    await this.revokeSession.execute(
+      new RevokeAdminUserSessionCommand(this.actor(actor), userId, sessionId),
+    );
     return { success: true as const };
   }
   @Post('sessions/revoke-all')
@@ -63,7 +65,9 @@ export class AdminUserSecurityController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    const revokedCount = await this.revokeAllSessions.execute(new RevokeAllAdminUserSessionsCommand(this.actor(actor), userId));
+    const revokedCount = await this.revokeAllSessions.execute(
+      new RevokeAllAdminUserSessionsCommand(this.actor(actor), userId),
+    );
     return { success: true as const, revokedCount };
   }
   @Post('unlock')
@@ -75,7 +79,9 @@ export class AdminUserSecurityController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
     @CurrentUserId() actor: string | undefined,
   ) {
-    await this.unlockUser.execute(new UnlockAdminUserCommand(this.actor(actor), userId));
+    await this.unlockUser.execute(
+      new UnlockAdminUserCommand(this.actor(actor), userId),
+    );
     return { success: true as const };
   }
   @Get('security-events')
@@ -86,9 +92,11 @@ export class AdminUserSecurityController {
   async events(
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ): Promise<readonly AdminSecurityEventResponse[]> {
-    return (await this.listSecurityEvents.execute(new ListAdminSecurityEventsQuery(userId))).map(
-      toAdminSecurityEventResponse,
-    );
+    return (
+      await this.listSecurityEvents.execute(
+        new ListAdminSecurityEventsQuery(userId),
+      )
+    ).map(toAdminSecurityEventResponse);
   }
   private actor(actor: string | undefined): string {
     if (!actor)

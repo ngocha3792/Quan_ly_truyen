@@ -29,7 +29,9 @@ export interface AdminUnlockIdentityRecord {
 export interface AdminUserSecurityPersistencePort {
   userExists(userId: string): Promise<boolean>;
 
-  listSessions(userId: string): Promise<readonly AdminUserSecuritySessionRecord[]>;
+  listSessions(
+    userId: string,
+  ): Promise<readonly AdminUserSecuritySessionRecord[]>;
 
   revokeSession(input: {
     readonly actorUserId: string;

@@ -21,8 +21,6 @@
         [period]="store.selectedPeriod()"
         (periodChange)="changePeriod($event)"
       ></app-readership-chart>
-
-      <app-publication-schedule [items]="dashboard.schedule"></app-publication-schedule>
     </section>
 
     <section class="dashboard-row dashboard-row--management">
@@ -33,9 +31,6 @@
       <app-reader-comments [comments]="dashboard.comments"></app-reader-comments>
     </section>
 
-    <app-dashboard-bottom-panels
-      [topStories]="dashboard.topStories"
-      [monthlyGoals]="dashboard.monthlyGoals"
-    ></app-dashboard-bottom-panels>
+    <app-dashboard-bottom-panels [topStories]="dashboard.topStories"></app-dashboard-bottom-panels>
   }
 </main>

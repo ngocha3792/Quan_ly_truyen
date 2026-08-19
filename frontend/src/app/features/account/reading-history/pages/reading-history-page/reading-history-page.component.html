@@ -33,7 +33,7 @@
         <app-reading-history-list
           main
           [items]="store.filteredHistory()"
-          [bookmarkedIds]="store.bookmarkedIds()"
+          [bookmarkPendingChapterIds]="store.bookmarkPendingChapterIds()"
           (bookmarkToggle)="store.toggleBookmark($event)"
         />
 

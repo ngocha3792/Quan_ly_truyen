@@ -34,7 +34,9 @@ export class AuthorProfileController {
   @Get()
   @Header('Cache-Control', 'private, no-store')
   get(@CurrentUserId() userId: string | undefined): Promise<AuthorProfileView> {
-    return this.getProfile.execute(new GetAuthorProfileQuery(this.requireUserId(userId)));
+    return this.getProfile.execute(
+      new GetAuthorProfileQuery(this.requireUserId(userId)),
+    );
   }
 
   @Patch()
@@ -46,15 +48,17 @@ export class AuthorProfileController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ): Promise<AuthorProfileView> {
-    return this.updateProfile.execute(new UpdateAuthorProfileCommand({
-      userId: this.requireUserId(userId),
-      displayName: request.displayName,
-      bio: request.bio,
-      avatarMediaId: request.avatarMediaId,
-      bannerMediaId: request.bannerMediaId,
-      socialLinks: request.socialLinks,
-      audit: { ipAddress, userAgent, requestId },
-    }));
+    return this.updateProfile.execute(
+      new UpdateAuthorProfileCommand({
+        userId: this.requireUserId(userId),
+        displayName: request.displayName,
+        bio: request.bio,
+        avatarMediaId: request.avatarMediaId,
+        bannerMediaId: request.bannerMediaId,
+        socialLinks: request.socialLinks,
+        audit: { ipAddress, userAgent, requestId },
+      }),
+    );
   }
 
   private requireUserId(userId: string | undefined): string {

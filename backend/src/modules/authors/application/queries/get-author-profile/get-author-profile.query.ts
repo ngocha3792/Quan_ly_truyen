@@ -1,1 +1,3 @@
-export class GetAuthorProfileQuery { constructor(readonly userId:string){} }
+export class GetAuthorProfileQuery {
+  constructor(readonly userId: string) {}
+}

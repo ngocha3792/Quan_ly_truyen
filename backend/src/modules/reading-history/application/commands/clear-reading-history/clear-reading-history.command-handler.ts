@@ -15,6 +15,8 @@ export class ClearReadingHistoryCommandHandler {
   ) {}
 
   async execute(command: ClearReadingHistoryCommand): Promise<void> {
-    await this.persistence.clearMine(requireReadingHistoryUserId(command.userId));
+    await this.persistence.clearMine(
+      requireReadingHistoryUserId(command.userId),
+    );
   }
 }

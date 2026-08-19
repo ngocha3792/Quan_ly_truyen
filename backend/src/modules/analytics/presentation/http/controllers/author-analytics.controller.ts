@@ -2,9 +2,12 @@ import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import {
-  GetAuthorAnalyticsOverviewQuery, GetAuthorAnalyticsOverviewQueryHandler,
-  GetAuthorStoryAnalyticsQuery, GetAuthorStoryAnalyticsQueryHandler,
-  ListAuthorStoryAnalyticsQuery, ListAuthorStoryAnalyticsQueryHandler,
+  GetAuthorAnalyticsOverviewQuery,
+  GetAuthorAnalyticsOverviewQueryHandler,
+  GetAuthorStoryAnalyticsQuery,
+  GetAuthorStoryAnalyticsQueryHandler,
+  ListAuthorStoryAnalyticsQuery,
+  ListAuthorStoryAnalyticsQueryHandler,
 } from '../../../application';
 import {
   AnalyticsDateRangeRequest,
@@ -25,7 +28,9 @@ export class AuthorAnalyticsController {
     @CurrentUserId() userId: string | undefined,
     @Query() query: AnalyticsDateRangeRequest,
   ) {
-    return this.overviewHandler.execute(new GetAuthorAnalyticsOverviewQuery(userId, query.from, query.to));
+    return this.overviewHandler.execute(
+      new GetAuthorAnalyticsOverviewQuery(userId, query.from, query.to),
+    );
   }
 
   @Get('stories')
@@ -33,7 +38,9 @@ export class AuthorAnalyticsController {
     @CurrentUserId() userId: string | undefined,
     @Query() query: AnalyticsStoriesRequest,
   ) {
-    return this.storiesHandler.execute(new ListAuthorStoryAnalyticsQuery(userId, query));
+    return this.storiesHandler.execute(
+      new ListAuthorStoryAnalyticsQuery(userId, query),
+    );
   }
 
   @Get('stories/:storyId')
@@ -42,6 +49,8 @@ export class AuthorAnalyticsController {
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
     @Query() query: AnalyticsDateRangeRequest,
   ) {
-    return this.storyHandler.execute(new GetAuthorStoryAnalyticsQuery(userId, storyId, query.from, query.to));
+    return this.storyHandler.execute(
+      new GetAuthorStoryAnalyticsQuery(userId, storyId, query.from, query.to),
+    );
   }
 }

@@ -124,7 +124,8 @@ export class PrismaCategoryRepository implements CategoryRepositoryPort {
     const name = input.name;
     try {
       return await this.prisma.$transaction(async (tx) => {
-        if (!(await lockCategory(tx, id))) throw new CategoryNotFoundException(id);
+        if (!(await lockCategory(tx, id)))
+          throw new CategoryNotFoundException(id);
         const current = await tx.category.findUnique({
           where: { id },
           include: {
@@ -162,11 +163,15 @@ export class PrismaCategoryRepository implements CategoryRepositoryPort {
             ...(input.description === undefined
               ? {}
               : { description: input.description }),
-            ...(input.parentId === undefined ? {} : { parentId: input.parentId }),
+            ...(input.parentId === undefined
+              ? {}
+              : { parentId: input.parentId }),
             ...(input.sortOrder === undefined
               ? {}
               : { sortOrder: input.sortOrder }),
-            ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+            ...(input.isActive === undefined
+              ? {}
+              : { isActive: input.isActive }),
           },
           include: {
             parent: { select: { id: true, name: true, slug: true } },
@@ -199,7 +204,8 @@ export class PrismaCategoryRepository implements CategoryRepositoryPort {
 
   async delete(id: string, audit: CategoryAuditContext): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      if (!(await lockCategory(tx, id))) throw new CategoryNotFoundException(id);
+      if (!(await lockCategory(tx, id)))
+        throw new CategoryNotFoundException(id);
       const current = await tx.category.findUnique({
         where: { id },
         include: { _count: { select: { stories: true, children: true } } },
@@ -238,7 +244,11 @@ function page(pageNumber: number, pageSize: number, totalItems: number) {
   };
 }
 
-function taxonomySlug(base: string, attempt: number, maxLength: number): string {
+function taxonomySlug(
+  base: string,
+  attempt: number,
+  maxLength: number,
+): string {
   if (attempt === 0) return base.slice(0, maxLength).replace(/-+$/u, '');
   const candidate = createUniqueSlug(base, attempt + 1);
   if (candidate.length <= maxLength) return candidate;

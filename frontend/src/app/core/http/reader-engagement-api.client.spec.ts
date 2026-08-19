@@ -45,6 +45,42 @@ describe('ReaderEngagementApiClient', () => {
     await expect(promise).resolves.toEqual([]);
   });
 
+  it('uses persisted reading-bookmark endpoints', async () => {
+    const bookmark = {
+      id: 'bookmark-1',
+      storyId: 'story-1',
+      chapterId: 'chapter-1',
+      position: 0,
+      createdAt: '2026-08-17T00:00:00.000Z',
+      updatedAt: '2026-08-17T00:00:00.000Z',
+    };
+
+    const savePromise = firstValueFrom(api.upsertReadingBookmark('chapter-1'));
+    const saveRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
+    expect(saveRequest.request.method).toBe('PUT');
+    expect(saveRequest.request.body).toEqual({});
+    saveRequest.flush(successEnvelope(bookmark));
+    await expect(savePromise).resolves.toEqual(bookmark);
+
+    const getPromise = firstValueFrom(api.getReadingBookmark('chapter-1'));
+    const getRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
+    expect(getRequest.request.method).toBe('GET');
+    getRequest.flush(successEnvelope(bookmark));
+    await expect(getPromise).resolves.toEqual(bookmark);
+
+    const listPromise = firstValueFrom(api.listReadingBookmarks());
+    const listRequest = http.expectOne('/api/v1/reading-bookmarks');
+    expect(listRequest.request.method).toBe('GET');
+    listRequest.flush(successEnvelope([bookmark]));
+    await expect(listPromise).resolves.toEqual([bookmark]);
+
+    const removePromise = firstValueFrom(api.removeReadingBookmark('chapter-1'));
+    const removeRequest = http.expectOne('/api/v1/reading-bookmarks/chapter-1');
+    expect(removeRequest.request.method).toBe('DELETE');
+    removeRequest.flush(null);
+    await expect(removePromise).resolves.toBeNull();
+  });
+
   it('reuses a comment idempotency key after an ambiguous failure', async () => {
     const first = firstValueFrom(api.createStoryComment('story-1', '  Xin chào  '));
     const firstRequest = http.expectOne('/api/v1/stories/story-1/comments');

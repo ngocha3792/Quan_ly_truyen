@@ -131,7 +131,7 @@ export function findBoundaryViolations(records, options = {}) {
         sourceFeature &&
         targetFeature &&
         sourceFeature.key !== targetFeature.key &&
-        !isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot)
+        !isAllowedCrossFeatureImport(sourceFeature, targetFile, targetFeature, sourceRoot)
       ) {
         violations.push(
           violation(
@@ -213,7 +213,7 @@ function relativePartsFor(file, sourceRoot) {
   return path.relative(sourceRoot, file).split(path.sep).filter(Boolean);
 }
 
-function isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot) {
+function isAllowedCrossFeatureImport(sourceFeature, targetFile, targetFeature, sourceRoot) {
   const parts = relativePartsFor(targetFile, sourceRoot);
 
   /*
@@ -225,7 +225,7 @@ function isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot) {
    * features/account/shared
    */
   if (targetFeature.feature === 'shared') {
-    return true;
+    return sourceFeature.scope === targetFeature.scope;
   }
 
   /*

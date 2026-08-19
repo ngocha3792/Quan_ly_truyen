@@ -193,8 +193,8 @@
                 type="password"
                 [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
                 placeholder="••••••••"
-                minlength="8"
-                maxlength="72"
+                [attr.minlength]="mode() === 'register' ? passwordPolicy.minimumLength : null"
+                [attr.maxlength]="mode() === 'register' ? passwordPolicy.maximumLength : null"
                 required
               />
             </div>
@@ -206,7 +206,7 @@
             </a>
           } @else {
             <small class="hint">
-              Từ 8 đến 72 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
+              {{ passwordHint }}
             </small>
           }
 

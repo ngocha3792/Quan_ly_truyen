@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "release": "production-v1",
+  "policy": {
+    "requiredFeaturesMustBeReadyForProduction": true,
+    "deferredFeaturesMustBeHidden": true
+  },
+  "features": [
+    {
+      "id": "account-auth-security",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/auth + frontend/account",
+      "notes": "Register, login, refresh, logout, verification, reset/change password, sessions, MFA and account security are in V1."
+    },
+    {
+      "id": "reader-catalog-and-reading",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/stories+chapters + frontend/public",
+      "notes": "Public catalog, story detail and chapter reading are in V1."
+    },
+    {
+      "id": "reader-history-and-progress",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/reading-history + frontend/account",
+      "notes": "Cross-session reading history and progress are in V1."
+    },
+    {
+      "id": "reader-bookmarks",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/reading-history + frontend/reader",
+      "notes": "Chapter bookmarks are persisted through application ports and Prisma, loaded on reader/history views, and verified across independent user sessions."
+    },
+    {
+      "id": "reader-library",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/libraries + frontend/account",
+      "notes": "Reader library is in V1."
+    },
+    {
+      "id": "reader-comments-ratings-reports",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/comments+ratings+reports + frontend/public",
+      "notes": "Comments, reactions, ratings and reader reporting are in V1."
+    },
+    {
+      "id": "author-follow",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/follows + frontend/account+public",
+      "notes": "Following authors is in V1. This does not imply following individual stories."
+    },
+    {
+      "id": "notifications",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/notifications + frontend/account",
+      "notes": "Existing notification flows are in V1. Story-follow chapter notifications are explicitly deferred."
+    },
+    {
+      "id": "author-application",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/author-applications + frontend/account",
+      "notes": "Author application and admin approval/rejection are in V1."
+    },
+    {
+      "id": "author-story-management",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/stories + frontend/author-portal",
+      "notes": "Author story lifecycle and immediate chapter publishing are in V1."
+    },
+    {
+      "id": "production-media",
+      "decision": "required",
+      "readiness": "blocked",
+      "productionExposure": "pending",
+      "owner": "backend/media + frontend upload flows + production config",
+      "nextPhase": "phase-4",
+      "blockingReason": "Production example config keeps CLOUDINARY_ENABLED=false; V1 requires verified production media credentials, presets and webhook configuration."
+    },
+    {
+      "id": "admin-operations",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/admin-facing modules + frontend/admin",
+      "notes": "User administration, story review, reports/moderation, taxonomy and audit-log read-side are in V1."
+    },
+    {
+      "id": "public-content-review",
+      "decision": "required",
+      "readiness": "blocked",
+      "productionExposure": "pending",
+      "owner": "frontend/public/static + product/legal",
+      "nextPhase": "phase-4",
+      "blockingReason": "Terms/privacy/about copy and historical/marketing claims still require production-owner review before public launch."
+    },
+    {
+      "id": "story-follow",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned reader engagement",
+      "nextPhase": "post-v1",
+      "notes": "StoryFollow may remain in schema but must not be represented as a working Production V1 capability."
+    },
+    {
+      "id": "chapter-scheduling",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned chapters/author-studio",
+      "nextPhase": "post-v1",
+      "notes": "scheduledAt may remain in persistence contracts, but author scheduling controls and dashboard claims are hidden in V1."
+    },
+    {
+      "id": "reader-weekly-reading-time",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned reading analytics",
+      "nextPhase": "post-v1",
+      "notes": "ReadingSession may remain in schema; placeholder weekly-reading-time statistics are not shown in V1."
+    },
+    {
+      "id": "story-contributor-workflow",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned author collaboration",
+      "nextPhase": "post-v1",
+      "notes": "StoryContributor may remain in schema for future collaboration work."
+    },
+    {
+      "id": "chapter-version-history",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned chapters",
+      "nextPhase": "post-v1",
+      "notes": "ChapterVersion may remain in schema; no version-history product claim belongs in V1."
+    },
+    {
+      "id": "personalized-recommendations",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned discovery",
+      "nextPhase": "post-v1",
+      "notes": "Ranking/filtering is allowed; claims of personalized recommendation are not."
+    },
+    {
+      "id": "author-dashboard-advanced-goals-and-trends",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "planned author analytics",
+      "nextPhase": "post-v1",
+      "notes": "Synthetic metric trends, gamified author level/XP and fake comment unread state are not exposed. Monthly goals remain deferred and hidden until backed by persisted product semantics."
+    }
+  ],
+  "sourceGuards": [
+    {
+      "featureId": "story-follow",
+      "path": "frontend/src/app/features/account/reading-history",
+      "forbidden": [
+        "followedStories"
+      ]
+    },
+    {
+      "featureId": "story-follow",
+      "path": "frontend/src/app/features/account/my-library",
+      "forbidden": [
+        "filter === 'following'",
+        "filterChange.emit('following')",
+        "isFollowing",
+        "return 'following'",
+        "return 'THEO DÕI'"
+      ]
+    },
+    {
+      "featureId": "reader-weekly-reading-time",
+      "path": "frontend/src/app/features/account/reading-history",
+      "forbidden": [
+        "weeklyReadingTime"
+      ]
+    },
+    {
+      "featureId": "chapter-scheduling",
+      "path": "frontend/src/app/features/author-portal/author-studio/pages",
+      "forbidden": [
+        "PublicationScheduleComponent",
+        "<app-publication-schedule"
+      ]
+    },
+    {
+      "featureId": "chapter-scheduling",
+      "path": "backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts",
+      "forbidden": [
+        "id: 'pending-chapters'",
+        "title: 'Chương đã lên lịch'"
+      ]
+    },
+    {
+      "featureId": "personalized-recommendations",
+      "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",
+      "forbidden": [
+        "gợi ý cá nhân hóa"
+      ]
+    },
+    {
+      "featureId": "author-dashboard-advanced-goals-and-trends",
+      "path": "frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts",
+      "forbidden": [
+        "metric.trendDirection",
+        "metric.trendValue",
+        "metric.trendLabel"
+      ]
+    },
+    {
+      "featureId": "author-dashboard-advanced-goals-and-trends",
+      "path": "frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts",
+      "forbidden": [
+        "Mục tiêu tháng này",
+        "monthlyGoals"
+      ]
+    }
+  ]
+}

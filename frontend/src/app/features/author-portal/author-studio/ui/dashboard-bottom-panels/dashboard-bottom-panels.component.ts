@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { AuthorMonthlyGoal, AuthorTopStory } from '../../domain/author-studio.models';
+import { AuthorTopStory } from '../../domain/author-studio.models';
 import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
 @Component({
@@ -59,42 +59,13 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
       </div>
     </section>
 
-    <section class="monthly-goals dashboard-card">
-      <header>
-        <h2>Mục tiêu tháng này</h2>
-      </header>
-
-      <div class="goal-list">
-        @for (goal of monthlyGoals; track goal.id) {
-          <article [attr.data-tone]="goal.tone">
-            <span class="goal-icon">
-              <app-studio-icon [name]="goal.icon" [size]="17"></app-studio-icon>
-            </span>
-
-            <span class="goal-label">
-              {{ goal.label }}
-            </span>
-
-            <span class="goal-progress">
-              <span [style.width.%]="goal.progress"></span>
-            </span>
-
-            <strong>
-              {{ goal.currentValue }}
-              /
-              {{ goal.targetValue }}
-            </strong>
-          </article>
-        }
-      </div>
-    </section>
   `,
 
   styles: [
     `
       :host {
         display: grid;
-        grid-template-columns: 1.05fr 1fr 1.05fr;
+        grid-template-columns: 1.05fr 1fr;
         gap: 10px;
         min-width: 0;
       }
@@ -203,8 +174,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         line-height: 1.3;
       }
 
-      .top-story-list,
-      .goal-list {
+      .top-story-list {
         display: grid;
         margin-top: 12px;
       }
@@ -266,89 +236,15 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         font-size: 12px;
       }
 
-      .goal-list article {
-        display: grid;
-        min-height: 52px;
-        grid-template-columns:
-          34px
-          110px
-          minmax(70px, 1fr)
-          85px;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .goal-icon {
-        display: grid;
-        width: 32px;
-        height: 32px;
-        place-items: center;
-        border-radius: 8px;
-        background: rgba(126, 34, 206, 0.2);
-        color: #bd6bff;
-      }
-
-      article[data-tone='indigo'] .goal-icon {
-        background: rgba(37, 99, 235, 0.18);
-        color: #5c88ff;
-      }
-
-      article[data-tone='green'] .goal-icon {
-        background: rgba(22, 163, 74, 0.17);
-        color: #4ade80;
-      }
-
-      .goal-label {
-        color: var(--text-secondary);
-        font-size: 13px;
-      }
-
-      .goal-progress {
-        height: 6px;
-        overflow: hidden;
-        border-radius: 999px;
-        background: rgba(114, 127, 157, 0.18);
-      }
-
-      .goal-progress > span {
-        display: block;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #7c3aed, #bd5eff);
-      }
-
-      article[data-tone='indigo'] .goal-progress > span {
-        background: linear-gradient(90deg, #3b63e9, #6386ff);
-      }
-
-      article[data-tone='green'] .goal-progress > span {
-        background: linear-gradient(90deg, #16a34a, #4ade80);
-      }
-
-      .goal-list strong {
-        color: var(--text-strong);
-        font-size: 12.5px;
-        font-weight: 650;
-        text-align: right;
-      }
-
       @media (max-width: 1200px) {
         :host {
           grid-template-columns: 1fr 1fr;
-        }
-
-        .monthly-goals {
-          grid-column: 1 / -1;
         }
       }
 
       @media (max-width: 700px) {
         :host {
           grid-template-columns: 1fr;
-        }
-
-        .monthly-goals {
-          grid-column: auto;
         }
 
         .action-grid {
@@ -361,7 +257,4 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 export class DashboardBottomPanelsComponent {
   @Input({ required: true })
   topStories: readonly AuthorTopStory[] = [];
-
-  @Input({ required: true })
-  monthlyGoals: readonly AuthorMonthlyGoal[] = [];
 }

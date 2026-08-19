@@ -1,0 +1,1099 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d00b21a..fe9d2c3 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -19,6 +19,23 @@ env:
+   NPM_VERSION: "11.12.1"
+ 
+ jobs:
++  production-scope:
++    name: Product / Production V1 scope contract
++    runs-on: ubuntu-latest
++    timeout-minutes: 5
++
++    steps:
++      - name: Checkout
++        uses: actions/checkout@v6
++
++      - name: Setup Node.js
++        uses: actions/setup-node@v6
++        with:
++          node-version-file: .nvmrc
++
++      - name: Verify Production V1 scope contract
++        run: node scripts/verify-production-scope.mjs --mode=contract
++
+   frontend-quality:
+     name: Frontend / quality, tests and build
+     runs-on: ubuntu-latest
+@@ -870,6 +887,7 @@ jobs:
+     runs-on: ubuntu-latest
+     if: always()
+     needs:
++      - production-scope
+       - frontend-quality
+       - backend-quality
+       - backend-integration
+@@ -879,6 +897,7 @@ jobs:
+     steps:
+       - name: Verify all required jobs succeeded
+         env:
++          PRODUCTION_SCOPE: ${{ needs.production-scope.result }}
+           FRONTEND_QUALITY: ${{ needs.frontend-quality.result }}
+           BACKEND_QUALITY: ${{ needs.backend-quality.result }}
+           BACKEND_INTEGRATION: ${{ needs.backend-integration.result }}
+@@ -888,6 +907,7 @@ jobs:
+         shell: bash
+         run: |
+           for result in \
++            "$PRODUCTION_SCOPE" \
+             "$FRONTEND_QUALITY" \
+             "$BACKEND_QUALITY" \
+             "$BACKEND_INTEGRATION" \
+diff --git a/.github/workflows/deploy-environment.yml b/.github/workflows/deploy-environment.yml
+index 34c86d6..9146ff7 100644
+--- a/.github/workflows/deploy-environment.yml
++++ b/.github/workflows/deploy-environment.yml
+@@ -64,6 +64,24 @@ jobs:
+           ref: ${{ inputs.source_sha }}
+           fetch-depth: 0
+ 
++      - name: Setup Node.js for release policy
++        uses: actions/setup-node@v6
++        with:
++          node-version-file: .nvmrc
++
++      - name: Verify Production V1 scope policy
++        shell: bash
++        env:
++          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
++        run: |
++          set -euo pipefail
++
++          node scripts/verify-production-scope.mjs --mode=contract
++
++          if [[ "${DEPLOY_ENVIRONMENT}" == "production" ]]; then
++            node scripts/verify-production-scope.mjs --mode=release
++          fi
++
+       - name: Verify immutable SHA belongs to main
+         id: source
+         shell: bash
+diff --git a/backend/ops/production/PRODUCTION_RUNBOOK.md b/backend/ops/production/PRODUCTION_RUNBOOK.md
+index 434c12c..42d8527 100644
+--- a/backend/ops/production/PRODUCTION_RUNBOOK.md
++++ b/backend/ops/production/PRODUCTION_RUNBOOK.md
+@@ -84,6 +84,21 @@ Khi phải restore production thật:
+ 
+ `Restore-Postgres.ps1` verify checksum/archive trước khi dừng API/worker và tạo safety backup mặc định trước thao tác destructive. Sau restore phải chạy postdeploy gate và Auth smoke test.
+ 
++## Production V1 scope gate
++
++Production scope is declared in `ops/production/production-v1.scope.json` and explained in `ops/production/PRODUCTION_V1_SCOPE.md`. The contract is checked in normal CI; production deployment additionally requires every `required` feature to be `ready`.
++
++Run from repository root:
++
++```bash
++node scripts/verify-production-scope.mjs --mode=contract
++node scripts/verify-production-scope.mjs --mode=release
++```
++
++Do not bypass this gate by changing a blocker to `ready` without closing the implementation/configuration requirement. Deferred features may keep future-facing persistence fields, but they must remain hidden from the Production V1 UX.
++
++The initial V1 gate intentionally blocks production for persisted reader bookmarks, verified production media configuration and final public static-content review. Staging can continue to deploy while those blockers are being closed.
++
+ ## Auth release checklist
+ 
+ - `LogoutAllCommandHandler` chỉ gọi persistence đúng một lần.
+diff --git a/backend/ops/production/PRODUCTION_V1_SCOPE.md b/backend/ops/production/PRODUCTION_V1_SCOPE.md
+new file mode 100644
+index 0000000..65e2c78
+--- /dev/null
++++ b/backend/ops/production/PRODUCTION_V1_SCOPE.md
+@@ -0,0 +1,77 @@
++# Production V1 scope
++
++This document is the human-readable companion to `production-v1.scope.json`. The JSON file is the machine-enforced source of truth for release scope.
++
++## Release rule
++
++Production V1 follows two rules:
++
++1. Every feature marked `required` must be `ready` before a production deployment can start.
++2. Every feature marked `deferred` must stay hidden from the Production V1 user experience until its scope decision is changed deliberately.
++
++Normal CI runs the contract check so scope drift is caught on pull requests. The production deployment workflow additionally runs the release check, which intentionally fails while any required capability remains blocked.
++
++Run locally from the repository root:
++
++```bash
++node scripts/verify-production-scope.mjs --mode=contract
++node scripts/verify-production-scope.mjs --mode=release
++```
++
++The second command is expected to fail until all Production V1 blockers are closed.
++
++## Production V1 capability matrix
++
++### Required and currently ready
++
++- Account authentication/security and account recovery flows.
++- Public catalog, story details and chapter reading.
++- Reading history and reading progress persistence.
++- Reader library.
++- Comments, reactions, ratings and reporting.
++- Author follow.
++- Existing notification flows.
++- Author application plus admin approval/rejection.
++- Author story management and immediate chapter publishing.
++- Admin user/story/report/moderation/taxonomy/audit operations.
++
++### Required but currently blocking production
++
++- **Reader bookmarks**: Prisma schema exists, but bookmark behavior is not persisted end-to-end yet.
++- **Production media**: V1 needs verified Cloudinary production configuration; the example production configuration intentionally ships disabled.
++- **Public content review**: terms/privacy/about copy and marketing/history claims require explicit production-owner review.
++
++These blockers are deliberate. Do not mark them `ready` merely to make the deployment workflow pass.
++
++## Explicitly deferred from Production V1
++
++The following schema or UI concepts may remain in the repository for future work, but they are not Production V1 promises:
++
++- Story follow (`StoryFollow`). V1 supports following authors, not individual stories.
++- Author chapter scheduling (`scheduledAt`). Immediate publishing remains supported.
++- Weekly reading-time statistics (`ReadingSession`).
++- Story contributor workflow (`StoryContributor`).
++- Chapter version-history workflow (`ChapterVersion`).
++- Personalized recommendation claims.
++- Heuristic author monthly goals and synthetic directional trends.
++
++Deferred items are protected by source guards where a misleading user-facing exposure previously existed. Persistence fields may remain when removing them would create unnecessary migration churn.
++
++## How to change scope safely
++
++A scope change is a product decision, not a CI workaround.
++
++To promote a deferred feature:
++
++1. Implement the domain/application/infrastructure/presentation flow using the existing module boundaries.
++2. Connect the frontend through `domain -> data-access -> pages/ui`; do not bypass repositories/stores with ad-hoc HTTP calls.
++3. Add unit/integration/E2E coverage for the promoted capability.
++4. Change its manifest entry from `deferred` to `required` with `readiness: ready` and `productionExposure: enabled` only after the behavior is complete.
++5. Remove or update obsolete `sourceGuards` for that feature.
++6. Run the contract and release checks, then the full CI suite.
++
++To close a required blocker, update only the `readiness`, `productionExposure`, blocker fields and evidence/notes after the implementation and production configuration have been verified.
++
++## V1 non-goals
++
++Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history, story-follow notifications, scheduled publishing or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.
+diff --git a/backend/ops/production/production-v1.scope.json b/backend/ops/production/production-v1.scope.json
+new file mode 100644
+index 0000000..bf128df
+--- /dev/null
++++ b/backend/ops/production/production-v1.scope.json
+@@ -0,0 +1,217 @@
++{
++  "schemaVersion": 1,
++  "release": "production-v1",
++  "policy": {
++    "requiredFeaturesMustBeReadyForProduction": true,
++    "deferredFeaturesMustBeHidden": true
++  },
++  "features": [
++    {
++      "id": "account-auth-security",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/auth + frontend/account",
++      "notes": "Register, login, refresh, logout, verification, reset/change password, sessions, MFA and account security are in V1."
++    },
++    {
++      "id": "reader-catalog-and-reading",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/stories+chapters + frontend/public",
++      "notes": "Public catalog, story detail and chapter reading are in V1."
++    },
++    {
++      "id": "reader-history-and-progress",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/reading-history + frontend/account",
++      "notes": "Cross-session reading history and progress are in V1."
++    },
++    {
++      "id": "reader-bookmarks",
++      "decision": "required",
++      "readiness": "blocked",
++      "productionExposure": "pending",
++      "owner": "backend/reading-history + frontend/reader",
++      "nextPhase": "phase-1",
++      "blockingReason": "ReadingBookmark exists in Prisma but there is no persisted application/API flow; current UI state is local-only."
++    },
++    {
++      "id": "reader-library",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/libraries + frontend/account",
++      "notes": "Reader library is in V1."
++    },
++    {
++      "id": "reader-comments-ratings-reports",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/comments+ratings+reports + frontend/public",
++      "notes": "Comments, reactions, ratings and reader reporting are in V1."
++    },
++    {
++      "id": "author-follow",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/follows + frontend/account+public",
++      "notes": "Following authors is in V1. This does not imply following individual stories."
++    },
++    {
++      "id": "notifications",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/notifications + frontend/account",
++      "notes": "Existing notification flows are in V1. Story-follow chapter notifications are explicitly deferred."
++    },
++    {
++      "id": "author-application",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/author-applications + frontend/account",
++      "notes": "Author application and admin approval/rejection are in V1."
++    },
++    {
++      "id": "author-story-management",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/stories + frontend/author-portal",
++      "notes": "Author story lifecycle and immediate chapter publishing are in V1."
++    },
++    {
++      "id": "production-media",
++      "decision": "required",
++      "readiness": "blocked",
++      "productionExposure": "pending",
++      "owner": "backend/media + frontend upload flows + production config",
++      "nextPhase": "phase-4",
++      "blockingReason": "Production example config keeps CLOUDINARY_ENABLED=false; V1 requires verified production media credentials, presets and webhook configuration."
++    },
++    {
++      "id": "admin-operations",
++      "decision": "required",
++      "readiness": "ready",
++      "productionExposure": "enabled",
++      "owner": "backend/admin-facing modules + frontend/admin",
++      "notes": "User administration, story review, reports/moderation, taxonomy and audit-log read-side are in V1."
++    },
++    {
++      "id": "public-content-review",
++      "decision": "required",
++      "readiness": "blocked",
++      "productionExposure": "pending",
++      "owner": "frontend/public/static + product/legal",
++      "nextPhase": "phase-4",
++      "blockingReason": "Terms/privacy/about copy and historical/marketing claims still require production-owner review before public launch."
++    },
++    {
++      "id": "story-follow",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned reader engagement",
++      "nextPhase": "post-v1",
++      "notes": "StoryFollow may remain in schema but must not be represented as a working Production V1 capability."
++    },
++    {
++      "id": "chapter-scheduling",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned chapters/author-studio",
++      "nextPhase": "post-v1",
++      "notes": "scheduledAt may remain in persistence contracts, but author scheduling controls and dashboard claims are hidden in V1."
++    },
++    {
++      "id": "reader-weekly-reading-time",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned reading analytics",
++      "nextPhase": "post-v1",
++      "notes": "ReadingSession may remain in schema; placeholder weekly-reading-time statistics are not shown in V1."
++    },
++    {
++      "id": "story-contributor-workflow",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned author collaboration",
++      "nextPhase": "post-v1",
++      "notes": "StoryContributor may remain in schema for future collaboration work."
++    },
++    {
++      "id": "chapter-version-history",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned chapters",
++      "nextPhase": "post-v1",
++      "notes": "ChapterVersion may remain in schema; no version-history product claim belongs in V1."
++    },
++    {
++      "id": "personalized-recommendations",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned discovery",
++      "nextPhase": "post-v1",
++      "notes": "Ranking/filtering is allowed; claims of personalized recommendation are not."
++    },
++    {
++      "id": "author-dashboard-advanced-goals-and-trends",
++      "decision": "deferred",
++      "readiness": "deferred",
++      "productionExposure": "hidden",
++      "owner": "planned author analytics",
++      "nextPhase": "post-v1",
++      "notes": "Heuristic monthly goals and synthetic directional trends are hidden until backed by persisted product semantics."
++    }
++  ],
++  "sourceGuards": [
++    {
++      "featureId": "story-follow",
++      "path": "frontend/src/app/features/account/reading-history",
++      "forbidden": ["followedStories"]
++    },
++    {
++      "featureId": "reader-weekly-reading-time",
++      "path": "frontend/src/app/features/account/reading-history",
++      "forbidden": ["weeklyReadingTime"]
++    },
++    {
++      "featureId": "chapter-scheduling",
++      "path": "frontend/src/app/features/author-portal/author-studio/pages",
++      "forbidden": ["PublicationScheduleComponent", "<app-publication-schedule"]
++    },
++    {
++      "featureId": "chapter-scheduling",
++      "path": "backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts",
++      "forbidden": ["id: 'pending-chapters'", "title: 'Chương đã lên lịch'"]
++    },
++    {
++      "featureId": "personalized-recommendations",
++      "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",
++      "forbidden": ["gợi ý cá nhân hóa"]
++    },
++    {
++      "featureId": "author-dashboard-advanced-goals-and-trends",
++      "path": "frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts",
++      "forbidden": ["metric.trendDirection", "metric.trendValue", "metric.trendLabel"]
++    },
++    {
++      "featureId": "author-dashboard-advanced-goals-and-trends",
++      "path": "frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts",
++      "forbidden": ["Mục tiêu tháng này", "monthlyGoals"]
++    }
++  ]
++}
+diff --git a/backend/package.json b/backend/package.json
+index 281e338..f81c083 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -134,7 +134,9 @@
+     "test:analytics:prepare": "tsx scripts/testing/prepare-postgres-test-environment.ts",
+     "test:analytics:integration": "npm run test:analytics:prepare && jest --config ./test/jest-reader-analytics-integration.json --runInBand",
+     "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts",
+-    "architecture:check": "node scripts/architecture/check-boundaries.mjs"
++    "architecture:check": "node scripts/architecture/check-boundaries.mjs",
++    "production:scope:check": "node ../scripts/verify-production-scope.mjs --mode=contract",
++    "production:scope:release": "node ../scripts/verify-production-scope.mjs --mode=release"
+   },
+   "dependencies": {
+     "@nestjs/bullmq": "^11.0.4",
+diff --git a/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts b/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
+index 8449afd..da266d6 100644
+--- a/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
++++ b/backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts
+@@ -63,9 +63,6 @@ export class AuthorDashboardMapper {
+       (sum, story) => sum + story.chapterCount,
+       0,
+     );
+-    const pendingChapters = scheduledChapters.filter(
+-      (chapter) => chapter.status === 'SCHEDULED',
+-    ).length;
+     const views30Days = dailyStats
+       .filter((stat) => stat.date >= start30Days)
+       .reduce(
+@@ -111,14 +108,6 @@ export class AuthorDashboardMapper {
+           icon: 'draft',
+           tone: 'blue',
+         },
+-        {
+-          id: 'pending-chapters',
+-          title: 'Chương đã lên lịch',
+-          value: AuthorDashboardMapper.formatCompact(pendingChapters),
+-          ...directTrend,
+-          icon: 'clock',
+-          tone: 'orange',
+-        },
+         {
+           id: 'views',
+           title: 'Lượt xem 30 ngày',
+diff --git a/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
+index 63f59b5..c3a27d2 100644
+--- a/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
++++ b/frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts
+@@ -29,8 +29,6 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
+           statistics: {
+             storiesRead: String(entries.length),
+             chaptersRead: String(chaptersRead),
+-            weeklyReadingTime: '—',
+-            followedStories: '—',
+           },
+           continueReading: history.slice(0, 5).map((item) => ({
+             id: item.id,
+diff --git a/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts b/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
+index da17243..ea10cbf 100644
+--- a/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
++++ b/frontend/src/app/features/account/reading-history/data-access/reading-history.store.ts
+@@ -87,7 +87,6 @@ export class ReadingHistoryStore {
+                 ...current.statistics,
+                 storiesRead: '0',
+                 chaptersRead: '0',
+-                weeklyReadingTime: '—',
+               },
+             });
+           }
+diff --git a/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts b/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
+index b2e2608..8bd383e 100644
+--- a/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
++++ b/frontend/src/app/features/account/reading-history/domain/reading-history.models.ts
+@@ -27,8 +27,6 @@ export interface ReadingHistoryItem {
+ export interface ReadingHistoryStatistics {
+   readonly storiesRead: string;
+   readonly chaptersRead: string;
+-  readonly weeklyReadingTime: string;
+-  readonly followedStories: string;
+ }
+ 
+ export interface ContinueReadingItem {
+diff --git a/frontend/src/app/features/account/reading-history/ui/reading-history-sidebar/reading-history-sidebar.component.html b/frontend/src/app/features/account/reading-history/ui/reading-history-sidebar/reading-history-sidebar.component.html
+index 18e3f55..780a3f5 100644
+--- a/frontend/src/app/features/account/reading-history/ui/reading-history-sidebar/reading-history-sidebar.component.html
++++ b/frontend/src/app/features/account/reading-history/ui/reading-history-sidebar/reading-history-sidebar.component.html
+@@ -48,36 +48,6 @@
+           {{ statistics.chaptersRead }}
+         </strong>
+       </article>
+-
+-      <article>
+-        <span class="stat-icon">
+-          <svg viewBox="0 0 24 24">
+-            <circle cx="12" cy="12" r="9"></circle>
+-
+-            <path d="M12 7v5l3 2"></path>
+-          </svg>
+-        </span>
+-
+-        <p>Thời gian đọc tuần này</p>
+-
+-        <strong>
+-          {{ statistics.weeklyReadingTime }}
+-        </strong>
+-      </article>
+-
+-      <article>
+-        <span class="stat-icon">
+-          <svg viewBox="0 0 24 24">
+-            <path d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18l-6-4-6 4V4Z"></path>
+-          </svg>
+-        </span>
+-
+-        <p>Truyện đang theo dõi</p>
+-
+-        <strong>
+-          {{ statistics.followedStories }}
+-        </strong>
+-      </article>
+     </div>
+   </section>
+ 
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.html b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.html
+index 111f55b..ab21be0 100644
+--- a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.html
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.html
+@@ -21,8 +21,6 @@
+         [period]="store.selectedPeriod()"
+         (periodChange)="changePeriod($event)"
+       ></app-readership-chart>
+-
+-      <app-publication-schedule [items]="dashboard.schedule"></app-publication-schedule>
+     </section>
+ 
+     <section class="dashboard-row dashboard-row--management">
+@@ -33,9 +31,6 @@
+       <app-reader-comments [comments]="dashboard.comments"></app-reader-comments>
+     </section>
+ 
+-    <app-dashboard-bottom-panels
+-      [topStories]="dashboard.topStories"
+-      [monthlyGoals]="dashboard.monthlyGoals"
+-    ></app-dashboard-bottom-panels>
++    <app-dashboard-bottom-panels [topStories]="dashboard.topStories"></app-dashboard-bottom-panels>
+   }
+ </main>
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.scss b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.scss
+index 03f3826..c100bd6 100644
+--- a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.scss
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.scss
+@@ -37,7 +37,7 @@
+ .metric-grid {
+   order: 2;
+   display: grid;
+-  grid-template-columns: repeat(6, minmax(0, 1fr));
++  grid-template-columns: repeat(4, minmax(0, 1fr));
+   gap: 1.25rem;
+ }
+ 
+@@ -52,7 +52,7 @@ app-dashboard-bottom-panels {
+   min-width: 0;
+   gap: 1.25rem;
+   margin-top: 1.25rem;
+-  grid-template-columns: minmax(0, 1.38fr) minmax(380px, 0.92fr);
++  grid-template-columns: minmax(0, 1fr);
+   align-items: stretch;
+ }
+ 
+diff --git a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.ts b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.ts
+index 8faddf7..204c216 100644
+--- a/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component.ts
+@@ -4,7 +4,6 @@ import { AuthorStudioStore } from '../../data-access/author-studio.store';
+ import { AuthorStudioPeriod } from '../../domain/author-studio.models';
+ import { AuthorStoryTableComponent } from '../../ui/author-story-table/author-story-table.component';
+ import { DashboardBottomPanelsComponent } from '../../ui/dashboard-bottom-panels/dashboard-bottom-panels.component';
+-import { PublicationScheduleComponent } from '../../ui/publication-schedule/publication-schedule.component';
+ import { ReaderCommentsComponent } from '../../ui/reader-comments/reader-comments.component';
+ import { ReadershipChartComponent } from '../../ui/readership-chart/readership-chart.component';
+ import { RecentDraftsComponent } from '../../ui/recent-drafts/recent-drafts.component';
+@@ -17,7 +16,6 @@ import { StudioStatCardComponent } from '../../ui/studio-stat-card/studio-stat-c
+   imports: [
+     StudioStatCardComponent,
+     ReadershipChartComponent,
+-    PublicationScheduleComponent,
+     AuthorStoryTableComponent,
+     RecentDraftsComponent,
+     ReaderCommentsComponent,
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
+index 321b87b..6336c12 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts
+@@ -1,7 +1,7 @@
+ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+ import { RouterLink } from '@angular/router';
+ 
+-import { AuthorMonthlyGoal, AuthorTopStory } from '../../domain/author-studio.models';
++import { AuthorTopStory } from '../../domain/author-studio.models';
+ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+ 
+ @Component({
+@@ -59,42 +59,13 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+       </div>
+     </section>
+ 
+-    <section class="monthly-goals dashboard-card">
+-      <header>
+-        <h2>Mục tiêu tháng này</h2>
+-      </header>
+-
+-      <div class="goal-list">
+-        @for (goal of monthlyGoals; track goal.id) {
+-          <article [attr.data-tone]="goal.tone">
+-            <span class="goal-icon">
+-              <app-studio-icon [name]="goal.icon" [size]="17"></app-studio-icon>
+-            </span>
+-
+-            <span class="goal-label">
+-              {{ goal.label }}
+-            </span>
+-
+-            <span class="goal-progress">
+-              <span [style.width.%]="goal.progress"></span>
+-            </span>
+-
+-            <strong>
+-              {{ goal.currentValue }}
+-              /
+-              {{ goal.targetValue }}
+-            </strong>
+-          </article>
+-        }
+-      </div>
+-    </section>
+   `,
+ 
+   styles: [
+     `
+       :host {
+         display: grid;
+-        grid-template-columns: 1.05fr 1fr 1.05fr;
++        grid-template-columns: 1.05fr 1fr;
+         gap: 10px;
+         min-width: 0;
+       }
+@@ -203,8 +174,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+         line-height: 1.3;
+       }
+ 
+-      .top-story-list,
+-      .goal-list {
++      .top-story-list {
+         display: grid;
+         margin-top: 12px;
+       }
+@@ -266,80 +236,10 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+         font-size: 12px;
+       }
+ 
+-      .goal-list article {
+-        display: grid;
+-        min-height: 52px;
+-        grid-template-columns:
+-          34px
+-          110px
+-          minmax(70px, 1fr)
+-          85px;
+-        align-items: center;
+-        gap: 10px;
+-      }
+-
+-      .goal-icon {
+-        display: grid;
+-        width: 32px;
+-        height: 32px;
+-        place-items: center;
+-        border-radius: 8px;
+-        background: rgba(126, 34, 206, 0.2);
+-        color: #bd6bff;
+-      }
+-
+-      article[data-tone='indigo'] .goal-icon {
+-        background: rgba(37, 99, 235, 0.18);
+-        color: #5c88ff;
+-      }
+-
+-      article[data-tone='green'] .goal-icon {
+-        background: rgba(22, 163, 74, 0.17);
+-        color: #4ade80;
+-      }
+-
+-      .goal-label {
+-        color: var(--text-secondary);
+-        font-size: 13px;
+-      }
+-
+-      .goal-progress {
+-        height: 6px;
+-        overflow: hidden;
+-        border-radius: 999px;
+-        background: rgba(114, 127, 157, 0.18);
+-      }
+-
+-      .goal-progress > span {
+-        display: block;
+-        height: 100%;
+-        border-radius: inherit;
+-        background: linear-gradient(90deg, #7c3aed, #bd5eff);
+-      }
+-
+-      article[data-tone='indigo'] .goal-progress > span {
+-        background: linear-gradient(90deg, #3b63e9, #6386ff);
+-      }
+-
+-      article[data-tone='green'] .goal-progress > span {
+-        background: linear-gradient(90deg, #16a34a, #4ade80);
+-      }
+-
+-      .goal-list strong {
+-        color: var(--text-strong);
+-        font-size: 12.5px;
+-        font-weight: 650;
+-        text-align: right;
+-      }
+-
+       @media (max-width: 1200px) {
+         :host {
+           grid-template-columns: 1fr 1fr;
+         }
+-
+-        .monthly-goals {
+-          grid-column: 1 / -1;
+-        }
+       }
+ 
+       @media (max-width: 700px) {
+@@ -347,10 +247,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+           grid-template-columns: 1fr;
+         }
+ 
+-        .monthly-goals {
+-          grid-column: auto;
+-        }
+-
+         .action-grid {
+           grid-template-columns: repeat(2, 1fr);
+         }
+@@ -361,7 +257,4 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+ export class DashboardBottomPanelsComponent {
+   @Input({ required: true })
+   topStories: readonly AuthorTopStory[] = [];
+-
+-  @Input({ required: true })
+-  monthlyGoals: readonly AuthorMonthlyGoal[] = [];
+ }
+diff --git a/frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts b/frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts
+index ade1001..e8d604f 100644
+--- a/frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts
++++ b/frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts
+@@ -22,19 +22,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+ 
+         <strong>{{ metric.value }}</strong>
+       </div>
+-
+-      <p [class.metric-trend--down]="metric.trendDirection === 'down'">
+-        <app-studio-icon
+-          [name]="metric.trendDirection === 'up' ? 'arrow-up' : 'arrow-down'"
+-          [size]="13"
+-        ></app-studio-icon>
+-
+-        <strong>
+-          {{ metric.trendValue }}
+-        </strong>
+-
+-        {{ metric.trendLabel }}
+-      </p>
+     </article>
+   `,
+ 
+@@ -135,26 +122,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+         overflow: hidden;
+         text-overflow: ellipsis;
+       }
+-
+-      p {
+-        display: flex;
+-        grid-column: 1 / -1;
+-        align-items: center;
+-        gap: 4px;
+-        margin: 4px 0 0;
+-        color: var(--text-muted);
+-        font-size: 11px;
+-        white-space: nowrap;
+-      }
+-
+-      p strong {
+-        color: #4ade80;
+-      }
+-
+-      .metric-trend--down strong,
+-      .metric-trend--down {
+-        color: #fb5b65;
+-      }
+     `,
+   ],
+ })
+diff --git a/frontend/src/app/features/public/static/pages/about-page/about-page.component.html b/frontend/src/app/features/public/static/pages/about-page/about-page.component.html
+index 066c7c1..ab0b825 100644
+--- a/frontend/src/app/features/public/static/pages/about-page/about-page.component.html
++++ b/frontend/src/app/features/public/static/pages/about-page/about-page.component.html
+@@ -39,8 +39,8 @@
+           </svg>
+         </div>
+ 
+-        <strong>50K+</strong>
+-        <h2>Truyện</h2>
++        <strong>Đa dạng</strong>
++        <h2>Kho truyện</h2>
+ 
+         <p>
+           Kho truyện phong phú,
+@@ -59,8 +59,8 @@
+           </svg>
+         </div>
+ 
+-        <strong>120K+</strong>
+-        <h2>Người dùng</h2>
++        <strong>Kết nối</strong>
++        <h2>Cộng đồng</h2>
+ 
+         <p>
+           Cộng đồng ngày càng lớn
+@@ -79,7 +79,7 @@
+           </svg>
+         </div>
+ 
+-        <strong>20+</strong>
++        <strong>Nhiều</strong>
+         <h2>Thể loại</h2>
+ 
+         <p>
+@@ -97,13 +97,13 @@
+           </svg>
+         </div>
+ 
+-        <strong>99.9%</strong>
+-        <h2>Uptime</h2>
++        <strong>Có giám sát</strong>
++        <h2>Vận hành</h2>
+ 
+         <p>
+-          Hạ tầng ổn định, luôn sẵn
++          Hạ tầng được theo dõi để
+           <br />
+-          sàng phục vụ bạn.
++          phát hiện sự cố sớm.
+         </p>
+       </article>
+     </div>
+@@ -186,8 +186,8 @@
+           <h3>Khám phá dễ dàng</h3>
+ 
+           <p>
+-            Tìm kiếm thông minh, bộ lọc đa dạng và gợi ý cá nhân hóa giúp bạn nhanh chóng tìm thấy
+-            truyện yêu thích.
++            Tìm kiếm và bộ lọc theo nội dung giúp bạn nhanh chóng thu hẹp danh sách và tìm thấy
++            truyện phù hợp.
+           </p>
+         </div>
+       </article>
+diff --git a/scripts/verify-production-scope.mjs b/scripts/verify-production-scope.mjs
+new file mode 100755
+index 0000000..a96cae1
+--- /dev/null
++++ b/scripts/verify-production-scope.mjs
+@@ -0,0 +1,209 @@
++#!/usr/bin/env node
++
++import { readFile, readdir, stat } from 'node:fs/promises';
++import path from 'node:path';
++import process from 'node:process';
++import { fileURLToPath } from 'node:url';
++
++const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
++const repositoryRoot = path.resolve(scriptDirectory, '..');
++const manifestPath = path.join(
++  repositoryRoot,
++  'backend/ops/production/production-v1.scope.json',
++);
++
++const modeArgument = process.argv.find((argument) => argument.startsWith('--mode='));
++const mode = modeArgument?.slice('--mode='.length) ?? 'contract';
++
++if (!['contract', 'release'].includes(mode)) {
++  fail(`Unsupported mode "${mode}". Use --mode=contract or --mode=release.`);
++}
++
++const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
++const errors = [];
++
++validateManifest(manifest, errors);
++await validateDeferredSourceGuards(manifest, errors);
++
++if (mode === 'release') {
++  const blockers = manifest.features.filter(
++    (feature) => feature.decision === 'required' && feature.readiness !== 'ready',
++  );
++
++  for (const blocker of blockers) {
++    errors.push(
++      `Production blocker ${blocker.id}: ${blocker.blockingReason ?? 'readiness is not ready'}${
++        blocker.nextPhase ? ` (next: ${blocker.nextPhase})` : ''
++      }`,
++    );
++  }
++}
++
++if (errors.length > 0) {
++  console.error(`Production V1 scope ${mode} check failed:`);
++  for (const error of errors) console.error(`- ${error}`);
++  process.exit(1);
++}
++
++const required = manifest.features.filter((feature) => feature.decision === 'required');
++const ready = required.filter((feature) => feature.readiness === 'ready');
++const blocked = required.filter((feature) => feature.readiness !== 'ready');
++const deferred = manifest.features.filter((feature) => feature.decision === 'deferred');
++
++console.log(
++  `Production V1 scope ${mode} check OK: ${ready.length}/${required.length} required ready, ${blocked.length} blocked, ${deferred.length} deferred and hidden.`,
++);
++
++function validateManifest(candidate, validationErrors) {
++  if (candidate.schemaVersion !== 1) {
++    validationErrors.push('schemaVersion must be 1.');
++  }
++
++  if (candidate.release !== 'production-v1') {
++    validationErrors.push('release must be "production-v1".');
++  }
++
++  if (!Array.isArray(candidate.features) || candidate.features.length === 0) {
++    validationErrors.push('features must be a non-empty array.');
++    return;
++  }
++
++  const identifiers = new Set();
++
++  for (const feature of candidate.features) {
++    if (!isNonEmptyString(feature.id)) {
++      validationErrors.push('Every feature requires a non-empty id.');
++      continue;
++    }
++
++    if (identifiers.has(feature.id)) {
++      validationErrors.push(`Duplicate feature id: ${feature.id}.`);
++    }
++    identifiers.add(feature.id);
++
++    if (!['required', 'deferred'].includes(feature.decision)) {
++      validationErrors.push(`${feature.id}: decision must be required or deferred.`);
++      continue;
++    }
++
++    if (!isNonEmptyString(feature.owner)) {
++      validationErrors.push(`${feature.id}: owner is required.`);
++    }
++
++    if (feature.decision === 'required') {
++      if (!['ready', 'blocked'].includes(feature.readiness)) {
++        validationErrors.push(`${feature.id}: required readiness must be ready or blocked.`);
++      }
++
++      if (feature.readiness === 'ready' && feature.productionExposure !== 'enabled') {
++        validationErrors.push(`${feature.id}: ready required features must be enabled.`);
++      }
++
++      if (feature.readiness === 'blocked') {
++        if (feature.productionExposure !== 'pending') {
++          validationErrors.push(`${feature.id}: blocked required features must be pending.`);
++        }
++        if (!isNonEmptyString(feature.blockingReason)) {
++          validationErrors.push(`${feature.id}: blocked required features need blockingReason.`);
++        }
++        if (!isNonEmptyString(feature.nextPhase)) {
++          validationErrors.push(`${feature.id}: blocked required features need nextPhase.`);
++        }
++      }
++    }
++
++    if (feature.decision === 'deferred') {
++      if (feature.readiness !== 'deferred') {
++        validationErrors.push(`${feature.id}: deferred features must use readiness=deferred.`);
++      }
++      if (feature.productionExposure !== 'hidden') {
++        validationErrors.push(`${feature.id}: deferred features must be hidden.`);
++      }
++      if (!isNonEmptyString(feature.nextPhase)) {
++        validationErrors.push(`${feature.id}: deferred features need nextPhase.`);
++      }
++    }
++  }
++
++  if (!Array.isArray(candidate.sourceGuards)) {
++    validationErrors.push('sourceGuards must be an array.');
++    return;
++  }
++
++  for (const guard of candidate.sourceGuards) {
++    if (!identifiers.has(guard.featureId)) {
++      validationErrors.push(`Source guard references unknown feature: ${guard.featureId}.`);
++    }
++    if (!isNonEmptyString(guard.path)) {
++      validationErrors.push(`Source guard for ${guard.featureId} requires path.`);
++    }
++    if (!Array.isArray(guard.forbidden) || guard.forbidden.length === 0) {
++      validationErrors.push(`Source guard for ${guard.featureId} requires forbidden tokens.`);
++    }
++  }
++}
++
++async function validateDeferredSourceGuards(candidate, validationErrors) {
++  if (!Array.isArray(candidate.features) || !Array.isArray(candidate.sourceGuards)) return;
++
++  const featureById = new Map(candidate.features.map((feature) => [feature.id, feature]));
++
++  for (const guard of candidate.sourceGuards) {
++    const feature = featureById.get(guard.featureId);
++    if (!feature || feature.decision !== 'deferred') continue;
++
++    const targetPath = path.resolve(repositoryRoot, guard.path);
++    if (!targetPath.startsWith(`${repositoryRoot}${path.sep}`) && targetPath !== repositoryRoot) {
++      validationErrors.push(`${guard.featureId}: guard path escapes repository root.`);
++      continue;
++    }
++
++    let files;
++    try {
++      files = await collectFiles(targetPath);
++    } catch (error) {
++      validationErrors.push(`${guard.featureId}: cannot inspect ${guard.path}: ${error.message}`);
++      continue;
++    }
++
++    for (const file of files) {
++      const content = await readFile(file, 'utf8');
++      for (const token of guard.forbidden) {
++        if (content.includes(token)) {
++          validationErrors.push(
++            `${guard.featureId}: deferred Production V1 exposure "${token}" found in ${path.relative(
++              repositoryRoot,
++              file,
++            )}.`,
++          );
++        }
++      }
++    }
++  }
++}
++
++async function collectFiles(targetPath) {
++  const targetStat = await stat(targetPath);
++  if (targetStat.isFile()) return [targetPath];
++  if (!targetStat.isDirectory()) return [];
++
++  const entries = await readdir(targetPath, { withFileTypes: true });
++  const nested = await Promise.all(
++    entries.map(async (entry) => {
++      const entryPath = path.join(targetPath, entry.name);
++      if (entry.isDirectory()) return collectFiles(entryPath);
++      return entry.isFile() ? [entryPath] : [];
++    }),
++  );
++
++  return nested.flat();
++}
++
++function isNonEmptyString(value) {
++  return typeof value === 'string' && value.trim().length > 0;
++}
++
++function fail(message) {
++  console.error(message);
++  process.exit(1);
++}

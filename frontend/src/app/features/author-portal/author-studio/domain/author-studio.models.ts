@@ -35,9 +35,6 @@ export interface AuthorStudioProfile {
   readonly displayName: string;
   readonly penName: string;
   readonly avatarUrl: string;
-  readonly level: number;
-  readonly currentExperience: number;
-  readonly requiredExperience: number;
   readonly verified: boolean;
 }
 
@@ -45,9 +42,6 @@ export interface AuthorStudioMetric {
   readonly id: string;
   readonly title: string;
   readonly value: string;
-  readonly trendValue: string;
-  readonly trendLabel: string;
-  readonly trendDirection: 'up' | 'down';
   readonly icon: StudioIconName;
   readonly tone: StudioMetricTone;
 }
@@ -97,7 +91,6 @@ export interface AuthorReaderComment {
   readonly storyTitle: string;
   readonly content: string;
   readonly createdAt: string;
-  readonly unread: boolean;
 }
 
 export interface AuthorTopStory {

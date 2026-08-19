@@ -59,25 +59,12 @@ export class AuthorDashboardMapper {
     const currentDrafts = stories.filter(
       (story) => story.status === 'DRAFT',
     ).length;
-    const totalChapters = stories.reduce(
-      (sum, story) => sum + story.chapterCount,
-      0,
-    );
-    const pendingChapters = scheduledChapters.filter(
-      (chapter) => chapter.status === 'SCHEDULED',
-    ).length;
     const views30Days = dailyStats
       .filter((stat) => stat.date >= start30Days)
       .reduce(
         (sum, stat) => sum + AuthorDashboardMapper.safeNumber(stat.viewCount),
         0,
       );
-
-    const directTrend = {
-      trendValue: 'Trực tiếp',
-      trendLabel: 'từ hệ thống',
-      trendDirection: 'up' as const,
-    };
 
     return {
       profile: {
@@ -86,9 +73,6 @@ export class AuthorDashboardMapper {
         avatarUrl:
           AuthorDashboardMapper.mediaUrl(profile.user.avatarMedia) ??
           EMPTY_AVATAR_URL,
-        level: Math.floor(totalChapters / 50) + 1,
-        currentExperience: totalChapters % 50,
-        requiredExperience: 50,
         verified: profile.verificationStatus === 'VERIFIED',
       },
       unreadNotifications,
@@ -97,7 +81,6 @@ export class AuthorDashboardMapper {
           id: 'published-stories',
           title: 'Truyện đang xuất bản',
           value: AuthorDashboardMapper.formatCompact(publishedStories.length),
-          ...directTrend,
           icon: 'book',
           tone: 'purple',
         },
@@ -107,23 +90,13 @@ export class AuthorDashboardMapper {
           value: AuthorDashboardMapper.formatCompact(
             currentDrafts + draftChapters.length,
           ),
-          ...directTrend,
           icon: 'draft',
           tone: 'blue',
-        },
-        {
-          id: 'pending-chapters',
-          title: 'Chương đã lên lịch',
-          value: AuthorDashboardMapper.formatCompact(pendingChapters),
-          ...directTrend,
-          icon: 'clock',
-          tone: 'orange',
         },
         {
           id: 'views',
           title: 'Lượt xem 30 ngày',
           value: AuthorDashboardMapper.formatCompact(views30Days),
-          ...directTrend,
           icon: 'eye',
           tone: 'indigo',
         },
@@ -131,7 +104,6 @@ export class AuthorDashboardMapper {
           id: 'followers',
           title: 'Người theo dõi',
           value: AuthorDashboardMapper.formatCompact(profile.followerCount),
-          ...directTrend,
           icon: 'users',
           tone: 'pink',
         },
@@ -196,7 +168,6 @@ export class AuthorDashboardMapper {
           comment.createdAt,
           now,
         ),
-        unread: false,
       })),
       topStories: [...stories]
         .sort((first, second) =>

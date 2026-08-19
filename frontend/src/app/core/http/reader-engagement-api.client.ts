@@ -7,6 +7,7 @@ import { ApiSuccessEnvelope } from './api-envelope.model';
 import {
   LibraryApiStatus,
   LibraryEntryApiItem,
+  ReadingBookmarkApiItem,
   ReadingHistoryApiItem,
   StoryCommentApiItem,
   StoryCommentApiPage,
@@ -62,6 +63,29 @@ export class ReaderEngagementApiClient {
 
   clearReadingHistory(): Observable<void> {
     return this.http.delete<void>(`${this.config.apiBaseUrl}/reading-history`);
+  }
+
+  listReadingBookmarks(): Observable<readonly ReadingBookmarkApiItem[]> {
+    return this.get<readonly ReadingBookmarkApiItem[]>('/reading-bookmarks');
+  }
+
+  getReadingBookmark(chapterId: string): Observable<ReadingBookmarkApiItem | null> {
+    return this.get<ReadingBookmarkApiItem | null>(
+      `/reading-bookmarks/${encodeURIComponent(chapterId)}`,
+    );
+  }
+
+  upsertReadingBookmark(chapterId: string): Observable<ReadingBookmarkApiItem> {
+    return this.put<ReadingBookmarkApiItem>(
+      `/reading-bookmarks/${encodeURIComponent(chapterId)}`,
+      {},
+    );
+  }
+
+  removeReadingBookmark(chapterId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.config.apiBaseUrl}/reading-bookmarks/${encodeURIComponent(chapterId)}`,
+    );
   }
 
   getMyRating(storyId: string): Observable<StoryRatingApiItem | null> {

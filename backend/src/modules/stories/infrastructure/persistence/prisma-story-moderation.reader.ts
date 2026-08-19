@@ -52,7 +52,7 @@ export class PrismaStoryModerationReader implements StoryModerationReaderPort {
           : {}),
       };
       const where: Prisma.StorySubmissionWhereInput = {
-        ...(input.status ? { status: input.status as SubmissionStatus } : {}),
+        ...(input.status ? { status: input.status } : {}),
         ...(input.submittedFrom || input.submittedTo
           ? {
               submittedAt: {

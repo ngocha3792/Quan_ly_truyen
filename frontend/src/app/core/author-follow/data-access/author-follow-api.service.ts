@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
-import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
-import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
+import { APP_RUNTIME_CONFIG } from '../../config/app-config.token';
+import { ApiSuccessEnvelope } from '../../http/api-envelope.model';
 import { AuthorFollowMutation, FollowingAuthorsPage } from '../domain/author-follow.models';
 
 @Injectable({ providedIn: 'root' })

@@ -17,7 +17,11 @@ import {
   GetAuthorDetailQueryHandler,
   GetAuthorDirectoryQueryHandler,
 } from './application';
-import { PrismaAuthorLifecyclePersistence, PrismaAuthorPersistence, PrismaAuthorProfilePersistence } from './infrastructure';
+import {
+  PrismaAuthorLifecyclePersistence,
+  PrismaAuthorPersistence,
+  PrismaAuthorProfilePersistence,
+} from './infrastructure';
 import {
   ActiveAuthorGuard,
   AdminAuthorsController,
@@ -59,8 +63,14 @@ const queryHandlers = [
     UpdateAuthorProfileCommandHandler,
     ActiveAuthorGuard,
     ...portProviders,
-    { provide: AUTHOR_LIFECYCLE_PERSISTENCE_PORT, useExisting: PrismaAuthorLifecyclePersistence },
-    { provide: AUTHOR_PROFILE_PERSISTENCE_PORT, useExisting: PrismaAuthorProfilePersistence },
+    {
+      provide: AUTHOR_LIFECYCLE_PERSISTENCE_PORT,
+      useExisting: PrismaAuthorLifecyclePersistence,
+    },
+    {
+      provide: AUTHOR_PROFILE_PERSISTENCE_PORT,
+      useExisting: PrismaAuthorProfilePersistence,
+    },
     ...queryHandlers,
   ],
   exports: [AssertActiveAuthorQueryHandler, ActiveAuthorGuard],

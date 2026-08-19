@@ -3,11 +3,7 @@ import type { LibraryEntryResultDto } from '../dto';
 export const LIBRARY_PERSISTENCE_PORT = Symbol('LIBRARY_PERSISTENCE_PORT');
 
 export type LibraryEntryStatus =
-  | 'PLAN_TO_READ'
-  | 'READING'
-  | 'COMPLETED'
-  | 'ON_HOLD'
-  | 'DROPPED';
+  'PLAN_TO_READ' | 'READING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED';
 
 export interface UpsertLibraryEntryInput {
   readonly userId: string;

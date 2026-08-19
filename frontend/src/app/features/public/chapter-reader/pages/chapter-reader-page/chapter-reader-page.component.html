@@ -119,11 +119,12 @@
         [fontSize]="store.fontSize()"
         [lightsOff]="store.lightsOff()"
         [bookmarked]="store.bookmarked()"
+        [bookmarkPending]="store.bookmarkPending()"
         (fontDecrease)="store.decreaseFontSize()"
         (fontIncrease)="store.increaseFontSize()"
         (fontReset)="store.resetFontSize()"
         (lightsToggle)="store.toggleLights()"
-        (bookmarkToggle)="store.toggleBookmark()"
+        (bookmarkToggle)="toggleBookmark()"
       ></app-chapter-sidebar>
     </div>
   }

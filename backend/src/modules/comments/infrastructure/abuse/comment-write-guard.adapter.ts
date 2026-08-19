@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { COMMENT_ABUSE_GUARD_PORT, type CommentAbuseGuardPort, type CommentWriteGuardPort } from '../../application/ports';
+import {
+  COMMENT_ABUSE_GUARD_PORT,
+  type CommentAbuseGuardPort,
+  type CommentWriteGuardPort,
+} from '../../application/ports';
 import { CommentDuplicateRecentException, CommentPolicy } from '../../domain';
 import {
   RECENT_COMMENT_READER_PORT,
@@ -11,7 +15,8 @@ export class CommentWriteGuardAdapter implements CommentWriteGuardPort {
   constructor(
     @Inject(RECENT_COMMENT_READER_PORT)
     private readonly recentComments: RecentCommentReaderPort,
-    @Inject(COMMENT_ABUSE_GUARD_PORT) private readonly limiter: CommentAbuseGuardPort,
+    @Inject(COMMENT_ABUSE_GUARD_PORT)
+    private readonly limiter: CommentAbuseGuardPort,
   ) {}
 
   async prepare(input: {

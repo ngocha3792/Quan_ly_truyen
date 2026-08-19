@@ -141,6 +141,21 @@ test('allow scoped shared feature import', () => {
   );
 });
 
+
+test('forbid shared internals across feature scopes', () => {
+  const violations = violationsFor(
+    file('features', 'account', 'following', 'pages', 'following.ts'),
+
+    `
+          import { AuthorFollowApiService }
+            from '@features/public/shared/author-follow/data-access/author-follow-api.service';
+        `,
+  );
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0].message, /account\/following cannot import internals of public\/shared/);
+});
+
 test('allow explicit feature public API', () => {
   const violations = violationsFor(
     file('features', 'public', 'story', 'pages', 'page.ts'),

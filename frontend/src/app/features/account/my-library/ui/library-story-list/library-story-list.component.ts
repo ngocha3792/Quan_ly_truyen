@@ -38,7 +38,7 @@ export class LibraryStoryListComponent {
       return 'reading';
     }
 
-    return 'following';
+    return 'saved';
   }
 
   getStatusLabel(story: LibraryStory): string {
@@ -54,6 +54,6 @@ export class LibraryStoryListComponent {
       return 'ĐANG ĐỌC';
     }
 
-    return 'THEO DÕI';
+    return 'TRONG THƯ VIỆN';
   }
 }

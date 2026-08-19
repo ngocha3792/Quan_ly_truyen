@@ -1,2 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common'; import { FOLLOW_REPOSITORY, type FollowRepositoryPort } from '../../ports'; import { UnfollowAuthorCommand } from './unfollow-author.command';
-@Injectable() export class UnfollowAuthorCommandHandler { constructor(@Inject(FOLLOW_REPOSITORY) private readonly repository: FollowRepositoryPort) {} execute(command: UnfollowAuthorCommand) { return this.repository.unfollow(command.userId, command.authorId); } }
+import { Inject, Injectable } from '@nestjs/common';
+import { FOLLOW_REPOSITORY, type FollowRepositoryPort } from '../../ports';
+import { UnfollowAuthorCommand } from './unfollow-author.command';
+@Injectable()
+export class UnfollowAuthorCommandHandler {
+  constructor(
+    @Inject(FOLLOW_REPOSITORY)
+    private readonly repository: FollowRepositoryPort,
+  ) {}
+  execute(command: UnfollowAuthorCommand) {
+    return this.repository.unfollow(command.userId, command.authorId);
+  }
+}

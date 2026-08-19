@@ -1,6 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthenticationRequiredException } from '@/common/exceptions';
-import { AssertActiveAuthorQuery, AssertActiveAuthorQueryHandler } from '../../../application';
+import {
+  AssertActiveAuthorQuery,
+  AssertActiveAuthorQueryHandler,
+} from '../../../application';
 
 interface RequestWithUser {
   method?: string;
@@ -8,7 +11,9 @@ interface RequestWithUser {
 }
 @Injectable()
 export class ActiveAuthorGuard implements CanActivate {
-  constructor(private readonly assertActiveAuthor: AssertActiveAuthorQueryHandler) {}
+  constructor(
+    private readonly assertActiveAuthor: AssertActiveAuthorQueryHandler,
+  ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     if (

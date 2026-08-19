@@ -67,6 +67,8 @@
       type="button"
       class="bookmark-button"
       [class.bookmark-button--active]="bookmarked"
+      [disabled]="bookmarkPending"
+      [attr.aria-busy]="bookmarkPending"
       (click)="bookmarkToggle.emit()"
     >
       <svg viewBox="0 0 24 24">
@@ -75,7 +77,7 @@
 
       <span>
         <strong>
-          {{ bookmarked ? 'Đã đánh dấu chương' : 'Đánh dấu chương này' }}
+          {{ bookmarkPending ? 'Đang lưu...' : bookmarked ? 'Đã đánh dấu chương' : 'Đánh dấu chương này' }}
         </strong>
 
         <small>

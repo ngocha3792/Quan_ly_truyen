@@ -13,8 +13,10 @@ export interface ReadingHistoryItem {
   readonly author: string;
   readonly genres: readonly string[];
 
+  readonly chapterId: string;
   readonly chapterNumber: number;
   readonly chapterTitle: string;
+  readonly bookmarked: boolean;
 
   readonly progress: number;
   readonly lastReadLabel: string;
@@ -27,8 +29,6 @@ export interface ReadingHistoryItem {
 export interface ReadingHistoryStatistics {
   readonly storiesRead: string;
   readonly chaptersRead: string;
-  readonly weeklyReadingTime: string;
-  readonly followedStories: string;
 }
 
 export interface ContinueReadingItem {

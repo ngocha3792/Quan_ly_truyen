@@ -109,18 +109,20 @@ describe('Phase 5 author profile, follows and notifications', () => {
       where: { userId: authorId },
     });
 
-    const updated = await updateProfile.execute(new UpdateAuthorProfileCommand({
-      userId: authorId,
-      displayName: '  Kiếm   Khách  ',
-      bio: 'Tiểu sử tác giả',
-      avatarMediaId: avatar.id,
-      bannerMediaId: banner.id,
-      socialLinks: {
-        website: 'https://example.test/me',
-        facebook: 'https://facebook.com/example',
-      },
-      audit: { requestId: unique('request') },
-    }));
+    const updated = await updateProfile.execute(
+      new UpdateAuthorProfileCommand({
+        userId: authorId,
+        displayName: '  Kiếm   Khách  ',
+        bio: 'Tiểu sử tác giả',
+        avatarMediaId: avatar.id,
+        bannerMediaId: banner.id,
+        socialLinks: {
+          website: 'https://example.test/me',
+          facebook: 'https://facebook.com/example',
+        },
+        audit: { requestId: unique('request') },
+      }),
+    );
 
     expect(updated.displayName).toBe('Kiếm Khách');
     expect(updated.slug).toBe(before.slug);
@@ -142,11 +144,13 @@ describe('Phase 5 author profile, follows and notifications', () => {
     ).toBe(1);
 
     await expect(
-      updateProfile.execute(new UpdateAuthorProfileCommand({
-        userId: authorId,
-        avatarMediaId: foreignAvatar.id,
-        audit: {},
-      })),
+      updateProfile.execute(
+        new UpdateAuthorProfileCommand({
+          userId: authorId,
+          avatarMediaId: foreignAvatar.id,
+          audit: {},
+        }),
+      ),
     ).rejects.toMatchObject({ code: 'AUTHOR_AVATAR_INVALID' });
   });
 
@@ -155,16 +159,20 @@ describe('Phase 5 author profile, follows and notifications', () => {
     const secondAuthor = await createAuthor('name-race-b');
 
     const results = await Promise.allSettled([
-      updateProfile.execute(new UpdateAuthorProfileCommand({
-        userId: firstAuthor,
-        displayName: 'Phase Five Shared Name',
-        audit: {},
-      })),
-      updateProfile.execute(new UpdateAuthorProfileCommand({
-        userId: secondAuthor,
-        displayName: '  PHASE   FIVE SHARED NAME  ',
-        audit: {},
-      })),
+      updateProfile.execute(
+        new UpdateAuthorProfileCommand({
+          userId: firstAuthor,
+          displayName: 'Phase Five Shared Name',
+          audit: {},
+        }),
+      ),
+      updateProfile.execute(
+        new UpdateAuthorProfileCommand({
+          userId: secondAuthor,
+          displayName: '  PHASE   FIVE SHARED NAME  ',
+          audit: {},
+        }),
+      ),
     ]);
 
     expect(
@@ -229,10 +237,14 @@ describe('Phase 5 author profile, follows and notifications', () => {
     });
 
     const otherReader = await createUser('other-reader');
-    await expect(followAuthor.execute(new FollowAuthorCommand(otherReader, authorId))).rejects.toMatchObject({
+    await expect(
+      followAuthor.execute(new FollowAuthorCommand(otherReader, authorId)),
+    ).rejects.toMatchObject({
       code: 'AUTHOR_NOT_FOLLOWABLE',
     });
-    await expect(unfollowAuthor.execute(new UnfollowAuthorCommand(readerId, authorId))).resolves.toMatchObject({
+    await expect(
+      unfollowAuthor.execute(new UnfollowAuthorCommand(readerId, authorId)),
+    ).resolves.toMatchObject({
       isFollowing: false,
     });
   });
@@ -247,7 +259,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
       passwordHash: 'phase5-reader-hash',
     });
     const readerSession = await createSession(deletingReader);
-    await followAuthor.execute(new FollowAuthorCommand(deletingReader, targetAuthor));
+    await followAuthor.execute(
+      new FollowAuthorCommand(deletingReader, targetAuthor),
+    );
 
     await expect(
       deletion.deleteAccount({
@@ -277,7 +291,9 @@ describe('Phase 5 author profile, follows and notifications', () => {
     });
     const authorSession = await createSession(deletingAuthor);
     const remainingReader = await createUser('remaining-reader');
-    await followAuthor.execute(new FollowAuthorCommand(remainingReader, deletingAuthor));
+    await followAuthor.execute(
+      new FollowAuthorCommand(remainingReader, deletingAuthor),
+    );
 
     await expect(
       deletion.deleteAccount({

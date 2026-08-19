@@ -197,7 +197,8 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
         });
 
         const incomingChapterNumber = chapter.number.toNumber();
-        const existingChapterNumber = existing?.currentChapter?.number.toNumber();
+        const existingChapterNumber =
+          existing?.currentChapter?.number.toNumber();
         const shouldAdvance =
           existingChapterNumber === undefined ||
           incomingChapterNumber >= existingChapterNumber;

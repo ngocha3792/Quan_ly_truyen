@@ -1,8 +1,5 @@
 import type { LoginClientContext } from '../commands/login/login.command';
-import type {
-  LoginResultDto,
-  OAuthAuthorizationResultDto,
-} from '../dto';
+import type { LoginResultDto, OAuthAuthorizationResultDto } from '../dto';
 
 export const OAUTH_FLOW_PORT = Symbol('OAUTH_FLOW_PORT');
 

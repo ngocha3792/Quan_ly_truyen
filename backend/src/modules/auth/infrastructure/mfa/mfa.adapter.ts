@@ -65,7 +65,6 @@ import { RedisMfaChallengeStore } from './redis-mfa-challenge.store';
 
 import { TotpAdapter } from './totp.adapter';
 
-
 @Injectable()
 export class MfaAdapter implements MfaPort {
   private readonly config: AuthConfig;
@@ -105,7 +104,9 @@ export class MfaAdapter implements MfaPort {
    * =========================
    */
 
-  async beginPreAuthEnrollment(ticket: string): Promise<MfaEnrollmentResultDto> {
+  async beginPreAuthEnrollment(
+    ticket: string,
+  ): Promise<MfaEnrollmentResultDto> {
     const challenge = await this.challenges.read(ticket);
 
     if (challenge.mode !== 'enroll') {

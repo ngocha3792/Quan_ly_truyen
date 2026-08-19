@@ -38,6 +38,15 @@ export interface ReadingHistoryApiItem {
   readonly lastReadAt: string;
 }
 
+export interface ReadingBookmarkApiItem {
+  readonly id: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly position: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 export interface StoryRatingApiItem {
   readonly storyId: string;
   readonly score: number;

@@ -4,8 +4,8 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
-  IsEnum,
   IsInt,
+  IsIn,
   IsNumber,
   IsOptional,
   IsUUID,
@@ -13,11 +13,14 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { ReaderAnalyticsEventType } from '@/generated/prisma/client';
+import {
+  READER_ANALYTICS_EVENT_TYPE_VALUES,
+  type ReaderAnalyticsEventTypeName,
+} from '../../../domain';
 
 export class ReaderAnalyticsEventRequest {
   @IsUUID('4') eventId!: string;
-  @IsEnum(ReaderAnalyticsEventType) type!: ReaderAnalyticsEventType;
+  @IsIn(READER_ANALYTICS_EVENT_TYPE_VALUES) type!: ReaderAnalyticsEventTypeName;
   @IsInt() @Min(1) @Max(1) version!: number;
   @IsUUID('4') sessionId!: string;
   @IsUUID('4') storyId!: string;

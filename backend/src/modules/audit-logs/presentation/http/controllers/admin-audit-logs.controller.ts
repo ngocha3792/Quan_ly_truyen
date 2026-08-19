@@ -12,7 +12,12 @@ import {
 } from 'class-validator';
 import { RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
-import { GetAuditLogDetailQuery, GetAuditLogDetailQueryHandler, ListAuditLogsQuery, ListAuditLogsQueryHandler } from '../../../application';
+import {
+  GetAuditLogDetailQuery,
+  GetAuditLogDetailQueryHandler,
+  ListAuditLogsQuery,
+  ListAuditLogsQueryHandler,
+} from '../../../application';
 
 class ListAuditLogsRequest {
   @IsOptional() @IsUUID('4') actorId?: string;
@@ -36,17 +41,19 @@ export class AdminAuditLogsController {
 
   @Get()
   list(@Query() request: ListAuditLogsRequest) {
-    return this.listAuditLogs.execute(new ListAuditLogsQuery({
-      actorId: request.actorId,
-      action: request.action?.trim() || undefined,
-      entityType: request.entityType?.trim() || undefined,
-      entityId: request.entityId?.trim() || undefined,
-      requestId: request.requestId?.trim() || undefined,
-      from: request.from ? new Date(request.from) : undefined,
-      to: request.to ? new Date(request.to) : undefined,
-      page: request.page,
-      pageSize: request.pageSize,
-    }));
+    return this.listAuditLogs.execute(
+      new ListAuditLogsQuery({
+        actorId: request.actorId,
+        action: request.action?.trim() || undefined,
+        entityType: request.entityType?.trim() || undefined,
+        entityId: request.entityId?.trim() || undefined,
+        requestId: request.requestId?.trim() || undefined,
+        from: request.from ? new Date(request.from) : undefined,
+        to: request.to ? new Date(request.to) : undefined,
+        page: request.page,
+        pageSize: request.pageSize,
+      }),
+    );
   }
 
   @Get(':auditLogId')
@@ -54,6 +61,8 @@ export class AdminAuditLogsController {
     @Param('auditLogId', new ParseUUIDPipe({ version: '4' }))
     auditLogId: string,
   ) {
-    return this.getAuditLogDetail.execute(new GetAuditLogDetailQuery(auditLogId));
+    return this.getAuditLogDetail.execute(
+      new GetAuditLogDetailQuery(auditLogId),
+    );
   }
 }

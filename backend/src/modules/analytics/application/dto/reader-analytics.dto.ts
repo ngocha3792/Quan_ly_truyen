@@ -1,9 +1,6 @@
-export type ReaderAnalyticsEventTypeName =
-  | 'STORY_VIEW'
-  | 'CHAPTER_VIEW'
-  | 'READING_STARTED'
-  | 'READING_PROGRESS'
-  | 'READING_COMPLETED';
+import type { ReaderAnalyticsEventTypeName } from '../../domain';
+
+export type { ReaderAnalyticsEventTypeName } from '../../domain';
 export interface ReaderAnalyticsEventInput {
   readonly eventId: string;
   readonly type: ReaderAnalyticsEventTypeName;

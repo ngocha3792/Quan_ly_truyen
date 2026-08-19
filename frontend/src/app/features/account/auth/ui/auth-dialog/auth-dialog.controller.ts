@@ -9,7 +9,9 @@ import {
 } from '../../../../../core/auth/auth.models';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { getRegisterValidationMessage } from '../../../../../core/auth/auth-validation';
+import { passwordPolicyHint } from '../../../../../core/auth/password-policy';
 import { OAuthBrowserService } from '../../../../../core/auth/oauth-browser.service';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 import { isValidEmail, readApiErrorCode, readMfaChallenge } from './auth-dialog-error.util';
 
@@ -35,6 +37,8 @@ export abstract class AuthDialogController implements OnDestroy {
   protected readonly auth = inject(AuthStore);
 
   private readonly authApi = inject(AuthApiService);
+  protected readonly passwordPolicy = inject(APP_RUNTIME_CONFIG).passwordPolicy;
+  protected readonly passwordHint = passwordPolicyHint(this.passwordPolicy);
   private readonly oauth = inject(OAuthBrowserService);
 
   protected readonly mode = signal<'login' | 'register'>('login');
@@ -310,7 +314,7 @@ export abstract class AuthDialogController implements OnDestroy {
       password: this.password,
     };
 
-    const validationMessage = getRegisterValidationMessage(payload);
+    const validationMessage = getRegisterValidationMessage(payload, this.passwordPolicy);
 
     if (validationMessage) {
       this.localError.set(validationMessage);

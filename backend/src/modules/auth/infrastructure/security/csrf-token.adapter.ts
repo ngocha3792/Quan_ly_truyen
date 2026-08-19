@@ -18,12 +18,14 @@ import {
 
 import type { AuthConfig } from '@/config';
 
-import type { CsrfTokenPort, ValidateCsrfTokenInput } from '../../application/ports';
+import type {
+  CsrfTokenPort,
+  ValidateCsrfTokenInput,
+} from '../../application/ports';
 
 const CSRF_TOKEN_VERSION = 'v1';
 
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
-
 
 @Injectable()
 export class CsrfTokenAdapter implements CsrfTokenPort {

@@ -20,7 +20,9 @@ export type SaveReadingProgressResult =
 export interface ReadingHistoryPersistencePort {
   listMine(userId: string): Promise<readonly ReadingHistoryEntryResultDto[]>;
 
-  saveProgress(input: SaveReadingProgressInput): Promise<SaveReadingProgressResult>;
+  saveProgress(
+    input: SaveReadingProgressInput,
+  ): Promise<SaveReadingProgressResult>;
 
   removeMine(userId: string, storyId: string): Promise<void>;
 

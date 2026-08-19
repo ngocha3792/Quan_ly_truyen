@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@/generated/prisma/client';
 import {
   MediaAsset,
-  MediaPurpose,
   MediaResourceType,
   MediaStatus,
 } from '@/generated/prisma/client';
@@ -28,7 +27,10 @@ import type {
   MediaStorageResourceType,
   StoredMedia,
 } from '../../application/ports/stored-media.interface';
-import type { ConfirmMediaUploadInput, CreateMediaUploadIntentInput, MediaPurposeName } from '../../application/dto';
+import type {
+  ConfirmMediaUploadInput,
+  CreateMediaUploadIntentInput,
+} from '../../application/dto';
 import type { MediaCommandPort } from '../../application/ports';
 import { MEDIA_ERROR_CODES } from '../../domain/exceptions/media-error-codes';
 import { MediaPublicIdPolicy } from '../../domain/policies/media-public-id.policy';
@@ -53,7 +55,7 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
   async createUploadIntent(
     input: CreateMediaUploadIntentInput,
   ): Promise<SignedUploadParameters> {
-    const policy = MEDIA_UPLOAD_POLICIES[input.purpose as MediaPurposeName];
+    const policy = MEDIA_UPLOAD_POLICIES[input.purpose];
     this.validateDeclaredFile(input, policy);
     await this.ownership.assertCanCreate(
       input.principal,
@@ -101,7 +103,7 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
     try {
       const signed = this.mediaStorage.createSignedUpload({
         mediaAssetId,
-        purpose: input.purpose as MediaPurposeName,
+        purpose: input.purpose,
         publicId,
         assetFolder,
         resourceType: policy.resourceType,

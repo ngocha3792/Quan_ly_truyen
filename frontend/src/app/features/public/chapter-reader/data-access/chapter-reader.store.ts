@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
 import type {
@@ -22,12 +22,14 @@ export class ChapterReaderStore {
   readonly fontSize = signal(18);
   readonly lightsOff = signal(false);
   readonly bookmarked = signal(false);
+  readonly bookmarkPending = signal(false);
   readonly commentPending = signal(false);
   readonly commentMessage = signal<string | null>(null);
 
   load(storySlug: string, chapterNumber: string): void {
     this.loading.set(true);
     this.error.set(null);
+    this.bookmarked.set(false);
     this.repository
       .getChapter(storySlug, chapterNumber)
       .pipe(
@@ -37,11 +39,24 @@ export class ChapterReaderStore {
             .ensureInitialized()
             .pipe(
               tap(() => this.loadComments(storySlug, chapterNumber)),
-              switchMap((result) =>
-                result === 'authenticated'
-                  ? this.repository.saveProgress(view.story.id, view.chapter.id)
-                  : of(undefined),
-              ),
+              switchMap((result) => {
+                if (result !== 'authenticated') {
+                  this.bookmarked.set(false);
+                  return of(undefined);
+                }
+
+                return forkJoin({
+                  progress: this.repository
+                    .saveProgress(view.story.id, view.chapter.id)
+                    .pipe(catchError(() => of(undefined))),
+                  bookmarked: this.repository
+                    .getBookmark(view.chapter.id)
+                    .pipe(catchError(() => of(false))),
+                }).pipe(
+                  tap(({ bookmarked }) => this.bookmarked.set(bookmarked)),
+                  map(() => undefined),
+                );
+              }),
               catchError(() => of(undefined)),
             )
             .subscribe();
@@ -262,7 +277,27 @@ export class ChapterReaderStore {
     this.lightsOff.update((current) => !current);
   }
   toggleBookmark(): void {
-    this.bookmarked.update((current) => !current);
+    const view = this.viewState();
+    if (!view || !this.auth.isAuthenticated() || this.bookmarkPending()) return;
+
+    const previous = this.bookmarked();
+    const next = !previous;
+    this.bookmarked.set(next);
+    this.bookmarkPending.set(true);
+
+    const request$ = next
+      ? this.repository.saveBookmark(view.chapter.id)
+      : this.repository.removeBookmark(view.chapter.id);
+
+    request$
+      .pipe(
+        catchError(() => {
+          this.bookmarked.set(previous);
+          return EMPTY;
+        }),
+        finalize(() => this.bookmarkPending.set(false)),
+      )
+      .subscribe();
   }
 
   private optimisticReaction(

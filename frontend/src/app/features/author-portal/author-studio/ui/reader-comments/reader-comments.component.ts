@@ -38,10 +38,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
 
               <p>{{ comment.content }}</p>
             </div>
-
-            @if (comment.unread) {
-              <span class="unread-dot"></span>
-            }
           </article>
         }
       </div>
@@ -160,17 +156,6 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
         line-height: 1.45;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-
-      .unread-dot {
-        position: absolute;
-        top: 50%;
-        right: 0;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #ef4444;
-        transform: translateY(-50%);
       }
     `,
   ],

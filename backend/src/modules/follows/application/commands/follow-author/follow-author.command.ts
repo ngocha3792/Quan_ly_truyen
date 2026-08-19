@@ -1,1 +1,6 @@
-export class FollowAuthorCommand { constructor(readonly userId: string, readonly authorId: string) {} }
+export class FollowAuthorCommand {
+  constructor(
+    readonly userId: string,
+    readonly authorId: string,
+  ) {}
+}

@@ -1,10 +1,5 @@
 import { InvalidInputException } from '@/common/exceptions';
-import { BCRYPT_MAX_PASSWORD_BYTES } from '@/common/utils';
-
-const LOWERCASE_PATTERN = /[a-z]/;
-const UPPERCASE_PATTERN = /[A-Z]/;
-const NUMBER_PATTERN = /\d/;
-const SYMBOL_PATTERN = /[^A-Za-z0-9]/;
+import { PasswordPolicy } from '../policies';
 
 export class PasswordValueObject {
   private constructor(readonly value: string) {}
@@ -14,18 +9,7 @@ export class PasswordValueObject {
       throw PasswordValueObject.invalid();
     }
 
-    const byteLength = Buffer.byteLength(rawValue, 'utf8');
-
-    const isValid =
-      rawValue.length >= 8 &&
-      rawValue.length <= 72 &&
-      byteLength <= BCRYPT_MAX_PASSWORD_BYTES &&
-      LOWERCASE_PATTERN.test(rawValue) &&
-      UPPERCASE_PATTERN.test(rawValue) &&
-      NUMBER_PATTERN.test(rawValue) &&
-      SYMBOL_PATTERN.test(rawValue);
-
-    if (!isValid) {
+    if (!PasswordPolicy.isSatisfiedBy(rawValue)) {
       throw PasswordValueObject.invalid();
     }
 
@@ -35,8 +19,7 @@ export class PasswordValueObject {
   private static invalid(): InvalidInputException {
     return new InvalidInputException({
       code: 'AUTH_INVALID_PASSWORD',
-      message:
-        'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
+      message: `Mật khẩu phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
       details: {
         field: 'password',
       },

@@ -21,9 +21,16 @@ import {
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 import {
-  CreateTagCommand, CreateTagCommandHandler, DeleteTagCommand, DeleteTagCommandHandler,
-  ListTagsQuery, ListTagsQueryHandler, MergeTagsCommand, MergeTagsCommandHandler,
-  UpdateTagCommand, UpdateTagCommandHandler,
+  CreateTagCommand,
+  CreateTagCommandHandler,
+  DeleteTagCommand,
+  DeleteTagCommandHandler,
+  ListTagsQuery,
+  ListTagsQueryHandler,
+  MergeTagsCommand,
+  MergeTagsCommandHandler,
+  UpdateTagCommand,
+  UpdateTagCommandHandler,
 } from '../../../application';
 import {
   CreateTagRequest,
@@ -56,7 +63,14 @@ export class AdminTagsController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
-    return this.createTag.execute(new CreateTagCommand(request.name, { actorId, ipAddress, userAgent, requestId }));
+    return this.createTag.execute(
+      new CreateTagCommand(request.name, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
+    );
   }
 
   @Patch(':tagId')
@@ -68,7 +82,14 @@ export class AdminTagsController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
-    return this.updateTag.execute(new UpdateTagCommand(tagId, request.name, { actorId, ipAddress, userAgent, requestId }));
+    return this.updateTag.execute(
+      new UpdateTagCommand(tagId, request.name, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
+    );
   }
 
   @Delete(':tagId')
@@ -80,7 +101,9 @@ export class AdminTagsController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ): Promise<void> {
-    await this.deleteTag.execute(new DeleteTagCommand(tagId, { actorId, ipAddress, userAgent, requestId }));
+    await this.deleteTag.execute(
+      new DeleteTagCommand(tagId, { actorId, ipAddress, userAgent, requestId }),
+    );
   }
 
   @Post(':sourceTagId/merge')
@@ -95,6 +118,13 @@ export class AdminTagsController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
-    return this.mergeTags.execute(new MergeTagsCommand(sourceTagId, request.targetTagId, { actorId, ipAddress, userAgent, requestId }));
+    return this.mergeTags.execute(
+      new MergeTagsCommand(sourceTagId, request.targetTagId, {
+        actorId,
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
+    );
   }
 }

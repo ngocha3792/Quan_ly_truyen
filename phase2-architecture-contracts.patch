@@ -1,0 +1,3593 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index fe9d2c3..04f36ca 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -36,6 +36,9 @@ jobs:
+       - name: Verify Production V1 scope contract
+         run: node scripts/verify-production-scope.mjs --mode=contract
+ 
++      - name: Verify Production V1 FE-BE API contracts
++        run: node scripts/verify-api-contracts.mjs
++
+   frontend-quality:
+     name: Frontend / quality, tests and build
+     runs-on: ubuntu-latest
+diff --git a/backend/docs/architecture/backend.md b/backend/docs/architecture/backend.md
+index cc8662a..9bfe26b 100644
+--- a/backend/docs/architecture/backend.md
++++ b/backend/docs/architecture/backend.md
+@@ -1,8 +1,10 @@
+ # Backend architecture
+ 
+-The backend is migrated incrementally toward modular Clean Architecture. Each business module owns its use cases and is split by dependency direction rather than by technical type alone.
++The backend currently uses modular Clean Architecture across 19 business modules. The architecture guard is a hard CI contract: there is no legacy exception baseline.
+ 
+-## Target module shape
++## Canonical module shape
++
++Every module must keep the canonical directories below because `npm run architecture:check` verifies their presence.
+ 
+ ```text
+ src/modules/<module>/
+@@ -14,14 +16,16 @@ src/modules/<module>/
+ │   └── ports/
+ ├── domain/
+ │   ├── entities/
+-│   ├── value-objects/
+-│   ├── policies/
++│   ├── enums/
+ │   ├── events/
+-│   └── exceptions/
++│   ├── exceptions/
++│   ├── policies/
++│   ├── repositories/
++│   └── value-objects/
+ ├── infrastructure/
+ │   ├── persistence/
+ │   ├── cache/
+-│   └── integrations/
++│   └── search/
+ ├── presentation/
+ │   └── http/
+ │       ├── controllers/
+@@ -31,7 +35,7 @@ src/modules/<module>/
+ └── index.ts
+ ```
+ 
+-Only create folders that the module actually needs. Empty folders are not an architectural requirement.
++A canonical directory may contain only its barrel/index file until that responsibility is needed. Do not invent placeholder business classes merely to fill the tree.
+ 
+ ## Dependency direction
+ 
+@@ -42,24 +46,42 @@ presentation ---> application ---> domain
+                  infrastructure ----+
+ ```
+ 
+-Rules:
++Rules enforced by the guard:
++
++- `domain` must not import NestJS, Prisma/generated Prisma, infrastructure adapters, Redis, queues, or HTTP code.
++- `application` may use NestJS DI decorators, but must not import generated Prisma or concrete infrastructure. External work is described through ports.
++- `presentation` translates HTTP contracts and calls application use cases. It must not import infrastructure adapters **or generated Prisma types/enums**.
++- `infrastructure` implements ports and is the only business-module layer allowed to depend directly on Prisma, Redis, BullMQ, Cloudinary, and vendor SDKs.
++- `<module>.module.ts` is the composition root that binds ports to adapters.
++- Cross-module imports must go through the target module's public root contract. Importing another module's internal handler/adapter is forbidden.
++- Application use cases live under commands/queries; new `application/services` and service-centric application classes are forbidden.
+ 
+-- `domain` must not import NestJS, Prisma, Redis, queues, HTTP code, or infrastructure adapters.
+-- `application` may use NestJS dependency-injection decorators, but it must not import Prisma or concrete infrastructure adapters. External work is described through application ports.
+-- `infrastructure` implements application/domain ports and may use Prisma, Redis, BullMQ, Cloudinary, and other external libraries.
+-- `presentation` translates HTTP input/output and calls application use cases. It must not query Prisma directly.
+-- `<module>.module.ts` is the composition root for wiring ports to adapters.
+-- One module must not import another module's infrastructure or private handlers. Cross-module interaction must go through an explicitly exported contract/port or an event.
++## Enum and persistence mapping rule
++
++Database enums belong to the persistence adapter, not HTTP or application contracts.
++
++Preferred flow:
++
++```text
++HTTP request
++  -> domain/application-owned string union or value list
++  -> command/query input
++  -> infrastructure mapper/adapter
++  -> Prisma enum
++```
++
++This keeps Prisma schema changes from leaking into controller DTOs or use-case contracts.
+ 
+ ## Commands and queries
+ 
+ - Command: changes state.
+ - Query: reads state.
+-- A handler should represent one use case. Avoid growing new god services that mix unrelated operations.
++- A handler represents one use case.
++- Do not grow god services that combine unrelated orchestration.
+ 
+ ## Ports and adapters
+ 
+-Ports describe what a use case needs, not a mirror of a vendor SDK or Prisma client.
++Ports describe the capability a use case needs, not a vendor API mirror.
+ 
+ Good:
+ 
+@@ -81,72 +103,34 @@ export interface PrismaPort {
+ }
+ ```
+ 
+-## Incremental migration guard
++## Architecture guard
+ 
+-Run:
++Run from `backend/`:
+ 
+ ```bash
+ npm run architecture:check
+ ```
+ 
+-The guard rejects new `domain -> framework/infrastructure` and `application -> infrastructure/Prisma` dependencies. Existing application violations are explicitly baselined in `scripts/architecture/check-boundaries.mjs` so the repository can be improved slice by slice without accepting new debt. When a legacy violation is fixed, remove its baseline entry in the same change.
+-
+-## Refactor rule
+-
+-Architectural refactors preserve externally observable behavior unless a separate feature change explicitly says otherwise. Keep HTTP routes, request/response contracts, authorization behavior, and database schema stable during module extraction.
+-
+-## Folder policy: structure is semantic, not a checklist
++Expected result:
+ 
+-The four top-level layers (`application`, `domain`, `infrastructure`, `presentation`) are the architectural boundary. Their child folders are created only when the module has code with that responsibility.
+-
+-Examples:
+-
+-- Create `domain/entities` only when the module has domain entities. Do not add placeholder entities just to fill the tree.
+-- Create `domain/events` only when the module publishes domain events.
+-- Create `domain/repositories` only when a domain-level repository abstraction is genuinely required. Most persistence needs in this codebase are application ports under `application/ports`.
+-- Create `infrastructure/cache` or `infrastructure/search` only when the module owns a cache/search adapter.
+-- Create `application/mappers` only when there is an actual mapping boundary.
+-- Never commit empty folders or `.gitkeep` files purely to make every module visually identical.
+-
+-A healthy module can therefore be smaller than the full reference tree while still following the same architecture. The reference tree describes allowed responsibilities, not mandatory empty directories.
+-
+-## Migration status
+-
+-The incremental extraction currently separates these responsibilities from `stories`:
+-
+-- ratings -> `modules/ratings`
+-- libraries -> `modules/libraries`
+-- reading history -> `modules/reading-history`
+-- comments -> `modules/comments`
+-- chapter lifecycle and public chapter reader -> `modules/chapters`
+-
+-`StoriesModule` now owns story lifecycle/publication/metadata only. Legacy internals inside other modules are cleaned in later passes without changing HTTP contracts or the Prisma schema.
+-
+-### Module ownership after phases 8-11
+-
+-The next extraction pass also establishes these ownership boundaries:
+-
+-- categories -> `modules/categories` (admin category lifecycle and hierarchy)
+-- tags -> `modules/tags` (admin tag lifecycle and merge)
+-- author follow relationships -> `modules/follows`
+-- report review/closure -> `modules/reports`
+-- comment/user enforcement actions remain -> `modules/moderation`
+-- media upload/query/cleanup/webhook capability -> `modules/media`
+-
+-`modules/taxonomy` is removed: category and tag only shared a CRUD-shaped implementation, not one business lifecycle. `AuthorFollowService` is removed from `authors`; the author module still owns author profile/lifecycle and follower counters are treated as denormalized data maintained by the follows persistence adapter.
++```text
++Architecture boundaries OK (19 modules, canonical folders enforced, 0 legacy exceptions).
++```
+ 
+-`src/infrastructure/media` is removed. Cloudinary and disabled-storage implementations now live under `modules/media/infrastructure`, while HTTP controllers/DTOs live under `modules/media/presentation` and storage contracts live under `modules/media/application/ports`.
++The guard rejects:
+ 
+-The media module still contains explicitly baselined legacy application-to-Prisma/observability dependencies. Those are intentionally left for the following dependency-cleanup phase instead of hiding a behavior change inside the ownership move. New violations remain rejected by `npm run architecture:check`.
++- missing canonical module directories;
++- controllers/requests/responses outside their canonical HTTP folders;
++- `application/services` and application `*Service` use cases;
++- domain dependencies on framework/infrastructure/Prisma;
++- application dependencies on infrastructure/Prisma;
++- presentation dependencies on infrastructure/generated Prisma;
++- cross-module imports that bypass a module's public root contract.
+ 
+-### Dependency cleanup after phase 11 (phase 12A + phase 13 slice)
++Do not add exceptions or raise a baseline to make CI green. Fix the dependency direction instead.
+ 
+-The first dependency-cleanup slice removes concrete infrastructure access from these application paths without changing HTTP contracts or the Prisma schema:
++## Refactor discipline
+ 
+-- `audit-logs/application` now depends on repository and metrics ports; Prisma and `MetricsService` live behind infrastructure adapters.
+-- comment abuse protection now depends on a rate-limit store, metrics port, and recent-comment reader; Redis/Prisma/observability stay in `comments/infrastructure`.
+-- `moderation/application` now orchestrates moderation policy through persistence/metrics ports instead of importing Prisma or observability directly.
+-- moderation no longer imports private handlers/enums from `users`. `UsersModule` exports the explicit `USER_MODERATION_PORT` public contract and owns the adapter that reuses the managed-user status use case.
+-- admin user security now depends on `ADMIN_USER_SECURITY_PERSISTENCE_PORT`; Prisma transaction/audit details live in the auth infrastructure adapter.
++Architecture refactors preserve externally observable behavior unless the same change explicitly introduces a product contract change. Keep routes, authorization semantics, response envelopes, and database migrations intentional and reviewable.
+ 
+-The architecture baseline is reduced from 38 to 25 tracked legacy violations. The remaining baseline is intentionally limited to the later cleanup slices for media, authors, analytics, and the legacy comment interaction service. New violations are still rejected immediately.
++The Production V1 API wiring contract is tracked separately in `ops/production/API_CONTRACT_MATRIX.md` and checked by `node ../scripts/verify-api-contracts.mjs`.
+diff --git a/backend/ops/production/API_CONTRACT_MATRIX.md b/backend/ops/production/API_CONTRACT_MATRIX.md
+new file mode 100644
+index 0000000..e5c45c8
+--- /dev/null
++++ b/backend/ops/production/API_CONTRACT_MATRIX.md
+@@ -0,0 +1,35 @@
++# Production V1 API Contract Matrix
++
++> Generated from `api-contracts.production-v1.json`. Do not edit by hand.
++>
++> Scope: important Production V1 user-facing screens and their HTTP dependencies. Every declared contract is required to have both a backend controller binding and at least one frontend consumer binding. Operational, webhook, maintenance and intentionally backend-only integration endpoints are outside this screen matrix.
++
++| Screen | Frontend route/surface | FE ↔ BE contracts | Frontend consumer files |
++| --- | --- | --- | --- |
++| Auth bootstrap / login / register | global bootstrap + auth dialog | `GET /auth/client-config`<br>`POST /auth/login`<br>`POST /auth/register`<br>`GET /auth/me` | `frontend/src/app/core/config/app-runtime-config.loader.ts`<br>`frontend/src/app/core/config/app-runtime-config.server.ts`<br>`frontend/src/app/core/auth/auth-api.service.ts` |
++| Forgot / reset password | /quen-mat-khau + /dat-lai-mat-khau | `POST /auth/forgot-password`<br>`POST /auth/reset-password/validate`<br>`POST /auth/reset-password` | `frontend/src/app/core/auth/auth-api.service.ts` |
++| Account profile / preferences / security | /tai-khoan/* | `GET /users/me`<br>`PATCH /users/me`<br>`POST /auth/change-password` | `frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts`<br>`frontend/src/app/features/account/profile/security/data/account-security-api.service.ts` |
++| Public catalog / story detail | /truyen + /truyen/:slug | `GET /stories`<br>`GET /stories/:slug` | `frontend/src/app/core/http/public-stories-api.client.ts` |
++| Chapter reader / progress / bookmark | /truyen/:slug/chuong-:chapter | `GET /stories/:storySlug/chapters/:chapterNumber`<br>`PUT /reading-progress/:storyId`<br>`GET /reading-bookmarks/:chapterId`<br>`PUT /reading-bookmarks/:chapterId`<br>`DELETE /reading-bookmarks/:chapterId` | `frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts`<br>`frontend/src/app/core/http/reader-engagement-api.client.ts` |
++| My Library | /thu-vien | `GET /library`<br>`PUT /library/:storyId` | `frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts` |
++| Reading history | /lich-su-doc | `GET /reading-history`<br>`GET /reading-bookmarks` | `frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts` |
++| Follow authors / following list | /dang-theo-doi + public author surfaces | `POST /authors/:authorId/follow`<br>`DELETE /authors/:authorId/follow`<br>`GET /me/following` | `frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts` |
++| Notifications | /thong-bao | `GET /notifications`<br>`PATCH /notifications/:notificationId/read`<br>`PATCH /notifications/settings` | `frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts` |
++| Author application | /dang-ky-tac-gia | `GET /author-applications/config`<br>`PUT /author-applications/me/draft`<br>`POST /author-applications/me/submit` | `frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts` |
++| Author dashboard / profile | /author-studio + /author-studio/profile | `GET /author/dashboard`<br>`GET /author/profile`<br>`PATCH /author/profile` | `frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts`<br>`frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts` |
++| Author story / chapter studio | /author-studio/truyen/* | `GET /author/stories`<br>`POST /author/stories`<br>`POST /author/stories/:storyId/chapters`<br>`POST /author/stories/:storyId/chapters/:chapterId/publish` | `frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts` |
++| Author analytics | /author-studio/analytics/* | `GET /author/analytics/overview`<br>`GET /author/analytics/stories` | `frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts` |
++| Admin users | /admin/users/* | `GET /admin/users`<br>`PATCH /admin/users/:userId/status` | `frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts` |
++| Admin authors | /admin/authors/* | `GET /admin/authors`<br>`PATCH /admin/authors/:authorId/status` | `frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts` |
++| Admin story review | /admin/stories/* | `GET /admin/story-submissions`<br>`POST /admin/story-submissions/:submissionId/approve`<br>`POST /admin/story-submissions/:submissionId/reject` | `frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts` |
++| Admin reports / moderation | /admin/reports/* | `GET /admin/reports`<br>`POST /admin/reports/:reportId/resolve`<br>`POST /admin/reports/:reportId/reject` | `frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts` |
++| Admin categories / tags | /admin/categories + /admin/tags | `GET /admin/categories`<br>`POST /admin/categories`<br>`GET /admin/tags` | `frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts`<br>`frontend/src/app/features/admin/tags/data-access/admin-tags-api.service.ts` |
++| Admin author applications | /admin/author-applications/* | `GET /author-applications/admin`<br>`POST /author-applications/admin/:applicationId/approve`<br>`POST /author-applications/admin/:applicationId/reject` | `frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts` |
++| Admin audit logs | /admin/audit-logs/* | `GET /admin/audit-logs`<br>`GET /admin/audit-logs/:auditLogId` | `frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts` |
++
++## Enforcement
++
++- `node scripts/verify-api-contracts.mjs` verifies every declared backend/frontend binding and fails on matrix drift.
++- `node scripts/verify-api-contracts.mjs --write` regenerates this table after an intentional contract change.
++- A new Production V1 screen that performs HTTP I/O must add its important contracts to the manifest in the same change.
++- Backend-only operational/webhook/maintenance endpoints are not evidence of a missing UI; they are deliberately outside this screen-oriented contract.
+diff --git a/backend/ops/production/api-contracts.production-v1.json b/backend/ops/production/api-contracts.production-v1.json
+new file mode 100644
+index 0000000..ad3b54b
+--- /dev/null
++++ b/backend/ops/production/api-contracts.production-v1.json
+@@ -0,0 +1,1200 @@
++{
++  "schemaVersion": 1,
++  "scope": "Production V1 important user-facing screens",
++  "screens": [
++    {
++      "id": "runtime-auth-entry",
++      "title": "Auth bootstrap / login / register",
++      "frontendRoute": "global bootstrap + auth dialog",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/auth/client-config",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts",
++            "tokens": [
++              "@Controller('auth')",
++              "@Get('client-config')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/config/app-runtime-config.loader.ts",
++              "tokens": [
++                "/auth/client-config",
++                "parseAuthClientConfigResponse"
++              ]
++            },
++            {
++              "file": "frontend/src/app/core/config/app-runtime-config.server.ts",
++              "tokens": [
++                "/auth/client-config",
++                "parseAuthClientConfigResponse"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/auth/login",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-token.controller.ts",
++            "tokens": [
++              "@Controller('auth')",
++              "@Post('login')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/login`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/auth/register",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
++            "tokens": [
++              "@Controller('auth')",
++              "@Post('register')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/register`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/auth/me",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-account.controller.ts",
++            "tokens": [
++              "@Controller('auth')",
++              "@Get('me')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/me`"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "password-recovery",
++      "title": "Forgot / reset password",
++      "frontendRoute": "/quen-mat-khau + /dat-lai-mat-khau",
++      "contracts": [
++        {
++          "method": "POST",
++          "path": "/auth/forgot-password",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
++            "tokens": [
++              "@Post('forgot-password')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/forgot-password`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/auth/reset-password/validate",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
++            "tokens": [
++              "@Post('reset-password/validate')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/reset-password/validate`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/auth/reset-password",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
++            "tokens": [
++              "@Post('reset-password')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/auth/auth-api.service.ts",
++              "tokens": [
++                "`${this.baseUrl}/reset-password`"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "account-profile",
++      "title": "Account profile / preferences / security",
++      "frontendRoute": "/tai-khoan/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/users/me",
++          "backend": {
++            "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
++            "tokens": [
++              "@Controller('users')",
++              "@Get('me')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
++              "tokens": [
++                "`${this.usersUrl}/me`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/users/me",
++          "backend": {
++            "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
++            "tokens": [
++              "@Patch('me')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
++              "tokens": [
++                "`${this.usersUrl}/me`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/auth/change-password",
++          "backend": {
++            "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
++            "tokens": [
++              "@Post('change-password')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/profile/security/data/account-security-api.service.ts",
++              "tokens": [
++                "`${this.authUrl}/change-password`"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "public-catalog-story",
++      "title": "Public catalog / story detail",
++      "frontendRoute": "/truyen + /truyen/:slug",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/stories",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
++            "tokens": [
++              "@Controller('stories')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/public-stories-api.client.ts",
++              "tokens": [
++                "/stories"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/stories/:slug",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
++            "tokens": [
++              "@Get(':slug')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/public-stories-api.client.ts",
++              "tokens": [
++                "encodeURIComponent(slug)"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "chapter-reader",
++      "title": "Chapter reader / progress / bookmark",
++      "frontendRoute": "/truyen/:slug/chuong-:chapter",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/stories/:storySlug/chapters/:chapterNumber",
++          "backend": {
++            "file": "backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts",
++            "tokens": [
++              "@Get(':storySlug/chapters/:chapterNumber')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts",
++              "tokens": [
++                "getChapter"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PUT",
++          "path": "/reading-progress/:storyId",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
++            "tokens": [
++              "@Put('reading-progress/:storyId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
++              "tokens": [
++                "/reading-progress/"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/reading-bookmarks/:chapterId",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
++            "tokens": [
++              "@Controller('reading-bookmarks')",
++              "@Get(':chapterId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
++              "tokens": [
++                "getReadingBookmark"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PUT",
++          "path": "/reading-bookmarks/:chapterId",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
++            "tokens": [
++              "@Put(':chapterId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
++              "tokens": [
++                "upsertReadingBookmark"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "DELETE",
++          "path": "/reading-bookmarks/:chapterId",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
++            "tokens": [
++              "@Delete(':chapterId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
++              "tokens": [
++                "removeReadingBookmark"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "my-library",
++      "title": "My Library",
++      "frontendRoute": "/thu-vien",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/library",
++          "backend": {
++            "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
++            "tokens": [
++              "@Get('library')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
++              "tokens": [
++                "listLibrary"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PUT",
++          "path": "/library/:storyId",
++          "backend": {
++            "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
++            "tokens": [
++              "@Put('library/:storyId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
++              "tokens": [
++                "upsertLibrary"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "reading-history",
++      "title": "Reading history",
++      "frontendRoute": "/lich-su-doc",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/reading-history",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
++            "tokens": [
++              "@Get('reading-history')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
++              "tokens": [
++                "listReadingHistory"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/reading-bookmarks",
++          "backend": {
++            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
++            "tokens": [
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
++              "tokens": [
++                "listReadingBookmarks"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "author-following",
++      "title": "Follow authors / following list",
++      "frontendRoute": "/dang-theo-doi + public author surfaces",
++      "contracts": [
++        {
++          "method": "POST",
++          "path": "/authors/:authorId/follow",
++          "backend": {
++            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
++            "tokens": [
++              "@Post('authors/:authorId/follow')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
++              "tokens": [
++                "/follow"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "DELETE",
++          "path": "/authors/:authorId/follow",
++          "backend": {
++            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
++            "tokens": [
++              "@Delete('authors/:authorId/follow')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
++              "tokens": [
++                "/follow"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/me/following",
++          "backend": {
++            "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
++            "tokens": [
++              "@Get('me/following')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
++              "tokens": [
++                "/me/following"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "notifications",
++      "title": "Notifications",
++      "frontendRoute": "/thong-bao",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/notifications",
++          "backend": {
++            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
++            "tokens": [
++              "@Controller('notifications')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
++              "tokens": [
++                "this.baseUrl"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/notifications/:notificationId/read",
++          "backend": {
++            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
++            "tokens": [
++              "@Patch(':notificationId/read')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
++              "tokens": [
++                "/read"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/notifications/settings",
++          "backend": {
++            "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
++            "tokens": [
++              "@Patch('settings')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
++              "tokens": [
++                "/settings"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "author-application",
++      "title": "Author application",
++      "frontendRoute": "/dang-ky-tac-gia",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/author-applications/config",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
++            "tokens": [
++              "@Get('config')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
++              "tokens": [
++                "/config"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PUT",
++          "path": "/author-applications/me/draft",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
++            "tokens": [
++              "@Put('me/draft')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
++              "tokens": [
++                "/me/draft"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author-applications/me/submit",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
++            "tokens": [
++              "@Post('me/submit')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
++              "tokens": [
++                "/me/submit"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "author-dashboard-profile",
++      "title": "Author dashboard / profile",
++      "frontendRoute": "/author-studio + /author-studio/profile",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/author/dashboard",
++          "backend": {
++            "file": "backend/src/modules/authors/presentation/http/controllers/author-dashboard.controller.ts",
++            "tokens": [
++              "@Controller('author/dashboard')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts",
++              "tokens": [
++                "/author/dashboard"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/author/profile",
++          "backend": {
++            "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
++            "tokens": [
++              "@Controller('author/profile')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
++              "tokens": [
++                "/author/profile"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/author/profile",
++          "backend": {
++            "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
++            "tokens": [
++              "@Patch()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
++              "tokens": [
++                "/author/profile"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "author-story-studio",
++      "title": "Author story / chapter studio",
++      "frontendRoute": "/author-studio/truyen/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/author/stories",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
++            "tokens": [
++              "@Controller('author/stories')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
++              "tokens": [
++                "this.storiesUrl"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author/stories",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
++            "tokens": [
++              "@Post()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
++              "tokens": [
++                "this.storiesUrl, input"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author/stories/:storyId/chapters",
++          "backend": {
++            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
++            "tokens": [
++              "@Controller('author/stories/:storyId/chapters')",
++              "@Post()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
++              "tokens": [
++                "/chapters`"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author/stories/:storyId/chapters/:chapterId/publish",
++          "backend": {
++            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
++            "tokens": [
++              "@Post(':chapterId/publish')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
++              "tokens": [
++                "/publish`"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "author-analytics",
++      "title": "Author analytics",
++      "frontendRoute": "/author-studio/analytics/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/author/analytics/overview",
++          "backend": {
++            "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
++            "tokens": [
++              "@Get('overview')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
++              "tokens": [
++                "/author/analytics/overview"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/author/analytics/stories",
++          "backend": {
++            "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
++            "tokens": [
++              "@Get('stories')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
++              "tokens": [
++                "/author/analytics/stories"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-users",
++      "title": "Admin users",
++      "frontendRoute": "/admin/users/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/users",
++          "backend": {
++            "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
++            "tokens": [
++              "@Controller('admin/users')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
++              "tokens": [
++                "this.baseUrl"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/admin/users/:userId/status",
++          "backend": {
++            "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
++            "tokens": [
++              "@Patch(':userId/status')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
++              "tokens": [
++                "/status"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-authors",
++      "title": "Admin authors",
++      "frontendRoute": "/admin/authors/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/authors",
++          "backend": {
++            "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
++            "tokens": [
++              "@Controller('admin/authors')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
++              "tokens": [
++                "this.baseUrl"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "PATCH",
++          "path": "/admin/authors/:authorId/status",
++          "backend": {
++            "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
++            "tokens": [
++              "@Patch(':authorId/status')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
++              "tokens": [
++                "/status"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-story-review",
++      "title": "Admin story review",
++      "frontendRoute": "/admin/stories/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/story-submissions",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-moderation.controller.ts",
++            "tokens": [
++              "@Controller('admin/story-submissions')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
++              "tokens": [
++                "/admin/story-submissions"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/admin/story-submissions/:submissionId/approve",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
++            "tokens": [
++              "@Post(':submissionId/approve')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
++              "tokens": [
++                "/approve"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/admin/story-submissions/:submissionId/reject",
++          "backend": {
++            "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
++            "tokens": [
++              "@Post(':submissionId/reject')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
++              "tokens": [
++                "/reject"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-reports",
++      "title": "Admin reports / moderation",
++      "frontendRoute": "/admin/reports/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/reports",
++          "backend": {
++            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
++            "tokens": [
++              "@Controller('admin/reports')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
++              "tokens": [
++                "this.reportsUrl"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/admin/reports/:reportId/resolve",
++          "backend": {
++            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
++            "tokens": [
++              "@Post(':reportId/resolve')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
++              "tokens": [
++                "resolve"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/admin/reports/:reportId/reject",
++          "backend": {
++            "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
++            "tokens": [
++              "@Post(':reportId/reject')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
++              "tokens": [
++                "reject"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-taxonomy",
++      "title": "Admin categories / tags",
++      "frontendRoute": "/admin/categories + /admin/tags",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/categories",
++          "backend": {
++            "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
++            "tokens": [
++              "@Controller('admin/categories')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
++              "tokens": [
++                "/admin/categories"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/admin/categories",
++          "backend": {
++            "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
++            "tokens": [
++              "@Post()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
++              "tokens": [
++                "this.url, input"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/admin/tags",
++          "backend": {
++            "file": "backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts",
++            "tokens": [
++              "@Controller('admin/tags')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/tags/data-access/admin-tags-api.service.ts",
++              "tokens": [
++                "/admin/tags"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-author-applications",
++      "title": "Admin author applications",
++      "frontendRoute": "/admin/author-applications/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/author-applications/admin",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
++            "tokens": [
++              "@Controller('author-applications/admin')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
++              "tokens": [
++                "/author-applications/admin"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author-applications/admin/:applicationId/approve",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
++            "tokens": [
++              "@Post(':applicationId/approve')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
++              "tokens": [
++                "/approve"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "POST",
++          "path": "/author-applications/admin/:applicationId/reject",
++          "backend": {
++            "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
++            "tokens": [
++              "@Post(':applicationId/reject')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
++              "tokens": [
++                "/reject"
++              ]
++            }
++          ]
++        }
++      ]
++    },
++    {
++      "id": "admin-audit",
++      "title": "Admin audit logs",
++      "frontendRoute": "/admin/audit-logs/*",
++      "contracts": [
++        {
++          "method": "GET",
++          "path": "/admin/audit-logs",
++          "backend": {
++            "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
++            "tokens": [
++              "@Controller('admin/audit-logs')",
++              "@Get()"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
++              "tokens": [
++                "/admin/audit-logs"
++              ]
++            }
++          ]
++        },
++        {
++          "method": "GET",
++          "path": "/admin/audit-logs/:auditLogId",
++          "backend": {
++            "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
++            "tokens": [
++              "@Get(':auditLogId')"
++            ]
++          },
++          "frontend": [
++            {
++              "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
++              "tokens": [
++                "encodeURIComponent(id)"
++              ]
++            }
++          ]
++        }
++      ]
++    }
++  ]
++}
+diff --git a/backend/ops/production/production-v1.scope.json b/backend/ops/production/production-v1.scope.json
+index eda39d0..a1375a8 100644
+--- a/backend/ops/production/production-v1.scope.json
++++ b/backend/ops/production/production-v1.scope.json
+@@ -184,6 +184,17 @@
+         "followedStories"
+       ]
+     },
++    {
++      "featureId": "story-follow",
++      "path": "frontend/src/app/features/account/my-library",
++      "forbidden": [
++        "filter === 'following'",
++        "filterChange.emit('following')",
++        "isFollowing",
++        "return 'following'",
++        "return 'THEO DÕI'"
++      ]
++    },
+     {
+       "featureId": "reader-weekly-reading-time",
+       "path": "frontend/src/app/features/account/reading-history",
+diff --git a/backend/package.json b/backend/package.json
+index f81c083..5c1075c 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -136,7 +136,8 @@
+     "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts",
+     "architecture:check": "node scripts/architecture/check-boundaries.mjs",
+     "production:scope:check": "node ../scripts/verify-production-scope.mjs --mode=contract",
+-    "production:scope:release": "node ../scripts/verify-production-scope.mjs --mode=release"
++    "production:scope:release": "node ../scripts/verify-production-scope.mjs --mode=release",
++    "api:contract:check": "node ../scripts/verify-api-contracts.mjs"
+   },
+   "dependencies": {
+     "@nestjs/bullmq": "^11.0.4",
+diff --git a/backend/scripts/architecture/check-boundaries.mjs b/backend/scripts/architecture/check-boundaries.mjs
+index 8da5267..8c79140 100644
+--- a/backend/scripts/architecture/check-boundaries.mjs
++++ b/backend/scripts/architecture/check-boundaries.mjs
+@@ -204,11 +204,15 @@ for (const file of files) {
+       continue;
+     }
+ 
+-    if (isPresentation && isInfrastructureImport(specifier)) {
++    if (
++      isPresentation &&
++      (isInfrastructureImport(specifier) || isGeneratedPrismaImport(specifier))
++    ) {
+       violations.push({
+         file: rel,
+         specifier,
+-        reason: 'presentation must call application contracts, not infrastructure adapters',
++        reason:
++          'presentation must depend on application/domain contracts, not infrastructure/Prisma',
+       });
+     }
+   }
+diff --git a/backend/src/modules/analytics/application/dto/reader-analytics.dto.ts b/backend/src/modules/analytics/application/dto/reader-analytics.dto.ts
+index 18c8434..d44b180 100644
+--- a/backend/src/modules/analytics/application/dto/reader-analytics.dto.ts
++++ b/backend/src/modules/analytics/application/dto/reader-analytics.dto.ts
+@@ -1,9 +1,6 @@
+-export type ReaderAnalyticsEventTypeName =
+-  | 'STORY_VIEW'
+-  | 'CHAPTER_VIEW'
+-  | 'READING_STARTED'
+-  | 'READING_PROGRESS'
+-  | 'READING_COMPLETED';
++import type { ReaderAnalyticsEventTypeName } from '../../domain';
++
++export type { ReaderAnalyticsEventTypeName } from '../../domain';
+ export interface ReaderAnalyticsEventInput {
+   readonly eventId: string;
+   readonly type: ReaderAnalyticsEventTypeName;
+diff --git a/backend/src/modules/analytics/domain/enums/index.ts b/backend/src/modules/analytics/domain/enums/index.ts
+index cb0ff5c..4941388 100644
+--- a/backend/src/modules/analytics/domain/enums/index.ts
++++ b/backend/src/modules/analytics/domain/enums/index.ts
+@@ -1 +1 @@
+-export {};
++export * from './reader-analytics-event-type.enum';
+diff --git a/backend/src/modules/analytics/domain/enums/reader-analytics-event-type.enum.ts b/backend/src/modules/analytics/domain/enums/reader-analytics-event-type.enum.ts
+new file mode 100644
+index 0000000..b62c509
+--- /dev/null
++++ b/backend/src/modules/analytics/domain/enums/reader-analytics-event-type.enum.ts
+@@ -0,0 +1,10 @@
++export const READER_ANALYTICS_EVENT_TYPE_VALUES = [
++  'STORY_VIEW',
++  'CHAPTER_VIEW',
++  'READING_STARTED',
++  'READING_PROGRESS',
++  'READING_COMPLETED',
++] as const;
++
++export type ReaderAnalyticsEventTypeName =
++  (typeof READER_ANALYTICS_EVENT_TYPE_VALUES)[number];
+diff --git a/backend/src/modules/analytics/presentation/http/requests/ingest-reader-analytics.request.ts b/backend/src/modules/analytics/presentation/http/requests/ingest-reader-analytics.request.ts
+index dcb60e5..13926ee 100644
+--- a/backend/src/modules/analytics/presentation/http/requests/ingest-reader-analytics.request.ts
++++ b/backend/src/modules/analytics/presentation/http/requests/ingest-reader-analytics.request.ts
+@@ -4,8 +4,8 @@ import {
+   ArrayMinSize,
+   IsArray,
+   IsDateString,
+-  IsEnum,
+   IsInt,
++  IsIn,
+   IsNumber,
+   IsOptional,
+   IsUUID,
+@@ -13,11 +13,14 @@ import {
+   Min,
+   ValidateNested,
+ } from 'class-validator';
+-import { ReaderAnalyticsEventType } from '@/generated/prisma/client';
++import {
++  READER_ANALYTICS_EVENT_TYPE_VALUES,
++  type ReaderAnalyticsEventTypeName,
++} from '../../../domain';
+ 
+ export class ReaderAnalyticsEventRequest {
+   @IsUUID('4') eventId!: string;
+-  @IsEnum(ReaderAnalyticsEventType) type!: ReaderAnalyticsEventType;
++  @IsIn(READER_ANALYTICS_EVENT_TYPE_VALUES) type!: ReaderAnalyticsEventTypeName;
+   @IsInt() @Min(1) @Max(1) version!: number;
+   @IsUUID('4') sessionId!: string;
+   @IsUUID('4') storyId!: string;
+diff --git a/backend/src/modules/auth/domain/policies/index.ts b/backend/src/modules/auth/domain/policies/index.ts
+index f0c2ef6..46a6923 100644
+--- a/backend/src/modules/auth/domain/policies/index.ts
++++ b/backend/src/modules/auth/domain/policies/index.ts
+@@ -3,3 +3,4 @@ export * from './email-verification.policy';
+ export * from './password-reset.policy';
+ export * from './email-change.policy';
+ export * from './recovery-email.policy';
++export * from './password.policy';
+diff --git a/backend/src/modules/auth/domain/policies/password.policy.ts b/backend/src/modules/auth/domain/policies/password.policy.ts
+new file mode 100644
+index 0000000..6205971
+--- /dev/null
++++ b/backend/src/modules/auth/domain/policies/password.policy.ts
+@@ -0,0 +1,30 @@
++import { BCRYPT_MAX_PASSWORD_BYTES } from '@/common/utils';
++
++const LOWERCASE_PATTERN = /[a-z]/;
++const UPPERCASE_PATTERN = /[A-Z]/;
++const NUMBER_PATTERN = /\d/;
++const SYMBOL_PATTERN = /[^A-Za-z0-9]/;
++
++export class PasswordPolicy {
++  static readonly MIN_LENGTH = 8;
++  static readonly MAX_LENGTH = 72;
++  static readonly MAX_BYTES = BCRYPT_MAX_PASSWORD_BYTES;
++  static readonly REQUIRE_LOWERCASE = true;
++  static readonly REQUIRE_UPPERCASE = true;
++  static readonly REQUIRE_NUMBER = true;
++  static readonly REQUIRE_SYMBOL = true;
++
++  static isSatisfiedBy(rawValue: string): boolean {
++    const byteLength = Buffer.byteLength(rawValue, 'utf8');
++
++    return (
++      rawValue.length >= PasswordPolicy.MIN_LENGTH &&
++      rawValue.length <= PasswordPolicy.MAX_LENGTH &&
++      byteLength <= PasswordPolicy.MAX_BYTES &&
++      (!PasswordPolicy.REQUIRE_LOWERCASE || LOWERCASE_PATTERN.test(rawValue)) &&
++      (!PasswordPolicy.REQUIRE_UPPERCASE || UPPERCASE_PATTERN.test(rawValue)) &&
++      (!PasswordPolicy.REQUIRE_NUMBER || NUMBER_PATTERN.test(rawValue)) &&
++      (!PasswordPolicy.REQUIRE_SYMBOL || SYMBOL_PATTERN.test(rawValue))
++    );
++  }
++}
+diff --git a/backend/src/modules/auth/domain/value-objects/password.value-object.ts b/backend/src/modules/auth/domain/value-objects/password.value-object.ts
+index f4ba48b..1fbd8ba 100644
+--- a/backend/src/modules/auth/domain/value-objects/password.value-object.ts
++++ b/backend/src/modules/auth/domain/value-objects/password.value-object.ts
+@@ -1,10 +1,5 @@
+ import { InvalidInputException } from '@/common/exceptions';
+-import { BCRYPT_MAX_PASSWORD_BYTES } from '@/common/utils';
+-
+-const LOWERCASE_PATTERN = /[a-z]/;
+-const UPPERCASE_PATTERN = /[A-Z]/;
+-const NUMBER_PATTERN = /\d/;
+-const SYMBOL_PATTERN = /[^A-Za-z0-9]/;
++import { PasswordPolicy } from '../policies';
+ 
+ export class PasswordValueObject {
+   private constructor(readonly value: string) {}
+@@ -14,18 +9,7 @@ export class PasswordValueObject {
+       throw PasswordValueObject.invalid();
+     }
+ 
+-    const byteLength = Buffer.byteLength(rawValue, 'utf8');
+-
+-    const isValid =
+-      rawValue.length >= 8 &&
+-      rawValue.length <= 72 &&
+-      byteLength <= BCRYPT_MAX_PASSWORD_BYTES &&
+-      LOWERCASE_PATTERN.test(rawValue) &&
+-      UPPERCASE_PATTERN.test(rawValue) &&
+-      NUMBER_PATTERN.test(rawValue) &&
+-      SYMBOL_PATTERN.test(rawValue);
+-
+-    if (!isValid) {
++    if (!PasswordPolicy.isSatisfiedBy(rawValue)) {
+       throw PasswordValueObject.invalid();
+     }
+ 
+@@ -36,7 +20,7 @@ export class PasswordValueObject {
+     return new InvalidInputException({
+       code: 'AUTH_INVALID_PASSWORD',
+       message:
+-        'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
++        `Mật khẩu phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
+       details: {
+         field: 'password',
+       },
+diff --git a/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.spec.ts b/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.spec.ts
+index 7b958f2..7bda214 100644
+--- a/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.spec.ts
++++ b/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.spec.ts
+@@ -2,10 +2,12 @@ import { ConfigService } from '@nestjs/config';
+ 
+ import { CSRF_HEADER_NAME } from '@/common/constants';
+ 
++import { PasswordPolicy, PasswordResetPolicy } from '../../../domain';
++
+ import { AuthClientConfigController } from './auth-client-config.controller';
+ 
+ describe('AuthClientConfigController', () => {
+-  it('trả về csrf client config từ AuthConfig', () => {
++  it('trả về auth client config từ domain policy và AuthConfig', () => {
+     const configService = {
+       getOrThrow: jest.fn().mockReturnValue({
+         csrf: {
+@@ -18,6 +20,18 @@ describe('AuthClientConfigController', () => {
+     const controller = new AuthClientConfigController(configService);
+ 
+     expect(controller.getClientConfig()).toEqual({
++      passwordPolicy: {
++        minimumLength: PasswordPolicy.MIN_LENGTH,
++        maximumLength: PasswordPolicy.MAX_LENGTH,
++        maximumBytes: PasswordPolicy.MAX_BYTES,
++        requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
++        requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
++        requireNumber: PasswordPolicy.REQUIRE_NUMBER,
++        requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
++      },
++      passwordReset: {
++        tokenExpiresInMinutes: PasswordResetPolicy.TTL_MINUTES,
++      },
+       csrf: {
+         enabled: true,
+         cookieName: 'runtime_csrf_cookie',
+diff --git a/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts b/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts
+index 2db49ec..9091264 100644
+--- a/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts
++++ b/backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts
+@@ -5,7 +5,21 @@ import { CSRF_HEADER_NAME } from '@/common/constants';
+ import { Public } from '@/common/decorators';
+ import type { AuthConfig } from '@/config';
+ 
++import { PasswordPolicy, PasswordResetPolicy } from '../../../domain';
++
+ export interface AuthClientConfigResponse {
++  readonly passwordPolicy: {
++    readonly minimumLength: number;
++    readonly maximumLength: number;
++    readonly maximumBytes: number;
++    readonly requireLowercase: boolean;
++    readonly requireUppercase: boolean;
++    readonly requireNumber: boolean;
++    readonly requireSymbol: boolean;
++  };
++  readonly passwordReset: {
++    readonly tokenExpiresInMinutes: number;
++  };
+   readonly csrf: {
+     readonly enabled: boolean;
+     readonly cookieName: string;
+@@ -26,6 +40,18 @@ export class AuthClientConfigController {
+   @Header('Cache-Control', 'no-store')
+   getClientConfig(): AuthClientConfigResponse {
+     return {
++      passwordPolicy: {
++        minimumLength: PasswordPolicy.MIN_LENGTH,
++        maximumLength: PasswordPolicy.MAX_LENGTH,
++        maximumBytes: PasswordPolicy.MAX_BYTES,
++        requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
++        requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
++        requireNumber: PasswordPolicy.REQUIRE_NUMBER,
++        requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
++      },
++      passwordReset: {
++        tokenExpiresInMinutes: PasswordResetPolicy.TTL_MINUTES,
++      },
+       csrf: {
+         enabled: this.authConfig.csrf.enabled,
+         cookieName: this.authConfig.csrf.cookieName,
+diff --git a/backend/src/modules/auth/presentation/http/requests/change-password.request.ts b/backend/src/modules/auth/presentation/http/requests/change-password.request.ts
+index b5e602a..1877e69 100644
+--- a/backend/src/modules/auth/presentation/http/requests/change-password.request.ts
++++ b/backend/src/modules/auth/presentation/http/requests/change-password.request.ts
+@@ -1,35 +1,35 @@
+-import { IsString, IsStrongPassword, Length, MaxLength } from 'class-validator';
++import { IsString, Length, MaxLength } from 'class-validator';
++
++import { IsStrongPassword } from '@/common/decorators';
++
++import { PasswordPolicy } from '../../../domain';
+ 
+ export class ChangePasswordRequest {
+   /*
+    * Không dùng @Trim() cho password.
+    */
+   @IsString()
+-  @Length(1, 72, {
++  @Length(1, PasswordPolicy.MAX_LENGTH, {
+     message: 'Mật khẩu hiện tại không hợp lệ',
+   })
+   currentPassword!: string;
+ 
+   @IsString()
+-  @MaxLength(72, {
+-    message: 'Mật khẩu mới không được vượt quá 72 ký tự',
++  @MaxLength(PasswordPolicy.MAX_LENGTH, {
++    message: `Mật khẩu mới không được vượt quá ${PasswordPolicy.MAX_LENGTH} ký tự`,
+   })
+   @IsStrongPassword(
+     {
+-      minLength: 8,
+-
+-      minLowercase: 1,
+-
+-      minUppercase: 1,
+-
+-      minNumbers: 1,
+-
+-      minSymbols: 1,
++      minLength: PasswordPolicy.MIN_LENGTH,
++      maxLength: PasswordPolicy.MAX_LENGTH,
++      requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
++      requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
++      requireNumber: PasswordPolicy.REQUIRE_NUMBER,
++      requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
+     },
+-
+     {
+       message:
+-        'Mật khẩu mới phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
++        `Mật khẩu mới phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
+     },
+   )
+   newPassword!: string;
+diff --git a/backend/src/modules/auth/presentation/http/requests/register.request.ts b/backend/src/modules/auth/presentation/http/requests/register.request.ts
+index 9e62629..b554e9d 100644
+--- a/backend/src/modules/auth/presentation/http/requests/register.request.ts
++++ b/backend/src/modules/auth/presentation/http/requests/register.request.ts
+@@ -5,6 +5,7 @@ import {
+   NormalizeEmail,
+   Trim,
+ } from '@/common/decorators/validation';
++import { PasswordPolicy } from '../../../domain';
+ 
+ export class RegisterRequest {
+   @NormalizeEmail()
+@@ -26,10 +27,17 @@ export class RegisterRequest {
+ 
+   @IsString()
+   @IsStrongPassword(
+-    {},
++    {
++      minLength: PasswordPolicy.MIN_LENGTH,
++      maxLength: PasswordPolicy.MAX_LENGTH,
++      requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
++      requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
++      requireNumber: PasswordPolicy.REQUIRE_NUMBER,
++      requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
++    },
+     {
+       message:
+-        'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
++        `Mật khẩu phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
+     },
+   )
+   password!: string;
+diff --git a/backend/src/modules/auth/presentation/http/requests/reset-password.request.ts b/backend/src/modules/auth/presentation/http/requests/reset-password.request.ts
+index 99c9b9d..e7343be 100644
+--- a/backend/src/modules/auth/presentation/http/requests/reset-password.request.ts
++++ b/backend/src/modules/auth/presentation/http/requests/reset-password.request.ts
+@@ -1,12 +1,13 @@
+ import {
+   IsString,
+-  IsStrongPassword,
+   Length,
+   Matches,
+   MaxLength,
+ } from 'class-validator';
+ 
+-import { Trim } from '@/common/decorators';
++import { IsStrongPassword, Trim } from '@/common/decorators';
++
++import { PasswordPolicy } from '../../../domain';
+ 
+ export class ResetPasswordRequest {
+   @Trim()
+@@ -20,20 +21,21 @@ export class ResetPasswordRequest {
+   token!: string;
+ 
+   @IsString()
+-  @MaxLength(72, {
+-    message: 'Mật khẩu không được vượt quá 72 ký tự',
++  @MaxLength(PasswordPolicy.MAX_LENGTH, {
++    message: `Mật khẩu không được vượt quá ${PasswordPolicy.MAX_LENGTH} ký tự`,
+   })
+   @IsStrongPassword(
+     {
+-      minLength: 8,
+-      minLowercase: 1,
+-      minUppercase: 1,
+-      minNumbers: 1,
+-      minSymbols: 1,
++      minLength: PasswordPolicy.MIN_LENGTH,
++      maxLength: PasswordPolicy.MAX_LENGTH,
++      requireLowercase: PasswordPolicy.REQUIRE_LOWERCASE,
++      requireUppercase: PasswordPolicy.REQUIRE_UPPERCASE,
++      requireNumber: PasswordPolicy.REQUIRE_NUMBER,
++      requireSymbol: PasswordPolicy.REQUIRE_SYMBOL,
+     },
+     {
+       message:
+-        'Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt',
++        `Mật khẩu phải có từ ${PasswordPolicy.MIN_LENGTH} đến ${PasswordPolicy.MAX_LENGTH} ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt`,
+     },
+   )
+   newPassword!: string;
+diff --git a/backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts b/backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts
+index 50d72bc..ecceb63 100644
+--- a/backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts
++++ b/backend/src/modules/media/presentation/http/dto/create-media-upload-intent.dto.ts
+@@ -1,5 +1,5 @@
+ import {
+-  IsEnum,
++  IsIn,
+   IsInt,
+   IsMimeType,
+   IsString,
+@@ -7,11 +7,14 @@ import {
+   MaxLength,
+   Min,
+ } from 'class-validator';
+-import { MediaPurpose } from '@/generated/prisma/client';
++import {
++  MEDIA_PURPOSE_VALUES,
++  type MediaPurposeName,
++} from '../../../application/dto';
+ 
+ export class CreateMediaUploadIntentDto {
+-  @IsEnum(MediaPurpose)
+-  purpose!: MediaPurpose;
++  @IsIn(MEDIA_PURPOSE_VALUES)
++  purpose!: MediaPurposeName;
+ 
+   @IsUUID()
+   ownerId!: string;
+diff --git a/backend/src/modules/reports/application/dto/report.models.ts b/backend/src/modules/reports/application/dto/report.models.ts
+index 0de9ade..3a89a0c 100644
+--- a/backend/src/modules/reports/application/dto/report.models.ts
++++ b/backend/src/modules/reports/application/dto/report.models.ts
+@@ -1,8 +1,10 @@
++import type { ReportReasonName, ReportStatusName } from '../../domain';
++
+ export type ReportCloseStatus = 'RESOLVED' | 'REJECTED';
+ 
+ export interface AdminReportListQuery {
+-  readonly status?: string;
+-  readonly reason?: string;
++  readonly status?: ReportStatusName;
++  readonly reason?: ReportReasonName;
+   readonly reporter?: string;
+   readonly reportedUser?: string;
+   readonly createdFrom?: Date;
+diff --git a/backend/src/modules/reports/domain/enums/index.ts b/backend/src/modules/reports/domain/enums/index.ts
+index cb0ff5c..1227b63 100644
+--- a/backend/src/modules/reports/domain/enums/index.ts
++++ b/backend/src/modules/reports/domain/enums/index.ts
+@@ -1 +1 @@
+-export {};
++export * from './report.enum';
+diff --git a/backend/src/modules/reports/domain/enums/report.enum.ts b/backend/src/modules/reports/domain/enums/report.enum.ts
+new file mode 100644
+index 0000000..416d36d
+--- /dev/null
++++ b/backend/src/modules/reports/domain/enums/report.enum.ts
+@@ -0,0 +1,21 @@
++export const REPORT_STATUS_VALUES = [
++  'OPEN',
++  'IN_REVIEW',
++  'RESOLVED',
++  'REJECTED',
++] as const;
++
++export type ReportStatusName = (typeof REPORT_STATUS_VALUES)[number];
++
++export const REPORT_REASON_VALUES = [
++  'SPAM',
++  'HARASSMENT',
++  'HATE_SPEECH',
++  'SEXUAL_CONTENT',
++  'VIOLENCE',
++  'COPYRIGHT',
++  'MISINFORMATION',
++  'OTHER',
++] as const;
++
++export type ReportReasonName = (typeof REPORT_REASON_VALUES)[number];
+diff --git a/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts b/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts
+index 268a311..4374a5f 100644
+--- a/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts
++++ b/backend/src/modules/reports/presentation/http/requests/admin-reports.request.ts
+@@ -1,7 +1,6 @@
+ import { Type } from 'class-transformer';
+ import {
+   IsDateString,
+-  IsEnum,
+   IsIn,
+   IsInt,
+   IsOptional,
+@@ -11,11 +10,16 @@ import {
+   Min,
+   MinLength,
+ } from 'class-validator';
+-import { ReportReason, ReportStatus } from '@/generated/prisma/client';
++import {
++  REPORT_REASON_VALUES,
++  REPORT_STATUS_VALUES,
++  type ReportReasonName,
++  type ReportStatusName,
++} from '../../../domain';
+ 
+ export class ListAdminReportsRequest {
+-  @IsOptional() @IsEnum(ReportStatus) status?: ReportStatus;
+-  @IsOptional() @IsEnum(ReportReason) reason?: ReportReason;
++  @IsOptional() @IsIn(REPORT_STATUS_VALUES) status?: ReportStatusName;
++  @IsOptional() @IsIn(REPORT_REASON_VALUES) reason?: ReportReasonName;
+   @IsOptional() @IsString() @MaxLength(160) reporter?: string;
+   @IsOptional() @IsString() @MaxLength(160) reportedUser?: string;
+   @IsOptional() @IsDateString() createdFrom?: string;
+diff --git a/backend/src/modules/stories/application/ports/story-moderation.reader.port.ts b/backend/src/modules/stories/application/ports/story-moderation.reader.port.ts
+index ac1ab10..5395ec7 100644
+--- a/backend/src/modules/stories/application/ports/story-moderation.reader.port.ts
++++ b/backend/src/modules/stories/application/ports/story-moderation.reader.port.ts
+@@ -1,9 +1,11 @@
++import type { StorySubmissionStatusName } from '../../domain';
++
+ export const STORY_MODERATION_READER_PORT = Symbol(
+   'STORY_MODERATION_READER_PORT',
+ );
+ export type AdminStorySubmissionSort = 'submittedAt:desc' | 'submittedAt:asc';
+ export interface ListStorySubmissionsInput {
+-  readonly status?: string;
++  readonly status?: StorySubmissionStatusName;
+   readonly author?: string;
+   readonly story?: string;
+   readonly reviewer?: string;
+@@ -15,7 +17,7 @@ export interface ListStorySubmissionsInput {
+ }
+ export interface StorySubmissionListItemRecord {
+   readonly submissionId: string;
+-  readonly status: string;
++  readonly status: StorySubmissionStatusName;
+   readonly story: {
+     readonly id: string;
+     readonly title: string;
+@@ -42,7 +44,7 @@ export interface ListStorySubmissionsResult {
+ export interface StorySubmissionDetailRecord {
+   readonly submission: {
+     readonly id: string;
+-    readonly status: string;
++    readonly status: StorySubmissionStatusName;
+     readonly authorNote: string | null;
+     readonly submittedAt: Date;
+     readonly reviewedAt: Date | null;
+@@ -88,7 +90,7 @@ export interface StorySubmissionDetailRecord {
+   }[];
+   readonly submissionHistory: readonly {
+     readonly id: string;
+-    readonly status: string;
++    readonly status: StorySubmissionStatusName;
+     readonly submittedAt: Date;
+     readonly reviewedAt: Date | null;
+     readonly reviewer: {
+diff --git a/backend/src/modules/stories/domain/enums/index.ts b/backend/src/modules/stories/domain/enums/index.ts
+index cb0ff5c..36f9921 100644
+--- a/backend/src/modules/stories/domain/enums/index.ts
++++ b/backend/src/modules/stories/domain/enums/index.ts
+@@ -1 +1 @@
+-export {};
++export * from './submission-status.enum';
+diff --git a/backend/src/modules/stories/domain/enums/submission-status.enum.ts b/backend/src/modules/stories/domain/enums/submission-status.enum.ts
+new file mode 100644
+index 0000000..19fcae1
+--- /dev/null
++++ b/backend/src/modules/stories/domain/enums/submission-status.enum.ts
+@@ -0,0 +1,9 @@
++export const STORY_SUBMISSION_STATUS_VALUES = [
++  'PENDING',
++  'APPROVED',
++  'REJECTED',
++  'CANCELED',
++] as const;
++
++export type StorySubmissionStatusName =
++  (typeof STORY_SUBMISSION_STATUS_VALUES)[number];
+diff --git a/backend/src/modules/stories/presentation/http/requests/list-admin-story-submissions.request.ts b/backend/src/modules/stories/presentation/http/requests/list-admin-story-submissions.request.ts
+index db8fb95..f96560a 100644
+--- a/backend/src/modules/stories/presentation/http/requests/list-admin-story-submissions.request.ts
++++ b/backend/src/modules/stories/presentation/http/requests/list-admin-story-submissions.request.ts
+@@ -1,7 +1,6 @@
+ import { Transform, Type } from 'class-transformer';
+ import {
+   IsDateString,
+-  IsEnum,
+   IsIn,
+   IsInt,
+   IsOptional,
+@@ -10,10 +9,15 @@ import {
+   MaxLength,
+   Min,
+ } from 'class-validator';
+-import { SubmissionStatus } from '@/generated/prisma/client';
++import {
++  STORY_SUBMISSION_STATUS_VALUES,
++  type StorySubmissionStatusName,
++} from '../../../domain';
+ import type { AdminStorySubmissionSort } from '../../../application';
+ export class ListAdminStorySubmissionsRequest {
+-  @IsOptional() @IsEnum(SubmissionStatus) status?: SubmissionStatus;
++  @IsOptional()
++  @IsIn(STORY_SUBMISSION_STATUS_VALUES)
++  status?: StorySubmissionStatusName;
+   @IsOptional()
+   @Transform(({ value }: { value: unknown }) =>
+     typeof value === 'string' ? value.trim() : value,
+diff --git a/frontend/ARCHITECTURE.md b/frontend/ARCHITECTURE.md
+index 71b20f1..825a73e 100644
+--- a/frontend/ARCHITECTURE.md
++++ b/frontend/ARCHITECTURE.md
+@@ -17,8 +17,6 @@ Features converge on these boundaries:
+ - `pages`: route-level containers.
+ - `ui`: presentation components.
+ 
+-Cross-feature code belongs in `core` only when it is application-wide infrastructure, or in `shared` when it is presentation-only and reusable.
+-
+ Dependencies flow inward:
+ 
+ - `pages` may compose `ui`, coordinate `data-access`, and consume `domain` types.
+@@ -26,33 +24,38 @@ Dependencies flow inward:
+ - `data-access` may implement and consume `domain`, but not depend on `pages` or `ui`.
+ - `domain` must not depend on `pages`, `ui`, `data-access`, or Angular.
+ 
+-`npm run architecture:check` enforces these directions for relative imports inside `src/app/features`.
++## Shared ownership
+ 
+-## Debt ratchet
++Use the narrowest owner that matches the capability:
+ 
+-`npm run architecture:check` records the current upper bound for inline templates, inline styles, and total lines exceeding the target budget for each file type. A change may reduce these values but must not increase them. The excess-line metric allows one large component to be split into several focused files without penalizing the extraction merely because the file count grows. Hard line limits prevent a single file from growing beyond the current worst cases.
++- `features/<scope>/shared`: reusable **only inside the same scope** (`account`, `public`, `admin`, or `author-portal`). Cross-scope imports into another scope's `shared` internals are forbidden.
++- `core`: application-wide state/infrastructure or cross-scope product capabilities with a stable public contract. Example: `core/author-follow` is consumed by both public author views and account following pages.
++- `shared`: presentation-only primitives reused across the application.
+ 
+-Update the baseline only after debt has been removed. Do not increase a baseline to make CI pass.
++Feature-to-feature imports may use another feature's root public API, but must not import its internals.
+ 
+-Component classes have a 500-line hard cap and a 250-line target. Stores have a 600-line hard cap and a 300-line target. Their excess-line totals are tracked independently so splitting one large class cannot hide growth in another. New code should meet the target; legacy files above it may only shrink.
++`npm run architecture:check` enforces these rules for both relative and configured alias imports.
+ 
+-## Strict compilation
++## Runtime FE-BE contracts
+ 
+-Application and test TypeScript compile with `strict`. Angular templates compile with `strictTemplates`, strict injection parameters, and strict input access modifiers. Redundant optional chaining in templates is promoted to an error through extended diagnostics.
++Frontend policy/config values that belong to backend product rules must come from a backend contract, not duplicated literals. Authentication runtime config is loaded from `GET /api/v1/auth/client-config` and contains CSRF settings, password policy, and password-reset TTL for both browser and SSR runtimes.
+ 
+-Do not suppress strict errors with broad casts or `any`. Narrow values at their boundary and keep template guards aligned with the types rendered inside each control-flow block.
++Production V1 screen/API wiring is documented in `../backend/ops/production/API_CONTRACT_MATRIX.md` and enforced by `node ../scripts/verify-api-contracts.mjs`.
++
++## Debt ratchet
++
++`npm run architecture:check` records the current upper bound for inline templates, inline styles, and total lines exceeding the target budget for each file type. A change may reduce these values but must not increase them. Hard line limits prevent a single file from growing beyond the current worst cases.
+ 
+-## Regression suite
++Update a debt baseline only after debt has actually been removed. Never increase a baseline only to make CI pass.
+ 
+-The unit suite protects cross-tab auth coordination, root route composition and private-route guards, and the shared icon registry. When changing one of these infrastructure contracts, extend the corresponding regression test before changing its implementation.
++Component classes have a 500-line hard cap and a 250-line target. Stores have a 600-line hard cap and a 300-line target. New code should meet the target; legacy files above it may only shrink.
+ 
+-## Mechanical asset extraction
++## Strict compilation
+ 
+-Use `node scripts/extract-inline-component-assets.mjs <feature-path>` for a dry run, then add
+-`--write` to extract static inline templates and styles into co-located `.html` and `.scss` files.
+-The script refuses to overwrite existing assets and rejects interpolated TypeScript template
+-literals, so those cases must be reviewed manually.
++Application and test TypeScript compile with `strict`. Angular templates compile with `strictTemplates`, strict injection parameters, and strict input access modifiers.
++
++Do not suppress strict errors with broad casts or `any`. Narrow values at their boundary and keep template guards aligned with the types rendered inside each control-flow block.
+ 
+ ## Change discipline
+ 
+-Keep mechanical template/style extraction separate from behavior changes. Preserve selectors, inputs, outputs, route URLs, and API contracts during extraction. Every refactoring wave must pass formatting, architecture, lint, unit tests, E2E type checking, and the production build.
++Keep mechanical refactors separate from behavior changes where practical. Preserve selectors, route URLs, and API contracts during extraction. Every refactoring wave must pass formatting, architecture, lint, type checking, tests, and the production build.
+diff --git a/frontend/scripts/architecture-rules.mjs b/frontend/scripts/architecture-rules.mjs
+index 8e5944e..9ed9d34 100644
+--- a/frontend/scripts/architecture-rules.mjs
++++ b/frontend/scripts/architecture-rules.mjs
+@@ -131,7 +131,7 @@ export function findBoundaryViolations(records, options = {}) {
+         sourceFeature &&
+         targetFeature &&
+         sourceFeature.key !== targetFeature.key &&
+-        !isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot)
++        !isAllowedCrossFeatureImport(sourceFeature, targetFile, targetFeature, sourceRoot)
+       ) {
+         violations.push(
+           violation(
+@@ -213,7 +213,7 @@ function relativePartsFor(file, sourceRoot) {
+   return path.relative(sourceRoot, file).split(path.sep).filter(Boolean);
+ }
+ 
+-function isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot) {
++function isAllowedCrossFeatureImport(sourceFeature, targetFile, targetFeature, sourceRoot) {
+   const parts = relativePartsFor(targetFile, sourceRoot);
+ 
+   /*
+@@ -225,7 +225,7 @@ function isAllowedCrossFeatureImport(targetFile, targetFeature, sourceRoot) {
+    * features/account/shared
+    */
+   if (targetFeature.feature === 'shared') {
+-    return true;
++    return sourceFeature.scope === targetFeature.scope;
+   }
+ 
+   /*
+diff --git a/frontend/scripts/architecture-rules.test.mjs b/frontend/scripts/architecture-rules.test.mjs
+index e8126a6..c29ed08 100644
+--- a/frontend/scripts/architecture-rules.test.mjs
++++ b/frontend/scripts/architecture-rules.test.mjs
+@@ -141,6 +141,21 @@ test('allow scoped shared feature import', () => {
+   );
+ });
+ 
++
++test('forbid shared internals across feature scopes', () => {
++  const violations = violationsFor(
++    file('features', 'account', 'following', 'pages', 'following.ts'),
++
++    `
++          import { AuthorFollowApiService }
++            from '@features/public/shared/author-follow/data-access/author-follow-api.service';
++        `,
++  );
++
++  assert.equal(violations.length, 1);
++  assert.match(violations[0].message, /account\/following cannot import internals of public\/shared/);
++});
++
+ test('allow explicit feature public API', () => {
+   const violations = violationsFor(
+     file('features', 'public', 'story', 'pages', 'page.ts'),
+diff --git a/frontend/scripts/check-architecture.mjs b/frontend/scripts/check-architecture.mjs
+index 81244bb..8296866 100644
+--- a/frontend/scripts/check-architecture.mjs
++++ b/frontend/scripts/check-architecture.mjs
+@@ -140,6 +140,30 @@ for (const violation of boundaryViolations) {
+   errors.push(`${relativePath(violation.file)}:${violation.line} ${violation.message}`);
+ }
+ 
++const forbiddenAuthRuntimeLiterals = [
++  'minimumLength: 8',
++  'maximumLength: 72',
++  'tokenExpiresInMinutes: 15',
++  'Validators.minLength(8)',
++  'Validators.maxLength(72)',
++  'minlength="8"',
++  'maxlength="72"',
++];
++
++for (const record of records) {
++  if (!relativePath(record.file).startsWith('src/app/')) {
++    continue;
++  }
++
++  for (const literal of forbiddenAuthRuntimeLiterals) {
++    if (record.content.includes(literal)) {
++      errors.push(
++        `${relativePath(record.file)} hardcodes backend-owned auth policy literal ${JSON.stringify(literal)}`,
++      );
++    }
++  }
++}
++
+ console.log(
+   [
+     `Architecture debt: ${current.inlineTemplates} inline templates, ${current.inlineStyles} inline styles`,
+diff --git a/frontend/src/app/core/auth/auth-validation.ts b/frontend/src/app/core/auth/auth-validation.ts
+index acd01c2..f0034af 100644
+--- a/frontend/src/app/core/auth/auth-validation.ts
++++ b/frontend/src/app/core/auth/auth-validation.ts
+@@ -1,3 +1,5 @@
++import type { AuthPasswordPolicyConfig } from '../config/app-config.token';
++import { evaluatePasswordPolicy, passwordPolicyHint } from './password-policy';
+ import { RegisterRequest } from './auth.models';
+ 
+ const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/;
+@@ -7,7 +9,10 @@ const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  * Validate trước ở frontend để cải thiện UX.
+  * Backend vẫn là nơi quyết định dữ liệu có hợp lệ hay không.
+  */
+-export function getRegisterValidationMessage(request: RegisterRequest): string | null {
++export function getRegisterValidationMessage(
++  request: RegisterRequest,
++  passwordPolicy: AuthPasswordPolicyConfig,
++): string | null {
+   const email = request.email.trim();
+   const username = request.username.trim();
+   const displayName = request.displayName.trim();
+@@ -29,23 +34,8 @@ export function getRegisterValidationMessage(request: RegisterRequest): string |
+     return 'Tên hiển thị phải có độ dài từ 1 đến 120 ký tự.';
+   }
+ 
+-  const hasLowercase = /[a-z]/.test(password);
+-  const hasUppercase = /[A-Z]/.test(password);
+-  const hasNumber = /\d/.test(password);
+-  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
+-
+-  if (
+-    password.length < 8 ||
+-    password.length > 72 ||
+-    !hasLowercase ||
+-    !hasUppercase ||
+-    !hasNumber ||
+-    !hasSpecialCharacter
+-  ) {
+-    return [
+-      'Mật khẩu phải dài 8–72 ký tự,',
+-      'gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.',
+-    ].join(' ');
++  if (!evaluatePasswordPolicy(password, passwordPolicy).valid) {
++    return passwordPolicyHint(passwordPolicy);
+   }
+ 
+   return null;
+diff --git a/frontend/src/app/core/auth/password-policy.ts b/frontend/src/app/core/auth/password-policy.ts
+new file mode 100644
+index 0000000..9efed6c
+--- /dev/null
++++ b/frontend/src/app/core/auth/password-policy.ts
+@@ -0,0 +1,43 @@
++import type { AuthPasswordPolicyConfig } from '../config/app-config.token';
++
++export interface PasswordPolicyEvaluation {
++  readonly minimumLength: boolean;
++  readonly maximumLength: boolean;
++  readonly maximumBytes: boolean;
++  readonly lowercase: boolean;
++  readonly uppercase: boolean;
++  readonly number: boolean;
++  readonly symbol: boolean;
++  readonly valid: boolean;
++}
++
++export function evaluatePasswordPolicy(
++  value: string,
++  policy: AuthPasswordPolicyConfig,
++): PasswordPolicyEvaluation {
++  const evaluation = {
++    minimumLength: value.length >= policy.minimumLength,
++    maximumLength: value.length <= policy.maximumLength,
++    maximumBytes: new TextEncoder().encode(value).length <= policy.maximumBytes,
++    lowercase: !policy.requireLowercase || /[a-z]/.test(value),
++    uppercase: !policy.requireUppercase || /[A-Z]/.test(value),
++    number: !policy.requireNumber || /\d/.test(value),
++    symbol: !policy.requireSymbol || /[^A-Za-z0-9]/.test(value),
++  };
++
++  return {
++    ...evaluation,
++    valid: Object.values(evaluation).every(Boolean),
++  };
++}
++
++export function passwordPolicyHint(policy: AuthPasswordPolicyConfig): string {
++  const requirements: string[] = [];
++  if (policy.requireLowercase) requirements.push('chữ thường');
++  if (policy.requireUppercase) requirements.push('chữ hoa');
++  if (policy.requireNumber) requirements.push('chữ số');
++  if (policy.requireSymbol) requirements.push('ký tự đặc biệt');
++
++  const suffix = requirements.length > 0 ? `, có ${requirements.join(', ')}` : '';
++  return `Từ ${policy.minimumLength} đến ${policy.maximumLength} ký tự, tối đa ${policy.maximumBytes} byte UTF-8${suffix}.`;
++}
+diff --git a/frontend/src/app/features/public/shared/author-follow/data-access/author-follow-api.service.ts b/frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts
+similarity index 90%
+rename from frontend/src/app/features/public/shared/author-follow/data-access/author-follow-api.service.ts
+rename to frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts
+index f035fcc..3db0494 100644
+--- a/frontend/src/app/features/public/shared/author-follow/data-access/author-follow-api.service.ts
++++ b/frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts
+@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
+ import { inject, Injectable } from '@angular/core';
+ import { map, Observable } from 'rxjs';
+ 
+-import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
+-import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
++import { APP_RUNTIME_CONFIG } from '../../config/app-config.token';
++import { ApiSuccessEnvelope } from '../../http/api-envelope.model';
+ import { AuthorFollowMutation, FollowingAuthorsPage } from '../domain/author-follow.models';
+ 
+ @Injectable({ providedIn: 'root' })
+diff --git a/frontend/src/app/features/public/shared/author-follow/domain/author-follow.models.ts b/frontend/src/app/core/author-follow/domain/author-follow.models.ts
+similarity index 100%
+rename from frontend/src/app/features/public/shared/author-follow/domain/author-follow.models.ts
+rename to frontend/src/app/core/author-follow/domain/author-follow.models.ts
+diff --git a/frontend/src/app/core/author-follow/index.ts b/frontend/src/app/core/author-follow/index.ts
+new file mode 100644
+index 0000000..7d3981d
+--- /dev/null
++++ b/frontend/src/app/core/author-follow/index.ts
+@@ -0,0 +1,2 @@
++export * from './data-access/author-follow-api.service';
++export * from './domain/author-follow.models';
+diff --git a/frontend/src/app/core/config/app-config.token.ts b/frontend/src/app/core/config/app-config.token.ts
+index 4ca79b7..d95a405 100644
+--- a/frontend/src/app/core/config/app-config.token.ts
++++ b/frontend/src/app/core/config/app-config.token.ts
+@@ -1,10 +1,25 @@
+ import { InjectionToken } from '@angular/core';
+ 
++export interface AuthPasswordPolicyConfig {
++  readonly minimumLength: number;
++  readonly maximumLength: number;
++  readonly maximumBytes: number;
++  readonly requireLowercase: boolean;
++  readonly requireUppercase: boolean;
++  readonly requireNumber: boolean;
++  readonly requireSymbol: boolean;
++}
++
++export interface AuthPasswordResetConfig {
++  readonly tokenExpiresInMinutes: number;
++}
++
+ export interface AppRuntimeConfig {
+   readonly apiBaseUrl: string;
+   readonly appName: string;
+   readonly production: boolean;
+-
++  readonly passwordPolicy: AuthPasswordPolicyConfig;
++  readonly passwordReset: AuthPasswordResetConfig;
+   readonly csrf: {
+     readonly enabled: boolean;
+     readonly cookieName: string;
+diff --git a/frontend/src/app/core/config/app-runtime-config.loader.ts b/frontend/src/app/core/config/app-runtime-config.loader.ts
+index 9e239d4..a20be6f 100644
+--- a/frontend/src/app/core/config/app-runtime-config.loader.ts
++++ b/frontend/src/app/core/config/app-runtime-config.loader.ts
+@@ -1,85 +1,26 @@
+ import { environment } from '../../../environments/environment';
+ 
+ import { AppRuntimeConfig } from './app-config.token';
++import { parseAuthClientConfigResponse } from './auth-client-config.parser';
+ 
+ export async function loadAppRuntimeConfig(): Promise<AppRuntimeConfig> {
+   const response = await fetch(`${environment.apiBaseUrl}/auth/client-config`, {
+     method: 'GET',
+-
+     credentials: 'include',
+-
+     cache: 'no-store',
+-
+-    headers: {
+-      Accept: 'application/json',
+-    },
++    headers: { Accept: 'application/json' },
+   });
+ 
+   if (!response.ok) {
+     throw new Error(`Không thể tải runtime auth config: HTTP ${response.status}`);
+   }
+ 
+-  const body: unknown = await response.json();
+-
+-  const csrf = parseCsrfConfig(body);
++  const parsed = parseAuthClientConfigResponse(await response.json());
+ 
+   return {
+     apiBaseUrl: environment.apiBaseUrl,
+-
+     appName: environment.appName,
+-
+     production: environment.production,
+-
+-    csrf,
+-  };
+-}
+-
+-function parseCsrfConfig(value: unknown): AppRuntimeConfig['csrf'] {
+-  if (!isRecord(value) || value['success'] !== true) {
+-    throw new Error('Runtime auth config không đúng response envelope.');
+-  }
+-
+-  const data = value['data'];
+-
+-  if (!isRecord(data)) {
+-    throw new Error('Runtime auth config thiếu data.');
+-  }
+-
+-  const csrf = data['csrf'];
+-
+-  if (!isRecord(csrf)) {
+-    throw new Error('Runtime auth config thiếu csrf config.');
+-  }
+-
+-  const enabled = csrf['enabled'];
+-
+-  const cookieName = csrf['cookieName'];
+-
+-  const headerName = csrf['headerName'];
+-
+-  if (typeof enabled !== 'boolean') {
+-    throw new Error('Runtime csrf.enabled không hợp lệ.');
+-  }
+-
+-  if (!isNonEmptyString(cookieName)) {
+-    throw new Error('Runtime csrf.cookieName không hợp lệ.');
+-  }
+-
+-  if (!isNonEmptyString(headerName)) {
+-    throw new Error('Runtime csrf.headerName không hợp lệ.');
+-  }
+-
+-  return {
+-    enabled,
+-    cookieName,
+-    headerName,
++    ...parsed,
+   };
+ }
+-
+-function isRecord(value: unknown): value is Record<string, unknown> {
+-  return typeof value === 'object' && value !== null;
+-}
+-
+-function isNonEmptyString(value: unknown): value is string {
+-  return typeof value === 'string' && value.trim().length > 0;
+-}
+diff --git a/frontend/src/app/core/config/app-runtime-config.server.ts b/frontend/src/app/core/config/app-runtime-config.server.ts
+index 0da42ea..ace9bb1 100644
+--- a/frontend/src/app/core/config/app-runtime-config.server.ts
++++ b/frontend/src/app/core/config/app-runtime-config.server.ts
+@@ -1,19 +1,36 @@
+ import { environment } from '../../../environments/environment';
+ import { AppRuntimeConfig } from './app-config.token';
++import { parseAuthClientConfigResponse } from './auth-client-config.parser';
+ 
+ const DEVELOPMENT_API_ORIGIN = 'http://127.0.0.1:3000';
+ const DEVELOPMENT_PUBLIC_ORIGIN = 'http://localhost:4200';
+ 
+-export function loadServerAppRuntimeConfig(): AppRuntimeConfig {
++let runtimeConfigPromise: Promise<AppRuntimeConfig> | null = null;
++
++export function loadServerAppRuntimeConfig(): Promise<AppRuntimeConfig> {
++  runtimeConfigPromise ??= fetchServerRuntimeConfig();
++  return runtimeConfigPromise;
++}
++
++async function fetchServerRuntimeConfig(): Promise<AppRuntimeConfig> {
++  const apiBaseUrl = `${serverApiOrigin()}${environment.apiBaseUrl}`;
++  const response = await fetch(`${apiBaseUrl}/auth/client-config`, {
++    method: 'GET',
++    cache: 'no-store',
++    headers: { Accept: 'application/json' },
++  });
++
++  if (!response.ok) {
++    throw new Error(`Không thể tải SSR runtime auth config: HTTP ${response.status}`);
++  }
++
++  const parsed = parseAuthClientConfigResponse(await response.json());
++
+   return {
+-    apiBaseUrl: `${serverApiOrigin()}${environment.apiBaseUrl}`,
++    apiBaseUrl,
+     appName: environment.appName,
+     production: environment.production,
+-    csrf: {
+-      enabled: false,
+-      cookieName: 'csrf_token',
+-      headerName: 'X-CSRF-Token',
+-    },
++    ...parsed,
+   };
+ }
+ 
+diff --git a/frontend/src/app/core/config/auth-client-config.parser.spec.ts b/frontend/src/app/core/config/auth-client-config.parser.spec.ts
+new file mode 100644
+index 0000000..c286f70
+--- /dev/null
++++ b/frontend/src/app/core/config/auth-client-config.parser.spec.ts
+@@ -0,0 +1,73 @@
++import { parseAuthClientConfigResponse } from './auth-client-config.parser';
++
++describe('parseAuthClientConfigResponse', () => {
++  it('parses the backend-owned auth client contract', () => {
++    expect(
++      parseAuthClientConfigResponse({
++        success: true,
++        data: {
++          passwordPolicy: {
++            minimumLength: 10,
++            maximumLength: 64,
++            maximumBytes: 72,
++            requireLowercase: true,
++            requireUppercase: true,
++            requireNumber: true,
++            requireSymbol: false,
++          },
++          passwordReset: {
++            tokenExpiresInMinutes: 30,
++          },
++          csrf: {
++            enabled: true,
++            cookieName: 'csrf-token',
++            headerName: 'x-csrf-token',
++          },
++        },
++      }),
++    ).toEqual({
++      passwordPolicy: {
++        minimumLength: 10,
++        maximumLength: 64,
++        maximumBytes: 72,
++        requireLowercase: true,
++        requireUppercase: true,
++        requireNumber: true,
++        requireSymbol: false,
++      },
++      passwordReset: {
++        tokenExpiresInMinutes: 30,
++      },
++      csrf: {
++        enabled: true,
++        cookieName: 'csrf-token',
++        headerName: 'x-csrf-token',
++      },
++    });
++  });
++
++  it('rejects invalid password policy ranges', () => {
++    expect(() =>
++      parseAuthClientConfigResponse({
++        success: true,
++        data: {
++          passwordPolicy: {
++            minimumLength: 72,
++            maximumLength: 8,
++            maximumBytes: 72,
++            requireLowercase: true,
++            requireUppercase: true,
++            requireNumber: true,
++            requireSymbol: true,
++          },
++          passwordReset: { tokenExpiresInMinutes: 15 },
++          csrf: {
++            enabled: true,
++            cookieName: 'csrf-token',
++            headerName: 'x-csrf-token',
++          },
++        },
++      }),
++    ).toThrowError(/length range/);
++  });
++});
+diff --git a/frontend/src/app/core/config/auth-client-config.parser.ts b/frontend/src/app/core/config/auth-client-config.parser.ts
+new file mode 100644
+index 0000000..cdb3c45
+--- /dev/null
++++ b/frontend/src/app/core/config/auth-client-config.parser.ts
+@@ -0,0 +1,104 @@
++import { AppRuntimeConfig } from './app-config.token';
++
++export interface ParsedAuthClientConfig {
++  readonly csrf: AppRuntimeConfig['csrf'];
++  readonly passwordPolicy: AppRuntimeConfig['passwordPolicy'];
++  readonly passwordReset: AppRuntimeConfig['passwordReset'];
++}
++
++export function parseAuthClientConfigResponse(value: unknown): ParsedAuthClientConfig {
++  if (!isRecord(value) || value['success'] !== true) {
++    throw new Error('Runtime auth config không đúng response envelope.');
++  }
++
++  const data = value['data'];
++  if (!isRecord(data)) {
++    throw new Error('Runtime auth config thiếu data.');
++  }
++
++  return {
++    csrf: parseCsrfConfig(data['csrf']),
++    passwordPolicy: parsePasswordPolicy(data['passwordPolicy']),
++    passwordReset: parsePasswordReset(data['passwordReset']),
++  };
++}
++
++function parseCsrfConfig(value: unknown): AppRuntimeConfig['csrf'] {
++  if (!isRecord(value)) {
++    throw new Error('Runtime auth config thiếu csrf config.');
++  }
++
++  const enabled = value['enabled'];
++  const cookieName = value['cookieName'];
++  const headerName = value['headerName'];
++
++  if (typeof enabled !== 'boolean') {
++    throw new Error('Runtime csrf.enabled không hợp lệ.');
++  }
++  if (!isNonEmptyString(cookieName)) {
++    throw new Error('Runtime csrf.cookieName không hợp lệ.');
++  }
++  if (!isNonEmptyString(headerName)) {
++    throw new Error('Runtime csrf.headerName không hợp lệ.');
++  }
++
++  return { enabled, cookieName, headerName };
++}
++
++function parsePasswordPolicy(value: unknown): AppRuntimeConfig['passwordPolicy'] {
++  if (!isRecord(value)) {
++    throw new Error('Runtime auth config thiếu passwordPolicy.');
++  }
++
++  const minimumLength = readPositiveInteger(value, 'minimumLength');
++  const maximumLength = readPositiveInteger(value, 'maximumLength');
++  const maximumBytes = readPositiveInteger(value, 'maximumBytes');
++
++  if (maximumLength < minimumLength) {
++    throw new Error('Runtime passwordPolicy length range không hợp lệ.');
++  }
++
++  return {
++    minimumLength,
++    maximumLength,
++    maximumBytes,
++    requireLowercase: readBoolean(value, 'requireLowercase'),
++    requireUppercase: readBoolean(value, 'requireUppercase'),
++    requireNumber: readBoolean(value, 'requireNumber'),
++    requireSymbol: readBoolean(value, 'requireSymbol'),
++  };
++}
++
++function parsePasswordReset(value: unknown): AppRuntimeConfig['passwordReset'] {
++  if (!isRecord(value)) {
++    throw new Error('Runtime auth config thiếu passwordReset.');
++  }
++
++  return {
++    tokenExpiresInMinutes: readPositiveInteger(value, 'tokenExpiresInMinutes'),
++  };
++}
++
++function readPositiveInteger(value: Record<string, unknown>, key: string): number {
++  const candidate = value[key];
++  if (!Number.isSafeInteger(candidate) || (candidate as number) <= 0) {
++    throw new Error(`Runtime auth config ${key} không hợp lệ.`);
++  }
++  return candidate as number;
++}
++
++function readBoolean(value: Record<string, unknown>, key: string): boolean {
++  const candidate = value[key];
++  if (typeof candidate !== 'boolean') {
++    throw new Error(`Runtime auth config ${key} không hợp lệ.`);
++  }
++  return candidate;
++}
++
++function isRecord(value: unknown): value is Record<string, unknown> {
++  return typeof value === 'object' && value !== null;
++}
++
++function isNonEmptyString(value: unknown): value is string {
++  return typeof value === 'string' && value.trim().length > 0;
++}
+diff --git a/frontend/src/app/core/http/api.interceptor.spec.ts b/frontend/src/app/core/http/api.interceptor.spec.ts
+index e007490..d422b11 100644
+--- a/frontend/src/app/core/http/api.interceptor.spec.ts
++++ b/frontend/src/app/core/http/api.interceptor.spec.ts
+@@ -30,6 +30,20 @@ describe('apiInterceptor', () => {
+ 
+     production: false,
+ 
++    passwordPolicy: {
++      minimumLength: 8,
++      maximumLength: 72,
++      maximumBytes: 72,
++      requireLowercase: true,
++      requireUppercase: true,
++      requireNumber: true,
++      requireSymbol: true,
++    },
++
++    passwordReset: {
++      tokenExpiresInMinutes: 15,
++    },
++
+     csrf: {
+       enabled: true,
+ 
+diff --git a/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.component.html b/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.component.html
+index 2509aec..da60a54 100644
+--- a/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.component.html
++++ b/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.component.html
+@@ -193,8 +193,8 @@
+                 type="password"
+                 [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+                 placeholder="••••••••"
+-                minlength="8"
+-                maxlength="72"
++                [attr.minlength]="mode() === 'register' ? passwordPolicy.minimumLength : null"
++                [attr.maxlength]="mode() === 'register' ? passwordPolicy.maximumLength : null"
+                 required
+               />
+             </div>
+@@ -206,7 +206,7 @@
+             </a>
+           } @else {
+             <small class="hint">
+-              Từ 8 đến 72 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
++              {{ passwordHint }}
+             </small>
+           }
+ 
+diff --git a/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.controller.ts b/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.controller.ts
+index d5a8125..f2995ac 100644
+--- a/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.controller.ts
++++ b/frontend/src/app/features/account/auth/ui/auth-dialog/auth-dialog.controller.ts
+@@ -9,7 +9,9 @@ import {
+ } from '../../../../../core/auth/auth.models';
+ import { AuthStore } from '../../../../../core/auth/auth.store';
+ import { getRegisterValidationMessage } from '../../../../../core/auth/auth-validation';
++import { passwordPolicyHint } from '../../../../../core/auth/password-policy';
+ import { OAuthBrowserService } from '../../../../../core/auth/oauth-browser.service';
++import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
+ import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+ import { isValidEmail, readApiErrorCode, readMfaChallenge } from './auth-dialog-error.util';
+ 
+@@ -35,6 +37,8 @@ export abstract class AuthDialogController implements OnDestroy {
+   protected readonly auth = inject(AuthStore);
+ 
+   private readonly authApi = inject(AuthApiService);
++  protected readonly passwordPolicy = inject(APP_RUNTIME_CONFIG).passwordPolicy;
++  protected readonly passwordHint = passwordPolicyHint(this.passwordPolicy);
+   private readonly oauth = inject(OAuthBrowserService);
+ 
+   protected readonly mode = signal<'login' | 'register'>('login');
+@@ -310,7 +314,7 @@ export abstract class AuthDialogController implements OnDestroy {
+       password: this.password,
+     };
+ 
+-    const validationMessage = getRegisterValidationMessage(payload);
++    const validationMessage = getRegisterValidationMessage(payload, this.passwordPolicy);
+ 
+     if (validationMessage) {
+       this.localError.set(validationMessage);
+diff --git a/frontend/src/app/features/account/following/pages/following-page/following-page.component.ts b/frontend/src/app/features/account/following/pages/following-page/following-page.component.ts
+index 1b1e17a..4243f18 100644
+--- a/frontend/src/app/features/account/following/pages/following-page/following-page.component.ts
++++ b/frontend/src/app/features/account/following/pages/following-page/following-page.component.ts
+@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ import { RouterLink } from '@angular/router';
+ 
+-import { AuthorFollowApiService } from '../../../../public/shared/author-follow/data-access/author-follow-api.service';
+-import { FollowingAuthorItem } from '../../../../public/shared/author-follow/domain/author-follow.models';
++import { AuthorFollowApiService, FollowingAuthorItem } from '@core/author-follow';
+ 
+ @Component({
+   selector: 'app-following-page',
+diff --git a/frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts b/frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts
+index 9deecf9..832c87c 100644
+--- a/frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts
++++ b/frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts
+@@ -70,7 +70,6 @@ function toLibraryStory(entry: LibraryEntryApiItem): LibraryStory {
+     lastReadLabel: relativeLabel(lastReadMinutes),
+     lastReadMinutes,
+     isReading: entry.status === 'READING',
+-    isFollowing: false,
+     isFavorite: entry.isFavorite,
+     isCompleted: entry.status === 'COMPLETED',
+     coverInitials: initials(entry.story.title),
+diff --git a/frontend/src/app/features/account/my-library/data-access/my-library.store.ts b/frontend/src/app/features/account/my-library/data-access/my-library.store.ts
+index 62c8706..55ce7ab 100644
+--- a/frontend/src/app/features/account/my-library/data-access/my-library.store.ts
++++ b/frontend/src/app/features/account/my-library/data-access/my-library.store.ts
+@@ -129,8 +129,6 @@ export class MyLibraryStore {
+     switch (this.filter()) {
+       case 'reading':
+         return story.isReading;
+-      case 'following':
+-        return story.isFollowing;
+       case 'favorite':
+         return story.isFavorite;
+       case 'completed':
+diff --git a/frontend/src/app/features/account/my-library/domain/my-library.models.ts b/frontend/src/app/features/account/my-library/domain/my-library.models.ts
+index 598d7b3..60f190c 100644
+--- a/frontend/src/app/features/account/my-library/domain/my-library.models.ts
++++ b/frontend/src/app/features/account/my-library/domain/my-library.models.ts
+@@ -1,4 +1,4 @@
+-export type LibraryFilter = 'all' | 'reading' | 'following' | 'favorite' | 'completed';
++export type LibraryFilter = 'all' | 'reading' | 'favorite' | 'completed';
+ 
+ export type LibrarySort = 'recent' | 'progress' | 'title' | 'chapter';
+ 
+@@ -22,7 +22,6 @@ export interface LibraryStory {
+   readonly lastReadMinutes: number;
+ 
+   readonly isReading: boolean;
+-  readonly isFollowing: boolean;
+   readonly isFavorite: boolean;
+   readonly isCompleted: boolean;
+ 
+diff --git a/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.scss b/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.scss
+index 673dac3..66bf5d7 100644
+--- a/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.scss
++++ b/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.scss
+@@ -119,7 +119,7 @@
+   background: #d4a72c;
+ }
+ 
+-.status-badge[data-status='following'] {
++.status-badge[data-status='saved'] {
+   background: #14b8a6;
+ }
+ 
+diff --git a/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.ts b/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.ts
+index f9cebbc..a081256 100644
+--- a/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.ts
++++ b/frontend/src/app/features/account/my-library/ui/library-story-list/library-story-list.component.ts
+@@ -38,7 +38,7 @@ export class LibraryStoryListComponent {
+       return 'reading';
+     }
+ 
+-    return 'following';
++    return 'saved';
+   }
+ 
+   getStatusLabel(story: LibraryStory): string {
+@@ -54,6 +54,6 @@ export class LibraryStoryListComponent {
+       return 'ĐANG ĐỌC';
+     }
+ 
+-    return 'THEO DÕI';
++    return 'TRONG THƯ VIỆN';
+   }
+ }
+diff --git a/frontend/src/app/features/account/my-library/ui/library-toolbar/library-toolbar.component.html b/frontend/src/app/features/account/my-library/ui/library-toolbar/library-toolbar.component.html
+index 5514588..554941d 100644
+--- a/frontend/src/app/features/account/my-library/ui/library-toolbar/library-toolbar.component.html
++++ b/frontend/src/app/features/account/my-library/ui/library-toolbar/library-toolbar.component.html
+@@ -39,19 +39,6 @@
+       Đang đọc
+     </button>
+ 
+-    <button
+-      type="button"
+-      [class.active]="filter === 'following'"
+-      (click)="filterChange.emit('following')"
+-    >
+-      <svg viewBox="0 0 24 24">
+-        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+-
+-        <circle cx="12" cy="12" r="2.5"></circle>
+-      </svg>
+-
+-      Theo dõi
+-    </button>
+ 
+     <button
+       type="button"
+diff --git a/frontend/src/app/features/account/profile/security/components/change-email-dialog/change-email-dialog.component.ts b/frontend/src/app/features/account/profile/security/components/change-email-dialog/change-email-dialog.component.ts
+index 48164f4..2a41b15 100644
+--- a/frontend/src/app/features/account/profile/security/components/change-email-dialog/change-email-dialog.component.ts
++++ b/frontend/src/app/features/account/profile/security/components/change-email-dialog/change-email-dialog.component.ts
+@@ -1,7 +1,8 @@
+-import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
++import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+ 
+ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+ 
++import { APP_RUNTIME_CONFIG } from '../../../../../../core/config/app-config.token';
+ import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
+ 
+ import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+@@ -75,7 +76,7 @@ interface ChangeEmailForm {
+           icon="lock"
+           autocomplete="current-password"
+           placeholder="Nhập mật khẩu hiện tại"
+-          [maxLength]="72"
++          [maxLength]="passwordMaximumLength"
+           formControlName="currentPassword"
+           [error]="currentPasswordError"
+         />
+@@ -109,6 +110,8 @@ interface ChangeEmailForm {
+   changeDetection: ChangeDetectionStrategy.OnPush,
+ })
+ export class ChangeEmailDialogComponent {
++  protected readonly passwordMaximumLength = inject(APP_RUNTIME_CONFIG).passwordPolicy.maximumLength;
++
+   readonly open = input(false);
+ 
+   readonly submitting = input(false);
+@@ -129,7 +132,7 @@ export class ChangeEmailDialogComponent {
+     currentPassword: new FormControl('', {
+       nonNullable: true,
+ 
+-      validators: [Validators.required, Validators.maxLength(72)],
++      validators: [Validators.required, Validators.maxLength(this.passwordMaximumLength)],
+     }),
+   });
+ 
+diff --git a/frontend/src/app/features/account/profile/security/components/change-password-dialog/change-password-dialog.component.ts b/frontend/src/app/features/account/profile/security/components/change-password-dialog/change-password-dialog.component.ts
+index 1382101..9d5ff31 100644
+--- a/frontend/src/app/features/account/profile/security/components/change-password-dialog/change-password-dialog.component.ts
++++ b/frontend/src/app/features/account/profile/security/components/change-password-dialog/change-password-dialog.component.ts
+@@ -1,4 +1,4 @@
+-import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
++import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+ 
+ import {
+   AbstractControl,
+@@ -10,6 +10,8 @@ import {
+   Validators,
+ } from '@angular/forms';
+ 
++import { APP_RUNTIME_CONFIG, type AuthPasswordPolicyConfig } from '../../../../../../core/config/app-config.token';
++import { evaluatePasswordPolicy, passwordPolicyHint } from '../../../../../../core/auth/password-policy';
+ import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
+ 
+ import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+@@ -26,8 +28,6 @@ interface ChangePasswordForm {
+   confirmPassword: FormControl<string>;
+ }
+ 
+-const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+-
+ @Component({
+   selector: 'app-change-password-dialog',
+ 
+@@ -67,9 +67,9 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
+           icon="key"
+           autocomplete="new-password"
+           placeholder="Nhập mật khẩu mới"
+-          [maxLength]="72"
++          [maxLength]="passwordPolicy.maximumLength"
+           formControlName="newPassword"
+-          hint="8–72 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt."
++          [hint]="passwordHint"
+           [error]="newPasswordError"
+         />
+ 
+@@ -78,7 +78,7 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
+           icon="check"
+           autocomplete="new-password"
+           placeholder="Nhập lại mật khẩu mới"
+-          [maxLength]="72"
++          [maxLength]="passwordPolicy.maximumLength"
+           formControlName="confirmPassword"
+           [error]="confirmPasswordError"
+         />
+@@ -112,6 +112,10 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
+   changeDetection: ChangeDetectionStrategy.OnPush,
+ })
+ export class ChangePasswordDialogComponent {
++  protected readonly passwordPolicy = inject(APP_RUNTIME_CONFIG).passwordPolicy;
++
++  protected readonly passwordHint = passwordPolicyHint(this.passwordPolicy);
++
+   readonly open = input(false);
+ 
+   readonly submitting = input(false);
+@@ -134,11 +138,11 @@ export class ChangePasswordDialogComponent {
+         validators: [
+           Validators.required,
+ 
+-          Validators.minLength(8),
++          Validators.minLength(this.passwordPolicy.minimumLength),
+ 
+-          Validators.maxLength(72),
++          Validators.maxLength(this.passwordPolicy.maximumLength),
+ 
+-          Validators.pattern(STRONG_PASSWORD_PATTERN),
++          passwordPolicyValidator(this.passwordPolicy),
+         ],
+       }),
+ 
+@@ -210,6 +214,13 @@ export class ChangePasswordDialogComponent {
+   }
+ }
+ 
++function passwordPolicyValidator(policy: AuthPasswordPolicyConfig): ValidatorFn {
++  return (control: AbstractControl): ValidationErrors | null =>
++    evaluatePasswordPolicy(String(control.value ?? ''), policy).valid
++      ? null
++      : { passwordPolicy: true };
++}
++
+ function passwordsMatchValidator(): ValidatorFn {
+   return (control: AbstractControl): ValidationErrors | null => {
+     const newPassword = control.get('newPassword')?.value;
+diff --git a/frontend/src/app/features/account/reset-password/data-access/reset-password-http.repository.ts b/frontend/src/app/features/account/reset-password/data-access/reset-password-http.repository.ts
+index 07685e6..11797dc 100644
+--- a/frontend/src/app/features/account/reset-password/data-access/reset-password-http.repository.ts
++++ b/frontend/src/app/features/account/reset-password/data-access/reset-password-http.repository.ts
+@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
+ import { catchError, map, Observable, of, throwError } from 'rxjs';
+ 
+ import { AuthApiService } from '../../../../core/auth/auth-api.service';
++import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
+ import { ApiErrorEnvelope } from '../../../../core/http/api-envelope.model';
+ import {
+   ResetPasswordConfig,
+@@ -13,21 +14,23 @@ import {
+ } from '../domain/reset-password.models';
+ import { ResetPasswordRepository } from '../domain/reset-password.repository';
+ 
+-const RESET_PASSWORD_CONFIG: ResetPasswordConfig = {
+-  minimumLength: 8,
+-  maximumLength: 72,
+-  tokenExpiresInMinutes: 15,
+-};
+ 
+ @Injectable()
+ export class ResetPasswordHttpRepository implements ResetPasswordRepository {
+   private readonly authApi = inject(AuthApiService);
++  private readonly runtimeConfig = inject(APP_RUNTIME_CONFIG);
+ 
+   getConfig(): Observable<ResetPasswordConfig> {
+-    /*
+-     * Backend hiện chưa có password-policy endpoint.
+-     */
+-    return of(RESET_PASSWORD_CONFIG);
++    return of({
++      minimumLength: this.runtimeConfig.passwordPolicy.minimumLength,
++      maximumLength: this.runtimeConfig.passwordPolicy.maximumLength,
++      maximumBytes: this.runtimeConfig.passwordPolicy.maximumBytes,
++      requireLowercase: this.runtimeConfig.passwordPolicy.requireLowercase,
++      requireUppercase: this.runtimeConfig.passwordPolicy.requireUppercase,
++      requireNumber: this.runtimeConfig.passwordPolicy.requireNumber,
++      requireSymbol: this.runtimeConfig.passwordPolicy.requireSymbol,
++      tokenExpiresInMinutes: this.runtimeConfig.passwordReset.tokenExpiresInMinutes,
++    });
+   }
+ 
+   validateToken(request: ResetPasswordTokenRequest): Observable<ResetPasswordTokenValidation> {
+diff --git a/frontend/src/app/features/account/reset-password/data-access/reset-password.store.ts b/frontend/src/app/features/account/reset-password/data-access/reset-password.store.ts
+index 27bdb4e..104d0c7 100644
+--- a/frontend/src/app/features/account/reset-password/data-access/reset-password.store.ts
++++ b/frontend/src/app/features/account/reset-password/data-access/reset-password.store.ts
+@@ -1,6 +1,5 @@
+ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+-import { forkJoin } from 'rxjs';
+ 
+ import { AuthStore } from '../../../../core/auth/auth.store';
+ import {
+@@ -56,36 +55,20 @@ export class ResetPasswordStore {
+ 
+     this.tokenValidation.set(null);
+ 
+-    forkJoin({
+-      config: this.repository.getConfig(),
++    this.repository
++      .getConfig()
++      .pipe(takeUntilDestroyed(this.destroyRef))
++      .subscribe((config) => this.config.set(config));
+ 
+-      validation: this.repository.validateToken({
+-        token: normalizedToken,
+-      }),
+-    })
++    this.repository
++      .validateToken({ token: normalizedToken })
+       .pipe(takeUntilDestroyed(this.destroyRef))
+       .subscribe({
+-        next: ({ config, validation }) => {
+-          this.config.set(config);
+-
++        next: (validation) => {
+           this.tokenValidation.set(validation);
+-
+           this.status.set('ready');
+         },
+-
+-        error: (error: unknown) => {
+-          /*
+-           * Fallback config phải khớp
+-           * password policy backend.
+-           */
+-          this.config.set({
+-            minimumLength: 8,
+-            maximumLength: 72,
+-            tokenExpiresInMinutes: 15,
+-          });
+-
+-          this.handleTokenError(error);
+-        },
++        error: (error: unknown) => this.handleTokenError(error),
+       });
+   }
+ 
+diff --git a/frontend/src/app/features/account/reset-password/domain/reset-password.models.ts b/frontend/src/app/features/account/reset-password/domain/reset-password.models.ts
+index 2ef29bb..d9bf435 100644
+--- a/frontend/src/app/features/account/reset-password/domain/reset-password.models.ts
++++ b/frontend/src/app/features/account/reset-password/domain/reset-password.models.ts
+@@ -4,6 +4,11 @@ export type ResetPasswordStatus =
+ export interface ResetPasswordConfig {
+   readonly minimumLength: number;
+   readonly maximumLength: number;
++  readonly maximumBytes: number;
++  readonly requireLowercase: boolean;
++  readonly requireUppercase: boolean;
++  readonly requireNumber: boolean;
++  readonly requireSymbol: boolean;
+   readonly tokenExpiresInMinutes: number;
+ }
+ 
+@@ -12,11 +17,7 @@ export interface ResetPasswordTokenRequest {
+ }
+ 
+ export interface ResetPasswordTokenValidation {
+-  /*
+-   * Backend hiện chưa có endpoint validate
+-   * reset token và không expose email từ token,
+-   * nên email là optional.
+-   */
++  /* Backend validate token không expose email, nên email là optional. */
+   readonly email?: string;
+ 
+   readonly expiresAt: string;
+diff --git a/frontend/src/app/features/account/reset-password/pages/reset-password-page/reset-password-page.component.html b/frontend/src/app/features/account/reset-password/pages/reset-password-page/reset-password-page.component.html
+index 34e5aba..8e2b5a4 100644
+--- a/frontend/src/app/features/account/reset-password/pages/reset-password-page/reset-password-page.component.html
++++ b/frontend/src/app/features/account/reset-password/pages/reset-password-page/reset-password-page.component.html
+@@ -1,18 +1,14 @@
+ <app-auth-flow-page-shell>
+-  <app-reset-password-card
+-    [status]="store.status()"
+-    [config]="
+-      store.config() ?? {
+-        minimumLength: 8,
+-        maximumLength: 72,
+-        tokenExpiresInMinutes: 15,
+-      }
+-    "
+-    [tokenValidation]="store.tokenValidation()"
+-    [result]="store.result()"
+-    [errorMessage]="store.errorMessage()"
+-    (passwordSubmitted)="store.submit($event)"
+-    (retryValidation)="store.retryValidation()"
+-    (errorCleared)="store.clearError()"
+-  />
++  @if (store.config(); as config) {
++    <app-reset-password-card
++      [status]="store.status()"
++      [config]="config"
++      [tokenValidation]="store.tokenValidation()"
++      [result]="store.result()"
++      [errorMessage]="store.errorMessage()"
++      (passwordSubmitted)="store.submit($event)"
++      (retryValidation)="store.retryValidation()"
++      (errorCleared)="store.clearError()"
++    />
++  }
+ </app-auth-flow-page-shell>
+diff --git a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.html b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.html
+index a6176ef..f816239 100644
+--- a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.html
++++ b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.html
+@@ -77,29 +77,38 @@
+             ký tự
+           </p>
+ 
+-          <p [class.passed]="hasUppercase()">
+-            <span>
+-              {{ hasUppercase() ? '✓' : 'A' }}
+-            </span>
+-
+-            Ít nhất 1 chữ in hoa
++          <p [class.passed]="hasMaximumBytes()">
++            <span>{{ hasMaximumBytes() ? '✓' : config.maximumBytes }}</span>
++            Tối đa {{ config.maximumBytes }} byte UTF-8
+           </p>
+ 
+-          <p [class.passed]="hasNumber()">
+-            <span>
+-              {{ hasNumber() ? '✓' : '1' }}
+-            </span>
++          @if (config.requireLowercase) {
++            <p [class.passed]="hasLowercase()">
++              <span>{{ hasLowercase() ? '✓' : 'a' }}</span>
++              Ít nhất 1 chữ thường
++            </p>
++          }
+ 
+-            Ít nhất 1 chữ số
+-          </p>
++          @if (config.requireUppercase) {
++            <p [class.passed]="hasUppercase()">
++              <span>{{ hasUppercase() ? '✓' : 'A' }}</span>
++              Ít nhất 1 chữ in hoa
++            </p>
++          }
+ 
+-          <p [class.passed]="hasSpecialCharacter()">
+-            <span>
+-              {{ hasSpecialCharacter() ? '✓' : '#' }}
+-            </span>
++          @if (config.requireNumber) {
++            <p [class.passed]="hasNumber()">
++              <span>{{ hasNumber() ? '✓' : '1' }}</span>
++              Ít nhất 1 chữ số
++            </p>
++          }
+ 
+-            Ít nhất 1 ký tự đặc biệt
+-          </p>
++          @if (config.requireSymbol) {
++            <p [class.passed]="hasSpecialCharacter()">
++              <span>{{ hasSpecialCharacter() ? '✓' : '#' }}</span>
++              Ít nhất 1 ký tự đặc biệt
++            </p>
++          }
+         </div>
+       </section>
+ 
+diff --git a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.ts b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.ts
+index dbdfb4a..9ec5288 100644
+--- a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.ts
++++ b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password-card.component.ts
+@@ -50,12 +50,8 @@ export class ResetPasswordCardComponent implements OnChanges {
+   @Input()
+   status: ResetPasswordStatus = 'idle';
+ 
+-  @Input()
+-  config: ResetPasswordConfig = {
+-    minimumLength: 8,
+-    maximumLength: 64,
+-    tokenExpiresInMinutes: 15,
+-  };
++  @Input({ required: true })
++  config!: ResetPasswordConfig;
+ 
+   @Input()
+   tokenValidation: ResetPasswordTokenValidation | null = null;
+@@ -80,7 +76,7 @@ export class ResetPasswordCardComponent implements OnChanges {
+       password: new FormControl('', {
+         nonNullable: true,
+ 
+-        validators: [Validators.required, passwordComplexityValidator(8), Validators.maxLength(72)],
++        validators: [Validators.required],
+       }),
+ 
+       confirmPassword: new FormControl('', {
+@@ -99,7 +95,7 @@ export class ResetPasswordCardComponent implements OnChanges {
+       this.passwordControl.setValidators([
+         Validators.required,
+ 
+-        passwordComplexityValidator(this.config.minimumLength),
++        passwordComplexityValidator(this.config),
+ 
+         Validators.maxLength(this.config.maximumLength),
+       ]);
+@@ -154,16 +150,24 @@ export class ResetPasswordCardComponent implements OnChanges {
+     return this.passwordControl.value.length >= this.config.minimumLength;
+   }
+ 
++  protected hasMaximumBytes(): boolean {
++    return new TextEncoder().encode(this.passwordControl.value).length <= this.config.maximumBytes;
++  }
++
++  protected hasLowercase(): boolean {
++    return !this.config.requireLowercase || /[a-z]/.test(this.passwordControl.value);
++  }
++
+   protected hasUppercase(): boolean {
+-    return /[A-Z]/.test(this.passwordControl.value);
++    return !this.config.requireUppercase || /[A-Z]/.test(this.passwordControl.value);
+   }
+ 
+   protected hasNumber(): boolean {
+-    return /[0-9]/.test(this.passwordControl.value);
++    return !this.config.requireNumber || /[0-9]/.test(this.passwordControl.value);
+   }
+ 
+   protected hasSpecialCharacter(): boolean {
+-    return /[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]';`~]/.test(this.passwordControl.value);
++    return !this.config.requireSymbol || /[^A-Za-z0-9]/.test(this.passwordControl.value);
+   }
+ 
+   protected handleSubmit(): void {
+diff --git a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password.validators.ts b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password.validators.ts
+index 7417308..a47f3fe 100644
+--- a/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password.validators.ts
++++ b/frontend/src/app/features/account/reset-password/ui/reset-password-card/reset-password.validators.ts
+@@ -1,5 +1,8 @@
+ import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+ 
++import { evaluatePasswordPolicy } from '../../../../../core/auth/password-policy';
++import type { ResetPasswordConfig } from '../../domain/reset-password.models';
++
+ export function passwordsMatchValidator(): ValidatorFn {
+   return (control: AbstractControl): ValidationErrors | null => {
+     const password = control.get('password')?.value;
+@@ -9,14 +12,9 @@ export function passwordsMatchValidator(): ValidatorFn {
+   };
+ }
+ 
+-export function passwordComplexityValidator(minimumLength: number): ValidatorFn {
++export function passwordComplexityValidator(config: ResetPasswordConfig): ValidatorFn {
+   return (control: AbstractControl): ValidationErrors | null => {
+-    const value = String(control.value ?? '');
+-    const errors: ValidationErrors = {};
+-    if (value.length < minimumLength) errors['passwordMinimumLength'] = true;
+-    if (!/[A-Z]/.test(value)) errors['passwordUppercase'] = true;
+-    if (!/[0-9]/.test(value)) errors['passwordNumber'] = true;
+-    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]';`~]/.test(value)) errors['passwordSpecial'] = true;
+-    return Object.keys(errors).length > 0 ? errors : null;
++    const evaluation = evaluatePasswordPolicy(String(control.value ?? ''), config);
++    return evaluation.valid ? null : { passwordPolicy: evaluation };
+   };
+ }
+diff --git a/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts b/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
+index cf37519..37d0b5b 100644
+--- a/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
++++ b/frontend/src/app/features/public/author-detail/data-access/author-detail.store.ts
+@@ -2,8 +2,7 @@ import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angul
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ 
+ import { AuthStore } from '../../../../core/auth/auth.store';
+-import { AuthorFollowApiService } from '../../shared/author-follow/data-access/author-follow-api.service';
+-import { AuthorFollowMutation } from '../../shared/author-follow/domain/author-follow.models';
++import { AuthorFollowApiService, AuthorFollowMutation } from '@core/author-follow';
+ import { AuthorDetailView } from '../domain/author-detail.models';
+ import { AuthorDetailRepository } from '../domain/author-detail.repository';
+ 
+diff --git a/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts b/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
+index be7dddd..ea94a60 100644
+--- a/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
++++ b/frontend/src/app/features/public/author-directory/data-access/author-directory.store.ts
+@@ -2,8 +2,7 @@ import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angul
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ 
+ import { AuthStore } from '../../../../core/auth/auth.store';
+-import { AuthorFollowApiService } from '../../shared/author-follow/data-access/author-follow-api.service';
+-import { AuthorFollowMutation } from '../../shared/author-follow/domain/author-follow.models';
++import { AuthorFollowApiService, AuthorFollowMutation } from '@core/author-follow';
+ import { AuthorDirectorySort, AuthorDirectoryView } from '../domain/author-directory.models';
+ import { AuthorDirectoryRepository } from '../domain/author-directory.repository';
+ 
+diff --git a/frontend/src/main.server.ts b/frontend/src/main.server.ts
+index 937d8f7..2463f6a 100644
+--- a/frontend/src/main.server.ts
++++ b/frontend/src/main.server.ts
+@@ -5,10 +5,13 @@ import { createAppConfig } from './app/app.config';
+ import { serverConfig } from './app/app.config.server';
+ import { loadServerAppRuntimeConfig } from './app/core/config/app-runtime-config.server';
+ 
+-const bootstrap = (context: BootstrapContext) =>
++const bootstrap = async (context: BootstrapContext) =>
+   bootstrapApplication(
+     App,
+-    mergeApplicationConfig(createAppConfig(loadServerAppRuntimeConfig()), serverConfig),
++    mergeApplicationConfig(
++      createAppConfig(await loadServerAppRuntimeConfig()),
++      serverConfig,
++    ),
+     context,
+   );
+ 
+diff --git a/scripts/verify-api-contracts.mjs b/scripts/verify-api-contracts.mjs
+new file mode 100644
+index 0000000..f3df900
+--- /dev/null
++++ b/scripts/verify-api-contracts.mjs
+@@ -0,0 +1,145 @@
++import fs from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const scriptDir = path.dirname(fileURLToPath(import.meta.url));
++const repoRoot = path.resolve(scriptDir, '..');
++const manifestPath = path.join(
++  repoRoot,
++  'backend/ops/production/api-contracts.production-v1.json',
++);
++const matrixPath = path.join(repoRoot, 'backend/ops/production/API_CONTRACT_MATRIX.md');
++const writeMode = process.argv.includes('--write');
++
++const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
++const errors = [];
++const screenIds = new Set();
++let contractCount = 0;
++
++if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.screens)) {
++  errors.push('Manifest phải có schemaVersion=1 và screens[].');
++}
++
++for (const screen of manifest.screens ?? []) {
++  if (!screen.id || screenIds.has(screen.id)) {
++    errors.push(`Screen id không hợp lệ hoặc bị trùng: ${String(screen.id)}`);
++    continue;
++  }
++  screenIds.add(screen.id);
++
++  if (!screen.title || !screen.frontendRoute || !Array.isArray(screen.contracts) || screen.contracts.length === 0) {
++    errors.push(`Screen ${screen.id} phải có title, frontendRoute và ít nhất một contract.`);
++    continue;
++  }
++
++  for (const contract of screen.contracts) {
++    contractCount += 1;
++    validateContract(screen.id, contract);
++  }
++}
++
++const markdown = renderMatrix(manifest);
++if (writeMode) {
++  fs.writeFileSync(matrixPath, markdown);
++} else if (!fs.existsSync(matrixPath)) {
++  errors.push(`Thiếu generated matrix: ${relative(matrixPath)}. Chạy node scripts/verify-api-contracts.mjs --write`);
++} else if (normalize(fs.readFileSync(matrixPath, 'utf8')) !== normalize(markdown)) {
++  errors.push('API_CONTRACT_MATRIX.md bị drift khỏi manifest. Chạy node scripts/verify-api-contracts.mjs --write');
++}
++
++if (errors.length > 0) {
++  console.error('Production V1 API contract check failed:\n');
++  for (const error of errors) console.error(`- ${error}`);
++  process.exit(1);
++}
++
++console.log(
++  `Production V1 API contract matrix OK: ${screenIds.size} screens, ${contractCount} wired endpoint contracts, 0 declared frontend-only/backend-only contracts.`,
++);
++
++function validateContract(screenId, contract) {
++  const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
++  if (!allowedMethods.has(contract.method) || typeof contract.path !== 'string' || !contract.path.startsWith('/')) {
++    errors.push(`${screenId}: method/path không hợp lệ.`);
++  }
++
++  validateBinding(screenId, contract, 'backend', contract.backend);
++
++  if (!Array.isArray(contract.frontend) || contract.frontend.length === 0) {
++    errors.push(`${screenId} ${contract.method} ${contract.path}: phải có ít nhất một frontend consumer.`);
++    return;
++  }
++
++  for (const binding of contract.frontend) {
++    validateBinding(screenId, contract, 'frontend', binding);
++  }
++}
++
++function validateBinding(screenId, contract, side, binding) {
++  if (!binding || typeof binding.file !== 'string' || !Array.isArray(binding.tokens) || binding.tokens.length === 0) {
++    errors.push(`${screenId} ${contract.method} ${contract.path}: ${side} binding không hợp lệ.`);
++    return;
++  }
++
++  const absolutePath = path.join(repoRoot, binding.file);
++  if (!fs.existsSync(absolutePath)) {
++    errors.push(`${screenId} ${contract.method} ${contract.path}: thiếu ${side} file ${binding.file}`);
++    return;
++  }
++
++  const source = fs.readFileSync(absolutePath, 'utf8');
++  for (const token of binding.tokens) {
++    if (!source.includes(token)) {
++      errors.push(
++        `${screenId} ${contract.method} ${contract.path}: ${side} token ${JSON.stringify(token)} không còn trong ${binding.file}`,
++      );
++    }
++  }
++}
++
++function renderMatrix(value) {
++  const lines = [
++    '# Production V1 API Contract Matrix',
++    '',
++    '> Generated from `api-contracts.production-v1.json`. Do not edit by hand.',
++    '>',
++    '> Scope: important Production V1 user-facing screens and their HTTP dependencies. Every declared contract is required to have both a backend controller binding and at least one frontend consumer binding. Operational, webhook, maintenance and intentionally backend-only integration endpoints are outside this screen matrix.',
++    '',
++    '| Screen | Frontend route/surface | FE ↔ BE contracts | Frontend consumer files |',
++    '| --- | --- | --- | --- |',
++  ];
++
++  for (const screen of value.screens ?? []) {
++    const endpoints = screen.contracts.map((item) => `\`${item.method} ${item.path}\``).join('<br>');
++    const files = [
++      ...new Set(
++        screen.contracts.flatMap((item) => item.frontend.map((binding) => `\`${binding.file}\``)),
++      ),
++    ].join('<br>');
++    lines.push(`| ${escapeTable(screen.title)} | ${escapeTable(screen.frontendRoute)} | ${endpoints} | ${files} |`);
++  }
++
++  lines.push(
++    '',
++    '## Enforcement',
++    '',
++    '- `node scripts/verify-api-contracts.mjs` verifies every declared backend/frontend binding and fails on matrix drift.',
++    '- `node scripts/verify-api-contracts.mjs --write` regenerates this table after an intentional contract change.',
++    '- A new Production V1 screen that performs HTTP I/O must add its important contracts to the manifest in the same change.',
++    '- Backend-only operational/webhook/maintenance endpoints are not evidence of a missing UI; they are deliberately outside this screen-oriented contract.',
++  );
++
++  return `${lines.join('\n')}\n`;
++}
++
++function escapeTable(value) {
++  return String(value).replaceAll('|', '\\|');
++}
++
++function normalize(value) {
++  return value.replaceAll('\r\n', '\n').trimEnd();
++}
++
++function relative(value) {
++  return path.relative(repoRoot, value).replaceAll(path.sep, '/');
++}

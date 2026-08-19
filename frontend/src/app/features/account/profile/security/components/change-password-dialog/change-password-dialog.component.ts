@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
 
 import {
   AbstractControl,
@@ -10,6 +10,8 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { APP_RUNTIME_CONFIG, type AuthPasswordPolicyConfig } from '../../../../../../core/config/app-config.token';
+import { evaluatePasswordPolicy, passwordPolicyHint } from '../../../../../../core/auth/password-policy';
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
 import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
@@ -25,8 +27,6 @@ interface ChangePasswordForm {
 
   confirmPassword: FormControl<string>;
 }
-
-const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
 
 @Component({
   selector: 'app-change-password-dialog',
@@ -67,9 +67,9 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
           icon="key"
           autocomplete="new-password"
           placeholder="Nhập mật khẩu mới"
-          [maxLength]="72"
+          [maxLength]="passwordPolicy.maximumLength"
           formControlName="newPassword"
-          hint="8–72 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt."
+          [hint]="passwordHint"
           [error]="newPasswordError"
         />
 
@@ -78,7 +78,7 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
           icon="check"
           autocomplete="new-password"
           placeholder="Nhập lại mật khẩu mới"
-          [maxLength]="72"
+          [maxLength]="passwordPolicy.maximumLength"
           formControlName="confirmPassword"
           [error]="confirmPasswordError"
         />
@@ -112,6 +112,10 @@ const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangePasswordDialogComponent {
+  protected readonly passwordPolicy = inject(APP_RUNTIME_CONFIG).passwordPolicy;
+
+  protected readonly passwordHint = passwordPolicyHint(this.passwordPolicy);
+
   readonly open = input(false);
 
   readonly submitting = input(false);
@@ -134,11 +138,11 @@ export class ChangePasswordDialogComponent {
         validators: [
           Validators.required,
 
-          Validators.minLength(8),
+          Validators.minLength(this.passwordPolicy.minimumLength),
 
-          Validators.maxLength(72),
+          Validators.maxLength(this.passwordPolicy.maximumLength),
 
-          Validators.pattern(STRONG_PASSWORD_PATTERN),
+          passwordPolicyValidator(this.passwordPolicy),
         ],
       }),
 
@@ -208,6 +212,13 @@ export class ChangePasswordDialogComponent {
       newPassword: value.newPassword,
     });
   }
+}
+
+function passwordPolicyValidator(policy: AuthPasswordPolicyConfig): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null =>
+    evaluatePasswordPolicy(String(control.value ?? ''), policy).valid
+      ? null
+      : { passwordPolicy: true };
 }
 
 function passwordsMatchValidator(): ValidatorFn {

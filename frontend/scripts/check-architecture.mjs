@@ -140,6 +140,30 @@ for (const violation of boundaryViolations) {
   errors.push(`${relativePath(violation.file)}:${violation.line} ${violation.message}`);
 }
 
+const forbiddenAuthRuntimeLiterals = [
+  'minimumLength: 8',
+  'maximumLength: 72',
+  'tokenExpiresInMinutes: 15',
+  'Validators.minLength(8)',
+  'Validators.maxLength(72)',
+  'minlength="8"',
+  'maxlength="72"',
+];
+
+for (const record of records) {
+  if (!relativePath(record.file).startsWith('src/app/')) {
+    continue;
+  }
+
+  for (const literal of forbiddenAuthRuntimeLiterals) {
+    if (record.content.includes(literal)) {
+      errors.push(
+        `${relativePath(record.file)} hardcodes backend-owned auth policy literal ${JSON.stringify(literal)}`,
+      );
+    }
+  }
+}
+
 console.log(
   [
     `Architecture debt: ${current.inlineTemplates} inline templates, ${current.inlineStyles} inline styles`,

@@ -17,9 +17,7 @@ export class GetNotificationViewQueryHandler {
     private readonly persistence: NotificationPersistencePort,
   ) {}
 
-  async execute(
-    query: GetNotificationViewQuery,
-  ): Promise<NotificationViewDto> {
+  async execute(query: GetNotificationViewQuery): Promise<NotificationViewDto> {
     const { userId } = query;
     const now = new Date();
     const startOfToday = new Date(now);

@@ -1,1 +1,6 @@
-export class UnlockAdminUserCommand { constructor(readonly actorUserId:string,readonly userId:string){} }
+export class UnlockAdminUserCommand {
+  constructor(
+    readonly actorUserId: string,
+    readonly userId: string,
+  ) {}
+}

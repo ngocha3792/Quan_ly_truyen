@@ -1,7 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
-  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -10,10 +9,15 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { SubmissionStatus } from '@/generated/prisma/client';
+import {
+  STORY_SUBMISSION_STATUS_VALUES,
+  type StorySubmissionStatusName,
+} from '../../../domain';
 import type { AdminStorySubmissionSort } from '../../../application';
 export class ListAdminStorySubmissionsRequest {
-  @IsOptional() @IsEnum(SubmissionStatus) status?: SubmissionStatus;
+  @IsOptional()
+  @IsIn(STORY_SUBMISSION_STATUS_VALUES)
+  status?: StorySubmissionStatusName;
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

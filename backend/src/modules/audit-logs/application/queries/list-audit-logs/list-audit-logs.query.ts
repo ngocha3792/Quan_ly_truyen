@@ -1,1 +1,4 @@
-import type { ListAuditLogsInput } from '../../dto'; export class ListAuditLogsQuery { constructor(readonly input: ListAuditLogsInput) {} }
+import type { ListAuditLogsInput } from '../../dto';
+export class ListAuditLogsQuery {
+  constructor(readonly input: ListAuditLogsInput) {}
+}

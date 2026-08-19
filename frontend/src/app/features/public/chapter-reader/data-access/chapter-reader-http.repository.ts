@@ -98,6 +98,20 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     return this.engagement.saveReadingProgress(storyId, chapterId).pipe(map(() => undefined));
   }
 
+  getBookmark(chapterId: string): Observable<boolean> {
+    return this.engagement
+      .getReadingBookmark(chapterId)
+      .pipe(map((bookmark) => bookmark !== null));
+  }
+
+  saveBookmark(chapterId: string): Observable<void> {
+    return this.engagement.upsertReadingBookmark(chapterId).pipe(map(() => undefined));
+  }
+
+  removeBookmark(chapterId: string): Observable<void> {
+    return this.engagement.removeReadingBookmark(chapterId);
+  }
+
   private withViewerReactions(
     items: readonly StoryCommentApiItem[],
   ): Observable<readonly ChapterComment[]> {

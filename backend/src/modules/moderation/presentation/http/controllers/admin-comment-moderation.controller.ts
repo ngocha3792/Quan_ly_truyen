@@ -154,10 +154,16 @@ export class AdminCommentModerationController {
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() request: WarnUserRequest,
   ) {
-    return this.warnUser.execute(new WarnUserCommand(
-      this.actor(actorId), commentId, request.message, request.reason, request.reportId,
-      { ipAddress, userAgent, requestId },
-    ));
+    return this.warnUser.execute(
+      new WarnUserCommand(
+        this.actor(actorId),
+        commentId,
+        request.message,
+        request.reason,
+        request.reportId,
+        { ipAddress, userAgent, requestId },
+      ),
+    );
   }
 
   @Post(':commentId/moderation/ban-user')
@@ -174,10 +180,15 @@ export class AdminCommentModerationController {
     @Param('commentId', new ParseUUIDPipe({ version: '4' })) commentId: string,
     @Body() request: ModerateCommentRequest,
   ) {
-    return this.banUser.execute(new BanUserCommand(
-      this.actor(actorId), commentId, request.reason, request.reportId,
-      { ipAddress, userAgent, requestId },
-    ));
+    return this.banUser.execute(
+      new BanUserCommand(
+        this.actor(actorId),
+        commentId,
+        request.reason,
+        request.reportId,
+        { ipAddress, userAgent, requestId },
+      ),
+    );
   }
 
   private moderate(
@@ -189,10 +200,16 @@ export class AdminCommentModerationController {
     commentId: string,
     request: ModerateCommentRequest,
   ) {
-    return this.moderateComment.execute(new ModerateCommentCommand(
-      this.actor(actorId), commentId, operation, request.reason, request.reportId,
-      { ipAddress, userAgent, requestId },
-    ));
+    return this.moderateComment.execute(
+      new ModerateCommentCommand(
+        this.actor(actorId),
+        commentId,
+        operation,
+        request.reason,
+        request.reportId,
+        { ipAddress, userAgent, requestId },
+      ),
+    );
   }
 
   private actor(value: string | undefined): string {

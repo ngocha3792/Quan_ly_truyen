@@ -1,5 +1,8 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
+import { evaluatePasswordPolicy } from '../../../../../core/auth/password-policy';
+import type { ResetPasswordConfig } from '../../domain/reset-password.models';
+
 export function passwordsMatchValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const password = control.get('password')?.value;
@@ -9,14 +12,9 @@ export function passwordsMatchValidator(): ValidatorFn {
   };
 }
 
-export function passwordComplexityValidator(minimumLength: number): ValidatorFn {
+export function passwordComplexityValidator(config: ResetPasswordConfig): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
-    const value = String(control.value ?? '');
-    const errors: ValidationErrors = {};
-    if (value.length < minimumLength) errors['passwordMinimumLength'] = true;
-    if (!/[A-Z]/.test(value)) errors['passwordUppercase'] = true;
-    if (!/[0-9]/.test(value)) errors['passwordNumber'] = true;
-    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]';`~]/.test(value)) errors['passwordSpecial'] = true;
-    return Object.keys(errors).length > 0 ? errors : null;
+    const evaluation = evaluatePasswordPolicy(String(control.value ?? ''), config);
+    return evaluation.valid ? null : { passwordPolicy: evaluation };
   };
 }

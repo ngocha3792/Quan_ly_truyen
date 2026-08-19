@@ -8,7 +8,10 @@ import {
   AuthorStatusReasonRequiredException,
   ManagedAuthorNotFoundException,
 } from '../../domain';
-import type { AdminAuthorDetailDto, AdminAuthorListDto } from '../../application/dto';
+import type {
+  AdminAuthorDetailDto,
+  AdminAuthorListDto,
+} from '../../application/dto';
 
 @Injectable()
 export class PrismaAuthorLifecyclePersistence implements AuthorLifecyclePersistencePort {

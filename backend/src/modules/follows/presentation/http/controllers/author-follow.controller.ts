@@ -36,7 +36,9 @@ export class AuthorFollowController {
     @CurrentUserId() userId: string | undefined,
     @Param('authorId', new ParseUUIDPipe({ version: '4' })) authorId: string,
   ): Promise<AuthorFollowMutationView> {
-    return this.followAuthor.execute(new FollowAuthorCommand(this.requireUserId(userId), authorId));
+    return this.followAuthor.execute(
+      new FollowAuthorCommand(this.requireUserId(userId), authorId),
+    );
   }
 
   @Delete('authors/:authorId/follow')
@@ -44,7 +46,9 @@ export class AuthorFollowController {
     @CurrentUserId() userId: string | undefined,
     @Param('authorId', new ParseUUIDPipe({ version: '4' })) authorId: string,
   ): Promise<AuthorFollowMutationView> {
-    return this.unfollowAuthor.execute(new UnfollowAuthorCommand(this.requireUserId(userId), authorId));
+    return this.unfollowAuthor.execute(
+      new UnfollowAuthorCommand(this.requireUserId(userId), authorId),
+    );
   }
 
   @Get('me/following')
@@ -52,9 +56,14 @@ export class AuthorFollowController {
     @CurrentUserId() userId: string | undefined,
     @Query() query: ListFollowingRequest,
   ): Promise<FollowingListView> {
-    return this.listFollowing.execute(new ListFollowingQuery({
-      userId: this.requireUserId(userId), page: query.page, pageSize: query.pageSize, authorIds: query.authorIds,
-    }));
+    return this.listFollowing.execute(
+      new ListFollowingQuery({
+        userId: this.requireUserId(userId),
+        page: query.page,
+        pageSize: query.pageSize,
+        authorIds: query.authorIds,
+      }),
+    );
   }
 
   private requireUserId(userId: string | undefined): string {

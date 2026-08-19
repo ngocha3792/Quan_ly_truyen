@@ -32,6 +32,7 @@ export enum PermissionCode {
   LIBRARY_MANAGE_OWN = 'library.manage.own',
   FOLLOW_MANAGE_OWN = 'follow.manage.own',
   READING_HISTORY_MANAGE_OWN = 'reading-history.manage.own',
+  READING_BOOKMARK_MANAGE_OWN = 'reading-bookmark.manage.own',
 
   REPORT_CREATE = 'report.create',
   REPORT_REVIEW = 'report.review',

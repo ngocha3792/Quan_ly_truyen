@@ -4,6 +4,11 @@ export type ResetPasswordStatus =
 export interface ResetPasswordConfig {
   readonly minimumLength: number;
   readonly maximumLength: number;
+  readonly maximumBytes: number;
+  readonly requireLowercase: boolean;
+  readonly requireUppercase: boolean;
+  readonly requireNumber: boolean;
+  readonly requireSymbol: boolean;
   readonly tokenExpiresInMinutes: number;
 }
 
@@ -12,11 +17,7 @@ export interface ResetPasswordTokenRequest {
 }
 
 export interface ResetPasswordTokenValidation {
-  /*
-   * Backend hiện chưa có endpoint validate
-   * reset token và không expose email từ token,
-   * nên email là optional.
-   */
+  /* Backend validate token không expose email, nên email là optional. */
   readonly email?: string;
 
   readonly expiresAt: string;

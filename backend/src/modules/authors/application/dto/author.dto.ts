@@ -147,7 +147,6 @@ export interface AuthorReaderCommentDto {
   readonly storyTitle: string;
   readonly content: string;
   readonly createdAt: string;
-  readonly unread: boolean;
 }
 
 export interface AuthorTopStoryDto {
@@ -173,9 +172,6 @@ export interface AuthorDashboardDto {
     readonly displayName: string;
     readonly penName: string;
     readonly avatarUrl: string;
-    readonly level: number;
-    readonly currentExperience: number;
-    readonly requiredExperience: number;
     readonly verified: boolean;
   };
   readonly unreadNotifications: number;
@@ -183,9 +179,6 @@ export interface AuthorDashboardDto {
     readonly id: string;
     readonly title: string;
     readonly value: string;
-    readonly trendValue: string;
-    readonly trendLabel: string;
-    readonly trendDirection: 'up' | 'down';
     readonly icon: 'book' | 'draft' | 'clock' | 'eye' | 'users';
     readonly tone: 'purple' | 'blue' | 'orange' | 'indigo' | 'pink';
   }[];

@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CommentAbuseGuardPort, CommentAbuseScope } from '../../application/ports';
+import type {
+  CommentAbuseGuardPort,
+  CommentAbuseScope,
+} from '../../application/ports';
 import { ConfigService } from '@nestjs/config';
 import { RateLimitExceededException } from '@/common/exceptions';
 import { AbuseProtectionUnavailableException } from '../../domain';

@@ -6,10 +6,7 @@ import type { AuditLogMetricsPort } from '../../application';
 export class MetricsAuditLogAdapter implements AuditLogMetricsPort {
   constructor(private readonly metrics: MetricsService) {}
 
-  recordRead(
-    operation: 'list' | 'detail',
-    outcome: 'success' | 'error',
-  ): void {
+  recordRead(operation: 'list' | 'detail', outcome: 'success' | 'error'): void {
     this.metrics.recordAuditLogRead(operation, outcome);
   }
 }

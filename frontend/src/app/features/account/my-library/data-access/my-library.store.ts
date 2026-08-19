@@ -129,8 +129,6 @@ export class MyLibraryStore {
     switch (this.filter()) {
       case 'reading':
         return story.isReading;
-      case 'following':
-        return story.isFollowing;
       case 'favorite':
         return story.isFavorite;
       case 'completed':

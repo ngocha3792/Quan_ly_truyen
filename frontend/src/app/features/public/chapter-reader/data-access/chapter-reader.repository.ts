@@ -34,4 +34,7 @@ export abstract class ChapterReaderRepository {
     description?: string,
   ): Observable<void>;
   abstract saveProgress(storyId: string, chapterId: string): Observable<void>;
+  abstract getBookmark(chapterId: string): Observable<boolean>;
+  abstract saveBookmark(chapterId: string): Observable<void>;
+  abstract removeBookmark(chapterId: string): Observable<void>;
 }

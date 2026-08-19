@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
   IsDateString,
-  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -11,11 +10,16 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { ReportReason, ReportStatus } from '@/generated/prisma/client';
+import {
+  REPORT_REASON_VALUES,
+  REPORT_STATUS_VALUES,
+  type ReportReasonName,
+  type ReportStatusName,
+} from '../../../domain';
 
 export class ListAdminReportsRequest {
-  @IsOptional() @IsEnum(ReportStatus) status?: ReportStatus;
-  @IsOptional() @IsEnum(ReportReason) reason?: ReportReason;
+  @IsOptional() @IsIn(REPORT_STATUS_VALUES) status?: ReportStatusName;
+  @IsOptional() @IsIn(REPORT_REASON_VALUES) reason?: ReportReasonName;
   @IsOptional() @IsString() @MaxLength(160) reporter?: string;
   @IsOptional() @IsString() @MaxLength(160) reportedUser?: string;
   @IsOptional() @IsDateString() createdFrom?: string;

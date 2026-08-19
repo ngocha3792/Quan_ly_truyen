@@ -2,7 +2,7 @@ import type { MediaPurposeName } from './media-purpose.dto';
 export interface MediaAssetDto {
   readonly id: string;
   readonly uploaderId: string | null;
-  readonly purpose: MediaPurposeName | string;
+  readonly purpose: MediaPurposeName;
   readonly status: string;
   readonly publicId: string | null;
   readonly resourceType: string | null;

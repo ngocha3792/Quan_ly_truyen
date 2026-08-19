@@ -18,8 +18,14 @@ import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import { AuthenticationRequiredException } from '@/common/exceptions';
 import {
-  GetReportQuery, GetReportQueryHandler, ListReportsQuery, ListReportsQueryHandler,
-  RejectReportCommand, RejectReportCommandHandler, ResolveReportCommand, ResolveReportCommandHandler,
+  GetReportQuery,
+  GetReportQueryHandler,
+  ListReportsQuery,
+  ListReportsQueryHandler,
+  RejectReportCommand,
+  RejectReportCommandHandler,
+  ResolveReportCommand,
+  ResolveReportCommandHandler,
 } from '../../../application';
 import { CloseReportRequest, ListAdminReportsRequest } from '../requests';
 
@@ -35,20 +41,22 @@ export class AdminReportsController {
 
   @Get()
   list(@Query() request: ListAdminReportsRequest) {
-    return this.listReports.execute(new ListReportsQuery({
-      status: request.status,
-      reason: request.reason,
-      reporter: request.reporter,
-      reportedUser: request.reportedUser,
-      createdFrom: request.createdFrom
-        ? new Date(request.createdFrom)
-        : undefined,
-      createdTo: request.createdTo ? new Date(request.createdTo) : undefined,
-      page: request.page,
-      pageSize: request.pageSize,
-      sort: request.sort,
-      direction: request.direction,
-    }));
+    return this.listReports.execute(
+      new ListReportsQuery({
+        status: request.status,
+        reason: request.reason,
+        reporter: request.reporter,
+        reportedUser: request.reportedUser,
+        createdFrom: request.createdFrom
+          ? new Date(request.createdFrom)
+          : undefined,
+        createdTo: request.createdTo ? new Date(request.createdTo) : undefined,
+        page: request.page,
+        pageSize: request.pageSize,
+        sort: request.sort,
+        direction: request.direction,
+      }),
+    );
   }
 
   @Get(':reportId')
@@ -68,7 +76,13 @@ export class AdminReportsController {
     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
     @Body() request: CloseReportRequest,
   ) {
-    return this.resolveReport.execute(new ResolveReportCommand(this.actor(actorId), reportId, request.note, { ipAddress, userAgent, requestId }));
+    return this.resolveReport.execute(
+      new ResolveReportCommand(this.actor(actorId), reportId, request.note, {
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
+    );
   }
 
   @Post(':reportId/reject')
@@ -81,7 +95,13 @@ export class AdminReportsController {
     @Param('reportId', new ParseUUIDPipe({ version: '4' })) reportId: string,
     @Body() request: CloseReportRequest,
   ) {
-    return this.rejectReport.execute(new RejectReportCommand(this.actor(actorId), reportId, request.note, { ipAddress, userAgent, requestId }));
+    return this.rejectReport.execute(
+      new RejectReportCommand(this.actor(actorId), reportId, request.note, {
+        ipAddress,
+        userAgent,
+        requestId,
+      }),
+    );
   }
 
   private actor(value: string | undefined): string {

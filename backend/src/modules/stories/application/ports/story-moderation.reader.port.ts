@@ -1,9 +1,11 @@
+import type { StorySubmissionStatusName } from '../../domain';
+
 export const STORY_MODERATION_READER_PORT = Symbol(
   'STORY_MODERATION_READER_PORT',
 );
 export type AdminStorySubmissionSort = 'submittedAt:desc' | 'submittedAt:asc';
 export interface ListStorySubmissionsInput {
-  readonly status?: string;
+  readonly status?: StorySubmissionStatusName;
   readonly author?: string;
   readonly story?: string;
   readonly reviewer?: string;
@@ -15,7 +17,7 @@ export interface ListStorySubmissionsInput {
 }
 export interface StorySubmissionListItemRecord {
   readonly submissionId: string;
-  readonly status: string;
+  readonly status: StorySubmissionStatusName;
   readonly story: {
     readonly id: string;
     readonly title: string;
@@ -42,7 +44,7 @@ export interface ListStorySubmissionsResult {
 export interface StorySubmissionDetailRecord {
   readonly submission: {
     readonly id: string;
-    readonly status: string;
+    readonly status: StorySubmissionStatusName;
     readonly authorNote: string | null;
     readonly submittedAt: Date;
     readonly reviewedAt: Date | null;
@@ -88,7 +90,7 @@ export interface StorySubmissionDetailRecord {
   }[];
   readonly submissionHistory: readonly {
     readonly id: string;
-    readonly status: string;
+    readonly status: StorySubmissionStatusName;
     readonly submittedAt: Date;
     readonly reviewedAt: Date | null;
     readonly reviewer: {

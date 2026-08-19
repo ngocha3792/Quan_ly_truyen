@@ -105,7 +105,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('merges tags atomically and deduplicates StoryTag rows', async () => {
-    const source = await createTag.execute(new CreateTagCommand(unique('Sci Fi'), taxAudit()));
+    const source = await createTag.execute(
+      new CreateTagCommand(unique('Sci Fi'), taxAudit()),
+    );
     const target = await createTag.execute(
       new CreateTagCommand(unique('Science Fiction'), taxAudit()),
     );
@@ -120,7 +122,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
       ],
     });
 
-    const result = await mergeTags.execute(new MergeTagsCommand(source.id, target.id, taxAudit()));
+    const result = await mergeTags.execute(
+      new MergeTagsCommand(source.id, target.id, taxAudit()),
+    );
     expect(result.merged).toMatchObject({
       movedStoryCount: 1,
       deduplicatedStoryCount: 1,
@@ -139,7 +143,9 @@ describe('Taxonomy PostgreSQL invariants', () => {
   });
 
   it('blocks hard delete for used taxonomy', async () => {
-    const tag = await createTag.execute(new CreateTagCommand(unique('UsedTag'), taxAudit()));
+    const tag = await createTag.execute(
+      new CreateTagCommand(unique('UsedTag'), taxAudit()),
+    );
     const category = await createCategory.execute(
       new CreateCategoryCommand({ name: unique('UsedCategory') }, taxAudit()),
     );
@@ -150,11 +156,15 @@ describe('Taxonomy PostgreSQL invariants', () => {
       data: { storyId, categoryId: category.id, isPrimary: true },
     });
 
-    await expect(deleteTag.execute(new DeleteTagCommand(tag.id, taxAudit()))).rejects.toMatchObject({
+    await expect(
+      deleteTag.execute(new DeleteTagCommand(tag.id, taxAudit())),
+    ).rejects.toMatchObject({
       code: 'TAG_IN_USE',
     });
     await expect(
-      deleteCategory.execute(new DeleteCategoryCommand(category.id, taxAudit())),
+      deleteCategory.execute(
+        new DeleteCategoryCommand(category.id, taxAudit()),
+      ),
     ).rejects.toMatchObject({ code: 'CATEGORY_IN_USE' });
     await expect(
       prisma.storyTag.count({ where: { storyId, tagId: tag.id } }),
@@ -226,7 +236,11 @@ describe('Taxonomy PostgreSQL invariants', () => {
     ).rejects.toMatchObject({ code: 'CATEGORY_HAS_ACTIVE_CHILDREN' });
     await expect(
       updateCategory.execute(
-        new UpdateCategoryCommand(parent.id, { parentId: child.id }, taxAudit()),
+        new UpdateCategoryCommand(
+          parent.id,
+          { parentId: child.id },
+          taxAudit(),
+        ),
       ),
     ).rejects.toMatchObject({ code: 'CATEGORY_HIERARCHY_CYCLE' });
   });

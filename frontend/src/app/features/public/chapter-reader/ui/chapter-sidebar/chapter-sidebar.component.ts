@@ -24,6 +24,9 @@ export class ChapterSidebarComponent {
   @Input()
   bookmarked = false;
 
+  @Input()
+  bookmarkPending = false;
+
   @Output()
   readonly fontDecrease = new EventEmitter<void>();
 
