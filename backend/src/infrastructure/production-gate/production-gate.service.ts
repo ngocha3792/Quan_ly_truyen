@@ -557,7 +557,7 @@ export class ProductionGateService {
         throw error;
       }
 
-      throw new Error('Seed data inspection failed');
+      throw new Error('Seed data inspection failed', { cause: error });
     }
   }
 
