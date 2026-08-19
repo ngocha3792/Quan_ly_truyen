@@ -70,9 +70,7 @@
         class="bookmark-button"
         type="button"
         [class.bookmark-button--active]="item.bookmarked"
-        [attr.aria-label]="
-          item.bookmarked ? 'Bỏ đánh dấu chương' : 'Đánh dấu chương'
-        "
+        [attr.aria-label]="item.bookmarked ? 'Bỏ đánh dấu chương' : 'Đánh dấu chương'"
         [disabled]="bookmarkPendingChapterIds.includes(item.chapterId)"
         [attr.aria-busy]="bookmarkPendingChapterIds.includes(item.chapterId)"
         (click)="bookmarkToggle.emit(item.chapterId)"

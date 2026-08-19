@@ -77,7 +77,13 @@
 
       <span>
         <strong>
-          {{ bookmarkPending ? 'Đang lưu...' : bookmarked ? 'Đã đánh dấu chương' : 'Đánh dấu chương này' }}
+          {{
+            bookmarkPending
+              ? 'Đang lưu...'
+              : bookmarked
+                ? 'Đã đánh dấu chương'
+                : 'Đánh dấu chương này'
+          }}
         </strong>
 
         <small>

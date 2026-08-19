@@ -110,7 +110,8 @@ interface ChangeEmailForm {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangeEmailDialogComponent {
-  protected readonly passwordMaximumLength = inject(APP_RUNTIME_CONFIG).passwordPolicy.maximumLength;
+  protected readonly passwordMaximumLength =
+    inject(APP_RUNTIME_CONFIG).passwordPolicy.maximumLength;
 
   readonly open = input(false);
 

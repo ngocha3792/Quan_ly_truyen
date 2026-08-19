@@ -141,7 +141,6 @@ test('allow scoped shared feature import', () => {
   );
 });
 
-
 test('forbid shared internals across feature scopes', () => {
   const violations = violationsFor(
     file('features', 'account', 'following', 'pages', 'following.ts'),
@@ -153,7 +152,10 @@ test('forbid shared internals across feature scopes', () => {
   );
 
   assert.equal(violations.length, 1);
-  assert.match(violations[0].message, /account\/following cannot import internals of public\/shared/);
+  assert.match(
+    violations[0].message,
+    /account\/following cannot import internals of public\/shared/,
+  );
 });
 
 test('allow explicit feature public API', () => {

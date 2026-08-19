@@ -58,7 +58,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         }
       </div>
     </section>
-
   `,
 
   styles: [

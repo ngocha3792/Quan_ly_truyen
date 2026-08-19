@@ -10,8 +10,14 @@ import {
   Validators,
 } from '@angular/forms';
 
-import { APP_RUNTIME_CONFIG, type AuthPasswordPolicyConfig } from '../../../../../../core/config/app-config.token';
-import { evaluatePasswordPolicy, passwordPolicyHint } from '../../../../../../core/auth/password-policy';
+import {
+  APP_RUNTIME_CONFIG,
+  type AuthPasswordPolicyConfig,
+} from '../../../../../../core/config/app-config.token';
+import {
+  evaluatePasswordPolicy,
+  passwordPolicyHint,
+} from '../../../../../../core/auth/password-policy';
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
 import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';

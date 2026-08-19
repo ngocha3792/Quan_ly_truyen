@@ -88,9 +88,7 @@ export class ReadingHistoryStore {
           return EMPTY;
         }),
         finalize(() =>
-          this.bookmarkPendingChapterIds.update((ids) =>
-            ids.filter((id) => id !== chapterId),
-          ),
+          this.bookmarkPendingChapterIds.update((ids) => ids.filter((id) => id !== chapterId)),
         ),
       )
       .subscribe();
@@ -151,7 +149,6 @@ export class ReadingHistoryStore {
       )
       .subscribe();
   }
-
 
   private setBookmarkState(chapterId: string, bookmarked: boolean): void {
     this.viewState.update((current) =>

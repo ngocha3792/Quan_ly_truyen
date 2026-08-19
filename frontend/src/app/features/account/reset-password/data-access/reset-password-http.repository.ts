@@ -14,7 +14,6 @@ import {
 } from '../domain/reset-password.models';
 import { ResetPasswordRepository } from '../domain/reset-password.repository';
 
-
 @Injectable()
 export class ResetPasswordHttpRepository implements ResetPasswordRepository {
   private readonly authApi = inject(AuthApiService);

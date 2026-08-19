@@ -312,5 +312,4 @@ export class StudioSidebarComponent {
       icon: 'chart',
     },
   ];
-
 }

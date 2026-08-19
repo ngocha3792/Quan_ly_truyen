@@ -99,9 +99,7 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   }
 
   getBookmark(chapterId: string): Observable<boolean> {
-    return this.engagement
-      .getReadingBookmark(chapterId)
-      .pipe(map((bookmark) => bookmark !== null));
+    return this.engagement.getReadingBookmark(chapterId).pipe(map((bookmark) => bookmark !== null));
   }
 
   saveBookmark(chapterId: string): Observable<void> {
