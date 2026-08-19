@@ -170,7 +170,7 @@ function resolveAlias(specifier, alias) {
 
   const wildcard = specifier.slice(prefix.length, specifier.length - suffix.length || undefined);
 
-  return path.resolve(baseUrl, target.replace('*', wildcard));
+  return path.resolve(baseUrl, target.replace(/\*/g, wildcard));
 }
 
 function featureLayerFor(file, sourceRoot) {
