@@ -15,9 +15,15 @@ updates:
     groups:
       backend-production:
         dependency-type: production
+        update-types:
+          - minor
+          - patch
 
       backend-development:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
 
   # Frontend npm dependencies.
   - package-ecosystem: npm
@@ -33,9 +39,15 @@ updates:
     groups:
       frontend-production:
         dependency-type: production
+        update-types:
+          - minor
+          - patch
 
       frontend-development:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
 
   # Backend Docker base images.
   - package-ecosystem: docker
