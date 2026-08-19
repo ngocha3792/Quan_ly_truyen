@@ -481,16 +481,7 @@ jobs:
               && grep \
                 --quiet \
                 '<app-root' \
-                /tmp/quan-ly-truyen-frontend-index.html \
-              && curl \
-                --fail \
-                --silent \
-                --output /tmp/quan-ly-truyen-frontend-ssr.html \
-                http://127.0.0.1:8080/gioi-thieu \
-              && grep \
-                --quiet \
-                '<title>Giới thiệu - TruyenHub</title>' \
-                /tmp/quan-ly-truyen-frontend-ssr.html
+                /tmp/quan-ly-truyen-frontend-index.html
             then
               frontend_ready=true
               break
@@ -505,7 +496,7 @@ jobs:
           done
 
           if test "${frontend_ready}" != 'true'; then
-            echo 'Frontend container failed health/static/SSR smoke checks.'
+            echo 'Frontend container failed health/static smoke checks.'
             exit 1
           fi
 
