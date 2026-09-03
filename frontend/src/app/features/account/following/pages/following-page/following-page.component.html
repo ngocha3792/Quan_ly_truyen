@@ -6,6 +6,16 @@
     </div>
     <a routerLink="/tac-gia">Khám phá tác giả</a>
   </header>
+  @if (error()) {
+    <app-error-alert
+      title="Không thể hoàn tất yêu cầu"
+      [message]="error()"
+      (retry)="load(page())"
+    />
+  }
+  @if (loading() && items().length === 0) {
+    <app-loading-state message="Đang tải danh sách tác giả..." />
+  }
   <section class="following-list">
     @for (item of items(); track item.author.id) {
       <article>
@@ -28,7 +38,7 @@
           [disabled]="pending().includes(item.author.id)"
           (click)="unfollow(item.author.id)"
         >
-          Bỏ theo dõi
+          {{ pending().includes(item.author.id) ? 'Đang xử lý...' : 'Bỏ theo dõi' }}
         </button>
       </article>
     } @empty {

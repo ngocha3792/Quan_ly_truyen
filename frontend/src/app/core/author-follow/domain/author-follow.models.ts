@@ -4,6 +4,13 @@ export interface AuthorFollowMutation {
   readonly followersCount: number;
 }
 
+export interface StoryFollowMutation {
+  readonly storyId: string;
+  readonly isFollowing: boolean;
+  readonly notificationsEnabled: boolean;
+  readonly followersCount: number;
+}
+
 export interface FollowingAuthorItem {
   readonly author: {
     readonly id: string;

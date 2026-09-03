@@ -12,6 +12,7 @@ import { AuthStore } from '../../../../../core/auth/auth.store';
 import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { LibraryStore } from '../../../../../core/storage/library.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
+import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 import type {
   CommentReactionApiType,
   CommentReportReasonApi,
@@ -57,11 +58,11 @@ export class StoryDetailComponent implements OnInit {
 
     const description =
       story.description.trim().slice(0, 160) ||
-      `Đọc ${story.title} của ${story.author} trên TruyenHub.`;
+      `Đọc ${story.title} của ${story.author} trên ${APP_NAME}.`;
     const canonicalPath = `/truyen/${encodeURIComponent(story.slug)}`;
 
     this.seo.apply({
-      title: `${story.title} - ${story.author} | TruyenHub`,
+      title: `${story.title} - ${story.author} | ${APP_NAME}`,
       description,
       canonicalPath,
       imageUrl: story.coverUrl,
@@ -99,6 +100,10 @@ export class StoryDetailComponent implements OnInit {
   protected toggleLibrary(): void {
     const current = this.store.story();
     if (current) this.library.toggle(current.id);
+  }
+
+  protected toggleStoryFollow(): void {
+    this.runAuthenticated(() => this.store.toggleStoryFollow());
   }
 
   protected rate(score: number): void {

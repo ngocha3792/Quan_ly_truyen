@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
 import { AuthStore } from '../../../../core/auth/auth.store';
+import { AuthorFollowApiService } from '../../../../core/author-follow';
 import type {
   CommentReactionApiType,
   CommentReportReasonApi,
@@ -13,6 +14,7 @@ import { StoryDetailRepository } from './story.repository';
 export class StoryDetailStore {
   private readonly repository = inject(StoryDetailRepository);
   private readonly auth = inject(AuthStore);
+  private readonly followApi = inject(AuthorFollowApiService);
 
   readonly story = signal<Story | null | undefined>(undefined);
   readonly loading = signal(true);
@@ -23,6 +25,9 @@ export class StoryDetailStore {
   readonly ratingPending = signal(false);
   readonly commentPending = signal(false);
   readonly commentMessage = signal<string | null>(null);
+  readonly storyFollowing = signal(false);
+  readonly storyFollowPending = signal(false);
+  readonly storyFollowersCount = signal(0);
 
   loadStory(slug: string): void {
     this.loading.set(true);
@@ -30,12 +35,14 @@ export class StoryDetailStore {
     this.comments.set([]);
     this.commentMessage.set(null);
     this.ratingScore.set(null);
+    this.storyFollowing.set(false);
 
     this.repository
       .getStoryBySlug(slug)
       .pipe(
         tap((story) => {
           this.story.set(story);
+          this.storyFollowersCount.set(story?.followers ?? 0);
           this.loading.set(false);
         }),
         switchMap((story) => {
@@ -50,6 +57,11 @@ export class StoryDetailStore {
                     authState === 'authenticated'
                       ? this.repository.getMyRating(story.id).pipe(
                           tap((score) => this.ratingScore.set(score)),
+                          switchMap(() => this.followApi.getStoryFollow(story.id)),
+                          tap((follow) => {
+                            this.storyFollowing.set(follow.isFollowing);
+                            this.storyFollowersCount.set(follow.followersCount);
+                          }),
                           catchError(() => of(null)),
                         )
                       : of(null),
@@ -74,6 +86,35 @@ export class StoryDetailStore {
           this.error.set(getApiErrorMessage(err, 'Không thể tải thông tin truyện.'));
           return of(null);
         }),
+      )
+      .subscribe();
+  }
+
+  toggleStoryFollow(): void {
+    const story = this.story();
+    if (!story || this.storyFollowPending()) return;
+    const wasFollowing = this.storyFollowing();
+    const previousCount = this.storyFollowersCount();
+    this.storyFollowing.set(!wasFollowing);
+    this.storyFollowersCount.set(Math.max(0, previousCount + (wasFollowing ? -1 : 1)));
+    this.storyFollowPending.set(true);
+
+    const request$ = wasFollowing
+      ? this.followApi.unfollowStory(story.id)
+      : this.followApi.followStory(story.id);
+    request$
+      .pipe(
+        tap((result) => {
+          this.storyFollowing.set(result.isFollowing);
+          this.storyFollowersCount.set(result.followersCount);
+        }),
+        catchError((error) => {
+          this.storyFollowing.set(wasFollowing);
+          this.storyFollowersCount.set(previousCount);
+          this.error.set(getApiErrorMessage(error, 'Không thể cập nhật theo dõi truyện.'));
+          return EMPTY;
+        }),
+        finalize(() => this.storyFollowPending.set(false)),
       )
       .subscribe();
   }

@@ -1,9 +1,19 @@
 import { Transform, Type } from 'class-transformer';
 import { IsArray, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 
 export class ListFollowingRequest {
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = DEFAULT_PAGE;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PAGE_LIMIT)
+  pageSize = DEFAULT_PAGE_LIMIT;
 
   @IsOptional()
   @Transform(({ value }) => {

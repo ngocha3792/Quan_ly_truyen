@@ -6,8 +6,12 @@ import { AuthAuthorizationModule } from '@/modules/auth';
 import {
   FOLLOW_REPOSITORY,
   FollowAuthorCommandHandler,
+  FollowStoryCommandHandler,
+  GetStoryFollowQueryHandler,
   ListFollowingQueryHandler,
+  ListStoryFollowsQueryHandler,
   UnfollowAuthorCommandHandler,
+  UnfollowStoryCommandHandler,
 } from './application';
 import { PrismaFollowRepository } from './infrastructure';
 import { AuthorFollowController } from './presentation/http/controllers';
@@ -19,6 +23,10 @@ import { AuthorFollowController } from './presentation/http/controllers';
     FollowAuthorCommandHandler,
     UnfollowAuthorCommandHandler,
     ListFollowingQueryHandler,
+    FollowStoryCommandHandler,
+    UnfollowStoryCommandHandler,
+    GetStoryFollowQueryHandler,
+    ListStoryFollowsQueryHandler,
     PrismaFollowRepository,
     { provide: FOLLOW_REPOSITORY, useExisting: PrismaFollowRepository },
   ],

@@ -23,6 +23,11 @@ header h1 {
 header a {
   color: var(--primary);
 }
+app-error-alert,
+app-loading-state {
+  display: block;
+  margin-bottom: 16px;
+}
 .following-list {
   display: grid;
   gap: 12px;

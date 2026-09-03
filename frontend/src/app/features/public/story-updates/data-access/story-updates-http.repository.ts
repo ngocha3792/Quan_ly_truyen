@@ -1,6 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of, switchMap } from 'rxjs';
 
+import { AuthStore } from '../../../../core/auth/auth.store';
+import { AuthorFollowApiService } from '../../../../core/author-follow';
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
 import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
 import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
@@ -15,19 +17,41 @@ import { StoryUpdatesRepository } from './story-updates.repository';
 @Injectable()
 export class StoryUpdatesHttpRepository implements StoryUpdatesRepository {
   private readonly api = inject(PublicStoriesApiClient);
+  private readonly followApi = inject(AuthorFollowApiService);
+  private readonly auth = inject(AuthStore);
 
   getOverview(query: StoryUpdatesQuery): Observable<StoryUpdatesOverview> {
-    return this.api
-      .list({ sort: 'latest', pageSize: 100 })
-      .pipe(map((page) => buildOverview(page.items, query)));
+    return this.api.list({ sort: 'latest', pageSize: 100 }).pipe(
+      switchMap((page) =>
+        this.followedStoryIds(page.items).pipe(
+          map((followedIds) => buildOverview(page.items, query, followedIds)),
+        ),
+      ),
+    );
+  }
+
+  private followedStoryIds(
+    stories: readonly PublicStoryApiItem[],
+  ): Observable<ReadonlySet<string>> {
+    return this.auth.ensureInitialized().pipe(
+      switchMap((authState) =>
+        authState === 'authenticated'
+          ? this.followApi.getStoryFollows(stories.map((story) => story.id)).pipe(
+              map((ids) => new Set(ids)),
+              catchError(() => of(new Set<string>())),
+            )
+          : of(new Set<string>()),
+      ),
+    );
   }
 }
 
 function buildOverview(
   stories: readonly PublicStoryApiItem[],
   query: StoryUpdatesQuery,
+  followedIds: ReadonlySet<string>,
 ): StoryUpdatesOverview {
-  const allItems = stories.map(toUpdateItem);
+  const allItems = stories.map((story) => toUpdateItem(story, followedIds));
   const featured = allItems[0] ?? null;
   let items = featured ? allItems.filter((story) => story.id !== featured.id) : allItems;
 
@@ -46,7 +70,7 @@ function buildOverview(
     featured,
     items: items.slice(start, start + query.pageSize),
     topUpdates,
-    stats: buildStats(stories),
+    stats: buildStats(stories, allItems),
     schedule: [],
     popularGenres: buildPopularGenres(stories),
     pagination: {
@@ -59,7 +83,10 @@ function buildOverview(
   };
 }
 
-function toUpdateItem(story: PublicStoryApiItem): StoryUpdateItem {
+function toUpdateItem(
+  story: PublicStoryApiItem,
+  followedIds: ReadonlySet<string>,
+): StoryUpdateItem {
   const recentlyUpdated = Date.now() - new Date(story.updatedAt).getTime() <= 24 * 60 * 60 * 1000;
   const hot = story.stats.views >= 1000 || story.stats.followers >= 100;
 
@@ -78,7 +105,7 @@ function toUpdateItem(story: PublicStoryApiItem): StoryUpdateItem {
     commentCount: story.stats.comments,
     status: story.status === 'COMPLETED' ? 'completed' : 'ongoing',
     badge: recentlyUpdated ? 'new' : hot ? 'hot' : null,
-    followed: false,
+    followed: followedIds.has(story.id),
     hot,
   };
 }
@@ -122,11 +149,15 @@ function sortStories(
   }
 }
 
-function buildStats(stories: readonly PublicStoryApiItem[]): readonly StoryUpdateStat[] {
+function buildStats(
+  stories: readonly PublicStoryApiItem[],
+  items: readonly StoryUpdateItem[],
+): readonly StoryUpdateStat[] {
   const today = new Date().toDateString();
   const chaptersToday = stories.filter(
     (story) => story.lastChapterAt && new Date(story.lastChapterAt).toDateString() === today,
   ).length;
+  const followingCount = items.filter((story) => story.followed).length;
 
   return [
     {
@@ -148,9 +179,9 @@ function buildStats(stories: readonly PublicStoryApiItem[]): readonly StoryUpdat
     {
       id: 'following',
       label: 'Đang theo dõi',
-      value: 0,
+      value: followingCount,
       valueSuffix: null,
-      comparisonText: 'Chưa có API thư viện/follow công khai',
+      comparisonText: 'Trong số truyện đang hiển thị',
       tone: 'pink',
     },
     {

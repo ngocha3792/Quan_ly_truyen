@@ -14,6 +14,7 @@ import type {
   AuthorFollowMutationView,
   FollowingListView,
   ListFollowingInput,
+  StoryFollowView,
 } from '../../application/dto';
 import type { FollowRepositoryPort } from '../../application/ports/follow.repository.port';
 
@@ -152,6 +153,89 @@ export class PrismaFollowRepository implements FollowRepositoryPort {
     };
   }
 
+  async followStory(userId: string, storyId: string): Promise<StoryFollowView> {
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockActiveFollower(tx, userId);
+      const story = await this.lockStory(tx, storyId);
+      if (
+        !story ||
+        story.deleted_at !== null ||
+        story.visibility !== 'public' ||
+        !['published', 'hiatus', 'completed'].includes(story.status)
+      ) {
+        throw new ResourceConflictException({
+          code: 'STORY_NOT_FOLLOWABLE',
+          message: 'Truyện hiện không thể nhận lượt theo dõi mới',
+        });
+      }
+
+      await tx.storyFollow.createMany({
+        data: [{ userId, storyId, notificationsEnabled: true }],
+        skipDuplicates: true,
+      });
+      const followersCount = await this.reconcileLockedStoryCount(tx, storyId);
+      return {
+        storyId,
+        isFollowing: true,
+        notificationsEnabled: true,
+        followersCount,
+      };
+    });
+  }
+
+  async unfollowStory(
+    userId: string,
+    storyId: string,
+  ): Promise<StoryFollowView> {
+    return this.prisma.$transaction(async (tx) => {
+      const story = await this.lockStory(tx, storyId);
+      if (!story) throw this.storyNotFound(storyId);
+      await tx.storyFollow.deleteMany({ where: { userId, storyId } });
+      const followersCount = await this.reconcileLockedStoryCount(tx, storyId);
+      return {
+        storyId,
+        isFollowing: false,
+        notificationsEnabled: false,
+        followersCount,
+      };
+    });
+  }
+
+  async getStoryFollow(
+    userId: string,
+    storyId: string,
+  ): Promise<StoryFollowView> {
+    const [story, follow] = await Promise.all([
+      this.prisma.story.findFirst({
+        where: { id: storyId, deletedAt: null },
+        select: { id: true, followerCount: true },
+      }),
+      this.prisma.storyFollow.findUnique({
+        where: { userId_storyId: { userId, storyId } },
+        select: { notificationsEnabled: true },
+      }),
+    ]);
+    if (!story) throw this.storyNotFound(storyId);
+    return {
+      storyId,
+      isFollowing: follow !== null,
+      notificationsEnabled: follow?.notificationsEnabled ?? false,
+      followersCount: story.followerCount,
+    };
+  }
+
+  async listStoryFollows(
+    userId: string,
+    storyIds: readonly string[],
+  ): Promise<readonly string[]> {
+    if (storyIds.length === 0) return [];
+    const rows = await this.prisma.storyFollow.findMany({
+      where: { userId, storyId: { in: [...storyIds] } },
+      select: { storyId: true },
+    });
+    return rows.map((row) => row.storyId);
+  }
+
   private async lockActiveFollower(
     tx: Prisma.TransactionClient,
     userId: string,
@@ -185,6 +269,31 @@ export class PrismaFollowRepository implements FollowRepositoryPort {
     if (rows.length === 0) throw this.notFound(authorId);
   }
 
+  private async lockStory(
+    tx: Prisma.TransactionClient,
+    storyId: string,
+  ): Promise<{
+    id: string;
+    status: string;
+    visibility: string;
+    deleted_at: Date | null;
+  } | null> {
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        status: string;
+        visibility: string;
+        deleted_at: Date | null;
+      }>
+    >(Prisma.sql`
+      SELECT id, status, visibility, deleted_at
+      FROM "stories"
+      WHERE id = ${storyId}::uuid
+      FOR UPDATE
+    `);
+    return rows[0] ?? null;
+  }
+
   private async reconcileLockedAuthorCount(
     tx: Prisma.TransactionClient,
     authorId: string,
@@ -197,11 +306,31 @@ export class PrismaFollowRepository implements FollowRepositoryPort {
     return count;
   }
 
+  private async reconcileLockedStoryCount(
+    tx: Prisma.TransactionClient,
+    storyId: string,
+  ): Promise<number> {
+    const count = await tx.storyFollow.count({ where: { storyId } });
+    await tx.story.update({
+      where: { id: storyId },
+      data: { followerCount: count },
+    });
+    return count;
+  }
+
   private notFound(authorId: string): ResourceNotFoundException {
     return new ResourceNotFoundException({
       code: 'AUTHOR_NOT_FOUND',
       resource: 'tác giả',
       identifier: authorId,
+    });
+  }
+
+  private storyNotFound(storyId: string): ResourceNotFoundException {
+    return new ResourceNotFoundException({
+      code: 'STORY_NOT_FOUND',
+      resource: 'truyện',
+      identifier: storyId,
     });
   }
 }

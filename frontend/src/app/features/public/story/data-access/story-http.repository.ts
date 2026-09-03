@@ -173,6 +173,7 @@ function toStory(story: PublicStoryApiItem): Story {
     views: story.stats.views,
     rating: story.stats.ratingAverage,
     chapterCount: story.stats.chapters,
+    followers: story.stats.followers,
     status: story.status,
     badge: story.status === 'COMPLETED' ? 'FULL' : undefined,
   };

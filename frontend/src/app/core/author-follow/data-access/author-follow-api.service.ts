@@ -1,10 +1,14 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, of } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../config/app-config.token';
 import { ApiSuccessEnvelope } from '../../http/api-envelope.model';
-import { AuthorFollowMutation, FollowingAuthorsPage } from '../domain/author-follow.models';
+import {
+  AuthorFollowMutation,
+  FollowingAuthorsPage,
+  StoryFollowMutation,
+} from '../domain/author-follow.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthorFollowApiService {
@@ -37,6 +41,41 @@ export class AuthorFollowApiService {
     if (authorIds?.length) params['authorIds'] = authorIds.slice(0, 50).join(',');
     return this.http
       .get<ApiSuccessEnvelope<FollowingAuthorsPage>>(`${this.config.apiBaseUrl}/me/following`, {
+        params,
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  getStoryFollow(storyId: string): Observable<StoryFollowMutation> {
+    return this.http
+      .get<ApiSuccessEnvelope<StoryFollowMutation>>(
+        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storyId)}/follow`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  followStory(storyId: string): Observable<StoryFollowMutation> {
+    return this.http
+      .post<ApiSuccessEnvelope<StoryFollowMutation>>(
+        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storyId)}/follow`,
+        {},
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  unfollowStory(storyId: string): Observable<StoryFollowMutation> {
+    return this.http
+      .delete<ApiSuccessEnvelope<StoryFollowMutation>>(
+        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storyId)}/follow`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  getStoryFollows(storyIds: readonly string[]): Observable<readonly string[]> {
+    if (storyIds.length === 0) return of([]);
+    const params = new HttpParams().set('storyIds', storyIds.join(','));
+    return this.http
+      .get<ApiSuccessEnvelope<readonly string[]>>(`${this.config.apiBaseUrl}/me/story-follows`, {
         params,
       })
       .pipe(map((response) => response.data));

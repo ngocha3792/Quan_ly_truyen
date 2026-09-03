@@ -13,14 +13,24 @@ import { PermissionCode } from '@/common/enums';
 import {
   FollowAuthorCommand,
   FollowAuthorCommandHandler,
+  FollowStoryCommand,
+  FollowStoryCommandHandler,
+  GetStoryFollowQuery,
+  GetStoryFollowQueryHandler,
   ListFollowingQuery,
   ListFollowingQueryHandler,
+  ListStoryFollowsQuery,
+  ListStoryFollowsQueryHandler,
   UnfollowAuthorCommand,
   UnfollowAuthorCommandHandler,
+  UnfollowStoryCommand,
+  UnfollowStoryCommandHandler,
   type AuthorFollowMutationView,
   type FollowingListView,
+  type StoryFollowView,
 } from '../../../application';
 import { ListFollowingRequest } from '../requests/list-following.request';
+import { ListStoryFollowsRequest } from '../requests/list-story-follows.request';
 
 @Controller()
 @RequirePermissions(PermissionCode.FOLLOW_MANAGE_OWN)
@@ -29,6 +39,10 @@ export class AuthorFollowController {
     private readonly followAuthor: FollowAuthorCommandHandler,
     private readonly unfollowAuthor: UnfollowAuthorCommandHandler,
     private readonly listFollowing: ListFollowingQueryHandler,
+    private readonly followStoryHandler: FollowStoryCommandHandler,
+    private readonly unfollowStoryHandler: UnfollowStoryCommandHandler,
+    private readonly getStoryFollowHandler: GetStoryFollowQueryHandler,
+    private readonly listStoryFollowsHandler: ListStoryFollowsQueryHandler,
   ) {}
 
   @Post('authors/:authorId/follow')
@@ -63,6 +77,46 @@ export class AuthorFollowController {
         pageSize: query.pageSize,
         authorIds: query.authorIds,
       }),
+    );
+  }
+
+  @Post('stories/:storyId/follow')
+  followStory(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<StoryFollowView> {
+    return this.followStoryHandler.execute(
+      new FollowStoryCommand(this.requireUserId(userId), storyId),
+    );
+  }
+
+  @Delete('stories/:storyId/follow')
+  unfollowStory(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<StoryFollowView> {
+    return this.unfollowStoryHandler.execute(
+      new UnfollowStoryCommand(this.requireUserId(userId), storyId),
+    );
+  }
+
+  @Get('stories/:storyId/follow')
+  getStoryFollow(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<StoryFollowView> {
+    return this.getStoryFollowHandler.execute(
+      new GetStoryFollowQuery(this.requireUserId(userId), storyId),
+    );
+  }
+
+  @Get('me/story-follows')
+  listStoryFollows(
+    @CurrentUserId() userId: string | undefined,
+    @Query() query: ListStoryFollowsRequest,
+  ): Promise<readonly string[]> {
+    return this.listStoryFollowsHandler.execute(
+      new ListStoryFollowsQuery(this.requireUserId(userId), query.storyIds),
     );
   }
 

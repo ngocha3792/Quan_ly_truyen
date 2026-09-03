@@ -71,6 +71,18 @@
               library.has(item.id) ? 'Đã lưu' : 'Thêm thư viện'
             }}
           </button>
+          <button
+            class="save"
+            type="button"
+            [class.saved]="store.storyFollowing()"
+            [disabled]="store.storyFollowPending()"
+            (click)="toggleStoryFollow()"
+          >
+            <app-icon name="heart" [size]="17" />{{
+              store.storyFollowing() ? 'Đang theo dõi' : 'Theo dõi truyện'
+            }}
+            <small>{{ store.storyFollowersCount() | compactNumber }}</small>
+          </button>
         </div>
       </div>
     </section>
