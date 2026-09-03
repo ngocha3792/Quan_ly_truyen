@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@/generated/prisma/client';
 import {
   MediaAsset,
+  MediaPurpose,
   MediaResourceType,
   MediaStatus,
 } from '@/generated/prisma/client';
@@ -17,6 +18,10 @@ import {
   UnsupportedMediaTypeException,
 } from '@/common/exceptions';
 import type { AuthPrincipal } from '@/common/interfaces/auth';
+import {
+  CLOUDINARY_DEFAULTS,
+  MEDIA_STORAGE_PROVIDERS,
+} from '@/common/constants';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import {
   MEDIA_STORAGE,
@@ -71,14 +76,14 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
     );
     const rootFolder = this.configService.get<string>(
       'cloudinary.rootFolder',
-      'quan-ly-truyen',
+      CLOUDINARY_DEFAULTS.ROOT_FOLDER,
     );
     const assetFolder = [rootFolder, policy.folderSegment, input.ownerId].join(
       '/',
     );
     const ttlSeconds = this.configService.get<number>(
       'cloudinary.uploadIntentTtlSeconds',
-      300,
+      CLOUDINARY_DEFAULTS.UPLOAD_INTENT_TTL_SECONDS,
     );
     const confirmExpiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
@@ -88,7 +93,7 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
         uploaderId: input.principal.userId,
         purpose: input.purpose,
         status: MediaStatus.PENDING,
-        storageProvider: 'cloudinary',
+        storageProvider: MEDIA_STORAGE_PROVIDERS.CLOUDINARY,
         publicId,
         resourceType: toPrismaResourceType(policy.resourceType),
         assetFolder,
@@ -129,7 +134,10 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
   }): Promise<MediaAsset> {
     const media = await this.requireMedia(input.mediaAssetId);
     this.ownership.assertUploader(input.principal, media.uploaderId);
-    if (media.status === MediaStatus.READY) return media;
+    if (media.status === MediaStatus.READY) {
+      await this.linkChapterMediaIfNeeded(media);
+      return media;
+    }
     if (media.uploadExpiresAt && media.uploadExpiresAt.getTime() < Date.now()) {
       await this.prisma.mediaAsset.updateMany({
         where: {
@@ -218,6 +226,7 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
           from: MediaStatus.PROCESSING,
           to: MediaStatus.READY,
         });
+      await this.linkChapterMediaIfNeeded(media);
       this.logger.log({
         message: 'media upload confirmed',
         mediaAssetId: media.id,
@@ -246,6 +255,46 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
       });
       throw error;
     }
+  }
+
+  private async linkChapterMediaIfNeeded(media: MediaAsset): Promise<void> {
+    if (media.purpose !== MediaPurpose.CHAPTER_IMAGE) return;
+    const ownerId = readMetadataOwnerId(media.metadata);
+    if (!ownerId) {
+      throw new InvalidStateTransitionException({
+        resource: 'chapter media upload',
+        from: media.status,
+        to: MediaStatus.READY,
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(Prisma.sql`
+        SELECT pg_advisory_xact_lock(hashtext('chapter_media:' || ${ownerId}))
+      `);
+      const existing = await tx.chapterMedia.findUnique({
+        where: {
+          chapterId_mediaAssetId: {
+            chapterId: ownerId,
+            mediaAssetId: media.id,
+          },
+        },
+        select: { chapterId: true },
+      });
+      if (existing) return;
+      const last = await tx.chapterMedia.findFirst({
+        where: { chapterId: ownerId },
+        orderBy: { sortOrder: 'desc' },
+        select: { sortOrder: true },
+      });
+      await tx.chapterMedia.create({
+        data: {
+          chapterId: ownerId,
+          mediaAssetId: media.id,
+          sortOrder: (last?.sortOrder ?? -1) + 1,
+        },
+      });
+    });
   }
 
   private async requireMedia(id: string): Promise<MediaAsset> {
@@ -329,6 +378,14 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
         maxBytes: policy.maxBytes,
       });
   }
+}
+
+function readMetadataOwnerId(metadata: Prisma.JsonValue): string | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+  const ownerId = metadata['ownerId'];
+  return typeof ownerId === 'string' && ownerId.length > 0 ? ownerId : null;
 }
 
 export function toPrismaResourceType(

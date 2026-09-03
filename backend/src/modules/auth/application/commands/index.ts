@@ -10,6 +10,7 @@ export * from './forgot-password';
 export * from './reset-password';
 export * from './revoke-session';
 export * from './revoke-other-sessions';
+export * from './set-current-session-trust';
 export * from './change-password';
 export * from './request-email-change';
 export * from './confirm-email-change';

@@ -12,6 +12,11 @@ import {
   MinLength,
 } from 'class-validator';
 import { normalizeCategoryName } from '../../../domain';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 
 export class ListAdminCategoriesRequest {
   @IsOptional()
@@ -35,13 +40,13 @@ export class ListAdminCategoriesRequest {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
+  page = DEFAULT_PAGE;
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  pageSize = 20;
+  @Max(MAX_PAGE_LIMIT)
+  pageSize = DEFAULT_PAGE_LIMIT;
   @IsOptional()
   @IsIn(['default', 'name:asc', 'createdAt:desc'])
   sort = 'default';

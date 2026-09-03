@@ -116,6 +116,8 @@ export class PrismaAnalyticsAggregationAdapter {
             data: { viewCount: { increment: 1n } },
           });
         }
+
+        await this.persistAuthenticatedReadingSession(tx, event);
       }
 
       await tx.readerAnalyticsEvent.updateMany({
@@ -129,6 +131,78 @@ export class PrismaAnalyticsAggregationAdapter {
       processed > 0 ? 'success' : 'skipped',
     );
     return processed;
+  }
+
+  private async persistAuthenticatedReadingSession(
+    tx: Prisma.TransactionClient,
+    event: {
+      id: string;
+      type: ReaderAnalyticsEventType;
+      userId: string | null;
+      sessionId: string;
+      storyId: string;
+      chapterId: string | null;
+      progressPercent: Prisma.Decimal | null;
+      activeSeconds: number | null;
+      occurredAt: Date;
+    },
+  ): Promise<void> {
+    if (
+      !event.userId ||
+      !event.chapterId ||
+      (event.type !== ReaderAnalyticsEventType.READING_STARTED &&
+        event.type !== ReaderAnalyticsEventType.READING_PROGRESS &&
+        event.type !== ReaderAnalyticsEventType.READING_COMPLETED)
+    ) {
+      return;
+    }
+
+    const existing = await tx.readingSession.findUnique({
+      where: { id: event.sessionId },
+      select: { userId: true, storyId: true, chapterId: true },
+    });
+    if (
+      existing &&
+      (existing.userId !== event.userId ||
+        existing.storyId !== event.storyId ||
+        existing.chapterId !== event.chapterId)
+    ) {
+      return;
+    }
+
+    const position = Math.max(
+      0,
+      Math.min(100, Math.round(Number(event.progressPercent ?? 0))),
+    );
+    const activeSeconds = Math.max(0, Math.min(60, event.activeSeconds ?? 0));
+    const completed = event.type === ReaderAnalyticsEventType.READING_COMPLETED;
+
+    await tx.readingSession.upsert({
+      where: { id: event.sessionId },
+      create: {
+        id: event.sessionId,
+        userId: event.userId,
+        storyId: event.storyId,
+        chapterId: event.chapterId,
+        startedAt: event.occurredAt,
+        endedAt:
+          event.type === ReaderAnalyticsEventType.READING_STARTED
+            ? null
+            : event.occurredAt,
+        durationSeconds: activeSeconds,
+        startPosition: position,
+        endPosition: position,
+        completed,
+      },
+      update: {
+        endedAt: event.occurredAt,
+        endPosition: position,
+        ...(activeSeconds > 0
+          ? { durationSeconds: { increment: activeSeconds } }
+          : {}),
+        ...(completed ? { completed: true } : {}),
+      },
+    });
   }
 
   private delta(type: ReaderAnalyticsEventType, activeSeconds: number): Delta {

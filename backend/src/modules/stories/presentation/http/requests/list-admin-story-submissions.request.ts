@@ -14,6 +14,11 @@ import {
   type StorySubmissionStatusName,
 } from '../../../domain';
 import type { AdminStorySubmissionSort } from '../../../application';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 export class ListAdminStorySubmissionsRequest {
   @IsOptional()
   @IsIn(STORY_SUBMISSION_STATUS_VALUES)
@@ -41,8 +46,13 @@ export class ListAdminStorySubmissionsRequest {
   reviewer?: string;
   @IsOptional() @IsDateString() submittedFrom?: string;
   @IsOptional() @IsDateString() submittedTo?: string;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize = 20;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = DEFAULT_PAGE;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PAGE_LIMIT)
+  pageSize = DEFAULT_PAGE_LIMIT;
   @IsOptional()
   @IsIn(['submittedAt:desc', 'submittedAt:asc'])
   sort: AdminStorySubmissionSort = 'submittedAt:desc';

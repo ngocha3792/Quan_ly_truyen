@@ -6,6 +6,9 @@ import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
   AuthorManagedStory,
   AuthorStoryDraftInput,
+  AuthorStoryContributor,
+  AuthorStoryContributorInput,
+  AuthorStoryContributorRole,
   AuthorStoryMedia,
   AuthorStoryMetadataCategory,
   AuthorStoryMetadataTag,
@@ -23,9 +26,11 @@ export class AuthorStoryEditorStore {
   readonly categories = signal<readonly AuthorStoryMetadataCategory[]>([]);
   readonly tags = signal<readonly AuthorStoryMetadataTag[]>([]);
   readonly coverUrl = signal<string | null>(null);
+  readonly contributors = signal<readonly AuthorStoryContributor[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly workflowBusy = signal(false);
+  readonly contributorBusy = signal(false);
   readonly error = signal<string | null>(null);
 
   load(storyId: string | null): void {
@@ -34,11 +39,13 @@ export class AuthorStoryEditorStore {
     this.coverUrl.set(null);
 
     const story$ = storyId ? this.repository.getStory(storyId) : of(null);
+    const contributors$ = storyId ? this.repository.listContributors(storyId) : of([]);
 
     forkJoin({
       story: story$,
       categories: this.repository.listCategories(),
       tags: this.repository.listTags(),
+      contributors: contributors$,
     })
       .pipe(
         finalize(() => this.loading.set(false)),
@@ -49,14 +56,17 @@ export class AuthorStoryEditorStore {
           story,
           categories,
           tags,
+          contributors,
         }: {
           story: AuthorManagedStory | null;
           categories: readonly AuthorStoryMetadataCategory[];
           tags: readonly AuthorStoryMetadataTag[];
+          contributors: readonly AuthorStoryContributor[];
         }) => {
           this.story.set(story);
           this.categories.set(categories);
           this.tags.set(tags);
+          this.contributors.set(contributors);
           this.loadCover(story);
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
@@ -104,6 +114,52 @@ export class AuthorStoryEditorStore {
 
   clearError(): void {
     this.error.set(null);
+  }
+
+  upsertContributor(
+    storyId: string,
+    input: AuthorStoryContributorInput,
+  ): Observable<AuthorStoryContributor> {
+    this.contributorBusy.set(true);
+    this.error.set(null);
+    return this.repository.upsertContributor(storyId, input).pipe(
+      tap((saved) =>
+        this.contributors.update((contributors) => [
+          ...contributors.filter(
+            (item) => item.userId !== saved.userId || item.role !== saved.role,
+          ),
+          saved,
+        ]),
+      ),
+      catchError((error: unknown) => {
+        this.error.set(getApiErrorMessage(error));
+        throw error;
+      }),
+      finalize(() => this.contributorBusy.set(false)),
+    );
+  }
+
+  removeContributor(
+    storyId: string,
+    contributorUserId: string,
+    role: AuthorStoryContributorRole,
+  ): Observable<void> {
+    this.contributorBusy.set(true);
+    this.error.set(null);
+    return this.repository.removeContributor(storyId, contributorUserId, role).pipe(
+      tap(() =>
+        this.contributors.update((contributors) =>
+          contributors.filter(
+            (item) => item.userId !== contributorUserId || item.role !== role,
+          ),
+        ),
+      ),
+      catchError((error: unknown) => {
+        this.error.set(getApiErrorMessage(error));
+        throw error;
+      }),
+      finalize(() => this.contributorBusy.set(false)),
+    );
   }
 
   private saveNew(

@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthorStudioProfile, StudioIconName } from '../../domain/author-studio.models';
 import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 
 interface StudioNavigationItem {
   readonly label: string;
@@ -28,7 +29,7 @@ interface StudioNavigationItem {
         </span>
 
         <div>
-          <strong>TruyenHub</strong>
+          <strong>{{ appName }}</strong>
           <small>Author Studio</small>
         </div>
       </div>
@@ -281,6 +282,8 @@ interface StudioNavigationItem {
   ],
 })
 export class StudioSidebarComponent {
+  protected readonly appName = APP_NAME;
+
   @Input({ required: true })
   profile!: AuthorStudioProfile;
 

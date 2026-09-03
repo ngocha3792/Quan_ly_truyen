@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import { API_PATHS } from '@/common/constants';
 
 import type {
   AuthConfig,
@@ -50,7 +51,7 @@ export default registerAs(AUTH_CONFIG_KEY, (): AuthConfig => ({
 
     domain: optionalString(process.env.AUTH_COOKIE_DOMAIN),
 
-    path: process.env.AUTH_COOKIE_PATH ?? '/api/v1/auth',
+    path: process.env.AUTH_COOKIE_PATH ?? API_PATHS.AUTH,
   },
 
   loginRateLimit: {

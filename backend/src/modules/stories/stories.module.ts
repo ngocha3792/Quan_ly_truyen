@@ -18,17 +18,21 @@ import {
   RejectStorySubmissionCommandHandler,
   STORY_MODERATION_READER_PORT,
   STORY_PERSISTENCE_PORT,
+  STORY_CONTRIBUTOR_PERSISTENCE_PORT,
+  StoryContributorUseCases,
   SubmitAuthorStoryCommandHandler,
   UpdateAuthorStoryCommandHandler,
 } from './application';
 import {
   PrismaStoryModerationReader,
   PrismaStoryPersistence,
+  PrismaStoryContributorPersistence,
 } from './infrastructure';
 import {
   AdminStoryModerationController,
   AdminStoryPublicationController,
   AuthorStoriesController,
+  AuthorStoryContributorsController,
   PublicStoriesController,
   StoryMetadataController,
 } from './presentation/http';
@@ -38,6 +42,7 @@ import {
   controllers: [
     PublicStoriesController,
     AuthorStoriesController,
+    AuthorStoryContributorsController,
     StoryMetadataController,
     AdminStoryModerationController,
     AdminStoryPublicationController,
@@ -57,6 +62,8 @@ import {
     ListStoryCategoriesQueryHandler,
     ListStoryTagsQueryHandler,
     PrismaStoryPersistence,
+    PrismaStoryContributorPersistence,
+    StoryContributorUseCases,
     PrismaStoryModerationReader,
     {
       provide: STORY_PERSISTENCE_PORT,
@@ -65,6 +72,10 @@ import {
     {
       provide: STORY_MODERATION_READER_PORT,
       useExisting: PrismaStoryModerationReader,
+    },
+    {
+      provide: STORY_CONTRIBUTOR_PERSISTENCE_PORT,
+      useExisting: PrismaStoryContributorPersistence,
     },
   ],
 })

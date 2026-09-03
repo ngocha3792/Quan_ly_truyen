@@ -20,6 +20,12 @@
   --main-overflow: hidden;
 }
 
+app-error-alert,
+app-loading-state {
+  display: block;
+  margin-bottom: 1rem;
+}
+
 .pagination-row {
   min-height: 60px;
 

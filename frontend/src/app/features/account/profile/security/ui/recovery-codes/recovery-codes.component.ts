@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
+import { APP_FILE_SLUG, APP_NAME } from '../../../../../../core/config/app-identity.constants';
 
 @Component({
   selector: 'app-recovery-codes',
@@ -127,7 +128,7 @@ export class RecoveryCodesComponent {
 
   protected download(): void {
     const content = [
-      'TruyenHub - Mã khôi phục MFA',
+      `${APP_NAME} - Mã khôi phục MFA`,
       '',
       ...this.codes(),
       '',
@@ -143,7 +144,7 @@ export class RecoveryCodesComponent {
     const anchor = document.createElement('a');
 
     anchor.href = url;
-    anchor.download = 'truyenhub-recovery-codes.txt';
+    anchor.download = `${APP_FILE_SLUG}-recovery-codes.txt`;
 
     anchor.click();
     URL.revokeObjectURL(url);

@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 
 import { RelativeTimePipe } from '../../../../../../shared/pipes/relative-time.pipe';
 
 import { AccountSessionViewModel, SessionFilter } from '../../domain/account-session.models';
 
 import { AccountSessionsStore } from '../../data-access/account-sessions.store';
+import { AccountSessionsApiService } from '../../data-access/account-sessions-api.service';
 
 import { ConfirmSessionDialogComponent } from '../../ui/confirm-session-dialog/confirm-session-dialog.component';
 import { CurrentSessionCardComponent } from '../../ui/current-session-card/current-session-card.component';
@@ -13,6 +15,7 @@ import { SecurityTipsCardComponent } from '../../ui/security-tips-card/security-
 import { SessionListComponent } from '../../ui/session-list/session-list.component';
 import { SessionListToolbarComponent } from '../../ui/session-list-toolbar/session-list-toolbar.component';
 import { StatCardComponent } from '../../../../../../shared/components/stat-card/stat-card.component';
+import { APP_NAME } from '../../../../../../core/config/app-identity.constants';
 type ConfirmationMode =
   | {
       readonly type: 'single';
@@ -48,6 +51,10 @@ type ConfirmationMode =
 })
 export class AccountSessionsPageComponent implements OnInit {
   protected readonly store = inject(AccountSessionsStore);
+  private readonly api = inject(AccountSessionsApiService);
+  protected readonly trustBusy = signal(false);
+  protected readonly trustError = signal<string | null>(null);
+  protected readonly trustSuccess = signal<string | null>(null);
 
   protected readonly confirmation = signal<ConfirmationMode | null>(null);
 
@@ -107,6 +114,30 @@ export class AccountSessionsPageComponent implements OnInit {
     this.store.setFilter(filter);
   }
 
+  protected toggleCurrentDeviceTrust(): void {
+    const current = this.store.currentSession();
+    if (!current || this.trustBusy()) return;
+    const trusted = !current.trusted;
+    this.trustBusy.set(true);
+    this.trustError.set(null);
+    this.trustSuccess.set(null);
+    this.api
+      .setCurrentSessionTrusted(trusted)
+      .pipe(finalize(() => this.trustBusy.set(false)))
+      .subscribe({
+      next: () => {
+        this.trustSuccess.set(trusted ? 'Đã tin cậy thiết bị hiện tại.' : 'Đã bỏ tin cậy thiết bị hiện tại.');
+        this.store.reload();
+      },
+      error: () => this.trustError.set('Không thể cập nhật trạng thái thiết bị tin cậy.'),
+    });
+  }
+
+  protected clearTrustMessages(): void {
+    this.trustError.set(null);
+    this.trustSuccess.set(null);
+  }
+
   protected confirmationTitle(): string {
     const confirmation = this.confirmation();
 
@@ -127,7 +158,7 @@ export class AccountSessionsPageComponent implements OnInit {
     if (confirmation.type === 'all') {
       return [
         `Có ${confirmation.count} phiên đăng nhập sẽ bị thu hồi.`,
-        'Các thiết bị đó phải đăng nhập lại để tiếp tục sử dụng TruyenHub.',
+        `Các thiết bị đó phải đăng nhập lại để tiếp tục sử dụng ${APP_NAME}.`,
       ].join(' ');
     }
 

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { appPageTitle } from '../core/config/app-identity.constants';
 
 import { authenticatedGuard } from '../core/auth/authenticated.guard';
 import { AUTH_PERMISSIONS, AUTH_ROLES } from '../core/auth/authorization.models';
@@ -23,7 +24,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'tong-quan' },
       {
         path: 'tong-quan',
-        title: 'Tổng quan tác giả - TruyenHub',
+        title: appPageTitle('Tổng quan tác giả'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-dashboard-page/author-dashboard-page.component').then(
             (module) => module.AuthorDashboardPageComponent,
@@ -31,7 +32,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       },
       {
         path: 'ho-so',
-        title: 'Hồ sơ tác giả - TruyenHub',
+        title: appPageTitle('Hồ sơ tác giả'),
         loadComponent: () =>
           import('../features/author-portal/author-profile/pages/author-profile-page/author-profile-page.component').then(
             (module) => module.AuthorProfilePageComponent,
@@ -40,7 +41,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'thong-ke',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.ANALYTICS_READ)],
-        title: 'Thống kê độc giả - TruyenHub',
+        title: appPageTitle('Thống kê độc giả'),
         loadComponent: () =>
           import('../features/author-portal/analytics/pages/author-analytics-page/author-analytics-page.component').then(
             (module) => module.AuthorAnalyticsPageComponent,
@@ -49,7 +50,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'thong-ke/truyen/:storyId',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.ANALYTICS_READ)],
-        title: 'Thống kê truyện - TruyenHub',
+        title: appPageTitle('Thống kê truyện'),
         loadComponent: () =>
           import('../features/author-portal/analytics/pages/story-analytics-page/story-analytics-page.component').then(
             (module) => module.StoryAnalyticsPageComponent,
@@ -57,7 +58,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       },
       {
         path: 'truyen/tao-moi',
-        title: 'Tạo truyện - TruyenHub',
+        title: appPageTitle('Tạo truyện'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component').then(
             (module) => module.AuthorStoryEditorPageComponent,
@@ -66,7 +67,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'truyen/:storyId/chuong/tao-moi',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
-        title: 'Viết chương mới - TruyenHub',
+        title: appPageTitle('Viết chương mới'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component').then(
             (module) => module.AuthorChapterEditorPageComponent,
@@ -75,7 +76,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'truyen/:storyId/chuong/:chapterId',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_UPDATE_OWN)],
-        title: 'Chỉnh sửa chương - TruyenHub',
+        title: appPageTitle('Chỉnh sửa chương'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component').then(
             (module) => module.AuthorChapterEditorPageComponent,
@@ -84,7 +85,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'truyen/:storyId/chuong',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
-        title: 'Quản lý chương - TruyenHub',
+        title: appPageTitle('Quản lý chương'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-story-chapters-page/author-story-chapters-page.component').then(
             (module) => module.AuthorStoryChaptersPageComponent,
@@ -93,7 +94,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       {
         path: 'truyen/:storyId',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.STORY_UPDATE_OWN)],
-        title: 'Chỉnh sửa truyện - TruyenHub',
+        title: appPageTitle('Chỉnh sửa truyện'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component').then(
             (module) => module.AuthorStoryEditorPageComponent,
@@ -101,7 +102,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       },
       {
         path: 'truyen',
-        title: 'Truyện của tôi - TruyenHub',
+        title: appPageTitle('Truyện của tôi'),
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-stories-page/author-stories-page.component').then(
             (module) => module.AuthorStoriesPageComponent,

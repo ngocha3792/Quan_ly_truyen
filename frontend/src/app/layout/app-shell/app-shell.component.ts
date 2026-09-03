@@ -3,6 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth.store';
+import {
+  APP_DEFAULT_PAGE_TITLE,
+  APP_DEFAULT_SEO_DESCRIPTION,
+} from '../../core/config/app-identity.constants';
 import { SeoService } from '../../core/seo/seo.service';
 import { AppFooterComponent } from '../footer/app-footer.component';
 import { AppHeaderComponent } from '../header/app-header.component';
@@ -43,14 +47,13 @@ export class AppShellComponent implements OnInit {
     const snapshot = activeRoute.snapshot;
     const description = snapshot.data['seoDescription'];
 
-    const title =
-      typeof snapshot.title === 'string' ? snapshot.title : 'TruyenHub - Đọc truyện online';
+    const title = typeof snapshot.title === 'string' ? snapshot.title : APP_DEFAULT_PAGE_TITLE;
     const canonicalPath = this.router.url.split(/[?#]/, 1)[0] || '/';
 
     if (typeof description !== 'string' || !description.trim()) {
       this.seo.apply({
         title,
-        description: 'TruyenHub - nền tảng đọc và quản lý truyện online.',
+        description: APP_DEFAULT_SEO_DESCRIPTION,
         canonicalPath,
         type: 'website',
         robots: 'noindex,nofollow',

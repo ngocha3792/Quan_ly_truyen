@@ -1,6 +1,6 @@
-<a routerLink="/" class="brand" aria-label="TruyenHub - Trang chủ">
+<a routerLink="/" class="brand" [attr.aria-label]="appName + ' - Trang chủ'">
   <span class="mark" aria-hidden="true"> <span></span><span></span> </span>
   @if (!compact()) {
-    <strong>TruyenHub</strong>
+    <strong>{{ appName }}</strong>
   }
 </a>

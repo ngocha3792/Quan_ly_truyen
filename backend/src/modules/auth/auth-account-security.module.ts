@@ -21,6 +21,7 @@ import {
   ResendRecoveryEmailCommandHandler,
   RevokeOtherSessionsCommandHandler,
   RevokeSessionCommandHandler,
+  SetCurrentSessionTrustCommandHandler,
   UpdateSecurityQuestionsCommandHandler,
   VerifyRecoveryEmailCommandHandler,
 } from './application';
@@ -63,6 +64,7 @@ import { PrismaAdminUserSecurityPersistence } from './infrastructure';
     GetSessionsQueryHandler,
     RevokeSessionCommandHandler,
     RevokeOtherSessionsCommandHandler,
+    SetCurrentSessionTrustCommandHandler,
     GetSecurityEventsQueryHandler,
     GetSecurityOverviewQueryHandler,
     GetSecurityQuestionCatalogQueryHandler,

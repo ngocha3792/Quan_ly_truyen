@@ -1,4 +1,8 @@
 import { registerAs } from '@nestjs/config';
+import {
+  CLOUDINARY_DEFAULTS,
+  CLOUDINARY_UPLOAD_PRESET_DEFAULTS,
+} from '@/common/constants';
 
 function parsePositiveInteger(
   value: string | undefined,
@@ -24,13 +28,16 @@ export default registerAs('cloudinary', () => ({
   apiKey: process.env.CLOUDINARY_API_KEY,
   apiSecret: process.env.CLOUDINARY_API_SECRET,
 
-  rootFolder: process.env.CLOUDINARY_ROOT_FOLDER ?? 'quan-ly-truyen',
+  rootFolder:
+    process.env.CLOUDINARY_ROOT_FOLDER ?? CLOUDINARY_DEFAULTS.ROOT_FOLDER,
 
-  signatureAlgorithm: process.env.CLOUDINARY_SIGNATURE_ALGORITHM ?? 'sha256',
+  signatureAlgorithm:
+    process.env.CLOUDINARY_SIGNATURE_ALGORITHM ??
+    CLOUDINARY_DEFAULTS.SIGNATURE_ALGORITHM,
 
   uploadIntentTtlSeconds: parsePositiveInteger(
     process.env.CLOUDINARY_UPLOAD_INTENT_TTL_SECONDS,
-    300,
+    CLOUDINARY_DEFAULTS.UPLOAD_INTENT_TTL_SECONDS,
   ),
 
   /**
@@ -46,44 +53,54 @@ export default registerAs('cloudinary', () => ({
    */
   readyOrphanGraceSeconds: parsePositiveInteger(
     process.env.CLOUDINARY_READY_ORPHAN_GRACE_SECONDS,
-    3600,
+    CLOUDINARY_DEFAULTS.READY_ORPHAN_GRACE_SECONDS,
   ),
 
   webhookSignatureTtlSeconds: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_SIGNATURE_TTL_SECONDS,
-    300,
+    CLOUDINARY_DEFAULTS.WEBHOOK_SIGNATURE_TTL_SECONDS,
   ),
 
   webhookPollIntervalMs: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_POLL_INTERVAL_MS,
-    1000,
+    CLOUDINARY_DEFAULTS.WEBHOOK_POLL_INTERVAL_MS,
   ),
   webhookBatchSize: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_BATCH_SIZE,
-    100,
+    CLOUDINARY_DEFAULTS.WEBHOOK_BATCH_SIZE,
   ),
   webhookMaxAttempts: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_MAX_ATTEMPTS,
-    5,
+    CLOUDINARY_DEFAULTS.WEBHOOK_MAX_ATTEMPTS,
   ),
   webhookRetryBaseMs: parsePositiveInteger(
     process.env.CLOUDINARY_WEBHOOK_RETRY_BASE_MS,
-    5000,
+    CLOUDINARY_DEFAULTS.WEBHOOK_RETRY_BASE_MS,
   ),
   deleteMaxAttempts: parsePositiveInteger(
     process.env.CLOUDINARY_DELETE_MAX_ATTEMPTS,
-    5,
+    CLOUDINARY_DEFAULTS.DELETE_MAX_ATTEMPTS,
   ),
   deleteRetryBaseMs: parsePositiveInteger(
     process.env.CLOUDINARY_DELETE_RETRY_BASE_MS,
-    5000,
+    CLOUDINARY_DEFAULTS.DELETE_RETRY_BASE_MS,
   ),
 
   uploadPresets: {
-    avatar: process.env.CLOUDINARY_AVATAR_UPLOAD_PRESET,
-    authorBanner: process.env.CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET,
-    storyCover: process.env.CLOUDINARY_STORY_COVER_UPLOAD_PRESET,
-    chapterImage: process.env.CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET,
-    attachment: process.env.CLOUDINARY_ATTACHMENT_UPLOAD_PRESET,
+    avatar:
+      process.env.CLOUDINARY_AVATAR_UPLOAD_PRESET ??
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.AVATAR,
+    authorBanner:
+      process.env.CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET ??
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.AUTHOR_BANNER,
+    storyCover:
+      process.env.CLOUDINARY_STORY_COVER_UPLOAD_PRESET ??
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.STORY_COVER,
+    chapterImage:
+      process.env.CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET ??
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.CHAPTER_IMAGE,
+    attachment:
+      process.env.CLOUDINARY_ATTACHMENT_UPLOAD_PRESET ??
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.ATTACHMENT,
   },
 }));

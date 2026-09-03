@@ -15,6 +15,10 @@ export enum AuthAuditAction {
 
   SESSION_REVOKED = 'auth.session.revoked',
 
+  DEVICE_TRUSTED = 'auth.device.trusted',
+
+  DEVICE_TRUST_REVOKED = 'auth.device.trust_revoked',
+
   LOGOUT = 'auth.logout',
 
   LOGOUT_ALL = 'auth.logout_all',

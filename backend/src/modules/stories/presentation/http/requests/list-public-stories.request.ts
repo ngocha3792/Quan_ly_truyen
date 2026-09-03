@@ -13,6 +13,11 @@ import type {
   PublicStoryListSort,
   PublicStoryListStatus,
 } from '../../../application';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 
 const PUBLIC_STORY_SORTS: readonly PublicStoryListSort[] = [
   'latest',
@@ -66,12 +71,12 @@ export class ListPublicStoriesRequest {
   @IsInt()
   @Min(1)
   @Max(100000)
-  page: number = 1;
+  page: number = DEFAULT_PAGE;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  pageSize: number = 20;
+  @Max(MAX_PAGE_LIMIT)
+  pageSize: number = DEFAULT_PAGE_LIMIT;
 }

@@ -10,6 +10,8 @@ import { ContentLayoutComponent } from '../../../../../shared/components/content
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 
 import { provideNotifications } from '../../data-access/notifications.providers';
 
@@ -33,6 +35,8 @@ import { NotificationsToolbarComponent } from '../../ui/notifications-toolbar/no
     PageHeadingComponent,
     ContentLayoutComponent,
     PaginationComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
 
     NotificationsToolbarComponent,
     NotificationsListComponent,

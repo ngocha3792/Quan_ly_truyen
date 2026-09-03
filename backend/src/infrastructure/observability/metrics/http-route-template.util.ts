@@ -26,8 +26,8 @@ export function shouldSkipHttpObservability(request: RoutedRequest): boolean {
   );
   return (
     path === '/internal/metrics' ||
-    path === '/api/v1/health/live' ||
-    path === '/api/v1/health/ready'
+    path === API_PATHS.HEALTH_LIVE ||
+    path === API_PATHS.HEALTH_READY
   );
 }
 
@@ -45,3 +45,4 @@ function readRoutePath(value: unknown): string | undefined {
 function stripQuery(value: string): string {
   return value.split('?', 1)[0] ?? '';
 }
+import { API_PATHS } from '@/common/constants';

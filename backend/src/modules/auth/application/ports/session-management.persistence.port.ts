@@ -18,6 +18,8 @@ export interface ManagedSessionRecord {
   createdAt: Date;
 
   expiresAt: Date;
+
+  trusted: boolean;
 }
 
 export interface RevokeUserSessionInput {
@@ -61,4 +63,11 @@ export interface SessionManagementPersistencePort {
   revokeUserSession(input: RevokeUserSessionInput): Promise<boolean>;
 
   revokeOtherUserSessions(input: RevokeOtherUserSessionsInput): Promise<number>;
+
+  setCurrentSessionTrusted(input: {
+    userId: string;
+    sessionId: string;
+    trusted: boolean;
+    changedAt: Date;
+  }): Promise<boolean>;
 }

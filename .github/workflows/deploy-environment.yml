@@ -1,6 +1,14 @@
 name: Deploy Environment
 
 on:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+    types:
+      - completed
+
   workflow_dispatch:
     inputs:
       environment:
@@ -27,12 +35,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: deploy-${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
   cancel-in-progress: false
 
 jobs:
   verify:
     name: Verify release candidate
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -43,13 +55,16 @@ jobs:
 
     outputs:
       source_sha: ${{ steps.source.outputs.sha }}
+      environment: ${{ steps.target.outputs.environment }}
+      deployment_mode: ${{ steps.target.outputs.deployment_mode }}
 
     steps:
       - name: Validate deployment policy
+        id: target
         shell: bash
         env:
-          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
-          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
+          DEPLOY_ENVIRONMENT: ${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
+          DEPLOYMENT_MODE: ${{ github.event_name == 'workflow_run' && 'Registry' || inputs.deployment_mode }}
         run: |
           set -euo pipefail
 
@@ -58,10 +73,13 @@ jobs:
             exit 1
           fi
 
+          echo "environment=${DEPLOY_ENVIRONMENT}" >> "${GITHUB_OUTPUT}"
+          echo "deployment_mode=${DEPLOYMENT_MODE}" >> "${GITHUB_OUTPUT}"
+
       - name: Checkout release candidate
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.source_sha }}
           fetch-depth: 0
 
       - name: Setup Node.js for release policy
@@ -72,7 +90,7 @@ jobs:
       - name: Verify Production V1 scope policy
         shell: bash
         env:
-          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          DEPLOY_ENVIRONMENT: ${{ steps.target.outputs.environment }}
         run: |
           set -euo pipefail
 
@@ -86,7 +104,7 @@ jobs:
         id: source
         shell: bash
         env:
-          REQUESTED_SHA: ${{ inputs.source_sha }}
+          REQUESTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.source_sha }}
         run: |
           set -euo pipefail
 
@@ -153,11 +171,11 @@ jobs:
           echo "Verified CI: $(jq -r '.html_url' <<<"${successful_run}")"
 
       - name: Setup Docker Buildx
-        if: inputs.deployment_mode == 'Registry'
+        if: github.event_name == 'workflow_dispatch' && inputs.deployment_mode == 'Registry'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR for manifest verification
-        if: inputs.deployment_mode == 'Registry'
+        if: github.event_name == 'workflow_dispatch' && inputs.deployment_mode == 'Registry'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -165,7 +183,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Require all immutable application images
-        if: inputs.deployment_mode == 'Registry'
+        if: github.event_name == 'workflow_dispatch' && inputs.deployment_mode == 'Registry'
         shell: bash
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
@@ -185,14 +203,99 @@ jobs:
             docker buildx imagetools inspect "${image}" >/dev/null
           done
 
-  deploy:
-    name: Deploy ${{ inputs.environment }}
+  publish-images:
+    name: Publish ${{ matrix.name }}
+    if: github.event_name == 'workflow_run'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: backend runtime
+            image: quan-ly-truyen-backend
+            context: backend
+            dockerfile: backend/Dockerfile
+            target: runtime
+            node_image: node:24.15.0-bookworm-slim
+            cache_scope: cd-backend-runtime
+          - name: backend migrations
+            image: quan-ly-truyen-backend-migrate
+            context: backend
+            dockerfile: backend/Dockerfile
+            target: migrate
+            node_image: node:24.15.0-bookworm-slim
+            cache_scope: cd-backend-migrate
+          - name: frontend runtime
+            image: quan-ly-truyen-frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+            target: runtime
+            node_image: node:24.15.0-alpine
+            cache_scope: cd-frontend-runtime
+
+    steps:
+      - name: Checkout verified source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+          fetch-depth: 1
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve lowercase image name
+        id: image
+        shell: bash
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "name=ghcr.io/${owner}/${IMAGE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ needs.verify.outputs.source_sha }}
+          build-args: NODE_IMAGE=${{ matrix.node_image }}
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+          provenance: mode=max
+          sbom: true
+
+  deploy:
+    name: Deploy ${{ needs.verify.outputs.environment }}
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      (needs.publish-images.result == 'success' || needs.publish-images.result == 'skipped')
+    needs:
+      - verify
+      - publish-images
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     environment:
-      name: ${{ inputs.environment }}
+      name: ${{ needs.verify.outputs.environment }}
 
     permissions:
       contents: read
@@ -378,7 +481,7 @@ jobs:
           REMOTE
 
       - name: Authenticate deployment host to GHCR
-        if: inputs.deployment_mode == 'Registry'
+        if: needs.verify.outputs.deployment_mode == 'Registry'
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -403,8 +506,8 @@ jobs:
       - name: Deploy verified release
         shell: bash
         env:
-          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
-          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
+          DEPLOY_ENVIRONMENT: ${{ needs.verify.outputs.environment }}
+          DEPLOYMENT_MODE: ${{ needs.verify.outputs.deployment_mode }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -438,8 +541,8 @@ jobs:
         shell: bash
         env:
           SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
-          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
-          DEPLOYMENT_MODE: ${{ inputs.deployment_mode }}
+          DEPLOY_ENVIRONMENT: ${{ needs.verify.outputs.environment }}
+          DEPLOYMENT_MODE: ${{ needs.verify.outputs.deployment_mode }}
         run: |
           {
             echo "## Deployment complete"

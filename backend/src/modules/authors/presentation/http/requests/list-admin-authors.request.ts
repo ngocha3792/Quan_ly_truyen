@@ -10,6 +10,11 @@ import {
   MaxLength,
 } from 'class-validator';
 import { AuthorLifecycleStatus } from '../../../domain';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 
 export class ListAdminAuthorsRequest {
   @IsOptional()
@@ -32,11 +37,11 @@ export class ListAdminAuthorsRequest {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
+  page = DEFAULT_PAGE;
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  pageSize = 20;
+  @Max(MAX_PAGE_LIMIT)
+  pageSize = DEFAULT_PAGE_LIMIT;
 }

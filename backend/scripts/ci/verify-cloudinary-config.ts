@@ -1,7 +1,13 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { config as loadEnvironment } from 'dotenv';
+import path from 'node:path';
+import { CLOUDINARY_UPLOAD_PRESET_DEFAULTS } from '@/common/constants';
 
-loadEnvironment();
+const envFile =
+  process.argv
+    .find((argument) => argument.startsWith('--env-file='))
+    ?.slice('--env-file='.length) ?? '.env';
+loadEnvironment({ path: path.resolve(process.cwd(), envFile) });
 
 async function main(): Promise<void> {
   if (process.env.CLOUDINARY_ENABLED !== 'true') {
@@ -12,11 +18,16 @@ async function main(): Promise<void> {
   const apiKey = requireVariable('CLOUDINARY_API_KEY');
   const apiSecret = requireVariable('CLOUDINARY_API_SECRET');
   const expected = [
-    requireVariable('CLOUDINARY_AVATAR_UPLOAD_PRESET'),
-    requireVariable('CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET'),
-    requireVariable('CLOUDINARY_STORY_COVER_UPLOAD_PRESET'),
-    requireVariable('CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET'),
-    requireVariable('CLOUDINARY_ATTACHMENT_UPLOAD_PRESET'),
+    process.env.CLOUDINARY_AVATAR_UPLOAD_PRESET?.trim() ||
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.AVATAR,
+    process.env.CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET?.trim() ||
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.AUTHOR_BANNER,
+    process.env.CLOUDINARY_STORY_COVER_UPLOAD_PRESET?.trim() ||
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.STORY_COVER,
+    process.env.CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET?.trim() ||
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.CHAPTER_IMAGE,
+    process.env.CLOUDINARY_ATTACHMENT_UPLOAD_PRESET?.trim() ||
+      CLOUDINARY_UPLOAD_PRESET_DEFAULTS.ATTACHMENT,
   ];
   cloudinary.config({
     cloud_name: cloudName,
@@ -71,8 +82,8 @@ function isUploadPreset(
 }
 
 function requireVariable(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is required`);
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required in ${envFile}`);
   return value;
 }
 

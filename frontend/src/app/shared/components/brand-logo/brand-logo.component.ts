@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { APP_NAME } from '../../../core/config/app-identity.constants';
 
 @Component({
   selector: 'app-brand-logo',
@@ -11,4 +12,5 @@ import { RouterLink } from '@angular/router';
 })
 export class BrandLogoComponent {
   readonly compact = input(false);
+  protected readonly appName = APP_NAME;
 }

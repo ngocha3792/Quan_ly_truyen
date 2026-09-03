@@ -17,6 +17,7 @@ export interface Story {
   readonly views: number;
   readonly rating: number;
   readonly chapterCount?: number;
+  readonly followers?: number;
   readonly status: 'ONGOING' | 'COMPLETED' | 'HIATUS';
   readonly badge?: 'NEW' | 'HOT' | 'FULL';
 }

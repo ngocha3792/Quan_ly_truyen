@@ -178,6 +178,14 @@ Release thủ công trên host:
 
 ## GitHub deployment environments
 
+Mỗi lần workflow `CI` hoàn tất thành công cho một commit được push lên `main`, workflow
+`Deploy Environment` tự động build và push ba image immutable theo đúng Git SHA, sau đó deploy
+environment `production`. Không cần `git pull`, build source hoặc chạy migration thủ công trên VPS.
+
+Đường `workflow_dispatch` vẫn được giữ lại để redeploy staging/production theo một SHA cụ thể.
+Nếu GitHub Environment `production` có required reviewers, deployment tự động sẽ dừng ở bước chờ
+approval; bỏ protection đó nếu muốn hoàn toàn hands-off.
+
 Workflow `Deploy Environment` yêu cầu GitHub Environments `staging` và `production`. Mỗi environment cấu hình riêng các secrets sau:
 
 ```text

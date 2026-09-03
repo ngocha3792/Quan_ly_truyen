@@ -20,6 +20,13 @@
   </div>
 }
 
+@if (trustError() || trustSuccess()) {
+  <div class="alert" [class.error-alert]="trustError()" [class.success-alert]="trustSuccess()">
+    <span>{{ trustError() || trustSuccess() }}</span>
+    <button type="button" (click)="clearTrustMessages()">Đóng</button>
+  </div>
+}
+
 @if (store.loading()) {
   <section class="loading-card">
     <span class="spinner"></span>
@@ -59,6 +66,15 @@
 
       @if (store.currentSession(); as currentSession) {
         <app-current-session-card [session]="currentSession" />
+        <div class="trust-current-device">
+          <div>
+            <strong>{{ currentSession.trusted ? 'Thiết bị này đang được tin cậy' : 'Tin cậy thiết bị này' }}</strong>
+            <span>Trạng thái tin cậy hết hạn cùng phiên đăng nhập và có thể thu hồi bất cứ lúc nào.</span>
+          </div>
+          <button type="button" [disabled]="trustBusy()" (click)="toggleCurrentDeviceTrust()">
+            {{ currentSession.trusted ? 'Bỏ tin cậy' : 'Đánh dấu tin cậy' }}
+          </button>
+        </div>
       }
 
       <section class="sessions-card">

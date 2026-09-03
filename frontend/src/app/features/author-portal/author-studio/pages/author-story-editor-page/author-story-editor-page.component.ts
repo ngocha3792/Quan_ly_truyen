@@ -15,9 +15,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthorStoryEditorStore } from '../../data-access/author-story-editor.store';
 import {
+  AUTHOR_STORY_CONTRIBUTOR_ROLES,
   AuthorManagedStory,
   AuthorStoryCategory,
   AuthorStoryDraftInput,
+  AuthorStoryContributor,
+  AuthorStoryContributorRole,
   AuthorStoryTag,
 } from '../../domain/author-story-management.models';
 
@@ -44,6 +47,13 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
     title: ['', [Validators.required, Validators.maxLength(255)]],
     synopsis: [''],
   });
+  protected readonly contributorForm = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
+    role: ['EDITOR' as AuthorStoryContributorRole, Validators.required],
+    creditName: ['', Validators.maxLength(120)],
+    canEdit: [true],
+  });
+  protected readonly contributorRoles = AUTHOR_STORY_CONTRIBUTOR_ROLES;
   protected readonly selectedCategoryIds = signal<readonly string[]>([]);
   protected readonly selectedTagIds = signal<readonly string[]>([]);
   protected readonly coverFile = signal<File | null>(null);
@@ -196,6 +206,47 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
       .subscribe({ error: () => undefined });
   }
 
+  protected saveContributor(): void {
+    if (!this.storyId || this.contributorForm.invalid || this.store.contributorBusy()) {
+      this.contributorForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.contributorForm.getRawValue();
+    this.store
+      .upsertContributor(this.storyId, {
+        email: value.email.trim(),
+        role: value.role,
+        creditName: value.creditName.trim() || undefined,
+        canEdit: value.canEdit,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () =>
+          this.contributorForm.reset({
+            email: '',
+            role: 'EDITOR',
+            creditName: '',
+            canEdit: true,
+          }),
+        error: () => undefined,
+      });
+  }
+
+  protected removeContributor(contributor: AuthorStoryContributor): void {
+    if (!this.storyId || this.store.contributorBusy()) return;
+    if (!window.confirm(`Gỡ ${contributor.displayName} khỏi vai trò này?`)) return;
+
+    this.store
+      .removeContributor(this.storyId, contributor.userId, contributor.role)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
+  }
+
+  protected contributorRoleLabel(role: AuthorStoryContributorRole): string {
+    return CONTRIBUTOR_ROLE_LABELS[role];
+  }
+
   protected updateAuthorNote(event: Event): void {
     this.authorNote.set((event.target as HTMLTextAreaElement).value);
   }
@@ -244,3 +295,10 @@ function validateCover(file: File): string | null {
   const extensionValid = ['jpg', 'jpeg', 'png', 'webp'].includes(extension ?? '');
   return mimeValid && extensionValid ? null : 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
 }
+
+const CONTRIBUTOR_ROLE_LABELS: Record<AuthorStoryContributorRole, string> = {
+  CO_AUTHOR: 'Đồng tác giả',
+  EDITOR: 'Biên tập viên',
+  TRANSLATOR: 'Dịch giả',
+  ILLUSTRATOR: 'Họa sĩ',
+};

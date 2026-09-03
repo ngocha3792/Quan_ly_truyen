@@ -166,5 +166,64 @@
         }
       </aside>
     </form>
+
+    @if (store.story(); as story) {
+      <section class="panel contributors-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Cộng tác viên</h2>
+            <p>Thêm người đã có tài khoản bằng email và phân vai cho truyện.</p>
+          </div>
+        </div>
+
+        <form class="contributor-form" [formGroup]="contributorForm" (ngSubmit)="saveContributor()">
+          <label>
+            <span>Email tài khoản</span>
+            <input type="email" formControlName="email" placeholder="contributor@example.com" />
+          </label>
+          <label>
+            <span>Vai trò</span>
+            <select formControlName="role">
+              @for (role of contributorRoles; track role) {
+                <option [value]="role">{{ contributorRoleLabel(role) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>Tên ghi công</span>
+            <input type="text" formControlName="creditName" placeholder="Để trống để dùng tên hồ sơ" />
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="canEdit" />
+            <span>Cho phép chỉnh sửa nội dung</span>
+          </label>
+          <button class="primary-action" type="submit" [disabled]="store.contributorBusy()">
+            {{ store.contributorBusy() ? 'Đang lưu...' : 'Thêm / cập nhật' }}
+          </button>
+        </form>
+
+        <div class="contributor-list">
+          @for (contributor of store.contributors(); track contributor.userId + contributor.role) {
+            <article class="contributor-item">
+              <div>
+                <strong>{{ contributor.creditName || contributor.displayName }}</strong>
+                <span>{{ contributor.email }} · {{ contributorRoleLabel(contributor.role) }}</span>
+                <small>{{ contributor.canEdit ? 'Có quyền chỉnh sửa' : 'Chỉ ghi công' }}</small>
+              </div>
+              <button
+                type="button"
+                class="text-danger"
+                [disabled]="store.contributorBusy()"
+                (click)="removeContributor(contributor)"
+              >
+                Gỡ
+              </button>
+            </article>
+          } @empty {
+            <p class="empty-state">Truyện chưa có cộng tác viên.</p>
+          }
+        </div>
+      </section>
+    }
   }
 </main>

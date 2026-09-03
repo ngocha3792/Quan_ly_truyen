@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash, randomBytes } from 'node:crypto';
 
 import { ConfigService } from '@nestjs/config';
 
@@ -39,7 +40,7 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
     now: Date,
   ): Promise<readonly ManagedSessionRecord[]> {
     try {
-      return await this.prisma.session.findMany({
+      const sessions = await this.prisma.session.findMany({
         where: {
           userId,
 
@@ -66,6 +67,10 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
           createdAt: true,
 
           expiresAt: true,
+
+          trustedDevice: {
+            select: { revokedAt: true, expiresAt: true },
+          },
         },
 
         orderBy: [
@@ -80,6 +85,13 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
 
         take: this.listLimit,
       });
+      return sessions.map(({ trustedDevice, ...session }) => ({
+        ...session,
+        trusted:
+          trustedDevice !== null &&
+          trustedDevice.revokedAt === null &&
+          trustedDevice.expiresAt > now,
+      }));
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'auth-list-user-sessions',
@@ -290,6 +302,106 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
         operation: 'auth-revoke-user-session',
 
         resource: 'Phiên đăng nhập',
+      });
+    }
+  }
+
+  async setCurrentSessionTrusted(input: {
+    userId: string;
+    sessionId: string;
+    trusted: boolean;
+    changedAt: Date;
+  }): Promise<boolean> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const session = await tx.session.findFirst({
+          where: {
+            id: input.sessionId,
+            userId: input.userId,
+            revokedAt: null,
+            expiresAt: { gt: input.changedAt },
+          },
+          select: {
+            id: true,
+            deviceId: true,
+            deviceName: true,
+            userAgent: true,
+            expiresAt: true,
+            trustedDeviceId: true,
+          },
+        });
+        if (!session) return false;
+
+        if (!input.trusted) {
+          if (!session.trustedDeviceId) return true;
+          await tx.trustedDevice.updateMany({
+            where: { id: session.trustedDeviceId, userId: input.userId, revokedAt: null },
+            data: {
+              revokedAt: input.changedAt,
+              revokedReason: 'user_revoked',
+              lastUsedAt: input.changedAt,
+            },
+          });
+          await tx.session.updateMany({
+            where: { userId: input.userId, trustedDeviceId: session.trustedDeviceId },
+            data: { trustedDeviceId: null },
+          });
+          await this.auditWriter.write(tx, {
+            actorId: input.userId,
+            actorSessionId: input.sessionId,
+            action: AuthAuditAction.DEVICE_TRUST_REVOKED,
+            entityType: 'trusted_device',
+            entityId: session.trustedDeviceId,
+            newValues: { trusted: false, revokedAt: input.changedAt },
+          });
+          return true;
+        }
+
+        const deviceId = session.deviceId ?? session.id;
+        const hash = (value: string): string =>
+          createHash('sha256').update(value).digest('hex');
+        const trustedDevice = await tx.trustedDevice.upsert({
+          where: { userId_deviceId: { userId: input.userId, deviceId } },
+          create: {
+            userId: input.userId,
+            deviceId,
+            deviceName: session.deviceName,
+            fingerprintHash: hash(`${input.userId}:${deviceId}:${session.userAgent ?? ''}`),
+            trustTokenHash: hash(randomBytes(32).toString('base64url')),
+            trustedAt: input.changedAt,
+            lastUsedAt: input.changedAt,
+            expiresAt: session.expiresAt,
+          },
+          update: {
+            deviceName: session.deviceName,
+            fingerprintHash: hash(`${input.userId}:${deviceId}:${session.userAgent ?? ''}`),
+            trustTokenHash: hash(randomBytes(32).toString('base64url')),
+            trustedAt: input.changedAt,
+            lastUsedAt: input.changedAt,
+            expiresAt: session.expiresAt,
+            revokedAt: null,
+            revokedReason: null,
+          },
+          select: { id: true },
+        });
+        await tx.session.update({
+          where: { id: session.id },
+          data: { deviceId, trustedDeviceId: trustedDevice.id },
+        });
+        await this.auditWriter.write(tx, {
+          actorId: input.userId,
+          actorSessionId: input.sessionId,
+          action: AuthAuditAction.DEVICE_TRUSTED,
+          entityType: 'trusted_device',
+          entityId: trustedDevice.id,
+          newValues: { trusted: true, expiresAt: session.expiresAt },
+        });
+        return true;
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'auth-set-current-session-trusted',
+        resource: 'Thiết bị tin cậy',
       });
     }
   }

@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 
 import { AppEnvironment } from '@/common/enums';
+import { API_PATHS, APP_NAME, CLOUDINARY_DEFAULTS } from '@/common/constants';
 
 function parseBooleanValue(value: unknown): boolean {
   if (typeof value === 'boolean') {
@@ -210,7 +211,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  AUTH_COOKIE_PATH = '/api/v1/auth';
+  AUTH_COOKIE_PATH = API_PATHS.AUTH;
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
   AUTH_CSRF_ENABLED = false;
@@ -659,7 +660,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  CLOUDINARY_ROOT_FOLDER = 'quan-ly-truyen';
+  CLOUDINARY_ROOT_FOLDER = APP_NAME;
 
   @IsString()
   @IsNotEmpty()
@@ -670,10 +671,13 @@ export class EnvironmentVariables {
   @Min(1)
   CLOUDINARY_UPLOAD_INTENT_TTL_SECONDS = 300;
 
-  @Transform(({ value }) => parseIntegerValue(value ?? 3600))
+  @Transform(({ value }) =>
+    parseIntegerValue(value ?? CLOUDINARY_DEFAULTS.READY_ORPHAN_GRACE_SECONDS),
+  )
   @IsInt()
   @Min(60)
-  CLOUDINARY_READY_ORPHAN_GRACE_SECONDS = 3600;
+  CLOUDINARY_READY_ORPHAN_GRACE_SECONDS =
+    CLOUDINARY_DEFAULTS.READY_ORPHAN_GRACE_SECONDS;
 
   @Transform(({ value }) => parseIntegerValue(value ?? 300))
   @IsInt()
@@ -1145,16 +1149,15 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     );
   }
 
+  if (config.NODE_ENV === 'production' && !config.CLOUDINARY_ENABLED) {
+    throw new Error('CLOUDINARY_ENABLED must be true in production');
+  }
+
   if (config.CLOUDINARY_ENABLED) {
     const requiredVars: (keyof EnvironmentVariables)[] = [
       'CLOUDINARY_CLOUD_NAME',
       'CLOUDINARY_API_KEY',
       'CLOUDINARY_API_SECRET',
-      'CLOUDINARY_AVATAR_UPLOAD_PRESET',
-      'CLOUDINARY_AUTHOR_BANNER_UPLOAD_PRESET',
-      'CLOUDINARY_STORY_COVER_UPLOAD_PRESET',
-      'CLOUDINARY_CHAPTER_IMAGE_UPLOAD_PRESET',
-      'CLOUDINARY_ATTACHMENT_UPLOAD_PRESET',
     ];
 
     for (const key of requiredVars) {
@@ -1263,9 +1266,9 @@ function validateProductionGateRules(config: EnvironmentVariables): void {
     throw new Error('AUTH_COOKIE_SECURE must be true in production');
   }
 
-  if (config.AUTH_COOKIE_PATH !== '/api/v1/auth') {
+  if (config.AUTH_COOKIE_PATH !== API_PATHS.AUTH) {
     throw new Error(
-      'AUTH_COOKIE_PATH must be exactly /api/v1/auth in production',
+      `AUTH_COOKIE_PATH must be exactly ${API_PATHS.AUTH} in production`,
     );
   }
 

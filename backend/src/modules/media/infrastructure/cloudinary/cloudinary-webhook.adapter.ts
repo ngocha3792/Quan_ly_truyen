@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CLOUDINARY_DEFAULTS } from '@/common/constants';
 import { Prisma } from '@/generated/prisma/client';
 import { InvalidInputException, StorageException } from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database/prisma';
@@ -39,7 +40,7 @@ export class CloudinaryWebhookAdapter implements MediaWebhookPort {
     const timestamp = Number(input.timestamp);
     const validFor = this.configService.get<number>(
       'cloudinary.webhookSignatureTtlSeconds',
-      300,
+      CLOUDINARY_DEFAULTS.WEBHOOK_SIGNATURE_TTL_SECONDS,
     );
     const nowSeconds = Math.floor(Date.now() / 1000);
     if (

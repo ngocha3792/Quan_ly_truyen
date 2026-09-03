@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import { API_PATHS } from '@/common/constants';
 
 import type { MaintenanceConfig } from './config.types';
 
@@ -12,8 +13,8 @@ export default registerAs(MAINTENANCE_CONFIG_KEY, (): MaintenanceConfig => ({
     process.env.MAINTENANCE_BYPASS_HEADER ?? 'x-maintenance-key',
   bypassToken: process.env.MAINTENANCE_BYPASS_TOKEN?.trim() || undefined,
   allowedPaths: [
-    '/api/v1/health',
-    '/api/v1/health/live',
-    '/api/v1/health/ready',
+    API_PATHS.HEALTH,
+    API_PATHS.HEALTH_LIVE,
+    API_PATHS.HEALTH_READY,
   ],
 }));

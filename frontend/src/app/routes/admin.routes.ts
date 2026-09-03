@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { appPageTitle } from '../core/config/app-identity.constants';
 
 import { authenticatedGuard } from '../core/auth/authenticated.guard';
 import { AUTH_PERMISSIONS } from '../core/auth/authorization.models';
@@ -29,7 +30,7 @@ const authorApplicationGuards = [
 export const ADMIN_ROUTES: Routes = [
   {
     path: 'admin/audit-logs',
-    title: 'Audit Logs - TruyenHub',
+    title: appPageTitle('Audit Logs'),
     canActivate: auditLogReadGuards,
     loadComponent: () =>
       import('../features/admin/audit-logs/pages/list/admin-audit-logs-list-page.component').then(
@@ -38,7 +39,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/audit-logs/:id',
-    title: 'Chi tiết Audit Log - TruyenHub',
+    title: appPageTitle('Chi tiết Audit Log'),
     canActivate: auditLogReadGuards,
     loadComponent: () =>
       import('../features/admin/audit-logs/pages/detail/admin-audit-log-detail-page.component').then(
@@ -47,7 +48,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/reports',
-    title: 'Báo cáo bình luận - TruyenHub',
+    title: appPageTitle('Báo cáo bình luận'),
     canActivate: reportReviewGuards,
     loadComponent: () =>
       import('../features/admin/reports/pages/list/admin-reports-list-page.component').then(
@@ -56,7 +57,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/reports/:reportId',
-    title: 'Chi tiết báo cáo - TruyenHub',
+    title: appPageTitle('Chi tiết báo cáo'),
     canActivate: reportReviewGuards,
     loadComponent: () =>
       import('../features/admin/reports/pages/detail/admin-report-detail-page.component').then(
@@ -65,7 +66,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/categories',
-    title: 'Quản lý thể loại - TruyenHub',
+    title: appPageTitle('Quản lý thể loại'),
     canActivate: categoryManagementGuards,
     loadComponent: () =>
       import('../features/admin/categories/pages/list/admin-categories-list-page.component').then(
@@ -74,7 +75,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/tags',
-    title: 'Quản lý tag - TruyenHub',
+    title: appPageTitle('Quản lý tag'),
     canActivate: tagManagementGuards,
     loadComponent: () =>
       import('../features/admin/tags/pages/list/admin-tags-list-page.component').then(
@@ -83,7 +84,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/stories',
-    title: 'Duyệt truyện - TruyenHub',
+    title: appPageTitle('Duyệt truyện'),
     canActivate: storyModerationGuards,
     loadComponent: () =>
       import('../features/admin/stories/pages/list/admin-stories-list-page.component').then(
@@ -92,7 +93,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/story-submissions/:submissionId',
-    title: 'Chi tiết duyệt truyện - TruyenHub',
+    title: appPageTitle('Chi tiết duyệt truyện'),
     canActivate: storyModerationGuards,
     loadComponent: () =>
       import('../features/admin/stories/pages/detail/admin-story-submission-detail-page.component').then(
@@ -101,7 +102,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/users',
-    title: 'Quản lý người dùng - TruyenHub',
+    title: appPageTitle('Quản lý người dùng'),
     canActivate: userManagementGuards,
     loadComponent: () =>
       import('../features/admin/users/pages/list/admin-users-list-page.component').then(
@@ -110,7 +111,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/users/:userId',
-    title: 'Chi tiết người dùng - TruyenHub',
+    title: appPageTitle('Chi tiết người dùng'),
     canActivate: userManagementGuards,
     loadComponent: () =>
       import('../features/admin/users/pages/detail/admin-user-detail-page.component').then(
@@ -119,7 +120,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/authors',
-    title: 'Quản lý tác giả - TruyenHub',
+    title: appPageTitle('Quản lý tác giả'),
     canActivate: authorManagementGuards,
     loadComponent: () =>
       import('../features/admin/authors/pages/list/admin-authors-list-page.component').then(
@@ -128,7 +129,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/authors/:authorId',
-    title: 'Chi tiết tác giả - TruyenHub',
+    title: appPageTitle('Chi tiết tác giả'),
     canActivate: authorManagementGuards,
     loadComponent: () =>
       import('../features/admin/authors/pages/detail/admin-author-detail-page.component').then(
@@ -137,7 +138,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/author-applications',
-    title: 'Xét duyệt hồ sơ tác giả - TruyenHub',
+    title: appPageTitle('Xét duyệt hồ sơ tác giả'),
     canActivate: authorApplicationGuards,
     loadComponent: () =>
       import('../features/admin/author-applications/pages/list/admin-author-application-list-page.component').then(
@@ -146,7 +147,7 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'admin/author-applications/:applicationId',
-    title: 'Chi tiết hồ sơ tác giả - TruyenHub',
+    title: appPageTitle('Chi tiết hồ sơ tác giả'),
     canActivate: authorApplicationGuards,
     loadComponent: () =>
       import('../features/admin/author-applications/pages/detail/admin-author-application-detail-page.component').then(

@@ -12,6 +12,7 @@ import { resolveAuthGuardState } from '../../../../../core/auth/auth-guard.util'
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { SeoService } from '../../../../../core/seo/seo.service';
+import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 import type {
   CommentReactionApiType,
   CommentReportReasonApi,
@@ -49,8 +50,8 @@ export class ChapterReaderPageComponent implements OnInit {
     const canonicalPath = `/truyen/${encodeURIComponent(view.story.slug)}/chuong/${view.chapter.number}`;
 
     this.seo.apply({
-      title: `${view.story.title} - ${chapterLabel} | TruyenHub`,
-      description: `Đọc ${chapterLabel} của ${view.story.title} online trên TruyenHub.`,
+      title: `${view.story.title} - ${chapterLabel} | ${APP_NAME}`,
+      description: `Đọc ${chapterLabel} của ${view.story.title} online trên ${APP_NAME}.`,
       canonicalPath,
       type: 'article',
     });

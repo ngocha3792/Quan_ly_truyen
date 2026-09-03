@@ -84,38 +84,50 @@ export class NotificationsFanoutProcessor extends WorkerHost {
     let batchNumber = 0;
 
     while (true) {
-      const follows = await this.prisma.userFollowAuthor.findMany({
+      const followers = await this.prisma.user.findMany({
         where: {
-          authorId: payload.authorId,
-          createdAt: { lte: publishedAt },
-          ...(cursorUserId ? { userId: { gt: cursorUserId } } : {}),
-        },
-        orderBy: { userId: 'asc' },
-        take: FANOUT_BATCH_SIZE,
-        select: {
-          userId: true,
-          user: {
-            select: {
-              status: true,
-              deletedAt: true,
-              notificationPreference: {
-                select: { newChapterEnabled: true, inAppEnabled: true },
+          ...(cursorUserId ? { id: { gt: cursorUserId } } : {}),
+          OR: [
+            {
+              authorFollows: {
+                some: {
+                  authorId: payload.authorId,
+                  createdAt: { lte: publishedAt },
+                },
               },
             },
+            {
+              storyFollows: {
+                some: {
+                  storyId: payload.storyId,
+                  createdAt: { lte: publishedAt },
+                },
+              },
+            },
+          ],
+        },
+        orderBy: { id: 'asc' },
+        take: FANOUT_BATCH_SIZE,
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+          notificationPreference: {
+            select: { newChapterEnabled: true, inAppEnabled: true },
           },
         },
       });
 
-      if (follows.length === 0) break;
+      if (followers.length === 0) break;
       batchNumber += 1;
-      cursorUserId = follows[follows.length - 1]?.userId;
+      cursorUserId = followers[followers.length - 1]?.id;
 
-      const eligible = follows.filter((follow) => {
-        const preference = follow.user.notificationPreference;
+      const eligible = followers.filter((follower) => {
+        const preference = follower.notificationPreference;
         return (
-          follow.userId !== payload.authorId &&
-          follow.user.status === AccountStatus.ACTIVE &&
-          follow.user.deletedAt === null &&
+          follower.id !== payload.authorId &&
+          follower.status === AccountStatus.ACTIVE &&
+          follower.deletedAt === null &&
           preference?.newChapterEnabled !== false &&
           preference?.inAppEnabled !== false
         );
@@ -124,9 +136,9 @@ export class NotificationsFanoutProcessor extends WorkerHost {
 
       const result = eligible.length
         ? await this.prisma.notification.createMany({
-            data: eligible.map((follow) => ({
-              dedupeKey: `new-chapter:${payload.chapterId}:${follow.userId}`,
-              userId: follow.userId,
+            data: eligible.map((follower) => ({
+              dedupeKey: `new-chapter:${payload.chapterId}:${follower.id}`,
+              userId: follower.id,
               type: 'new_chapter',
               title: `${author.penName} vừa đăng chương mới`,
               body: `${payload.storyTitle} — Chương ${payload.chapterNumber}: ${payload.chapterTitle}`,
@@ -153,7 +165,7 @@ export class NotificationsFanoutProcessor extends WorkerHost {
       insertedTotal += result.count;
 
       this.logger.log({
-        event: 'author-follower-notification.batch.completed',
+        event: 'chapter-follower-notification.batch.completed',
         outboxEventId: job.data.outboxEventId,
         chapterId: payload.chapterId,
         batchNumber,
@@ -161,7 +173,7 @@ export class NotificationsFanoutProcessor extends WorkerHost {
         insertedCount: result.count,
       });
 
-      if (follows.length < FANOUT_BATCH_SIZE) break;
+      if (followers.length < FANOUT_BATCH_SIZE) break;
     }
 
     return { inserted: insertedTotal, eligible: eligibleTotal };

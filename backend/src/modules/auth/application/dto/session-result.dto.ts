@@ -11,6 +11,7 @@ export interface SessionResultDto {
   lastUsedAt: Date | null;
   createdAt: Date;
   expiresAt: Date;
+  trusted: boolean;
 }
 
 export interface GetSessionsResultDto {

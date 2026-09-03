@@ -17,6 +17,7 @@ import { MfaSettingsStore } from '../../data-access/mfa-settings.store';
 import { MfaQrCodeComponent } from '../../../../shared/ui/mfa-qr-code/mfa-qr-code.component';
 import { OtpCodeInputComponent } from '../../ui/otp-code-input/otp-code-input.component';
 import { RecoveryCodesComponent } from '../../ui/recovery-codes/recovery-codes.component';
+import { APP_WEB_CLIENT_NAME } from '../../../../../../core/config/app-identity.constants';
 import { SecurityFeatureShellComponent } from '../../ui/security-feature-shell/security-feature-shell.component';
 import { SecurityPanelComponent } from '../../ui/security-panel/security-panel.component';
 
@@ -175,9 +176,9 @@ export class MfaSettingsPageComponent implements OnInit {
 
   private getDeviceName(): string {
     if (typeof navigator === 'undefined') {
-      return 'TruyenHub Web';
+      return APP_WEB_CLIENT_NAME;
     }
 
-    return `TruyenHub Web - ${navigator.platform || 'Browser'}`;
+    return `${APP_WEB_CLIENT_NAME} - ${navigator.platform || 'Browser'}`;
   }
 }

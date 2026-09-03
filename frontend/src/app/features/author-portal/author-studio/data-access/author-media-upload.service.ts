@@ -6,7 +6,12 @@ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import { AuthorStoryMedia } from '../domain/author-story-management.models';
 
-interface StoryCoverUploadIntent {
+const AUTHOR_MEDIA_PURPOSE = {
+  storyCover: 'STORY_COVER',
+  chapterImage: 'CHAPTER_IMAGE',
+} as const;
+
+interface AuthorMediaUploadIntent {
   readonly mediaAssetId: string;
   readonly uploadUrl: string;
   readonly apiKey: string;
@@ -21,7 +26,7 @@ interface StoryCoverUploadIntent {
   };
 }
 
-interface CloudinaryStoryCoverUploadResponse {
+interface CloudinaryUploadResponse {
   readonly public_id: string;
   readonly version: number;
   readonly signature: string;
@@ -29,40 +34,56 @@ interface CloudinaryStoryCoverUploadResponse {
 }
 
 @Injectable()
-export class AuthorStoryCoverUploadService {
+export class AuthorMediaUploadService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
 
-  upload(storyId: string, file: File): Observable<AuthorStoryMedia> {
-    return this.createIntent(storyId, file).pipe(
-      switchMap((intent: StoryCoverUploadIntent) =>
+  uploadStoryCover(storyId: string, file: File): Observable<AuthorStoryMedia> {
+    return this.upload(AUTHOR_MEDIA_PURPOSE.storyCover, storyId, file);
+  }
+
+  uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia> {
+    return this.upload(AUTHOR_MEDIA_PURPOSE.chapterImage, chapterId, file);
+  }
+
+  private upload(
+    purpose: (typeof AUTHOR_MEDIA_PURPOSE)[keyof typeof AUTHOR_MEDIA_PURPOSE],
+    ownerId: string,
+    file: File,
+  ): Observable<AuthorStoryMedia> {
+    return this.createIntent(purpose, ownerId, file).pipe(
+      switchMap((intent) =>
         this.uploadToCloudinary(intent, file).pipe(
-          switchMap((result: CloudinaryStoryCoverUploadResponse) => this.confirm(intent, result)),
+          switchMap((result) => this.confirm(intent, result)),
         ),
       ),
     );
   }
 
-  private createIntent(storyId: string, file: File): Observable<StoryCoverUploadIntent> {
+  private createIntent(
+    purpose: (typeof AUTHOR_MEDIA_PURPOSE)[keyof typeof AUTHOR_MEDIA_PURPOSE],
+    ownerId: string,
+    file: File,
+  ): Observable<AuthorMediaUploadIntent> {
     return this.http
-      .post<ApiSuccessEnvelope<StoryCoverUploadIntent>>(
+      .post<ApiSuccessEnvelope<AuthorMediaUploadIntent>>(
         `${this.config.apiBaseUrl}/media/upload-intents`,
         {
-          purpose: 'STORY_COVER',
-          ownerId: storyId,
+          purpose,
+          ownerId,
           originalName: file.name,
           declaredMimeType: resolveImageMimeType(file),
           declaredSizeBytes: file.size,
         },
-        { headers: idempotencyHeaders() },
+        { headers: new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() }) },
       )
-      .pipe(map((response: ApiSuccessEnvelope<StoryCoverUploadIntent>) => response.data));
+      .pipe(map((response) => response.data));
   }
 
   private uploadToCloudinary(
-    intent: StoryCoverUploadIntent,
+    intent: AuthorMediaUploadIntent,
     file: File,
-  ): Observable<CloudinaryStoryCoverUploadResponse> {
+  ): Observable<CloudinaryUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('api_key', intent.apiKey);
@@ -73,13 +94,12 @@ export class AuthorStoryCoverUploadService {
     formData.append('asset_folder', intent.parameters.asset_folder);
     formData.append('overwrite', String(intent.parameters.overwrite));
     formData.append('tags', intent.parameters.tags);
-
-    return this.http.post<CloudinaryStoryCoverUploadResponse>(intent.uploadUrl, formData);
+    return this.http.post<CloudinaryUploadResponse>(intent.uploadUrl, formData);
   }
 
   private confirm(
-    intent: StoryCoverUploadIntent,
-    result: CloudinaryStoryCoverUploadResponse,
+    intent: AuthorMediaUploadIntent,
+    result: CloudinaryUploadResponse,
   ): Observable<AuthorStoryMedia> {
     return this.http
       .post<ApiSuccessEnvelope<AuthorStoryMedia>>(
@@ -91,7 +111,7 @@ export class AuthorStoryCoverUploadService {
           resourceType: result.resource_type,
         },
       )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryMedia>) => response.data));
+      .pipe(map((response) => response.data));
   }
 }
 
@@ -102,8 +122,4 @@ function resolveImageMimeType(file: File): string {
   if (extension === 'png') return 'image/png';
   if (extension === 'webp') return 'image/webp';
   return 'application/octet-stream';
-}
-
-function idempotencyHeaders(): HttpHeaders {
-  return new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() });
 }

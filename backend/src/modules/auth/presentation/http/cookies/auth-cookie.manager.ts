@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CookieOptions, Response } from 'express';
 
-import { CSRF_HEADER_NAME } from '@/common/constants';
+import { API_PATHS, CSRF_HEADER_NAME } from '@/common/constants';
 import type { AuthConfig } from '@/config';
 
 import {
@@ -16,7 +16,7 @@ import {
 
 import { readCookieFromHeader } from './cookie-header-reader';
 
-const OAUTH_COOKIE_PATH = '/api/v1/auth/oauth';
+const OAUTH_COOKIE_PATH = API_PATHS.AUTH_OAUTH;
 
 @Injectable()
 export class AuthCookieManager {

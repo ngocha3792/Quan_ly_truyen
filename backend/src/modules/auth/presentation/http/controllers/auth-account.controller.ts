@@ -41,6 +41,8 @@ import {
   RevokeOtherSessionsCommandHandler,
   RevokeSessionCommand,
   RevokeSessionCommandHandler,
+  SetCurrentSessionTrustCommand,
+  SetCurrentSessionTrustCommandHandler,
 } from '../../../application';
 import type { CurrentUserResultDto } from '../../../application';
 
@@ -73,6 +75,7 @@ export class AuthAccountController {
 
     private readonly deleteAccountCommandHandler: DeleteAccountCommandHandler,
     private readonly getSecurityOverviewQueryHandler: GetSecurityOverviewQueryHandler,
+    private readonly setCurrentSessionTrust: SetCurrentSessionTrustCommandHandler,
   ) {}
 
   @Get('me')
@@ -124,8 +127,31 @@ export class AuthAccountController {
         lastUsedAt: session.lastUsedAt?.toISOString() ?? null,
         createdAt: session.createdAt.toISOString(),
         expiresAt: session.expiresAt.toISOString(),
+        trusted: session.trusted,
       })),
     };
+  }
+
+  @Post('sessions/current/trust')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async trustCurrentSession(
+    @CurrentUserId() userId: string | undefined,
+    @CurrentSessionId() sessionId: string | undefined,
+  ): Promise<void> {
+    await this.setCurrentSessionTrust.execute(
+      new SetCurrentSessionTrustCommand(userId, sessionId, true),
+    );
+  }
+
+  @Delete('sessions/current/trust')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async untrustCurrentSession(
+    @CurrentUserId() userId: string | undefined,
+    @CurrentSessionId() sessionId: string | undefined,
+  ): Promise<void> {
+    await this.setCurrentSessionTrust.execute(
+      new SetCurrentSessionTrustCommand(userId, sessionId, false),
+    );
   }
   @Delete('account')
   @Idempotent({

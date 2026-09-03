@@ -20,6 +20,7 @@ export class SessionResultMapper {
       lastUsedAt: session.lastUsedAt,
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
+      trusted: session.trusted,
     };
   }
 }

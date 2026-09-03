@@ -10,6 +10,9 @@ import {
   AuthorManagedChapterSummary,
   AuthorManagedStory,
   AuthorStoryDraftInput,
+  AuthorStoryContributor,
+  AuthorStoryContributorInput,
+  AuthorStoryContributorRole,
   AuthorStoryMedia,
   AuthorStoryMetadataCategory,
   AuthorStoryMetadataTag,
@@ -17,13 +20,13 @@ import {
   AuthorStoryUpdateInput,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
-import { AuthorStoryCoverUploadService } from './author-story-cover-upload.service';
+import { AuthorMediaUploadService } from './author-media-upload.service';
 
 @Injectable()
 export class AuthorStoryManagementHttpRepository implements AuthorStoryManagementRepository {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
-  private readonly coverUpload = inject(AuthorStoryCoverUploadService);
+  private readonly mediaUpload = inject(AuthorMediaUploadService);
   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
   private storyCreateRetry: CreateRetryState | null = null;
@@ -177,13 +180,47 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   }
 
   uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia> {
-    return this.coverUpload.upload(storyId, file);
+    return this.mediaUpload.uploadStoryCover(storyId, file);
+  }
+
+  uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia> {
+    return this.mediaUpload.uploadChapterImage(chapterId, file);
   }
 
   getMedia(mediaId: string): Observable<AuthorStoryMedia> {
     return this.http
       .get<ApiSuccessEnvelope<AuthorStoryMedia>>(`${this.config.apiBaseUrl}/media/${mediaId}`)
       .pipe(map((response: ApiSuccessEnvelope<AuthorStoryMedia>) => response.data));
+  }
+
+  listContributors(storyId: string): Observable<readonly AuthorStoryContributor[]> {
+    return this.http
+      .get<ApiSuccessEnvelope<readonly AuthorStoryContributor[]>>(
+        `${this.storiesUrl}/${storyId}/contributors`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  upsertContributor(
+    storyId: string,
+    input: AuthorStoryContributorInput,
+  ): Observable<AuthorStoryContributor> {
+    return this.http
+      .put<ApiSuccessEnvelope<AuthorStoryContributor>>(
+        `${this.storiesUrl}/${storyId}/contributors`,
+        input,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  removeContributor(
+    storyId: string,
+    contributorUserId: string,
+    role: AuthorStoryContributorRole,
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.storiesUrl}/${storyId}/contributors/${contributorUserId}/${role}`,
+    );
   }
 }
 

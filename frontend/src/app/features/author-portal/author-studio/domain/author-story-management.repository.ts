@@ -6,6 +6,9 @@ import {
   AuthorManagedChapterSummary,
   AuthorManagedStory,
   AuthorStoryDraftInput,
+  AuthorStoryContributor,
+  AuthorStoryContributorInput,
+  AuthorStoryContributorRole,
   AuthorStoryMedia,
   AuthorStoryMetadataCategory,
   AuthorStoryMetadataTag,
@@ -40,5 +43,16 @@ export abstract class AuthorStoryManagementRepository {
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
   abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
   abstract uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia>;
+  abstract uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia>;
   abstract getMedia(mediaId: string): Observable<AuthorStoryMedia>;
+  abstract listContributors(storyId: string): Observable<readonly AuthorStoryContributor[]>;
+  abstract upsertContributor(
+    storyId: string,
+    input: AuthorStoryContributorInput,
+  ): Observable<AuthorStoryContributor>;
+  abstract removeContributor(
+    storyId: string,
+    contributorUserId: string,
+    role: AuthorStoryContributorRole,
+  ): Observable<void>;
 }

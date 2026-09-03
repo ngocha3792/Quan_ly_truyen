@@ -64,6 +64,8 @@ label > span,
   font-weight: 700;
 }
 input[type='text'],
+input[type='email'],
+select,
 textarea {
   width: 100%;
   box-sizing: border-box;
@@ -74,6 +76,53 @@ textarea {
   color: #fff;
   font: inherit;
   resize: vertical;
+}
+.contributors-panel {
+  margin-top: 18px;
+}
+.section-heading p {
+  margin: 6px 0 0;
+  color: #8f9bb3;
+}
+.contributor-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(150px, 0.8fr) minmax(190px, 1fr) auto auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 18px;
+}
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  min-height: 41px;
+  white-space: nowrap;
+}
+.contributor-form .primary-action {
+  padding: 0 16px;
+}
+.contributor-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.contributor-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid #293650;
+  border-radius: 8px;
+  background: #091322;
+}
+.contributor-item div {
+  display: grid;
+  gap: 3px;
+}
+.contributor-item span,
+.empty-state {
+  margin: 0;
+  color: #9da9be;
 }
 input:disabled,
 textarea:disabled {
@@ -199,5 +248,8 @@ small {
   }
   .cover-box {
     min-height: 180px;
+  }
+  .contributor-form {
+    grid-template-columns: 1fr;
   }
 }

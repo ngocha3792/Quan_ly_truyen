@@ -14,6 +14,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions';
+import { API_PATHS } from '@/common/constants';
 
 let sdk: NodeSDK | undefined;
 let started = false;
@@ -53,8 +54,8 @@ export function startTelemetry(): Promise<void> {
               const path = request.url?.split('?', 1)[0] ?? '';
               return (
                 path === '/internal/metrics' ||
-                path === '/api/v1/health/live' ||
-                path === '/api/v1/health/ready'
+                path === API_PATHS.HEALTH_LIVE ||
+                path === API_PATHS.HEALTH_READY
               );
             },
           },

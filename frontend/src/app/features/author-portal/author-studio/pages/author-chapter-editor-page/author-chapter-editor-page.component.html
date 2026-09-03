@@ -25,14 +25,31 @@
         <input type="text" maxlength="255" formControlName="title" />
       </label>
 
-      <label class="content-field">
-        <span>Nội dung Markdown</span>
+      <div class="content-field">
+        <span class="content-toolbar">
+          <span>Nội dung Markdown</span>
+          @if (!isCreate && isEditable()) {
+            <label class="image-upload-action">
+              {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                [disabled]="store.uploadingImage()"
+                (change)="selectChapterImage($event)"
+              />
+            </label>
+          }
+        </span>
         <textarea
+          #contentArea
           rows="28"
           formControlName="content"
           placeholder="Bắt đầu viết nội dung chương..."
         ></textarea>
-      </label>
+        @if (isCreate) {
+          <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
+        }
+      </div>
 
       <footer>
         @if (store.chapter(); as chapter) {

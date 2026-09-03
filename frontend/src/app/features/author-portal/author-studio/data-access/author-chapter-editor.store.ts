@@ -7,6 +7,7 @@ import {
   AuthorChapterDraftInput,
   AuthorManagedChapter,
   AuthorManagedStory,
+  AuthorStoryMedia,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 
@@ -19,6 +20,7 @@ export class AuthorChapterEditorStore {
   readonly chapter = signal<AuthorManagedChapter | null>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly uploadingImage = signal(false);
   readonly error = signal<string | null>(null);
 
   load(storyId: string, chapterId: string | null): void {
@@ -68,5 +70,13 @@ export class AuthorChapterEditorStore {
 
   setError(error: unknown): void {
     this.error.set(getApiErrorMessage(error));
+  }
+
+  uploadImage(chapterId: string, file: File): Observable<AuthorStoryMedia> {
+    this.uploadingImage.set(true);
+    this.error.set(null);
+    return this.repository.uploadChapterImage(chapterId, file).pipe(
+      finalize(() => this.uploadingImage.set(false)),
+    );
   }
 }

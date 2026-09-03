@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { appPageTitle } from '../core/config/app-identity.constants';
 
 import { authenticatedGuard } from '../core/auth/authenticated.guard';
 import { AUTH_PERMISSIONS } from '../core/auth/authorization.models';
@@ -13,7 +14,7 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
   },
   {
     path: 'lich-su',
-    title: 'Lịch sử đọc - TruyenHub',
+    title: appPageTitle('Lịch sử đọc'),
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.READING_HISTORY_MANAGE_OWN)],
     loadComponent: () =>
       import('../features/account/reading-history/pages/reading-history-page/reading-history-page.component').then(
@@ -22,7 +23,7 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
   },
   {
     path: 'dang-theo-doi',
-    title: 'Tác giả đang theo dõi - TruyenHub',
+    title: appPageTitle('Tác giả đang theo dõi'),
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.FOLLOW_MANAGE_OWN)],
     loadComponent: () =>
       import('../features/account/following/pages/following-page/following-page.component').then(
@@ -31,7 +32,7 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
   },
   {
     path: 'thong-bao',
-    title: 'Thông báo - TruyenHub',
+    title: appPageTitle('Thông báo'),
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.NOTIFICATION_MANAGE_OWN)],
     loadComponent: () =>
       import('../features/account/notifications/pages/notifications-page/notifications-page.component').then(
@@ -40,7 +41,7 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
   },
   {
     path: 'thu-vien',
-    title: 'Thư viện của tôi - TruyenHub',
+    title: appPageTitle('Thư viện của tôi'),
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.LIBRARY_MANAGE_OWN)],
     loadComponent: () =>
       import('../features/account/my-library/pages/my-library-page/my-library-page.component').then(
@@ -49,7 +50,7 @@ export const ACCOUNT_FEATURE_ROUTES: Routes = [
   },
   {
     path: 'dang-ky-tac-gia',
-    title: 'Trở thành tác giả - TruyenHub',
+    title: appPageTitle('Trở thành tác giả'),
     canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_CREATE)],
     loadComponent: () =>
       import('../features/account/author-application/pages/author-application-page/author-application-page.component').then(

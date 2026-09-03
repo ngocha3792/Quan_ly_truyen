@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 import { AuthFlowCardComponent } from '../../../shared/ui/auth-flow-card/auth-flow-card.component';
+import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 
 import {
   EmailConfirmationResult,
@@ -26,7 +27,11 @@ import {
         icon="mail"
         eyebrow="ĐANG XÁC NHẬN"
         title="Đang xác nhận email mới"
-        description="Vui lòng chờ trong giây lát trong khi TruyenHub kiểm tra liên kết xác nhận của bạn."
+        [description]="
+          'Vui lòng chờ trong giây lát trong khi ' +
+          appName +
+          ' kiểm tra liên kết xác nhận của bạn.'
+        "
         [loading]="true"
       >
         <div class="progress-line">
@@ -42,7 +47,11 @@ import {
         icon="check"
         eyebrow="XÁC NHẬN THÀNH CÔNG"
         title="Xác nhận email mới"
-        description="Email mới của bạn đã được xác nhận thành công. Tài khoản đã được cập nhật và bạn có thể tiếp tục sử dụng TruyenHub."
+        [description]="
+          'Email mới của bạn đã được xác nhận thành công. Tài khoản đã được cập nhật và bạn có thể tiếp tục sử dụng ' +
+          appName +
+          '.'
+        "
         tone="success"
       >
         <div class="email-information">
@@ -83,7 +92,7 @@ import {
         <div authFooter class="auth-footer">
           Cần hỗ trợ?
 
-          <a routerLink="/cong-dong"> Liên hệ đội ngũ TruyenHub </a>.
+          <a routerLink="/cong-dong"> Liên hệ đội ngũ {{ appName }} </a>.
         </div>
       </app-auth-flow-card>
     }
@@ -134,7 +143,7 @@ import {
         <div authFooter class="auth-footer">
           Cần hỗ trợ?
 
-          <a routerLink="/cong-dong"> Liên hệ đội ngũ TruyenHub </a>.
+          <a routerLink="/cong-dong"> Liên hệ đội ngũ {{ appName }} </a>.
         </div>
       </app-auth-flow-card>
     }
@@ -355,6 +364,8 @@ import {
   `,
 })
 export class EmailConfirmationCardComponent {
+  protected readonly appName = APP_NAME;
+
   @Input({
     required: true,
   })

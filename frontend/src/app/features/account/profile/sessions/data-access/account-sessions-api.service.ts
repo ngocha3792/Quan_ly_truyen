@@ -72,4 +72,12 @@ export class AccountSessionsApiService {
       )
       .pipe(map(() => undefined));
   }
+
+  setCurrentSessionTrusted(trusted: boolean): Observable<void> {
+    const url = `${this.authUrl}/sessions/current/trust`;
+    const request = trusted
+      ? this.http.post<ApiSuccessEnvelope<unknown> | null>(url, {})
+      : this.http.delete<ApiSuccessEnvelope<unknown> | null>(url);
+    return request.pipe(map(() => undefined));
+  }
 }

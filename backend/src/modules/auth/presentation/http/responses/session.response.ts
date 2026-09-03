@@ -11,6 +11,7 @@ export interface SessionResponse {
   lastUsedAt: string | null;
   createdAt: string;
   expiresAt: string;
+  trusted: boolean;
 }
 
 export interface SessionsResponse {

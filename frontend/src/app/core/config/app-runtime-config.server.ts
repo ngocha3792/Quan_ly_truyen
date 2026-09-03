@@ -9,7 +9,14 @@ const ROUTE_DISCOVERY_POSITIVE_INTEGER = 1;
 let runtimeConfigPromise: Promise<AppRuntimeConfig> | null = null;
 
 export function loadServerAppRuntimeConfig(): Promise<AppRuntimeConfig> {
-  runtimeConfigPromise ??= fetchServerRuntimeConfig();
+  runtimeConfigPromise ??= fetchServerRuntimeConfig().catch((error: unknown) => {
+    // A rejected promise must not be cached forever. During local startup the
+    // frontend can receive a request before the API is ready; the next request
+    // should be allowed to fetch the runtime config again without restarting ng serve.
+    runtimeConfigPromise = null;
+    throw error;
+  });
+
   return runtimeConfigPromise;
 }
 

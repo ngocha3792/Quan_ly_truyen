@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
+import { APP_NAME } from '../config/app-identity.constants';
 
 export interface SeoMetadata {
   readonly title: string;
@@ -33,7 +34,7 @@ export class SeoService {
     this.title.setTitle(metadata.title);
     this.updateName('description', metadata.description);
     this.updateName('robots', metadata.robots ?? DEFAULT_ROBOTS);
-    this.updateProperty('og:site_name', 'TruyenHub');
+    this.updateProperty('og:site_name', APP_NAME);
     this.updateProperty('og:type', metadata.type);
     this.updateProperty('og:title', metadata.title);
     this.updateProperty('og:description', metadata.description);

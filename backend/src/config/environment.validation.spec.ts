@@ -72,6 +72,14 @@ describe('validateEnvironment', () => {
 
     METRICS_BEARER_TOKEN: 'production-metrics-value-1234567890-abcdef',
 
+    CLOUDINARY_ENABLED: 'true',
+
+    CLOUDINARY_CLOUD_NAME: 'production-cloud',
+
+    CLOUDINARY_API_KEY: 'production-cloudinary-api-key',
+
+    CLOUDINARY_API_SECRET: 'production-cloudinary-api-secret',
+
     SWAGGER_ENABLED: 'false',
 
     MAIL_MESSAGE_ID_DOMAIN: 'mail.example.com',
@@ -85,6 +93,13 @@ describe('validateEnvironment', () => {
 
   it('enforces production readiness configuration', () => {
     expect(() => validateEnvironment(productionBase)).not.toThrow();
+
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        CLOUDINARY_ENABLED: 'false',
+      }),
+    ).toThrow('CLOUDINARY_ENABLED must be true in production');
 
     expect(() =>
       validateEnvironment({
@@ -288,6 +303,11 @@ describe('validateEnvironment', () => {
       METRICS_BEARER_TOKEN: 'production-metrics-value-1234567890-abcdef',
 
       SWAGGER_ENABLED: 'false',
+
+      CLOUDINARY_ENABLED: 'true',
+      CLOUDINARY_CLOUD_NAME: 'production-cloud',
+      CLOUDINARY_API_KEY: 'production-cloudinary-api-key',
+      CLOUDINARY_API_SECRET: 'production-cloudinary-api-secret',
     };
 
     expect(() =>
@@ -404,6 +424,11 @@ describe('validateEnvironment', () => {
       METRICS_ENABLED: 'true',
 
       METRICS_BEARER_TOKEN: 'production-metrics-value-1234567890-abcdef',
+
+      CLOUDINARY_ENABLED: 'true',
+      CLOUDINARY_CLOUD_NAME: 'production-cloud',
+      CLOUDINARY_API_KEY: 'production-cloudinary-api-key',
+      CLOUDINARY_API_SECRET: 'production-cloudinary-api-secret',
 
       SWAGGER_ENABLED: 'false',
     };

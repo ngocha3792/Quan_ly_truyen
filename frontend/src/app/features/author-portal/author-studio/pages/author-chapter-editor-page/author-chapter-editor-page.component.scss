@@ -33,6 +33,34 @@ label {
   display: grid;
   gap: 8px;
 }
+.content-field {
+  display: grid;
+  gap: 8px;
+}
+.content-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #bac4d7;
+  font-size: 13px;
+  font-weight: 700;
+}
+.image-upload-action {
+  display: inline-flex;
+  width: auto;
+  padding: 7px 10px;
+  border: 1px solid #33415f;
+  border-radius: 7px;
+  color: #d7a6ff;
+  cursor: pointer;
+}
+.image-upload-action input {
+  display: none;
+}
+.content-field small {
+  color: #8290a8;
+}
 label > span {
   color: #bac4d7;
   font-size: 13px;

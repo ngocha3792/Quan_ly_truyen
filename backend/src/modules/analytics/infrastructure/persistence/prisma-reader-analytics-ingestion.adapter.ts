@@ -78,6 +78,7 @@ export class PrismaReaderAnalyticsIngestionAdapter implements ReaderAnalyticsIng
         type: event.type,
         version: event.version,
         viewerKeyHash,
+        userId: input.userId ?? null,
         sessionId: event.sessionId,
         storyId: event.storyId,
         chapterId: event.chapterId ?? null,

@@ -1,13 +1,25 @@
 <main class="notifications-page">
-  @if (store.view(); as view) {
-    <div class="page-container">
-      <app-breadcrumb [items]="breadcrumbs" />
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
 
-      <app-page-heading
-        title="Thông báo"
-        description="Xem tất cả thông báo, cập nhật và hoạt động liên quan đến tài khoản của bạn."
+    <app-page-heading
+      title="Thông báo"
+      description="Xem tất cả thông báo, cập nhật và hoạt động liên quan đến tài khoản của bạn."
+    />
+
+    @if (store.error()) {
+      <app-error-alert
+        title="Không thể hoàn tất yêu cầu"
+        [message]="store.error()"
+        (retry)="store.view() ? store.clearError() : store.load()"
       />
+    }
 
+    @if (store.loading() && !store.view()) {
+      <app-loading-state message="Đang tải thông báo..." />
+    }
+
+    @if (store.view(); as view) {
       <app-content-layout class="notifications-layout" asideWidth="340px">
         <app-notifications-toolbar
           main
@@ -44,6 +56,6 @@
           (settingToggle)="store.toggleSetting($event)"
         />
       </app-content-layout>
-    </div>
-  }
+    }
+  </div>
 </main>

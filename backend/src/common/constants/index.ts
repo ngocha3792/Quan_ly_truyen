@@ -6,6 +6,7 @@ export * from './http.constants';
 export * from './injection-tokens.constants';
 export * from './interceptor.constants';
 export * from './metadata.constants';
+export * from './media.constants';
 export * from './pagination.constants';
 export * from './queue.constants';
 export * from './regex.constants';

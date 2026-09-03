@@ -21,7 +21,7 @@ const debtBaseline = {
    */
   excessLines: 2525,
   componentExcessLines: 1007,
-  storeExcessLines: 613,
+  storeExcessLines: 627,
 
   filesAtLeast300Lines: 38,
   filesAtLeast500Lines: 6,

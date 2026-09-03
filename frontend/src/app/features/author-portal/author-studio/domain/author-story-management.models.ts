@@ -10,6 +10,13 @@ export type AuthorStoryStatus =
 
 export type AuthorStoryVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 export type AuthorChapterStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
+export const AUTHOR_STORY_CONTRIBUTOR_ROLES = [
+  'CO_AUTHOR',
+  'EDITOR',
+  'TRANSLATOR',
+  'ILLUSTRATOR',
+] as const;
+export type AuthorStoryContributorRole = (typeof AUTHOR_STORY_CONTRIBUTOR_ROLES)[number];
 
 export interface AuthorStoryCategory {
   readonly id: string;
@@ -123,4 +130,21 @@ export interface AuthorStoryMedia {
   readonly height: number | null;
   readonly sizeBytes: string | null;
   readonly readyAt: string | null;
+}
+
+export interface AuthorStoryContributor {
+  readonly userId: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly role: AuthorStoryContributorRole;
+  readonly creditName: string | null;
+  readonly canEdit: boolean;
+  readonly createdAt: string;
+}
+
+export interface AuthorStoryContributorInput {
+  readonly email: string;
+  readonly role: AuthorStoryContributorRole;
+  readonly creditName?: string;
+  readonly canEdit: boolean;
 }

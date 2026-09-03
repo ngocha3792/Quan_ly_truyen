@@ -11,6 +11,11 @@ import {
   MinLength,
 } from 'class-validator';
 import { normalizeTagName } from '../../../domain';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from '@/common/constants';
 
 export class ListAdminTagsRequest {
   @IsOptional()
@@ -24,13 +29,13 @@ export class ListAdminTagsRequest {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
+  page = DEFAULT_PAGE;
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  pageSize = 20;
+  @Max(MAX_PAGE_LIMIT)
+  pageSize = DEFAULT_PAGE_LIMIT;
   @IsOptional()
   @IsIn(['name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc'])
   sort = 'name:asc';

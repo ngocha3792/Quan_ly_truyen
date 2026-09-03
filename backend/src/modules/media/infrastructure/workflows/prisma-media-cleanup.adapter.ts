@@ -17,6 +17,7 @@ import {
 } from '@/common/exceptions';
 
 import type { AuthPrincipal } from '@/common/interfaces/auth';
+import { CLOUDINARY_DEFAULTS } from '@/common/constants';
 
 import { PrismaService } from '@/infrastructure/database/prisma';
 
@@ -306,7 +307,7 @@ export class PrismaMediaCleanupAdapter implements MediaCleanupPort {
     const readyOrphanGraceSeconds = this.configService.get<number>(
       'cloudinary.readyOrphanGraceSeconds',
 
-      3600,
+      CLOUDINARY_DEFAULTS.READY_ORPHAN_GRACE_SECONDS,
     );
 
     const readyOrphanBefore = new Date(
@@ -316,7 +317,7 @@ export class PrismaMediaCleanupAdapter implements MediaCleanupPort {
     const maxAttempts = this.configService.get<number>(
       'cloudinary.deleteMaxAttempts',
 
-      5,
+      CLOUDINARY_DEFAULTS.DELETE_MAX_ATTEMPTS,
     );
 
     const candidates = await this.prisma.mediaAsset.findMany({

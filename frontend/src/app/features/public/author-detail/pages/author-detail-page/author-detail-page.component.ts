@@ -11,6 +11,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { resolveAuthGuardState } from '../../../../../core/auth/auth-guard.util';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { SeoService } from '../../../../../core/seo/seo.service';
+import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 
 import { provideAuthorDetail } from '../../data-access/author-detail.providers';
 import { AuthorDetailStore } from '../../data-access/author-detail.store';
@@ -60,14 +61,14 @@ export class AuthorDetailPageComponent implements OnInit {
     const description = (
       profile.biography[0] ||
       profile.headline ||
-      `Tác giả ${profile.name} trên TruyenHub.`
+      `Tác giả ${profile.name} trên ${APP_NAME}.`
     )
       .trim()
       .slice(0, 160);
     const canonicalPath = `/tac-gia/${encodeURIComponent(profile.slug)}`;
 
     this.seo.apply({
-      title: `${profile.name} - Tác giả | TruyenHub`,
+      title: `${profile.name} - Tác giả | ${APP_NAME}`,
       description,
       canonicalPath,
       type: 'profile',

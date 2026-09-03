@@ -12,6 +12,7 @@ import { getRegisterValidationMessage } from '../../../../../core/auth/auth-vali
 import { passwordPolicyHint } from '../../../../../core/auth/password-policy';
 import { OAuthBrowserService } from '../../../../../core/auth/oauth-browser.service';
 import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
+import { APP_WEB_CLIENT_NAME } from '../../../../../core/config/app-identity.constants';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 import { isValidEmail, readApiErrorCode, readMfaChallenge } from './auth-dialog-error.util';
 
@@ -257,7 +258,7 @@ export abstract class AuthDialogController implements OnDestroy {
       .login({
         identifier,
         password: this.password,
-        deviceName: 'TruyenHub Web',
+        deviceName: APP_WEB_CLIENT_NAME,
       })
       .subscribe({
         next: () => {
@@ -429,7 +430,7 @@ export abstract class AuthDialogController implements OnDestroy {
       .confirmMfaEnrollment({
         mfaTicket: ticket,
         totpCode,
-        deviceName: 'TruyenHub Web',
+        deviceName: APP_WEB_CLIENT_NAME,
       })
       .pipe(
         finalize(() => {
@@ -500,7 +501,7 @@ export abstract class AuthDialogController implements OnDestroy {
               totpCode,
             }),
 
-        deviceName: 'TruyenHub Web',
+        deviceName: APP_WEB_CLIENT_NAME,
       })
       .pipe(
         finalize(() => {

@@ -7,7 +7,7 @@
     "lint": "ng lint",
     "lint:check": "ng lint --max-warnings=0",
     "architecture:test": "node --test ./scripts/architecture-rules.test.mjs",
-    "architecture:check": "npm run architecture:test && node ./scripts/check-architecture.mjs",
+    "architecture:check": "npm run architecture:test && node ./scripts/check-architecture.mjs && node ../scripts/check-centralized-constants.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
     "test": "ng test",
     "test:ci": "ng test --no-watch --no-progress",
