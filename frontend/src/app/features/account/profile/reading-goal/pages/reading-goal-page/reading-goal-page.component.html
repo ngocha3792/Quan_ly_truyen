@@ -1,0 +1,56 @@
+<header class="page-header">
+  <h1>Mục tiêu đọc</h1>
+
+  <p>Đặt số chương bạn muốn đọc mỗi tuần và theo dõi tiến độ của mình.</p>
+</header>
+
+@if (store.error()) {
+  <div class="alert error-alert">
+    {{ store.error() }}
+  </div>
+}
+
+@if (store.success()) {
+  <div class="alert success-alert">
+    {{ store.success() }}
+  </div>
+}
+
+@if (!store.loading() && store.goal(); as goal) {
+  <section class="goal-card">
+    <div class="goal-heading">
+      <span>Đọc {{ goal.targetChapters }} chương mỗi tuần</span>
+
+      <strong>{{ goal.completedChapters }} / {{ goal.targetChapters }} chương</strong>
+    </div>
+
+    <div class="goal-progress">
+      <span [style.width.%]="getGoalProgress()"></span>
+    </div>
+
+    <p>Còn {{ goal.remainingDays }} ngày để hoàn thành mục tiêu tuần này.</p>
+  </section>
+}
+
+<section class="goal-form-card">
+  <h2>Chỉnh mục tiêu</h2>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <label>
+      <span>Số chương mỗi tuần</span>
+
+      <input
+        type="number"
+        formControlName="targetChapters"
+        min="1"
+        max="100"
+        step="1"
+        autocomplete="off"
+      />
+    </label>
+
+    <button class="primary-button" type="submit" [disabled]="form.invalid || store.saving()">
+      {{ store.saving() ? 'Đang lưu...' : 'Lưu mục tiêu' }}
+    </button>
+  </form>
+</section>

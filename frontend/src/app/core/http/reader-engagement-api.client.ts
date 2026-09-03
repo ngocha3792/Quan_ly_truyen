@@ -8,6 +8,7 @@ import {
   LibraryApiStatus,
   LibraryEntryApiItem,
   ReadingBookmarkApiItem,
+  ReadingGoalApiItem,
   ReadingHistoryApiItem,
   StoryCommentApiItem,
   StoryCommentApiPage,
@@ -86,6 +87,14 @@ export class ReaderEngagementApiClient {
     return this.http.delete<void>(
       `${this.config.apiBaseUrl}/reading-bookmarks/${encodeURIComponent(chapterId)}`,
     );
+  }
+
+  getReadingGoal(): Observable<ReadingGoalApiItem> {
+    return this.get<ReadingGoalApiItem>('/reading-goal');
+  }
+
+  upsertReadingGoal(targetChapters: number): Observable<ReadingGoalApiItem> {
+    return this.put<ReadingGoalApiItem>('/reading-goal', { targetChapters });
   }
 
   getMyRating(storyId: string): Observable<StoryRatingApiItem | null> {

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { appPageTitle } from '../../../core/config/app-identity.constants';
 
 import { AccountLayoutComponent } from './layout/account-layout/account-layout.component';
 
@@ -10,7 +11,7 @@ export const ACCOUNT_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        title: 'Tổng quan tài khoản - TruyenHub',
+        title: appPageTitle('Tổng quan tài khoản'),
         loadComponent: () =>
           import('./pages/account-overview-page/account-overview-page.component').then(
             (module) => module.AccountOverviewPageComponent,
@@ -18,7 +19,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'thong-tin-ca-nhan',
-        title: 'Thông tin cá nhân - TruyenHub',
+        title: appPageTitle('Thông tin cá nhân'),
         loadComponent: () =>
           import('./profile/pages/account-profile-page/account-profile-page.component').then(
             (module) => module.AccountProfilePageComponent,
@@ -26,7 +27,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'bao-mat',
-        title: 'Bảo mật tài khoản - TruyenHub',
+        title: appPageTitle('Bảo mật tài khoản'),
         loadComponent: () =>
           import('./security/pages/account-security-page/account-security-page.component').then(
             (module) => module.AccountSecurityPageComponent,
@@ -34,7 +35,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'bao-mat/xac-thuc-2-lop',
-        title: 'Xác thực hai lớp - TruyenHub',
+        title: appPageTitle('Xác thực hai lớp'),
 
         loadComponent: () =>
           import('./security/features/mfa/mfa-settings-page.component').then(
@@ -43,7 +44,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'bao-mat/email-khoi-phuc',
-        title: 'Email khôi phục - TruyenHub',
+        title: appPageTitle('Email khôi phục'),
 
         loadComponent: () =>
           import('./security/features/recovery-email/recovery-email-page.component').then(
@@ -52,7 +53,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'bao-mat/cau-hoi-bao-mat',
-        title: 'Câu hỏi bảo mật - TruyenHub',
+        title: appPageTitle('Câu hỏi bảo mật'),
 
         loadComponent: () =>
           import('./security/features/security-questions/security-questions-page.component').then(
@@ -61,7 +62,7 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'thiet-bi',
-        title: 'Thiết bị đăng nhập - TruyenHub',
+        title: appPageTitle('Thiết bị đăng nhập'),
 
         loadComponent: () =>
           import('./sessions/pages/account-sessions-page/account-sessions-page.component').then(
@@ -70,11 +71,20 @@ export const ACCOUNT_ROUTES: Routes = [
       },
       {
         path: 'hoat-dong',
-        title: 'Lịch sử hoạt động - TruyenHub',
+        title: appPageTitle('Lịch sử hoạt động'),
 
         loadComponent: () =>
           import('./activity/pages/account-activity-page/account-activity-page.component').then(
             (module) => module.AccountActivityPageComponent,
+          ),
+      },
+      {
+        path: 'muc-tieu-doc',
+        title: appPageTitle('Mục tiêu đọc'),
+
+        loadComponent: () =>
+          import('./reading-goal/pages/reading-goal-page/reading-goal-page.component').then(
+            (module) => module.ReadingGoalPageComponent,
           ),
       },
     ],

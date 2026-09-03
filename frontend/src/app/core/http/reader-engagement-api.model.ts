@@ -53,6 +53,12 @@ export interface StoryRatingApiItem {
   readonly updatedAt: string;
 }
 
+export interface ReadingGoalApiItem {
+  readonly targetChapters: number;
+  readonly completedChapters: number;
+  readonly remainingDays: number;
+}
+
 export type CommentReactionApiType = 'LIKE' | 'LOVE' | 'LAUGH' | 'INSIGHTFUL';
 export type CommentReportReasonApi =
   | 'SPAM'

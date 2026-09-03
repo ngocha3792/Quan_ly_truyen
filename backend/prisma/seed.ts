@@ -69,6 +69,7 @@ const permissions = [
     ["follow.manage.own", "Manage own story follows", "follow", "manage.own"],
     ["reading-history.manage.own", "Manage own reading history", "reading-history", "manage.own"],
     ["reading-bookmark.manage.own", "Manage own reading bookmarks", "reading-bookmark", "manage.own"],
+    ["reading-goal.manage.own", "Manage own reading goal", "reading-goal", "manage.own"],
 
     ["report.create", "Create reports", "report", "create"],
     ["report.review", "Review and resolve reports", "report", "review"],
@@ -103,6 +104,7 @@ const userPermissionCodes: PermissionCode[] = [
     "follow.manage.own",
     "reading-history.manage.own",
     "reading-bookmark.manage.own",
+    "reading-goal.manage.own",
     "report.create",
     "media.upload",
     "notification.manage.own",

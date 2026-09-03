@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { forkJoin, map, Observable } from 'rxjs';
 
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type { LibraryEntryApiItem } from '../../../../core/http/reader-engagement-api.model';
@@ -22,8 +22,8 @@ export class MyLibraryHttpRepository implements MyLibraryRepository {
   private readonly api = inject(ReaderEngagementApiClient);
 
   getLibrary(): Observable<MyLibraryView> {
-    return this.api.listLibrary().pipe(
-      map((entries) => {
+    return forkJoin([this.api.listLibrary(), this.api.getReadingGoal()]).pipe(
+      map(([entries, goal]) => {
         const stories = entries.map(toLibraryStory);
         return {
           stories,
@@ -39,11 +39,7 @@ export class MyLibraryHttpRepository implements MyLibraryRepository {
               coverInitials: story.coverInitials,
               coverTone: story.coverTone,
             })),
-          goal: {
-            targetChapters: 0,
-            completedChapters: 0,
-            remainingDays: 0,
-          },
+          goal,
         };
       }),
     );

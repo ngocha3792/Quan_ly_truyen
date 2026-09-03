@@ -5,6 +5,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { API_PREFIX } from '@/common/constants';
 import { UsersModule } from './modules/users';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -31,6 +32,7 @@ import { StoriesModule } from './modules/stories';
 import { RatingsModule } from './modules/ratings';
 import { LibrariesModule } from './modules/libraries';
 import { ReadingHistoryModule } from './modules/reading-history';
+import { ReadingGoalsModule } from './modules/reading-goals';
 import { CommentsModule } from './modules/comments';
 import { ChaptersModule } from './modules/chapters';
 import { CategoriesModule } from './modules/categories';
@@ -53,6 +55,7 @@ import { AnalyticsModule } from './modules/analytics';
     RatingsModule,
     LibrariesModule,
     ReadingHistoryModule,
+    ReadingGoalsModule,
     CommentsModule,
     ChaptersModule,
     CategoriesModule,
@@ -119,11 +122,11 @@ export class AppModule implements NestModule {
     consumer
       .apply(JsonContentTypeMiddleware)
       .exclude(
-        { path: 'api/v1/media/upload', method: RequestMethod.POST },
-        { path: 'api/v1/webhooks/{*path}', method: RequestMethod.ALL },
+        { path: `${API_PREFIX}/media/upload`, method: RequestMethod.POST },
+        { path: `${API_PREFIX}/webhooks/{*path}`, method: RequestMethod.ALL },
       )
       .forRoutes({
-        path: 'api/v1/{*path}',
+        path: `${API_PREFIX}/{*path}`,
         method: RequestMethod.ALL,
       });
   }

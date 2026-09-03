@@ -340,6 +340,8 @@ model User {
   readingProgresses          ReadingProgress[]
   readingSessions            ReadingSession[]
   readingBookmarks           ReadingBookmark[]
+  readingGoal                ReadingGoal?
+  readerAnalyticsEvents      ReaderAnalyticsEvent[]
   reportsFiled               Report[]                 @relation("ReportsFiled")
   reportsAssigned            Report[]                 @relation("ReportsAssigned")
   reportedInReports          Report[]                 @relation("ReportedUserReports")
@@ -1186,6 +1188,17 @@ model ReadingSession {
   @@map("reading_sessions")
 }
 
+model ReadingGoal {
+  userId         String   @id @map("user_id") @db.Uuid
+  targetChapters Int      @default(0) @map("target_chapters")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reading_goals")
+}
+
 // ============================================================
 // MODERATION, REPORTING, NOTIFICATIONS, AUDITING
 // ============================================================
@@ -1394,6 +1407,7 @@ model ReaderAnalyticsEvent {
   type            ReaderAnalyticsEventType
   version         Int                      @default(1)
   viewerKeyHash   String                   @map("viewer_key_hash") @db.VarChar(64)
+  userId          String?                  @map("user_id") @db.Uuid
   sessionId       String                   @map("session_id") @db.Uuid
   storyId         String                   @map("story_id") @db.Uuid
   chapterId       String?                  @map("chapter_id") @db.Uuid
@@ -1407,11 +1421,13 @@ model ReaderAnalyticsEvent {
 
   story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
   chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([processedAt, receivedAt], map: "reader_analytics_events_processing_idx")
   @@index([storyId, occurredAt], map: "reader_analytics_events_story_occurred_idx")
   @@index([chapterId, occurredAt], map: "reader_analytics_events_chapter_occurred_idx")
   @@index([viewerKeyHash, occurredAt], map: "reader_analytics_events_viewer_occurred_idx")
+  @@index([userId, occurredAt], map: "reader_analytics_events_user_occurred_idx")
   @@index([type, occurredAt], map: "reader_analytics_events_type_occurred_idx")
   @@index([queuedAt, receivedAt], map: "reader_analytics_events_queue_recovery_idx")
   @@map("reader_analytics_events")
