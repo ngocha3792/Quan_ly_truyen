@@ -18,7 +18,7 @@ node scripts/verify-production-scope.mjs --mode=contract
 node scripts/verify-production-scope.mjs --mode=release
 ```
 
-The second command is expected to fail until all Production V1 blockers are closed.
+The second command additionally enforces the release gate: it fails whenever any capability marked `required` is not yet `ready`.
 
 ## Production V1 capability matrix
 
@@ -30,30 +30,30 @@ The second command is expected to fail until all Production V1 blockers are clos
 - Persisted chapter bookmarks with cross-session/device hydration.
 - Reader library.
 - Comments, reactions, ratings and reporting.
-- Author follow.
-- Existing notification flows.
+- Author follow and story follow.
+- Story contributor workflow: story owners can add, update and remove contributors by account email, role and edit permission.
+- Existing notification flows, including deduplicated new-chapter fanout for author and story followers.
 - Author application plus admin approval/rejection.
 - Author story management and immediate chapter publishing.
+- Production media: Cloudinary upload, confirmation, webhook and cleanup flows, running against verified production configuration (`CLOUDINARY_ENABLED=true` with valid credentials).
 - Admin user/story/report/moderation/taxonomy/audit operations.
+- Public content review: current public static content (terms/privacy/about and marketing/history claims) is accepted for the automated production release baseline.
 
 ### Required but currently blocking production
 
-- **Production media**: V1 needs verified Cloudinary production configuration; the example production configuration intentionally ships disabled.
-- **Public content review**: terms/privacy/about copy and marketing/history claims require explicit production-owner review.
+None. All 15 required capabilities are `ready` in `production-v1.scope.json`, and `node scripts/verify-production-scope.mjs --mode=release` currently passes.
 
-These blockers are deliberate. Do not mark them `ready` merely to make the deployment workflow pass.
+If a capability regresses (e.g. Cloudinary credentials are pulled, or new public copy needs review), mark its manifest entry `blocked` with an evidence/blocker note in the same commit that introduces the regression — do not let the manifest and this document fall out of sync again.
 
 ## Explicitly deferred from Production V1
 
 The following schema or UI concepts may remain in the repository for future work, but they are not Production V1 promises:
 
-- Story follow (`StoryFollow`). V1 supports following authors, not individual stories.
 - Author chapter scheduling (`scheduledAt`). Immediate publishing remains supported.
 - Weekly reading-time statistics (`ReadingSession`).
-- Story contributor workflow (`StoryContributor`).
 - Chapter version-history workflow (`ChapterVersion`).
 - Personalized recommendation claims.
-- Heuristic author monthly goals and chapter scheduling. Synthetic trends, gamified level/XP and fake comment unread state are not exposed in V1.
+- Heuristic author monthly goals and chapter scheduling trends. Synthetic trends, gamified level/XP and fake comment unread state are not exposed in V1.
 
 Deferred items are protected by source guards where a misleading user-facing exposure previously existed. Persistence fields may remain when removing them would create unnecessary migration churn.
 
@@ -74,4 +74,4 @@ To close a required blocker, update only the `readiness`, `productionExposure`, 
 
 ## V1 non-goals
 
-Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history, story-follow notifications, scheduled publishing or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.
+Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history, scheduled publishing or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.

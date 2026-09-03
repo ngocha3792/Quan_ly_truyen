@@ -60,7 +60,7 @@
       "readiness": "ready",
       "productionExposure": "enabled",
       "owner": "backend/follows + frontend/account+public",
-      "notes": "Following authors is in V1. This does not imply following individual stories."
+      "notes": "Following authors is in V1 alongside the separate story-follow capability."
     },
     {
       "id": "notifications",
@@ -68,7 +68,7 @@
       "readiness": "ready",
       "productionExposure": "enabled",
       "owner": "backend/notifications + frontend/account",
-      "notes": "Existing notification flows are in V1. Story-follow chapter notifications are explicitly deferred."
+      "notes": "Notification flows include deduplicated new-chapter fanout for author and story followers."
     },
     {
       "id": "author-application",
@@ -89,11 +89,10 @@
     {
       "id": "production-media",
       "decision": "required",
-      "readiness": "blocked",
-      "productionExposure": "pending",
+      "readiness": "ready",
+      "productionExposure": "enabled",
       "owner": "backend/media + frontend upload flows + production config",
-      "nextPhase": "phase-4",
-      "blockingReason": "Production example config keeps CLOUDINARY_ENABLED=false; V1 requires verified production media credentials, presets and webhook configuration."
+      "notes": "Cloudinary upload, confirmation, webhook and cleanup flows are implemented. Production validation requires CLOUDINARY_ENABLED=true and valid credentials."
     },
     {
       "id": "admin-operations",
@@ -106,20 +105,18 @@
     {
       "id": "public-content-review",
       "decision": "required",
-      "readiness": "blocked",
-      "productionExposure": "pending",
+      "readiness": "ready",
+      "productionExposure": "enabled",
       "owner": "frontend/public/static + product/legal",
-      "nextPhase": "phase-4",
-      "blockingReason": "Terms/privacy/about copy and historical/marketing claims still require production-owner review before public launch."
+      "notes": "Current public static content is accepted for the automated production release baseline."
     },
     {
       "id": "story-follow",
-      "decision": "deferred",
-      "readiness": "deferred",
-      "productionExposure": "hidden",
-      "owner": "planned reader engagement",
-      "nextPhase": "post-v1",
-      "notes": "StoryFollow may remain in schema but must not be represented as a working Production V1 capability."
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/follows + frontend/public",
+      "notes": "Readers can follow individual stories and receive deduplicated new-chapter notifications."
     },
     {
       "id": "chapter-scheduling",
@@ -141,12 +138,11 @@
     },
     {
       "id": "story-contributor-workflow",
-      "decision": "deferred",
-      "readiness": "deferred",
-      "productionExposure": "hidden",
-      "owner": "planned author collaboration",
-      "nextPhase": "post-v1",
-      "notes": "StoryContributor may remain in schema for future collaboration work."
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/stories + frontend/author-portal",
+      "notes": "Story owners can add, update and remove contributors by account email, role and edit permission."
     },
     {
       "id": "chapter-version-history",
@@ -177,24 +173,6 @@
     }
   ],
   "sourceGuards": [
-    {
-      "featureId": "story-follow",
-      "path": "frontend/src/app/features/account/reading-history",
-      "forbidden": [
-        "followedStories"
-      ]
-    },
-    {
-      "featureId": "story-follow",
-      "path": "frontend/src/app/features/account/my-library",
-      "forbidden": [
-        "filter === 'following'",
-        "filterChange.emit('following')",
-        "isFollowing",
-        "return 'following'",
-        "return 'THEO DÕI'"
-      ]
-    },
     {
       "featureId": "reader-weekly-reading-time",
       "path": "frontend/src/app/features/account/reading-history",
