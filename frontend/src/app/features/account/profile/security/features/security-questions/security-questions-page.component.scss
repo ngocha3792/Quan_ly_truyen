@@ -30,6 +30,7 @@
   padding: 17px 0;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
   gap: 13px;
   border-bottom: 1px solid var(--border);
 

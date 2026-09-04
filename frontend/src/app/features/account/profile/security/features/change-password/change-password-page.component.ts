@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 
 import {
   AbstractControl,
@@ -18,13 +18,12 @@ import {
   evaluatePasswordPolicy,
   passwordPolicyHint,
 } from '../../../../../../core/auth/password-policy';
-import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
-
-import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
 
 import { AccountPasswordInputComponent } from '../../../../shared/ui/account-password-input/account-password-input.component';
 
-import { ChangePasswordRequest } from '../../data/account-security.models';
+import { AccountSecurityStore } from '../../data/account-security.store';
+import { SecurityFeatureShellComponent } from '../../ui/security-feature-shell/security-feature-shell.component';
+import { SecurityPanelComponent } from '../../ui/security-panel/security-panel.component';
 
 interface ChangePasswordForm {
   currentPassword: FormControl<string>;
@@ -35,126 +34,49 @@ interface ChangePasswordForm {
 }
 
 @Component({
-  selector: 'app-change-password-dialog',
+  selector: 'app-change-password-page',
 
   standalone: true,
 
   imports: [
     ReactiveFormsModule,
-    IconComponent,
-    AccountDialogShellComponent,
+    SecurityFeatureShellComponent,
+    SecurityPanelComponent,
     AccountPasswordInputComponent,
   ],
 
-  template: `
-    <app-account-dialog-shell
-      [open]="open()"
-      [busy]="submitting()"
-      title="Đổi mật khẩu"
-      dialogTitleId="change-password-title"
-      (closed)="closed.emit()"
-    >
-      <form class="password-form" [formGroup]="form" (ngSubmit)="submit()">
-        <p class="form-description">
-          Sử dụng mật khẩu mạnh mà bạn chưa từng sử dụng cho tài khoản này.
-        </p>
+  templateUrl: './change-password-page.component.html',
 
-        <app-account-password-input
-          label="Mật khẩu hiện tại"
-          icon="lock"
-          autocomplete="current-password"
-          placeholder="Nhập mật khẩu hiện tại"
-          formControlName="currentPassword"
-          [error]="currentPasswordError"
-        />
-
-        <app-account-password-input
-          label="Mật khẩu mới"
-          icon="key"
-          autocomplete="new-password"
-          placeholder="Nhập mật khẩu mới"
-          [maxLength]="passwordPolicy.maximumLength"
-          formControlName="newPassword"
-          [hint]="passwordHint"
-          [error]="newPasswordError"
-        />
-
-        <app-account-password-input
-          label="Xác nhận mật khẩu mới"
-          icon="check"
-          autocomplete="new-password"
-          placeholder="Nhập lại mật khẩu mới"
-          [maxLength]="passwordPolicy.maximumLength"
-          formControlName="confirmPassword"
-          [error]="confirmPasswordError"
-        />
-
-        <div class="dialog-actions">
-          <button
-            class="cancel-button"
-            type="button"
-            [disabled]="submitting()"
-            (click)="closed.emit()"
-          >
-            Hủy
-          </button>
-
-          <button class="submit-button" type="submit" [disabled]="submitting() || form.invalid">
-            @if (submitting()) {
-              <span class="spinner"></span>
-            } @else {
-              <app-icon name="lock" [size]="16" />
-            }
-
-            Đổi mật khẩu
-          </button>
-        </div>
-      </form>
-    </app-account-dialog-shell>
-  `,
-
-  styleUrl: './change-password-dialog.component.scss',
+  styleUrl: './change-password-page.component.scss',
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ChangePasswordDialogComponent {
+export class ChangePasswordPageComponent implements OnInit {
+  protected readonly store = inject(AccountSecurityStore);
+
   protected readonly passwordPolicy = inject(APP_RUNTIME_CONFIG).passwordPolicy;
 
   protected readonly passwordHint = passwordPolicyHint(this.passwordPolicy);
-
-  readonly open = input(false);
-
-  readonly submitting = input(false);
-
-  readonly closed = output<void>();
-
-  readonly submitted = output<ChangePasswordRequest>();
 
   protected readonly form = new FormGroup<ChangePasswordForm>(
     {
       currentPassword: new FormControl('', {
         nonNullable: true,
-
         validators: [Validators.required],
       }),
 
       newPassword: new FormControl('', {
         nonNullable: true,
-
         validators: [
           Validators.required,
-
           Validators.minLength(this.passwordPolicy.minimumLength),
-
           Validators.maxLength(this.passwordPolicy.maximumLength),
-
           passwordPolicyValidator(this.passwordPolicy),
         ],
       }),
 
       confirmPassword: new FormControl('', {
         nonNullable: true,
-
         validators: [Validators.required],
       }),
     },
@@ -163,12 +85,8 @@ export class ChangePasswordDialogComponent {
     },
   );
 
-  constructor() {
-    effect(() => {
-      if (!this.open()) {
-        this.form.reset();
-      }
-    });
+  ngOnInit(): void {
+    this.store.clearMessages();
   }
 
   protected get currentPasswordError(): string {
@@ -206,17 +124,22 @@ export class ChangePasswordDialogComponent {
   protected submit(): void {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.submitting()) {
+    if (this.form.invalid || this.store.submitting()) {
       return;
     }
 
     const value = this.form.getRawValue();
 
-    this.submitted.emit({
-      currentPassword: value.currentPassword,
-
-      newPassword: value.newPassword,
-    });
+    this.store
+      .changePassword({
+        currentPassword: value.currentPassword,
+        newPassword: value.newPassword,
+      })
+      .subscribe({
+        next: () => {
+          this.form.reset();
+        },
+      });
   }
 }
 

@@ -4,17 +4,11 @@ import { Router } from '@angular/router';
 
 import { AuthStore } from '../../../../../../core/auth/auth.store';
 
-import { ChangeEmailDialogComponent } from '../../components/change-email-dialog/change-email-dialog.component';
-import { ChangePasswordDialogComponent } from '../../components/change-password-dialog/change-password-dialog.component';
 import { DeleteAccountDialogComponent } from '../../components/delete-account-dialog/delete-account-dialog.component';
 import { SecurityScoreCardComponent } from '../../components/security-score-card/security-score-card.component';
 import { SecuritySettingCardComponent } from '../../components/security-setting-card/security-setting-card.component';
 
-import {
-  ChangeEmailRequest,
-  ChangePasswordRequest,
-  DeleteAccountRequest,
-} from '../../data/account-security.models';
+import { DeleteAccountRequest } from '../../data/account-security.models';
 
 import { AccountSecurityStore } from '../../data/account-security.store';
 
@@ -27,10 +21,6 @@ import { AccountSecurityStore } from '../../data/account-security.store';
     SecuritySettingCardComponent,
 
     SecurityScoreCardComponent,
-
-    ChangePasswordDialogComponent,
-
-    ChangeEmailDialogComponent,
 
     DeleteAccountDialogComponent,
   ],
@@ -48,50 +38,18 @@ export class AccountSecurityPageComponent implements OnInit {
 
   protected readonly store = inject(AccountSecurityStore);
 
-  protected readonly passwordDialogOpen = signal(false);
-
-  protected readonly emailDialogOpen = signal(false);
-
   protected readonly deleteDialogOpen = signal(false);
 
   ngOnInit(): void {
     this.store.load();
   }
 
-  protected openPasswordDialog(): void {
-    this.store.clearMessages();
-
-    this.passwordDialogOpen.set(true);
+  protected openChangePassword(): void {
+    void this.router.navigateByUrl('/tai-khoan/bao-mat/doi-mat-khau');
   }
 
-  protected openEmailDialog(): void {
-    this.store.clearMessages();
-
-    this.emailDialogOpen.set(true);
-  }
-
-  protected changePassword(request: ChangePasswordRequest): void {
-    this.store.changePassword(request).subscribe({
-      next: () => {
-        this.passwordDialogOpen.set(false);
-      },
-    });
-  }
-
-  protected changeEmail(request: ChangeEmailRequest): void {
-    this.store.requestEmailChange(request).subscribe({
-      next: () => {
-        /**
-         * Chỉ đóng dialog.
-         *
-         * KHÔNG sửa auth.user.email tại đây.
-         *
-         * Email thật chỉ thay đổi sau khi
-         * user click link confirm.
-         */
-        this.emailDialogOpen.set(false);
-      },
-    });
+  protected openChangeEmail(): void {
+    void this.router.navigateByUrl('/tai-khoan/bao-mat/doi-email');
   }
 
   protected deleteAccount(request: DeleteAccountRequest): void {
@@ -149,7 +107,7 @@ export class AccountSecurityPageComponent implements OnInit {
         break;
 
       default:
-        this.openPasswordDialog();
+        this.openChangePassword();
     }
   }
 }

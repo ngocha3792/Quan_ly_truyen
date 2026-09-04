@@ -1,0 +1,71 @@
+<app-security-feature-shell
+  title="Đổi email đăng nhập"
+  description="Thay đổi địa chỉ email dùng để đăng nhập và nhận thông báo bảo mật."
+>
+  <div security-main>
+    @if (store.error()) {
+      <div class="alert error">
+        {{ store.error() }}
+      </div>
+    }
+
+    @if (store.success()) {
+      <div class="alert success">
+        {{ store.success() }}
+      </div>
+    }
+
+    <app-security-panel title="Email hiện tại" icon="mail">
+      <div class="current-email">
+        <strong>{{ store.user()?.email || 'Không xác định' }}</strong>
+      </div>
+    </app-security-panel>
+
+    <app-security-panel
+      title="Email đăng nhập mới"
+      description="Bạn sẽ phải xác nhận email mới trước khi thay đổi có hiệu lực. Sau khi xác nhận, toàn bộ phiên đăng nhập hiện tại sẽ bị thu hồi."
+      icon="mail"
+    >
+      <form class="security-form" [formGroup]="form" (ngSubmit)="submit()">
+        <app-account-form-field
+          label="Email mới"
+          type="email"
+          icon="mail"
+          autocomplete="email"
+          placeholder="email-moi@example.com"
+          [maxLength]="320"
+          formControlName="newEmail"
+          [error]="newEmailError"
+        />
+
+        <app-account-password-input
+          label="Mật khẩu hiện tại"
+          icon="lock"
+          autocomplete="current-password"
+          placeholder="Nhập mật khẩu hiện tại"
+          [maxLength]="passwordMaximumLength"
+          formControlName="currentPassword"
+          [error]="currentPasswordError"
+        />
+
+        <div class="form-actions">
+          <button class="primary-button" type="submit" [disabled]="form.invalid || store.submitting()">
+            {{ store.submitting() ? 'Đang gửi...' : 'Gửi link xác nhận' }}
+          </button>
+        </div>
+      </form>
+    </app-security-panel>
+  </div>
+
+  <div security-aside>
+    <section class="aside-card">
+      <h3>Lưu ý quan trọng</h3>
+
+      <p>Email mới phải khác email hiện tại đang dùng để đăng nhập.</p>
+
+      <p>Link xác nhận chỉ có hiệu lực trong thời gian ngắn.</p>
+
+      <p>Sau khi xác nhận, các phiên đăng nhập khác sẽ bị đăng xuất.</p>
+    </section>
+  </div>
+</app-security-feature-shell>

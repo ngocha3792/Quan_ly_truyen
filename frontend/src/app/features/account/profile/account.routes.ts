@@ -34,6 +34,24 @@ export const ACCOUNT_ROUTES: Routes = [
           ),
       },
       {
+        path: 'bao-mat/doi-mat-khau',
+        title: appPageTitle('Đổi mật khẩu'),
+
+        loadComponent: () =>
+          import('./security/features/change-password/change-password-page.component').then(
+            (module) => module.ChangePasswordPageComponent,
+          ),
+      },
+      {
+        path: 'bao-mat/doi-email',
+        title: appPageTitle('Đổi email đăng nhập'),
+
+        loadComponent: () =>
+          import('./security/features/change-email/change-email-page.component').then(
+            (module) => module.ChangeEmailPageComponent,
+          ),
+      },
+      {
         path: 'bao-mat/xac-thuc-2-lop',
         title: appPageTitle('Xác thực hai lớp'),
 

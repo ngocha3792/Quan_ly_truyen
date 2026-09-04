@@ -35,7 +35,7 @@
       description="Cập nhật mật khẩu mới để bảo vệ tài khoản của bạn."
       icon="lock"
       actionLabel="Đổi mật khẩu"
-      (action)="openPasswordDialog()"
+      (action)="openChangePassword()"
     />
 
     <app-security-setting-card
@@ -44,7 +44,7 @@
       icon="mail"
       [value]="store.user()?.email || null"
       actionLabel="Đổi email"
-      (action)="openEmailDialog()"
+      (action)="openChangeEmail()"
     />
 
     <app-security-setting-card
@@ -95,21 +95,6 @@
     (suggestionsRequested)="showSuggestions()"
   />
 </div>
-
-<app-change-password-dialog
-  [open]="passwordDialogOpen()"
-  [submitting]="store.submitting()"
-  (closed)="passwordDialogOpen.set(false)"
-  (submitted)="changePassword($event)"
-/>
-
-<app-change-email-dialog
-  [open]="emailDialogOpen()"
-  [submitting]="store.submitting()"
-  [currentEmail]="store.user()?.email || ''"
-  (closed)="emailDialogOpen.set(false)"
-  (submitted)="changeEmail($event)"
-/>
 
 <app-delete-account-dialog
   [open]="deleteDialogOpen()"
