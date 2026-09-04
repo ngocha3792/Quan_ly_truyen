@@ -222,7 +222,7 @@ if ($UseLocalBuild) {
       '[2b/8] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
-    Invoke-DockerCompose pull postgres redis caddy
+    Invoke-DockerCompose pull postgres redis
   }
 }
 elseif (-not $SkipPull) {
@@ -274,7 +274,7 @@ foreach (
 }
 
 Write-Host `
-  '[7/8] Starting API, worker, recovery metrics, frontend and HTTPS edge...' `
+  '[7/8] Starting API, worker, recovery metrics and frontend (HTTPS edge is a host-level Nginx reverse proxy, not managed by this script)...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose up `
@@ -283,8 +283,7 @@ Invoke-DockerCompose up `
   api `
   worker `
   recovery-metrics `
-  frontend `
-  caddy
+  frontend
 
 if (-not $SkipObservability) {
   Write-Host '[7b/8] Starting observability stack...' `

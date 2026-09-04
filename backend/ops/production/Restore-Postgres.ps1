@@ -86,7 +86,7 @@ $ComposePrefix = @(
 )
 
 Write-Host 'Stopping traffic and background processing...' -ForegroundColor Yellow
-& docker @ComposePrefix stop caddy api worker
+& docker @ComposePrefix stop api worker
 
 if ($LASTEXITCODE -ne 0) {
   throw 'Unable to stop application services.'
@@ -115,7 +115,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host 'Starting application after restore...' -ForegroundColor Cyan
-& docker @ComposePrefix up -d --wait api worker caddy
+& docker @ComposePrefix up -d --wait api worker
 
 if ($LASTEXITCODE -ne 0) {
   throw 'Database restored, but application startup failed.'
