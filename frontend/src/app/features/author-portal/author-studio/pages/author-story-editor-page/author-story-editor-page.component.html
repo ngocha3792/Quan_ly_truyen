@@ -20,10 +20,10 @@
   </header>
 
   @if (store.error()) {
-    <p class="notice notice--error">{{ store.error() }}</p>
+    <div class="alert error">{{ store.error() }}</div>
   }
   @if (fileError()) {
-    <p class="notice notice--error">{{ fileError() }}</p>
+    <div class="alert error">{{ fileError() }}</div>
   }
 
   @if (store.loading()) {
@@ -38,18 +38,23 @@
 
     <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()">
       <section class="panel main-panel">
-        <label>
+        <label class="field">
           <span>Tên truyện</span>
-          <input type="text" formControlName="title" maxlength="255" />
+          <div class="input-wrapper">
+            <app-icon name="book" [size]="17" />
+            <input type="text" formControlName="title" maxlength="255" />
+          </div>
         </label>
 
-        <label>
+        <label class="field">
           <span>Mô tả</span>
-          <textarea
-            rows="9"
-            formControlName="synopsis"
-            placeholder="Giới thiệu nội dung truyện..."
-          ></textarea>
+          <div class="textarea-wrapper">
+            <textarea
+              rows="9"
+              formControlName="synopsis"
+              placeholder="Giới thiệu nội dung truyện..."
+            ></textarea>
+          </div>
         </label>
 
         <div class="field-group">
@@ -114,6 +119,7 @@
 
         @if (isEditable()) {
           <label class="file-action">
+            <app-icon name="camera" [size]="16" />
             Chọn ảnh JPG / PNG / WebP
             <input
               type="file"
@@ -127,19 +133,26 @@
         }
 
         <button class="primary-action" type="submit" [disabled]="!isEditable() || store.saving()">
+          @if (store.saving()) {
+            <span class="spinner"></span>
+          } @else {
+            <app-icon name="save" [size]="16" />
+          }
           {{ store.saving() ? 'Đang lưu...' : 'Lưu bản nháp' }}
         </button>
 
         @if (canSubmit()) {
           <hr />
-          <label>
+          <label class="field">
             <span>Ghi chú cho người duyệt</span>
-            <textarea
-              rows="3"
-              maxlength="2000"
-              [value]="authorNote()"
-              (input)="updateAuthorNote($event)"
-            ></textarea>
+            <div class="textarea-wrapper">
+              <textarea
+                rows="3"
+                maxlength="2000"
+                [value]="authorNote()"
+                (input)="updateAuthorNote($event)"
+              ></textarea>
+            </div>
           </label>
           @if (hasUnsavedChanges()) {
             <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
@@ -177,21 +190,30 @@
         </div>
 
         <form class="contributor-form" [formGroup]="contributorForm" (ngSubmit)="saveContributor()">
-          <label>
+          <label class="field">
             <span>Email tài khoản</span>
-            <input type="email" formControlName="email" placeholder="contributor@example.com" />
+            <div class="input-wrapper">
+              <app-icon name="mail" [size]="16" />
+              <input type="email" formControlName="email" placeholder="contributor@example.com" />
+            </div>
           </label>
-          <label>
+          <label class="field">
             <span>Vai trò</span>
-            <select formControlName="role">
-              @for (role of contributorRoles; track role) {
-                <option [value]="role">{{ contributorRoleLabel(role) }}</option>
-              }
-            </select>
+            <div class="input-wrapper">
+              <app-icon name="users" [size]="16" />
+              <select formControlName="role">
+                @for (role of contributorRoles; track role) {
+                  <option [value]="role">{{ contributorRoleLabel(role) }}</option>
+                }
+              </select>
+            </div>
           </label>
-          <label>
+          <label class="field">
             <span>Tên ghi công</span>
-            <input type="text" formControlName="creditName" placeholder="Để trống để dùng tên hồ sơ" />
+            <div class="input-wrapper">
+              <app-icon name="user" [size]="16" />
+              <input type="text" formControlName="creditName" placeholder="Để trống để dùng tên hồ sơ" />
+            </div>
           </label>
           <label class="checkbox-label">
             <input type="checkbox" formControlName="canEdit" />

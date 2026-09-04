@@ -3,7 +3,7 @@
 }
 .studio-page {
   padding: 32px clamp(18px, 4vw, 48px) 56px;
-  color: #dfe6f5;
+  color: var(--text-strong);
 }
 .page-header {
   display: flex;
@@ -13,22 +13,23 @@
   margin-bottom: 22px;
 }
 .page-header a {
-  color: #b76cff;
+  color: var(--primary-soft);
   text-decoration: none;
 }
 h1 {
   margin: 8px 0 0;
-  color: #fff;
+  color: var(--text-strong);
   font-size: clamp(26px, 4vw, 36px);
 }
 .page-header p {
   margin: 7px 0 0;
-  color: #8f9bb3;
+  color: var(--text-muted);
 }
 .primary-action {
   padding: 11px 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #9d43ef, #6e31da);
+  background: linear-gradient(135deg, #a150f2, #6a43df);
+  box-shadow: 0 12px 30px rgba(111, 64, 224, 0.27);
   color: #fff !important;
   font-weight: 700;
   white-space: nowrap;
@@ -43,9 +44,9 @@ h1 {
   align-items: center;
   gap: 16px;
   padding: 16px 18px;
-  border: 1px solid #202b40;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #0c1627;
+  background: rgba(6, 11, 22, 0.55);
 }
 .chapter-number {
   display: grid;
@@ -53,8 +54,8 @@ h1 {
   height: 48px;
   place-items: center;
   border-radius: 9px;
-  background: rgba(132, 71, 214, 0.15);
-  color: #d5a4ff;
+  background: rgba(139, 76, 230, 0.18);
+  color: var(--primary-soft);
   font-weight: 800;
 }
 .chapter-copy > div {
@@ -65,12 +66,12 @@ h1 {
 }
 h2 {
   margin: 0;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 16px;
 }
 .chapter-copy p {
   margin: 6px 0 0;
-  color: #8290a8;
+  color: var(--text-muted);
   font-size: 12px;
 }
 .status {
@@ -95,10 +96,10 @@ h2 {
 .actions button {
   min-height: 34px;
   padding: 0 10px;
-  border: 1px solid #2b3853;
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: #111d31;
-  color: #d4dcea;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
   cursor: pointer;
   line-height: 32px;
   text-decoration: none;
@@ -117,10 +118,10 @@ h2 {
 .notice,
 .empty-state {
   padding: 18px;
-  border: 1px solid #26334c;
+  border: 1px solid var(--border);
   border-radius: 9px;
-  background: #0b1424;
-  color: #99a6bb;
+  background: rgba(4, 8, 19, 0.65);
+  color: var(--text-secondary);
 }
 .notice--error {
   border-color: rgba(239, 68, 68, 0.3);

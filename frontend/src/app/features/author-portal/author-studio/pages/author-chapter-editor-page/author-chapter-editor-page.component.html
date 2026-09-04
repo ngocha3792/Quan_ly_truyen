@@ -10,7 +10,7 @@
   </header>
 
   @if (store.error()) {
-    <p class="notice notice--error">{{ store.error() }}</p>
+    <div class="alert error">{{ store.error() }}</div>
   }
   @if (store.loading()) {
     <p class="notice">Đang tải chương...</p>
@@ -20,9 +20,12 @@
     }
 
     <form class="editor" [formGroup]="form" (ngSubmit)="save()">
-      <label>
+      <label class="field">
         <span>Tiêu đề chương</span>
-        <input type="text" maxlength="255" formControlName="title" />
+        <div class="input-wrapper">
+          <app-icon name="book-open" [size]="17" />
+          <input type="text" maxlength="255" formControlName="title" />
+        </div>
       </label>
 
       <div class="content-field">
@@ -30,6 +33,7 @@
           <span>Nội dung Markdown</span>
           @if (!isCreate && isEditable()) {
             <label class="image-upload-action">
+              <app-icon name="camera" [size]="15" />
               {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
               <input
                 type="file"
@@ -40,12 +44,14 @@
             </label>
           }
         </span>
-        <textarea
-          #contentArea
-          rows="28"
-          formControlName="content"
-          placeholder="Bắt đầu viết nội dung chương..."
-        ></textarea>
+        <div class="textarea-wrapper">
+          <textarea
+            #contentArea
+            rows="28"
+            formControlName="content"
+            placeholder="Bắt đầu viết nội dung chương..."
+          ></textarea>
+        </div>
         @if (isCreate) {
           <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
         }
@@ -57,7 +63,12 @@
         } @else {
           <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
         }
-        <button type="submit" [disabled]="!isEditable() || store.saving()">
+        <button class="primary-action" type="submit" [disabled]="!isEditable() || store.saving()">
+          @if (store.saving()) {
+            <span class="spinner"></span>
+          } @else {
+            <app-icon name="save" [size]="16" />
+          }
           {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
         </button>
       </footer>

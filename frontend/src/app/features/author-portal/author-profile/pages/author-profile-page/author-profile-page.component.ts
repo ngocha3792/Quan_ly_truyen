@@ -2,13 +2,14 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { provideAuthorProfile } from '../../data-access/author-profile.providers';
 import { AuthorProfileStore } from '../../data-access/author-profile.store';
 
 @Component({
   selector: 'app-author-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, IconComponent],
   providers: [...provideAuthorProfile(), AuthorProfileStore],
   templateUrl: './author-profile-page.component.html',
   styleUrl: './author-profile-page.component.scss',

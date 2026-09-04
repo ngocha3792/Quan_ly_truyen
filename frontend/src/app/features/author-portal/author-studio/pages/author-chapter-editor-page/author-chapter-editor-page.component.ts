@@ -13,12 +13,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, IconComponent],
   providers: [AuthorChapterEditorStore],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrl: './author-chapter-editor-page.component.scss',

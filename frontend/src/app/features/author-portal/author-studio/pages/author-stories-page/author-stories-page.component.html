@@ -6,21 +6,27 @@
       <p>Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện.</p>
     </div>
 
-    <a class="primary-action" routerLink="/author-studio/truyen/tao-moi">+ Tạo truyện</a>
+    <a class="primary-action" routerLink="/author-studio/truyen/tao-moi">
+      <app-icon name="plus" [size]="16" />
+      Tạo truyện
+    </a>
   </header>
 
   <section class="toolbar" aria-label="Bộ lọc truyện">
-    <input
-      type="search"
-      placeholder="Tìm theo tên truyện..."
-      [value]="query()"
-      (input)="updateQuery($event)"
-    />
+    <div class="input-wrapper">
+      <app-icon name="search" [size]="17" />
+      <input
+        type="search"
+        placeholder="Tìm theo tên truyện..."
+        [value]="query()"
+        (input)="updateQuery($event)"
+      />
+    </div>
     <span>{{ filteredStories().length }} truyện</span>
   </section>
 
   @if (store.error()) {
-    <p class="notice notice--error">{{ store.error() }}</p>
+    <div class="alert error">{{ store.error() }}</div>
   }
 
   @if (store.loading()) {

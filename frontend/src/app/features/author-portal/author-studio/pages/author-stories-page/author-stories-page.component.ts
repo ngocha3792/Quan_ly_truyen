@@ -9,13 +9,14 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { AuthorStoriesStore } from '../../data-access/author-stories.store';
 import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story-management.models';
 
 @Component({
   selector: 'app-author-stories-page',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, IconComponent],
   providers: [AuthorStoriesStore],
   templateUrl: './author-stories-page.component.html',
   styleUrl: './author-stories-page.component.scss',
