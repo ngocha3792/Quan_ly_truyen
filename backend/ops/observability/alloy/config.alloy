@@ -5,7 +5,10 @@ otelcol.receiver.otlp "default" {
 }
 
 otelcol.exporter.otlp "tempo" {
-  client { endpoint = "tempo:4317" tls { insecure = true } }
+  client {
+    endpoint = "tempo:4317"
+    tls { insecure = true }
+  }
 }
 
 discovery.docker "containers" { host = "unix:///var/run/docker.sock" }

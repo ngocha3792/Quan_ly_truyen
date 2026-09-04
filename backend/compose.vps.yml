@@ -1,0 +1,18 @@
+services:
+  api:
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  frontend:
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:8025:8025"
+    mem_limit: 64m
+    cpus: 0.25
