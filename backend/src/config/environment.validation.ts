@@ -1149,7 +1149,10 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     );
   }
 
-  if (config.NODE_ENV === 'production' && !config.CLOUDINARY_ENABLED) {
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    !config.CLOUDINARY_ENABLED
+  ) {
     throw new Error('CLOUDINARY_ENABLED must be true in production');
   }
 
@@ -1268,7 +1271,7 @@ function validateProductionGateRules(config: EnvironmentVariables): void {
 
   if (config.AUTH_COOKIE_PATH !== API_PATHS.AUTH) {
     throw new Error(
-      `AUTH_COOKIE_PATH must be exactly ${API_PATHS.AUTH} in production`,
+      `AUTH_COOKIE_PATH must be exactly ${String(API_PATHS.AUTH)} in production`,
     );
   }
 

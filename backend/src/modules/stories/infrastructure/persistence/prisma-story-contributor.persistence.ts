@@ -68,13 +68,13 @@ export class PrismaStoryContributorPersistence implements StoryContributorPersis
           storyId_userId_role: {
             storyId: input.storyId,
             userId: user.id,
-            role: input.role as ContributorRole,
+            role: input.role,
           },
         },
         create: {
           storyId: input.storyId,
           userId: user.id,
-          role: input.role as ContributorRole,
+          role: input.role,
           creditName: input.creditName?.trim() || null,
           canEdit: input.canEdit,
         },
@@ -99,7 +99,7 @@ export class PrismaStoryContributorPersistence implements StoryContributorPersis
       where: {
         storyId: input.storyId,
         userId: input.contributorUserId,
-        role: input.role as ContributorRole,
+        role: input.role,
       },
     });
   }
