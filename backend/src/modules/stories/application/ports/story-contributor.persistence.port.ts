@@ -22,7 +22,10 @@ export interface StoryContributorView {
 }
 
 export interface StoryContributorPersistencePort {
-  list(ownerId: string, storyId: string): Promise<readonly StoryContributorView[]>;
+  list(
+    ownerId: string,
+    storyId: string,
+  ): Promise<readonly StoryContributorView[]>;
   upsert(input: {
     readonly ownerId: string;
     readonly storyId: string;

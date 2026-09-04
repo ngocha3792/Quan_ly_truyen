@@ -140,7 +140,11 @@ import { SecurityLevel, SecurityScore } from '../../data/account-security.models
       height: 100%;
       display: block;
       border-radius: inherit;
-      background: linear-gradient(90deg, var(--score-accent-dim, #733cdd), var(--score-accent, #ad58ef));
+      background: linear-gradient(
+        90deg,
+        var(--score-accent-dim, #733cdd),
+        var(--score-accent, #ad58ef)
+      );
       transition: width 220ms ease;
     }
 

@@ -125,12 +125,14 @@ export class AccountSessionsPageComponent implements OnInit {
       .setCurrentSessionTrusted(trusted)
       .pipe(finalize(() => this.trustBusy.set(false)))
       .subscribe({
-      next: () => {
-        this.trustSuccess.set(trusted ? 'Đã tin cậy thiết bị hiện tại.' : 'Đã bỏ tin cậy thiết bị hiện tại.');
-        this.store.reload();
-      },
-      error: () => this.trustError.set('Không thể cập nhật trạng thái thiết bị tin cậy.'),
-    });
+        next: () => {
+          this.trustSuccess.set(
+            trusted ? 'Đã tin cậy thiết bị hiện tại.' : 'Đã bỏ tin cậy thiết bị hiện tại.',
+          );
+          this.store.reload();
+        },
+        error: () => this.trustError.set('Không thể cập nhật trạng thái thiết bị tin cậy.'),
+      });
   }
 
   protected clearTrustMessages(): void {

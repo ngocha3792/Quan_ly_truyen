@@ -55,7 +55,8 @@ export class AuthorStoryContributorsController {
   async remove(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
-    @Param('contributorUserId', new ParseUUIDPipe({ version: '4' })) contributorUserId: string,
+    @Param('contributorUserId', new ParseUUIDPipe({ version: '4' }))
+    contributorUserId: string,
     @Param('role') role: string,
   ): Promise<void> {
     await this.useCases.remove({

@@ -335,7 +335,11 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
         if (!input.trusted) {
           if (!session.trustedDeviceId) return true;
           await tx.trustedDevice.updateMany({
-            where: { id: session.trustedDeviceId, userId: input.userId, revokedAt: null },
+            where: {
+              id: session.trustedDeviceId,
+              userId: input.userId,
+              revokedAt: null,
+            },
             data: {
               revokedAt: input.changedAt,
               revokedReason: 'user_revoked',
@@ -343,7 +347,10 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
             },
           });
           await tx.session.updateMany({
-            where: { userId: input.userId, trustedDeviceId: session.trustedDeviceId },
+            where: {
+              userId: input.userId,
+              trustedDeviceId: session.trustedDeviceId,
+            },
             data: { trustedDeviceId: null },
           });
           await this.auditWriter.write(tx, {
@@ -366,7 +373,9 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
             userId: input.userId,
             deviceId,
             deviceName: session.deviceName,
-            fingerprintHash: hash(`${input.userId}:${deviceId}:${session.userAgent ?? ''}`),
+            fingerprintHash: hash(
+              `${input.userId}:${deviceId}:${session.userAgent ?? ''}`,
+            ),
             trustTokenHash: hash(randomBytes(32).toString('base64url')),
             trustedAt: input.changedAt,
             lastUsedAt: input.changedAt,
@@ -374,7 +383,9 @@ export class PrismaSessionManagementPersistence implements SessionManagementPers
           },
           update: {
             deviceName: session.deviceName,
-            fingerprintHash: hash(`${input.userId}:${deviceId}:${session.userAgent ?? ''}`),
+            fingerprintHash: hash(
+              `${input.userId}:${deviceId}:${session.userAgent ?? ''}`,
+            ),
             trustTokenHash: hash(randomBytes(32).toString('base64url')),
             trustedAt: input.changedAt,
             lastUsedAt: input.changedAt,

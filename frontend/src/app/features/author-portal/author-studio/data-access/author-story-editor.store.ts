@@ -149,9 +149,7 @@ export class AuthorStoryEditorStore {
     return this.repository.removeContributor(storyId, contributorUserId, role).pipe(
       tap(() =>
         this.contributors.update((contributors) =>
-          contributors.filter(
-            (item) => item.userId !== contributorUserId || item.role !== role,
-          ),
+          contributors.filter((item) => item.userId !== contributorUserId || item.role !== role),
         ),
       ),
       catchError((error: unknown) => {

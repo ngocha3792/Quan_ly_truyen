@@ -21,13 +21,15 @@ export class StoryUpdatesHttpRepository implements StoryUpdatesRepository {
   private readonly auth = inject(AuthStore);
 
   getOverview(query: StoryUpdatesQuery): Observable<StoryUpdatesOverview> {
-    return this.api.list({ sort: 'latest', pageSize: 100 }).pipe(
-      switchMap((page) =>
-        this.followedStoryIds(page.items).pipe(
-          map((followedIds) => buildOverview(page.items, query, followedIds)),
+    return this.api
+      .list({ sort: 'latest', pageSize: 100 })
+      .pipe(
+        switchMap((page) =>
+          this.followedStoryIds(page.items).pipe(
+            map((followedIds) => buildOverview(page.items, query, followedIds)),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   private followedStoryIds(

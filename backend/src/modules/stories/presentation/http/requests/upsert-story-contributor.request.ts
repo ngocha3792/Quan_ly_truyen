@@ -1,5 +1,15 @@
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import { STORY_CONTRIBUTOR_ROLES, type StoryContributorRoleName } from '../../../application';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import {
+  STORY_CONTRIBUTOR_ROLES,
+  type StoryContributorRoleName,
+} from '../../../application';
 
 export class UpsertStoryContributorRequest {
   @IsEmail()

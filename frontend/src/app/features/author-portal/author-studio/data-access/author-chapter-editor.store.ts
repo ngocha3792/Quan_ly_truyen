@@ -75,8 +75,8 @@ export class AuthorChapterEditorStore {
   uploadImage(chapterId: string, file: File): Observable<AuthorStoryMedia> {
     this.uploadingImage.set(true);
     this.error.set(null);
-    return this.repository.uploadChapterImage(chapterId, file).pipe(
-      finalize(() => this.uploadingImage.set(false)),
-    );
+    return this.repository
+      .uploadChapterImage(chapterId, file)
+      .pipe(finalize(() => this.uploadingImage.set(false)));
   }
 }

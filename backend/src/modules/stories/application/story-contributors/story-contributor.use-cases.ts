@@ -24,7 +24,10 @@ export class StoryContributorUseCases {
     creditName?: string;
     canEdit: boolean;
   }) {
-    return this.persistence.upsert({ ...input, email: input.email.trim().toLowerCase() });
+    return this.persistence.upsert({
+      ...input,
+      email: input.email.trim().toLowerCase(),
+    });
   }
 
   remove(input: {

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { AccountStatus, ContributorRole } from '@/generated/prisma/client';
-import { ResourceConflictException, ResourceNotFoundException } from '@/common/exceptions';
+import {
+  ResourceConflictException,
+  ResourceNotFoundException,
+} from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database';
 import type {
   StoryContributorPersistencePort,
@@ -12,7 +15,10 @@ import type {
 export class PrismaStoryContributorPersistence implements StoryContributorPersistencePort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(ownerId: string, storyId: string): Promise<readonly StoryContributorView[]> {
+  async list(
+    ownerId: string,
+    storyId: string,
+  ): Promise<readonly StoryContributorView[]> {
     await this.requireOwnedStory(ownerId, storyId);
     const rows = await this.prisma.storyContributor.findMany({
       where: { storyId },
@@ -98,7 +104,10 @@ export class PrismaStoryContributorPersistence implements StoryContributorPersis
     });
   }
 
-  private async requireOwnedStory(ownerId: string, storyId: string): Promise<void> {
+  private async requireOwnedStory(
+    ownerId: string,
+    storyId: string,
+  ): Promise<void> {
     const story = await this.prisma.story.findFirst({
       where: { id: storyId, authorId: ownerId, deletedAt: null },
       select: { id: true },

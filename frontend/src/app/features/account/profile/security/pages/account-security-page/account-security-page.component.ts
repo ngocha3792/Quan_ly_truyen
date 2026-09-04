@@ -17,13 +17,7 @@ import { AccountSecurityStore } from '../../data/account-security.store';
 
   standalone: true,
 
-  imports: [
-    SecuritySettingCardComponent,
-
-    SecurityScoreCardComponent,
-
-    DeleteAccountDialogComponent,
-  ],
+  imports: [SecuritySettingCardComponent, SecurityScoreCardComponent, DeleteAccountDialogComponent],
 
   templateUrl: './account-security-page.component.html',
 
