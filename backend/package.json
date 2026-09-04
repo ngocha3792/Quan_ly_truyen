@@ -161,7 +161,7 @@
     "@prisma/instrumentation": "7.9.1",
     "@types/ioredis": "^4.28.10",
     "bcryptjs": "^3.0.3",
-    "bullmq": "^6.1.2",
+    "bullmq": "^5.81.3",
     "bullmq-otel": "2.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -188,7 +188,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^26.2.0",
+    "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.1",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.21.0",
@@ -209,7 +209,7 @@
     "tsc-alias": "^1.9.1",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.12",
-    "typescript": "7.0.2",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.67.0"
   },
   "jest": {
