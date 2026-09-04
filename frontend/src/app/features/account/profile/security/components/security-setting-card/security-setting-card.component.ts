@@ -21,37 +21,39 @@ export type SecurityCardTone = 'default' | 'success' | 'danger';
         <p>{{ description() }}</p>
       </div>
 
-      @if (value()) {
-        <span class="setting-value">
-          {{ value() }}
-        </span>
-      }
+      <div class="setting-trailing">
+        @if (value()) {
+          <span class="setting-value">
+            {{ value() }}
+          </span>
+        }
 
-      @if (badge()) {
-        <span class="setting-badge" [class.enabled]="badgeTone() === 'success'">
-          {{ badge() }}
-        </span>
-      }
+        @if (badge()) {
+          <span class="setting-badge" [class.enabled]="badgeTone() === 'success'">
+            {{ badge() }}
+          </span>
+        }
 
-      @if (actionLabel()) {
-        <button
-          type="button"
-          class="setting-action"
-          [class.danger]="tone() === 'danger'"
-          (click)="action.emit()"
-        >
-          {{ actionLabel() }}
-        </button>
-      } @else {
-        <button
-          type="button"
-          class="chevron-action"
-          aria-label="Mở chi tiết"
-          (click)="action.emit()"
-        >
-          <app-icon name="chevron-right" [size]="20" />
-        </button>
-      }
+        @if (actionLabel()) {
+          <button
+            type="button"
+            class="setting-action"
+            [class.danger]="tone() === 'danger'"
+            (click)="action.emit()"
+          >
+            {{ actionLabel() }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="chevron-action"
+            aria-label="Mở chi tiết"
+            (click)="action.emit()"
+          >
+            <app-icon name="chevron-right" [size]="20" />
+          </button>
+        }
+      </div>
     </article>
   `,
   styles: `
@@ -66,7 +68,7 @@ export type SecurityCardTone = 'default' | 'success' | 'danger';
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 17px;
+      gap: 16px;
       border: 1px solid var(--border);
       border-radius: 13px;
       background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
@@ -74,6 +76,13 @@ export type SecurityCardTone = 'default' | 'success' | 'danger';
       transition:
         transform 170ms ease,
         border-color 170ms ease;
+    }
+
+    .setting-trailing {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
     }
 
     .setting-card:hover {
@@ -175,12 +184,10 @@ export type SecurityCardTone = 'default' | 'success' | 'danger';
         grid-template-columns: auto minmax(0, 1fr);
       }
 
-      .setting-action,
-      .setting-value,
-      .setting-badge,
-      .chevron-action {
+      .setting-trailing {
         grid-column: 2;
-        justify-self: start;
+        justify-content: flex-start;
+        flex-wrap: wrap;
       }
     }
   `,

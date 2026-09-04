@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
-import { SecurityScore } from '../../data/account-security.models';
+import { SecurityLevel, SecurityScore } from '../../data/account-security.models';
 
 @Component({
   selector: 'app-security-score-card',
@@ -10,14 +10,14 @@ import { SecurityScore } from '../../data/account-security.models';
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <aside class="score-card" [attr.data-level]="score().level">
+    <aside class="score-card" [attr.data-level]="score().level" [style]="cardVars()">
       <div class="score-title">
         <strong>Mức độ bảo mật</strong>
 
         <app-icon name="info" [size]="15" />
       </div>
 
-      <div class="score-ring" [style.background]="ringBackground()">
+      <div class="score-ring" [style]="ringStyle()">
         <div class="score-ring-inner">
           <strong> {{ score().percent }}% </strong>
 
@@ -66,7 +66,7 @@ import { SecurityScore } from '../../data/account-security.models';
   `,
   styles: `
     .score-card {
-      padding: 22px 20px;
+      padding: 24px 20px;
       border: 1px solid var(--border);
       border-radius: 14px;
       background: linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98));
@@ -87,11 +87,12 @@ import { SecurityScore } from '../../data/account-security.models';
     }
 
     .score-ring {
-      width: 128px;
-      height: 128px;
-      margin: 25px auto 17px;
-      padding: 8px;
+      width: 136px;
+      height: 136px;
+      margin: 24px auto 20px;
+      padding: 10px;
       border-radius: 50%;
+      transition: box-shadow 220ms ease;
     }
 
     .score-ring-inner {
@@ -100,20 +101,23 @@ import { SecurityScore } from '../../data/account-security.models';
       display: grid;
       place-items: center;
       align-content: center;
-      gap: 5px;
+      gap: 4px;
       border-radius: 50%;
-      background: #11192b;
+      background: #131b2e;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     }
 
     .score-ring-inner strong {
       color: #f8fafc;
-      font-size: 28px;
-      font-weight: 700;
+      font-size: 30px;
+      font-weight: 750;
+      letter-spacing: -0.02em;
     }
 
     .score-ring-inner span {
-      color: #94a3b8;
+      color: var(--score-accent, #94a3b8);
       font-size: 12px;
+      font-weight: 650;
     }
 
     .score-description {
@@ -126,7 +130,7 @@ import { SecurityScore } from '../../data/account-security.models';
 
     .score-progress {
       height: 6px;
-      margin: 19px 0 24px;
+      margin: 20px 0 24px;
       overflow: hidden;
       border-radius: 20px;
       background: #252d40;
@@ -136,12 +140,13 @@ import { SecurityScore } from '../../data/account-security.models';
       height: 100%;
       display: block;
       border-radius: inherit;
-      background: linear-gradient(90deg, #733cdd, #ad58ef);
+      background: linear-gradient(90deg, var(--score-accent-dim, #733cdd), var(--score-accent, #ad58ef));
+      transition: width 220ms ease;
     }
 
     .score-items {
       display: grid;
-      gap: 17px;
+      gap: 16px;
     }
 
     .score-item {
@@ -154,16 +159,18 @@ import { SecurityScore } from '../../data/account-security.models';
     .item-status {
       width: 22px;
       height: 22px;
+      flex-shrink: 0;
       display: grid;
       place-items: center;
-      border: 1px solid #465067;
+      border: 1.5px solid #3a4358;
       border-radius: 50%;
       color: #4ade80;
     }
 
     .item-status.completed {
-      border-color: rgba(34, 197, 94, 0.18);
-      background: rgba(34, 197, 94, 0.18);
+      border-color: transparent;
+      color: #0f1a12;
+      background: #4ade80;
     }
 
     .score-item div {
@@ -185,7 +192,7 @@ import { SecurityScore } from '../../data/account-security.models';
     .suggestion-button {
       width: 100%;
       min-height: 42px;
-      margin-top: 25px;
+      margin-top: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -197,6 +204,9 @@ import { SecurityScore } from '../../data/account-security.models';
       font-weight: 650;
       cursor: pointer;
       background: transparent;
+      transition:
+        color 150ms ease,
+        background 150ms ease;
     }
 
     .suggestion-button:hover {
@@ -210,17 +220,42 @@ export class SecurityScoreCardComponent {
 
   readonly suggestionsRequested = output<void>();
 
+  private static readonly LEVEL_PALETTE: Record<
+    SecurityLevel,
+    { readonly accent: string; readonly accentDim: string; readonly glow: string }
+  > = {
+    low: { accent: '#f87171', accentDim: '#c0392b', glow: 'rgba(248, 113, 113, 0.28)' },
+    medium: { accent: '#fbbf24', accentDim: '#b8790a', glow: 'rgba(251, 191, 36, 0.26)' },
+    good: { accent: '#a970ff', accentDim: '#733cdd', glow: 'rgba(149, 82, 236, 0.28)' },
+    excellent: { accent: '#4ade80', accentDim: '#1f9d55', glow: 'rgba(74, 222, 128, 0.28)' },
+  };
+
+  private readonly palette = computed(
+    () => SecurityScoreCardComponent.LEVEL_PALETTE[this.score().level],
+  );
+
   readonly ringBackground = computed(() => {
     const percent = this.score().percent;
+    const { accent } = this.palette();
 
     return [
       'conic-gradient(',
-      '#9552ec 0%,',
-      `#9552ec ${percent}%,`,
+      `${accent} 0%,`,
+      `${accent} ${percent}%,`,
       'rgba(86, 98, 127, .2)',
       `${percent}%,`,
       'rgba(86, 98, 127, .2) 100%',
       ')',
     ].join(' ');
   });
+
+  readonly ringStyle = computed(() => ({
+    background: this.ringBackground(),
+    'box-shadow': `0 0 0 1px rgba(255, 255, 255, 0.02), 0 8px 22px ${this.palette().glow}`,
+  }));
+
+  readonly cardVars = computed(() => ({
+    '--score-accent': this.palette().accent,
+    '--score-accent-dim': this.palette().accentDim,
+  }));
 }
