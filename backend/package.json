@@ -237,8 +237,9 @@
   },
   "overrides": {
     "deepmerge-ts": "8.0.1",
-    "fast-uri": "3.1.5",
-    "js-yaml": "5.2.2"
+    "fast-uri": "4.1.4",
+    "js-yaml": "5.2.2",
+    "mysql2": "3.24.3"
   },
   "packageManager": "npm@11.12.1",
   "engines": {
