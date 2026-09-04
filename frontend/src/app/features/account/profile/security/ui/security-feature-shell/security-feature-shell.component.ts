@@ -56,9 +56,13 @@ import { IconComponent } from '../../../../../../shared/components/icon/icon.com
       align-items: center;
       gap: 6px;
       color: #9d70e9;
-      font-size: 10px;
+      font-size: 13px;
       font-weight: 700;
       text-decoration: none;
+    }
+
+    .back-link:hover {
+      color: #c084fc;
     }
 
     h1 {

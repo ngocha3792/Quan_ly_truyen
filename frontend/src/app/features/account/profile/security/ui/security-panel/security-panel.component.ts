@@ -82,7 +82,7 @@ import { IconComponent, IconName } from '../../../../../../shared/components/ico
     p {
       margin: 7px 0 0;
       color: #7f899d;
-      font-size: 10px;
+      font-size: 12.5px;
       line-height: 1.55;
     }
 
