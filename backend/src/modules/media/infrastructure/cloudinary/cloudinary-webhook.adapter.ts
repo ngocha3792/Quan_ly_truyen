@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CLOUDINARY_DEFAULTS } from '@/common/constants';
@@ -54,13 +54,9 @@ export class CloudinaryWebhookAdapter implements MediaWebhookPort {
       });
     }
     const rawText = input.rawBody.toString('utf8');
-    const valid = this.cloudinary.utils.verifyNotificationSignature(
-      rawText,
-      timestamp,
-      input.signature,
-      validFor,
-    );
-    if (!valid) throw new CloudinaryWebhookSignatureException();
+    if (!this.verifyWebhookSignature(rawText, timestamp, input.signature)) {
+      throw new CloudinaryWebhookSignatureException();
+    }
 
     let payload: Record<string, unknown>;
     try {
@@ -135,6 +131,32 @@ export class CloudinaryWebhookAdapter implements MediaWebhookPort {
         retryable: true,
       });
     }
+  }
+
+  /**
+   * Cloudinary always signs outbound notification payloads with SHA-1,
+   * regardless of the account's configured upload `signature_algorithm`
+   * (that setting only governs how *we* sign outgoing upload requests).
+   * The SDK's own `verifyNotificationSignature` reads the same global
+   * `signature_algorithm` config, so with SHA-256 configured for uploads
+   * it always rejects genuine Cloudinary notifications. Verify against
+   * the documented SHA-1 scheme directly instead.
+   */
+  private verifyWebhookSignature(
+    body: string,
+    timestamp: number,
+    signature: string,
+  ): boolean {
+    const apiSecret = this.configService.getOrThrow<string>(
+      'cloudinary.apiSecret',
+    );
+    const expected = createHash('sha1')
+      .update(`${body}${timestamp}${apiSecret}`)
+      .digest('hex');
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+    const actualBuffer = Buffer.from(signature, 'utf8');
+    if (expectedBuffer.length !== actualBuffer.length) return false;
+    return timingSafeEqual(expectedBuffer, actualBuffer);
   }
 }
 
