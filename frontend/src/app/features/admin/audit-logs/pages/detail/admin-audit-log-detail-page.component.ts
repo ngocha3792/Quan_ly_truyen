@@ -15,6 +15,8 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuditLogsApiService } from '../../data-access/admin-audit-logs-api.service';
 import type { AdminAuditLogDetail } from '../../domain/admin-audit-log.models';
@@ -31,6 +33,8 @@ import { AuditJsonViewerComponent } from '../../ui/audit-json-viewer/audit-json-
     RouterLink,
     BreadcrumbComponent,
     PageHeadingComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
   ],
   templateUrl: './admin-audit-log-detail-page.component.html',
   styleUrl: './admin-audit-log-detail-page.component.scss',
@@ -78,7 +82,7 @@ export class AdminAuditLogDetailPageComponent implements OnInit {
     if (value && navigator.clipboard) void navigator.clipboard.writeText(value);
   }
 
-  private load(): void {
+  protected load(): void {
     if (!this.id) return;
     this.loading.set(true);
     this.error.set('');

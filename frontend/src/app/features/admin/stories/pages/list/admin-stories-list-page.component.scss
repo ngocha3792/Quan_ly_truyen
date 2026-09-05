@@ -1,10 +1,10 @@
-.admin-page {
-  padding: 2rem 1rem;
-  color: var(--text-strong);
+:host {
+  display: block;
 }
-.page-container {
-  max-width: 1200px;
-  margin: auto;
+.admin-page {
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  color: var(--text-strong);
 }
 small {
   display: block;
@@ -40,10 +40,12 @@ td {
 }
 .pager {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
 }
 .error {
   color: #ffb1be;

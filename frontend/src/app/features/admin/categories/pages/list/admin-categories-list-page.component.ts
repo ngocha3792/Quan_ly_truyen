@@ -15,6 +15,9 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminCategoriesApiService } from '../../data-access/admin-categories-api.service';
@@ -23,7 +26,15 @@ import { AdminCategory, AdminCategoryList } from '../../domain/admin-category.mo
 @Component({
   selector: 'app-admin-categories-list-page',
   standalone: true,
-  imports: [FormsModule, BreadcrumbComponent, PageHeadingComponent, PaginationComponent],
+  imports: [
+    FormsModule,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    PaginationComponent,
+    EmptyStateComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
+  ],
   templateUrl: './admin-categories-list-page.component.html',
   styleUrl: './admin-categories-list-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -194,7 +205,7 @@ export class AdminCategoriesListPageComponent implements OnInit {
       });
   }
 
-  private load(): void {
+  protected load(): void {
     this.loading.set(true);
     this.error.set('');
     this.api

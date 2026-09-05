@@ -1,8 +1,13 @@
+:host {
+  display: block;
+}
 .admin-page {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 32px 20px;
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
   color: var(--text-strong);
+}
+.state {
+  padding: 18px 0;
 }
 .toolbar {
   display: flex;
@@ -48,9 +53,6 @@ button:disabled {
   padding: 12px;
   border: 1px solid #33415f;
   border-radius: 8px;
-}
-.notice.error {
-  color: #ff9a9a;
 }
 .notice.success {
   color: #91e6af;

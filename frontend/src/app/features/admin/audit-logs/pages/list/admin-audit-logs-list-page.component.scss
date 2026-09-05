@@ -1,7 +1,13 @@
-.admin-audit-list {
-  width: min(1440px, calc(100% - 2rem));
-  margin: 2rem auto 4rem;
+:host {
+  display: block;
+}
+.admin-page {
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
   color: var(--text-strong);
+}
+.state {
+  padding: 18px 0;
 }
 .filters {
   display: grid;
@@ -67,9 +73,6 @@ code {
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
-}
-.error {
-  color: #ffb1be;
 }
 @media (max-width: 1000px) {
   .filters {

@@ -1,10 +1,10 @@
-.admin-page {
-  padding: 2rem 1rem;
-  color: var(--text-strong);
+:host {
+  display: block;
 }
-.page-container {
-  max-width: 1000px;
-  margin: auto;
+.admin-page {
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
+  color: var(--text-strong);
 }
 .back-button {
   color: #a78bfa;

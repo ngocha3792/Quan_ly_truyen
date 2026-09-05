@@ -22,6 +22,8 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminReportsApiService } from '../../data-access/admin-reports-api.service';
 import type { AdminReportDetail, AdminReportReason } from '../../domain/admin-report.models';
@@ -48,6 +50,8 @@ const REPORT_REASON_LABELS: Record<AdminReportReason, string> = {
     BreadcrumbComponent,
     PageHeadingComponent,
     AdminReportStatusBadgeComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
   ],
   templateUrl: './admin-report-detail-page.component.html',
   styleUrl: './admin-report-detail-page.component.scss',
@@ -164,7 +168,7 @@ export class AdminReportDetailPageComponent implements OnInit {
         error: (e: unknown) => this.error.set(getApiErrorMessage(e)),
       });
   }
-  private load(): void {
+  protected load(): void {
     if (!this.reportId) return;
     this.loading.set(true);
     this.api

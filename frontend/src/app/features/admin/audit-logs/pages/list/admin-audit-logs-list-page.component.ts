@@ -16,6 +16,9 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminAuditLogsApiService } from '../../data-access/admin-audit-logs-api.service';
@@ -31,6 +34,9 @@ import type { AdminAuditLogList } from '../../domain/admin-audit-log.models';
     BreadcrumbComponent,
     PageHeadingComponent,
     PaginationComponent,
+    EmptyStateComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
   ],
   templateUrl: './admin-audit-logs-list-page.component.html',
   styleUrl: './admin-audit-logs-list-page.component.scss',
@@ -111,7 +117,7 @@ export class AdminAuditLogsListPageComponent implements OnInit {
     });
   }
 
-  private load(): void {
+  protected load(): void {
     this.loading.set(true);
     this.error.set('');
     this.api

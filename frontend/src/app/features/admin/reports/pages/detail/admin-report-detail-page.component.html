@@ -1,118 +1,125 @@
-<main class="admin-detail">
-  <app-breadcrumb [items]="breadcrumbs" />
-  @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
-  @if (message()) {
-    <p class="message">{{ message() }}</p>
-  }
-  @if (loading()) {
-    <p>Đang tải...</p>
-  } @else if (detail(); as d) {
-    <app-page-heading
-      [title]="reasonLabel(d.reason)"
-      [description]="d.createdAt | date: 'medium'"
-      icon="alert-triangle"
-    >
-      <a class="back-button" routerLink="/admin/reports">← Danh sách báo cáo</a>
-    </app-page-heading>
-    <div class="hero-meta">
-      <app-admin-report-status-badge [status]="d.status" />
-    </div>
-    <div class="grid">
-      <section class="card">
-        <h2>Nội dung bị báo cáo</h2>
-        @if (evidenceBody()) {
-          <pre class="content">{{ evidenceBody() }}</pre>
-        } @else {
-          <pre>{{ evidenceText() }}</pre>
-        }
-      </section>
-      <section class="card">
-        <h2>Bình luận hiện tại</h2>
-        @if (d.currentComment) {
-          <p class="status">{{ d.currentComment.moderationStatus }}</p>
-          <pre class="content">{{ d.currentComment.body }}</pre>
-          @if (editedAfterReport()) {
-            <strong class="warning">Đã chỉnh sửa sau khi bị báo cáo</strong>
+<main class="admin-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
+
+    @if (message()) {
+      <p class="message">{{ message() }}</p>
+    }
+    @if (error()) {
+      <div class="state">
+        <app-error-alert title="Không thể tải báo cáo" [message]="error()" (retry)="load()" />
+      </div>
+    }
+    @if (loading() && !detail()) {
+      <app-loading-state message="Đang tải báo cáo..." />
+    } @else if (detail(); as d) {
+      <app-page-heading
+        [title]="reasonLabel(d.reason)"
+        [description]="d.createdAt | date: 'medium'"
+        icon="alert-triangle"
+      >
+        <a class="back-button" routerLink="/admin/reports">← Danh sách báo cáo</a>
+      </app-page-heading>
+      <div class="hero-meta">
+        <app-admin-report-status-badge [status]="d.status" />
+      </div>
+      <div class="grid">
+        <section class="card">
+          <h2>Nội dung bị báo cáo</h2>
+          @if (evidenceBody()) {
+            <pre class="content">{{ evidenceBody() }}</pre>
+          } @else {
+            <pre>{{ evidenceText() }}</pre>
           }
-        } @else {
-          <p>Bình luận không còn khả dụng.</p>
+        </section>
+        <section class="card">
+          <h2>Bình luận hiện tại</h2>
+          @if (d.currentComment) {
+            <p class="status">{{ d.currentComment.moderationStatus }}</p>
+            <pre class="content">{{ d.currentComment.body }}</pre>
+            @if (editedAfterReport()) {
+              <strong class="warning">Đã chỉnh sửa sau khi bị báo cáo</strong>
+            }
+          } @else {
+            <p>Bình luận không còn khả dụng.</p>
+          }
+        </section>
+      </div>
+      <section class="card">
+        <h2>Bối cảnh</h2>
+        <p>
+          Truyện: {{ d.story?.title || '—' }}
+          @if (d.chapter) {
+            · {{ d.chapter.title }}
+          }
+        </p>
+        <p>
+          Người báo cáo: {{ d.reporter?.displayName || '—' }} · Người bị báo cáo:
+          {{ d.reportedUser?.displayName || '—' }} ({{ d.reportedUser?.status || '—' }})
+        </p>
+        <p>
+          Báo cáo liên quan: {{ d.relatedReportCount }} · Kiểm duyệt gần đây:
+          {{ d.recentUserModerationCount }}
+        </p>
+        <p>{{ d.description || 'Không có mô tả.' }}</p>
+      </section>
+      <section class="card">
+        <h2>Hành động kiểm duyệt</h2>
+        <label>Lý do (10–2000 ký tự)</label
+        ><textarea rows="3" maxlength="2000" [(ngModel)]="reason"></textarea>
+        <div class="actions">
+          @if (canModerate()) {
+            <button [disabled]="mutating()" (click)="moderate('hold')">Giữ lại</button
+            ><button [disabled]="mutating()" (click)="moderate('hide')">Ẩn</button
+            ><button [disabled]="mutating()" (click)="moderate('restore')">Khôi phục</button
+            ><button class="danger" [disabled]="mutating()" (click)="moderate('remove')">
+              Xóa
+            </button>
+          }
+          @if (canBan()) {
+            <button class="danger" [disabled]="mutating()" (click)="ban()">Cấm người dùng</button>
+          }
+        </div>
+        @if (canWarn()) {
+          <label>Nội dung cảnh báo</label
+          ><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea
+          ><button [disabled]="mutating()" (click)="warn()">Gửi cảnh báo</button>
         }
       </section>
-    </div>
-    <section class="card">
-      <h2>Bối cảnh</h2>
-      <p>
-        Truyện: {{ d.story?.title || '—' }}
-        @if (d.chapter) {
-          · {{ d.chapter.title }}
-        }
-      </p>
-      <p>
-        Người báo cáo: {{ d.reporter?.displayName || '—' }} · Người bị báo cáo:
-        {{ d.reportedUser?.displayName || '—' }} ({{ d.reportedUser?.status || '—' }})
-      </p>
-      <p>
-        Báo cáo liên quan: {{ d.relatedReportCount }} · Kiểm duyệt gần đây:
-        {{ d.recentUserModerationCount }}
-      </p>
-      <p>{{ d.description || 'Không có mô tả.' }}</p>
-    </section>
-    <section class="card">
-      <h2>Hành động kiểm duyệt</h2>
-      <label>Lý do (10–2000 ký tự)</label
-      ><textarea rows="3" maxlength="2000" [(ngModel)]="reason"></textarea>
-      <div class="actions">
-        @if (canModerate()) {
-          <button [disabled]="mutating()" (click)="moderate('hold')">Giữ lại</button
-          ><button [disabled]="mutating()" (click)="moderate('hide')">Ẩn</button
-          ><button [disabled]="mutating()" (click)="moderate('restore')">Khôi phục</button
-          ><button class="danger" [disabled]="mutating()" (click)="moderate('remove')">Xóa</button>
-        }
-        @if (canBan()) {
-          <button class="danger" [disabled]="mutating()" (click)="ban()">Cấm người dùng</button>
-        }
-      </div>
-      @if (canWarn()) {
-        <label>Nội dung cảnh báo</label
-        ><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea
-        ><button [disabled]="mutating()" (click)="warn()">Gửi cảnh báo</button>
-      }
-    </section>
-    <section class="card">
-      <h2>Quyết định xử lý báo cáo</h2>
-      <textarea
-        rows="3"
-        maxlength="2000"
-        [(ngModel)]="decisionNote"
-        placeholder="Ghi chú xử lý (ít nhất 10 ký tự)"
-      ></textarea>
-      <div class="actions">
-        <button
-          [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
-          (click)="closeReport('resolve')"
-        >
-          Đã xử lý</button
-        ><button
-          [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
-          (click)="closeReport('reject')"
-        >
-          Từ chối
-        </button>
-      </div>
-    </section>
-    <section class="card">
-      <h2>Lịch sử kiểm duyệt</h2>
-      @for (action of d.moderationActions; track action.id) {
-        <div class="history">
-          <strong>{{ action.action }}</strong
-          ><span>{{ action.createdAt | date: 'short' }}</span>
-          <p>{{ action.reason || '—' }}</p>
+      <section class="card">
+        <h2>Quyết định xử lý báo cáo</h2>
+        <textarea
+          rows="3"
+          maxlength="2000"
+          [(ngModel)]="decisionNote"
+          placeholder="Ghi chú xử lý (ít nhất 10 ký tự)"
+        ></textarea>
+        <div class="actions">
+          <button
+            [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
+            (click)="closeReport('resolve')"
+          >
+            Đã xử lý</button
+          ><button
+            [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
+            (click)="closeReport('reject')"
+          >
+            Từ chối
+          </button>
         </div>
-      } @empty {
-        <p>Chưa có hành động nào.</p>
-      }
-    </section>
-  }
+      </section>
+      <section class="card">
+        <h2>Lịch sử kiểm duyệt</h2>
+        @for (action of d.moderationActions; track action.id) {
+          <div class="history">
+            <strong>{{ action.action }}</strong
+            ><span>{{ action.createdAt | date: 'short' }}</span>
+            <p>{{ action.reason || '—' }}</p>
+          </div>
+        } @empty {
+          <p>Chưa có hành động nào.</p>
+        }
+      </section>
+    }
+  </div>
 </main>

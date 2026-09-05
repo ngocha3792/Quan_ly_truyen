@@ -1,9 +1,13 @@
-.audit-detail {
-  width: min(1100px, calc(100% - 2rem));
-  margin: 2rem auto 4rem;
-  display: grid;
-  gap: 1rem;
+:host {
+  display: block;
+}
+.admin-page {
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
   color: var(--text-strong);
+}
+.state {
+  padding: 18px 0;
 }
 .back-button {
   color: #a78bfa;
@@ -13,6 +17,7 @@
   white-space: nowrap;
 }
 .card {
+  margin-top: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.9rem;
   padding: 1rem;
@@ -23,6 +28,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  margin-top: 1rem;
+}
+.payload-grid .card {
+  margin-top: 0;
 }
 dl {
   display: grid;
@@ -43,9 +52,6 @@ dd a {
 }
 .ua {
   white-space: pre-wrap;
-}
-.error {
-  color: #ffb1be;
 }
 @media (max-width: 760px) {
   .payload-grid {

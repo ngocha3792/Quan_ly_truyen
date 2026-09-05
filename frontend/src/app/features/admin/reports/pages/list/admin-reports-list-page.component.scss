@@ -1,8 +1,13 @@
+:host {
+  display: block;
+}
 .admin-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 20px;
+  min-height: calc(100vh - 72px);
+  padding: 1.25rem 0 4rem;
   color: var(--text-strong);
+}
+.state {
+  padding: 18px 0;
 }
 .filters {
   display: grid;
@@ -46,9 +51,6 @@ a {
   margin-top: 16px;
   color: var(--text-secondary);
   font-size: 0.85rem;
-}
-.error {
-  color: #fb7185;
 }
 @media (max-width: 800px) {
   .filters {
