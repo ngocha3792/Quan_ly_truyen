@@ -45,9 +45,9 @@ test('deactivated category stays visible and editable on an existing author stor
   await loginAuthor(page, testInfo.title);
   await page.goto('/author-studio/truyen');
 
-  const storyCard = page.locator('.story-card').filter({ hasText: 'E2E Taxonomy Legacy Story' });
-  await expect(storyCard).toBeVisible();
-  await storyCard.getByRole('link', { name: 'Chi tiết' }).click();
+  const storyRow = page.getByRole('row').filter({ hasText: 'E2E Taxonomy Legacy Story' });
+  await expect(storyRow).toBeVisible();
+  await storyRow.getByRole('link', { name: 'Chi tiết' }).click();
 
   await expect(
     page.getByRole('button', { name: /E2E Legacy Fantasy · Không còn sử dụng/ }),
