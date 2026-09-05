@@ -9,88 +9,94 @@
       <app-button variant="primary" (click)="openCreate()">Tạo tag</app-button>
     </app-page-heading>
 
-    <section class="toolbar">
-      <app-search-field
-        [value]="q"
-        placeholder="Tìm theo tên hoặc slug…"
-        ariaLabel="Tìm tag"
-        (valueChange)="keywordChanged($event)"
-      />
-    </section>
-
-    @if (message()) {
-      <p class="notice success">{{ message() }}</p>
-    }
-    @if (error()) {
-      <div class="state">
-        <app-error-alert title="Không thể tải tag" [message]="error()" (retry)="load()" />
-      </div>
-    }
-    @if (loading() && !result()) {
-      <app-loading-state message="Đang tải tag..." />
-    } @else if (result(); as data) {
-      @if (data.items.length === 0) {
-        <app-empty-state
-          icon="bookmark"
-          title="Không có tag phù hợp"
-          description="Thử điều chỉnh bộ lọc hoặc tạo tag mới."
+    <section class="card">
+      <div class="toolbar">
+        <app-search-field
+          [value]="q"
+          placeholder="Tìm theo tên hoặc slug…"
+          ariaLabel="Tìm tag"
+          (valueChange)="keywordChanged($event)"
         />
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tên</th>
-                <th>Slug</th>
-                <th>Số truyện</th>
-                <th>Ngày tạo</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (tag of data.items; track tag.id) {
-                <tr>
-                  <td>
-                    <strong>{{ tag.name }}</strong>
-                  </td>
-                  <td>
-                    <code>{{ tag.slug }}</code>
-                  </td>
-                  <td>{{ tag.storyCount }}</td>
-                  <td>{{ tag.createdAt.slice(0, 10) }}</td>
-                  <td class="actions">
-                    <app-button variant="secondary" (click)="openEdit(tag)">Sửa</app-button>
-                    <app-button variant="secondary" (click)="openMerge(tag)">Hợp nhất</app-button>
-                    <app-button
-                      variant="danger"
-                      [disabled]="tag.storyCount > 0"
-                      [title]="
-                        tag.storyCount > 0
-                          ? 'Tag đang được ' +
-                            tag.storyCount +
-                            ' truyện sử dụng. Hãy hợp nhất trước.'
-                          : ''
-                      "
-                      (click)="delete(tag)"
-                    >
-                      Xóa
-                    </app-button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <footer class="pager">
-          <span>Tổng {{ data.pagination.totalItems }} tag</span>
-          <app-pagination
-            [page]="data.pagination.page"
-            [totalPages]="data.pagination.totalPages || 1"
-            (pageChange)="go($event)"
-          />
-        </footer>
+      </div>
+
+      @if (message()) {
+        <p class="notice success">{{ message() }}</p>
       }
-    }
+      @if (error()) {
+        <div class="state">
+          <app-error-alert title="Không thể tải tag" [message]="error()" (retry)="load()" />
+        </div>
+      }
+      @if (loading() && !result()) {
+        <div class="state">
+          <app-loading-state message="Đang tải tag..." />
+        </div>
+      } @else if (result(); as data) {
+        @if (data.items.length === 0) {
+          <div class="state">
+            <app-empty-state
+              icon="bookmark"
+              title="Không có tag phù hợp"
+              description="Thử điều chỉnh bộ lọc hoặc tạo tag mới."
+            />
+          </div>
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên</th>
+                  <th>Slug</th>
+                  <th>Số truyện</th>
+                  <th>Ngày tạo</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (tag of data.items; track tag.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ tag.name }}</strong>
+                    </td>
+                    <td>
+                      <code>{{ tag.slug }}</code>
+                    </td>
+                    <td>{{ tag.storyCount }}</td>
+                    <td>{{ tag.createdAt.slice(0, 10) }}</td>
+                    <td class="actions">
+                      <app-button variant="secondary" (click)="openEdit(tag)">Sửa</app-button>
+                      <app-button variant="secondary" (click)="openMerge(tag)">Hợp nhất</app-button>
+                      <app-button
+                        variant="danger"
+                        [disabled]="tag.storyCount > 0"
+                        [title]="
+                          tag.storyCount > 0
+                            ? 'Tag đang được ' +
+                              tag.storyCount +
+                              ' truyện sử dụng. Hãy hợp nhất trước.'
+                            : ''
+                        "
+                        (click)="delete(tag)"
+                      >
+                        Xóa
+                      </app-button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <footer class="pagination">
+            <span>Tổng {{ data.pagination.totalItems }} tag</span>
+            <app-pagination
+              [page]="data.pagination.page"
+              [totalPages]="data.pagination.totalPages || 1"
+              (pageChange)="go($event)"
+            />
+          </footer>
+        }
+      }
+    </section>
 
     @if (editorOpen()) {
       <div class="modal-backdrop">

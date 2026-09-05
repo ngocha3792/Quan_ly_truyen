@@ -6,90 +6,97 @@
       description="Queue báo cáo bình luận với evidence snapshot và trạng thái xử lý."
       icon="alert-triangle"
     />
-    <app-tab-filter
-      ariaLabel="Trạng thái báo cáo"
-      [options]="statusFilterOptions"
-      [selected]="status"
-      (selectedChange)="statusChanged($event)"
-    />
-    <section class="filters">
-      <select [(ngModel)]="reason" (change)="go(1)">
-        <option value="">Tất cả lý do</option>
-        @for (item of reasons; track item) {
-          <option [value]="item">{{ reasonLabel(item) }}</option>
-        }
-      </select>
-      <app-search-field
-        [value]="reporter"
-        placeholder="Người báo cáo"
-        ariaLabel="Tìm theo người báo cáo"
-        (valueChange)="reporterChanged($event)"
+    <section class="card">
+      <app-tab-filter
+        class="status-tabs"
+        ariaLabel="Trạng thái báo cáo"
+        [options]="statusFilterOptions"
+        [selected]="status"
+        (selectedChange)="statusChanged($event)"
       />
-      <app-search-field
-        [value]="reportedUser"
-        placeholder="Người bị báo cáo"
-        ariaLabel="Tìm theo người bị báo cáo"
-        (valueChange)="reportedUserChanged($event)"
-      />
-      <label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label>
-      <label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
-    </section>
-    @if (error()) {
-      <div class="state">
-        <app-error-alert title="Không thể tải báo cáo" [message]="error()" (retry)="load()" />
-      </div>
-    }
-    @if (loading() && !result()) {
-      <app-loading-state message="Đang tải báo cáo..." />
-    } @else if (result(); as data) {
-      @if (data.items.length === 0) {
-        <app-empty-state
-          icon="alert-triangle"
-          title="Không có báo cáo phù hợp"
-          description="Thử điều chỉnh bộ lọc để xem thêm kết quả."
+      <div class="filters">
+        <select [(ngModel)]="reason" (change)="go(1)">
+          <option value="">Tất cả lý do</option>
+          @for (item of reasons; track item) {
+            <option [value]="item">{{ reasonLabel(item) }}</option>
+          }
+        </select>
+        <app-search-field
+          [value]="reporter"
+          placeholder="Người báo cáo"
+          ariaLabel="Tìm theo người báo cáo"
+          (valueChange)="reporterChanged($event)"
         />
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Lý do</th>
-                <th>Bình luận</th>
-                <th>Người bị báo cáo</th>
-                <th>Người báo cáo</th>
-                <th>Trạng thái</th>
-                <th>Ngày tạo</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of data.items; track item.id) {
-                <tr>
-                  <td>{{ reasonLabel(item.reason) }}</td>
-                  <td>{{ item.comment?.excerpt || '—' }}</td>
-                  <td>{{ item.reportedUser?.displayName || '—' }}</td>
-                  <td>{{ item.reporter?.displayName || '—' }}</td>
-                  <td><app-admin-report-status-badge [status]="item.status" /></td>
-                  <td>{{ item.createdAt | date: 'short' }}</td>
-                  <td>
-                    <app-link-button [routerLink]="['/admin/reports', item.id]"
-                      >Xem</app-link-button
-                    >
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <app-search-field
+          [value]="reportedUser"
+          placeholder="Người bị báo cáo"
+          ariaLabel="Tìm theo người bị báo cáo"
+          (valueChange)="reportedUserChanged($event)"
+        />
+        <label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label>
+        <label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
+      </div>
+      @if (error()) {
+        <div class="state">
+          <app-error-alert title="Không thể tải báo cáo" [message]="error()" (retry)="load()" />
         </div>
-        <footer class="pager">
-          <span>Tổng {{ data.pagination.totalItems }} báo cáo</span>
-          <app-pagination
-            [page]="page"
-            [totalPages]="data.pagination.totalPages || 1"
-            (pageChange)="go($event)"
-          />
-        </footer>
       }
-    }
+      @if (loading() && !result()) {
+        <div class="state">
+          <app-loading-state message="Đang tải báo cáo..." />
+        </div>
+      } @else if (result(); as data) {
+        @if (data.items.length === 0) {
+          <div class="state">
+            <app-empty-state
+              icon="alert-triangle"
+              title="Không có báo cáo phù hợp"
+              description="Thử điều chỉnh bộ lọc để xem thêm kết quả."
+            />
+          </div>
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Lý do</th>
+                  <th>Bình luận</th>
+                  <th>Người bị báo cáo</th>
+                  <th>Người báo cáo</th>
+                  <th>Trạng thái</th>
+                  <th>Ngày tạo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of data.items; track item.id) {
+                  <tr>
+                    <td>{{ reasonLabel(item.reason) }}</td>
+                    <td>{{ item.comment?.excerpt || '—' }}</td>
+                    <td>{{ item.reportedUser?.displayName || '—' }}</td>
+                    <td>{{ item.reporter?.displayName || '—' }}</td>
+                    <td><app-admin-report-status-badge [status]="item.status" /></td>
+                    <td>{{ item.createdAt | date: 'short' }}</td>
+                    <td>
+                      <app-link-button [routerLink]="['/admin/reports', item.id]"
+                        >Xem</app-link-button
+                      >
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <footer class="pagination">
+            <span>Tổng {{ data.pagination.totalItems }} báo cáo</span>
+            <app-pagination
+              [page]="page"
+              [totalPages]="data.pagination.totalPages || 1"
+              (pageChange)="go($event)"
+            />
+          </footer>
+        }
+      }
+    </section>
   </div>
 </main>

@@ -10,14 +10,25 @@ small {
   display: block;
   color: var(--text-muted);
 }
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+.status-tabs {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
 .state {
-  padding: 18px 0;
+  padding: 18px;
 }
 .filters {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.7rem;
-  margin: 1.4rem 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
 }
 .filters > input {
   padding: 0.65rem;
@@ -26,10 +37,8 @@ small {
   background: rgba(6, 11, 22, 0.55);
   color: var(--text-strong);
 }
-.table-wrap {
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+.table-scroll {
+  overflow-x: auto;
 }
 table {
   width: 100%;
@@ -37,16 +46,16 @@ table {
 }
 th,
 td {
-  padding: 0.8rem;
+  padding: 0.8rem 1.125rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
-.pager {
+.pagination {
+  padding: 16px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-top: 1rem;
   color: var(--text-secondary);
   font-size: 0.85rem;
 }

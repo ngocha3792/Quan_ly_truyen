@@ -6,49 +6,63 @@
   padding: 1.25rem 0 4rem;
   color: var(--text-strong);
 }
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(14, 21, 38, 0.88);
+}
+.status-tabs {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
 .state {
-  padding: 18px 0;
+  padding: 18px;
 }
 .filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin: 20px 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
 }
 .filters input,
 .filters select {
   padding: 10px;
-  border: 1px solid #303851;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #11182c;
-  color: #e9e7ef;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
 }
-.table-wrap {
-  overflow: auto;
-  border: 1px solid #293149;
-  border-radius: 12px;
+.filters label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.table-scroll {
+  overflow-x: auto;
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #0e1527;
 }
 th,
 td {
-  padding: 12px;
+  padding: 12px 18px;
   text-align: left;
-  border-bottom: 1px solid #252d43;
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
 a {
   color: #c084fc;
 }
-.pager {
+.pagination {
+  padding: 16px 18px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-top: 16px;
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
