@@ -38,7 +38,7 @@ describe('SetCurrentSessionTrustCommandHandler', () => {
 
         trusted: true,
 
-        changedAt: expect.any(Date),
+        changedAt: expect.any(Date) as unknown,
       }),
     );
   });

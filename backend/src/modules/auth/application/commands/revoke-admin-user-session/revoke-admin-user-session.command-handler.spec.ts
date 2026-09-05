@@ -40,7 +40,7 @@ describe('RevokeAdminUserSessionCommandHandler', () => {
 
         sessionId,
 
-        revokedAt: expect.any(Date),
+        revokedAt: expect.any(Date) as unknown,
       }),
     );
   });
