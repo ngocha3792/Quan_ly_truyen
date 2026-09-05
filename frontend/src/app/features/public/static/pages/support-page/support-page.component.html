@@ -1,19 +1,27 @@
 <main class="support-page">
   <section class="support-container">
-    <header class="page-header">
-      <div class="page-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 13v-1a8 8 0 0 1 16 0v1"></path>
-          <path d="M5 12h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-2a2 2 0 0 1 1-2Z"></path>
-          <path d="M19 12h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"></path>
-          <path d="M18 18c0 2-1.5 3-4 3h-1"></path>
-        </svg>
-      </div>
-
-      <span class="page-badge">HỖ TRỢ</span>
-      <h1>Trung tâm hỗ trợ</h1>
-      <p>Chọn đúng khu vực bên dưới để xử lý vấn đề bằng các chức năng hiện có của TruyenHub.</p>
-    </header>
+    <app-legal-page-header
+      badge="HỖ TRỢ"
+      title="Trung tâm hỗ trợ"
+      description="Chọn đúng khu vực bên dưới để xử lý vấn đề bằng các chức năng hiện có của TruyenHub."
+    >
+      <svg
+        icon
+        viewBox="0 0 24 24"
+        width="32"
+        height="32"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M4 13v-1a8 8 0 0 1 16 0v1"></path>
+        <path d="M5 12h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-2a2 2 0 0 1 1-2Z"></path>
+        <path d="M19 12h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"></path>
+        <path d="M18 18c0 2-1.5 3-4 3h-1"></path>
+      </svg>
+    </app-legal-page-header>
 
     <div class="support-layout">
       <section class="contact-card">

@@ -13,18 +13,27 @@ import { ErrorAlertComponent } from '../../../../../shared/components/error-aler
 
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { StatCardComponent } from '../../../../../shared/components/stat-card/stat-card.component';
+import { IconName } from '../../../../../shared/components/icon/icon.component';
+import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 
 import { StoryUpdatesStore } from '../../data-access/story-updates.store';
 
-import { StoryUpdatesSort, StoryUpdatesTab } from '../../domain/story-updates.models';
+import { StoryUpdateStat, StoryUpdatesSort, StoryUpdatesTab } from '../../domain/story-updates.models';
 
 import { FeaturedUpdateCardComponent } from '../../ui/featured-update-card/featured-update-card.component';
 import { PopularUpdateGenresComponent } from '../../ui/popular-update-genres/popular-update-genres.component';
 import { TopUpdatesCardComponent } from '../../ui/top-updates-card/top-updates-card.component';
 import { UpdateFilterBarComponent } from '../../ui/update-filter-bar/update-filter-bar.component';
 import { UpdateScheduleCardComponent } from '../../ui/update-schedule-card/update-schedule-card.component';
-import { UpdateStatCardComponent } from '../../ui/update-stat-card/update-stat-card.component';
 import { UpdateStoryGridComponent } from '../../ui/update-story-grid/update-story-grid.component';
+
+const STAT_ICONS: Record<StoryUpdateStat['id'], IconName> = {
+  'updated-stories': 'book-open',
+  'chapters-today': 'calendar',
+  following: 'heart',
+  'average-speed': 'zap',
+};
 
 @Component({
   selector: 'app-story-updates-page',
@@ -37,8 +46,9 @@ import { UpdateStoryGridComponent } from '../../ui/update-story-grid/update-stor
     ErrorAlertComponent,
     PageHeadingComponent,
     ContentLayoutComponent,
+    StatCardComponent,
+    CompactNumberPipe,
 
-    UpdateStatCardComponent,
     UpdateFilterBarComponent,
     FeaturedUpdateCardComponent,
     UpdateStoryGridComponent,
@@ -67,6 +77,8 @@ export class StoryUpdatesPageComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly store = inject(StoryUpdatesStore);
+
+  protected readonly statIcons = STAT_ICONS;
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {

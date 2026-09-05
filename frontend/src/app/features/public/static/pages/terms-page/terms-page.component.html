@@ -1,174 +1,66 @@
-<main class="terms-page">
-  <section class="terms-container">
-    <header class="terms-header">
-      <div class="terms-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M9 5.5V4a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"></path>
-          <rect x="4" y="5" width="12" height="17" rx="2"></rect>
-          <path d="M7.5 9h5"></path>
-          <path d="M7.5 13h5"></path>
-          <path d="M7.5 17h3.5"></path>
-        </svg>
-      </div>
+<app-legal-page-shell>
+  <app-legal-page-header
+    header
+    badge="ĐIỀU KHOẢN"
+    title="Điều khoản sử dụng"
+    description="Vui lòng đọc kỹ các điều khoản trước khi sử dụng dịch vụ của TruyenHub."
+    updatedAt="2025-05-01"
+  >
+    <svg
+      icon
+      viewBox="0 0 24 24"
+      width="32"
+      height="32"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M9 5.5V4a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"></path>
+      <rect x="4" y="5" width="12" height="17" rx="2"></rect>
+      <path d="M7.5 9h5"></path>
+      <path d="M7.5 13h5"></path>
+      <path d="M7.5 17h3.5"></path>
+    </svg>
+  </app-legal-page-header>
 
-      <span class="terms-badge">ĐIỀU KHOẢN</span>
+  <ng-container sections>
+    <app-legal-section-item
+      [number]="1"
+      title="Chấp nhận điều khoản"
+      description="Khi truy cập và sử dụng TruyenHub, bạn đồng ý tuân thủ và bị ràng buộc bởi các điều khoản này."
+    />
+    <app-legal-section-item
+      [number]="2"
+      title="Tài khoản người dùng"
+      description="Bạn chịu trách nhiệm bảo mật tài khoản và mọi hoạt động diễn ra dưới tài khoản của bạn."
+    />
+    <app-legal-section-item
+      [number]="3"
+      title="Nội dung và bản quyền"
+      description="Tất cả nội dung trên TruyenHub chỉ dành cho mục đích đọc cá nhân, không được sao chép hoặc phân phối trái phép."
+    />
+    <app-legal-section-item
+      [number]="4"
+      title="Hành vi bị cấm"
+      description="Nghiêm cấm các hành vi vi phạm pháp luật, lạm dụng hệ thống, đăng tải nội dung độc hại hoặc vi phạm bản quyền."
+    />
+    <app-legal-section-item
+      [number]="5"
+      title="Miễn trừ trách nhiệm"
+      description="TruyenHub không đảm bảo dịch vụ không gián đoạn hoặc không có lỗi. Chúng tôi không chịu trách nhiệm cho các thiệt hại phát sinh ngoài phạm vi pháp luật quy định."
+    />
+    <app-legal-section-item
+      [number]="6"
+      title="Thay đổi điều khoản"
+      description="Chúng tôi có thể cập nhật điều khoản bất kỳ lúc nào. Việc tiếp tục sử dụng dịch vụ đồng nghĩa với việc bạn chấp nhận các thay đổi."
+    />
+  </ng-container>
 
-      <h1>Điều khoản sử dụng</h1>
-
-      <p class="terms-subtitle">
-        Vui lòng đọc kỹ các điều khoản trước khi sử dụng dịch vụ của TruyenHub.
-      </p>
-
-      <p class="terms-updated">
-        Cập nhật lần cuối:
-        <time datetime="2025-05-01">01/05/2025</time>
-      </p>
-    </header>
-
-    <div class="terms-divider"></div>
-
-    <div class="terms-list">
-      <article class="term-item">
-        <span class="term-number">1</span>
-
-        <div class="term-content">
-          <h2>Chấp nhận điều khoản</h2>
-
-          <p>
-            Khi truy cập và sử dụng TruyenHub, bạn đồng ý tuân thủ và bị ràng buộc bởi các điều
-            khoản này.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-
-      <article class="term-item">
-        <span class="term-number">2</span>
-
-        <div class="term-content">
-          <h2>Tài khoản người dùng</h2>
-
-          <p>
-            Bạn chịu trách nhiệm bảo mật tài khoản và mọi hoạt động diễn ra dưới tài khoản của bạn.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-
-      <article class="term-item">
-        <span class="term-number">3</span>
-
-        <div class="term-content">
-          <h2>Nội dung và bản quyền</h2>
-
-          <p>
-            Tất cả nội dung trên TruyenHub chỉ dành cho mục đích đọc cá nhân, không được sao chép
-            hoặc phân phối trái phép.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-
-      <article class="term-item">
-        <span class="term-number">4</span>
-
-        <div class="term-content">
-          <h2>Hành vi bị cấm</h2>
-
-          <p>
-            Nghiêm cấm các hành vi vi phạm pháp luật, lạm dụng hệ thống, đăng tải nội dung độc hại
-            hoặc vi phạm bản quyền.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-
-      <article class="term-item">
-        <span class="term-number">5</span>
-
-        <div class="term-content">
-          <h2>Miễn trừ trách nhiệm</h2>
-
-          <p>
-            TruyenHub không đảm bảo dịch vụ không gián đoạn hoặc không có lỗi. Chúng tôi không chịu
-            trách nhiệm cho các thiệt hại phát sinh ngoài phạm vi pháp luật quy định.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-
-      <article class="term-item">
-        <span class="term-number">6</span>
-
-        <div class="term-content">
-          <h2>Thay đổi điều khoản</h2>
-
-          <p>
-            Chúng tôi có thể cập nhật điều khoản bất kỳ lúc nào. Việc tiếp tục sử dụng dịch vụ đồng
-            nghĩa với việc bạn chấp nhận các thay đổi.
-          </p>
-        </div>
-
-        <span class="term-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
-        </span>
-      </article>
-    </div>
-
-    <aside class="support-card">
-      <div class="support-info">
-        <div class="support-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9"></circle>
-            <path d="M9.7 9a2.4 2.4 0 1 1 3.7 2c-.9.6-1.4 1.1-1.4 2"></path>
-            <path d="M12 17h.01"></path>
-          </svg>
-        </div>
-
-        <div>
-          <h2>Bạn có câu hỏi?</h2>
-
-          <p>Liên hệ với chúng tôi nếu bạn cần hỗ trợ hoặc giải đáp thắc mắc.</p>
-        </div>
-      </div>
-
-      <a class="support-button" routerLink="/cong-dong">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 13v-1a8 8 0 0 1 16 0v1"></path>
-          <path d="M5 12h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-2a2 2 0 0 1 1-2Z"></path>
-          <path d="M19 12h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"></path>
-          <path d="M18 18c0 2-1.5 3-4 3h-1"></path>
-        </svg>
-
-        Liên hệ hỗ trợ
-      </a>
-    </aside>
-  </section>
-</main>
+  <app-legal-support-cta
+    support
+    title="Bạn có câu hỏi?"
+    description="Liên hệ với chúng tôi nếu bạn cần hỗ trợ hoặc giải đáp thắc mắc."
+  />
+</app-legal-page-shell>

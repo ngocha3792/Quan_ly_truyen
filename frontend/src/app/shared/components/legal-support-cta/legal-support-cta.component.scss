@@ -1,0 +1,119 @@
+:host {
+  display: block;
+}
+
+.support-card {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 20px 0 0;
+  padding: 20px 24px;
+  border: 1px solid rgba(192, 132, 252, 0.22);
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(76, 29, 149, 0.22),
+    rgba(88, 28, 135, 0.32),
+    rgba(76, 29, 149, 0.2)
+  );
+}
+
+.support-info {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.support-info h2 {
+  margin: 0 0 4px;
+  color: var(--text-strong);
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.support-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.support-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(216, 180, 254, 0.22);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #7e22ce, #4c1d95);
+  color: #f3e8ff;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.2);
+}
+
+.support-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.support-button {
+  display: inline-flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 1px solid rgba(216, 180, 254, 0.28);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  box-shadow:
+    0 6px 20px rgba(126, 34, 206, 0.32),
+    0 0 16px rgba(168, 85, 247, 0.18);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.support-button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.support-button:hover {
+  background: linear-gradient(135deg, #b76aff, #8b45ed);
+}
+
+.support-button:focus-visible {
+  outline: 2px solid #d8b4fe;
+  outline-offset: 3px;
+}
+
+@media (max-width: 920px) {
+  .support-card {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
+
+@media (max-width: 680px) {
+  .support-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 15px;
+  }
+
+  .support-button {
+    width: 100%;
+  }
+}

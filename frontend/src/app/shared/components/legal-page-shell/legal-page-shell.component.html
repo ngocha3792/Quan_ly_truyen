@@ -1,0 +1,13 @@
+<main class="legal-page">
+  <section class="legal-container">
+    <ng-content select="[header]" />
+
+    <div class="legal-divider"></div>
+
+    <div class="legal-list">
+      <ng-content select="[sections]" />
+    </div>
+
+    <ng-content select="[support]" />
+  </section>
+</main>

@@ -1,0 +1,20 @@
+<header class="legal-header">
+  <div class="legal-icon" aria-hidden="true">
+    <ng-content select="[icon]" />
+  </div>
+
+  <span class="legal-badge">{{ badge() }}</span>
+
+  <h1>{{ title() }}</h1>
+
+  <p class="legal-subtitle">
+    {{ description() }}
+  </p>
+
+  @if (updatedAt()) {
+    <p class="legal-updated">
+      Cập nhật lần cuối:
+      <time [attr.datetime]="updatedAt()">{{ updatedAt() | date: 'dd/MM/yyyy' }}</time>
+    </p>
+  }
+</header>

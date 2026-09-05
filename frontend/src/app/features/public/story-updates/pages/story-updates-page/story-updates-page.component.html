@@ -20,7 +20,13 @@
       <ng-container main>
         <section class="stats-grid">
           @for (stat of store.stats(); track stat.id) {
-            <app-update-stat-card [stat]="stat" />
+            <app-stat-card
+              [label]="stat.label"
+              [value]="(stat.value | compactNumber) + (stat.valueSuffix ? ' ' + stat.valueSuffix : '')"
+              [icon]="statIcons[stat.id]"
+              [tone]="stat.tone"
+              [description]="stat.comparisonText"
+            />
           }
         </section>
 
