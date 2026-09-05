@@ -36,18 +36,6 @@ header span {
   font-size: 0.75rem;
   font-weight: 800;
 }
-.alert {
-  margin-bottom: 20px;
-  padding: 0.7rem 0.8rem;
-  border-radius: 9px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-.alert.error {
-  color: #ffb1be;
-  background: rgba(231, 62, 91, 0.1);
-  border: 1px solid rgba(231, 62, 91, 0.2);
-}
 .media-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
@@ -218,49 +206,6 @@ legend {
 .form-actions {
   display: flex;
   justify-content: flex-end;
-}
-.primary-button {
-  min-height: 42px;
-  padding: 0 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #743bde, #a153eb);
-  box-shadow: 0 10px 24px rgba(115, 57, 217, 0.25);
-  color: #fff;
-  font-size: 13.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-.primary-button:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-.primary-button:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-.spinner {
-  width: 15px;
-  height: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 700ms linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.notice {
-  padding: 22px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(4, 8, 19, 0.65);
-  color: var(--text-secondary);
 }
 @media (max-width: 760px) {
   .media-grid,

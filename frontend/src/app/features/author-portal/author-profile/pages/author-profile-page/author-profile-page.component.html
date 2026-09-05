@@ -15,7 +15,7 @@
   </header>
 
   @if (store.error(); as error) {
-    <div class="alert error" role="alert">{{ error }}</div>
+    <app-notice kind="error" [message]="error" />
   }
   @if (store.profile(); as profile) {
     <div class="media-grid">
@@ -138,17 +138,18 @@
       </fieldset>
 
       <div class="form-actions wide">
-        <button class="primary-button" type="submit" [disabled]="form.invalid || store.saving()">
-          @if (store.saving()) {
-            <span class="spinner"></span>
-          } @else {
-            <app-icon name="save" [size]="16" />
-          }
+        <app-button
+          variant="primary"
+          type="submit"
+          [disabled]="form.invalid"
+          [loading]="store.saving()"
+        >
+          <app-icon icon name="save" [size]="16" />
           {{ store.saving() ? 'Đang lưu…' : 'Lưu hồ sơ' }}
-        </button>
+        </app-button>
       </div>
     </form>
   } @else if (store.loading()) {
-    <p class="notice">Đang tải hồ sơ…</p>
+    <app-loading-state message="Đang tải hồ sơ…" />
   }
 </section>

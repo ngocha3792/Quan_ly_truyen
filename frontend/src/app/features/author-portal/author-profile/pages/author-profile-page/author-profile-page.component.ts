@@ -2,14 +2,24 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { provideAuthorProfile } from '../../data-access/author-profile.providers';
 import { AuthorProfileStore } from '../../data-access/author-profile.store';
 
 @Component({
   selector: 'app-author-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    IconComponent,
+    ButtonComponent,
+    LoadingStateComponent,
+    NoticeComponent,
+  ],
   providers: [...provideAuthorProfile(), AuthorProfileStore],
   templateUrl: './author-profile-page.component.html',
   styleUrl: './author-profile-page.component.scss',
