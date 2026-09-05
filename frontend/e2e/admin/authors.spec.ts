@@ -11,7 +11,7 @@ test('manager suspend rồi reactivate author lifecycle', async ({ page }) => {
     }),
   ).toBeVisible();
 
-  await page.getByPlaceholder('Tên, slug, email').fill(AUTHOR_EMAIL);
+  await page.getByRole('searchbox', { name: 'Tìm tác giả' }).fill(AUTHOR_EMAIL);
 
   const row = page.getByRole('row').filter({
     hasText: AUTHOR_EMAIL,
