@@ -13,7 +13,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { AuthorStoryEditorStore } from '../../data-access/author-story-editor.store';
 import {
   AUTHOR_STORY_CONTRIBUTOR_ROLES,
@@ -28,7 +31,14 @@ import {
 @Component({
   selector: 'app-author-story-editor-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    IconComponent,
+    ButtonComponent,
+    LoadingStateComponent,
+    NoticeComponent,
+  ],
   providers: [AuthorStoryEditorStore],
   templateUrl: './author-story-editor-page.component.html',
   styleUrl: './author-story-editor-page.component.scss',

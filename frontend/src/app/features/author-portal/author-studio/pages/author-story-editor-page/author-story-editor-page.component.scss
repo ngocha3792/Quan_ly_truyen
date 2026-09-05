@@ -155,9 +155,6 @@ h1 {
   font-size: 13px;
   white-space: nowrap;
 }
-.contributor-form .primary-action {
-  padding: 0 16px;
-}
 .contributor-list {
   display: grid;
   gap: 10px;
@@ -210,9 +207,9 @@ textarea:disabled {
 }
 .chip--legacy {
   border-style: dashed;
-  border-color: #a06c32;
-  background: rgba(160, 108, 50, 0.14);
-  color: #efc47c;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.14);
+  color: #f4bd53;
 }
 .chip:disabled {
   cursor: default;
@@ -252,41 +249,6 @@ h2 {
 .file-action input {
   display: none;
 }
-.primary-action,
-.review-action {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #a150f2, #6a43df);
-  box-shadow: 0 12px 30px rgba(111, 64, 224, 0.27);
-  color: #fff;
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.review-action {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--border);
-  box-shadow: none;
-  color: var(--text-secondary);
-}
-.review-action--cancel {
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #f4bd53;
-}
-.primary-action:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-.primary-action:disabled,
-.review-action:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 .text-danger {
   border: 0;
   background: transparent;
@@ -302,37 +264,6 @@ hr {
 small {
   color: var(--text-muted);
   font-size: 12px;
-}
-.notice {
-  padding: 13px 15px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(4, 8, 19, 0.65);
-  color: var(--text-secondary);
-}
-.alert {
-  padding: 0.7rem 0.8rem;
-  border-radius: 9px;
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-.alert.error {
-  color: #ffb1be;
-  background: rgba(231, 62, 91, 0.1);
-  border: 1px solid rgba(231, 62, 91, 0.2);
-}
-.spinner {
-  width: 15px;
-  height: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 700ms linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 @media (max-width: 900px) {
   .editor-grid {

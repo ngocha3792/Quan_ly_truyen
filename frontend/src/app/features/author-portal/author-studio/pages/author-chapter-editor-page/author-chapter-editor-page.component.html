@@ -10,13 +10,13 @@
   </header>
 
   @if (store.error()) {
-    <div class="alert error">{{ store.error() }}</div>
+    <app-notice kind="error" [message]="store.error()" />
   }
   @if (store.loading()) {
-    <p class="notice">Đang tải chương...</p>
+    <app-loading-state message="Đang tải chương..." />
   } @else {
     @if (!isEditable()) {
-      <p class="notice">Chương này không thể chỉnh sửa ở trạng thái hiện tại.</p>
+      <app-notice kind="info" message="Chương này không thể chỉnh sửa ở trạng thái hiện tại." />
     }
 
     <form class="editor" [formGroup]="form" (ngSubmit)="save()">
@@ -63,14 +63,15 @@
         } @else {
           <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
         }
-        <button class="primary-action" type="submit" [disabled]="!isEditable() || store.saving()">
-          @if (store.saving()) {
-            <span class="spinner"></span>
-          } @else {
-            <app-icon name="save" [size]="16" />
-          }
+        <app-button
+          variant="primary"
+          type="submit"
+          [disabled]="!isEditable()"
+          [loading]="store.saving()"
+        >
+          <app-icon icon name="save" [size]="16" />
           {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
-        </button>
+        </app-button>
       </footer>
     </form>
   }

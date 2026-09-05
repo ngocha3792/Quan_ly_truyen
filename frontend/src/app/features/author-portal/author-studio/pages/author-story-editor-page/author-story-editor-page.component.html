@@ -20,20 +20,20 @@
   </header>
 
   @if (store.error()) {
-    <div class="alert error">{{ store.error() }}</div>
+    <app-notice kind="error" [message]="store.error()" />
   }
   @if (fileError()) {
-    <div class="alert error">{{ fileError() }}</div>
+    <app-notice kind="error" [message]="fileError()" />
   }
 
   @if (store.loading()) {
-    <p class="notice">Đang tải dữ liệu truyện...</p>
+    <app-loading-state message="Đang tải dữ liệu truyện..." />
   } @else {
     @if (!isEditable()) {
-      <p class="notice">
-        Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi
-        chỉnh sửa.
-      </p>
+      <app-notice
+        kind="info"
+        message="Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa."
+      />
     }
 
     <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()">
@@ -132,14 +132,15 @@
           }
         }
 
-        <button class="primary-action" type="submit" [disabled]="!isEditable() || store.saving()">
-          @if (store.saving()) {
-            <span class="spinner"></span>
-          } @else {
-            <app-icon name="save" [size]="16" />
-          }
+        <app-button
+          variant="primary"
+          type="submit"
+          [disabled]="!isEditable()"
+          [loading]="store.saving()"
+        >
+          <app-icon icon name="save" [size]="16" />
           {{ store.saving() ? 'Đang lưu...' : 'Lưu bản nháp' }}
-        </button>
+        </app-button>
 
         @if (canSubmit()) {
           <hr />
@@ -157,25 +158,20 @@
           @if (hasUnsavedChanges()) {
             <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
           }
-          <button
-            type="button"
-            class="review-action"
-            [disabled]="store.workflowBusy() || hasUnsavedChanges()"
+          <app-button
+            variant="secondary"
+            [disabled]="hasUnsavedChanges()"
+            [loading]="store.workflowBusy()"
             (click)="submitForReview()"
           >
             {{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}
-          </button>
+          </app-button>
         }
 
         @if (canCancel()) {
-          <button
-            type="button"
-            class="review-action review-action--cancel"
-            [disabled]="store.workflowBusy()"
-            (click)="cancelReview()"
-          >
+          <app-button variant="secondary" [loading]="store.workflowBusy()" (click)="cancelReview()">
             Hủy yêu cầu duyệt
-          </button>
+          </app-button>
         }
       </aside>
     </form>
@@ -223,9 +219,9 @@
             <input type="checkbox" formControlName="canEdit" />
             <span>Cho phép chỉnh sửa nội dung</span>
           </label>
-          <button class="primary-action" type="submit" [disabled]="store.contributorBusy()">
+          <app-button variant="primary" type="submit" [loading]="store.contributorBusy()">
             {{ store.contributorBusy() ? 'Đang lưu...' : 'Thêm / cập nhật' }}
-          </button>
+          </app-button>
         </form>
 
         <div class="contributor-list">

@@ -13,13 +13,23 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    IconComponent,
+    ButtonComponent,
+    LoadingStateComponent,
+    NoticeComponent,
+  ],
   providers: [AuthorChapterEditorStore],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrl: './author-chapter-editor-page.component.scss',
