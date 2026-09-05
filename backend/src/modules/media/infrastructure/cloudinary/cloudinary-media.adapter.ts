@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
@@ -41,7 +42,7 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
 
   async confirmUpload(input: ConfirmUploadInput): Promise<StoredMedia> {
     const client = this.requireClient('confirm');
-    this.verifyUploadResponseSignature(input, client);
+    this.verifyUploadResponseSignature(input);
     try {
       const authoritative: unknown = await client.api.resource(input.publicId, {
         resource_type: input.resourceType,
@@ -162,21 +163,25 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     return this.urlService.build(input);
   }
 
-  private verifyUploadResponseSignature(
-    input: ConfirmUploadInput,
-    client: CloudinaryClient,
-  ): void {
+  /**
+   * Cloudinary always signs upload API responses (the `signature` field
+   * returned to the client after a direct upload) with SHA-1, regardless
+   * of the account's configured upload `signature_algorithm` — the same
+   * legacy behavior as outbound webhook notifications (see
+   * CloudinaryWebhookAdapter). The SDK's own `api_sign_request`/
+   * `verify_api_response_signature` helpers default to the globally
+   * configured algorithm (SHA-256 here), so they reject every genuine
+   * response. Verify against the documented SHA-1 scheme directly.
+   */
+  private verifyUploadResponseSignature(input: ConfirmUploadInput): void {
     const apiSecret = this.configService.getOrThrow<string>(
       'cloudinary.apiSecret',
     );
 
-    const expected = client.utils.api_sign_request(
-      {
-        public_id: input.publicId,
-        version: input.version,
-      },
-      apiSecret,
-    );
+    const toSign = `public_id=${input.publicId}&version=${input.version}`;
+    const expected = createHash('sha1')
+      .update(`${toSign}${apiSecret}`)
+      .digest('hex');
 
     if (!timingSafeStringEqual(expected, input.responseSignature)) {
       throw new InvalidInputException({
