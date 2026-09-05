@@ -5,17 +5,12 @@
   gap: 1rem;
   color: var(--text-strong);
 }
-.eyebrow {
-  margin: 0;
-  color: var(--primary-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-h1 {
-  overflow-wrap: anywhere;
-  color: var(--text-strong);
+.back-button {
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
 }
 .card {
   border: 1px solid var(--border);

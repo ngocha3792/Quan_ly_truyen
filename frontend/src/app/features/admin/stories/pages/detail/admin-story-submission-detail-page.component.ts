@@ -12,6 +12,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, Observable } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminStoriesApiService } from '../../data-access/admin-stories-api.service';
 import type { AdminStorySubmissionDetail } from '../../domain/admin-story.models';
 import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badge.component';
@@ -19,7 +24,14 @@ import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badg
 @Component({
   selector: 'app-admin-story-submission-detail-page',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, AdminStoryStatusBadgeComponent],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    AdminStoryStatusBadgeComponent,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-story-submission-detail-page.component.html',
   styleUrl: './admin-story-submission-detail-page.component.scss',
@@ -29,6 +41,12 @@ export class AdminStorySubmissionDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly id = this.route.snapshot.paramMap.get('submissionId') ?? '';
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Duyệt truyện', route: '/admin/stories' },
+    { label: 'Chi tiết' },
+  ];
   readonly detail = signal<AdminStorySubmissionDetail | null>(null);
   readonly loading = signal(false);
   readonly mutating = signal(false);

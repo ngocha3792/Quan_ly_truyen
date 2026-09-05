@@ -1,0 +1,9 @@
+<span
+  class="status"
+  [class.active]="status === 'OPEN'"
+  [class.warning]="status === 'IN_REVIEW'"
+  [class.success]="status === 'RESOLVED'"
+  [class.danger]="status === 'REJECTED'"
+>
+  {{ label }}
+</span>

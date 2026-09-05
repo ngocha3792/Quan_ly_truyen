@@ -12,15 +12,30 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
 import type {
   AdminAuthorListResponse,
   AuthorLifecycleStatus,
 } from '../../domain/admin-author.models';
+import { AdminAuthorStatusBadgeComponent } from '../../ui/admin-author-status-badge.component';
 @Component({
   selector: 'app-admin-authors-list-page',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    PaginationComponent,
+    AdminAuthorStatusBadgeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-authors-list-page.component.html',
   styleUrl: './admin-authors-list-page.component.scss',
@@ -30,6 +45,11 @@ export class AdminAuthorsListPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Tác giả' },
+  ];
   readonly searchChanged = new Subject<void>();
   readonly result = signal<AdminAuthorListResponse | null>(null);
   readonly loading = signal(false);

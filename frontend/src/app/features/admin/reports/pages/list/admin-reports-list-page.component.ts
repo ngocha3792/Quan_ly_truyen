@@ -12,17 +12,50 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, finalize, Subject } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminReportsApiService } from '../../data-access/admin-reports-api.service';
 import type {
   AdminReportList,
   AdminReportReason,
   AdminReportStatus,
 } from '../../domain/admin-report.models';
+import { AdminReportStatusBadgeComponent } from '../../ui/admin-report-status-badge.component';
+
+const REPORT_STATUS_LABELS: Record<AdminReportStatus, string> = {
+  OPEN: 'Mới',
+  IN_REVIEW: 'Đang xử lý',
+  RESOLVED: 'Đã xử lý',
+  REJECTED: 'Đã từ chối',
+};
+
+const REPORT_REASON_LABELS: Record<AdminReportReason, string> = {
+  SPAM: 'Spam',
+  HARASSMENT: 'Quấy rối',
+  HATE_SPEECH: 'Phát ngôn thù ghét',
+  SEXUAL_CONTENT: 'Nội dung khiêu dâm',
+  VIOLENCE: 'Bạo lực',
+  COPYRIGHT: 'Vi phạm bản quyền',
+  MISINFORMATION: 'Thông tin sai lệch',
+  OTHER: 'Khác',
+};
 
 @Component({
   selector: 'app-admin-reports-list-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DatePipe,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    PaginationComponent,
+    AdminReportStatusBadgeComponent,
+  ],
   templateUrl: './admin-reports-list-page.component.html',
   styleUrl: './admin-reports-list-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +65,11 @@ export class AdminReportsListPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Báo cáo' },
+  ];
   readonly result = signal<AdminReportList | null>(null);
   readonly loading = signal(false);
   readonly error = signal('');
@@ -69,6 +107,12 @@ export class AdminReportsListPageComponent implements OnInit {
       this.page = Math.max(1, Number(p.get('page') ?? 1) || 1);
       this.load();
     });
+  }
+  protected reasonLabel(reason: AdminReportReason): string {
+    return REPORT_REASON_LABELS[reason];
+  }
+  protected statusLabel(status: AdminReportStatus): string {
+    return REPORT_STATUS_LABELS[status];
   }
   go(page: number): void {
     void this.router.navigate([], {

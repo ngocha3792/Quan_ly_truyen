@@ -11,13 +11,19 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, finalize, Subject } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminCategoriesApiService } from '../../data-access/admin-categories-api.service';
 import { AdminCategory, AdminCategoryList } from '../../domain/admin-category.models';
 
 @Component({
   selector: 'app-admin-categories-list-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, BreadcrumbComponent, PageHeadingComponent, PaginationComponent],
   templateUrl: './admin-categories-list-page.component.html',
   styleUrl: './admin-categories-list-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +33,12 @@ export class AdminCategoriesListPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Thể loại' },
+  ];
 
   readonly result = signal<AdminCategoryList | null>(null);
   readonly parentOptions = signal<readonly AdminCategory[]>([]);

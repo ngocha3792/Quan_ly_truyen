@@ -1,11 +1,10 @@
 <main class="admin-audit-list">
-  <header>
-    <div>
-      <p class="eyebrow">Admin / Security</p>
-      <h1>Audit Logs</h1>
-      <p>Timeline read-only với payload được sanitize ở server.</p>
-    </div>
-  </header>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Nhật ký audit"
+    description="Timeline chỉ đọc, payload đã được sanitize ở server."
+    icon="history"
+  />
 
   <form class="filters" (ngSubmit)="applyFilters()">
     <label>Actor ID<input name="actorId" [(ngModel)]="actorId" placeholder="UUID" /></label>
@@ -35,10 +34,10 @@
       <table>
         <thead>
           <tr>
-            <th>Time</th>
-            <th>Actor</th>
-            <th>Action</th>
-            <th>Entity</th>
+            <th>Thời gian</th>
+            <th>Người thực hiện</th>
+            <th>Hành động</th>
+            <th>Đối tượng</th>
             <th>Request ID</th>
             <th></th>
           </tr>
@@ -47,7 +46,7 @@
           @for (item of data.items; track item.id) {
             <tr>
               <td>{{ item.createdAt | date: 'short' }}</td>
-              <td>{{ item.actor?.displayName || 'Unknown/deleted actor' }}</td>
+              <td>{{ item.actor?.displayName || 'Không xác định/đã xóa' }}</td>
               <td>
                 <code>{{ item.action }}</code>
               </td>
@@ -77,14 +76,12 @@
       </table>
     </div>
     <footer class="pager">
-      <button type="button" [disabled]="page <= 1" (click)="go(page - 1)">Trước</button>
-      <span
-        >{{ page }} / {{ data.pagination.totalPages || 1 }} ·
-        {{ data.pagination.totalItems }} events</span
-      >
-      <button type="button" [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">
-        Sau
-      </button>
+      <span>Tổng {{ data.pagination.totalItems }} sự kiện</span>
+      <app-pagination
+        [page]="page"
+        [totalPages]="data.pagination.totalPages || 1"
+        (pageChange)="go($event)"
+      />
     </footer>
   }
 </main>

@@ -6,15 +6,24 @@
   max-width: 1100px;
   margin: auto;
 }
-.hero {
+.back-button {
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hero-meta {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 1.4rem 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin: -0.5rem 0 1.4rem;
 }
 .actions {
   display: flex;
   gap: 0.7rem;
+  margin-left: auto;
 }
 .actions button {
   padding: 0.65rem 1rem;

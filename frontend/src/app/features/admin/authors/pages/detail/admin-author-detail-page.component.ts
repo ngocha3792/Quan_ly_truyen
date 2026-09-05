@@ -15,12 +15,32 @@ import { finalize } from 'rxjs';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { AUTH_PERMISSIONS } from '../../../../../core/auth/authorization.models';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
 import type { AdminAuthorDetail, AuthorLifecycleStatus } from '../../domain/admin-author.models';
+import { AdminAuthorStatusBadgeComponent } from '../../ui/admin-author-status-badge.component';
+
+const AUTHOR_STATUS_LABELS: Record<AuthorLifecycleStatus, string> = {
+  ACTIVE: 'Hoạt động',
+  SUSPENDED: 'Tạm khóa',
+  REVOKED: 'Đã thu hồi',
+};
+
 @Component({
   selector: 'app-admin-author-detail-page',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    AdminAuthorStatusBadgeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-author-detail-page.component.html',
   styleUrl: './admin-author-detail-page.component.scss',
@@ -31,6 +51,12 @@ export class AdminAuthorDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly id = this.route.snapshot.paramMap.get('authorId') ?? '';
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Tác giả', route: '/admin/authors' },
+    { label: 'Chi tiết' },
+  ];
   readonly detail = signal<AdminAuthorDetail | null>(null);
   readonly loading = signal(false);
   readonly mutating = signal(false);
@@ -74,7 +100,7 @@ export class AdminAuthorDetailPageComponent implements OnInit {
       .subscribe({
         next: () => {
           this.actionOpen.set(false);
-          this.message.set(`Đã cập nhật author thành ${status}.`);
+          this.message.set(`Đã cập nhật trạng thái tác giả thành ${AUTHOR_STATUS_LABELS[status]}.`);
           this.load();
         },
         error: (e: unknown) => this.error.set(getApiErrorMessage(e)),

@@ -11,6 +11,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuditLogsApiService } from '../../data-access/admin-audit-logs-api.service';
 import type { AdminAuditLogDetail } from '../../domain/admin-audit-log.models';
 import { AuditDiffComponent } from '../../ui/audit-diff/audit-diff.component';
@@ -19,7 +24,14 @@ import { AuditJsonViewerComponent } from '../../ui/audit-json-viewer/audit-json-
 @Component({
   selector: 'app-admin-audit-log-detail-page',
   standalone: true,
-  imports: [AuditDiffComponent, AuditJsonViewerComponent, DatePipe, RouterLink],
+  imports: [
+    AuditDiffComponent,
+    AuditJsonViewerComponent,
+    DatePipe,
+    RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+  ],
   templateUrl: './admin-audit-log-detail-page.component.html',
   styleUrl: './admin-audit-log-detail-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +41,13 @@ export class AdminAuditLogDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
+
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Audit log', route: '/admin/audit-logs' },
+    { label: 'Chi tiết' },
+  ];
 
   protected readonly detail = signal<AdminAuditLogDetail | null>(null);
   protected readonly loading = signal(false);

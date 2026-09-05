@@ -1,12 +1,12 @@
 <main class="admin-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">Admin · Taxonomy</p>
-      <h1>Categories</h1>
-      <p>Quản lý hierarchy, lifecycle và usage mà không detach truyện hiện có.</p>
-    </div>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Quản lý thể loại"
+    description="Quản lý hierarchy, lifecycle và usage mà không detach truyện hiện có."
+    icon="grid"
+  >
     <button class="primary" type="button" (click)="openCreate()">Tạo thể loại</button>
-  </header>
+  </app-page-heading>
 
   <section class="toolbar">
     <input
@@ -17,12 +17,12 @@
     />
     <select [(ngModel)]="status" (ngModelChange)="applyFilters()">
       <option value="">Tất cả trạng thái</option>
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
+      <option value="active">Hoạt động</option>
+      <option value="inactive">Ngừng hoạt động</option>
     </select>
     <select [(ngModel)]="parentFilter" (ngModelChange)="applyFilters()">
-      <option value="">Tất cả parent</option>
-      <option value="root">Root only</option>
+      <option value="">Tất cả danh mục cha</option>
+      <option value="root">Chỉ danh mục gốc</option>
       @for (parent of parentOptions(); track parent.id) {
         <option [value]="parent.id">{{ parent.name }}</option>
       }
@@ -44,14 +44,14 @@
       <table>
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Tên</th>
             <th>Slug</th>
-            <th>Parent</th>
-            <th>Status</th>
-            <th>Stories</th>
-            <th>Children</th>
-            <th>Order</th>
-            <th>Actions</th>
+            <th>Danh mục cha</th>
+            <th>Trạng thái</th>
+            <th>Số truyện</th>
+            <th>Danh mục con</th>
+            <th>Thứ tự</th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -66,23 +66,23 @@
               <td>{{ category.parent?.name ?? '—' }}</td>
               <td>
                 <span class="status" [class.inactive]="!category.isActive">{{
-                  category.isActive ? 'ACTIVE' : 'INACTIVE'
+                  category.isActive ? 'Hoạt động' : 'Ngừng hoạt động'
                 }}</span>
               </td>
               <td>{{ category.storyCount }}</td>
               <td>{{ category.childCount }}</td>
               <td>{{ category.sortOrder }}</td>
               <td class="actions">
-                <button type="button" (click)="openEdit(category)">Edit</button
+                <button type="button" (click)="openEdit(category)">Sửa</button
                 ><button type="button" (click)="toggleActive(category)">
-                  {{ category.isActive ? 'Deactivate' : 'Reactivate' }}</button
+                  {{ category.isActive ? 'Ngừng hoạt động' : 'Kích hoạt lại' }}</button
                 ><button
                   class="danger"
                   type="button"
                   [disabled]="category.storyCount > 0 || category.childCount > 0"
                   (click)="delete(category)"
                 >
-                  Delete
+                  Xóa
                 </button>
               </td>
             </tr>
@@ -94,24 +94,14 @@
         </tbody>
       </table>
     </div>
-    <nav class="pager">
-      <button
-        type="button"
-        [disabled]="data.pagination.page <= 1"
-        (click)="go(data.pagination.page - 1)"
-      >
-        ← Trước</button
-      ><span
-        >Trang {{ data.pagination.page }}/{{ data.pagination.totalPages || 1 }} ·
-        {{ data.pagination.totalItems }} thể loại</span
-      ><button
-        type="button"
-        [disabled]="data.pagination.page >= data.pagination.totalPages"
-        (click)="go(data.pagination.page + 1)"
-      >
-        Sau →
-      </button>
-    </nav>
+    <footer class="pager">
+      <span>Tổng {{ data.pagination.totalItems }} thể loại</span>
+      <app-pagination
+        [page]="data.pagination.page"
+        [totalPages]="data.pagination.totalPages || 1"
+        (pageChange)="go($event)"
+      />
+    </footer>
   }
 
   @if (editorOpen()) {
@@ -121,26 +111,28 @@
         <label>Tên *<input [(ngModel)]="editName" maxlength="100" /></label>
         @if (editing) {
           <p class="muted">
-            Slug <code>{{ editing.slug }}</code> là read-only và không đổi khi rename.
+            Slug <code>{{ editing.slug }}</code> chỉ đọc và không đổi khi đổi tên.
           </p>
         }
         <label
           >Mô tả<textarea rows="4" maxlength="5000" [(ngModel)]="editDescription"></textarea>
         </label>
         <label
-          >Parent<select [(ngModel)]="editParentId">
-            <option value="">None</option>
+          >Danh mục cha<select [(ngModel)]="editParentId">
+            <option value="">Không có</option>
             @for (parent of parentOptions(); track parent.id) {
               <option [value]="parent.id" [disabled]="editActive && !parent.isActive">
-                {{ parent.name }}{{ parent.isActive ? '' : ' · inactive' }}
+                {{ parent.name }}{{ parent.isActive ? '' : ' · ngừng hoạt động' }}
               </option>
             }
           </select></label
         >
-        <label>Sort order<input type="number" [(ngModel)]="editSortOrder" /></label>
-        <label class="checkbox"><input type="checkbox" [(ngModel)]="editActive" /> Active</label>
+        <label>Thứ tự<input type="number" [(ngModel)]="editSortOrder" /></label>
+        <label class="checkbox"><input type="checkbox" [(ngModel)]="editActive" /> Hoạt động</label>
         @if (editing) {
-          <p class="muted">{{ editing.storyCount }} stories · {{ editing.childCount }} children</p>
+          <p class="muted">
+            {{ editing.storyCount }} truyện · {{ editing.childCount }} danh mục con
+          </p>
         }
         <div class="modal-actions">
           <button type="button" (click)="editorOpen.set(false)">Hủy</button

@@ -1,12 +1,12 @@
 <main class="admin-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">Admin · Taxonomy</p>
-      <h1>Tags</h1>
-      <p>Quản lý tag, usage và hợp nhất duplicate an toàn.</p>
-    </div>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Quản lý tag"
+    description="Quản lý tag, usage và hợp nhất duplicate an toàn."
+    icon="bookmark"
+  >
     <button class="primary" type="button" (click)="openCreate()">Tạo tag</button>
-  </header>
+  </app-page-heading>
 
   <section class="toolbar">
     <input
@@ -32,11 +32,11 @@
       <table>
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Tên</th>
             <th>Slug</th>
-            <th>Stories</th>
-            <th>Created</th>
-            <th>Actions</th>
+            <th>Số truyện</th>
+            <th>Ngày tạo</th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -51,20 +51,20 @@
               <td>{{ tag.storyCount }}</td>
               <td>{{ tag.createdAt.slice(0, 10) }}</td>
               <td class="actions">
-                <button type="button" (click)="openEdit(tag)">Edit</button>
-                <button type="button" (click)="openMerge(tag)">Merge</button>
+                <button type="button" (click)="openEdit(tag)">Sửa</button>
+                <button type="button" (click)="openMerge(tag)">Hợp nhất</button>
                 <button
                   type="button"
                   class="danger"
                   [disabled]="tag.storyCount > 0"
                   [title]="
                     tag.storyCount > 0
-                      ? 'Tag đang được ' + tag.storyCount + ' truyện sử dụng. Hãy merge trước.'
+                      ? 'Tag đang được ' + tag.storyCount + ' truyện sử dụng. Hãy hợp nhất trước.'
                       : ''
                   "
                   (click)="delete(tag)"
                 >
-                  Delete
+                  Xóa
                 </button>
               </td>
             </tr>
@@ -76,26 +76,14 @@
         </tbody>
       </table>
     </div>
-    <nav class="pager">
-      <button
-        type="button"
-        [disabled]="data.pagination.page <= 1"
-        (click)="go(data.pagination.page - 1)"
-      >
-        ← Trước
-      </button>
-      <span
-        >Trang {{ data.pagination.page }}/{{ data.pagination.totalPages || 1 }} ·
-        {{ data.pagination.totalItems }} tag</span
-      >
-      <button
-        type="button"
-        [disabled]="data.pagination.page >= data.pagination.totalPages"
-        (click)="go(data.pagination.page + 1)"
-      >
-        Sau →
-      </button>
-    </nav>
+    <footer class="pager">
+      <span>Tổng {{ data.pagination.totalItems }} tag</span>
+      <app-pagination
+        [page]="data.pagination.page"
+        [totalPages]="data.pagination.totalPages || 1"
+        (pageChange)="go($event)"
+      />
+    </footer>
   }
 
   @if (editorOpen()) {
@@ -126,9 +114,9 @@
   @if (mergeOpen() && mergeSource; as source) {
     <div class="modal-backdrop">
       <section class="modal" role="dialog" aria-modal="true">
-        <h2>Merge tag</h2>
+        <h2>Hợp nhất tag</h2>
         <p>
-          Source: <strong>{{ source.name }}</strong> · {{ source.storyCount }} stories
+          Tag nguồn: <strong>{{ source.name }}</strong> · {{ source.storyCount }} truyện
         </p>
         <label
           >Tìm tag đích<input
@@ -137,11 +125,11 @@
             (ngModelChange)="mergeSearchChanged.next()"
         /></label>
         <label
-          >Merge into
+          >Hợp nhất vào
           <select [(ngModel)]="mergeTargetId">
             <option value="">Chọn tag đích</option>
             @for (tag of mergeTargets(); track tag.id) {
-              <option [value]="tag.id">{{ tag.name }} · {{ tag.storyCount }} stories</option>
+              <option [value]="tag.id">{{ tag.name }} · {{ tag.storyCount }} truyện</option>
             }
           </select>
         </label>

@@ -1,16 +1,17 @@
 <main class="admin-page">
   <div class="page-container">
-    <header>
-      <p class="eyebrow">Quản trị / Truyện</p>
-      <h1>Duyệt truyện</h1>
-      <p>Queue duyệt có filter, pagination và lưu state trên URL.</p>
-    </header>
+    <app-breadcrumb [items]="breadcrumbs" />
+    <app-page-heading
+      title="Duyệt truyện"
+      description="Queue duyệt có filter, pagination và lưu state trên URL."
+      icon="book-open"
+    />
     <section class="filters">
       <select [(ngModel)]="status" (change)="applyFilters()">
         <option value="">Tất cả trạng thái</option>
-        <option value="PENDING">PENDING</option>
-        <option value="APPROVED">APPROVED</option>
-        <option value="REJECTED">REJECTED</option></select
+        <option value="PENDING">Chờ duyệt</option>
+        <option value="APPROVED">Đã duyệt</option>
+        <option value="REJECTED">Đã từ chối</option></select
       ><input
         [(ngModel)]="author"
         (ngModelChange)="searchChanged.next()"
@@ -40,12 +41,12 @@
         <table>
           <thead>
             <tr>
-              <th>Story</th>
-              <th>Author</th>
-              <th>Submitted</th>
-              <th>Status</th>
-              <th>Reviewer</th>
-              <th>Reviewed</th>
+              <th>Truyện</th>
+              <th>Tác giả</th>
+              <th>Ngày gửi</th>
+              <th>Trạng thái</th>
+              <th>Người duyệt</th>
+              <th>Ngày duyệt</th>
               <th></th>
             </tr>
           </thead>
@@ -70,11 +71,12 @@
         </table>
       </div>
       <footer class="pager">
-        <button [disabled]="page <= 1" (click)="goPage(page - 1)">Trước</button
-        ><span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span
-        ><button [disabled]="page >= data.pagination.totalPages" (click)="goPage(page + 1)">
-          Sau
-        </button>
+        <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
+        <app-pagination
+          [page]="page"
+          [totalPages]="data.pagination.totalPages || 1"
+          (pageChange)="goPage($event)"
+        />
       </footer>
     }
   </div>

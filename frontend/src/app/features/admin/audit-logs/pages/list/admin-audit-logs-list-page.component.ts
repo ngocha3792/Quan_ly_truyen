@@ -12,13 +12,26 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminAuditLogsApiService } from '../../data-access/admin-audit-logs-api.service';
 import type { AdminAuditLogList } from '../../domain/admin-audit-log.models';
 
 @Component({
   selector: 'app-admin-audit-logs-list-page',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    PaginationComponent,
+  ],
   templateUrl: './admin-audit-logs-list-page.component.html',
   styleUrl: './admin-audit-logs-list-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +41,12 @@ export class AdminAuditLogsListPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Nhật ký audit' },
+  ];
 
   protected readonly result = signal<AdminAuditLogList | null>(null);
   protected readonly loading = signal(false);

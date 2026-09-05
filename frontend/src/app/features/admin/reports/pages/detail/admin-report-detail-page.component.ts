@@ -18,13 +18,37 @@ import {
   type AuthPermission,
 } from '../../../../../core/auth/authorization.models';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminReportsApiService } from '../../data-access/admin-reports-api.service';
-import type { AdminReportDetail } from '../../domain/admin-report.models';
+import type { AdminReportDetail, AdminReportReason } from '../../domain/admin-report.models';
+import { AdminReportStatusBadgeComponent } from '../../ui/admin-report-status-badge.component';
+
+const REPORT_REASON_LABELS: Record<AdminReportReason, string> = {
+  SPAM: 'Spam',
+  HARASSMENT: 'Quấy rối',
+  HATE_SPEECH: 'Phát ngôn thù ghét',
+  SEXUAL_CONTENT: 'Nội dung khiêu dâm',
+  VIOLENCE: 'Bạo lực',
+  COPYRIGHT: 'Vi phạm bản quyền',
+  MISINFORMATION: 'Thông tin sai lệch',
+  OTHER: 'Khác',
+};
 
 @Component({
   selector: 'app-admin-report-detail-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DatePipe,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    AdminReportStatusBadgeComponent,
+  ],
   templateUrl: './admin-report-detail-page.component.html',
   styleUrl: './admin-report-detail-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +59,12 @@ export class AdminReportDetailPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly auth = inject(AuthStore);
   private readonly reportId = this.route.snapshot.paramMap.get('reportId') ?? '';
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Báo cáo', route: '/admin/reports' },
+    { label: 'Chi tiết' },
+  ];
   readonly detail = signal<AdminReportDetail | null>(null);
   readonly loading = signal(false);
   readonly mutating = signal(false);
@@ -68,6 +98,9 @@ export class AdminReportDetailPageComponent implements OnInit {
   });
   ngOnInit(): void {
     this.load();
+  }
+  protected reasonLabel(reason: AdminReportReason): string {
+    return REPORT_REASON_LABELS[reason];
   }
   moderate(operation: 'hold' | 'hide' | 'restore' | 'remove'): void {
     const d = this.detail(),

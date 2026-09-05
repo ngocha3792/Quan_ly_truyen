@@ -1,10 +1,11 @@
 <main class="admin-page">
   <div class="page-container">
-    <header>
-      <p>Quản trị / Tác giả</p>
-      <h1>Author lifecycle</h1>
-      <p>Quản lý capability tác giả độc lập với role.</p>
-    </header>
+    <app-breadcrumb [items]="breadcrumbs" />
+    <app-page-heading
+      title="Quản lý tác giả"
+      description="Quản lý capability tác giả độc lập với role."
+      icon="user"
+    />
     <section class="filters">
       <input
         [(ngModel)]="search"
@@ -12,9 +13,9 @@
         placeholder="Tên, slug, email"
       /><select [(ngModel)]="status" (change)="apply()">
         <option value="">Tất cả</option>
-        <option value="ACTIVE">ACTIVE</option>
-        <option value="SUSPENDED">SUSPENDED</option>
-        <option value="REVOKED">REVOKED</option></select
+        <option value="ACTIVE">Hoạt động</option>
+        <option value="SUSPENDED">Tạm khóa</option>
+        <option value="REVOKED">Đã thu hồi</option></select
       ><input type="date" [(ngModel)]="createdFrom" (change)="apply()" /><input
         type="date"
         [(ngModel)]="createdTo"
@@ -32,11 +33,11 @@
         <table>
           <thead>
             <tr>
-              <th>Author</th>
-              <th>User</th>
-              <th>Status</th>
-              <th>Stories</th>
-              <th>Joined</th>
+              <th>Tác giả</th>
+              <th>Người dùng</th>
+              <th>Trạng thái</th>
+              <th>Số truyện</th>
+              <th>Ngày tham gia</th>
               <th></th>
             </tr>
           </thead>
@@ -50,7 +51,7 @@
                 <td>
                   {{ item.user.displayName }}<small>{{ item.user.email }}</small>
                 </td>
-                <td>{{ item.status }}</td>
+                <td><app-admin-author-status-badge [status]="item.status" /></td>
                 <td>{{ item.storyCount }}</td>
                 <td>{{ item.createdAt | date: 'shortDate' }}</td>
                 <td><a [routerLink]="['/admin/authors', item.id]">Chi tiết</a></td>
@@ -59,10 +60,13 @@
           </tbody>
         </table>
       </div>
-      <footer>
-        <button [disabled]="page <= 1" (click)="go(page - 1)">Trước</button> Trang
-        {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}
-        <button [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">Sau</button>
+      <footer class="pager">
+        <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
+        <app-pagination
+          [page]="page"
+          [totalPages]="data.pagination.totalPages || 1"
+          (pageChange)="go($event)"
+        />
       </footer>
     }
   </div>

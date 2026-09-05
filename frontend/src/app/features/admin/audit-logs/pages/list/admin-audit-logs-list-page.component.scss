@@ -3,18 +3,6 @@
   margin: 2rem auto 4rem;
   color: var(--text-strong);
 }
-.eyebrow {
-  margin: 0;
-  color: var(--primary-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-h1 {
-  margin: 0.25rem 0;
-  color: var(--text-strong);
-}
 .filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

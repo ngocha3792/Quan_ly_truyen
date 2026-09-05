@@ -11,13 +11,19 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, finalize, Subject } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { AdminTagsApiService } from '../../data-access/admin-tags-api.service';
 import { AdminTag, AdminTagList } from '../../domain/admin-tag.models';
 
 @Component({
   selector: 'app-admin-tags-list-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, BreadcrumbComponent, PageHeadingComponent, PaginationComponent],
   templateUrl: './admin-tags-list-page.component.html',
   styleUrl: './admin-tags-list-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +33,12 @@ export class AdminTagsListPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Quản trị' },
+    { label: 'Tag' },
+  ];
 
   readonly result = signal<AdminTagList | null>(null);
   readonly loading = signal(false);

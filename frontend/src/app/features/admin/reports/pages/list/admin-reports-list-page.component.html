@@ -1,30 +1,29 @@
 <main class="admin-page">
-  <header>
-    <div>
-      <p class="eyebrow">Admin · Moderation</p>
-      <h1>Reports</h1>
-      <p>Queue báo cáo bình luận với evidence snapshot và trạng thái xử lý.</p>
-    </div>
-  </header>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Báo cáo vi phạm"
+    description="Queue báo cáo bình luận với evidence snapshot và trạng thái xử lý."
+    icon="alert-triangle"
+  />
   <section class="filters">
     <select [(ngModel)]="status" (change)="go(1)">
       <option value="">Tất cả trạng thái</option>
       @for (item of statuses; track item) {
-        <option [value]="item">{{ item }}</option>
+        <option [value]="item">{{ statusLabel(item) }}</option>
       }</select
     ><select [(ngModel)]="reason" (change)="go(1)">
       <option value="">Tất cả lý do</option>
       @for (item of reasons; track item) {
-        <option [value]="item">{{ item }}</option>
+        <option [value]="item">{{ reasonLabel(item) }}</option>
       }</select
     ><input
       [(ngModel)]="reporter"
       (ngModelChange)="searchChanged.next()"
-      placeholder="Reporter"
+      placeholder="Người báo cáo"
     /><input
       [(ngModel)]="reportedUser"
       (ngModelChange)="searchChanged.next()"
-      placeholder="Reported user"
+      placeholder="Người bị báo cáo"
     /><label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label
     ><label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
   </section>
@@ -39,41 +38,40 @@
         <thead>
           <tr>
             <th>Lý do</th>
-            <th>Comment</th>
-            <th>Reported user</th>
-            <th>Reporter</th>
-            <th>Status</th>
-            <th>Created</th>
+            <th>Bình luận</th>
+            <th>Người bị báo cáo</th>
+            <th>Người báo cáo</th>
+            <th>Trạng thái</th>
+            <th>Ngày tạo</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           @for (item of data.items; track item.id) {
             <tr>
-              <td>{{ item.reason }}</td>
+              <td>{{ reasonLabel(item.reason) }}</td>
               <td>{{ item.comment?.excerpt || '—' }}</td>
               <td>{{ item.reportedUser?.displayName || '—' }}</td>
               <td>{{ item.reporter?.displayName || '—' }}</td>
-              <td>
-                <span class="status">{{ item.status }}</span>
-              </td>
+              <td><app-admin-report-status-badge [status]="item.status" /></td>
               <td>{{ item.createdAt | date: 'short' }}</td>
               <td><a [routerLink]="['/admin/reports', item.id]">Xem</a></td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="7">Không có report.</td>
+              <td colspan="7">Không có báo cáo phù hợp.</td>
             </tr>
           }
         </tbody>
       </table>
     </div>
     <footer class="pager">
-      <button type="button" [disabled]="page <= 1" (click)="go(page - 1)">Trước</button
-      ><span>{{ page }} / {{ data.pagination.totalPages || 1 }}</span
-      ><button type="button" [disabled]="page >= data.pagination.totalPages" (click)="go(page + 1)">
-        Sau
-      </button>
+      <span>Trang {{ page }} / {{ data.pagination.totalPages || 1 }}</span>
+      <app-pagination
+        [page]="page"
+        [totalPages]="data.pagination.totalPages || 1"
+        (pageChange)="go($event)"
+      />
     </footer>
   }
 </main>

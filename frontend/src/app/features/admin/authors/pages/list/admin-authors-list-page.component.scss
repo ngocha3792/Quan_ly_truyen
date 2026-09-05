@@ -34,9 +34,14 @@ small {
   display: block;
   color: var(--text-muted);
 }
-footer {
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   margin-top: 1rem;
-  text-align: right;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
 }
 .error {
   color: #ffb1be;

@@ -56,7 +56,7 @@
         <section class="security-card">
           <header class="security-card__header">
             <div>
-              <h3>Security & sessions</h3>
+              <h3>Bảo mật & phiên đăng nhập</h3>
               <p>
                 MFA: <strong>{{ user.mfaEnabled ? 'Đã bật' : 'Chưa bật' }}</strong>
               </p>
@@ -64,7 +64,7 @@
             @if (canManageSecurity()) {
               <div class="security-actions">
                 <button type="button" [disabled]="securityLoading()" (click)="unlock()">
-                  Unlock login
+                  Mở khóa đăng nhập
                 </button>
                 <button
                   type="button"
@@ -72,7 +72,7 @@
                   [disabled]="securityLoading()"
                   (click)="revokeAllSessions()"
                 >
-                  Revoke all sessions
+                  Thu hồi mọi phiên
                 </button>
               </div>
             }
@@ -89,22 +89,22 @@
             <table>
               <thead>
                 <tr>
-                  <th>Device</th>
+                  <th>Thiết bị</th>
                   <th>IP</th>
-                  <th>Last seen</th>
-                  <th>Expires</th>
-                  <th>Status</th>
+                  <th>Lần cuối</th>
+                  <th>Hết hạn</th>
+                  <th>Trạng thái</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 @for (session of sessions(); track session.sessionId) {
                   <tr>
-                    <td>{{ session.deviceName || session.userAgent || 'Unknown' }}</td>
+                    <td>{{ session.deviceName || session.userAgent || 'Không xác định' }}</td>
                     <td>{{ session.ipAddress || '—' }}</td>
                     <td>{{ formatDate(session.lastSeenAt) }}</td>
                     <td>{{ formatDate(session.expiresAt) }}</td>
-                    <td>{{ session.revoked ? 'REVOKED' : 'ACTIVE' }}</td>
+                    <td>{{ session.revoked ? 'Đã thu hồi' : 'Hoạt động' }}</td>
                     <td>
                       @if (canManageSecurity() && !session.revoked) {
                         <button
@@ -112,14 +112,14 @@
                           [disabled]="securityLoading()"
                           (click)="revokeSession(session.sessionId)"
                         >
-                          Revoke
+                          Thu hồi
                         </button>
                       }
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6">Không có session.</td>
+                    <td colspan="6">Không có phiên đăng nhập.</td>
                   </tr>
                 }
               </tbody>
@@ -128,7 +128,7 @@
         </section>
 
         <section class="security-card">
-          <h3>Security activity gần đây</h3>
+          <h3>Hoạt động bảo mật gần đây</h3>
           <div class="event-list">
             @for (event of securityEvents(); track event.id) {
               <div class="event-row">
@@ -137,7 +137,7 @@
                 <small>{{ event.ipAddress || '—' }} · request {{ event.requestId || '—' }}</small>
               </div>
             } @empty {
-              <p>Chưa có security event phù hợp trong audit source hiện tại.</p>
+              <p>Chưa có sự kiện bảo mật phù hợp trong nguồn audit hiện tại.</p>
             }
           </div>
         </section>

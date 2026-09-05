@@ -1,6 +1,6 @@
 <main class="admin-page">
   <div class="page-container">
-    <a routerLink="/admin/authors">← Danh sách tác giả</a>
+    <app-breadcrumb [items]="breadcrumbs" />
     @if (loading()) {
       <p>Đang tải...</p>
     }
@@ -8,58 +8,58 @@
       <div class="error">{{ error() }}</div>
     }
     @if (detail(); as a) {
-      <header class="hero">
-        <div>
-          <h1>{{ a.penName }}</h1>
-          <p>{{ a.user.email }} · {{ a.status }}</p>
-          @if (a.statusReason) {
-            <p><strong>Lý do:</strong> {{ a.statusReason }}</p>
-          }
-        </div>
+      <app-page-heading [title]="a.penName" [description]="a.user.email" icon="user">
+        <a class="back-button" routerLink="/admin/authors">← Danh sách tác giả</a>
+      </app-page-heading>
+      <div class="hero-meta">
+        <app-admin-author-status-badge [status]="a.status" />
+        @if (a.statusReason) {
+          <span><strong>Lý do:</strong> {{ a.statusReason }}</span>
+        }
         <div class="actions">
           @if (canManage() && a.status !== 'ACTIVE') {
-            <button [disabled]="mutating()" (click)="reactivate()">Reactivate</button>
+            <button [disabled]="mutating()" (click)="reactivate()">Kích hoạt lại</button>
           }
           @if (canManage() && a.status === 'ACTIVE') {
-            <button [disabled]="mutating()" (click)="openAction('SUSPENDED')">Suspend</button
+            <button [disabled]="mutating()" (click)="openAction('SUSPENDED')">Tạm khóa</button
             ><button class="danger" [disabled]="mutating()" (click)="openAction('REVOKED')">
-              Revoke
+              Thu hồi
             </button>
           }
         </div>
-      </header>
+      </div>
       @if (message()) {
         <div class="success">{{ message() }}</div>
       }
       <section class="grid">
         <article>
-          <h2>Profile</h2>
-          <p>{{ a.profile.biography || 'Chưa có biography' }}</p>
-          <p>Verification: {{ a.profile.verificationStatus }}</p>
+          <h2>Hồ sơ</h2>
+          <p>{{ a.profile.biography || 'Chưa có tiểu sử' }}</p>
+          <p>Xác minh: {{ a.profile.verificationStatus }}</p>
         </article>
         <article>
-          <h2>Account</h2>
+          <h2>Tài khoản</h2>
           <p>{{ a.user.displayName }} · {{ a.user.status }}</p>
-          <p>Joined {{ a.createdAt | date: 'mediumDate' }}</p>
+          <p>Tham gia {{ a.createdAt | date: 'mediumDate' }}</p>
         </article>
         <article>
-          <h2>Application</h2>
+          <h2>Hồ sơ đăng ký</h2>
           @if (a.application) {
             <p>{{ a.application.status }} · {{ a.application.submittedAt | date: 'short' }}</p>
           } @else {
-            <p>Không có application.</p>
+            <p>Không có hồ sơ đăng ký.</p>
           }
         </article>
         <article>
-          <h2>Stories</h2>
+          <h2>Truyện</h2>
           <p>
-            Total {{ a.stories.total }} · Draft {{ a.stories.draft }} · Published
-            {{ a.stories.published }} · Pending {{ a.stories.pending }}
+            Tổng {{ a.stories.total }} · Nháp {{ a.stories.draft }} · Đã đăng
+            {{ a.stories.published }} · Chờ duyệt {{ a.stories.pending }}
           </p>
         </article>
       </section>
       <section>
-        <h2>Status / moderation history</h2>
+        <h2>Lịch sử trạng thái / kiểm duyệt</h2>
         @for (event of a.recentEvents; track event.id) {
           <p>
             <strong>{{ event.action }}</strong> · {{ event.createdAt | date: 'short' }}
@@ -70,7 +70,7 @@
     @if (actionOpen()) {
       <div class="backdrop">
         <section class="dialog" role="dialog">
-          <h2>{{ pendingStatus === 'REVOKED' ? 'Revoke' : 'Suspend' }} tác giả</h2>
+          <h2>{{ pendingStatus === 'REVOKED' ? 'Thu hồi' : 'Tạm khóa' }} tác giả</h2>
           <textarea
             [(ngModel)]="reason"
             rows="5"
