@@ -17,6 +17,8 @@ import type {
   CommentReactionApiType,
   CommentReportReasonApi,
 } from '../../../../../core/http/reader-engagement-api.model';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { ChapterListStore } from '../../data-access/chapter-list.store';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
@@ -25,9 +27,18 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
 @Component({
   selector: 'app-chapter-reader-page',
   standalone: true,
-  imports: [RouterLink, ChapterHeadingComponent, ChapterSidebarComponent, ChapterCommentsComponent],
+  imports: [
+    RouterLink,
+    ChapterHeadingComponent,
+    ChapterSidebarComponent,
+    ChapterCommentsComponent,
+    PaginationComponent,
+  ],
   templateUrl: './chapter-reader-page.component.html',
-  styleUrls: ['./chapter-reader-page.component.scss'],
+  styleUrls: [
+    './chapter-reader-page.component.scss',
+    './chapter-reader-page.chapter-list.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChapterReaderPageComponent implements OnInit {
@@ -36,6 +47,7 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(ChapterReaderStore);
+  protected readonly chapterList = inject(ChapterListStore);
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
   private trackedChapterId: string | null = null;

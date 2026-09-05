@@ -6,6 +6,7 @@ import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api
 import {
   PublicChapterNavigationApiItem,
   PublicChapterReaderApiResponse,
+  PublicStoryChapterListApiItem,
 } from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type {
@@ -15,6 +16,8 @@ import type {
 } from '../../../../core/http/reader-engagement-api.model';
 import {
   ChapterComment,
+  ChapterListItem,
+  ChapterListPage,
   ChapterNavigationItem,
   ChapterReaderView,
 } from '../domain/chapter-reader.models';
@@ -28,6 +31,16 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
 
   getChapter(storySlug: string, chapterNumber: string): Observable<ChapterReaderView> {
     return this.api.chapter(storySlug, chapterNumber).pipe(map(toChapterReaderView));
+  }
+
+  listChapters(storySlug: string, page: number, pageSize: number): Observable<ChapterListPage> {
+    return this.api.chapters(storySlug, page, pageSize).pipe(
+      map((result) => ({
+        items: result.items.map((item) => toChapterListItem(storySlug, item)),
+        page: result.pagination.page,
+        totalPages: result.pagination.totalPages,
+      })),
+    );
   }
 
   getComments(
@@ -168,6 +181,19 @@ function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterRea
     },
     comments: [],
     totalComments: result.chapter.comments,
+  };
+}
+
+function toChapterListItem(
+  storySlug: string,
+  item: PublicStoryChapterListApiItem,
+): ChapterListItem {
+  return {
+    id: item.id,
+    number: item.number,
+    title: item.title,
+    url: `/truyen/${storySlug}/chuong/${item.number}`,
+    publishedAt: item.publishedAt,
   };
 }
 

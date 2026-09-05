@@ -3,10 +3,19 @@ import type {
   CommentReactionApiType,
   CommentReportReasonApi,
 } from '../../../../core/http/reader-engagement-api.model';
-import { ChapterComment, ChapterReaderView } from '../domain/chapter-reader.models';
+import {
+  ChapterComment,
+  ChapterListPage,
+  ChapterReaderView,
+} from '../domain/chapter-reader.models';
 
 export abstract class ChapterReaderRepository {
   abstract getChapter(storySlug: string, chapterNumber: string): Observable<ChapterReaderView>;
+  abstract listChapters(
+    storySlug: string,
+    page: number,
+    pageSize: number,
+  ): Observable<ChapterListPage>;
   abstract getComments(
     storySlug: string,
     chapterNumber: string,

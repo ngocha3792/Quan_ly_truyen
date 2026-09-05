@@ -12,6 +12,20 @@ export interface RelatedStoryItem {
   readonly latestChapter: number | null;
 }
 
+export interface StoryChapterListItem {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  readonly url: string;
+  readonly publishedAt: string;
+}
+
+export interface StoryChapterListPage {
+  readonly items: readonly StoryChapterListItem[];
+  readonly page: number;
+  readonly totalPages: number;
+}
+
 export interface StoryDetailState {
   readonly story: Story | null;
   readonly loading: boolean;

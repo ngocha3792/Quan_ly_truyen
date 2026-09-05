@@ -74,7 +74,11 @@
               </a>
             }
 
-            <button class="bottom-button chapter-list-button" type="button">
+            <button
+              class="bottom-button chapter-list-button"
+              type="button"
+              (click)="chapterList.show(view.story.slug)"
+            >
               <svg viewBox="0 0 24 24">
                 <path d="M8 6h13"></path>
                 <path d="M8 12h13"></path>
@@ -127,5 +131,58 @@
         (bookmarkToggle)="toggleBookmark()"
       ></app-chapter-sidebar>
     </div>
+
+    @if (chapterList.open()) {
+      <div class="chapter-list-backdrop" (click)="chapterList.close()">
+        <section
+          class="chapter-list-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Danh sách chương"
+          (click)="$event.stopPropagation()"
+        >
+          <header>
+            <h2>Danh sách chương</h2>
+
+            <button type="button" aria-label="Đóng" (click)="chapterList.close()">
+              <svg viewBox="0 0 24 24">
+                <path d="m6 6 12 12"></path>
+                <path d="m18 6-12 12"></path>
+              </svg>
+            </button>
+          </header>
+
+          @if (chapterList.error(); as error) {
+            <p class="chapter-list-error">{{ error }}</p>
+          } @else if (chapterList.loading()) {
+            <p class="chapter-list-loading">Đang tải danh sách chương...</p>
+          } @else {
+            <ul class="chapter-list-items">
+              @for (item of chapterList.items(); track item.id) {
+                <li>
+                  <a
+                    [routerLink]="item.url"
+                    [class.active]="item.number === view.chapter.number"
+                    (click)="chapterList.close()"
+                  >
+                    Chương {{ item.number }}: {{ item.title }}
+                  </a>
+                </li>
+              } @empty {
+                <li class="chapter-list-empty">Truyện chưa có chương nào.</li>
+              }
+            </ul>
+
+            @if (chapterList.totalPages() > 1) {
+              <app-pagination
+                [page]="chapterList.page()"
+                [totalPages]="chapterList.totalPages()"
+                (pageChange)="chapterList.goToPage(view.story.slug, $event)"
+              />
+            }
+          }
+        </section>
+      </div>
+    }
   }
 </main>

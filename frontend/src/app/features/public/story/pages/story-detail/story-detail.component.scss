@@ -247,6 +247,23 @@ h2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem 1rem;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.chapter-list-loading,
+.chapter-list-error {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+.chapter-list-error {
+  color: #fda4af;
+}
+
+.chapters-panel app-pagination {
+  display: block;
+  margin-top: 1rem;
 }
 
 .chapter-list a {

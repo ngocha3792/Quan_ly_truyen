@@ -8,6 +8,7 @@ import {
   GetAuthorChapterQueryHandler,
   GetPublicChapterReaderQueryHandler,
   ListAuthorChaptersQueryHandler,
+  ListPublicStoryChaptersQueryHandler,
   PublishAuthorChapterCommandHandler,
   UpdateAuthorChapterCommandHandler,
 } from './application';
@@ -28,6 +29,7 @@ import {
     GetAuthorChapterQueryHandler,
     PublishAuthorChapterCommandHandler,
     GetPublicChapterReaderQueryHandler,
+    ListPublicStoryChaptersQueryHandler,
     PrismaChapterPersistence,
     {
       provide: CHAPTER_PERSISTENCE_PORT,

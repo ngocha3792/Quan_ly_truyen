@@ -17,6 +17,8 @@ import type {
   ChapterRecord,
   ChapterSummaryRecord,
   PublicChapterReaderDto,
+  PublicStoryChapterListDto,
+  PublicStoryChapterListItemDto,
   CreateAuthorChapterInput,
   CreateAuthorChapterResult,
   DeleteAuthorChapterInput,
@@ -791,6 +793,74 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
   }
 
+  async listPublishedByStory(
+    storySlug: string,
+    page: number,
+    pageSize: number,
+  ): Promise<PublicStoryChapterListDto | null> {
+    try {
+      const story = await this.prisma.story.findFirst({
+        where: {
+          slug: storySlug,
+          deletedAt: null,
+          visibility: StoryVisibility.PUBLIC,
+          publishedAt: {
+            not: null,
+          },
+          status: {
+            in: [...PUBLIC_STORY_STATUSES],
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!story) {
+        return null;
+      }
+
+      const where = {
+        storyId: story.id,
+        status: ChapterStatus.PUBLISHED,
+        deletedAt: null,
+        publishedAt: {
+          not: null,
+        },
+      } satisfies Prisma.ChapterWhereInput;
+
+      const [totalItems, chapters] = await this.prisma.$transaction([
+        this.prisma.chapter.count({ where }),
+        this.prisma.chapter.findMany({
+          where,
+          orderBy: {
+            number: 'asc',
+          },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select: PUBLIC_CHAPTER_NAVIGATION_SELECT,
+        }),
+      ]);
+
+      return {
+        items: chapters
+          .map((chapter) => toPublicStoryChapterListItemDto(chapter))
+          .filter(
+            (item): item is PublicStoryChapterListItemDto => item !== null,
+          ),
+        pagination: {
+          page,
+          pageSize,
+          totalItems,
+          totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize),
+        },
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'public-story-chapter-list',
+        resource: 'Chương',
+      });
+    }
+  }
+
   private toSummaryRecord(chapter: ChapterSummaryRow): ChapterSummaryRecord {
     return {
       id: chapter.id,
@@ -924,6 +994,22 @@ function toPublicChapterNavigation(
   chapter: PublicChapterNavigationRow | null,
 ): PublicChapterReaderDto['navigation']['previous'] {
   if (!chapter?.publishedAt) {
+    return null;
+  }
+
+  return {
+    id: chapter.id,
+    number: chapter.number.toNumber(),
+    title: chapter.title,
+    slug: chapter.slug,
+    publishedAt: chapter.publishedAt,
+  };
+}
+
+function toPublicStoryChapterListItemDto(
+  chapter: PublicChapterNavigationRow,
+): PublicStoryChapterListItemDto | null {
+  if (!chapter.publishedAt) {
     return null;
   }
 

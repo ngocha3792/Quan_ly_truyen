@@ -93,24 +93,35 @@
           <div class="panel-heading">
             <div>
               <span></span>
-              <h2>Chương mới nhất</h2>
+              <h2>Danh sách chương</h2>
             </div>
             <small>{{ item.chapterCount ?? 0 }} chương đã xuất bản</small>
           </div>
-          <div class="chapter-list">
-            @if (item.latestChapter; as latestChapter) {
-              <a [routerLink]="['/truyen', item.slug, 'chuong', latestChapter.number]">
-                <span
-                  >Chương {{ latestChapter.number }}:
-                  {{ latestChapter.title || 'Chương mới' }}</span
-                >
-                <small>{{ latestChapter.updatedAt | relativeTime }}</small>
-                <app-icon name="chevron-right" [size]="16" />
-              </a>
-            } @else {
-              <p>Truyện chưa có chương công khai.</p>
+          @if (chapterList.error(); as error) {
+            <p class="chapter-list-error">{{ error }}</p>
+          } @else if (chapterList.loading()) {
+            <p class="chapter-list-loading">Đang tải danh sách chương...</p>
+          } @else {
+            <div class="chapter-list">
+              @for (chapter of chapterList.items(); track chapter.id) {
+                <a [routerLink]="chapter.url">
+                  <span>Chương {{ chapter.number }}: {{ chapter.title || 'Chương mới' }}</span>
+                  <small>{{ chapter.publishedAt | relativeTime }}</small>
+                  <app-icon name="chevron-right" [size]="16" />
+                </a>
+              } @empty {
+                <p>Truyện chưa có chương công khai.</p>
+              }
+            </div>
+
+            @if (chapterList.totalPages() > 1) {
+              <app-pagination
+                [page]="chapterList.page()"
+                [totalPages]="chapterList.totalPages()"
+                (pageChange)="chapterList.goToPage(item.slug, $event)"
+              />
             }
-          </div>
+          }
         </section>
       </div>
 

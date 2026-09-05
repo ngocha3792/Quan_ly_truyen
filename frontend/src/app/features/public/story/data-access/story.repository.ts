@@ -3,10 +3,20 @@ import type {
   CommentReactionApiType,
   CommentReportReasonApi,
 } from '../../../../core/http/reader-engagement-api.model';
-import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
+import {
+  RelatedStoryItem,
+  Story,
+  StoryChapterListPage,
+  StoryComment,
+} from '../domain/story.models';
 
 export abstract class StoryDetailRepository {
   abstract getStoryBySlug(slug: string): Observable<Story | null>;
+  abstract listChapters(
+    storySlug: string,
+    page: number,
+    pageSize: number,
+  ): Observable<StoryChapterListPage>;
   abstract getComments(storySlug: string): Observable<readonly StoryComment[]>;
   abstract getRelatedStories(
     categories: readonly string[],

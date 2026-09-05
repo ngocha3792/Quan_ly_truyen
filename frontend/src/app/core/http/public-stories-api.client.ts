@@ -8,6 +8,7 @@ import {
   PublicChapterReaderApiResponse,
   PublicStoryApiItem,
   PublicStoryApiPage,
+  PublicStoryChapterListApiResponse,
   PublicStoryListParams,
 } from './public-stories-api.model';
 
@@ -44,6 +45,21 @@ export class PublicStoriesApiClient {
     return this.http
       .get<ApiSuccessEnvelope<PublicChapterReaderApiResponse>>(
         `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storySlug)}/chapters/${encodeURIComponent(chapterNumber)}`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  chapters(
+    storySlug: string,
+    page = 1,
+    pageSize = 100,
+  ): Observable<PublicStoryChapterListApiResponse> {
+    const params = new HttpParams().set('page', String(page)).set('pageSize', String(pageSize));
+
+    return this.http
+      .get<ApiSuccessEnvelope<PublicStoryChapterListApiResponse>>(
+        `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storySlug)}/chapters`,
+        { params },
       )
       .pipe(map((response) => response.data));
   }

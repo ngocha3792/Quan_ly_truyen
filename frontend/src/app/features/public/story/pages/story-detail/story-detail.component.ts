@@ -18,8 +18,10 @@ import type {
   CommentReportReasonApi,
 } from '../../../../../core/http/reader-engagement-api.model';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
+import { StoryChapterListStore } from '../../data-access/story-chapter-list.store';
 import { StoryDetailStore } from '../../data-access/story.store';
 import { StoryCommentsComponent } from '../../ui/story-comments/story-comments.component';
 import { StoryRelatedComponent } from '../../ui/story-related/story-related.component';
@@ -34,8 +36,9 @@ import { StoryRelatedComponent } from '../../ui/story-related/story-related.comp
     RelativeTimePipe,
     StoryCommentsComponent,
     StoryRelatedComponent,
+    PaginationComponent,
   ],
-  providers: [StoryDetailStore],
+  providers: [StoryDetailStore, StoryChapterListStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './story-detail.component.html',
   styleUrl: './story-detail.component.scss',
@@ -46,6 +49,7 @@ export class StoryDetailComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly auth = inject(AuthStore);
   protected readonly store = inject(StoryDetailStore);
+  protected readonly chapterList = inject(StoryChapterListStore);
   protected readonly library = inject(LibraryStore);
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
@@ -92,7 +96,10 @@ export class StoryDetailComponent implements OnInit {
     const sub = this.route.paramMap.subscribe((params) => {
       this.trackedStoryId = null;
       const slug = params.get('slug') ?? '';
-      if (slug) this.store.loadStory(slug);
+      if (slug) {
+        this.store.loadStory(slug);
+        this.chapterList.load(slug);
+      }
     });
     this.destroyRef.onDestroy(() => sub.unsubscribe());
   }

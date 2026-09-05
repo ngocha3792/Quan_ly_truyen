@@ -3,7 +3,10 @@ import { map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
-import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
+import {
+  PublicStoryApiItem,
+  PublicStoryChapterListApiItem,
+} from '../../../../core/http/public-stories-api.model';
 import { ReaderEngagementApiClient } from '../../../../core/http/reader-engagement-api.client';
 import type {
   CommentReactionApiType,
@@ -11,7 +14,13 @@ import type {
   StoryCommentApiItem,
 } from '../../../../core/http/reader-engagement-api.model';
 import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
-import { RelatedStoryItem, Story, StoryComment } from '../domain/story.models';
+import {
+  RelatedStoryItem,
+  Story,
+  StoryChapterListItem,
+  StoryChapterListPage,
+  StoryComment,
+} from '../domain/story.models';
 import { StoryDetailRepository } from './story.repository';
 
 @Injectable()
@@ -29,6 +38,20 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
         this.categorySlugs = story.categories.map((category) => category.slug);
         return toStory(story);
       }),
+    );
+  }
+
+  listChapters(
+    storySlug: string,
+    page: number,
+    pageSize: number,
+  ): Observable<StoryChapterListPage> {
+    return this.api.chapters(storySlug, page, pageSize).pipe(
+      map((result) => ({
+        items: result.items.map((item) => toStoryChapterListItem(storySlug, item)),
+        page: result.pagination.page,
+        totalPages: result.pagination.totalPages,
+      })),
     );
   }
 
@@ -176,6 +199,19 @@ function toStory(story: PublicStoryApiItem): Story {
     followers: story.stats.followers,
     status: story.status,
     badge: story.status === 'COMPLETED' ? 'FULL' : undefined,
+  };
+}
+
+function toStoryChapterListItem(
+  storySlug: string,
+  item: PublicStoryChapterListApiItem,
+): StoryChapterListItem {
+  return {
+    id: item.id,
+    number: item.number,
+    title: item.title,
+    url: `/truyen/${storySlug}/chuong/${item.number}`,
+    publishedAt: item.publishedAt,
   };
 }
 

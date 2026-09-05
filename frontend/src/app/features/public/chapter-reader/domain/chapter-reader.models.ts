@@ -35,3 +35,17 @@ export interface ChapterReaderView {
   readonly comments: readonly ChapterComment[];
   readonly totalComments: number;
 }
+
+export interface ChapterListItem {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  readonly url: string;
+  readonly publishedAt: string;
+}
+
+export interface ChapterListPage {
+  readonly items: readonly ChapterListItem[];
+  readonly page: number;
+  readonly totalPages: number;
+}

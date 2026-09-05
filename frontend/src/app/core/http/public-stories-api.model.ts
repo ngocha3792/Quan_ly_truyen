@@ -102,3 +102,21 @@ export interface PublicChapterNavigationApiItem {
   readonly slug: string;
   readonly publishedAt: string;
 }
+
+export interface PublicStoryChapterListApiItem {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  readonly slug: string;
+  readonly publishedAt: string;
+}
+
+export interface PublicStoryChapterListApiResponse {
+  readonly items: readonly PublicStoryChapterListApiItem[];
+  readonly pagination: {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly totalItems: number;
+    readonly totalPages: number;
+  };
+}

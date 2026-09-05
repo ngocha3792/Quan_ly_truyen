@@ -1,4 +1,4 @@
-import type { PublicChapterReaderDto } from '../dto';
+import type { PublicChapterReaderDto, PublicStoryChapterListDto } from '../dto';
 
 export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
 
@@ -209,4 +209,10 @@ export interface ChapterPersistencePort {
     storySlug: string,
     chapterNumber: string,
   ): Promise<PublicChapterReaderDto | null>;
+
+  listPublishedByStory(
+    storySlug: string,
+    page: number,
+    pageSize: number,
+  ): Promise<PublicStoryChapterListDto | null>;
 }
