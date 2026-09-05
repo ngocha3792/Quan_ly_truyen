@@ -71,7 +71,11 @@
                   <td>{{ item.reporter?.displayName || '—' }}</td>
                   <td><app-admin-report-status-badge [status]="item.status" /></td>
                   <td>{{ item.createdAt | date: 'short' }}</td>
-                  <td><a [routerLink]="['/admin/reports', item.id]">Xem</a></td>
+                  <td>
+                    <app-link-button [routerLink]="['/admin/reports', item.id]"
+                      >Xem</app-link-button
+                    >
+                  </td>
                 </tr>
               }
             </tbody>

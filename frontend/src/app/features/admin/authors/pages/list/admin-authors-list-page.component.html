@@ -66,7 +66,11 @@
                   <td><app-admin-author-status-badge [status]="item.status" /></td>
                   <td>{{ item.storyCount }}</td>
                   <td>{{ item.createdAt | date: 'shortDate' }}</td>
-                  <td><a [routerLink]="['/admin/authors', item.id]">Chi tiết</a></td>
+                  <td>
+                    <app-link-button [routerLink]="['/admin/authors', item.id]"
+                      >Chi tiết</app-link-button
+                    >
+                  </td>
                 </tr>
               }
             </tbody>

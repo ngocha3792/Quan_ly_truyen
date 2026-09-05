@@ -78,35 +78,3 @@ tbody tr:hover {
 
   text-align: right;
 }
-
-.review-link {
-  display: inline-flex;
-
-  min-height: 34px;
-
-  align-items: center;
-
-  padding: 0 13px;
-
-  border: 1px solid rgba(168, 85, 247, 0.26);
-
-  border-radius: 7px;
-
-  color: #c4a5f6;
-
-  font-size: 12px;
-
-  font-weight: 700;
-
-  text-decoration: none;
-
-  background: rgba(124, 58, 237, 0.08);
-}
-
-.review-link:hover {
-  color: #fff;
-
-  border-color: rgba(168, 85, 247, 0.5);
-
-  background: rgba(124, 58, 237, 0.18);
-}

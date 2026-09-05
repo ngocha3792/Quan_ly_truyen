@@ -19,6 +19,7 @@ import {
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
@@ -34,6 +35,7 @@ import type { AdminAuditLogList } from '../../domain/admin-audit-log.models';
     RouterLink,
     BreadcrumbComponent,
     ButtonComponent,
+    LinkButtonComponent,
     PageHeadingComponent,
     PaginationComponent,
     EmptyStateComponent,

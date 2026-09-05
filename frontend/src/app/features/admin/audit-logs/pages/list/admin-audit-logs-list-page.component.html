@@ -75,7 +75,11 @@
                       —
                     }
                   </td>
-                  <td><a [routerLink]="['/admin/audit-logs', item.id]">Xem</a></td>
+                  <td>
+                    <app-link-button [routerLink]="['/admin/audit-logs', item.id]"
+                      >Xem</app-link-button
+                    >
+                  </td>
                 </tr>
               }
             </tbody>

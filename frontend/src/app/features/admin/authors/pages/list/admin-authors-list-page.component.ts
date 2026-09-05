@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, Subject } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 import {
@@ -18,6 +18,7 @@ import {
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
@@ -45,13 +46,13 @@ const AUTHOR_STATUS_LABELS: Record<AuthorLifecycleStatus, string> = {
   imports: [
     DatePipe,
     FormsModule,
-    RouterLink,
     BreadcrumbComponent,
     PageHeadingComponent,
     PaginationComponent,
     AdminAuthorStatusBadgeComponent,
     EmptyStateComponent,
     ErrorAlertComponent,
+    LinkButtonComponent,
     LoadingStateComponent,
     SearchFieldComponent,
     TabFilterComponent,

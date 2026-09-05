@@ -36,7 +36,9 @@
           </td>
           <td><app-admin-user-status-badge [status]="user.status" /></td>
           <td>{{ formatDate(user.lastLoginAt) }}</td>
-          <td><a class="detail-link" [routerLink]="['/admin/users', user.id]">Chi tiết</a></td>
+          <td>
+            <app-link-button [routerLink]="['/admin/users', user.id]">Chi tiết</app-link-button>
+          </td>
         </tr>
       }
     </tbody>

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
+import { LinkButtonComponent } from '../../../../shared/components/link-button/link-button.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { AdminUserSummary } from '../domain/admin-user.models';
 import { AdminUserStatusBadgeComponent } from './admin-user-status-badge.component';
@@ -8,7 +8,7 @@ import { AdminUserStatusBadgeComponent } from './admin-user-status-badge.compone
 @Component({
   selector: 'app-admin-users-table',
   standalone: true,
-  imports: [RouterLink, PaginationComponent, AdminUserStatusBadgeComponent],
+  imports: [LinkButtonComponent, PaginationComponent, AdminUserStatusBadgeComponent],
   templateUrl: './admin-users-table.component.html',
   styleUrl: './admin-users-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

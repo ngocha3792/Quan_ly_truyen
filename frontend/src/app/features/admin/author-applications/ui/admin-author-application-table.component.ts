@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { RouterLink } from '@angular/router';
-
+import { LinkButtonComponent } from '../../../../shared/components/link-button/link-button.component';
 import { AdminAuthorApplicationRecord } from '../domain/admin-author-application.models';
 
 import { AdminAuthorApplicationStatusBadgeComponent } from './admin-author-application-status-badge.component';
@@ -11,7 +10,7 @@ import { AdminAuthorApplicationStatusBadgeComponent } from './admin-author-appli
 
   standalone: true,
 
-  imports: [RouterLink, AdminAuthorApplicationStatusBadgeComponent],
+  imports: [LinkButtonComponent, AdminAuthorApplicationStatusBadgeComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
