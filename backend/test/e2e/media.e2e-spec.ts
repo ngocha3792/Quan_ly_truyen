@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
@@ -500,16 +500,25 @@ describe('Media lifecycle with runtime auth wiring (e2e)', () => {
       declaredMimeType: 'image/webp',
     });
     const eventKey = `e2e-${runId}-upload`;
+    const webhookTimestamp = String(Math.floor(Date.now() / 1000));
+    const webhookBody = {
+      notification_id: eventKey,
+      notification_type: 'upload',
+      public_id: intent.parameters.public_id,
+      resource_type: 'image',
+    };
+    // Cloudinary always signs webhook notifications with SHA-1,
+    // independent of the account's upload signature_algorithm.
+    const webhookSignature = createHash('sha1')
+      .update(
+        `${JSON.stringify(webhookBody)}${webhookTimestamp}e2e-cloudinary-secret`,
+      )
+      .digest('hex');
     const webhookResponse = await request(httpServer())
       .post('/api/v1/webhooks/cloudinary')
-      .set('x-cld-timestamp', String(Math.floor(Date.now() / 1000)))
-      .set('x-cld-signature', 'valid')
-      .send({
-        notification_id: eventKey,
-        notification_type: 'upload',
-        public_id: intent.parameters.public_id,
-        resource_type: 'image',
-      });
+      .set('x-cld-timestamp', webhookTimestamp)
+      .set('x-cld-signature', webhookSignature)
+      .send(webhookBody);
     if (webhookResponse.status !== 200) {
       throw new Error(
         `Webhook request failed: ${webhookResponse.status} ${JSON.stringify(webhookResponse.body)}`,
