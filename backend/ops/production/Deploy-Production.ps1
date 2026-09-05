@@ -155,6 +155,18 @@ if ($UseLocalBuild) {
   )
 }
 
+# Optional host-specific compose override (for example, binding api/frontend
+# to loopback ports for a host-level Nginx edge instead of the caddy
+# container). Applied whenever present so a fresh deploy never silently
+# drops port bindings the edge proxy depends on.
+$HostOverrideComposeFile = Join-Path $BackendRoot 'compose.vps.yml'
+
+if (Test-Path -LiteralPath $HostOverrideComposeFile -PathType Leaf) {
+  $Compose += @(
+    '-f', 'compose.vps.yml'
+  )
+}
+
 function Invoke-DockerCompose {
   param(
     [Parameter(ValueFromRemainingArguments = $true)]
