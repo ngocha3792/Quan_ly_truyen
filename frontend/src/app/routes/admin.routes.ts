@@ -39,7 +39,7 @@ export const ADMIN_ROUTES: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'users' },
       {
         path: 'audit-logs',
-        title: appPageTitle('Audit Logs'),
+        title: appPageTitle('Nhật ký audit'),
         canActivate: auditLogReadGuards,
         loadComponent: () =>
           import('../features/admin/audit-logs/pages/list/admin-audit-logs-list-page.component').then(
@@ -48,7 +48,7 @@ export const ADMIN_ROUTES: Routes = [
       },
       {
         path: 'audit-logs/:id',
-        title: appPageTitle('Chi tiết Audit Log'),
+        title: appPageTitle('Chi tiết audit log'),
         canActivate: auditLogReadGuards,
         loadComponent: () =>
           import('../features/admin/audit-logs/pages/detail/admin-audit-log-detail-page.component').then(

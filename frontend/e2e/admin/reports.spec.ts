@@ -5,7 +5,7 @@ const MODERATION_REASON = 'Nội dung vi phạm cần được moderator xử l�
 
 async function openSeededReport(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/admin/reports?status=OPEN&reason=HARASSMENT');
-  await expect(page.getByRole('heading', { name: 'Báo cáo vi phạm' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Báo cáo bình luận' })).toBeVisible();
   const row = page.getByRole('row').filter({ hasText: REPORT_ROW_TEXT });
   await expect(row).toBeVisible();
   await row.getByRole('link', { name: 'Xem' }).click();
