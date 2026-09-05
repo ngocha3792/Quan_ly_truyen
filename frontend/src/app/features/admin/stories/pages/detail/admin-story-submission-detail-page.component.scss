@@ -1,5 +1,6 @@
 .admin-page {
   padding: 2rem 1rem;
+  color: var(--text-strong);
 }
 .page-container {
   max-width: 1100px;
@@ -30,9 +31,10 @@
 }
 article,
 details {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 1rem;
+  background: rgba(4, 8, 19, 0.65);
 }
 details {
   margin: 0.7rem 0;
@@ -43,27 +45,35 @@ pre {
   overflow: auto;
 }
 .error {
-  background: #fee2e2;
+  color: #ffb1be;
+  background: rgba(231, 62, 91, 0.1);
+  border: 1px solid rgba(231, 62, 91, 0.2);
+  border-radius: 0.5rem;
   padding: 0.75rem;
 }
 .success {
-  background: #dcfce7;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.09);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 0.5rem;
   padding: 0.75rem;
 }
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: #0008;
+  background: rgba(2, 7, 17, 0.68);
   display: grid;
   place-items: center;
   z-index: 100;
 }
 .dialog {
-  background: #fff;
+  background: #0f172a;
+  color: var(--text-strong);
   padding: 1.2rem;
   border-radius: 0.8rem;
   max-width: 520px;
   width: min(92vw, 520px);
+  border: 1px solid var(--border);
 }
 textarea {
   width: 100%;

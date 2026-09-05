@@ -3,9 +3,10 @@
   gap: 0.9rem;
 }
 .change {
-  border: 1px solid var(--border-color, #d5d5d5);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 0.9rem;
+  color: var(--text-strong);
 }
 .change header {
   display: flex;
@@ -24,7 +25,8 @@
 pre {
   margin: 0.4rem 0 0;
   padding: 0.65rem;
-  background: var(--surface-soft, #f7f7f8);
+  background: rgba(4, 8, 19, 0.65);
+  color: var(--text-secondary);
   border-radius: 0.5rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

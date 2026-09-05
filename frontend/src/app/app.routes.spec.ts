@@ -47,20 +47,7 @@ describe('application route composition', () => {
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
-      'admin/audit-logs',
-      'admin/audit-logs/:id',
-      'admin/reports',
-      'admin/reports/:reportId',
-      'admin/categories',
-      'admin/tags',
-      'admin/stories',
-      'admin/story-submissions/:submissionId',
-      'admin/users',
-      'admin/users/:userId',
-      'admin/authors',
-      'admin/authors/:authorId',
-      'admin/author-applications',
-      'admin/author-applications/:applicationId',
+      'admin',
       'tac-gia-studio',
     ]);
   });
@@ -75,24 +62,39 @@ describe('application route composition', () => {
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
-      'admin/audit-logs',
-      'admin/audit-logs/:id',
-      'admin/reports',
-      'admin/reports/:reportId',
-      'admin/categories',
-      'admin/tags',
-      'admin/stories',
-      'admin/story-submissions/:submissionId',
-      'admin/users',
-      'admin/users/:userId',
-      'admin/authors',
-      'admin/authors/:authorId',
-      'admin/author-applications',
-      'admin/author-applications/:applicationId',
+      'admin',
     ];
 
     for (const path of privatePaths) {
       expect(children.find((route) => route.path === path)?.canActivate?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('bọc toàn bộ route admin trong AdminShell với guard riêng cho từng mục', () => {
+    const adminRoute = shellRoute().children?.find((route) => route.path === 'admin');
+    const adminChildren = adminRoute?.children ?? [];
+
+    expect(adminChildren.map((route) => route.path)).toEqual([
+      '',
+      'audit-logs',
+      'audit-logs/:id',
+      'reports',
+      'reports/:reportId',
+      'categories',
+      'tags',
+      'stories',
+      'story-submissions/:submissionId',
+      'users',
+      'users/:userId',
+      'authors',
+      'authors/:authorId',
+      'author-applications',
+      'author-applications/:applicationId',
+    ]);
+
+    const guardedPaths = adminChildren.filter((route) => route.path !== '');
+    for (const route of guardedPaths) {
+      expect(route.canActivate?.length).toBeGreaterThan(0);
     }
   });
 });

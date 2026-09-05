@@ -3,9 +3,10 @@
   overflow: auto;
   max-height: 32rem;
   padding: 1rem;
-  border: 1px solid var(--border-color, #d5d5d5);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface-soft, #f7f7f8);
+  background: rgba(4, 8, 19, 0.65);
+  color: var(--text-strong);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font:

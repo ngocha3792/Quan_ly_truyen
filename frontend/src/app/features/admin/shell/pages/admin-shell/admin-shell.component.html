@@ -1,0 +1,22 @@
+<div class="admin-shell">
+  <div class="sidebar-column" [class.sidebar-column--open]="mobileOpen()">
+    <app-admin-sidebar (navigated)="closeMobile()"></app-admin-sidebar>
+  </div>
+
+  @if (mobileOpen()) {
+    <button
+      class="mobile-backdrop"
+      type="button"
+      aria-label="Đóng menu"
+      (click)="closeMobile()"
+    ></button>
+  }
+
+  <div class="admin-content">
+    <app-admin-topbar (menuRequested)="toggleMobile()"></app-admin-topbar>
+
+    <div class="admin-router-content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

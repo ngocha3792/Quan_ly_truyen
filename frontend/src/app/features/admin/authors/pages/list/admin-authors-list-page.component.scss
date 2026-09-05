@@ -1,5 +1,6 @@
 .admin-page {
   padding: 2rem 1rem;
+  color: var(--text-strong);
 }
 .page-container {
   max-width: 1100px;
@@ -16,7 +17,7 @@
 }
 .table-wrap {
   overflow: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 0.7rem;
 }
 table {
@@ -27,18 +28,21 @@ th,
 td {
   padding: 0.8rem;
   text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border);
 }
 small {
   display: block;
-  color: #64748b;
+  color: var(--text-muted);
 }
 footer {
   margin-top: 1rem;
   text-align: right;
 }
 .error {
-  background: #fee2e2;
+  color: #ffb1be;
+  background: rgba(231, 62, 91, 0.1);
+  border: 1px solid rgba(231, 62, 91, 0.2);
+  border-radius: 0.5rem;
   padding: 0.7rem;
 }
 @media (max-width: 800px) {

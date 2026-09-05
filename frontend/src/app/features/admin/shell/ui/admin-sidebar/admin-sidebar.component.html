@@ -1,0 +1,44 @@
+<aside class="admin-sidebar">
+  <div class="admin-brand">
+    <span class="brand-symbol">
+      <span></span>
+      <span></span>
+    </span>
+
+    <div>
+      <strong>{{ appName }}</strong>
+      <small>Quản trị</small>
+    </div>
+  </div>
+
+  <nav aria-label="Điều hướng quản trị">
+    @for (item of navigationItems(); track item.label) {
+      <a [routerLink]="item.route" routerLinkActive="active" (click)="navigated.emit()">
+        <app-icon [name]="item.icon" [size]="18"></app-icon>
+
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  @if (user(); as currentUser) {
+    <section class="admin-profile-card">
+      <div class="profile-avatar">
+        @if (currentUser.avatar?.url; as avatarUrl) {
+          <img [src]="avatarUrl" [alt]="currentUser.displayName" />
+        } @else {
+          <span class="avatar-initial">{{ initial(currentUser.displayName) }}</span>
+        }
+      </div>
+
+      <strong>{{ currentUser.displayName }}</strong>
+      <small>Quản trị viên</small>
+
+      <a routerLink="/" (click)="navigated.emit()">
+        <app-icon name="door-open" [size]="16"></app-icon>
+
+        Về trang chủ
+      </a>
+    </section>
+  }
+</aside>

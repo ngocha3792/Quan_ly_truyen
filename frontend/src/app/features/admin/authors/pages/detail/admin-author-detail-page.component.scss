@@ -1,5 +1,6 @@
 .admin-page {
   padding: 2rem 1rem;
+  color: var(--text-strong);
 }
 .page-container {
   max-width: 1000px;
@@ -29,28 +30,38 @@ section {
   border-radius: 0.7rem;
 }
 article {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   padding: 1rem;
+  background: rgba(4, 8, 19, 0.65);
 }
 .error {
-  background: #fee2e2;
+  color: #ffb1be;
+  background: rgba(231, 62, 91, 0.1);
+  border: 1px solid rgba(231, 62, 91, 0.2);
+  border-radius: 0.5rem;
   padding: 0.7rem;
 }
 .success {
-  background: #dcfce7;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.09);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 0.5rem;
   padding: 0.7rem;
 }
 .backdrop {
   position: fixed;
   inset: 0;
-  background: #0008;
+  background: rgba(2, 7, 17, 0.68);
   display: grid;
   place-items: center;
 }
 .dialog {
-  background: white;
+  background: #0f172a;
+  color: var(--text-strong);
   padding: 1.2rem;
   width: min(90vw, 500px);
+  border-radius: 0.8rem;
+  border: 1px solid var(--border);
 }
 textarea {
   width: 100%;
