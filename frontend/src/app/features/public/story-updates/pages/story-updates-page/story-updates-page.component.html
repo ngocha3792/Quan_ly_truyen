@@ -22,7 +22,9 @@
           @for (stat of store.stats(); track stat.id) {
             <app-stat-card
               [label]="stat.label"
-              [value]="(stat.value | compactNumber) + (stat.valueSuffix ? ' ' + stat.valueSuffix : '')"
+              [value]="
+                (stat.value | compactNumber) + (stat.valueSuffix ? ' ' + stat.valueSuffix : '')
+              "
               [icon]="statIcons[stat.id]"
               [tone]="stat.tone"
               [description]="stat.comparisonText"

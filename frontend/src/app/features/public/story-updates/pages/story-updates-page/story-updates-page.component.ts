@@ -19,7 +19,11 @@ import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pi
 
 import { StoryUpdatesStore } from '../../data-access/story-updates.store';
 
-import { StoryUpdateStat, StoryUpdatesSort, StoryUpdatesTab } from '../../domain/story-updates.models';
+import {
+  StoryUpdateStat,
+  StoryUpdatesSort,
+  StoryUpdatesTab,
+} from '../../domain/story-updates.models';
 
 import { FeaturedUpdateCardComponent } from '../../ui/featured-update-card/featured-update-card.component';
 import { PopularUpdateGenresComponent } from '../../ui/popular-update-genres/popular-update-genres.component';
