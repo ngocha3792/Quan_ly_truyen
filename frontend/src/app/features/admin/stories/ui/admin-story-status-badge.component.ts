@@ -4,6 +4,7 @@ const STORY_SUBMISSION_STATUS_LABELS: Record<string, string> = {
   PENDING: 'Chờ duyệt',
   APPROVED: 'Đã duyệt',
   REJECTED: 'Đã từ chối',
+  CANCELED: 'Đã hủy',
 };
 
 @Component({

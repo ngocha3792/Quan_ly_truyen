@@ -1,13 +1,17 @@
 <main class="admin-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
-    @if (loading()) {
-      <p>Đang tải...</p>
+    @if (message()) {
+      <p class="message">{{ message() }}</p>
     }
     @if (error()) {
-      <div class="error">{{ error() }}</div>
+      <div class="state">
+        <app-error-alert title="Không thể tải tác giả" [message]="error()" (retry)="load()" />
+      </div>
     }
-    @if (detail(); as a) {
+    @if (loading() && !detail()) {
+      <app-loading-state message="Đang tải tác giả..." />
+    } @else if (detail(); as a) {
       <app-page-heading [title]="a.penName" [description]="a.user.email" icon="user">
         <a class="back-button" routerLink="/admin/authors">← Danh sách tác giả</a>
       </app-page-heading>
@@ -18,19 +22,23 @@
         }
         <div class="actions">
           @if (canManage() && a.status !== 'ACTIVE') {
-            <button [disabled]="mutating()" (click)="reactivate()">Kích hoạt lại</button>
+            <app-button variant="secondary" [disabled]="mutating()" (click)="reactivate()"
+              >Kích hoạt lại</app-button
+            >
           }
           @if (canManage() && a.status === 'ACTIVE') {
-            <button [disabled]="mutating()" (click)="openAction('SUSPENDED')">Tạm khóa</button
-            ><button class="danger" [disabled]="mutating()" (click)="openAction('REVOKED')">
+            <app-button
+              variant="secondary"
+              [disabled]="mutating()"
+              (click)="openAction('SUSPENDED')"
+              >Tạm khóa</app-button
+            >
+            <app-button variant="danger" [disabled]="mutating()" (click)="openAction('REVOKED')">
               Thu hồi
-            </button>
+            </app-button>
           }
         </div>
       </div>
-      @if (message()) {
-        <div class="success">{{ message() }}</div>
-      }
       <section class="grid">
         <article>
           <h2>Hồ sơ</h2>
@@ -78,14 +86,14 @@
             placeholder="Lý do (tối thiểu 10 ký tự)"
           ></textarea>
           <div class="actions">
-            <button (click)="actionOpen.set(false)">Hủy</button
-            ><button
-              class="danger"
+            <app-button variant="secondary" (click)="actionOpen.set(false)">Hủy</app-button>
+            <app-button
+              variant="danger"
               [disabled]="reason.trim().length < 10 || mutating()"
               (click)="confirmAction()"
             >
               Xác nhận
-            </button>
+            </app-button>
           </div>
         </section>
       </div>

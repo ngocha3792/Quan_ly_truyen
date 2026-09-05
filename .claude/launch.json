@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start", "--prefix", "frontend"],
       "port": 4200
+    },
+    {
+      "name": "frontend-remote",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "frontend\\dev-remote.cmd"],
+      "port": 4200
     }
   ]
 }

@@ -1,13 +1,17 @@
 <main class="admin-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
-    @if (loading()) {
-      <p>Đang tải...</p>
+    @if (message()) {
+      <p class="message">{{ message() }}</p>
     }
     @if (error()) {
-      <div class="error">{{ error() }}</div>
+      <div class="state">
+        <app-error-alert title="Không thể tải submission" [message]="error()" (retry)="load()" />
+      </div>
     }
-    @if (detail(); as data) {
+    @if (loading() && !detail()) {
+      <app-loading-state message="Đang tải submission..." />
+    } @else if (detail(); as data) {
       <app-page-heading
         [title]="data.story.title"
         [description]="'Gửi ' + (data.submission.submittedAt | date: 'medium')"
@@ -19,14 +23,15 @@
         <app-admin-story-status-badge [status]="data.submission.status" />
         @if (data.submission.status === 'PENDING') {
           <div class="actions">
-            <button [disabled]="mutating()" (click)="approve()">Duyệt</button
-            ><button class="danger" [disabled]="mutating()" (click)="openReject()">Từ chối</button>
+            <app-button variant="secondary" [disabled]="mutating()" (click)="approve()"
+              >Duyệt</app-button
+            >
+            <app-button variant="danger" [disabled]="mutating()" (click)="openReject()"
+              >Từ chối</app-button
+            >
           </div>
         }
       </div>
-      @if (message()) {
-        <div class="success">{{ message() }}</div>
-      }
       <section class="grid">
         <article>
           <h2>Tác giả</h2>
@@ -91,14 +96,14 @@
           ><textarea [(ngModel)]="rejectReason" rows="6" maxlength="1000"></textarea
           ><small>{{ rejectReason.trim().length }} / 1000</small>
           <div class="actions">
-            <button (click)="closeReject()">Hủy</button
-            ><button
-              class="danger"
+            <app-button variant="secondary" (click)="closeReject()">Hủy</app-button>
+            <app-button
+              variant="danger"
               [disabled]="rejectReason.trim().length < 10 || mutating()"
               (click)="confirmReject()"
             >
               Xác nhận từ chối
-            </button>
+            </app-button>
           </div>
         </section>
       </div>

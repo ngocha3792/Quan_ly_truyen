@@ -15,11 +15,13 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import { AdminTagsApiService } from '../../data-access/admin-tags-api.service';
 import { AdminTag, AdminTagList } from '../../domain/admin-tag.models';
 
@@ -34,6 +36,8 @@ import { AdminTag, AdminTagList } from '../../domain/admin-tag.models';
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    ButtonComponent,
+    SearchFieldComponent,
   ],
   templateUrl: './admin-tags-list-page.component.html',
   styleUrl: './admin-tags-list-page.component.scss',
@@ -90,6 +94,16 @@ export class AdminTagsListPageComponent implements OnInit {
       relativeTo: this.route,
       queryParams: { q: this.q.trim() || null, page },
     });
+  }
+
+  protected keywordChanged(value: string): void {
+    this.q = value;
+    this.searchChanged.next();
+  }
+
+  protected mergeTargetSearchChanged(value: string): void {
+    this.mergeTargetSearch = value;
+    this.mergeSearchChanged.next();
   }
 
   openCreate(): void {

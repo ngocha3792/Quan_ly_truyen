@@ -6,6 +6,12 @@
   padding: 1.25rem 0 4rem;
   color: var(--text-strong);
 }
+.state {
+  padding: 18px 0;
+}
+.message {
+  color: #86efac;
+}
 .back-button {
   color: #a78bfa;
   font-size: 13px;
@@ -24,13 +30,6 @@
   display: flex;
   gap: 0.7rem;
   margin-left: auto;
-}
-.actions button {
-  padding: 0.65rem 1rem;
-}
-.danger {
-  background: #b91c1c;
-  color: #fff;
 }
 .grid {
   display: grid;
@@ -52,20 +51,6 @@ pre {
   white-space: pre-wrap;
   max-height: 30rem;
   overflow: auto;
-}
-.error {
-  color: #ffb1be;
-  background: rgba(231, 62, 91, 0.1);
-  border: 1px solid rgba(231, 62, 91, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-}
-.success {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.09);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
 }
 .dialog-backdrop {
   position: fixed;

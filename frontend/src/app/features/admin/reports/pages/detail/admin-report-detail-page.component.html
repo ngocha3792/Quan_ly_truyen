@@ -69,21 +69,31 @@
         ><textarea rows="3" maxlength="2000" [(ngModel)]="reason"></textarea>
         <div class="actions">
           @if (canModerate()) {
-            <button [disabled]="mutating()" (click)="moderate('hold')">Giữ lại</button
-            ><button [disabled]="mutating()" (click)="moderate('hide')">Ẩn</button
-            ><button [disabled]="mutating()" (click)="moderate('restore')">Khôi phục</button
-            ><button class="danger" [disabled]="mutating()" (click)="moderate('remove')">
+            <app-button variant="secondary" [disabled]="mutating()" (click)="moderate('hold')"
+              >Giữ lại</app-button
+            >
+            <app-button variant="secondary" [disabled]="mutating()" (click)="moderate('hide')"
+              >Ẩn</app-button
+            >
+            <app-button variant="secondary" [disabled]="mutating()" (click)="moderate('restore')"
+              >Khôi phục</app-button
+            >
+            <app-button variant="danger" [disabled]="mutating()" (click)="moderate('remove')">
               Xóa
-            </button>
+            </app-button>
           }
           @if (canBan()) {
-            <button class="danger" [disabled]="mutating()" (click)="ban()">Cấm người dùng</button>
+            <app-button variant="danger" [disabled]="mutating()" (click)="ban()"
+              >Cấm người dùng</app-button
+            >
           }
         </div>
         @if (canWarn()) {
           <label>Nội dung cảnh báo</label
-          ><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea
-          ><button [disabled]="mutating()" (click)="warn()">Gửi cảnh báo</button>
+          ><textarea rows="3" maxlength="1000" [(ngModel)]="warningMessage"></textarea>
+          <app-button variant="secondary" [disabled]="mutating()" (click)="warn()"
+            >Gửi cảnh báo</app-button
+          >
         }
       </section>
       <section class="card">
@@ -95,17 +105,20 @@
           placeholder="Ghi chú xử lý (ít nhất 10 ký tự)"
         ></textarea>
         <div class="actions">
-          <button
+          <app-button
+            variant="primary"
             [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
             (click)="closeReport('resolve')"
           >
-            Đã xử lý</button
-          ><button
+            Đã xử lý
+          </app-button>
+          <app-button
+            variant="secondary"
             [disabled]="mutating() || d.status === 'RESOLVED' || d.status === 'REJECTED'"
             (click)="closeReport('reject')"
           >
             Từ chối
-          </button>
+          </app-button>
         </div>
       </section>
       <section class="card">

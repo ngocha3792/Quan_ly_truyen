@@ -45,23 +45,6 @@ footer {
   display: flex;
   gap: 9px;
 }
-button {
-  min-height: 39px;
-  padding: 0 15px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.grant {
-  border: 0;
-  color: #fff;
-  background: #16a34a;
-}
-.remove {
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  color: #fda4af;
-  background: rgba(244, 63, 94, 0.08);
-}
 .notice {
   margin-top: 16px;
   padding: 12px 15px;

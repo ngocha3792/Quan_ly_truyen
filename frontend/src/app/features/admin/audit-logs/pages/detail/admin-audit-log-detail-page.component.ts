@@ -15,6 +15,7 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
@@ -32,6 +33,7 @@ import { AuditJsonViewerComponent } from '../../ui/audit-json-viewer/audit-json-
     DatePipe,
     RouterLink,
     BreadcrumbComponent,
+    ButtonComponent,
     PageHeadingComponent,
     ErrorAlertComponent,
     LoadingStateComponent,

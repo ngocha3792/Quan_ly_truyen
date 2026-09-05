@@ -19,17 +19,29 @@
   @if (!isSelf && user.status !== 'DELETED') {
     <div class="actions">
       @if (user.status !== 'ACTIVE') {
-        <button class="activate" [disabled]="actionLoading" (click)="statusChange.emit('ACTIVE')">
+        <app-button
+          variant="secondary"
+          [disabled]="actionLoading"
+          (click)="statusChange.emit('ACTIVE')"
+        >
           Kích hoạt
-        </button>
+        </app-button>
       }
       @if (user.status === 'ACTIVE') {
-        <button class="suspend" [disabled]="actionLoading" (click)="statusChange.emit('SUSPENDED')">
+        <app-button
+          variant="secondary"
+          [disabled]="actionLoading"
+          (click)="statusChange.emit('SUSPENDED')"
+        >
           Tạm khóa
-        </button>
-        <button class="ban" [disabled]="actionLoading" (click)="statusChange.emit('BANNED')">
+        </app-button>
+        <app-button
+          variant="danger"
+          [disabled]="actionLoading"
+          (click)="statusChange.emit('BANNED')"
+        >
           Cấm tài khoản
-        </button>
+        </app-button>
       }
     </div>
   }

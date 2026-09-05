@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { AdminUserDetail } from '../domain/admin-user.models';
 
 @Component({
   selector: 'app-admin-user-roles',
   standalone: true,
+  imports: [ButtonComponent],
   templateUrl: './admin-user-roles.component.html',
   styleUrl: './admin-user-roles.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

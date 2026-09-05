@@ -37,17 +37,6 @@ input {
   align-items: end;
   gap: 0.5rem;
 }
-button {
-  padding: 0.6rem 0.9rem;
-  border: 0;
-  border-radius: 0.5rem;
-  cursor: pointer;
-}
-button.secondary {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-strong);
-}
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);

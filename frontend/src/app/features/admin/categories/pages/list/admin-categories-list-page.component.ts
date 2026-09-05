@@ -15,11 +15,17 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
+import {
+  TabFilterComponent,
+  TabFilterOption,
+} from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AdminCategoriesApiService } from '../../data-access/admin-categories-api.service';
 import { AdminCategory, AdminCategoryList } from '../../domain/admin-category.models';
 
@@ -34,6 +40,9 @@ import { AdminCategory, AdminCategoryList } from '../../domain/admin-category.mo
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    ButtonComponent,
+    SearchFieldComponent,
+    TabFilterComponent,
   ],
   templateUrl: './admin-categories-list-page.component.html',
   styleUrl: './admin-categories-list-page.component.scss',
@@ -49,6 +58,12 @@ export class AdminCategoriesListPageComponent implements OnInit {
     { label: 'Trang chủ', route: '/' },
     { label: 'Quản trị' },
     { label: 'Thể loại' },
+  ];
+
+  protected readonly statusOptions: readonly TabFilterOption<'' | 'active' | 'inactive'>[] = [
+    { value: '', label: 'Tất cả' },
+    { value: 'active', label: 'Hoạt động' },
+    { value: 'inactive', label: 'Ngừng hoạt động' },
   ];
 
   readonly result = signal<AdminCategoryList | null>(null);
@@ -88,6 +103,16 @@ export class AdminCategoriesListPageComponent implements OnInit {
 
   applyFilters(): void {
     this.go(1);
+  }
+
+  protected keywordChanged(value: string): void {
+    this.q = value;
+    this.searchChanged.next();
+  }
+
+  protected statusChanged(value: '' | 'active' | 'inactive'): void {
+    this.status = value;
+    this.applyFilters();
   }
   go(page: number): void {
     void this.router.navigate([], {

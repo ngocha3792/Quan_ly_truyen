@@ -63,17 +63,16 @@
             </div>
             @if (canManageSecurity()) {
               <div class="security-actions">
-                <button type="button" [disabled]="securityLoading()" (click)="unlock()">
+                <app-button variant="secondary" [disabled]="securityLoading()" (click)="unlock()">
                   Mở khóa đăng nhập
-                </button>
-                <button
-                  type="button"
-                  class="danger-button"
+                </app-button>
+                <app-button
+                  variant="danger"
                   [disabled]="securityLoading()"
                   (click)="revokeAllSessions()"
                 >
                   Thu hồi mọi phiên
-                </button>
+                </app-button>
               </div>
             }
           </header>
@@ -107,13 +106,13 @@
                     <td>{{ session.revoked ? 'Đã thu hồi' : 'Hoạt động' }}</td>
                     <td>
                       @if (canManageSecurity() && !session.revoked) {
-                        <button
-                          type="button"
+                        <app-button
+                          variant="secondary"
                           [disabled]="securityLoading()"
                           (click)="revokeSession(session.sessionId)"
                         >
                           Thu hồi
-                        </button>
+                        </app-button>
                       }
                     </td>
                   </tr>
@@ -154,15 +153,14 @@
           <textarea [(ngModel)]="statusReason" rows="5" maxlength="1000"></textarea>
           <small>{{ statusReason.trim().length }} / 1000 (tối thiểu 10)</small>
           <div class="dialog-actions">
-            <button type="button" (click)="pendingStatus.set(null)">Hủy</button>
-            <button
-              type="button"
-              class="danger-button"
+            <app-button variant="secondary" (click)="pendingStatus.set(null)">Hủy</app-button>
+            <app-button
+              variant="danger"
               [disabled]="statusReason.trim().length < 10 || actionsStore.loading()"
               (click)="confirmStatus()"
             >
               Xác nhận
-            </button>
+            </app-button>
           </div>
         </section>
       </div>

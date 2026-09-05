@@ -6,27 +6,33 @@
       description="Queue báo cáo bình luận với evidence snapshot và trạng thái xử lý."
       icon="alert-triangle"
     />
+    <app-tab-filter
+      ariaLabel="Trạng thái báo cáo"
+      [options]="statusFilterOptions"
+      [selected]="status"
+      (selectedChange)="statusChanged($event)"
+    />
     <section class="filters">
-      <select [(ngModel)]="status" (change)="go(1)">
-        <option value="">Tất cả trạng thái</option>
-        @for (item of statuses; track item) {
-          <option [value]="item">{{ statusLabel(item) }}</option>
-        }</select
-      ><select [(ngModel)]="reason" (change)="go(1)">
+      <select [(ngModel)]="reason" (change)="go(1)">
         <option value="">Tất cả lý do</option>
         @for (item of reasons; track item) {
           <option [value]="item">{{ reasonLabel(item) }}</option>
-        }</select
-      ><input
-        [(ngModel)]="reporter"
-        (ngModelChange)="searchChanged.next()"
+        }
+      </select>
+      <app-search-field
+        [value]="reporter"
         placeholder="Người báo cáo"
-      /><input
-        [(ngModel)]="reportedUser"
-        (ngModelChange)="searchChanged.next()"
+        ariaLabel="Tìm theo người báo cáo"
+        (valueChange)="reporterChanged($event)"
+      />
+      <app-search-field
+        [value]="reportedUser"
         placeholder="Người bị báo cáo"
-      /><label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label
-      ><label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
+        ariaLabel="Tìm theo người bị báo cáo"
+        (valueChange)="reportedUserChanged($event)"
+      />
+      <label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label>
+      <label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
     </section>
     @if (error()) {
       <div class="state">

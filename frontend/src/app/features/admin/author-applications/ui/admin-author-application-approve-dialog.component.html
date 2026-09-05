@@ -22,13 +22,13 @@
     }
 
     <footer>
-      <button type="button" class="cancel-button" [disabled]="loading()" (click)="cancel.emit()">
+      <app-button variant="secondary" [disabled]="loading()" (click)="cancel.emit()">
         Hủy
-      </button>
+      </app-button>
 
-      <button type="button" class="approve-button" [disabled]="loading()" (click)="confirm.emit()">
+      <app-button variant="primary" [disabled]="loading()" (click)="confirm.emit()">
         {{ loading() ? 'Đang duyệt...' : 'Duyệt hồ sơ' }}
-      </button>
+      </app-button>
     </footer>
   </section>
 </div>

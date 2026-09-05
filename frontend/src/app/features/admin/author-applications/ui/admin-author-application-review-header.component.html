@@ -8,8 +8,12 @@
   </div>
   @if (application.status === 'PENDING') {
     <div class="actions">
-      <button class="reject" [disabled]="reviewing" (click)="reject.emit()">Từ chối</button
-      ><button class="approve" [disabled]="reviewing" (click)="approve.emit()">Duyệt hồ sơ</button>
+      <app-button variant="danger" [disabled]="reviewing" (click)="reject.emit()"
+        >Từ chối</app-button
+      >
+      <app-button variant="primary" [disabled]="reviewing" (click)="approve.emit()"
+        >Duyệt hồ sơ</app-button
+      >
     </div>
   }
 </section>

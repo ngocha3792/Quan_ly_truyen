@@ -1,0 +1,8 @@
+<button
+  [type]="type()"
+  [disabled]="disabled()"
+  [class]="'btn btn-' + variant()"
+  [attr.title]="title() || null"
+>
+  <ng-content />
+</button>

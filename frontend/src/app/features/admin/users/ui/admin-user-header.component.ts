@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { AdminUserDetail, ManagedUserStatus } from '../domain/admin-user.models';
 import { AdminUserStatusBadgeComponent } from './admin-user-status-badge.component';
 
 @Component({
   selector: 'app-admin-user-header',
   standalone: true,
-  imports: [AdminUserStatusBadgeComponent],
+  imports: [ButtonComponent, AdminUserStatusBadgeComponent],
   templateUrl: './admin-user-header.component.html',
   styleUrl: './admin-user-header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

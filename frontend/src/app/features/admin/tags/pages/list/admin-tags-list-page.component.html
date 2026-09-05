@@ -6,15 +6,15 @@
       description="Quản lý tag, usage và hợp nhất duplicate an toàn."
       icon="bookmark"
     >
-      <button class="primary" type="button" (click)="openCreate()">Tạo tag</button>
+      <app-button variant="primary" (click)="openCreate()">Tạo tag</app-button>
     </app-page-heading>
 
     <section class="toolbar">
-      <input
-        type="search"
+      <app-search-field
+        [value]="q"
         placeholder="Tìm theo tên hoặc slug…"
-        [(ngModel)]="q"
-        (ngModelChange)="searchChanged.next()"
+        ariaLabel="Tìm tag"
+        (valueChange)="keywordChanged($event)"
       />
     </section>
 
@@ -59,11 +59,10 @@
                   <td>{{ tag.storyCount }}</td>
                   <td>{{ tag.createdAt.slice(0, 10) }}</td>
                   <td class="actions">
-                    <button type="button" (click)="openEdit(tag)">Sửa</button>
-                    <button type="button" (click)="openMerge(tag)">Hợp nhất</button>
-                    <button
-                      type="button"
-                      class="danger"
+                    <app-button variant="secondary" (click)="openEdit(tag)">Sửa</app-button>
+                    <app-button variant="secondary" (click)="openMerge(tag)">Hợp nhất</app-button>
+                    <app-button
+                      variant="danger"
                       [disabled]="tag.storyCount > 0"
                       [title]="
                         tag.storyCount > 0
@@ -75,7 +74,7 @@
                       (click)="delete(tag)"
                     >
                       Xóa
-                    </button>
+                    </app-button>
                   </td>
                 </tr>
               }
@@ -104,15 +103,14 @@
             </p>
           }
           <div class="modal-actions">
-            <button type="button" (click)="editorOpen.set(false)">Hủy</button
-            ><button
-              class="primary"
-              type="button"
+            <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
+            <app-button
+              variant="primary"
               [disabled]="!editName.trim() || mutating()"
               (click)="saveEditor()"
             >
               Lưu
-            </button>
+            </app-button>
           </div>
         </section>
       </div>
@@ -125,12 +123,15 @@
           <p>
             Tag nguồn: <strong>{{ source.name }}</strong> · {{ source.storyCount }} truyện
           </p>
-          <label
-            >Tìm tag đích<input
-              type="search"
-              [(ngModel)]="mergeTargetSearch"
-              (ngModelChange)="mergeSearchChanged.next()"
-          /></label>
+          <label class="field-label">
+            Tìm tag đích
+            <app-search-field
+              [value]="mergeTargetSearch"
+              placeholder="Tìm tag đích"
+              ariaLabel="Tìm tag đích"
+              (valueChange)="mergeTargetSearchChanged($event)"
+            />
+          </label>
           <label
             >Hợp nhất vào
             <select [(ngModel)]="mergeTargetId">
@@ -144,15 +145,14 @@
             Tag nguồn sẽ bị xóa sau khi hợp nhất. Thao tác không tự động hoàn tác.
           </p>
           <div class="modal-actions">
-            <button type="button" (click)="mergeOpen.set(false)">Hủy</button
-            ><button
-              class="primary"
-              type="button"
+            <app-button variant="secondary" (click)="mergeOpen.set(false)">Hủy</app-button>
+            <app-button
+              variant="primary"
               [disabled]="!mergeTargetId || mutating()"
               (click)="merge()"
             >
               Hợp nhất
-            </button>
+            </app-button>
           </div>
         </section>
       </div>

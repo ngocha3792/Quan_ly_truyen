@@ -19,6 +19,7 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
@@ -42,6 +43,7 @@ import { AdminUserSummaryComponent } from '../../ui/admin-user-summary.component
     FormsModule,
     RouterLink,
     BreadcrumbComponent,
+    ButtonComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
     PageHeadingComponent,

@@ -16,6 +16,7 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
@@ -32,6 +33,7 @@ import type { AdminAuditLogList } from '../../domain/admin-audit-log.models';
     FormsModule,
     RouterLink,
     BreadcrumbComponent,
+    ButtonComponent,
     PageHeadingComponent,
     PaginationComponent,
     EmptyStateComponent,

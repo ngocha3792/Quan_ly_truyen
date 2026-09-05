@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "https://103.74.100.55.nip.io",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

@@ -23,7 +23,8 @@
         <dl>
           <dt>Audit ID</dt>
           <dd>
-            <code>{{ d.id }}</code> <button type="button" (click)="copy(d.id)">Copy</button>
+            <code>{{ d.id }}</code>
+            <app-button variant="secondary" type="button" (click)="copy(d.id)">Copy</app-button>
           </dd>
           <dt>Người thực hiện</dt>
           <dd>
@@ -35,7 +36,9 @@
             }
             @if (d.actorId) {
               <br /><code>{{ d.actorId }}</code>
-              <button type="button" (click)="copy(d.actorId)">Copy</button>
+              <app-button variant="secondary" type="button" (click)="copy(d.actorId)"
+                >Copy</app-button
+              >
             }
           </dd>
           <dt>Đối tượng</dt>
@@ -45,7 +48,9 @@
               <a [routerLink]="link">Mở đối tượng</a>
             }
             @if (d.entity.id) {
-              <button type="button" (click)="copy(d.entity.id)">Copy</button>
+              <app-button variant="secondary" type="button" (click)="copy(d.entity.id)"
+                >Copy</app-button
+              >
             }
           </dd>
           <dt>Request ID</dt>
@@ -54,7 +59,9 @@
               <a [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: d.requestId }">{{
                 d.requestId
               }}</a>
-              <button type="button" (click)="copy(d.requestId)">Copy</button>
+              <app-button variant="secondary" type="button" (click)="copy(d.requestId)"
+                >Copy</app-button
+              >
             } @else {
               —
             }

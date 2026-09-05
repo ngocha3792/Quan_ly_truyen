@@ -19,6 +19,9 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
 import type { AdminAuthorDetail, AuthorLifecycleStatus } from '../../domain/admin-author.models';
@@ -38,6 +41,9 @@ const AUTHOR_STATUS_LABELS: Record<AuthorLifecycleStatus, string> = {
     FormsModule,
     RouterLink,
     BreadcrumbComponent,
+    ButtonComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
     PageHeadingComponent,
     AdminAuthorStatusBadgeComponent,
   ],
@@ -106,7 +112,7 @@ export class AdminAuthorDetailPageComponent implements OnInit {
         error: (e: unknown) => this.error.set(getApiErrorMessage(e)),
       });
   }
-  private load(): void {
+  protected load(): void {
     if (!this.id) return;
     this.loading.set(true);
     this.api

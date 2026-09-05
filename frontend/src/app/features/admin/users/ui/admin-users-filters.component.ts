@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { SearchFieldComponent } from '../../../../shared/components/search-field/search-field.component';
 import {
   TabFilterComponent,
@@ -10,7 +11,7 @@ import { ManagedUserRoleFilter, ManagedUserStatusFilter } from '../domain/admin-
 @Component({
   selector: 'app-admin-users-filters',
   standalone: true,
-  imports: [SearchFieldComponent, TabFilterComponent],
+  imports: [ButtonComponent, SearchFieldComponent, TabFilterComponent],
   templateUrl: './admin-users-filters.component.html',
   styleUrl: './admin-users-filters.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -16,14 +16,29 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
+import {
+  TabFilterComponent,
+  TabFilterOption,
+} from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AdminStoriesApiService } from '../../data-access/admin-stories-api.service';
 import type {
   AdminStorySubmissionListResponse,
   AdminSubmissionStatus,
 } from '../../domain/admin-story.models';
 import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badge.component';
+
+const STORY_STATUS_LABELS: Record<AdminSubmissionStatus, string> = {
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Đã từ chối',
+  CANCELED: 'Đã hủy',
+};
 
 @Component({
   selector: 'app-admin-stories-list-page',
@@ -36,6 +51,11 @@ import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badg
     BreadcrumbComponent,
     PageHeadingComponent,
     PaginationComponent,
+    SearchFieldComponent,
+    TabFilterComponent,
+    EmptyStateComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-stories-list-page.component.html',
@@ -63,6 +83,12 @@ export class AdminStoriesListPageComponent implements OnInit {
   submittedTo = '';
   page = 1;
   readonly pageSize = 20;
+  protected readonly statusOptions: readonly TabFilterOption<'' | AdminSubmissionStatus>[] = [
+    { value: '', label: 'Tất cả' },
+    { value: 'PENDING', label: STORY_STATUS_LABELS.PENDING },
+    { value: 'APPROVED', label: STORY_STATUS_LABELS.APPROVED },
+    { value: 'REJECTED', label: STORY_STATUS_LABELS.REJECTED },
+  ];
   ngOnInit(): void {
     this.searchChanged
       .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
@@ -98,7 +124,23 @@ export class AdminStoriesListPageComponent implements OnInit {
       },
     });
   }
-  private load(): void {
+  protected statusChanged(value: '' | AdminSubmissionStatus): void {
+    this.status = value;
+    this.applyFilters();
+  }
+  protected authorChanged(value: string): void {
+    this.author = value;
+    this.searchChanged.next();
+  }
+  protected storyChanged(value: string): void {
+    this.story = value;
+    this.searchChanged.next();
+  }
+  protected reviewerChanged(value: string): void {
+    this.reviewer = value;
+    this.searchChanged.next();
+  }
+  protected load(): void {
     this.loading.set(true);
     this.error.set('');
     this.api

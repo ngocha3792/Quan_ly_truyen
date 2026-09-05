@@ -16,14 +16,29 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
+import {
+  TabFilterComponent,
+  TabFilterOption,
+} from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
 import type {
   AdminAuthorListResponse,
   AuthorLifecycleStatus,
 } from '../../domain/admin-author.models';
 import { AdminAuthorStatusBadgeComponent } from '../../ui/admin-author-status-badge.component';
+
+const AUTHOR_STATUS_LABELS: Record<AuthorLifecycleStatus, string> = {
+  ACTIVE: 'Hoạt động',
+  SUSPENDED: 'Tạm khóa',
+  REVOKED: 'Đã thu hồi',
+};
+
 @Component({
   selector: 'app-admin-authors-list-page',
   standalone: true,
@@ -35,6 +50,11 @@ import { AdminAuthorStatusBadgeComponent } from '../../ui/admin-author-status-ba
     PageHeadingComponent,
     PaginationComponent,
     AdminAuthorStatusBadgeComponent,
+    EmptyStateComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
+    SearchFieldComponent,
+    TabFilterComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-authors-list-page.component.html',
@@ -60,6 +80,12 @@ export class AdminAuthorsListPageComponent implements OnInit {
   createdTo = '';
   page = 1;
   readonly pageSize = 20;
+  protected readonly statusOptions: readonly TabFilterOption<'' | AuthorLifecycleStatus>[] = [
+    { value: '', label: 'Tất cả' },
+    { value: 'ACTIVE', label: AUTHOR_STATUS_LABELS.ACTIVE },
+    { value: 'SUSPENDED', label: AUTHOR_STATUS_LABELS.SUSPENDED },
+    { value: 'REVOKED', label: AUTHOR_STATUS_LABELS.REVOKED },
+  ];
   ngOnInit(): void {
     this.searchChanged
       .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
@@ -76,6 +102,14 @@ export class AdminAuthorsListPageComponent implements OnInit {
   apply(): void {
     this.go(1);
   }
+  protected keywordChanged(value: string): void {
+    this.search = value;
+    this.searchChanged.next();
+  }
+  protected statusChanged(value: '' | AuthorLifecycleStatus): void {
+    this.status = value;
+    this.apply();
+  }
   go(page: number): void {
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -88,7 +122,7 @@ export class AdminAuthorsListPageComponent implements OnInit {
       },
     });
   }
-  private load(): void {
+  protected load(): void {
     this.loading.set(true);
     this.error.set('');
     this.api

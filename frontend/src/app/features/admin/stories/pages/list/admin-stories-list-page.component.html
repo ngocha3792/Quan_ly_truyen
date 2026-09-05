@@ -6,78 +6,95 @@
       description="Queue duyệt có filter, pagination và lưu state trên URL."
       icon="book-open"
     />
+    <app-tab-filter
+      ariaLabel="Trạng thái duyệt truyện"
+      [options]="statusOptions"
+      [selected]="status"
+      (selectedChange)="statusChanged($event)"
+    />
     <section class="filters">
-      <select [(ngModel)]="status" (change)="applyFilters()">
-        <option value="">Tất cả trạng thái</option>
-        <option value="PENDING">Chờ duyệt</option>
-        <option value="APPROVED">Đã duyệt</option>
-        <option value="REJECTED">Đã từ chối</option></select
-      ><input
-        [(ngModel)]="author"
-        (ngModelChange)="searchChanged.next()"
+      <app-search-field
+        [value]="author"
         placeholder="Tác giả"
-      /><input
-        [(ngModel)]="story"
-        (ngModelChange)="searchChanged.next()"
-        placeholder="Truyện"
-      /><input
-        [(ngModel)]="reviewer"
-        (ngModelChange)="searchChanged.next()"
-        placeholder="Reviewer"
-      /><input [(ngModel)]="submittedFrom" (change)="applyFilters()" type="date" /><input
-        [(ngModel)]="submittedTo"
-        (change)="applyFilters()"
-        type="date"
+        ariaLabel="Tìm theo tác giả"
+        (valueChange)="authorChanged($event)"
       />
+      <app-search-field
+        [value]="story"
+        placeholder="Truyện"
+        ariaLabel="Tìm theo truyện"
+        (valueChange)="storyChanged($event)"
+      />
+      <app-search-field
+        [value]="reviewer"
+        placeholder="Người duyệt"
+        ariaLabel="Tìm theo người duyệt"
+        (valueChange)="reviewerChanged($event)"
+      />
+      <input [(ngModel)]="submittedFrom" (change)="applyFilters()" type="date" />
+      <input [(ngModel)]="submittedTo" (change)="applyFilters()" type="date" />
     </section>
     @if (error()) {
-      <div class="error">{{ error() }}</div>
-    }
-    @if (loading()) {
-      <p>Đang tải...</p>
-    }
-    @if (result(); as data) {
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Truyện</th>
-              <th>Tác giả</th>
-              <th>Ngày gửi</th>
-              <th>Trạng thái</th>
-              <th>Người duyệt</th>
-              <th>Ngày duyệt</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (item of data.items; track item.submissionId) {
-              <tr>
-                <td>
-                  <strong>{{ item.story.title }}</strong
-                  ><small>{{ item.chapterCount }} chương</small>
-                </td>
-                <td>{{ item.author.displayName }}</td>
-                <td>{{ item.submittedAt | date: 'short' }}</td>
-                <td><app-admin-story-status-badge [status]="item.status" /></td>
-                <td>{{ item.reviewer?.displayName ?? '—' }}</td>
-                <td>{{ item.reviewedAt ? (item.reviewedAt | date: 'short') : '—' }}</td>
-                <td>
-                  <a [routerLink]="['/admin/story-submissions', item.submissionId]">Chi tiết</a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <footer class="pager">
-        <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
-        <app-pagination
-          [page]="page"
-          [totalPages]="data.pagination.totalPages || 1"
-          (pageChange)="goPage($event)"
+      <div class="state">
+        <app-error-alert
+          title="Không thể tải danh sách truyện"
+          [message]="error()"
+          (retry)="load()"
         />
-      </footer>
+      </div>
+    }
+    @if (loading() && !result()) {
+      <app-loading-state message="Đang tải danh sách truyện..." />
+    } @else if (result(); as data) {
+      @if (data.items.length === 0) {
+        <app-empty-state
+          icon="book-open"
+          title="Không có truyện phù hợp"
+          description="Thử điều chỉnh bộ lọc để xem thêm kết quả."
+        />
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Truyện</th>
+                <th>Tác giả</th>
+                <th>Ngày gửi</th>
+                <th>Trạng thái</th>
+                <th>Người duyệt</th>
+                <th>Ngày duyệt</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of data.items; track item.submissionId) {
+                <tr>
+                  <td>
+                    <strong>{{ item.story.title }}</strong
+                    ><small>{{ item.chapterCount }} chương</small>
+                  </td>
+                  <td>{{ item.author.displayName }}</td>
+                  <td>{{ item.submittedAt | date: 'short' }}</td>
+                  <td><app-admin-story-status-badge [status]="item.status" /></td>
+                  <td>{{ item.reviewer?.displayName ?? '—' }}</td>
+                  <td>{{ item.reviewedAt ? (item.reviewedAt | date: 'short') : '—' }}</td>
+                  <td>
+                    <a [routerLink]="['/admin/story-submissions', item.submissionId]">Chi tiết</a>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="pager">
+          <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
+          <app-pagination
+            [page]="page"
+            [totalPages]="data.pagination.totalPages || 1"
+            (pageChange)="goPage($event)"
+          />
+        </footer>
+      }
     }
   </div>
 </main>

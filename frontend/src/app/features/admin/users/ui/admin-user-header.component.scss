@@ -57,32 +57,6 @@ p {
   font-weight: 800;
   background: rgba(124, 58, 237, 0.13);
 }
-button {
-  min-height: 39px;
-  padding: 0 15px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.activate {
-  border: 0;
-  color: #fff;
-  background: #16a34a;
-}
-.suspend {
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fde68a;
-  background: rgba(245, 158, 11, 0.08);
-}
-.ban {
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  color: #fda4af;
-  background: rgba(244, 63, 94, 0.08);
-}
 @media (max-width: 760px) {
   .hero {
     align-items: stretch;

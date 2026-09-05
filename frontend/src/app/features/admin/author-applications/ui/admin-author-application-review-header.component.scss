@@ -28,35 +28,12 @@ p {
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-}
-button {
-  min-height: 40px;
-  padding: 0 17px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.approve {
-  border: 0;
-  color: #fff;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-}
-.reject {
-  border: 1px solid rgba(244, 63, 94, 0.32);
-  color: #fda4af;
-  background: rgba(190, 24, 93, 0.08);
 }
 @media (max-width: 650px) {
   .review-header {
     align-items: stretch;
     flex-direction: column;
-  }
-  .actions button {
-    flex: 1;
   }
 }

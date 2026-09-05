@@ -13,9 +13,6 @@
   display: flex;
   margin-bottom: 16px;
 }
-.toolbar input {
-  width: min(480px, 100%);
-}
 input,
 select {
   min-height: 40px;
@@ -25,29 +22,10 @@ select {
   background: #0b1423;
   color: #eef2f8;
 }
-.primary {
-  border: 0;
-  background: #7c3aed;
-  color: #fff;
-  font-weight: 700;
-}
-.primary,
-button {
-  padding: 9px 12px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-button {
-  border: 1px solid #33415f;
-  background: #101b2d;
-  color: #d7deeb;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.danger {
-  color: #ff9a9a;
+.field-label {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
 }
 .notice {
   padding: 12px;

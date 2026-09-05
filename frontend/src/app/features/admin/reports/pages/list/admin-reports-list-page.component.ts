@@ -21,6 +21,11 @@ import { ErrorAlertComponent } from '../../../../../shared/components/error-aler
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
+import {
+  TabFilterComponent,
+  TabFilterOption,
+} from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AdminReportsApiService } from '../../data-access/admin-reports-api.service';
 import type {
   AdminReportList,
@@ -61,6 +66,8 @@ const REPORT_REASON_LABELS: Record<AdminReportReason, string> = {
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    SearchFieldComponent,
+    TabFilterComponent,
   ],
   templateUrl: './admin-reports-list-page.component.html',
   styleUrl: './admin-reports-list-page.component.scss',
@@ -81,6 +88,13 @@ export class AdminReportsListPageComponent implements OnInit {
   readonly error = signal('');
   readonly searchChanged = new Subject<void>();
   readonly statuses: readonly AdminReportStatus[] = ['OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED'];
+  protected readonly statusFilterOptions: readonly TabFilterOption<'' | AdminReportStatus>[] = [
+    { value: '', label: 'Tất cả' },
+    { value: 'OPEN', label: REPORT_STATUS_LABELS.OPEN },
+    { value: 'IN_REVIEW', label: REPORT_STATUS_LABELS.IN_REVIEW },
+    { value: 'RESOLVED', label: REPORT_STATUS_LABELS.RESOLVED },
+    { value: 'REJECTED', label: REPORT_STATUS_LABELS.REJECTED },
+  ];
   readonly reasons: readonly AdminReportReason[] = [
     'SPAM',
     'HARASSMENT',
@@ -91,7 +105,7 @@ export class AdminReportsListPageComponent implements OnInit {
     'MISINFORMATION',
     'OTHER',
   ];
-  status = '';
+  status: '' | AdminReportStatus = '';
   reason = '';
   reporter = '';
   reportedUser = '';
@@ -104,7 +118,7 @@ export class AdminReportsListPageComponent implements OnInit {
       .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.go(1));
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((p) => {
-      this.status = p.get('status') ?? '';
+      this.status = (p.get('status') as AdminReportStatus | null) ?? '';
       this.reason = p.get('reason') ?? '';
       this.reporter = p.get('reporter') ?? '';
       this.reportedUser = p.get('reportedUser') ?? '';
@@ -119,6 +133,18 @@ export class AdminReportsListPageComponent implements OnInit {
   }
   protected statusLabel(status: AdminReportStatus): string {
     return REPORT_STATUS_LABELS[status];
+  }
+  protected statusChanged(value: '' | AdminReportStatus): void {
+    this.status = value;
+    this.go(1);
+  }
+  protected reporterChanged(value: string): void {
+    this.reporter = value;
+    this.searchChanged.next();
+  }
+  protected reportedUserChanged(value: string): void {
+    this.reportedUser = value;
+    this.searchChanged.next();
   }
   go(page: number): void {
     void this.router.navigate([], {

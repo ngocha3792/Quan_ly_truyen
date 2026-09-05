@@ -14,6 +14,7 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import {
   AUTHOR_REJECTION_REASON_MAX_LENGTH,
   AUTHOR_REJECTION_REASON_MIN_LENGTH,
@@ -24,7 +25,7 @@ import {
 
   standalone: true,
 
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ButtonComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 

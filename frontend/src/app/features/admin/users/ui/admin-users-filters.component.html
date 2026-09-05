@@ -6,7 +6,7 @@
       ariaLabel="Tìm người dùng"
       (valueChange)="keywordChange.emit($event)"
     />
-    <button type="submit">Tìm</button>
+    <app-button variant="primary" type="submit">Tìm</app-button>
   </form>
 
   <select [value]="role" (change)="changeRole($event)">

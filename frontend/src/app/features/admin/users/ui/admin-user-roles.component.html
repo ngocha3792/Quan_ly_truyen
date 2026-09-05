@@ -19,17 +19,21 @@
   @if (canManage) {
     <footer>
       @if (hasAdmin()) {
-        <button class="remove" [disabled]="actionLoading || isSelf" (click)="removeAdmin.emit()">
+        <app-button
+          variant="danger"
+          [disabled]="actionLoading || isSelf"
+          (click)="removeAdmin.emit()"
+        >
           Gỡ quyền ADMIN
-        </button>
+        </app-button>
       } @else {
-        <button
-          class="grant"
+        <app-button
+          variant="secondary"
           [disabled]="actionLoading || user.status === 'DELETED'"
           (click)="grantAdmin.emit()"
         >
           Cấp quyền ADMIN
-        </button>
+        </app-button>
       }
     </footer>
   } @else {

@@ -16,23 +16,10 @@
   flex: 1;
 }
 
-button,
 select {
   min-height: 42px;
   border-radius: 8px;
   font: inherit;
-}
-
-button {
-  padding: 0 18px;
-  border: 0;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  background: linear-gradient(135deg, #743bde, #a153eb);
-}
-
-select {
   padding: 0 12px;
   border: 1px solid var(--border);
   outline: none;

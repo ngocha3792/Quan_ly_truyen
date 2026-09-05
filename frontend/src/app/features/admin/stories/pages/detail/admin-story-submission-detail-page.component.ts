@@ -16,6 +16,9 @@ import {
   BreadcrumbComponent,
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminStoriesApiService } from '../../data-access/admin-stories-api.service';
 import type { AdminStorySubmissionDetail } from '../../domain/admin-story.models';
@@ -30,6 +33,9 @@ import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badg
     RouterLink,
     AdminStoryStatusBadgeComponent,
     BreadcrumbComponent,
+    ButtonComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
     PageHeadingComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -94,7 +100,7 @@ export class AdminStorySubmissionDetailPageComponent implements OnInit {
         error: (e: unknown) => this.error.set(getApiErrorMessage(e)),
       });
   }
-  private load(): void {
+  protected load(): void {
     if (!this.id) return;
     this.loading.set(true);
     this.api

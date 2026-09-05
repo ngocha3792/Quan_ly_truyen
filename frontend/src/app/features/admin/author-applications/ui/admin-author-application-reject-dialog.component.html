@@ -52,13 +52,18 @@
       </div>
 
       <footer>
-        <button type="button" class="cancel-button" [disabled]="loading()" (click)="cancel.emit()">
+        <app-button
+          variant="secondary"
+          type="button"
+          [disabled]="loading()"
+          (click)="cancel.emit()"
+        >
           Hủy
-        </button>
+        </app-button>
 
-        <button type="submit" class="reject-button" [disabled]="loading()">
+        <app-button variant="danger" type="submit" [disabled]="loading()">
           {{ loading() ? 'Đang từ chối...' : 'Xác nhận từ chối' }}
-        </button>
+        </app-button>
       </footer>
     </form>
   </section>

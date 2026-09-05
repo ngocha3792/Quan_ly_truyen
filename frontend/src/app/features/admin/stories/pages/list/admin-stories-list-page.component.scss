@@ -10,13 +10,16 @@ small {
   display: block;
   color: var(--text-muted);
 }
+.state {
+  padding: 18px 0;
+}
 .filters {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.7rem;
   margin: 1.4rem 0;
 }
-.filters > * {
+.filters > input {
   padding: 0.65rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -46,13 +49,6 @@ td {
   margin-top: 1rem;
   color: var(--text-secondary);
   font-size: 0.85rem;
-}
-.error {
-  color: #ffb1be;
-  background: rgba(231, 62, 91, 0.1);
-  border: 1px solid rgba(231, 62, 91, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
 }
 @media (max-width: 900px) {
   .filters {

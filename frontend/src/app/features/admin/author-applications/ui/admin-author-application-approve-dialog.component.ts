@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, HostListener, input, output } from '@angular/core';
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-admin-author-application-approve-dialog',
 
   standalone: true,
+
+  imports: [ButtonComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 

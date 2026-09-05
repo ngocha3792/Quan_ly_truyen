@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { SearchFieldComponent } from '../../../../shared/components/search-field/search-field.component';
 import {
   TabFilterComponent,
@@ -9,7 +10,7 @@ import { AdminAuthorApplicationStatusFilter } from '../domain/admin-author-appli
 @Component({
   selector: 'app-admin-author-application-filters',
   standalone: true,
-  imports: [SearchFieldComponent, TabFilterComponent],
+  imports: [ButtonComponent, SearchFieldComponent, TabFilterComponent],
   templateUrl: './admin-author-application-filters.component.html',
   styleUrl: './admin-author-application-filters.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

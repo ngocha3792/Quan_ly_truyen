@@ -20,8 +20,8 @@
       <label>From<input name="from" type="datetime-local" [(ngModel)]="from" /></label>
       <label>To<input name="to" type="datetime-local" [(ngModel)]="to" /></label>
       <div class="filter-actions">
-        <button type="submit">Lọc</button>
-        <button type="button" class="secondary" (click)="clearFilters()">Xóa lọc</button>
+        <app-button variant="primary" type="submit">Lọc</app-button>
+        <app-button variant="secondary" type="button" (click)="clearFilters()">Xóa lọc</app-button>
       </div>
     </form>
 

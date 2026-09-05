@@ -6,21 +6,22 @@
       description="Quản lý hierarchy, lifecycle và usage mà không detach truyện hiện có."
       icon="grid"
     >
-      <button class="primary" type="button" (click)="openCreate()">Tạo thể loại</button>
+      <app-button variant="primary" (click)="openCreate()">Tạo thể loại</app-button>
     </app-page-heading>
 
     <section class="toolbar">
-      <input
-        type="search"
+      <app-search-field
+        [value]="q"
         placeholder="Tìm theo tên hoặc slug…"
-        [(ngModel)]="q"
-        (ngModelChange)="searchChanged.next()"
+        ariaLabel="Tìm thể loại"
+        (valueChange)="keywordChanged($event)"
       />
-      <select [(ngModel)]="status" (ngModelChange)="applyFilters()">
-        <option value="">Tất cả trạng thái</option>
-        <option value="active">Hoạt động</option>
-        <option value="inactive">Ngừng hoạt động</option>
-      </select>
+      <app-tab-filter
+        ariaLabel="Trạng thái thể loại"
+        [options]="statusOptions"
+        [selected]="status"
+        (selectedChange)="statusChanged($event)"
+      />
       <select [(ngModel)]="parentFilter" (ngModelChange)="applyFilters()">
         <option value="">Tất cả danh mục cha</option>
         <option value="root">Chỉ danh mục gốc</option>
@@ -81,17 +82,17 @@
                   <td>{{ category.childCount }}</td>
                   <td>{{ category.sortOrder }}</td>
                   <td class="actions">
-                    <button type="button" (click)="openEdit(category)">Sửa</button
-                    ><button type="button" (click)="toggleActive(category)">
-                      {{ category.isActive ? 'Ngừng hoạt động' : 'Kích hoạt lại' }}</button
-                    ><button
-                      class="danger"
-                      type="button"
+                    <app-button variant="secondary" (click)="openEdit(category)">Sửa</app-button>
+                    <app-button variant="secondary" (click)="toggleActive(category)">
+                      {{ category.isActive ? 'Ngừng hoạt động' : 'Kích hoạt lại' }}
+                    </app-button>
+                    <app-button
+                      variant="danger"
                       [disabled]="category.storyCount > 0 || category.childCount > 0"
                       (click)="delete(category)"
                     >
                       Xóa
-                    </button>
+                    </app-button>
                   </td>
                 </tr>
               }
@@ -142,15 +143,14 @@
             </p>
           }
           <div class="modal-actions">
-            <button type="button" (click)="editorOpen.set(false)">Hủy</button
-            ><button
-              class="primary"
-              type="button"
+            <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
+            <app-button
+              variant="primary"
               [disabled]="!editName.trim() || mutating()"
               (click)="saveEditor()"
             >
               Lưu
-            </button>
+            </app-button>
           </div>
         </section>
       </div>

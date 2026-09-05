@@ -6,7 +6,7 @@
       placeholder="Tìm theo họ tên, bút danh hoặc email..."
       ariaLabel="Tìm hồ sơ tác giả"
       (valueChange)="keywordChange.emit($event)"
-    /><button type="submit">Tìm kiếm</button>
+    /><app-button variant="primary" type="submit">Tìm kiếm</app-button>
   </form>
   <div class="summary">
     Tổng: <strong>{{ total }}</strong> hồ sơ
