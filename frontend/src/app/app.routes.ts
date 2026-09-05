@@ -10,6 +10,7 @@ import { PUBLIC_ROUTES } from './routes/public.routes';
 
 export const routes: Routes = [
   ...AUTHOR_STUDIO_ROUTES,
+  ...ADMIN_ROUTES,
   ...AUTH_STANDALONE_ROUTES,
   {
     path: '',
@@ -20,7 +21,6 @@ export const routes: Routes = [
       ...PUBLIC_ROUTES,
       ...AUTH_ROUTES,
       ...ACCOUNT_FEATURE_ROUTES,
-      ...ADMIN_ROUTES,
       ...AUTHOR_STUDIO_LEGACY_ROUTES,
     ],
   },

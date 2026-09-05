@@ -9,6 +9,7 @@ describe('application route composition', () => {
   it('keeps standalone routes outside AppShell and the wildcard last', () => {
     expect(routes.map((route) => route.path)).toEqual([
       'author-studio',
+      'admin',
       'tam-thoi-khong-the-xac-thuc',
       '',
       '**',
@@ -47,7 +48,6 @@ describe('application route composition', () => {
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
-      'admin',
       'tac-gia-studio',
     ]);
   });
@@ -62,7 +62,6 @@ describe('application route composition', () => {
       'thong-bao',
       'thu-vien',
       'dang-ky-tac-gia',
-      'admin',
     ];
 
     for (const path of privatePaths) {
@@ -70,8 +69,14 @@ describe('application route composition', () => {
     }
   });
 
+  it('keeps admin as a standalone route (outside AppShell, like author-studio) with its own guard', () => {
+    const adminRoute = routes.find((route) => route.path === 'admin');
+
+    expect(adminRoute?.canActivate?.length).toBeGreaterThan(0);
+  });
+
   it('bọc toàn bộ route admin trong AdminShell với guard riêng cho từng mục', () => {
-    const adminRoute = shellRoute().children?.find((route) => route.path === 'admin');
+    const adminRoute = routes.find((route) => route.path === 'admin');
     const adminChildren = adminRoute?.children ?? [];
 
     expect(adminChildren.map((route) => route.path)).toEqual([
