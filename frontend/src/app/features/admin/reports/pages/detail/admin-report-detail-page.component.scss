@@ -27,9 +27,9 @@
 .card {
   margin: 16px 0;
   padding: 18px;
-  border: 1px solid #293149;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #0e1527;
+  background: rgba(14, 21, 38, 0.88);
 }
 .card h2 {
   margin-top: 0;
@@ -44,10 +44,10 @@ pre {
   box-sizing: border-box;
   width: 100%;
   padding: 10px;
-  border: 1px solid #303851;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #11182c;
-  color: #eee;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
 }
 .actions {
   display: flex;
@@ -63,7 +63,7 @@ pre {
 }
 .history {
   padding: 10px 0;
-  border-top: 1px solid #283149;
+  border-top: 1px solid var(--border);
 }
 .history span {
   float: right;

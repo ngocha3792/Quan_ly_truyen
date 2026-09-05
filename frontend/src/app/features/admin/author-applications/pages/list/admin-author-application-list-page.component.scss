@@ -7,15 +7,13 @@
   min-height: calc(100vh - 72px);
   padding: 1.25rem 0 4rem;
   color: var(--text-strong);
-  background:
-    radial-gradient(circle at 10% 5%, rgba(103, 44, 204, 0.08), transparent 480px), #060b16;
 }
 
 .admin-card {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(14, 21, 38, 0.86);
+  background: rgba(14, 21, 38, 0.88);
 }
 
 .state-padding {
