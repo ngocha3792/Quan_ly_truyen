@@ -2,18 +2,18 @@ import { expect, test } from '../fixtures/managed-admin-test';
 
 const TARGET_EMAIL = 'e2e.managed-user@truyenhub.test';
 
-test('manager mở được Quản lý người dùng từ menu hồ sơ', async ({ page }) => {
+test('manager mở được trang quản trị từ menu hồ sơ', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: /E2E Manager/ }).click();
 
-  const usersLink = page.getByRole('link', {
-    name: 'Quản lý người dùng',
+  const adminLink = page.getByRole('link', {
+    name: 'Trang quản trị',
   });
 
-  await expect(usersLink).toBeVisible();
+  await expect(adminLink).toBeVisible();
 
-  await usersLink.click();
+  await adminLink.click();
 
   await expect(page).toHaveURL(/\/admin\/users$/);
 
