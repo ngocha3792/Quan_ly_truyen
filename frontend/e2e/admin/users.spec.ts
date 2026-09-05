@@ -169,17 +169,17 @@ test('manager xem và revoke session của user end-to-end', async ({ page }) =>
   });
 
   await expect(sessionRow).toBeVisible();
-  await expect(sessionRow.getByText('ACTIVE', { exact: true })).toBeVisible();
+  await expect(sessionRow.getByText('Hoạt động', { exact: true })).toBeVisible();
 
   page.once('dialog', (dialog) => void dialog.accept());
-  await sessionRow.getByRole('button', { name: 'Revoke' }).click();
+  await sessionRow.getByRole('button', { name: 'Thu hồi' }).click();
 
   await expect(page.getByText('Đã thu hồi phiên đăng nhập.')).toBeVisible();
   await expect(
     page
       .getByRole('row')
       .filter({ hasText: 'E2E Target Browser' })
-      .getByText('REVOKED', { exact: true }),
+      .getByText('Đã thu hồi', { exact: true }),
   ).toBeVisible();
   await expect(page.getByText('USER_SESSION_REVOKED', { exact: true }).first()).toBeVisible();
 });

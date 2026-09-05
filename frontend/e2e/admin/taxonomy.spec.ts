@@ -5,14 +5,14 @@ const SESSION_HINT_KEY = 'truyenhub.auth.has-refresh-session';
 
 test('manager merges duplicate tag and source disappears', async ({ page }) => {
   await page.goto('/admin/tags');
-  await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quản lý tag' })).toBeVisible();
 
   const sourceRow = page.getByRole('row').filter({ hasText: 'E2E Sci Fi' });
   await expect(sourceRow).toBeVisible();
-  await sourceRow.getByRole('button', { name: 'Merge' }).click();
+  await sourceRow.getByRole('button', { name: 'Hợp nhất' }).click();
 
   const dialog = page.getByRole('dialog');
-  const mergeSelect = dialog.getByLabel('Merge into');
+  const mergeSelect = dialog.getByLabel('Hợp nhất vào');
   const targetOption = mergeSelect.locator('option').filter({ hasText: 'E2E Science Fiction' });
   await expect(targetOption).toHaveCount(1);
   const targetValue = await targetOption.getAttribute('value');
@@ -28,17 +28,17 @@ test('deactivated category stays visible and editable on an existing author stor
   page,
 }, testInfo) => {
   await page.goto('/admin/categories');
-  await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quản lý thể loại' })).toBeVisible();
 
   const categoryRow = page.getByRole('row').filter({ hasText: 'E2E Legacy Fantasy' });
   await expect(categoryRow).toBeVisible();
   page.once('dialog', (dialog) => void dialog.accept());
-  await categoryRow.getByRole('button', { name: 'Deactivate' }).click();
+  await categoryRow.getByRole('button', { name: 'Ngừng hoạt động' }).click();
   await expect(
     page.getByText('Đã ngừng hoạt động thể loại; liên kết truyện cũ được giữ nguyên.'),
   ).toBeVisible();
   await expect(
-    page.getByRole('row').filter({ hasText: 'E2E Legacy Fantasy' }).getByText('INACTIVE'),
+    page.getByRole('row').filter({ hasText: 'E2E Legacy Fantasy' }).getByText('Ngừng hoạt động'),
   ).toBeVisible();
 
   await logoutCurrentSession(page);

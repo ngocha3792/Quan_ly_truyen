@@ -6,7 +6,7 @@ const SECRETS = ['DO_NOT_LEAK_1', 'DO_NOT_LEAK_2', 'DO_NOT_LEAK_3', 'DO_NOT_LEAK
 
 test('manager can investigate user lifecycle and correlate the same request', async ({ page }) => {
   await page.goto(`/admin/audit-logs?requestId=${CORRELATION_REQUEST}`);
-  await expect(page.getByRole('heading', { name: 'Audit Logs' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nhật ký audit' })).toBeVisible();
 
   const userRow = page.getByRole('row').filter({ hasText: 'user.status.changed' });
   await expect(userRow).toBeVisible();
@@ -17,9 +17,9 @@ test('manager can investigate user lifecycle and correlate the same request', as
 
   await userRow.getByRole('link', { name: 'Xem' }).click();
   await expect(page.getByRole('heading', { name: 'user.status.changed' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Before', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trước', exact: true })).toBeVisible();
   const changes = page.locator('section.card').filter({
-    has: page.getByRole('heading', { name: 'Changes', exact: true }),
+    has: page.getByRole('heading', { name: 'Thay đổi', exact: true }),
   });
   await expect(changes.locator('pre').filter({ hasText: 'ACTIVE' })).toBeVisible();
   await expect(changes.locator('pre').filter({ hasText: 'SUSPENDED' })).toBeVisible();

@@ -7,7 +7,7 @@ test('manager suspend rồi reactivate author lifecycle', async ({ page }) => {
 
   await expect(
     page.getByRole('heading', {
-      name: 'Author lifecycle',
+      name: 'Quản lý tác giả',
     }),
   ).toBeVisible();
 
@@ -22,18 +22,18 @@ test('manager suspend rồi reactivate author lifecycle', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'E2E Lifecycle Pen' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Suspend' }).click();
+  await page.getByRole('button', { name: 'Tạm khóa' }).click();
 
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox').fill('Tạm dừng tác giả từ Playwright để kiểm tra lifecycle.');
   await dialog.getByRole('button', { name: 'Xác nhận' }).click();
 
-  await expect(page.getByText('Đã cập nhật author thành SUSPENDED.')).toBeVisible();
-  await expect(page.getByText(/SUSPENDED/).first()).toBeVisible();
+  await expect(page.getByText('Đã cập nhật trạng thái tác giả thành Tạm khóa.')).toBeVisible();
+  await expect(page.locator('.hero-meta').getByText('Tạm khóa')).toBeVisible();
 
   page.once('dialog', (nativeDialog) => void nativeDialog.accept());
-  await page.getByRole('button', { name: 'Reactivate' }).click();
+  await page.getByRole('button', { name: 'Kích hoạt lại' }).click();
 
-  await expect(page.getByText('Đã cập nhật author thành ACTIVE.')).toBeVisible();
-  await expect(page.getByText(/ACTIVE/).first()).toBeVisible();
+  await expect(page.getByText('Đã cập nhật trạng thái tác giả thành Hoạt động.')).toBeVisible();
+  await expect(page.locator('.hero-meta').getByText('Hoạt động')).toBeVisible();
 });

@@ -21,7 +21,7 @@ test('manager xem queue, mở submission và reject với lý do', async ({ page
   await expect(page.getByRole('heading', { name: STORY_TITLE })).toBeVisible();
   await expect(page.getByText('E2E moderation chapter')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Reject' }).click();
+  await page.getByRole('button', { name: 'Từ chối' }).click();
 
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox').fill('Nội dung cần chỉnh sửa trước khi có thể xuất bản.');
@@ -29,6 +29,6 @@ test('manager xem queue, mở submission và reject với lý do', async ({ page
 
   await expect(page.getByText('Đã từ chối truyện.')).toBeVisible();
   await expect(
-    page.locator('app-admin-story-status-badge').getByText('REJECTED', { exact: true }),
+    page.locator('app-admin-story-status-badge').getByText('Đã từ chối', { exact: true }),
   ).toBeVisible();
 });
