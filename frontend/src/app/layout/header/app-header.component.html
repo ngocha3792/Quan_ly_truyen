@@ -10,7 +10,7 @@
       <app-icon [name]="mobileOpen() ? 'close' : 'menu'"></app-icon>
     </button>
 
-    <app-brand-logo></app-brand-logo>
+    <app-brand-logo [compact]="compactBrand()"></app-brand-logo>
 
     <nav class="desktop-nav" aria-label="Điều hướng chính">
       @for (item of navItems; track item.route) {
@@ -110,7 +110,7 @@
 
       <!-- READING HISTORY -->
       <a
-        class="icon-button"
+        class="icon-button history-link"
         routerLink="/lich-su"
         routerLinkActive="active"
         aria-label="Lịch sử đọc"

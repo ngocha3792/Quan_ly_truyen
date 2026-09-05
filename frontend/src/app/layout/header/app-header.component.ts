@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -103,6 +110,17 @@ export class AppHeaderComponent {
   protected readonly notificationsOpen = signal(false);
 
   protected readonly authOpen = signal(false);
+
+  protected readonly compactBrand = signal(false);
+
+  constructor() {
+    afterNextRender(() => {
+      const mediaQuery = window.matchMedia('(max-width: 480px)');
+
+      this.compactBrand.set(mediaQuery.matches);
+      mediaQuery.addEventListener('change', (event) => this.compactBrand.set(event.matches));
+    });
+  }
 
   private readonly notificationsView = toSignal(
     toObservable(this.auth.isAuthenticated).pipe(
