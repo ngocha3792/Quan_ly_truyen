@@ -1,10 +1,10 @@
 <section class="author-profile-page">
-  <header>
-    <div>
-      <p class="eyebrow">Author Studio</p>
-      <h1>Hồ sơ tác giả</h1>
-      <p>Thông tin này xuất hiện trên trang tác giả công khai.</p>
-    </div>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Hồ sơ tác giả"
+    description="Thông tin này xuất hiện trên trang tác giả công khai."
+    icon="user"
+  >
     @if (store.profile(); as profile) {
       @if (store.saving()) {
         <span aria-disabled="true">Đang lưu hồ sơ…</span>
@@ -12,7 +12,7 @@
         <a [routerLink]="['/tac-gia', profile.slug]">Xem hồ sơ công khai</a>
       }
     }
-  </header>
+  </app-page-heading>
 
   @if (store.error(); as error) {
     <app-notice kind="error" [message]="error" />
@@ -37,7 +37,7 @@
           />
         </label>
         @if (profile.avatar) {
-          <button type="button" class="link-button" (click)="store.clearAvatar()">Gỡ avatar</button>
+          <app-button variant="secondary" (click)="store.clearAvatar()">Gỡ avatar</app-button>
         }
       </article>
       <article>
@@ -58,7 +58,7 @@
           />
         </label>
         @if (profile.banner) {
-          <button type="button" class="link-button" (click)="store.clearBanner()">Gỡ banner</button>
+          <app-button variant="secondary" (click)="store.clearBanner()">Gỡ banner</app-button>
         }
       </article>
     </div>

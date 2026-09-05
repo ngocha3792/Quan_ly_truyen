@@ -1,36 +1,11 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-}
 .back {
   color: #a78bfa;
   font-weight: 700;
   text-decoration: none;
 }
-.success,
-.error,
-.notice {
-  margin-bottom: 16px;
-  padding: 12px 15px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-.success {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.09);
-}
-.error {
-  color: #fda4af;
-  background: rgba(244, 63, 94, 0.09);
-}
-.notice {
-  color: #fde68a;
-  background: rgba(245, 158, 11, 0.08);
-}
-
 .security-card {
   margin-top: 16px;
   padding: 18px;
@@ -80,27 +55,15 @@ td {
   grid-column: 1 / -1;
   color: #94a3b8;
 }
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.72);
-}
-.dialog {
-  width: min(92vw, 520px);
-  padding: 20px;
-  border-radius: 12px;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-.dialog textarea {
+.status-reason-input {
   width: 100%;
   box-sizing: border-box;
   margin: 10px 0;
   padding: 10px;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
 }
 .dialog-actions {
   justify-content: flex-end;

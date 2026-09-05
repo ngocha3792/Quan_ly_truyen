@@ -16,9 +16,11 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
@@ -36,7 +38,9 @@ import { AdminTag, AdminTagList } from '../../domain/admin-tag.models';
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    NoticeComponent,
     ButtonComponent,
+    DialogShellComponent,
     SearchFieldComponent,
   ],
   templateUrl: './admin-tags-list-page.component.html',

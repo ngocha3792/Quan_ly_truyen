@@ -1,35 +1,8 @@
+import { IconName } from '../../../../shared/components/icon/icon.component';
+
 export type AuthorStudioPeriod = '7d' | '30d' | '90d';
 
 export type StudioMetricTone = 'purple' | 'blue' | 'orange' | 'indigo' | 'pink' | 'green';
-
-export type StudioIconName =
-  | 'home'
-  | 'book'
-  | 'chapter'
-  | 'draft'
-  | 'calendar'
-  | 'comment'
-  | 'chart'
-  | 'wallet'
-  | 'user'
-  | 'bell'
-  | 'settings'
-  | 'search'
-  | 'plus'
-  | 'menu'
-  | 'close'
-  | 'eye'
-  | 'users'
-  | 'clock'
-  | 'edit'
-  | 'image'
-  | 'arrow-up'
-  | 'arrow-down'
-  | 'chevron-down'
-  | 'more'
-  | 'check'
-  | 'target'
-  | 'profile';
 
 export interface AuthorStudioProfile {
   readonly displayName: string;
@@ -42,7 +15,7 @@ export interface AuthorStudioMetric {
   readonly id: string;
   readonly title: string;
   readonly value: string;
-  readonly icon: StudioIconName;
+  readonly icon: IconName;
   readonly tone: StudioMetricTone;
 }
 
@@ -107,7 +80,7 @@ export interface AuthorMonthlyGoal {
   readonly currentValue: string;
   readonly targetValue: string;
   readonly progress: number;
-  readonly icon: StudioIconName;
+  readonly icon: IconName;
   readonly tone: StudioMetricTone;
 }
 

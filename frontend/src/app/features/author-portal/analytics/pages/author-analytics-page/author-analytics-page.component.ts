@@ -3,9 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
+import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { StatCardComponent } from '../../../../../shared/components/stat-card/stat-card.component';
 import {
   TabFilterComponent,
@@ -25,6 +27,8 @@ const RANGE_OPTIONS: readonly TabFilterOption<7 | 30 | 90>[] = [
   standalone: true,
   imports: [
     RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
     TabFilterComponent,
     StatCardComponent,
     LoadingStateComponent,
@@ -41,6 +45,10 @@ export class AuthorAnalyticsPageComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  protected readonly breadcrumbs = [
+    { label: 'Author Studio', route: '/author-studio/tong-quan' },
+    { label: 'Thống kê' },
+  ];
   protected readonly rangeOptions = RANGE_OPTIONS;
   readonly overview = signal<AuthorAnalyticsOverview | null>(null);
   readonly stories = signal<StoryAnalyticsList | null>(null);

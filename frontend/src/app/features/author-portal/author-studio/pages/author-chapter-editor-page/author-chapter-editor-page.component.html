@@ -1,78 +1,81 @@
-<main class="studio-page">
-  <header class="page-header">
-    <div>
-      <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']">← Danh sách chương</a>
-      <h1>{{ isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' }}</h1>
-      @if (store.story(); as story) {
-        <p>{{ story.title }} · {{ story.status }}</p>
-      }
-    </div>
-  </header>
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs()" />
+    <app-page-heading
+      [title]="isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương'"
+      [description]="store.story() ? store.story()!.title + ' · ' + store.story()!.status : null"
+      icon="chapter"
+    >
+      <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']" class="back"
+        >← Danh sách chương</a
+      >
+    </app-page-heading>
 
-  @if (store.error()) {
-    <app-notice kind="error" [message]="store.error()" />
-  }
-  @if (store.loading()) {
-    <app-loading-state message="Đang tải chương..." />
-  } @else {
-    @if (!isEditable()) {
-      <app-notice kind="info" message="Chương này không thể chỉnh sửa ở trạng thái hiện tại." />
+    @if (store.error()) {
+      <app-notice kind="error" [message]="store.error()" />
     }
+    @if (store.loading()) {
+      <app-loading-state message="Đang tải chương..." />
+    } @else {
+      @if (!isEditable()) {
+        <app-notice kind="info" message="Chương này không thể chỉnh sửa ở trạng thái hiện tại." />
+      }
 
-    <form class="editor" [formGroup]="form" (ngSubmit)="save()">
-      <label class="field">
-        <span>Tiêu đề chương</span>
-        <div class="input-wrapper">
-          <app-icon name="book-open" [size]="17" />
-          <input type="text" maxlength="255" formControlName="title" />
-        </div>
-      </label>
+      <form class="editor" [formGroup]="form" (ngSubmit)="save()">
+        <label class="field">
+          <span>Tiêu đề chương</span>
+          <div class="input-wrapper">
+            <app-icon name="book-open" [size]="17" />
+            <input type="text" maxlength="255" formControlName="title" />
+          </div>
+        </label>
 
-      <div class="content-field">
-        <span class="content-toolbar">
-          <span>Nội dung Markdown</span>
-          @if (!isCreate && isEditable()) {
-            <label class="image-upload-action">
-              <app-icon name="camera" [size]="15" />
-              {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                [disabled]="store.uploadingImage()"
-                (change)="selectChapterImage($event)"
-              />
-            </label>
+        <div class="content-field">
+          <span class="content-toolbar">
+            <span>Nội dung Markdown</span>
+            @if (!isCreate && isEditable()) {
+              <label class="image-upload-action">
+                <app-icon name="camera" [size]="15" />
+                {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  [disabled]="store.uploadingImage()"
+                  (change)="selectChapterImage($event)"
+                />
+              </label>
+            }
+          </span>
+          <div class="textarea-wrapper">
+            <textarea
+              #contentArea
+              rows="28"
+              formControlName="content"
+              placeholder="Bắt đầu viết nội dung chương..."
+            ></textarea>
+          </div>
+          @if (isCreate) {
+            <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
           }
-        </span>
-        <div class="textarea-wrapper">
-          <textarea
-            #contentArea
-            rows="28"
-            formControlName="content"
-            placeholder="Bắt đầu viết nội dung chương..."
-          ></textarea>
         </div>
-        @if (isCreate) {
-          <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
-        }
-      </div>
 
-      <footer>
-        @if (store.chapter(); as chapter) {
-          <span>{{ chapter.wordCount }} từ · phiên bản {{ chapter.version }}</span>
-        } @else {
-          <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
-        }
-        <app-button
-          variant="primary"
-          type="submit"
-          [disabled]="!isEditable()"
-          [loading]="store.saving()"
-        >
-          <app-icon icon name="save" [size]="16" />
-          {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
-        </app-button>
-      </footer>
-    </form>
-  }
+        <footer>
+          @if (store.chapter(); as chapter) {
+            <span>{{ chapter.wordCount }} từ · phiên bản {{ chapter.version }}</span>
+          } @else {
+            <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
+          }
+          <app-button
+            variant="primary"
+            type="submit"
+            [disabled]="!isEditable()"
+            [loading]="store.saving()"
+          >
+            <app-icon icon name="save" [size]="16" />
+            {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
+          </app-button>
+        </footer>
+      </form>
+    }
+  </div>
 </main>

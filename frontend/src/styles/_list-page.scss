@@ -1,0 +1,90 @@
+// Shared "workspace list page" shell — used by admin and author-studio list/detail
+// pages so the outer page rhythm, card frame, filter row, table and pagination
+// footer come from one place instead of being copy-pasted per page.
+
+.workspace-page {
+  min-height: calc(100vh - var(--header-height));
+  padding: 1.25rem 0 4rem;
+  color: var(--text-strong);
+}
+
+.list-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: rgba(14, 21, 38, 0.88);
+}
+
+.list-card__state {
+  padding: 18px;
+}
+
+.list-card__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-card__filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.7rem;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-card__filters > input,
+.list-card__toolbar > input {
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
+}
+
+.list-card__table-scroll {
+  overflow-x: auto;
+}
+
+.list-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.list-card th,
+.list-card td {
+  padding: 0.8rem 1.125rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-card th {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.list-card__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 16px 18px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .list-card__filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .list-card__pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

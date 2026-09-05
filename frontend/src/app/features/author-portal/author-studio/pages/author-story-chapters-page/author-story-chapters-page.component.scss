@@ -1,69 +1,14 @@
 :host {
   display: block;
 }
-.studio-page {
-  padding: 32px clamp(18px, 4vw, 48px) 56px;
-  color: var(--text-strong);
-}
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
-}
-.page-header a {
+.back {
   color: var(--primary-soft);
+  font-weight: 700;
   text-decoration: none;
 }
-h1 {
-  margin: 8px 0 0;
-  color: var(--text-strong);
-  font-size: clamp(26px, 4vw, 36px);
-}
-.page-header p {
-  margin: 7px 0 0;
+small {
+  display: block;
   color: var(--text-muted);
-}
-.chapter-list {
-  display: grid;
-  gap: 10px;
-}
-.chapter-list article {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-}
-.chapter-number {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: 9px;
-  background: rgba(139, 76, 230, 0.18);
-  color: var(--primary-soft);
-  font-weight: 800;
-}
-.chapter-copy > div {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-}
-h2 {
-  margin: 0;
-  color: var(--text-strong);
-  font-size: 16px;
-}
-.chapter-copy p {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
 }
 .status {
   padding: 3px 7px;
@@ -81,18 +26,4 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  justify-content: flex-end;
-}
-@media (max-width: 760px) {
-  .page-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .chapter-list article {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-  .actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
 }

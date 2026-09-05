@@ -1,25 +1,10 @@
 :host {
   display: block;
 }
-.studio-page {
-  padding: 32px clamp(18px, 4vw, 48px) 56px;
-  color: var(--text-strong);
-}
-.page-header {
-  margin-bottom: 20px;
-}
-.page-header a {
+.back {
   color: var(--primary-soft);
+  font-weight: 700;
   text-decoration: none;
-}
-h1 {
-  margin: 8px 0 0;
-  color: var(--text-strong);
-  font-size: clamp(26px, 4vw, 36px);
-}
-.page-header p {
-  margin: 7px 0 0;
-  color: var(--text-muted);
 }
 .editor {
   display: grid;

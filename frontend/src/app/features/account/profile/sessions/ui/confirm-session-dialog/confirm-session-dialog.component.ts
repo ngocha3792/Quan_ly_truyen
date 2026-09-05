@@ -2,19 +2,19 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
-import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+import { DialogShellComponent } from '../../../../../../shared/components/dialog-shell/dialog-shell.component';
 
 @Component({
   selector: 'app-confirm-session-dialog',
 
   standalone: true,
 
-  imports: [IconComponent, AccountDialogShellComponent],
+  imports: [IconComponent, DialogShellComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
   template: `
-    <app-account-dialog-shell
+    <app-dialog-shell
       [open]="open()"
       [busy]="busy()"
       [showHeader]="false"
@@ -56,7 +56,7 @@ import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialo
           </button>
         </div>
       </div>
-    </app-account-dialog-shell>
+    </app-dialog-shell>
   `,
 
   styles: `

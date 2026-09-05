@@ -15,6 +15,7 @@ import {
 } from '@angular/forms';
 
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../shared/components/dialog-shell/dialog-shell.component';
 import {
   AUTHOR_REJECTION_REASON_MAX_LENGTH,
   AUTHOR_REJECTION_REASON_MIN_LENGTH,
@@ -25,7 +26,7 @@ import {
 
   standalone: true,
 
-  imports: [ReactiveFormsModule, ButtonComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, DialogShellComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 

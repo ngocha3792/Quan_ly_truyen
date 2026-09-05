@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { PublicationScheduleItem } from '../../domain/author-studio.models';
-import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-publication-schedule',
   standalone: true,
 
-  imports: [StudioIconComponent],
+  imports: [IconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -15,7 +15,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
     <section class="dashboard-card">
       <header>
         <h2>
-          <app-studio-icon name="calendar" [size]="17"></app-studio-icon>
+          <app-icon name="calendar" [size]="17"></app-icon>
 
           Lịch xuất bản tuần này
         </h2>
@@ -90,7 +90,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         font-weight: 700;
       }
 
-      h2 app-studio-icon {
+      h2 app-icon {
         color: #c8cfe0;
       }
 

@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AuthorTopStory } from '../../domain/author-studio.models';
-import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-dashboard-bottom-panels',
   standalone: true,
 
-  imports: [RouterLink, StudioIconComponent],
+  imports: [RouterLink, IconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -20,13 +20,13 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
 
       <div class="action-grid">
         <a class="action-card action-card--purple" routerLink="/author-studio/truyen">
-          <app-studio-icon name="edit" [size]="28"></app-studio-icon>
+          <app-icon name="edit" [size]="28"></app-icon>
 
           <span>Viết chương mới</span>
         </a>
 
         <a class="action-card action-card--blue" routerLink="/author-studio/truyen">
-          <app-studio-icon name="image" [size]="28"></app-studio-icon>
+          <app-icon name="image" [size]="28"></app-icon>
 
           <span>Quản lý bìa truyện</span>
         </a>
@@ -50,7 +50,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
             <strong>{{ story.title }}</strong>
 
             <span class="story-views">
-              <app-studio-icon name="eye" [size]="13"></app-studio-icon>
+              <app-icon name="eye" [size]="13"></app-icon>
 
               {{ story.views }}
             </span>
@@ -136,7 +136,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
       }
 
-      .action-card app-studio-icon {
+      .action-card app-icon {
         display: grid;
         width: 42px;
         height: 42px;
@@ -146,22 +146,22 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         color: #c084fc;
       }
 
-      .action-card--purple app-studio-icon {
+      .action-card--purple app-icon {
         background: rgba(168, 85, 247, 0.18);
         color: #c084fc;
       }
 
-      .action-card--blue app-studio-icon {
+      .action-card--blue app-icon {
         background: rgba(37, 99, 235, 0.18);
         color: #5c88ff;
       }
 
-      .action-card--green app-studio-icon {
+      .action-card--green app-icon {
         background: rgba(22, 163, 74, 0.18);
         color: #4ade80;
       }
 
-      .action-card--orange app-studio-icon {
+      .action-card--orange app-icon {
         background: rgba(217, 119, 6, 0.18);
         color: #fb9161;
       }

@@ -1,0 +1,32 @@
+<app-shell-sidebar
+  brandSubtitle="Author Studio"
+  navAriaLabel="Điều hướng Author Studio"
+  [navigationItems]="navigationItems"
+  (navigated)="navigated.emit()"
+>
+  <section profile-card class="author-profile-card">
+    <div class="profile-avatar">
+      <img [src]="profile.avatarUrl" [alt]="profile.displayName" />
+
+      @if (profile.verified) {
+        <span class="verified" title="Tác giả đã xác minh"> ✓ </span>
+      }
+    </div>
+
+    <strong>
+      {{ profile.displayName }}
+    </strong>
+
+    <small>
+      {{ profile.penName }}
+    </small>
+
+    <a routerLink="/tai-khoan/thong-tin-ca-nhan" (click)="navigated.emit()">
+      <app-icon name="user" [size]="16"></app-icon>
+
+      Xem hồ sơ
+
+      <app-icon name="chevron-down" [size]="14"></app-icon>
+    </a>
+  </section>
+</app-shell-sidebar>

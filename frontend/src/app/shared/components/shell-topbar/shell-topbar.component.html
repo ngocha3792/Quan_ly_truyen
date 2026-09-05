@@ -1,0 +1,14 @@
+<header class="shell-topbar">
+  <button
+    class="mobile-menu-button"
+    type="button"
+    aria-label="Mở menu"
+    (click)="menuRequested.emit()"
+  >
+    <app-icon name="menu" [size]="20"></app-icon>
+  </button>
+
+  <div class="shell-topbar-actions">
+    <ng-content />
+  </div>
+</header>

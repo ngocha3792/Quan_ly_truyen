@@ -1,8 +1,8 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     @if (message()) {
-      <p class="message">{{ message() }}</p>
+      <app-notice kind="success" [message]="message()" />
     }
     @if (error()) {
       <div class="state">
@@ -89,24 +89,27 @@
       </section>
     }
     @if (rejectOpen()) {
-      <div class="dialog-backdrop">
-        <section class="dialog" role="dialog" aria-modal="true">
-          <h2>Từ chối submission</h2>
-          <label>Lý do *</label
-          ><textarea [(ngModel)]="rejectReason" rows="6" maxlength="1000"></textarea
-          ><small>{{ rejectReason.trim().length }} / 1000</small>
-          <div class="actions">
-            <app-button variant="secondary" (click)="closeReject()">Hủy</app-button>
-            <app-button
-              variant="danger"
-              [disabled]="rejectReason.trim().length < 10 || mutating()"
-              (click)="confirmReject()"
-            >
-              Xác nhận từ chối
-            </app-button>
-          </div>
-        </section>
-      </div>
+      <app-dialog-shell
+        [open]="true"
+        [busy]="mutating()"
+        title="Từ chối submission"
+        dialogTitleId="submission-reject-dialog-title"
+        (closed)="closeReject()"
+      >
+        <label>Lý do *</label
+        ><textarea [(ngModel)]="rejectReason" rows="6" maxlength="1000"></textarea
+        ><small>{{ rejectReason.trim().length }} / 1000</small>
+        <div class="actions">
+          <app-button variant="secondary" (click)="closeReject()">Hủy</app-button>
+          <app-button
+            variant="danger"
+            [disabled]="rejectReason.trim().length < 10 || mutating()"
+            (click)="confirmReject()"
+          >
+            Xác nhận từ chối
+          </app-button>
+        </div>
+      </app-dialog-shell>
     }
   </div>
 </main>

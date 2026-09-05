@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.notification-button {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-left: 1px solid var(--border);
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+.notification-button span {
+  position: absolute;
+  top: -1px;
+  right: -2px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #08111f;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.create-story-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 1px solid rgba(220, 186, 255, 0.23);
+  border-radius: 8px;
+  background: var(--primary-gradient);
+  color: var(--text-on-accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(114, 46, 208, 0.25);
+}
+
+@media (max-width: 600px) {
+  .create-story-button {
+    padding: 0 14px;
+    font-size: 12px;
+  }
+}

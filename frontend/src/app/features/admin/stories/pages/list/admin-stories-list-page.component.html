@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -6,7 +6,7 @@
       description="Queue duyệt có filter, pagination và lưu state trên URL."
       icon="book-open"
     />
-    <section class="card">
+    <section class="list-card">
       <app-tab-filter
         class="status-tabs"
         ariaLabel="Trạng thái duyệt truyện"
@@ -14,7 +14,7 @@
         [selected]="status"
         (selectedChange)="statusChanged($event)"
       />
-      <div class="filters">
+      <div class="list-card__filters">
         <app-search-field
           [value]="author"
           placeholder="Tác giả"
@@ -37,7 +37,7 @@
         <input [(ngModel)]="submittedTo" (change)="applyFilters()" type="date" />
       </div>
       @if (error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert
             title="Không thể tải danh sách truyện"
             [message]="error()"
@@ -46,12 +46,12 @@
         </div>
       }
       @if (loading() && !result()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-loading-state message="Đang tải danh sách truyện..." />
         </div>
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="state">
+          <div class="list-card__state">
             <app-empty-state
               icon="book-open"
               title="Không có truyện phù hợp"
@@ -59,7 +59,7 @@
             />
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="list-card__table-scroll">
             <table>
               <thead>
                 <tr>
@@ -95,7 +95,7 @@
               </tbody>
             </table>
           </div>
-          <footer class="pagination">
+          <footer class="list-card__pagination">
             <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
             <app-pagination
               [page]="page"

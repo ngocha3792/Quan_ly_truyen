@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { AuthorStudioDraft } from '../../domain/author-studio.models';
-import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-recent-drafts',
   standalone: true,
 
-  imports: [StudioIconComponent],
+  imports: [IconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -21,7 +21,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         @for (draft of drafts; track draft.id) {
           <article>
             <span class="draft-icon">
-              <app-studio-icon name="draft" [size]="16"></app-studio-icon>
+              <app-icon name="draft" [size]="16"></app-icon>
             </span>
 
             <div class="draft-information">

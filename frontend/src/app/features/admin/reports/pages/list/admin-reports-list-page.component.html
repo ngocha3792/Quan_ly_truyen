@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -6,7 +6,7 @@
       description="Queue báo cáo bình luận với evidence snapshot và trạng thái xử lý."
       icon="alert-triangle"
     />
-    <section class="card">
+    <section class="list-card">
       <app-tab-filter
         class="status-tabs"
         ariaLabel="Trạng thái báo cáo"
@@ -14,7 +14,7 @@
         [selected]="status"
         (selectedChange)="statusChanged($event)"
       />
-      <div class="filters">
+      <div class="list-card__filters">
         <select [(ngModel)]="reason" (change)="go(1)">
           <option value="">Tất cả lý do</option>
           @for (item of reasons; track item) {
@@ -37,17 +37,17 @@
         <label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
       </div>
       @if (error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert title="Không thể tải báo cáo" [message]="error()" (retry)="load()" />
         </div>
       }
       @if (loading() && !result()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-loading-state message="Đang tải báo cáo..." />
         </div>
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="state">
+          <div class="list-card__state">
             <app-empty-state
               icon="alert-triangle"
               title="Không có báo cáo phù hợp"
@@ -55,7 +55,7 @@
             />
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="list-card__table-scroll">
             <table>
               <thead>
                 <tr>
@@ -87,7 +87,7 @@
               </tbody>
             </table>
           </div>
-          <footer class="pagination">
+          <footer class="list-card__pagination">
             <span>Tổng {{ data.pagination.totalItems }} báo cáo</span>
             <app-pagination
               [page]="page"

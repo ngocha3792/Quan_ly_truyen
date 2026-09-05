@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -7,8 +7,8 @@
       icon="history"
     />
 
-    <section class="card">
-      <form class="filters" (ngSubmit)="applyFilters()">
+    <section class="list-card">
+      <form class="list-card__filters" (ngSubmit)="applyFilters()">
         <label>Actor ID<input name="actorId" [(ngModel)]="actorId" placeholder="UUID" /></label>
         <label
           >Action<input name="action" [(ngModel)]="action" placeholder="user.status.changed"
@@ -29,7 +29,7 @@
       </form>
 
       @if (error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert
             title="Không thể tải nhật ký audit"
             [message]="error()"
@@ -38,12 +38,12 @@
         </div>
       }
       @if (loading() && !result()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-loading-state message="Đang tải audit timeline..." />
         </div>
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="state">
+          <div class="list-card__state">
             <app-empty-state
               icon="history"
               title="Không có audit event phù hợp"
@@ -51,7 +51,7 @@
             />
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="list-card__table-scroll">
             <table>
               <thead>
                 <tr>
@@ -96,7 +96,7 @@
               </tbody>
             </table>
           </div>
-          <footer class="pagination">
+          <footer class="list-card__pagination">
             <span>Tổng {{ data.pagination.totalItems }} sự kiện</span>
             <app-pagination
               [page]="page"

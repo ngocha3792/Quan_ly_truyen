@@ -1,17 +1,17 @@
 <section class="analytics-page">
-  <header class="analytics-header">
-    <div>
-      <p class="eyebrow">Author Studio</p>
-      <h1>Thống kê độc giả</h1>
-      <p>Dữ liệu tổng hợp theo múi giờ analytics và có thể chậm vài phút.</p>
-    </div>
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Thống kê độc giả"
+    description="Dữ liệu tổng hợp theo múi giờ analytics và có thể chậm vài phút."
+    icon="chart"
+  >
     <app-tab-filter
       ariaLabel="Khoảng thời gian"
       [options]="rangeOptions"
       [selected]="days()"
       (selectedChange)="setDays($event)"
     />
-  </header>
+  </app-page-heading>
 
   @if (error()) {
     <app-error-alert title="Không thể tải thống kê" [message]="error()" (retry)="load()" />

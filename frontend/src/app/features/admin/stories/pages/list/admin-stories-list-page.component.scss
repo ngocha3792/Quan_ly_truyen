@@ -1,66 +1,11 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-  color: var(--text-strong);
-}
 small {
   display: block;
   color: var(--text-muted);
 }
-.card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(14, 21, 38, 0.88);
-}
 .status-tabs {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-}
-.state {
-  padding: 18px;
-}
-.filters {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.7rem;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-}
-.filters > input {
-  padding: 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: rgba(6, 11, 22, 0.55);
-  color: var(--text-strong);
-}
-.table-scroll {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.8rem 1.125rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-.pagination {
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-@media (max-width: 900px) {
-  .filters {
-    grid-template-columns: 1fr 1fr;
-  }
 }

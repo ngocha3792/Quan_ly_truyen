@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs()" />
     <app-page-heading
@@ -19,10 +19,10 @@
       />
     } @else if (detailStore.detail(); as user) {
       @if (actionsStore.message()) {
-        <div class="success">{{ actionsStore.message() }}</div>
+        <app-notice kind="success" [message]="actionsStore.message()" />
       }
       @if (actionsStore.error()) {
-        <div class="error">{{ actionsStore.error() }}</div>
+        <app-notice kind="error" [message]="actionsStore.error()" />
       }
 
       <app-admin-user-header
@@ -33,12 +33,13 @@
       />
 
       @if (isSelf()) {
-        <div class="notice">
-          Đây là tài khoản của bạn. Hệ thống không cho phép tự khóa/ban hoặc tự gỡ quyền ADMIN.
-        </div>
+        <app-notice
+          kind="info"
+          message="Đây là tài khoản của bạn. Hệ thống không cho phép tự khóa/ban hoặc tự gỡ quyền ADMIN."
+        />
       }
       @if (user.statusReason) {
-        <div class="notice"><strong>Lý do trạng thái:</strong> {{ user.statusReason }}</div>
+        <app-notice kind="info" [message]="'Lý do trạng thái: ' + user.statusReason" />
       }
 
       <app-admin-user-summary [user]="user" />
@@ -78,10 +79,10 @@
           </header>
 
           @if (securityMessage()) {
-            <div class="success">{{ securityMessage() }}</div>
+            <app-notice kind="success" [message]="securityMessage()" />
           }
           @if (securityError()) {
-            <div class="error">{{ securityError() }}</div>
+            <app-notice kind="error" [message]="securityError()" />
           }
 
           <div class="table-wrap">
@@ -144,26 +145,34 @@
     }
 
     @if (pendingStatus(); as status) {
-      <div class="dialog-backdrop">
-        <section class="dialog" role="dialog" aria-modal="true">
-          <h2>{{ status === 'BANNED' ? 'Cấm tài khoản' : 'Tạm khóa tài khoản' }}</h2>
-          <p>
-            Nhập lý do. Thao tác này sẽ làm mất hiệu lực các phiên/permission hiện tại theo backend.
-          </p>
-          <textarea [(ngModel)]="statusReason" rows="5" maxlength="1000"></textarea>
-          <small>{{ statusReason.trim().length }} / 1000 (tối thiểu 10)</small>
-          <div class="dialog-actions">
-            <app-button variant="secondary" (click)="pendingStatus.set(null)">Hủy</app-button>
-            <app-button
-              variant="danger"
-              [disabled]="statusReason.trim().length < 10 || actionsStore.loading()"
-              (click)="confirmStatus()"
-            >
-              Xác nhận
-            </app-button>
-          </div>
-        </section>
-      </div>
+      <app-dialog-shell
+        [open]="true"
+        [busy]="actionsStore.loading()"
+        [title]="status === 'BANNED' ? 'Cấm tài khoản' : 'Tạm khóa tài khoản'"
+        dialogTitleId="user-status-dialog-title"
+        (closed)="pendingStatus.set(null)"
+      >
+        <p>
+          Nhập lý do. Thao tác này sẽ làm mất hiệu lực các phiên/permission hiện tại theo backend.
+        </p>
+        <textarea
+          class="status-reason-input"
+          [(ngModel)]="statusReason"
+          rows="5"
+          maxlength="1000"
+        ></textarea>
+        <small>{{ statusReason.trim().length }} / 1000 (tối thiểu 10)</small>
+        <div class="dialog-actions">
+          <app-button variant="secondary" (click)="pendingStatus.set(null)">Hủy</app-button>
+          <app-button
+            variant="danger"
+            [disabled]="statusReason.trim().length < 10 || actionsStore.loading()"
+            (click)="confirmStatus()"
+          >
+            Xác nhận
+          </app-button>
+        </div>
+      </app-dialog-shell>
     }
   </div>
 </main>

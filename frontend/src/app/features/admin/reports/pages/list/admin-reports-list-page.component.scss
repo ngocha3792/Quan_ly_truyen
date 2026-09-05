@@ -1,73 +1,30 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-  color: var(--text-strong);
-}
-.card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(14, 21, 38, 0.88);
-}
 .status-tabs {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
 }
-.state {
-  padding: 18px;
-}
-.filters {
-  display: grid;
+.list-card__filters {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
 }
-.filters input,
-.filters select {
+.list-card__filters input,
+.list-card__filters select {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(6, 11, 22, 0.55);
   color: var(--text-strong);
 }
-.filters label {
+.list-card__filters label {
   display: grid;
   gap: 0.35rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
-.table-scroll {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 12px 18px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-a {
-  color: #c084fc;
-}
-.pagination {
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
 @media (max-width: 800px) {
-  .filters {
+  .list-card__filters {
     grid-template-columns: 1fr 1fr;
   }
 }

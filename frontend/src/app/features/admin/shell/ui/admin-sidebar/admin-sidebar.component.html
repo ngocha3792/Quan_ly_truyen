@@ -1,28 +1,11 @@
-<aside class="admin-sidebar">
-  <div class="admin-brand">
-    <span class="brand-symbol">
-      <span></span>
-      <span></span>
-    </span>
-
-    <div>
-      <strong>{{ appName }}</strong>
-      <small>Quản trị</small>
-    </div>
-  </div>
-
-  <nav aria-label="Điều hướng quản trị">
-    @for (item of navigationItems(); track item.label) {
-      <a [routerLink]="item.route" routerLinkActive="active" (click)="navigated.emit()">
-        <app-icon [name]="item.icon" [size]="18"></app-icon>
-
-        <span>{{ item.label }}</span>
-      </a>
-    }
-  </nav>
-
+<app-shell-sidebar
+  brandSubtitle="Quản trị"
+  navAriaLabel="Điều hướng quản trị"
+  [navigationItems]="navigationItems()"
+  (navigated)="navigated.emit()"
+>
   @if (user(); as currentUser) {
-    <section class="admin-profile-card">
+    <section profile-card class="admin-profile-card">
       <div class="profile-avatar">
         @if (currentUser.avatar?.url; as avatarUrl) {
           <img [src]="avatarUrl" [alt]="currentUser.displayName" />
@@ -41,4 +24,4 @@
       </a>
     </section>
   }
-</aside>
+</app-shell-sidebar>

@@ -10,28 +10,13 @@
   padding: 1.25rem 1.5rem 3rem;
 }
 
-.dashboard-heading {
+app-breadcrumb {
+  order: 0;
+}
+
+app-page-heading {
   order: 1;
   margin-bottom: 1.25rem;
-
-  h1 {
-    margin: 0;
-    color: #f8f6fb;
-    font-size: clamp(1.65rem, 2.8vw, 2.1rem);
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-  }
-
-  h1 span {
-    font-size: 0.85em;
-  }
-
-  p {
-    margin: 0.45rem 0 0;
-    color: #7f899d;
-    font-size: 0.85rem;
-    line-height: 1.6;
-  }
 }
 
 .metric-grid {

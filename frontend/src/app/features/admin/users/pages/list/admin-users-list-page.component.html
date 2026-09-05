@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -6,7 +6,7 @@
       description="Tìm kiếm, kiểm tra trạng thái tài khoản và quản lý quyền quản trị."
       icon="users"
     />
-    <section class="card">
+    <section class="list-card">
       <app-admin-users-filters
         [keyword]="store.keyword()"
         [status]="store.statusFilter()"
@@ -18,7 +18,7 @@
         (searchRequested)="submitSearch()"
       />
       @if (store.error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert
             title="Không thể tải người dùng"
             [message]="store.error()"

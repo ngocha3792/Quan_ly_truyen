@@ -1,9 +1,9 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
 
     @if (message()) {
-      <p class="message">{{ message() }}</p>
+      <app-notice kind="success" [message]="message()" />
     }
     @if (error()) {
       <div class="state">

@@ -1,11 +1,11 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" /><app-page-heading
       title="Xét duyệt hồ sơ tác giả"
       description="Quản lý và xét duyệt các yêu cầu trở thành tác giả trên hệ thống."
       icon="shield"
     />
-    <section class="admin-card">
+    <section class="list-card">
       <app-admin-author-application-filters
         [keyword]="store.keyword()"
         [status]="store.statusFilter()"
@@ -16,7 +16,7 @@
         (searchRequested)="store.search()"
       />
       @if (store.error()) {
-        <div class="state-padding">
+        <div class="list-card__state">
           <app-error-alert
             title="Không thể tải danh sách hồ sơ"
             [message]="store.error()"
@@ -34,7 +34,7 @@
         />
       } @else if (store.applications().length > 0) {
         <app-admin-author-application-table [applications]="store.applications()" />
-        <footer class="list-footer">
+        <footer class="list-card__pagination">
           <span>Trang {{ store.page() }} / {{ store.totalPages() }}</span
           ><app-pagination
             [page]="store.page()"

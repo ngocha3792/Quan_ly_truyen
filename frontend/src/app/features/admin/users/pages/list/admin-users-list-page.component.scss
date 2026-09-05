@@ -1,16 +1,3 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-}
-.card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(14, 21, 38, 0.88);
-}
-.state {
-  padding: 18px;
-}

@@ -1,86 +1,118 @@
-<main class="studio-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">Author Studio</p>
-      <h1>Truyện của tôi</h1>
-      <p>Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện.</p>
-    </div>
-
-    <app-link-button variant="primary" routerLink="/author-studio/truyen/tao-moi">
-      <app-icon icon name="plus" [size]="16" />
-      Tạo truyện
-    </app-link-button>
-  </header>
-
-  <section class="toolbar" aria-label="Bộ lọc truyện">
-    <app-search-field
-      [value]="query()"
-      placeholder="Tìm theo tên truyện..."
-      ariaLabel="Tìm truyện"
-      (valueChange)="keywordChanged($event)"
-    />
-    <span>{{ filteredStories().length }} truyện</span>
-  </section>
-
-  @if (store.error()) {
-    <app-notice kind="error" [message]="store.error()" />
-  }
-
-  @if (store.loading()) {
-    <app-loading-state message="Đang tải danh sách truyện..." />
-  } @else if (filteredStories().length === 0) {
-    <app-empty-state
-      icon="book-open"
-      title="Chưa có truyện phù hợp"
-      description="Tạo một bản nháp mới để bắt đầu viết."
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
+    <app-page-heading
+      title="Truyện của tôi"
+      description="Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện."
+      icon="book"
     >
-      <app-link-button emptyAction variant="primary" routerLink="/author-studio/truyen/tao-moi">
-        Tạo truyện đầu tiên
+      <app-link-button variant="primary" routerLink="/author-studio/truyen/tao-moi">
+        <app-icon icon name="plus" [size]="16" />
+        Tạo truyện
       </app-link-button>
-    </app-empty-state>
-  } @else {
-    <section class="story-list">
-      @for (story of filteredStories(); track story.id) {
-        <article class="story-card">
-          <div class="story-copy">
-            <div class="story-title-row">
-              <h2>{{ story.title }}</h2>
-              <span class="status" [attr.data-status]="story.status">
-                {{ statusLabel(story.status) }}
-              </span>
-            </div>
+    </app-page-heading>
 
-            <p>{{ story.synopsis || 'Chưa có mô tả.' }}</p>
+    <section class="list-card">
+      <div class="list-card__toolbar">
+        <app-search-field
+          [value]="query()"
+          placeholder="Tìm theo tên truyện..."
+          ariaLabel="Tìm truyện"
+          (valueChange)="keywordChanged($event)"
+        />
+        <span>{{ filteredStories().length }} truyện</span>
+      </div>
 
-            <div class="meta">
-              <span>Cập nhật {{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-              <span>{{ story.categories[0]?.name || 'Chưa chọn thể loại' }}</span>
-              <span>v{{ story.version }}</span>
-            </div>
-          </div>
+      @if (store.error()) {
+        <div class="list-card__state">
+          <app-notice kind="error" [message]="store.error()" />
+        </div>
+      }
 
-          <div class="story-actions">
-            <app-link-button variant="secondary" [routerLink]="['/author-studio/truyen', story.id]"
-              >Chi tiết</app-link-button
-            >
+      @if (store.loading()) {
+        <div class="list-card__state">
+          <app-loading-state message="Đang tải danh sách truyện..." />
+        </div>
+      } @else if (filteredStories().length === 0) {
+        <div class="list-card__state">
+          <app-empty-state
+            icon="book-open"
+            title="Chưa có truyện phù hợp"
+            description="Tạo một bản nháp mới để bắt đầu viết."
+          >
             <app-link-button
-              variant="secondary"
-              [routerLink]="['/author-studio/truyen', story.id, 'chuong']"
-              >Chương</app-link-button
+              emptyAction
+              variant="primary"
+              routerLink="/author-studio/truyen/tao-moi"
             >
-            @if (canDelete(story)) {
-              <app-button
-                variant="danger"
-                [loading]="store.actionStoryId() === story.id"
-                [disabled]="store.actionStoryId() === story.id"
-                (click)="deleteStory(story)"
-              >
-                Xóa
-              </app-button>
-            }
-          </div>
-        </article>
+              Tạo truyện đầu tiên
+            </app-link-button>
+          </app-empty-state>
+        </div>
+      } @else {
+        <div class="list-card__table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Truyện</th>
+                <th>Trạng thái</th>
+                <th>Thể loại</th>
+                <th>Cập nhật</th>
+                <th>Version</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (story of pagedStories(); track story.id) {
+                <tr>
+                  <td>
+                    <strong>{{ story.title }}</strong>
+                    <small>{{ story.synopsis || 'Chưa có mô tả.' }}</small>
+                  </td>
+                  <td>
+                    <span class="status" [attr.data-status]="story.status">
+                      {{ statusLabel(story.status) }}
+                    </span>
+                  </td>
+                  <td>{{ story.categories[0]?.name || 'Chưa chọn thể loại' }}</td>
+                  <td>{{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                  <td>v{{ story.version }}</td>
+                  <td class="actions">
+                    <app-link-button
+                      variant="secondary"
+                      [routerLink]="['/author-studio/truyen', story.id]"
+                      >Chi tiết</app-link-button
+                    >
+                    <app-link-button
+                      variant="secondary"
+                      [routerLink]="['/author-studio/truyen', story.id, 'chuong']"
+                      >Chương</app-link-button
+                    >
+                    @if (canDelete(story)) {
+                      <app-button
+                        variant="danger"
+                        [loading]="store.actionStoryId() === story.id"
+                        [disabled]="store.actionStoryId() === story.id"
+                        (click)="deleteStory(story)"
+                      >
+                        Xóa
+                      </app-button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="list-card__pagination">
+          <span>Trang {{ page() }} / {{ totalPages() }}</span>
+          <app-pagination
+            [page]="page()"
+            [totalPages]="totalPages()"
+            (pageChange)="goPage($event)"
+          />
+        </footer>
       }
     </section>
-  }
+  </div>
 </main>

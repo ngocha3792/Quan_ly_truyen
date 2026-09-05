@@ -1,26 +1,9 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-  color: var(--text-strong);
-}
-.card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(14, 21, 38, 0.88);
-}
-.state {
-  padding: 18px;
-}
-.filters {
-  display: grid;
+.list-card__filters {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
 }
 label {
   display: grid;
@@ -41,42 +24,19 @@ input {
   align-items: end;
   gap: 0.5rem;
 }
-.table-scroll {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.8rem 1.125rem;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border);
-}
 code {
   overflow-wrap: anywhere;
 }
-.pagination {
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+.list-card td {
+  vertical-align: top;
 }
 @media (max-width: 1000px) {
-  .filters {
+  .list-card__filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 620px) {
-  .filters {
+  .list-card__filters {
     grid-template-columns: 1fr;
-  }
-  .pagination {
-    flex-wrap: wrap;
   }
 }

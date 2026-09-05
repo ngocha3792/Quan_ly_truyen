@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 
-import { AccountDialogShellComponent } from '../../../../shared/ui/account-dialog-shell/account-dialog-shell.component';
+import { DialogShellComponent } from '../../../../../../shared/components/dialog-shell/dialog-shell.component';
 
 import { AccountFormFieldComponent } from '../../../../shared/ui/account-form-field/account-form-field.component';
 
@@ -30,13 +30,13 @@ const DELETE_CONFIRMATION = 'XOA TAI KHOAN';
 
     IconComponent,
 
-    AccountDialogShellComponent,
+    DialogShellComponent,
     AccountFormFieldComponent,
     AccountPasswordInputComponent,
   ],
 
   template: `
-    <app-account-dialog-shell
+    <app-dialog-shell
       [open]="open()"
       [busy]="submitting()"
       title="Xóa tài khoản"
@@ -100,7 +100,7 @@ const DELETE_CONFIRMATION = 'XOA TAI KHOAN';
           </button>
         </div>
       </form>
-    </app-account-dialog-shell>
+    </app-dialog-shell>
   `,
 
   styleUrl: './delete-account-dialog.component.scss',

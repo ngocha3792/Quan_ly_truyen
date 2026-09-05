@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -9,8 +9,8 @@
       <app-button variant="primary" (click)="openCreate()">Tạo thể loại</app-button>
     </app-page-heading>
 
-    <section class="card">
-      <div class="toolbar">
+    <section class="list-card">
+      <div class="list-card__toolbar">
         <app-search-field
           [value]="q"
           placeholder="Tìm theo tên hoặc slug…"
@@ -33,20 +33,20 @@
       </div>
 
       @if (message()) {
-        <p class="notice success">{{ message() }}</p>
+        <app-notice kind="success" [message]="message()" />
       }
       @if (error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert title="Không thể tải thể loại" [message]="error()" (retry)="load()" />
         </div>
       }
       @if (loading() && !result()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-loading-state message="Đang tải thể loại..." />
         </div>
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="state">
+          <div class="list-card__state">
             <app-empty-state
               icon="grid"
               title="Không có thể loại phù hợp"
@@ -54,7 +54,7 @@
             />
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="list-card__table-scroll">
             <table>
               <thead>
                 <tr>
@@ -104,7 +104,7 @@
               </tbody>
             </table>
           </div>
-          <footer class="pagination">
+          <footer class="list-card__pagination">
             <span>Tổng {{ data.pagination.totalItems }} thể loại</span>
             <app-pagination
               [page]="data.pagination.page"
@@ -117,9 +117,14 @@
     </section>
 
     @if (editorOpen()) {
-      <div class="modal-backdrop">
-        <section class="modal" role="dialog" aria-modal="true">
-          <h2>{{ editing ? 'Chỉnh sửa thể loại' : 'Tạo thể loại' }}</h2>
+      <app-dialog-shell
+        [open]="true"
+        [busy]="mutating()"
+        [title]="editing ? 'Chỉnh sửa thể loại' : 'Tạo thể loại'"
+        dialogTitleId="category-editor-dialog-title"
+        (closed)="editorOpen.set(false)"
+      >
+        <div class="editor-fields">
           <label>Tên *<input [(ngModel)]="editName" maxlength="100" /></label>
           @if (editing) {
             <p class="muted">
@@ -148,18 +153,18 @@
               {{ editing.storyCount }} truyện · {{ editing.childCount }} danh mục con
             </p>
           }
-          <div class="modal-actions">
-            <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
-            <app-button
-              variant="primary"
-              [disabled]="!editName.trim() || mutating()"
-              (click)="saveEditor()"
-            >
-              Lưu
-            </app-button>
-          </div>
-        </section>
-      </div>
+        </div>
+        <div class="modal-actions">
+          <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
+          <app-button
+            variant="primary"
+            [disabled]="!editName.trim() || mutating()"
+            (click)="saveEditor()"
+          >
+            Lưu
+          </app-button>
+        </div>
+      </app-dialog-shell>
     }
   </div>
 </main>

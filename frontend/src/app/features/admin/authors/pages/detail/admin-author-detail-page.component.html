@@ -1,8 +1,8 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     @if (message()) {
-      <p class="message">{{ message() }}</p>
+      <app-notice kind="success" [message]="message()" />
     }
     @if (error()) {
       <div class="state">
@@ -76,27 +76,30 @@
       </section>
     }
     @if (actionOpen()) {
-      <div class="backdrop">
-        <section class="dialog" role="dialog">
-          <h2>{{ pendingStatus === 'REVOKED' ? 'Thu hồi' : 'Tạm khóa' }} tác giả</h2>
-          <textarea
-            [(ngModel)]="reason"
-            rows="5"
-            maxlength="1000"
-            placeholder="Lý do (tối thiểu 10 ký tự)"
-          ></textarea>
-          <div class="actions">
-            <app-button variant="secondary" (click)="actionOpen.set(false)">Hủy</app-button>
-            <app-button
-              variant="danger"
-              [disabled]="reason.trim().length < 10 || mutating()"
-              (click)="confirmAction()"
-            >
-              Xác nhận
-            </app-button>
-          </div>
-        </section>
-      </div>
+      <app-dialog-shell
+        [open]="true"
+        [busy]="mutating()"
+        [title]="(pendingStatus === 'REVOKED' ? 'Thu hồi' : 'Tạm khóa') + ' tác giả'"
+        dialogTitleId="author-action-dialog-title"
+        (closed)="actionOpen.set(false)"
+      >
+        <textarea
+          [(ngModel)]="reason"
+          rows="5"
+          maxlength="1000"
+          placeholder="Lý do (tối thiểu 10 ký tự)"
+        ></textarea>
+        <div class="actions">
+          <app-button variant="secondary" (click)="actionOpen.set(false)">Hủy</app-button>
+          <app-button
+            variant="danger"
+            [disabled]="reason.trim().length < 10 || mutating()"
+            (click)="confirmAction()"
+          >
+            Xác nhận
+          </app-button>
+        </div>
+      </app-dialog-shell>
     }
   </div>
 </main>

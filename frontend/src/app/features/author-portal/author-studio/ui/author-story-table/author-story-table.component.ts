@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AuthorStudioStory } from '../../domain/author-studio.models';
-import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-author-story-table',
   standalone: true,
 
-  imports: [RouterLink, StudioIconComponent],
+  imports: [RouterLink, IconComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -76,7 +76,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
                     routerLink="/author-studio/truyen"
                     aria-label="Chỉnh sửa truyện"
                   >
-                    <app-studio-icon name="edit" [size]="14"></app-studio-icon>
+                    <app-icon name="edit" [size]="14"></app-icon>
                   </a>
                 </td>
               </tr>

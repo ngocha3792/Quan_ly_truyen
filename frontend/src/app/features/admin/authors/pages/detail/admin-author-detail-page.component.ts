@@ -20,8 +20,10 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuthorsApiService } from '../../data-access/admin-authors-api.service';
 import type { AdminAuthorDetail, AuthorLifecycleStatus } from '../../domain/admin-author.models';
@@ -42,8 +44,10 @@ const AUTHOR_STATUS_LABELS: Record<AuthorLifecycleStatus, string> = {
     RouterLink,
     BreadcrumbComponent,
     ButtonComponent,
+    DialogShellComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    NoticeComponent,
     PageHeadingComponent,
     AdminAuthorStatusBadgeComponent,
   ],

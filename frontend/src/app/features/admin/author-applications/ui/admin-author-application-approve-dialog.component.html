@@ -1,14 +1,12 @@
-<div class="dialog-backdrop" role="presentation" (click)="handleCancel()">
-  <section
-    class="dialog-card"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="approve-dialog-title"
-    (click)="$event.stopPropagation()"
-  >
+<app-dialog-shell
+  [open]="true"
+  [busy]="loading()"
+  title="Duyệt hồ sơ tác giả?"
+  dialogTitleId="approve-dialog-title"
+  (closed)="handleCancel()"
+>
+  <div class="approve-content">
     <div class="dialog-icon">✓</div>
-
-    <h2 id="approve-dialog-title">Duyệt hồ sơ tác giả?</h2>
 
     <p>Tài khoản này sẽ nhận quyền tác giả và có thể truy cập Author Studio.</p>
 
@@ -30,5 +28,5 @@
         {{ loading() ? 'Đang duyệt...' : 'Duyệt hồ sơ' }}
       </app-button>
     </footer>
-  </section>
-</div>
+  </div>
+</app-dialog-shell>

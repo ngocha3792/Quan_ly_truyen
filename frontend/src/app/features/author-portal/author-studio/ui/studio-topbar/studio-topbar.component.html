@@ -1,0 +1,17 @@
+<app-shell-topbar (menuRequested)="menuRequested.emit()">
+  <a class="notification-button" routerLink="/thong-bao" aria-label="Thông báo">
+    <app-icon name="bell" [size]="21"></app-icon>
+
+    @if (unreadNotifications > 0) {
+      <span>
+        {{ unreadNotifications }}
+      </span>
+    }
+  </a>
+
+  <a class="create-story-button" routerLink="/author-studio/truyen/tao-moi">
+    <app-icon name="plus" [size]="18"></app-icon>
+
+    Tạo truyện mới
+  </a>
+</app-shell-topbar>

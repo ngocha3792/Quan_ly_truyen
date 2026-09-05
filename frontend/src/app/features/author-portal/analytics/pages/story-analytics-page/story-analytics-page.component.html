@@ -1,18 +1,19 @@
 <section class="story-analytics">
-  <a routerLink="/author-studio/thong-ke" class="back">← Quay lại thống kê</a>
+  <app-breadcrumb [items]="breadcrumbs()" />
   @if (error()) {
     <app-error-alert title="Không thể tải thống kê" [message]="error()" (retry)="retry()" />
   } @else if (loading() && !data()) {
     <app-loading-state message="Đang tải thống kê..." />
   } @else if (data(); as analytics) {
-    <header>
-      <p>Thống kê truyện</p>
-      <h1>{{ analytics.story.title }}</h1>
-      <span
-        >{{ analytics.range.from }} → {{ analytics.range.to }} ·
-        {{ analytics.range.timeZone }}</span
-      >
-    </header>
+    <app-page-heading
+      [title]="analytics.story.title"
+      [description]="
+        analytics.range.from + ' → ' + analytics.range.to + ' · ' + analytics.range.timeZone
+      "
+      icon="chart"
+    >
+      <a routerLink="/author-studio/thong-ke" class="back">← Quay lại thống kê</a>
+    </app-page-heading>
     <div class="summary-grid">
       <app-stat-card label="Lượt xem" [value]="formatNumber(analytics.totals.views)" icon="eye" />
       <app-stat-card

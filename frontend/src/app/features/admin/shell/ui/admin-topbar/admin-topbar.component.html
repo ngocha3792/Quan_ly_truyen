@@ -1,16 +1,7 @@
-<header class="admin-topbar">
-  <button
-    class="mobile-menu-button"
-    type="button"
-    aria-label="Mở menu"
-    (click)="menuRequested.emit()"
-  >
-    <app-icon name="menu" [size]="20"></app-icon>
-  </button>
-
+<app-shell-topbar (menuRequested)="menuRequested.emit()">
   <a class="home-link" routerLink="/">
     <app-icon name="door-open" [size]="18"></app-icon>
 
     Về trang chủ
   </a>
-</header>
+</app-shell-topbar>

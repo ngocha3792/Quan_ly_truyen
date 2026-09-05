@@ -2,37 +2,3 @@
   display: block;
   min-height: 100%;
 }
-
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-  color: var(--text-strong);
-}
-
-.admin-card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(14, 21, 38, 0.88);
-}
-
-.state-padding {
-  padding: 18px;
-}
-
-.list-footer {
-  padding: 16px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: #64748b;
-  font-size: 12px;
-}
-
-@media (max-width: 700px) {
-  .list-footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-}

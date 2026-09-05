@@ -1,251 +1,266 @@
-<main class="studio-page">
-  <header class="page-header">
-    <div>
-      <a routerLink="/author-studio/truyen">← Truyện của tôi</a>
-      <h1>{{ isCreate() ? 'Tạo truyện mới' : 'Chỉnh sửa truyện' }}</h1>
-      @if (store.story(); as story) {
-        <p>
-          Trạng thái: <strong>{{ statusLabel(story) }}</strong> · phiên bản {{ story.version }}
-        </p>
-      } @else {
-        <p>Tạo bản nháp trước, sau đó bạn có thể tải ảnh bìa và viết chương.</p>
-      }
-    </div>
-
-    @if (store.story(); as story) {
-      <a class="secondary-action" [routerLink]="['/author-studio/truyen', story.id, 'chuong']">
-        Quản lý chương
-      </a>
-    }
-  </header>
-
-  @if (store.error()) {
-    <app-notice kind="error" [message]="store.error()" />
-  }
-  @if (fileError()) {
-    <app-notice kind="error" [message]="fileError()" />
-  }
-
-  @if (store.loading()) {
-    <app-loading-state message="Đang tải dữ liệu truyện..." />
-  } @else {
-    @if (!isEditable()) {
-      <app-notice
-        kind="info"
-        message="Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa."
-      />
-    }
-
-    <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()">
-      <section class="panel main-panel">
-        <label class="field">
-          <span>Tên truyện</span>
-          <div class="input-wrapper">
-            <app-icon name="book" [size]="17" />
-            <input type="text" formControlName="title" maxlength="255" />
-          </div>
-        </label>
-
-        <label class="field">
-          <span>Mô tả</span>
-          <div class="textarea-wrapper">
-            <textarea
-              rows="9"
-              formControlName="synopsis"
-              placeholder="Giới thiệu nội dung truyện..."
-            ></textarea>
-          </div>
-        </label>
-
-        <div class="field-group">
-          <span class="field-label">Thể loại</span>
-          <div class="chip-list">
-            @for (category of store.categories(); track category.id) {
-              <button
-                type="button"
-                class="chip"
-                [class.chip--selected]="isCategorySelected(category.id)"
-                [disabled]="!isEditable()"
-                (click)="toggleCategory(category.id)"
-              >
-                {{ category.name }}
-              </button>
-            }
-            @for (category of legacySelectedCategories(); track category.id) {
-              <button
-                type="button"
-                class="chip chip--selected chip--legacy"
-                [disabled]="!isEditable()"
-                [title]="
-                  isEditable()
-                    ? 'Thể loại đã ngừng hoạt động. Bạn chỉ có thể gỡ khỏi truyện.'
-                    : 'Thể loại đã ngừng hoạt động.'
-                "
-                (click)="removeLegacyCategory(category.id)"
-              >
-                {{ category.name }} · Không còn sử dụng
-              </button>
-            }
-          </div>
-        </div>
-
-        <div class="field-group">
-          <span class="field-label">Tag</span>
-          <div class="chip-list">
-            @for (tag of store.tags(); track tag.id) {
-              <button
-                type="button"
-                class="chip"
-                [class.chip--selected]="isTagSelected(tag.id)"
-                [disabled]="!isEditable()"
-                (click)="toggleTag(tag.id)"
-              >
-                {{ tag.name }}
-              </button>
-            }
-          </div>
-        </div>
-      </section>
-
-      <aside class="panel side-panel">
-        <h2>Ảnh bìa</h2>
-        <div class="cover-box">
-          @if (displayedCoverUrl(); as coverUrl) {
-            <img [src]="coverUrl" alt="Ảnh bìa truyện" />
-          } @else {
-            <span>Chưa có ảnh bìa</span>
-          }
-        </div>
-
-        @if (isEditable()) {
-          <label class="file-action">
-            <app-icon name="camera" [size]="16" />
-            Chọn ảnh JPG / PNG / WebP
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              (change)="selectCover($event)"
-            />
-          </label>
-          @if (displayedCoverUrl()) {
-            <button type="button" class="text-danger" (click)="removeCover()">Gỡ ảnh bìa</button>
-          }
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs()" />
+    <app-page-heading
+      [title]="isCreate() ? 'Tạo truyện mới' : 'Chỉnh sửa truyện'"
+      [description]="
+        store.story()
+          ? 'Trạng thái: ' + statusLabel(store.story()!) + ' · phiên bản ' + store.story()!.version
+          : 'Tạo bản nháp trước, sau đó bạn có thể tải ảnh bìa và viết chương.'
+      "
+      icon="book"
+    >
+      <div class="heading-actions">
+        <a routerLink="/author-studio/truyen" class="back">← Truyện của tôi</a>
+        @if (store.story(); as story) {
+          <a class="secondary-action" [routerLink]="['/author-studio/truyen', story.id, 'chuong']">
+            Quản lý chương
+          </a>
         }
+      </div>
+    </app-page-heading>
 
-        <app-button
-          variant="primary"
-          type="submit"
-          [disabled]="!isEditable()"
-          [loading]="store.saving()"
-        >
-          <app-icon icon name="save" [size]="16" />
-          {{ store.saving() ? 'Đang lưu...' : 'Lưu bản nháp' }}
-        </app-button>
+    @if (store.error()) {
+      <app-notice kind="error" [message]="store.error()" />
+    }
+    @if (fileError()) {
+      <app-notice kind="error" [message]="fileError()" />
+    }
 
-        @if (canSubmit()) {
-          <hr />
+    @if (store.loading()) {
+      <app-loading-state message="Đang tải dữ liệu truyện..." />
+    } @else {
+      @if (!isEditable()) {
+        <app-notice
+          kind="info"
+          message="Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa."
+        />
+      }
+
+      <form class="editor-grid" [formGroup]="form" (ngSubmit)="save()">
+        <section class="panel main-panel">
           <label class="field">
-            <span>Ghi chú cho người duyệt</span>
+            <span>Tên truyện</span>
+            <div class="input-wrapper">
+              <app-icon name="book" [size]="17" />
+              <input type="text" formControlName="title" maxlength="255" />
+            </div>
+          </label>
+
+          <label class="field">
+            <span>Mô tả</span>
             <div class="textarea-wrapper">
               <textarea
-                rows="3"
-                maxlength="2000"
-                [value]="authorNote()"
-                (input)="updateAuthorNote($event)"
+                rows="9"
+                formControlName="synopsis"
+                placeholder="Giới thiệu nội dung truyện..."
               ></textarea>
             </div>
           </label>
-          @if (hasUnsavedChanges()) {
-            <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
-          }
-          <app-button
-            variant="secondary"
-            [disabled]="hasUnsavedChanges()"
-            [loading]="store.workflowBusy()"
-            (click)="submitForReview()"
-          >
-            {{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}
-          </app-button>
-        }
 
-        @if (canCancel()) {
-          <app-button variant="secondary" [loading]="store.workflowBusy()" (click)="cancelReview()">
-            Hủy yêu cầu duyệt
-          </app-button>
-        }
-      </aside>
-    </form>
-
-    @if (store.story(); as story) {
-      <section class="panel contributors-panel">
-        <div class="section-heading">
-          <div>
-            <h2>Cộng tác viên</h2>
-            <p>Thêm người đã có tài khoản bằng email và phân vai cho truyện.</p>
+          <div class="field-group">
+            <span class="field-label">Thể loại</span>
+            <div class="chip-list">
+              @for (category of store.categories(); track category.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--selected]="isCategorySelected(category.id)"
+                  [disabled]="!isEditable()"
+                  (click)="toggleCategory(category.id)"
+                >
+                  {{ category.name }}
+                </button>
+              }
+              @for (category of legacySelectedCategories(); track category.id) {
+                <button
+                  type="button"
+                  class="chip chip--selected chip--legacy"
+                  [disabled]="!isEditable()"
+                  [title]="
+                    isEditable()
+                      ? 'Thể loại đã ngừng hoạt động. Bạn chỉ có thể gỡ khỏi truyện.'
+                      : 'Thể loại đã ngừng hoạt động.'
+                  "
+                  (click)="removeLegacyCategory(category.id)"
+                >
+                  {{ category.name }} · Không còn sử dụng
+                </button>
+              }
+            </div>
           </div>
-        </div>
 
-        <form class="contributor-form" [formGroup]="contributorForm" (ngSubmit)="saveContributor()">
-          <label class="field">
-            <span>Email tài khoản</span>
-            <div class="input-wrapper">
-              <app-icon name="mail" [size]="16" />
-              <input type="email" formControlName="email" placeholder="contributor@example.com" />
+          <div class="field-group">
+            <span class="field-label">Tag</span>
+            <div class="chip-list">
+              @for (tag of store.tags(); track tag.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--selected]="isTagSelected(tag.id)"
+                  [disabled]="!isEditable()"
+                  (click)="toggleTag(tag.id)"
+                >
+                  {{ tag.name }}
+                </button>
+              }
             </div>
-          </label>
-          <label class="field">
-            <span>Vai trò</span>
-            <div class="input-wrapper">
-              <app-icon name="users" [size]="16" />
-              <select formControlName="role">
-                @for (role of contributorRoles; track role) {
-                  <option [value]="role">{{ contributorRoleLabel(role) }}</option>
-                }
-              </select>
-            </div>
-          </label>
-          <label class="field">
-            <span>Tên ghi công</span>
-            <div class="input-wrapper">
-              <app-icon name="user" [size]="16" />
+          </div>
+        </section>
+
+        <aside class="panel side-panel">
+          <h2>Ảnh bìa</h2>
+          <div class="cover-box">
+            @if (displayedCoverUrl(); as coverUrl) {
+              <img [src]="coverUrl" alt="Ảnh bìa truyện" />
+            } @else {
+              <span>Chưa có ảnh bìa</span>
+            }
+          </div>
+
+          @if (isEditable()) {
+            <label class="file-action">
+              <app-icon name="camera" [size]="16" />
+              Chọn ảnh JPG / PNG / WebP
               <input
-                type="text"
-                formControlName="creditName"
-                placeholder="Để trống để dùng tên hồ sơ"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="selectCover($event)"
               />
-            </div>
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" formControlName="canEdit" />
-            <span>Cho phép chỉnh sửa nội dung</span>
-          </label>
-          <app-button variant="primary" type="submit" [loading]="store.contributorBusy()">
-            {{ store.contributorBusy() ? 'Đang lưu...' : 'Thêm / cập nhật' }}
-          </app-button>
-        </form>
-
-        <div class="contributor-list">
-          @for (contributor of store.contributors(); track contributor.userId + contributor.role) {
-            <article class="contributor-item">
-              <div>
-                <strong>{{ contributor.creditName || contributor.displayName }}</strong>
-                <span>{{ contributor.email }} · {{ contributorRoleLabel(contributor.role) }}</span>
-                <small>{{ contributor.canEdit ? 'Có quyền chỉnh sửa' : 'Chỉ ghi công' }}</small>
-              </div>
-              <button
-                type="button"
-                class="text-danger"
-                [disabled]="store.contributorBusy()"
-                (click)="removeContributor(contributor)"
-              >
-                Gỡ
-              </button>
-            </article>
-          } @empty {
-            <p class="empty-state">Truyện chưa có cộng tác viên.</p>
+            </label>
+            @if (displayedCoverUrl()) {
+              <button type="button" class="text-danger" (click)="removeCover()">Gỡ ảnh bìa</button>
+            }
           }
-        </div>
-      </section>
+
+          <app-button
+            variant="primary"
+            type="submit"
+            [disabled]="!isEditable()"
+            [loading]="store.saving()"
+          >
+            <app-icon icon name="save" [size]="16" />
+            {{ store.saving() ? 'Đang lưu...' : 'Lưu bản nháp' }}
+          </app-button>
+
+          @if (canSubmit()) {
+            <hr />
+            <label class="field">
+              <span>Ghi chú cho người duyệt</span>
+              <div class="textarea-wrapper">
+                <textarea
+                  rows="3"
+                  maxlength="2000"
+                  [value]="authorNote()"
+                  (input)="updateAuthorNote($event)"
+                ></textarea>
+              </div>
+            </label>
+            @if (hasUnsavedChanges()) {
+              <small>Hãy lưu các thay đổi trước khi gửi duyệt.</small>
+            }
+            <app-button
+              variant="secondary"
+              [disabled]="hasUnsavedChanges()"
+              [loading]="store.workflowBusy()"
+              (click)="submitForReview()"
+            >
+              {{ store.workflowBusy() ? 'Đang gửi...' : 'Gửi duyệt' }}
+            </app-button>
+          }
+
+          @if (canCancel()) {
+            <app-button
+              variant="secondary"
+              [loading]="store.workflowBusy()"
+              (click)="cancelReview()"
+            >
+              Hủy yêu cầu duyệt
+            </app-button>
+          }
+        </aside>
+      </form>
+
+      @if (store.story(); as story) {
+        <section class="panel contributors-panel">
+          <div class="section-heading">
+            <div>
+              <h2>Cộng tác viên</h2>
+              <p>Thêm người đã có tài khoản bằng email và phân vai cho truyện.</p>
+            </div>
+          </div>
+
+          <form
+            class="contributor-form"
+            [formGroup]="contributorForm"
+            (ngSubmit)="saveContributor()"
+          >
+            <label class="field">
+              <span>Email tài khoản</span>
+              <div class="input-wrapper">
+                <app-icon name="mail" [size]="16" />
+                <input type="email" formControlName="email" placeholder="contributor@example.com" />
+              </div>
+            </label>
+            <label class="field">
+              <span>Vai trò</span>
+              <div class="input-wrapper">
+                <app-icon name="users" [size]="16" />
+                <select formControlName="role">
+                  @for (role of contributorRoles; track role) {
+                    <option [value]="role">{{ contributorRoleLabel(role) }}</option>
+                  }
+                </select>
+              </div>
+            </label>
+            <label class="field">
+              <span>Tên ghi công</span>
+              <div class="input-wrapper">
+                <app-icon name="user" [size]="16" />
+                <input
+                  type="text"
+                  formControlName="creditName"
+                  placeholder="Để trống để dùng tên hồ sơ"
+                />
+              </div>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="canEdit" />
+              <span>Cho phép chỉnh sửa nội dung</span>
+            </label>
+            <app-button variant="primary" type="submit" [loading]="store.contributorBusy()">
+              {{ store.contributorBusy() ? 'Đang lưu...' : 'Thêm / cập nhật' }}
+            </app-button>
+          </form>
+
+          <div class="contributor-list">
+            @for (
+              contributor of store.contributors();
+              track contributor.userId + contributor.role
+            ) {
+              <article class="contributor-item">
+                <div>
+                  <strong>{{ contributor.creditName || contributor.displayName }}</strong>
+                  <span
+                    >{{ contributor.email }} · {{ contributorRoleLabel(contributor.role) }}</span
+                  >
+                  <small>{{ contributor.canEdit ? 'Có quyền chỉnh sửa' : 'Chỉ ghi công' }}</small>
+                </div>
+                <button
+                  type="button"
+                  class="text-danger"
+                  [disabled]="store.contributorBusy()"
+                  (click)="removeContributor(contributor)"
+                >
+                  Gỡ
+                </button>
+              </article>
+            } @empty {
+              <p class="empty-state">Truyện chưa có cộng tác viên.</p>
+            }
+          </div>
+        </section>
+      }
     }
-  }
+  </div>
 </main>

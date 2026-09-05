@@ -1,86 +1,116 @@
-<main class="studio-page">
-  @if (store.story(); as story) {
-    <header class="page-header">
-      <div>
-        <a [routerLink]="['/author-studio/truyen', story.id]">← {{ story.title }}</a>
-        <h1>Quản lý chương</h1>
-        <p>{{ store.chapters().length }} chương · trạng thái truyện {{ story.status }}</p>
-      </div>
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs()" />
+    @if (store.story(); as story) {
+      <app-page-heading
+        title="Quản lý chương"
+        [description]="store.chapters().length + ' chương · trạng thái truyện ' + story.status"
+        icon="chapter"
+      >
+        <a [routerLink]="['/author-studio/truyen', story.id]" class="back">← {{ story.title }}</a>
 
-      @if (canCreate(story)) {
-        <app-link-button
-          variant="primary"
-          [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
-        >
-          + Viết chương mới
-        </app-link-button>
+        @if (canCreate(story)) {
+          <app-link-button
+            variant="primary"
+            [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
+          >
+            + Viết chương mới
+          </app-link-button>
+        }
+      </app-page-heading>
+
+      @if (story.status === 'PENDING_REVIEW') {
+        <app-notice
+          kind="info"
+          message="Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương."
+        />
       }
-    </header>
 
-    @if (story.status === 'PENDING_REVIEW') {
-      <app-notice
-        kind="info"
-        message="Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương."
-      />
-    }
+      @if (store.error()) {
+        <app-notice kind="error" [message]="store.error()" />
+      }
 
-    @if (store.error()) {
-      <app-notice kind="error" [message]="store.error()" />
-    }
-
-    @if (store.chapters().length === 0) {
-      <app-empty-state
-        icon="book-open"
-        title="Chưa có chương"
-        description="Tạo chương đầu tiên cho truyện này."
-      />
-    } @else {
-      <section class="chapter-list">
-        @for (chapter of store.chapters(); track chapter.id) {
-          <article>
-            <div class="chapter-number">{{ chapter.number }}</div>
-            <div class="chapter-copy">
-              <div>
-                <h2>{{ chapter.title }}</h2>
-                <span class="status" [attr.data-status]="chapter.status">{{ chapter.status }}</span>
-              </div>
-              <p>
-                {{ chapter.wordCount }} từ · v{{ chapter.version }} · cập nhật
-                {{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}
-              </p>
-            </div>
-            <div class="actions">
-              @if (canEdit(story, chapter)) {
-                <app-link-button
-                  variant="secondary"
-                  [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
-                  >Sửa</app-link-button
-                >
-                <app-button
-                  variant="danger"
-                  [disabled]="store.actionChapterId() === chapter.id"
-                  (click)="deleteChapter(story, chapter)"
-                >
-                  Xóa
-                </app-button>
-              }
-              @if (canPublish(story, chapter)) {
-                <app-button
-                  variant="success"
-                  [disabled]="store.actionChapterId() === chapter.id"
-                  (click)="publishChapter(story, chapter)"
-                >
-                  Xuất bản
-                </app-button>
-              }
-            </div>
-          </article>
+      <section class="list-card">
+        @if (store.chapters().length === 0) {
+          <div class="list-card__state">
+            <app-empty-state
+              icon="book-open"
+              title="Chưa có chương"
+              description="Tạo chương đầu tiên cho truyện này."
+            />
+          </div>
+        } @else {
+          <div class="list-card__table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Tiêu đề</th>
+                  <th>Trạng thái</th>
+                  <th>Số từ</th>
+                  <th>Cập nhật</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (chapter of pagedChapters(); track chapter.id) {
+                  <tr>
+                    <td>{{ chapter.number }}</td>
+                    <td>
+                      <strong>{{ chapter.title }}</strong>
+                      <small>v{{ chapter.version }}</small>
+                    </td>
+                    <td>
+                      <span class="status" [attr.data-status]="chapter.status">{{
+                        chapter.status
+                      }}</span>
+                    </td>
+                    <td>{{ chapter.wordCount }}</td>
+                    <td>{{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="actions">
+                      @if (canEdit(story, chapter)) {
+                        <app-link-button
+                          variant="secondary"
+                          [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
+                          >Sửa</app-link-button
+                        >
+                        <app-button
+                          variant="danger"
+                          [disabled]="store.actionChapterId() === chapter.id"
+                          (click)="deleteChapter(story, chapter)"
+                        >
+                          Xóa
+                        </app-button>
+                      }
+                      @if (canPublish(story, chapter)) {
+                        <app-button
+                          variant="success"
+                          [disabled]="store.actionChapterId() === chapter.id"
+                          (click)="publishChapter(story, chapter)"
+                        >
+                          Xuất bản
+                        </app-button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <footer class="list-card__pagination">
+            <span>Trang {{ page() }} / {{ totalPages() }}</span>
+            <app-pagination
+              [page]="page()"
+              [totalPages]="totalPages()"
+              (pageChange)="goPage($event)"
+            />
+          </footer>
         }
       </section>
+    } @else if (store.loading()) {
+      <app-loading-state message="Đang tải danh sách chương..." />
+    } @else if (store.error()) {
+      <app-notice kind="error" [message]="store.error()" />
     }
-  } @else if (store.loading()) {
-    <app-loading-state message="Đang tải danh sách chương..." />
-  } @else if (store.error()) {
-    <app-notice kind="error" [message]="store.error()" />
-  }
+  </div>
 </main>

@@ -1,11 +1,6 @@
 :host {
   display: block;
 }
-.admin-page {
-  min-height: calc(100vh - 72px);
-  padding: 1.25rem 0 4rem;
-  color: var(--text-strong);
-}
 .state {
   padding: 18px 0;
 }
@@ -43,24 +38,6 @@ article {
   border: 1px solid var(--border);
   padding: 1rem;
   background: rgba(14, 21, 38, 0.88);
-}
-.message {
-  color: #86efac;
-}
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 7, 17, 0.68);
-  display: grid;
-  place-items: center;
-}
-.dialog {
-  background: #0f172a;
-  color: var(--text-strong);
-  padding: 1.2rem;
-  width: min(90vw, 500px);
-  border-radius: 0.8rem;
-  border: 1px solid var(--border);
 }
 textarea {
   width: 100%;

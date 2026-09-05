@@ -7,34 +7,13 @@
   padding: 32px clamp(18px, 4vw, 48px) 56px;
   color: var(--text-strong);
 }
-.analytics-header {
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-.analytics-header h1,
 .panel h2 {
   margin: 0;
   color: var(--text-strong);
 }
-h1 {
-  font-size: clamp(26px, 4vw, 38px);
-}
-.analytics-header p,
 .panel p {
   margin: 0.35rem 0 0;
   color: var(--text-muted);
-}
-.eyebrow {
-  margin: 0 0 6px;
-  color: var(--primary-soft);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
 }
 .summary-grid {
   display: grid;
@@ -111,8 +90,5 @@ td a {
 @media (max-width: 640px) {
   .analytics-page {
     padding: 20px 18px 40px;
-  }
-  .analytics-header {
-    align-items: stretch;
   }
 }

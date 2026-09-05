@@ -25,6 +25,7 @@ import {
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminReportsApiService } from '../../data-access/admin-reports-api.service';
 import type { AdminReportDetail, AdminReportReason } from '../../domain/admin-report.models';
@@ -53,6 +54,7 @@ const REPORT_REASON_LABELS: Record<AdminReportReason, string> = {
     AdminReportStatusBadgeComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    NoticeComponent,
     ButtonComponent,
   ],
   templateUrl: './admin-report-detail-page.component.html',

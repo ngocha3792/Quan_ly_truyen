@@ -13,10 +13,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
 
 @Component({
@@ -25,6 +27,8 @@ import { AuthorChapterEditorStore } from '../../data-access/author-chapter-edito
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
     IconComponent,
     ButtonComponent,
     LoadingStateComponent,
@@ -50,6 +54,15 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     title: ['', [Validators.required, Validators.maxLength(255)]],
     content: [''],
   });
+  protected readonly breadcrumbs = computed(() => [
+    { label: 'Author Studio', route: '/author-studio/tong-quan' },
+    { label: 'Truyện của tôi', route: '/author-studio/truyen' },
+    {
+      label: this.store.story()?.title ?? 'Quản lý chương',
+      route: `/author-studio/truyen/${this.storyId}/chuong`,
+    },
+    { label: this.isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' },
+  ]);
   protected readonly isEditable = computed(() => {
     const story = this.store.story();
     const chapter = this.store.chapter();

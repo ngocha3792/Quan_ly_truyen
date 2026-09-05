@@ -6,16 +6,17 @@ import {
   inject,
   Output,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { AUTH_PERMISSIONS, AuthPermission } from '../../../../../core/auth/authorization.models';
-import { APP_NAME } from '../../../../../core/config/app-identity.constants';
 import { IconComponent, IconName } from '../../../../../shared/components/icon/icon.component';
+import {
+  ShellNavigationItem,
+  ShellSidebarComponent,
+} from '../../../../../shared/components/shell-sidebar/shell-sidebar.component';
 
-interface AdminNavigationItem {
-  readonly label: string;
-  readonly route: string;
+interface AdminNavigationItem extends ShellNavigationItem {
   readonly icon: IconName;
   readonly permission: AuthPermission;
 }
@@ -70,7 +71,7 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
   selector: 'app-admin-sidebar',
   standalone: true,
 
-  imports: [RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterLink, IconComponent, ShellSidebarComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -81,7 +82,6 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
 export class AdminSidebarComponent {
   private readonly authStore = inject(AuthStore);
 
-  protected readonly appName = APP_NAME;
   protected readonly user = this.authStore.user;
 
   @Output()

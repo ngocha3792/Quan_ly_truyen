@@ -17,8 +17,10 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminStoriesApiService } from '../../data-access/admin-stories-api.service';
 import type { AdminStorySubmissionDetail } from '../../domain/admin-story.models';
@@ -34,8 +36,10 @@ import { AdminStoryStatusBadgeComponent } from '../../ui/admin-story-status-badg
     AdminStoryStatusBadgeComponent,
     BreadcrumbComponent,
     ButtonComponent,
+    DialogShellComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    NoticeComponent,
     PageHeadingComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

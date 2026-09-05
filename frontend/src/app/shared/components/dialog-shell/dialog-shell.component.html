@@ -1,0 +1,37 @@
+@if (open()) {
+  <div class="dialog-backdrop" role="presentation" (click)="requestClose()">
+    <section
+      class="dialog-card"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="showHeader() ? dialogTitleId() : null"
+      [attr.aria-label]="showHeader() ? null : ariaLabel()"
+      [style.--dialog-width]="maxWidth()"
+      (click)="$event.stopPropagation()"
+    >
+      @if (showHeader()) {
+        <header class="dialog-header">
+          <div>
+            @if (eyebrow()) {
+              <p>
+                {{ eyebrow() }}
+              </p>
+            }
+
+            <h2 [id]="dialogTitleId()">
+              {{ title() }}
+            </h2>
+          </div>
+
+          <button type="button" aria-label="Đóng" [disabled]="busy()" (click)="requestClose()">
+            <app-icon name="close" [size]="19" />
+          </button>
+        </header>
+      }
+
+      <div class="dialog-content" [class.dialog-content--headerless]="!showHeader()">
+        <ng-content />
+      </div>
+    </section>
+  </div>
+}

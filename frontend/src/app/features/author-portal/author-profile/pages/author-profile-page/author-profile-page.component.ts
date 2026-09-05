@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { provideAuthorProfile } from '../../data-access/author-profile.providers';
 import { AuthorProfileStore } from '../../data-access/author-profile.store';
 
@@ -15,6 +17,8 @@ import { AuthorProfileStore } from '../../data-access/author-profile.store';
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
     IconComponent,
     ButtonComponent,
     LoadingStateComponent,
@@ -27,6 +31,10 @@ import { AuthorProfileStore } from '../../data-access/author-profile.store';
 })
 export class AuthorProfilePageComponent {
   protected readonly store = inject(AuthorProfileStore);
+  protected readonly breadcrumbs = [
+    { label: 'Author Studio', route: '/author-studio/tong-quan' },
+    { label: 'Hồ sơ tác giả' },
+  ];
   protected readonly form = new FormGroup({
     displayName: new FormControl('', {
       nonNullable: true,

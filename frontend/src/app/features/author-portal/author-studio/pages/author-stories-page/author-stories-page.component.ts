@@ -9,15 +9,20 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import { AuthorStoriesStore } from '../../data-access/author-stories.store';
 import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story-management.models';
+
+const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-author-stories-page',
@@ -26,9 +31,12 @@ import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story
     DatePipe,
     RouterLink,
     IconComponent,
+    BreadcrumbComponent,
+    PageHeadingComponent,
     ButtonComponent,
     LinkButtonComponent,
     SearchFieldComponent,
+    PaginationComponent,
     LoadingStateComponent,
     NoticeComponent,
     EmptyStateComponent,
@@ -41,6 +49,13 @@ import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story
 export class AuthorStoriesPageComponent implements OnInit {
   protected readonly store = inject(AuthorStoriesStore);
   protected readonly query = signal('');
+  protected readonly page = signal(1);
+
+  protected readonly breadcrumbs = [
+    { label: 'Author Studio', route: '/author-studio/tong-quan' },
+    { label: 'Truyện của tôi' },
+  ];
+
   protected readonly filteredStories = computed(() => {
     const keyword = this.query().trim().toLocaleLowerCase('vi');
     if (!keyword) return this.store.stories();
@@ -50,12 +65,26 @@ export class AuthorStoriesPageComponent implements OnInit {
       .filter((story: AuthorManagedStory) => story.title.toLocaleLowerCase('vi').includes(keyword));
   });
 
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredStories().length / PAGE_SIZE)),
+  );
+
+  protected readonly pagedStories = computed(() => {
+    const start = (this.page() - 1) * PAGE_SIZE;
+    return this.filteredStories().slice(start, start + PAGE_SIZE);
+  });
+
   ngOnInit(): void {
     this.store.load();
   }
 
   protected keywordChanged(value: string): void {
     this.query.set(value);
+    this.page.set(1);
+  }
+
+  protected goPage(page: number): void {
+    this.page.set(page);
   }
 
   protected canDelete(story: AuthorManagedStory): boolean {

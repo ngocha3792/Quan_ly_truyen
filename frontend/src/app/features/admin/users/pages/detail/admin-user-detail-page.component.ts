@@ -20,8 +20,10 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminUserActionsStore } from '../../data-access/admin-user-actions.store';
 import { AdminUserDetailStore } from '../../data-access/admin-user-detail.store';
@@ -44,8 +46,10 @@ import { AdminUserSummaryComponent } from '../../ui/admin-user-summary.component
     RouterLink,
     BreadcrumbComponent,
     ButtonComponent,
+    DialogShellComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    NoticeComponent,
     PageHeadingComponent,
     AdminUserHeaderComponent,
     AdminUserSummaryComponent,

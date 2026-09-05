@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
@@ -6,7 +6,7 @@
       description="Quản lý capability tác giả độc lập với role."
       icon="user"
     />
-    <section class="card">
+    <section class="list-card">
       <app-tab-filter
         class="status-tabs"
         ariaLabel="Trạng thái tác giả"
@@ -14,7 +14,7 @@
         [selected]="status"
         (selectedChange)="statusChanged($event)"
       />
-      <div class="filters">
+      <div class="list-card__filters">
         <app-search-field
           [value]="search"
           placeholder="Tên, slug, email"
@@ -25,7 +25,7 @@
         <input type="date" [(ngModel)]="createdTo" (change)="apply()" />
       </div>
       @if (error()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-error-alert
             title="Không thể tải danh sách tác giả"
             [message]="error()"
@@ -34,12 +34,12 @@
         </div>
       }
       @if (loading() && !result()) {
-        <div class="state">
+        <div class="list-card__state">
           <app-loading-state message="Đang tải danh sách tác giả..." />
         </div>
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="state">
+          <div class="list-card__state">
             <app-empty-state
               icon="user"
               title="Không có tác giả phù hợp"
@@ -47,7 +47,7 @@
             />
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="list-card__table-scroll">
             <table>
               <thead>
                 <tr>
@@ -82,7 +82,7 @@
               </tbody>
             </table>
           </div>
-          <footer class="pagination">
+          <footer class="list-card__pagination">
             <span>Trang {{ data.pagination.page }} / {{ data.pagination.totalPages || 1 }}</span>
             <app-pagination
               [page]="page"

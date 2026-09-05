@@ -1,0 +1,36 @@
+<aside class="shell-sidebar">
+  <div class="shell-brand">
+    <span class="brand-symbol">
+      <span></span>
+      <span></span>
+    </span>
+
+    <div>
+      <strong>{{ appName }}</strong>
+      <small>{{ brandSubtitle() }}</small>
+    </div>
+  </div>
+
+  <nav [attr.aria-label]="navAriaLabel()">
+    @for (item of navigationItems(); track item.label) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+        (click)="navigated.emit()"
+      >
+        <app-icon [name]="item.icon" [size]="18"></app-icon>
+
+        <span>{{ item.label }}</span>
+
+        @if (item.badge) {
+          <small class="nav-badge">
+            {{ item.badge }}
+          </small>
+        }
+      </a>
+    }
+  </nav>
+
+  <ng-content select="[profile-card]" />
+</aside>

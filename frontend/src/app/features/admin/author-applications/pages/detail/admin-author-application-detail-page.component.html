@@ -1,4 +1,4 @@
-<main class="admin-page">
+<main class="workspace-page">
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" /><app-page-heading
       title="Chi tiết hồ sơ tác giả"
@@ -18,10 +18,10 @@
       />
     } @else if (detailStore.detail(); as application) {
       @if (actionsStore.message()) {
-        <div class="message success">{{ actionsStore.message() }}</div>
+        <app-notice kind="success" [message]="actionsStore.message()" />
       }
       @if (actionsStore.error()) {
-        <div class="message error">{{ actionsStore.error() }}</div>
+        <app-notice kind="error" [message]="actionsStore.error()" />
       }
       <app-admin-author-application-review-header
         [application]="application"

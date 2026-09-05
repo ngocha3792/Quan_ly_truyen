@@ -15,15 +15,6 @@
 .back:hover {
   color: var(--text-strong);
 }
-.story-analytics header h1 {
-  margin: 0.2rem 0;
-  color: var(--text-strong);
-  font-size: clamp(24px, 3.5vw, 32px);
-}
-.story-analytics header p,
-.story-analytics header span {
-  color: var(--text-muted);
-}
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

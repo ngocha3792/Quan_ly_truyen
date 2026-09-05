@@ -14,6 +14,7 @@ import {
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAuthorApplicationActionsStore } from '../../data-access/admin-author-application-actions.store';
 import { AdminAuthorApplicationDetailStore } from '../../data-access/admin-author-application-detail.store';
@@ -31,6 +32,7 @@ import { AdminAuthorApplicationSummaryComponent } from '../../ui/admin-author-ap
     PageHeadingComponent,
     LoadingStateComponent,
     ErrorAlertComponent,
+    NoticeComponent,
     AdminAuthorApplicationReviewHeaderComponent,
     AdminAuthorApplicationSummaryComponent,
     AdminAuthorApplicationApproveDialogComponent,

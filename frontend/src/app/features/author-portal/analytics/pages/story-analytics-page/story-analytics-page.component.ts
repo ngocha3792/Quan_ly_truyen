@@ -1,11 +1,20 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { combineLatest } from 'rxjs';
 
+import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { StatCardComponent } from '../../../../../shared/components/stat-card/stat-card.component';
 import { AuthorAnalyticsHttpService } from '../../data-access/author-analytics-http.service';
 import { StoryAnalyticsDetail } from '../../domain/author-analytics.models';
@@ -15,6 +24,8 @@ import { StoryAnalyticsDetail } from '../../domain/author-analytics.models';
   standalone: true,
   imports: [
     RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
     StatCardComponent,
     LoadingStateComponent,
     ErrorAlertComponent,
@@ -30,6 +41,11 @@ export class StoryAnalyticsPageComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly data = signal<StoryAnalyticsDetail | null>(null);
+  protected readonly breadcrumbs = computed(() => [
+    { label: 'Author Studio', route: '/author-studio/tong-quan' },
+    { label: 'Thống kê', route: '/author-studio/thong-ke' },
+    { label: this.data()?.story.title ?? 'Thống kê truyện' },
+  ]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   private lastStoryId = '';
