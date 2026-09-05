@@ -1,8 +1,13 @@
 <button
   [type]="type()"
-  [disabled]="disabled()"
+  [disabled]="disabled() || loading()"
   [class]="'btn btn-' + variant()"
   [attr.title]="title() || null"
 >
+  @if (loading()) {
+    <span class="btn-spinner" aria-hidden="true"></span>
+  } @else {
+    <ng-content select="[icon]" />
+  }
   <ng-content />
 </button>

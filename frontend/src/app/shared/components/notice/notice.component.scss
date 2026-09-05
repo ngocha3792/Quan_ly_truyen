@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: rgba(4, 8, 19, 0.65);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.notice[data-kind='error'] {
+  color: #ffb1be;
+  border-color: rgba(231, 62, 91, 0.2);
+  background: rgba(231, 62, 91, 0.1);
+}
+
+.notice[data-kind='success'] {
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.08);
+}

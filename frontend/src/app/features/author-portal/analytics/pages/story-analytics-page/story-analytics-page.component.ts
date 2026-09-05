@@ -3,13 +3,23 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { combineLatest } from 'rxjs';
 
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { StatCardComponent } from '../../../../../shared/components/stat-card/stat-card.component';
 import { AuthorAnalyticsHttpService } from '../../data-access/author-analytics-http.service';
 import { StoryAnalyticsDetail } from '../../domain/author-analytics.models';
 
 @Component({
   selector: 'app-story-analytics-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [
+    RouterLink,
+    StatCardComponent,
+    LoadingStateComponent,
+    ErrorAlertComponent,
+    EmptyStateComponent,
+  ],
   templateUrl: './story-analytics-page.component.html',
   styleUrl: './story-analytics-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,6 +32,9 @@ export class StoryAnalyticsPageComponent {
   readonly data = signal<StoryAnalyticsDetail | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  private lastStoryId = '';
+  private lastFrom = '';
+  private lastTo = '';
 
   constructor() {
     combineLatest([this.route.paramMap, this.route.queryParamMap])
@@ -53,7 +66,14 @@ export class StoryAnalyticsPageComponent {
     return Math.max(4, Math.round((views / max) * 100));
   }
 
+  protected retry(): void {
+    if (this.lastStoryId) this.load(this.lastStoryId, this.lastFrom, this.lastTo);
+  }
+
   private load(storyId: string, from: string, to: string): void {
+    this.lastStoryId = storyId;
+    this.lastFrom = from;
+    this.lastTo = to;
     this.loading.set(true);
     this.error.set(null);
     this.api

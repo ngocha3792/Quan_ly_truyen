@@ -22,12 +22,13 @@
 
 .btn-primary {
   border: 0;
-  background: #7c3aed;
+  background: var(--primary-gradient, #7c3aed);
+  box-shadow: 0 10px 26px rgba(115, 80, 255, 0.28);
   color: #fff;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .btn-secondary {
@@ -48,4 +49,14 @@
 
 .btn-danger:hover {
   filter: brightness(1.1);
+}
+
+.btn-success {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.12);
+  color: #62da86;
+}
+
+.btn-success:hover {
+  background: rgba(34, 197, 94, 0.2);
 }

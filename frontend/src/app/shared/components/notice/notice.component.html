@@ -1,0 +1,5 @@
+@if (message()) {
+  <p class="notice" [attr.data-kind]="kind()" role="status">
+    {{ message() }}
+  </p>
+}

@@ -26,12 +26,13 @@
 
 .btn-primary {
   border: 0;
-  background: #7c3aed;
+  background: var(--primary-gradient, #7c3aed);
+  box-shadow: 0 10px 26px rgba(115, 80, 255, 0.28);
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .btn-secondary {
@@ -52,4 +53,29 @@
 
 .btn-danger:hover:not(:disabled) {
   filter: brightness(1.1);
+}
+
+.btn-success {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.12);
+  color: #62da86;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin 700ms linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

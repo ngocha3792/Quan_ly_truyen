@@ -25,15 +25,6 @@ h1 {
   margin: 7px 0 0;
   color: var(--text-muted);
 }
-.primary-action {
-  padding: 11px 16px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #a150f2, #6a43df);
-  box-shadow: 0 12px 30px rgba(111, 64, 224, 0.27);
-  color: #fff !important;
-  font-weight: 700;
-  white-space: nowrap;
-}
 .chapter-list {
   display: grid;
   gap: 10px;
@@ -46,7 +37,7 @@ h1 {
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(6, 11, 22, 0.55);
+  background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
 }
 .chapter-number {
   display: grid;
@@ -91,47 +82,6 @@ h2 {
   flex-wrap: wrap;
   gap: 7px;
   justify-content: flex-end;
-}
-.actions a,
-.actions button {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--text-secondary);
-  cursor: pointer;
-  line-height: 32px;
-  text-decoration: none;
-}
-.actions .danger {
-  color: #ff8585;
-}
-.actions .publish {
-  border-color: rgba(34, 197, 94, 0.25);
-  color: #62da86;
-}
-.actions button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.notice,
-.empty-state {
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: rgba(4, 8, 19, 0.65);
-  color: var(--text-secondary);
-}
-.notice--error {
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ff9494;
-}
-.empty-state h2 {
-  margin-bottom: 6px;
-}
-.empty-state p {
-  margin: 0;
 }
 @media (max-width: 760px) {
   .page-header {

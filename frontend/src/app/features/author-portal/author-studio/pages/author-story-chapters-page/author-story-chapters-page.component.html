@@ -8,30 +8,32 @@
       </div>
 
       @if (canCreate(story)) {
-        <a
-          class="primary-action"
+        <app-link-button
+          variant="primary"
           [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
         >
           + Viết chương mới
-        </a>
+        </app-link-button>
       }
     </header>
 
     @if (story.status === 'PENDING_REVIEW') {
-      <p class="notice">
-        Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương.
-      </p>
+      <app-notice
+        kind="info"
+        message="Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương."
+      />
     }
 
     @if (store.error()) {
-      <p class="notice notice--error">{{ store.error() }}</p>
+      <app-notice kind="error" [message]="store.error()" />
     }
 
     @if (store.chapters().length === 0) {
-      <section class="empty-state">
-        <h2>Chưa có chương</h2>
-        <p>Tạo chương đầu tiên cho truyện này.</p>
-      </section>
+      <app-empty-state
+        icon="book-open"
+        title="Chưa có chương"
+        description="Tạo chương đầu tiên cho truyện này."
+      />
     } @else {
       <section class="chapter-list">
         @for (chapter of store.chapters(); track chapter.id) {
@@ -49,25 +51,27 @@
             </div>
             <div class="actions">
               @if (canEdit(story, chapter)) {
-                <a [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]">Sửa</a>
-                <button
-                  type="button"
-                  class="danger"
+                <app-link-button
+                  variant="secondary"
+                  [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
+                  >Sửa</app-link-button
+                >
+                <app-button
+                  variant="danger"
                   [disabled]="store.actionChapterId() === chapter.id"
                   (click)="deleteChapter(story, chapter)"
                 >
                   Xóa
-                </button>
+                </app-button>
               }
               @if (canPublish(story, chapter)) {
-                <button
-                  type="button"
-                  class="publish"
+                <app-button
+                  variant="success"
                   [disabled]="store.actionChapterId() === chapter.id"
                   (click)="publishChapter(story, chapter)"
                 >
                   Xuất bản
-                </button>
+                </app-button>
               }
             </div>
           </article>
@@ -75,8 +79,8 @@
       </section>
     }
   } @else if (store.loading()) {
-    <p class="notice">Đang tải danh sách chương...</p>
+    <app-loading-state message="Đang tải danh sách chương..." />
   } @else if (store.error()) {
-    <p class="notice notice--error">{{ store.error() }}</p>
+    <app-notice kind="error" [message]="store.error()" />
   }
 </main>

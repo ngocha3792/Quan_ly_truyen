@@ -1,9 +1,9 @@
 <section class="story-analytics">
   <a routerLink="/author-studio/thong-ke" class="back">← Quay lại thống kê</a>
   @if (error()) {
-    <p class="state error">{{ error() }}</p>
+    <app-error-alert title="Không thể tải thống kê" [message]="error()" (retry)="retry()" />
   } @else if (loading() && !data()) {
-    <p class="state">Đang tải…</p>
+    <app-loading-state message="Đang tải thống kê..." />
   } @else if (data(); as analytics) {
     <header>
       <p>Thống kê truyện</p>
@@ -14,25 +14,37 @@
       >
     </header>
     <div class="summary-grid">
-      <article>
-        <span>Views</span><strong>{{ formatNumber(analytics.totals.views) }}</strong>
-      </article>
-      <article>
-        <span>Readers</span><strong>{{ formatNumber(analytics.totals.uniqueReaders) }}</strong>
-      </article>
-      <article>
-        <span>Starts</span><strong>{{ formatNumber(analytics.totals.readingStarts) }}</strong>
-      </article>
-      <article>
-        <span>Completed</span><strong>{{ formatNumber(analytics.totals.completions) }}</strong>
-      </article>
-      <article>
-        <span>Completion</span><strong>{{ formatRate(analytics.totals.completionRate) }}</strong>
-      </article>
-      <article>
-        <span>Reading time</span
-        ><strong>{{ formatDuration(analytics.totals.readingSeconds) }}</strong>
-      </article>
+      <app-stat-card label="Lượt xem" [value]="formatNumber(analytics.totals.views)" icon="eye" />
+      <app-stat-card
+        label="Độc giả"
+        [value]="formatNumber(analytics.totals.uniqueReaders)"
+        icon="users"
+        tone="blue"
+      />
+      <app-stat-card
+        label="Bắt đầu đọc"
+        [value]="formatNumber(analytics.totals.readingStarts)"
+        icon="play"
+        tone="indigo"
+      />
+      <app-stat-card
+        label="Hoàn thành"
+        [value]="formatNumber(analytics.totals.completions)"
+        icon="check"
+        tone="green"
+      />
+      <app-stat-card
+        label="Tỷ lệ hoàn thành"
+        [value]="formatRate(analytics.totals.completionRate)"
+        icon="trophy"
+        tone="orange"
+      />
+      <app-stat-card
+        label="Thời gian đọc"
+        [value]="formatDuration(analytics.totals.readingSeconds)"
+        icon="clock"
+        tone="pink"
+      />
     </div>
     <article class="panel">
       <h2>Xu hướng</h2>
@@ -48,18 +60,22 @@
     <article class="panel">
       <h2>Theo chương</h2>
       @if (analytics.chapters.length === 0) {
-        <p class="state">Chưa có chương.</p>
+        <app-empty-state
+          icon="book-open"
+          title="Chưa có chương"
+          description="Truyện này chưa có chương nào được xuất bản."
+        />
       } @else {
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
                 <th>Chương</th>
-                <th>Views</th>
-                <th>Readers</th>
-                <th>Starts</th>
-                <th>Completed</th>
-                <th>Completion</th>
+                <th>Lượt xem</th>
+                <th>Độc giả</th>
+                <th>Bắt đầu đọc</th>
+                <th>Hoàn thành</th>
+                <th>Tỷ lệ hoàn thành</th>
               </tr>
             </thead>
             <tbody>

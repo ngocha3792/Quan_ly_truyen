@@ -2,6 +2,11 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
+import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { AuthorChaptersStore } from '../../data-access/author-chapters.store';
 import {
   AuthorManagedChapterSummary,
@@ -11,7 +16,15 @@ import {
 @Component({
   selector: 'app-author-story-chapters-page',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [
+    DatePipe,
+    RouterLink,
+    ButtonComponent,
+    LinkButtonComponent,
+    LoadingStateComponent,
+    NoticeComponent,
+    EmptyStateComponent,
+  ],
   providers: [AuthorChaptersStore],
   templateUrl: './author-story-chapters-page.component.html',
   styleUrl: './author-story-chapters-page.component.scss',
