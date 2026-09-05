@@ -211,10 +211,10 @@ function Invoke-ObservabilityCompose {
 Write-Host '[1/8] Validating Docker Compose configuration...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose config --quiet
+Invoke-DockerCompose -Arguments @('config', '--quiet')
 
 if (-not $SkipObservability) {
-  Invoke-ObservabilityCompose config --quiet
+  Invoke-ObservabilityCompose -Arguments @('config', '--quiet')
 }
 
 if ($UseLocalBuild) {
@@ -256,7 +256,7 @@ else {
 Write-Host '[3/8] Starting PostgreSQL and Redis...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose up -d --wait postgres redis
+Invoke-DockerCompose -Arguments @('up', '-d', '--wait', 'postgres', 'redis')
 
 Write-Host '[4/8] Applying database migrations...' `
   -ForegroundColor Cyan
@@ -289,19 +289,21 @@ Write-Host `
   '[7/8] Starting API, worker, recovery metrics and frontend (HTTPS edge is a host-level Nginx reverse proxy, not managed by this script)...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose up `
-  -d `
-  --wait `
-  api `
-  worker `
-  recovery-metrics `
-  frontend
+Invoke-DockerCompose -Arguments @(
+  'up',
+  '-d',
+  '--wait',
+  'api',
+  'worker',
+  'recovery-metrics',
+  'frontend'
+)
 
 if (-not $SkipObservability) {
   Write-Host '[7b/8] Starting observability stack...' `
     -ForegroundColor Cyan
 
-  Invoke-ObservabilityCompose up -d
+  Invoke-ObservabilityCompose -Arguments @('up', '-d')
 }
 
 if (-not $SkipPostdeployGate) {
