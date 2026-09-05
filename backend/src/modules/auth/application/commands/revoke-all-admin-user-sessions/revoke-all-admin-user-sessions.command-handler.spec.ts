@@ -55,7 +55,9 @@ describe('RevokeAllAdminUserSessionsCommandHandler', () => {
     persistence.userExists.mockResolvedValue(false);
 
     await expect(
-      handler.execute(new RevokeAllAdminUserSessionsCommand(actorUserId, userId)),
+      handler.execute(
+        new RevokeAllAdminUserSessionsCommand(actorUserId, userId),
+      ),
     ).rejects.toBeInstanceOf(ResourceNotFoundException);
 
     expect(persistence.revokeAllSessions).not.toHaveBeenCalled();
