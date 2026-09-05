@@ -10,14 +10,23 @@ import {
 
 import { DecimalPipe } from '@angular/common';
 
+import {
+  TabFilterComponent,
+  TabFilterOption,
+} from '../../../../../shared/components/tab-filter/tab-filter.component';
 import { AuthorStudioPeriod, ReadershipChartPoint } from '../../domain/author-studio.models';
-import { StudioIconComponent } from '../studio-icon/studio-icon.component';
+
+const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
+  { value: '7d', label: '7 ngày qua' },
+  { value: '30d', label: '30 ngày qua' },
+  { value: '90d', label: '90 ngày qua' },
+];
 
 @Component({
   selector: 'app-readership-chart',
   standalone: true,
 
-  imports: [DecimalPipe, StudioIconComponent],
+  imports: [DecimalPipe, TabFilterComponent],
 
   changeDetection: ChangeDetectionStrategy.OnPush,
 
@@ -37,17 +46,11 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
           </p>
         </div>
 
-        <label>
-          <select [value]="period" (change)="handlePeriodChange($event)">
-            <option value="7d">7 ngày qua</option>
-
-            <option value="30d">30 ngày qua</option>
-
-            <option value="90d">90 ngày qua</option>
-          </select>
-
-          <app-studio-icon name="chevron-down" [size]="14"></app-studio-icon>
-        </label>
+        <app-tab-filter
+          [options]="periodOptions"
+          [selected]="period"
+          (selectedChange)="periodChange.emit($event)"
+        />
       </header>
 
       <div class="chart-wrap">
@@ -158,7 +161,7 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         align-items: center;
         gap: 8px;
         margin: 0;
-        color: #f7f5ff;
+        color: var(--text-strong);
         font-size: 1.1rem;
         font-weight: 700;
       }
@@ -178,41 +181,6 @@ import { StudioIconComponent } from '../studio-icon/studio-icon.component';
         margin: 5px 0 0;
         color: var(--text-secondary);
         font-size: 13px;
-      }
-
-      header label {
-        position: relative;
-        display: flex;
-        min-height: 40px;
-        align-items: center;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: rgba(7, 13, 27, 0.72);
-        color: var(--text-secondary);
-      }
-
-      header select {
-        height: 38px;
-        padding: 0 34px 0 12px;
-        border: 0;
-        outline: none;
-        appearance: none;
-        background: transparent;
-        color: var(--text-strong);
-        font: inherit;
-        font-size: 13px;
-        cursor: pointer;
-      }
-
-      header label app-studio-icon {
-        position: absolute;
-        right: 10px;
-        pointer-events: none;
-      }
-
-      header option {
-        background: #111c2f;
-        color: #ffffff;
       }
 
       .chart-wrap {
@@ -308,6 +276,8 @@ export class ReadershipChartComponent {
 
   @Output()
   readonly periodChange = new EventEmitter<AuthorStudioPeriod>();
+
+  protected readonly periodOptions = PERIOD_OPTIONS;
 
   protected readonly gridLines = [
     {
@@ -429,11 +399,5 @@ export class ReadershipChartComponent {
       default:
         return '30 ngày qua';
     }
-  }
-
-  protected handlePeriodChange(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-
-    this.periodChange.emit(select.value as AuthorStudioPeriod);
   }
 }

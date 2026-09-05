@@ -30,23 +30,6 @@ h1 {
   margin: 8px 0 0;
   color: var(--text-muted);
 }
-.primary-action,
-.empty-state a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 16px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #a150f2, #6a43df);
-  box-shadow: 0 12px 30px rgba(111, 64, 224, 0.27);
-  color: #fff;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.primary-action:hover {
-  filter: brightness(1.1);
-}
 .toolbar {
   display: flex;
   align-items: center;
@@ -54,35 +37,8 @@ h1 {
   gap: 16px;
   margin-bottom: 16px;
 }
-.toolbar .input-wrapper {
-  width: min(480px, 100%);
-  min-height: 42px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-muted);
-  background: rgba(6, 11, 22, 0.55);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-.toolbar .input-wrapper:focus-within {
-  border-color: rgba(161, 99, 245, 0.68);
-  box-shadow: 0 0 0 3px rgba(139, 76, 230, 0.1);
-}
-.toolbar .input-wrapper input {
-  width: 100%;
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  outline: 0;
-  color: var(--text-strong);
-  font: inherit;
-  font-size: 14px;
-  background: transparent;
+.toolbar app-search-field {
+  max-width: 480px;
 }
 .toolbar span,
 .meta {
@@ -163,53 +119,6 @@ h2 {
   align-items: center;
   gap: 8px;
 }
-.story-actions a,
-.story-actions button {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-decoration: none;
-  line-height: 34px;
-}
-.story-actions .danger {
-  border-color: rgba(239, 68, 68, 0.25);
-  color: #ff8585;
-}
-.story-actions button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-.notice,
-.empty-state {
-  padding: 22px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(4, 8, 19, 0.65);
-  color: var(--text-secondary);
-}
-.alert {
-  padding: 0.7rem 0.8rem;
-  border-radius: 9px;
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-.alert.error {
-  color: #ffb1be;
-  background: rgba(231, 62, 91, 0.1);
-  border: 1px solid rgba(231, 62, 91, 0.2);
-}
-.empty-state {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-}
-.empty-state p {
-  margin: 0 0 8px;
-}
 @media (max-width: 760px) {
   .page-header,
   .story-card {
@@ -222,8 +131,5 @@ h2 {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-  .toolbar .input-wrapper {
-    width: 100%;
   }
 }

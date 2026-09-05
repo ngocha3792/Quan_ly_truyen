@@ -9,14 +9,30 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
+import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
+import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
+import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import { AuthorStoriesStore } from '../../data-access/author-stories.store';
 import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story-management.models';
 
 @Component({
   selector: 'app-author-stories-page',
   standalone: true,
-  imports: [DatePipe, RouterLink, IconComponent],
+  imports: [
+    DatePipe,
+    RouterLink,
+    IconComponent,
+    ButtonComponent,
+    LinkButtonComponent,
+    SearchFieldComponent,
+    LoadingStateComponent,
+    NoticeComponent,
+    EmptyStateComponent,
+  ],
   providers: [AuthorStoriesStore],
   templateUrl: './author-stories-page.component.html',
   styleUrl: './author-stories-page.component.scss',
@@ -38,8 +54,8 @@ export class AuthorStoriesPageComponent implements OnInit {
     this.store.load();
   }
 
-  protected updateQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+  protected keywordChanged(value: string): void {
+    this.query.set(value);
   }
 
   protected canDelete(story: AuthorManagedStory): boolean {

@@ -6,37 +6,38 @@
       <p>Quản lý bản nháp, trạng thái duyệt và các chương của từng truyện.</p>
     </div>
 
-    <a class="primary-action" routerLink="/author-studio/truyen/tao-moi">
-      <app-icon name="plus" [size]="16" />
+    <app-link-button variant="primary" routerLink="/author-studio/truyen/tao-moi">
+      <app-icon icon name="plus" [size]="16" />
       Tạo truyện
-    </a>
+    </app-link-button>
   </header>
 
   <section class="toolbar" aria-label="Bộ lọc truyện">
-    <div class="input-wrapper">
-      <app-icon name="search" [size]="17" />
-      <input
-        type="search"
-        placeholder="Tìm theo tên truyện..."
-        [value]="query()"
-        (input)="updateQuery($event)"
-      />
-    </div>
+    <app-search-field
+      [value]="query()"
+      placeholder="Tìm theo tên truyện..."
+      ariaLabel="Tìm truyện"
+      (valueChange)="keywordChanged($event)"
+    />
     <span>{{ filteredStories().length }} truyện</span>
   </section>
 
   @if (store.error()) {
-    <div class="alert error">{{ store.error() }}</div>
+    <app-notice kind="error" [message]="store.error()" />
   }
 
   @if (store.loading()) {
-    <p class="notice">Đang tải danh sách truyện...</p>
+    <app-loading-state message="Đang tải danh sách truyện..." />
   } @else if (filteredStories().length === 0) {
-    <section class="empty-state">
-      <h2>Chưa có truyện phù hợp</h2>
-      <p>Tạo một bản nháp mới để bắt đầu viết.</p>
-      <a routerLink="/author-studio/truyen/tao-moi">Tạo truyện đầu tiên</a>
-    </section>
+    <app-empty-state
+      icon="book-open"
+      title="Chưa có truyện phù hợp"
+      description="Tạo một bản nháp mới để bắt đầu viết."
+    >
+      <app-link-button emptyAction variant="primary" routerLink="/author-studio/truyen/tao-moi">
+        Tạo truyện đầu tiên
+      </app-link-button>
+    </app-empty-state>
   } @else {
     <section class="story-list">
       @for (story of filteredStories(); track story.id) {
@@ -59,17 +60,23 @@
           </div>
 
           <div class="story-actions">
-            <a [routerLink]="['/author-studio/truyen', story.id]">Chi tiết</a>
-            <a [routerLink]="['/author-studio/truyen', story.id, 'chuong']">Chương</a>
+            <app-link-button variant="secondary" [routerLink]="['/author-studio/truyen', story.id]"
+              >Chi tiết</app-link-button
+            >
+            <app-link-button
+              variant="secondary"
+              [routerLink]="['/author-studio/truyen', story.id, 'chuong']"
+              >Chương</app-link-button
+            >
             @if (canDelete(story)) {
-              <button
-                type="button"
-                class="danger"
+              <app-button
+                variant="danger"
+                [loading]="store.actionStoryId() === story.id"
                 [disabled]="store.actionStoryId() === story.id"
                 (click)="deleteStory(story)"
               >
-                {{ store.actionStoryId() === story.id ? 'Đang xóa...' : 'Xóa' }}
-              </button>
+                Xóa
+              </app-button>
             }
           </div>
         </article>

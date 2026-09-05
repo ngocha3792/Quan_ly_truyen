@@ -11,7 +11,12 @@
 
     <section class="metric-grid">
       @for (metric of dashboard.metrics; track metric.id) {
-        <app-studio-stat-card [metric]="metric"></app-studio-stat-card>
+        <app-stat-card
+          [label]="metric.title"
+          [value]="metric.value"
+          [icon]="metricIcon(metric.icon)"
+          [tone]="metric.tone"
+        />
       }
     </section>
 
