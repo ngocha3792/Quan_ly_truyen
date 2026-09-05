@@ -20,6 +20,7 @@
 }
 html {
   min-height: 100%;
+  overflow-x: hidden;
   background: var(--page-bg);
   scroll-behavior: smooth;
 }
@@ -27,6 +28,7 @@ body {
   min-width: 320px;
   min-height: 100dvh;
   margin: 0;
+  overflow-x: hidden;
   color: var(--text-secondary);
   background:
     radial-gradient(circle at 45% -15%, rgba(91, 51, 163, 0.12), transparent 28rem),
