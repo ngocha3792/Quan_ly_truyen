@@ -36,6 +36,7 @@ export class MyLibraryHttpRepository implements MyLibraryRepository {
               title: story.title,
               chapter: story.currentChapter,
               progress: story.progress,
+              coverUrl: story.coverUrl,
               coverInitials: story.coverInitials,
               coverTone: story.coverTone,
             })),
@@ -68,6 +69,7 @@ function toLibraryStory(entry: LibraryEntryApiItem): LibraryStory {
     isReading: entry.status === 'READING',
     isFavorite: entry.isFavorite,
     isCompleted: entry.status === 'COMPLETED',
+    coverUrl: entry.story.coverUrl,
     coverInitials: initials(entry.story.title),
     coverTone: TONES[hash(entry.story.id) % TONES.length],
   };

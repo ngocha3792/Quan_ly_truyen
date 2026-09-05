@@ -6,9 +6,13 @@
         [attr.data-tone]="story.coverTone"
         [routerLink]="['/truyen', story.slug]"
       >
-        <span class="cover-initials">
-          {{ story.coverInitials }}
-        </span>
+        @if (story.coverUrl) {
+          <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" decoding="async" />
+        } @else {
+          <span class="cover-initials">
+            {{ story.coverInitials }}
+          </span>
+        }
 
         <span class="status-badge" [attr.data-status]="getStatusKey(story)">
           {{ getStatusLabel(story) }}

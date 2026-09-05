@@ -42,6 +42,7 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
             title: item.title,
             chapterNumber: item.chapterNumber,
             progress: item.progress,
+            coverUrl: item.coverUrl,
             coverInitials: item.coverInitials,
             coverTone: item.coverTone,
           })),
@@ -82,6 +83,7 @@ function toHistoryItem(
     progress: entry.progressPercent,
     lastReadLabel: relativeLabel(lastReadMinutes),
     lastReadMinutes,
+    coverUrl: entry.story.coverUrl,
     coverInitials: initials(entry.story.title),
     coverTone: TONES[hash(entry.story.id) % TONES.length],
   };

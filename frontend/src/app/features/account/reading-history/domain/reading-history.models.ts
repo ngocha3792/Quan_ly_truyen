@@ -22,6 +22,7 @@ export interface ReadingHistoryItem {
   readonly lastReadLabel: string;
   readonly lastReadMinutes: number;
 
+  readonly coverUrl: string | null;
   readonly coverInitials: string;
   readonly coverTone: StoryCoverTone;
 }
@@ -37,6 +38,7 @@ export interface ContinueReadingItem {
   readonly title: string;
   readonly chapterNumber: number;
   readonly progress: number;
+  readonly coverUrl: string | null;
   readonly coverInitials: string;
   readonly coverTone: StoryCoverTone;
 }

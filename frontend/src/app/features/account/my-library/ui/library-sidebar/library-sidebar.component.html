@@ -84,7 +84,11 @@
       @for (item of quickItems; track item.id) {
         <a class="quick-item" [routerLink]="['/truyen', item.slug, 'chuong', item.chapter]">
           <span class="mini-cover" [attr.data-tone]="item.coverTone">
-            {{ item.coverInitials }}
+            @if (item.coverUrl) {
+              <img [src]="item.coverUrl" [alt]="item.title" loading="lazy" decoding="async" />
+            } @else {
+              {{ item.coverInitials }}
+            }
           </span>
 
           <span class="quick-information">

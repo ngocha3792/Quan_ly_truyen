@@ -6,9 +6,13 @@
         [attr.data-tone]="item.coverTone"
         [routerLink]="['/truyen', item.storySlug]"
       >
-        <span>
-          {{ item.coverInitials }}
-        </span>
+        @if (item.coverUrl) {
+          <img [src]="item.coverUrl" [alt]="item.title" loading="lazy" decoding="async" />
+        } @else {
+          <span>
+            {{ item.coverInitials }}
+          </span>
+        }
       </a>
 
       <div class="story-information">

@@ -45,6 +45,15 @@
   isolation: isolate;
 }
 
+.story-cover img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .story-cover::before,
 .story-cover::after {
   position: absolute;

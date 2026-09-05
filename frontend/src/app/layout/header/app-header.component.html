@@ -190,61 +190,10 @@
                 }
               </a>
 
-              @if (canReviewStories()) {
-                <a routerLink="/admin/stories" (click)="closeProfile()">
+              @if (hasAdminAccess()) {
+                <a routerLink="/admin" (click)="closeProfile()">
                   <app-icon name="shield" [size]="18"></app-icon>
-                  <span>Duyệt truyện</span>
-                </a>
-              }
-
-              @if (canManageUsers()) {
-                <a routerLink="/admin/users" (click)="closeProfile()">
-                  <app-icon name="user" [size]="18"></app-icon>
-
-                  <span>Quản lý người dùng</span>
-                </a>
-              }
-
-              @if (canManageAuthors()) {
-                <a routerLink="/admin/authors" (click)="closeProfile()">
-                  <app-icon name="user" [size]="18"></app-icon>
-                  <span>Quản lý tác giả</span>
-                </a>
-              }
-
-              @if (canReviewAuthorApplications()) {
-                <a routerLink="/admin/author-applications" (click)="closeProfile()">
-                  <app-icon name="shield" [size]="18"></app-icon>
-
-                  <span> Xét duyệt tác giả </span>
-                </a>
-              }
-
-              @if (canManageCategories()) {
-                <a routerLink="/admin/categories" (click)="closeProfile()">
-                  <app-icon name="grid" [size]="18"></app-icon>
-                  <span>Quản lý thể loại</span>
-                </a>
-              }
-
-              @if (canManageTags()) {
-                <a routerLink="/admin/tags" (click)="closeProfile()">
-                  <app-icon name="bookmark" [size]="18"></app-icon>
-                  <span>Quản lý tag</span>
-                </a>
-              }
-
-              @if (canReviewReports()) {
-                <a routerLink="/admin/reports" (click)="closeProfile()">
-                  <app-icon name="shield" [size]="18"></app-icon>
-                  <span>Reports</span>
-                </a>
-              }
-
-              @if (canReadAuditLogs()) {
-                <a routerLink="/admin/audit-logs" (click)="closeProfile()">
-                  <app-icon name="shield" [size]="18"></app-icon>
-                  <span>Audit Logs</span>
+                  <span>Trang quản trị</span>
                 </a>
               }
 
@@ -289,31 +238,9 @@
       }
 
       @if (auth.isAuthenticated()) {
-        @if (canReviewStories()) {
-          <a routerLink="/admin/stories" routerLinkActive="active" (click)="closeMobileMenu()">
-            Duyệt truyện
-          </a>
-        }
-
-        @if (canManageUsers()) {
-          <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMobileMenu()">
-            Quản lý người dùng
-          </a>
-        }
-
-        @if (canManageAuthors()) {
-          <a routerLink="/admin/authors" routerLinkActive="active" (click)="closeMobileMenu()">
-            Quản lý tác giả
-          </a>
-        }
-
-        @if (canReviewAuthorApplications()) {
-          <a
-            routerLink="/admin/author-applications"
-            routerLinkActive="active"
-            (click)="closeMobileMenu()"
-          >
-            Xét duyệt tác giả
+        @if (hasAdminAccess()) {
+          <a routerLink="/admin" routerLinkActive="active" (click)="closeMobileMenu()">
+            Trang quản trị
           </a>
         }
 

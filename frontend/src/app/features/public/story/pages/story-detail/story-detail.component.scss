@@ -148,7 +148,8 @@ h1 {
   margin-top: 1.5rem;
 }
 
-.buttons button {
+.buttons button,
+.buttons .read {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -156,6 +157,7 @@ h1 {
   padding: 0 1.25rem;
   border-radius: 8px;
   color: white;
+  text-decoration: none;
   font: inherit;
   font-size: 0.875rem;
   font-weight: 700;
@@ -165,7 +167,8 @@ h1 {
     box-shadow 150ms ease;
 }
 
-.buttons button:hover {
+.buttons button:hover,
+.buttons .read:hover {
   transform: translateY(-1px);
 }
 

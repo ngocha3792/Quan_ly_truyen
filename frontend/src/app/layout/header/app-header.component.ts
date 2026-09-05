@@ -80,6 +80,18 @@ export class AppHeaderComponent {
     this.hasPermission(AUTH_PERMISSIONS.AUDIT_LOG_READ),
   );
 
+  protected readonly hasAdminAccess = computed(
+    () =>
+      this.canManageUsers() ||
+      this.canReviewStories() ||
+      this.canManageAuthors() ||
+      this.canReviewAuthorApplications() ||
+      this.canManageCategories() ||
+      this.canManageTags() ||
+      this.canReviewReports() ||
+      this.canReadAuditLogs(),
+  );
+
   protected readonly query = signal('');
 
   protected readonly searchOpen = signal(false);

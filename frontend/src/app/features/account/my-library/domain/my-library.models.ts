@@ -25,6 +25,7 @@ export interface LibraryStory {
   readonly isFavorite: boolean;
   readonly isCompleted: boolean;
 
+  readonly coverUrl: string | null;
   readonly coverInitials: string;
   readonly coverTone: LibraryCoverTone;
 }
@@ -35,6 +36,7 @@ export interface LibraryQuickItem {
   readonly title: string;
   readonly chapter: number;
   readonly progress: number;
+  readonly coverUrl: string | null;
   readonly coverInitials: string;
   readonly coverTone: LibraryCoverTone;
 }
