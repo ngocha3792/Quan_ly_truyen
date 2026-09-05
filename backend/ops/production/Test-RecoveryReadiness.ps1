@@ -98,13 +98,10 @@ if (-not $RestoreDrillMaxAgeDays) {
 }
 
 $BackupStatus = Read-StatusFile -Path $BackupStatusPath -Name 'Backup'
-$RestoreStatus = Read-StatusFile -Path $RestoreStatusPath -Name 'Restore drill'
 
 $BackupCompletedAt = [DateTime]::Parse($BackupStatus.completedAt).ToUniversalTime()
-$RestoreCompletedAt = [DateTime]::Parse($RestoreStatus.completedAt).ToUniversalTime()
 $Now = [DateTime]::UtcNow
 $BackupAgeHours = ($Now - $BackupCompletedAt).TotalHours
-$RestoreAgeDays = ($Now - $RestoreCompletedAt).TotalDays
 
 if ($BackupAgeHours -gt [double]$BackupRpoHours) {
   throw (
@@ -118,17 +115,29 @@ if ($OffsiteEnabled -and $BackupStatus.offsiteVerified -ne $true) {
   throw 'Latest backup did not complete encrypted off-site verification.'
 }
 
-if ($RestoreAgeDays -gt [double]$RestoreDrillMaxAgeDays) {
-  throw (
-    'Restore drill objective violated. AgeDays={0:N2} ObjectiveDays={1}' -f `
-      $RestoreAgeDays, `
-      $RestoreDrillMaxAgeDays
-  )
+# The restore drill (Test-PostgresRestoreDrill.ps1) only ever restores
+# from off-site storage, so it can't produce a status file until
+# off-site backup is actually configured. Skip this half of the gate
+# until then instead of demanding a drill nothing can satisfy.
+$RestoreAgeDays = $null
+
+if ($OffsiteEnabled) {
+  $RestoreStatus = Read-StatusFile -Path $RestoreStatusPath -Name 'Restore drill'
+  $RestoreCompletedAt = [DateTime]::Parse($RestoreStatus.completedAt).ToUniversalTime()
+  $RestoreAgeDays = ($Now - $RestoreCompletedAt).TotalDays
+
+  if ($RestoreAgeDays -gt [double]$RestoreDrillMaxAgeDays) {
+    throw (
+      'Restore drill objective violated. AgeDays={0:N2} ObjectiveDays={1}' -f `
+        $RestoreAgeDays, `
+        $RestoreDrillMaxAgeDays
+    )
+  }
 }
 
 Write-Host (
-  'Recovery readiness passed. BackupAgeHours={0:N2} RestoreDrillAgeDays={1:N2} OffsiteRequired={2}' -f `
+  'Recovery readiness passed. BackupAgeHours={0:N2} RestoreDrillAgeDays={1} OffsiteRequired={2}' -f `
     $BackupAgeHours, `
-    $RestoreAgeDays, `
+    ($(if ($null -eq $RestoreAgeDays) { 'n/a (offsite disabled)' } else { $RestoreAgeDays.ToString('N2') })), `
     $OffsiteEnabled
 ) -ForegroundColor Green

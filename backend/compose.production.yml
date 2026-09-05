@@ -422,7 +422,10 @@ services:
       - sh
       - -ec
       - |
-        umask 077
+        # 022 (not the tighter 077) so an unprivileged deploy
+        # user/CI pipeline can still read and relocate backups; this
+        # host only ever grants SSH access to trusted operators.
+        umask 022
 
         timestamp="$$(date -u +%Y%m%dT%H%M%SZ)"
         filename="quan_ly_truyen-$${timestamp}.dump"
