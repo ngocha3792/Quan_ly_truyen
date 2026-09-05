@@ -205,7 +205,7 @@
     },
     {
       "featureId": "author-dashboard-advanced-goals-and-trends",
-      "path": "frontend/src/app/features/author-portal/author-studio/ui/studio-stat-card/studio-stat-card.component.ts",
+      "path": "frontend/src/app/features/author-portal/author-studio",
       "forbidden": [
         "metric.trendDirection",
         "metric.trendValue",
