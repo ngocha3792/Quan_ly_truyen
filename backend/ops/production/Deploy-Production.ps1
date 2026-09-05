@@ -299,6 +299,86 @@ Invoke-DockerCompose -Arguments @(
   'frontend'
 )
 
+$FrontendStaticDirectory = Get-DotEnvValue `
+  -Path $EnvironmentFilePath `
+  -Name 'FRONTEND_STATIC_DIRECTORY'
+
+if (-not [string]::IsNullOrWhiteSpace($FrontendStaticDirectory)) {
+  # Some hosts (this one included) terminate TLS and serve
+  # content-hashed static assets (js/css) straight from disk via a
+  # host-level Nginx edge, with the frontend container only handling
+  # SSR and API proxying. Every asset filename changes hash on each
+  # frontend build, so this directory must be refreshed on every
+  # deploy or the previous build's hashed filenames start 404'ing
+  # (and, since the SSR fallback route serves index.html for any
+  # unmatched path, the browser gets HTML back for a <script
+  # type="module"> request and refuses to run it -- pages stop
+  # rendering with no visible error beyond the console).
+  Write-Host `
+    '[7c/8] Refreshing static frontend assets for the host-level edge proxy...' `
+    -ForegroundColor Cyan
+
+  $ResolvedStaticDirectory = if (
+    [IO.Path]::IsPathRooted($FrontendStaticDirectory)
+  ) {
+    $FrontendStaticDirectory
+  }
+  else {
+    Join-Path $BackendRoot $FrontendStaticDirectory
+  }
+
+  $StagingDirectory = "$ResolvedStaticDirectory.staging"
+  $PreviousDirectory = "$ResolvedStaticDirectory.previous"
+
+  if (Test-Path -LiteralPath $StagingDirectory) {
+    Remove-Item -LiteralPath $StagingDirectory -Recurse -Force
+  }
+
+  New-Item -ItemType Directory -Path $StagingDirectory -Force | Out-Null
+
+  $FrontendContainerId = (
+    & docker compose --env-file $EnvironmentFilePath `
+      -f compose.production.yml ps -q frontend
+  ).Trim()
+
+  if ([string]::IsNullOrWhiteSpace($FrontendContainerId)) {
+    throw 'Could not resolve the frontend container to extract static assets from.'
+  }
+
+  & docker cp "${FrontendContainerId}:/app/dist/frontend/browser/." $StagingDirectory
+
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to copy static frontend assets out of the frontend container.'
+  }
+
+  # `docker cp` and any transient temp directory can land with a
+  # restrictive mode; the host-level Nginx worker runs as a different
+  # user (www-data) than this deploy user, so every directory in the
+  # tree must stay traversable and every file world-readable or Nginx
+  # gets a silent permission failure indistinguishable from "missing".
+  chmod 755 $StagingDirectory
+
+  Get-ChildItem -LiteralPath $StagingDirectory -Recurse -Directory |
+    ForEach-Object { chmod 755 $_.FullName }
+
+  Get-ChildItem -LiteralPath $StagingDirectory -Recurse -File |
+    ForEach-Object { chmod 644 $_.FullName }
+
+  if (Test-Path -LiteralPath $PreviousDirectory) {
+    Remove-Item -LiteralPath $PreviousDirectory -Recurse -Force
+  }
+
+  if (Test-Path -LiteralPath $ResolvedStaticDirectory) {
+    Move-Item -LiteralPath $ResolvedStaticDirectory -Destination $PreviousDirectory
+  }
+
+  Move-Item -LiteralPath $StagingDirectory -Destination $ResolvedStaticDirectory
+
+  Write-Host (
+    "Static frontend assets refreshed at {0}." -f $ResolvedStaticDirectory
+  ) -ForegroundColor Green
+}
+
 if (-not $SkipObservability) {
   Write-Host '[7b/8] Starting observability stack...' `
     -ForegroundColor Cyan
