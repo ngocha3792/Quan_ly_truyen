@@ -14,6 +14,7 @@ import type { Response } from 'express';
 import {
   CurrentUserId,
   RequirePermissions,
+  SkipRequestTimeout,
   SkipResponseEnvelope,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
@@ -132,6 +133,7 @@ export class AiChatController {
 
   @Post(':conversationId/messages/stream')
   @SkipResponseEnvelope()
+  @SkipRequestTimeout()
   async streamMessage(
     @CurrentUserId() userId: string | undefined,
     @Param('conversationId', new ParseUUIDPipe({ version: '4' }))

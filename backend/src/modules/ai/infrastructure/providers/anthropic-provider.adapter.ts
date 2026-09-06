@@ -25,7 +25,7 @@ import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const ANTHROPIC_API_VERSION = '2023-06-01';
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 1024;
+const MAX_OUTPUT_TOKENS = 4096;
 
 interface UsagePayload {
   input_tokens?: number;

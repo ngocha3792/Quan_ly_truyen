@@ -20,7 +20,7 @@ import {
 import { applyAiCredential } from './ai-auth.util';
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 1024;
+const MAX_OUTPUT_TOKENS = 4096;
 
 function buildMessages(request: AiGenerateRequest): AiMessage[] {
   const messages: AiMessage[] = [];

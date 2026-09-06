@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { ExternalServiceException } from '@/common/exceptions';
 import { AiMessageRole } from '../../../domain/enums';
 import { AiGatewayPort, AI_GATEWAY_PORT } from '../../ports/ai-gateway.port';
 import {
@@ -50,6 +51,13 @@ export class SendAiMessageCommandHandler {
           }
         : null,
     );
+
+    if (!generateResult.content.trim()) {
+      throw new ExternalServiceException({
+        service: 'AI',
+        message: 'AI không trả về nội dung. Vui lòng thử lại.',
+      });
+    }
 
     const assistantMessage = await this.conversations.appendMessage(
       command.conversationId,

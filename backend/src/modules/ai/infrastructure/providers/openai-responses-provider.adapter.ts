@@ -28,7 +28,7 @@ import {
 } from './sse-reader.util';
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 1024;
+const MAX_OUTPUT_TOKENS = 4096;
 
 interface ResponsesUsagePayload {
   input_tokens?: number;

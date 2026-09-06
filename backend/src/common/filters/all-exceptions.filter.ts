@@ -47,6 +47,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: resolveHttpRouteTemplate(request),
     });
 
+    /*
+     * Route handlers that manage their own response (SSE streams via
+     * @Res()) may already have flushed headers before an error lands
+     * here. Writing another status/header at that point throws
+     * ERR_HTTP_HEADERS_SENT and masks the real error in the logs.
+     */
+    if ((response as { headersSent?: boolean }).headersSent) {
+      (response as { end: () => void }).end();
+      return;
+    }
+
     httpAdapter.setHeader(response, 'x-request-id', requestMetadata.requestId);
 
     httpAdapter.reply(response, responseBody, normalized.status);

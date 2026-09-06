@@ -23,7 +23,7 @@ import {
 import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 1024;
+const MAX_OUTPUT_TOKENS = 4096;
 
 interface UsageMetadataPayload {
   promptTokenCount?: number;
