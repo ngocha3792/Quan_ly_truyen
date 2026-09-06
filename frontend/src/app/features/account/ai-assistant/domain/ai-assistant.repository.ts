@@ -6,6 +6,7 @@ import {
   AiConversationDetail,
   AiConversationSummary,
   AiSendMessageResult,
+  AiSendMessageStreamEvent,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from './ai-assistant.models';
@@ -28,4 +29,8 @@ export abstract class AiAssistantRepository {
   abstract getConversation(conversationId: string): Observable<AiConversationDetail>;
   abstract deleteConversation(conversationId: string): Observable<void>;
   abstract sendMessage(conversationId: string, content: string): Observable<AiSendMessageResult>;
+  abstract sendMessageStream(
+    conversationId: string,
+    content: string,
+  ): Observable<AiSendMessageStreamEvent>;
 }

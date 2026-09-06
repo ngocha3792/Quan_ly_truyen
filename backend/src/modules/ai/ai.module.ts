@@ -8,6 +8,8 @@ import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AI_CREDENTIAL_VAULT_PORT,
   AI_GATEWAY_PORT,
+  AI_USAGE_PERSISTENCE_PORT,
+  AiChatContextBuilderService,
   AiConnectionResolverService,
   CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
@@ -18,6 +20,7 @@ import {
   ListAiConnectionsQueryHandler,
   ListAiConversationsQueryHandler,
   SendAiMessageCommandHandler,
+  SendAiMessageStreamCommandHandler,
   TestAiConnectionCommandHandler,
   UpdateAiConnectionCommandHandler,
 } from './application';
@@ -31,6 +34,7 @@ import {
   OpenAiProviderAdapter,
   PrismaAiConnectionPersistence,
   PrismaAiConversationPersistence,
+  PrismaAiUsagePersistence,
 } from './infrastructure';
 import {
   AdminAiConnectionsController,
@@ -55,6 +59,10 @@ const portProviders = [
     provide: AI_GATEWAY_PORT,
     useExisting: AiGatewayService,
   },
+  {
+    provide: AI_USAGE_PERSISTENCE_PORT,
+    useExisting: PrismaAiUsagePersistence,
+  },
 ];
 
 const applicationHandlers = [
@@ -69,6 +77,7 @@ const applicationHandlers = [
   ListAiConversationsQueryHandler,
   GetAiConversationQueryHandler,
   SendAiMessageCommandHandler,
+  SendAiMessageStreamCommandHandler,
 ];
 
 @Module({
@@ -81,11 +90,13 @@ const applicationHandlers = [
   providers: [
     PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
+    PrismaAiUsagePersistence,
     AiApiKeyCipherAdapter,
     AiGatewayService,
     ...portProviders,
     ...applicationHandlers,
     AiConnectionResolverService,
+    AiChatContextBuilderService,
     GeminiProviderAdapter,
     OpenAiProviderAdapter,
     AnthropicProviderAdapter,

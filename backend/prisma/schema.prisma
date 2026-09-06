@@ -92,6 +92,15 @@ enum AiMessageRole {
   @@map("ai_message_role")
 }
 
+enum AiUsageCapability {
+  CHAT      @map("chat")
+  TRANSLATE @map("translate")
+  SUMMARY   @map("summary")
+  REWRITE   @map("rewrite")
+
+  @@map("ai_usage_capability")
+}
+
 enum AccountDeletionStatus {
   REQUESTED @map("requested")
   CANCELED  @map("canceled")
@@ -370,6 +379,7 @@ model User {
   auditLogs                  AuditLog[]
   aiConnections              AiConnection[]
   aiConversations            AiConversation[]
+  aiUsages                   AiUsage[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -457,6 +467,7 @@ model AiConnection {
 
   user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations AiConversation[]
+  usages        AiUsage[]
 
   @@index([userId])
   @@index([provider])
@@ -492,6 +503,28 @@ model AiMessage {
 
   @@index([conversationId, createdAt])
   @@map("ai_messages")
+}
+
+model AiUsage {
+  id           String            @id @default(uuid()) @db.Uuid
+  userId       String?           @map("user_id") @db.Uuid
+  connectionId String?           @map("connection_id") @db.Uuid
+  provider     AiProvider
+  model        String            @db.VarChar(200)
+  capability   AiUsageCapability @default(CHAT)
+  inputTokens  Int?              @map("input_tokens")
+  outputTokens Int?              @map("output_tokens")
+  latencyMs    Int               @map("latency_ms")
+  success      Boolean
+  errorCode    String?           @map("error_code") @db.VarChar(50)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([connectionId])
+  @@map("ai_usages")
 }
 
 model RecoveryEmail {

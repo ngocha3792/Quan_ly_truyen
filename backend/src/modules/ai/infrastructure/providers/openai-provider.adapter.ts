@@ -6,9 +6,11 @@ import {
   AiGenerateRequest,
   AiGenerateResponse,
   AiProviderClientPort,
+  AiStreamDelta,
 } from '../../application/ports/ai-provider-client.port';
 import {
   openAiCompatibleGenerate,
+  openAiCompatibleGenerateStream,
   openAiCompatibleListModels,
   openAiCompatibleTestConnection,
 } from './openai-compatible.core';
@@ -22,6 +24,13 @@ export class OpenAiProviderAdapter implements AiProviderClientPort {
     request: AiGenerateRequest,
   ): Promise<AiGenerateResponse> {
     return openAiCompatibleGenerate(config, request, OPENAI_BASE_URL);
+  }
+
+  generateStream(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+  ): AsyncIterable<AiStreamDelta> {
+    return openAiCompatibleGenerateStream(config, request, OPENAI_BASE_URL);
   }
 
   testConnection(config: AiConnectionConfig): Promise<AiConnectionTestResult> {

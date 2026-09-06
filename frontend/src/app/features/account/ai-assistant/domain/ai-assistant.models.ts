@@ -73,3 +73,8 @@ export interface AiSendMessageResult {
   readonly userMessage: AiMessage;
   readonly assistantMessage: AiMessage;
 }
+
+export type AiSendMessageStreamEvent =
+  | { readonly type: 'delta'; readonly text: string }
+  | { readonly type: 'done'; readonly userMessage: AiMessage; readonly assistantMessage: AiMessage }
+  | { readonly type: 'error'; readonly message: string };

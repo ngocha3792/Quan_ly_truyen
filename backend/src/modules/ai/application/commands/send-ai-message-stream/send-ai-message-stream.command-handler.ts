@@ -9,11 +9,11 @@ import {
   AiConversationPersistencePort,
 } from '../../ports/ai-conversation.persistence.port';
 import { AiChatContextBuilderService } from '../../services/ai-chat-context-builder.service';
-import { SendAiMessageCommand } from './send-ai-message.command';
-import { SendAiMessageResultView } from './send-ai-message.view';
+import { SendAiMessageStreamCommand } from './send-ai-message-stream.command';
+import { SendAiMessageStreamEvent } from './send-ai-message-stream.view';
 
 @Injectable()
-export class SendAiMessageCommandHandler {
+export class SendAiMessageStreamCommandHandler {
   constructor(
     private readonly contextBuilder: AiChatContextBuilderService,
     @Inject(AI_CONVERSATION_PERSISTENCE_PORT)
@@ -22,9 +22,9 @@ export class SendAiMessageCommandHandler {
     private readonly gateway: AiGatewayPort,
   ) {}
 
-  async execute(
-    command: SendAiMessageCommand,
-  ): Promise<SendAiMessageResultView> {
+  async *execute(
+    command: SendAiMessageStreamCommand,
+  ): AsyncGenerator<SendAiMessageStreamEvent> {
     const context = await this.contextBuilder.build(
       command.userId,
       command.conversationId,
@@ -37,19 +37,26 @@ export class SendAiMessageCommandHandler {
       command.content,
     );
 
-    const generateResult = await this.gateway.generate(
+    let fullText = '';
+
+    for await (const delta of this.gateway.generateStream(
       context.providerConfig,
       {
         systemPrompt: DEFAULT_CHAT_SYSTEM_PROMPT,
         messages: context.providerMessages,
       },
       { userId: command.userId, connectionId: context.connection.id },
-    );
+    )) {
+      if ('text' in delta) {
+        fullText += delta.text;
+        yield { type: 'delta', text: delta.text };
+      }
+    }
 
     const assistantMessage = await this.conversations.appendMessage(
       command.conversationId,
       AiMessageRole.ASSISTANT,
-      generateResult.content,
+      fullText,
     );
 
     await this.conversations.touch(
@@ -59,6 +66,6 @@ export class SendAiMessageCommandHandler {
         : undefined,
     );
 
-    return { userMessage, assistantMessage };
+    yield { type: 'done', userMessage, assistantMessage };
   }
 }

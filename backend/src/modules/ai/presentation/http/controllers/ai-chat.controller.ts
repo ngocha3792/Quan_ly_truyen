@@ -6,11 +6,18 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 
-import { CurrentUserId, RequirePermissions } from '@/common/decorators';
+import {
+  CurrentUserId,
+  RequirePermissions,
+  SkipResponseEnvelope,
+} from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
+import { AppException } from '@/common/exceptions';
 
 import {
   CreateAiConversationCommand,
@@ -23,6 +30,8 @@ import {
   ListAiConversationsQueryHandler,
   SendAiMessageCommand,
   SendAiMessageCommandHandler,
+  SendAiMessageStreamCommand,
+  SendAiMessageStreamCommandHandler,
 } from '../../../application';
 import { CreateAiConversationRequest, SendAiMessageRequest } from '../requests';
 import {
@@ -33,6 +42,10 @@ import {
   toAiConversationSummaryListResponse,
   toSendAiMessageResponse,
 } from '../responses';
+
+function writeSseEvent(response: Response, payload: unknown): void {
+  response.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
 
 const DEFAULT_TITLE = 'Cuộc trò chuyện mới';
 
@@ -45,6 +58,7 @@ export class AiChatController {
     private readonly createConversation: CreateAiConversationCommandHandler,
     private readonly deleteConversation: DeleteAiConversationCommandHandler,
     private readonly sendMessage: SendAiMessageCommandHandler,
+    private readonly sendMessageStream: SendAiMessageStreamCommandHandler,
   ) {}
 
   @Get()
@@ -113,6 +127,57 @@ export class AiChatController {
       ),
     );
     return toSendAiMessageResponse(result);
+  }
+
+  @Post(':conversationId/messages/stream')
+  @SkipResponseEnvelope()
+  async streamMessage(
+    @CurrentUserId() userId: string | undefined,
+    @Param('conversationId', new ParseUUIDPipe({ version: '4' }))
+    conversationId: string,
+    @Body() request: SendAiMessageRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    const resolvedUserId = this.requireUserId(userId);
+
+    response.setHeader('Content-Type', 'text/event-stream');
+    response.setHeader('Cache-Control', 'no-cache');
+    response.setHeader('Connection', 'keep-alive');
+    response.flushHeaders();
+
+    try {
+      const stream = this.sendMessageStream.execute(
+        new SendAiMessageStreamCommand(
+          resolvedUserId,
+          conversationId,
+          request.content,
+        ),
+      );
+
+      for await (const event of stream) {
+        if (event.type === 'delta') {
+          writeSseEvent(response, { type: 'delta', text: event.text });
+          continue;
+        }
+
+        writeSseEvent(response, {
+          type: 'done',
+          ...toSendAiMessageResponse({
+            userMessage: event.userMessage,
+            assistantMessage: event.assistantMessage,
+          }),
+        });
+      }
+    } catch (error) {
+      const message =
+        error instanceof AppException && error.expose
+          ? error.message
+          : 'Đã xảy ra lỗi khi kết nối tới AI. Vui lòng thử lại.';
+
+      writeSseEvent(response, { type: 'error', message });
+    } finally {
+      response.end();
+    }
   }
 
   private requireUserId(userId: string | undefined): string {

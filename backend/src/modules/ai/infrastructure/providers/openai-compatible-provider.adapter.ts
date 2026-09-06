@@ -8,10 +8,12 @@ import {
   AiGenerateRequest,
   AiGenerateResponse,
   AiProviderClientPort,
+  AiStreamDelta,
 } from '../../application/ports/ai-provider-client.port';
 import { assertPublicHttpsUrl } from '../security/ssrf-guard.util';
 import {
   openAiCompatibleGenerate,
+  openAiCompatibleGenerateStream,
   openAiCompatibleListModels,
   openAiCompatibleTestConnection,
 } from './openai-compatible.core';
@@ -24,6 +26,14 @@ export class OpenAiCompatibleProviderAdapter implements AiProviderClientPort {
   ): Promise<AiGenerateResponse> {
     const baseUrl = await this.requireGuardedBaseUrl(config);
     return openAiCompatibleGenerate(config, request, baseUrl);
+  }
+
+  async *generateStream(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+  ): AsyncIterable<AiStreamDelta> {
+    const baseUrl = await this.requireGuardedBaseUrl(config);
+    yield* openAiCompatibleGenerateStream(config, request, baseUrl);
   }
 
   async testConnection(

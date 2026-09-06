@@ -7,20 +7,62 @@ import {
   AiGenerateResponse,
   AiProviderClientPort,
   AiProviderRequestError,
+  AiStreamDelta,
 } from '../../application/ports/ai-provider-client.port';
+import {
+  extractSseDataLines,
+  readSseEventBlocks,
+  safeJsonParse,
+} from './sse-reader.util';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1024;
 
+interface UsageMetadataPayload {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+}
+
 interface GenerateContentPayload {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
+  usageMetadata?: UsageMetadataPayload;
   error?: { message?: string };
 }
 
 interface ListModelsPayload {
   models?: { name?: string }[];
   error?: { message?: string };
+}
+
+function buildContents(request: AiGenerateRequest) {
+  return request.messages.map((message) => ({
+    role: message.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: message.content }],
+  }));
+}
+
+function buildRequestBody(request: AiGenerateRequest) {
+  return {
+    ...(request.systemPrompt
+      ? { systemInstruction: { parts: [{ text: request.systemPrompt }] } }
+      : {}),
+    contents: buildContents(request),
+    generationConfig: {
+      maxOutputTokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+      ...(request.temperature !== undefined
+        ? { temperature: request.temperature }
+        : {}),
+    },
+  };
+}
+
+function toUsage(usage: UsageMetadataPayload | undefined) {
+  if (!usage) return undefined;
+  return {
+    inputTokens: usage.promptTokenCount,
+    outputTokens: usage.candidatesTokenCount,
+  };
 }
 
 @Injectable()
@@ -38,21 +80,7 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...(request.systemPrompt
-            ? { systemInstruction: { parts: [{ text: request.systemPrompt }] } }
-            : {}),
-          contents: request.messages.map((message) => ({
-            role: message.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: message.content }],
-          })),
-          generationConfig: {
-            maxOutputTokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
-            ...(request.temperature !== undefined
-              ? { temperature: request.temperature }
-              : {}),
-          },
-        }),
+        body: JSON.stringify(buildRequestBody(request)),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
@@ -88,7 +116,54 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       provider: config.provider,
       model: config.model,
       latencyMs: Date.now() - startedAt,
+      usage: toUsage(payload?.usageMetadata),
     };
+  }
+
+  async *generateStream(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+  ): AsyncIterable<AiStreamDelta> {
+    const url = `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(config.apiKey)}`;
+
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildRequestBody(request)),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      throw new AiProviderRequestError(
+        `Không thể kết nối tới Gemini: ${(error as Error).message}`,
+        null,
+      );
+    }
+
+    if (!response.ok) {
+      const payload = (await response
+        .json()
+        .catch(() => null)) as GenerateContentPayload | null;
+      throw new AiProviderRequestError(
+        payload?.error?.message ?? `Gemini trả về lỗi ${response.status}`,
+        response.status,
+      );
+    }
+
+    for await (const eventBlock of readSseEventBlocks(response)) {
+      for (const data of extractSseDataLines(eventBlock)) {
+        const chunk = safeJsonParse<GenerateContentPayload>(data);
+        const text = chunk?.candidates?.[0]?.content?.parts
+          ?.map((part) => part.text ?? '')
+          .join('');
+        if (text) yield { text };
+
+        const usage = toUsage(chunk?.usageMetadata);
+        if (usage) yield { usage };
+      }
+    }
   }
 
   async testConnection(

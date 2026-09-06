@@ -1,5 +1,10 @@
 import type { AiProvider } from '@/generated/prisma/client';
 
+import {
+  AiErrorCode,
+  classifyAiErrorStatus,
+} from '../../domain/errors/ai-error-code.enum';
+
 export type AiMessageRole = 'system' | 'user' | 'assistant';
 
 export interface AiMessage {
@@ -21,11 +26,17 @@ export interface AiGenerateRequest {
   readonly maxOutputTokens?: number;
 }
 
+export interface AiUsageTokens {
+  readonly inputTokens?: number;
+  readonly outputTokens?: number;
+}
+
 export interface AiGenerateResponse {
   readonly content: string;
   readonly provider: AiProvider;
   readonly model: string;
   readonly latencyMs: number;
+  readonly usage?: AiUsageTokens;
 }
 
 export interface AiConnectionTestResult {
@@ -33,13 +44,19 @@ export interface AiConnectionTestResult {
   readonly message?: string;
 }
 
+export type AiStreamDelta =
+  { readonly text: string } | { readonly usage: AiUsageTokens };
+
 export class AiProviderRequestError extends Error {
+  readonly code: AiErrorCode;
+
   constructor(
     message: string,
     readonly upstreamStatus: number | null,
   ) {
     super(message);
     this.name = 'AiProviderRequestError';
+    this.code = classifyAiErrorStatus(upstreamStatus);
   }
 }
 
@@ -48,6 +65,11 @@ export interface AiProviderClientPort {
     config: AiConnectionConfig,
     request: AiGenerateRequest,
   ): Promise<AiGenerateResponse>;
+
+  generateStream(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+  ): AsyncIterable<AiStreamDelta>;
 
   testConnection(config: AiConnectionConfig): Promise<AiConnectionTestResult>;
 

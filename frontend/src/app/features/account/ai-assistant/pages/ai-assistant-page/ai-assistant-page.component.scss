@@ -267,6 +267,19 @@
   opacity: 0.6;
 }
 
+.message--streaming p::after {
+  content: '▍';
+  display: inline-block;
+  margin-left: 2px;
+  animation: ai-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes ai-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .empty-hint {
   margin: auto;
   color: var(--text-muted);

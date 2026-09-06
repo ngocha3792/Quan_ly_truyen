@@ -117,7 +117,8 @@
             <div
               class="message"
               [class.message--user]="message.role === 'USER'"
-              [class.message--pending]="message.pending"
+              [class.message--pending]="message.pending && message.role === 'USER'"
+              [class.message--streaming]="message.pending && message.role === 'ASSISTANT'"
             >
               <p>{{ message.content }}</p>
             </div>

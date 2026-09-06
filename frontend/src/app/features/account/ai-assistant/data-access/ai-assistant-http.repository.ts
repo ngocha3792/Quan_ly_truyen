@@ -2,8 +2,10 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
+import { TokenStore } from '../../../../core/auth/token.store';
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+import { readBrowserCookie } from '../../../../core/http/browser-cookie.util';
 import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 import {
   AiConnection,
@@ -11,14 +13,18 @@ import {
   AiConversationDetail,
   AiConversationSummary,
   AiSendMessageResult,
+  AiSendMessageStreamEvent,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../domain/ai-assistant.models';
+
+const STREAM_FALLBACK_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ AI. Vui lòng thử lại.';
 
 @Injectable()
 export class AiAssistantHttpRepository implements AiAssistantRepository {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
+  private readonly tokenStore = inject(TokenStore);
   private readonly connectionsUrl = `${this.config.apiBaseUrl}/ai/connections`;
   private readonly conversationsUrl = `${this.config.apiBaseUrl}/ai/conversations`;
 
@@ -88,5 +94,92 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
         { content },
       )
       .pipe(map((response) => response.data));
+  }
+
+  sendMessageStream(conversationId: string, content: string): Observable<AiSendMessageStreamEvent> {
+    const url = `${this.conversationsUrl}/${conversationId}/messages/stream`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+    const accessToken = this.tokenStore.accessToken();
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    if (this.config.csrf.enabled) {
+      const csrfToken = readBrowserCookie(this.config.csrf.cookieName);
+      if (csrfToken) {
+        headers[this.config.csrf.headerName] = csrfToken;
+      }
+    }
+
+    return new Observable<AiSendMessageStreamEvent>((subscriber) => {
+      const controller = new AbortController();
+
+      fetch(url, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ content }),
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok || !response.body) {
+            subscriber.next({ type: 'error', message: STREAM_FALLBACK_ERROR_MESSAGE });
+            subscriber.complete();
+            return;
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            let separatorIndex = buffer.indexOf('\n\n');
+            while (separatorIndex !== -1) {
+              const rawEvent = buffer.slice(0, separatorIndex);
+              buffer = buffer.slice(separatorIndex + 2);
+
+              const dataLine = rawEvent.split('\n').find((line) => line.startsWith('data:'));
+              if (dataLine) {
+                const event = this.parseStreamEvent(dataLine.slice(5).trim());
+                if (event) {
+                  subscriber.next(event);
+                  if (event.type === 'done' || event.type === 'error') {
+                    subscriber.complete();
+                    return;
+                  }
+                }
+              }
+
+              separatorIndex = buffer.indexOf('\n\n');
+            }
+          }
+
+          subscriber.complete();
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          subscriber.next({
+            type: 'error',
+            message: error instanceof Error ? error.message : STREAM_FALLBACK_ERROR_MESSAGE,
+          });
+          subscriber.complete();
+        });
+
+      return () => controller.abort();
+    });
+  }
+
+  private parseStreamEvent(json: string): AiSendMessageStreamEvent | null {
+    try {
+      return JSON.parse(json) as AiSendMessageStreamEvent;
+    } catch {
+      return null;
+    }
   }
 }

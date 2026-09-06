@@ -5,3 +5,4 @@ export * from './test-ai-connection';
 export * from './create-ai-conversation';
 export * from './delete-ai-conversation';
 export * from './send-ai-message';
+export * from './send-ai-message-stream';

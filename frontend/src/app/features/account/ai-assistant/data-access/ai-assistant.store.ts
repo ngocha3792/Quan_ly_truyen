@@ -175,46 +175,79 @@ export class AiAssistantStore {
       pending: true,
     };
 
+    const streamingMessageId = pendingId();
+    const streamingMessage: AiMessage = {
+      id: streamingMessageId,
+      role: 'ASSISTANT',
+      content: '',
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
+    const isPlaceholder = (messageId: string) =>
+      messageId === optimisticMessage.id || messageId === streamingMessageId;
+
     this.sending.set(true);
     this.error.set(null);
     this.activeConversation.set({
       ...conversation,
-      messages: [...conversation.messages, optimisticMessage],
+      messages: [...conversation.messages, optimisticMessage, streamingMessage],
     });
 
     this.repository
-      .sendMessage(conversation.id, trimmed)
+      .sendMessageStream(conversation.id, trimmed)
       .pipe(
         finalize(() => this.sending.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (result) => {
+        next: (event) => {
           const current = this.activeConversation();
           if (!current || current.id !== conversation.id) return;
 
+          if (event.type === 'delta') {
+            this.activeConversation.set({
+              ...current,
+              messages: current.messages.map((message) =>
+                message.id === streamingMessageId
+                  ? { ...message, content: message.content + event.text }
+                  : message,
+              ),
+            });
+            return;
+          }
+
+          if (event.type === 'done') {
+            this.activeConversation.set({
+              ...current,
+              messages: [
+                ...current.messages.filter((message) => !isPlaceholder(message.id)),
+                event.userMessage,
+                event.assistantMessage,
+              ],
+            });
+            this.conversations.update((items) =>
+              items.map((item) =>
+                item.id === conversation.id
+                  ? { ...item, updatedAt: event.assistantMessage.createdAt }
+                  : item,
+              ),
+            );
+            return;
+          }
+
           this.activeConversation.set({
             ...current,
-            messages: [
-              ...current.messages.filter((message) => message.id !== optimisticMessage.id),
-              result.userMessage,
-              result.assistantMessage,
-            ],
+            messages: current.messages.filter((message) => !isPlaceholder(message.id)),
           });
-          this.conversations.update((items) =>
-            items.map((item) =>
-              item.id === conversation.id
-                ? { ...item, updatedAt: result.assistantMessage.createdAt }
-                : item,
-            ),
-          );
+          this.error.set(event.message);
         },
         error: (error: unknown) => {
           const current = this.activeConversation();
           if (current && current.id === conversation.id) {
             this.activeConversation.set({
               ...current,
-              messages: current.messages.filter((message) => message.id !== optimisticMessage.id),
+              messages: current.messages.filter((message) => !isPlaceholder(message.id)),
             });
           }
           this.error.set(getApiErrorMessage(error));
