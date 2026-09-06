@@ -80,6 +80,7 @@ export class AiChatController {
       new CreateAiConversationCommand(
         this.requireUserId(userId),
         request.connectionId,
+        request.modelId?.trim() || null,
         request.title?.trim() || DEFAULT_TITLE,
       ),
     );

@@ -8,6 +8,7 @@ export interface AiConversationRecord {
   readonly id: string;
   readonly userId: string;
   readonly connectionId: string | null;
+  readonly modelId: string | null;
   readonly vendorHint: string | null;
   readonly protocol: AiProtocol;
   readonly title: string;
@@ -36,6 +37,7 @@ export interface AiConversationPersistencePort {
   create(
     userId: string,
     connectionId: string | null,
+    modelId: string | null,
     vendorHint: string | null,
     protocol: AiProtocol,
     title: string,

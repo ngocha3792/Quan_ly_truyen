@@ -5,6 +5,7 @@ import {
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
+  AiModelInfo,
   AiProtocolAdapter,
   AiProtocolRequestError,
   AiStreamDelta,
@@ -50,7 +51,7 @@ interface MessageDeltaEventPayload {
 }
 
 interface ListModelsPayload {
-  data?: { id?: string }[];
+  data?: { id?: string; display_name?: string }[];
   error?: { message?: string };
 }
 
@@ -228,7 +229,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
 
   async listModels(
     connection: ResolvedAiConnection,
-  ): Promise<readonly string[]> {
+  ): Promise<readonly AiModelInfo[]> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
@@ -258,9 +259,18 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
       );
     }
 
-    return (payload?.data ?? [])
-      .map((model) => model.id)
-      .filter((id): id is string => Boolean(id));
+    return (payload?.data ?? []).flatMap((model) =>
+      model.id
+        ? [
+            {
+              id: model.id,
+              ...(model.display_name
+                ? { displayName: model.display_name }
+                : {}),
+            },
+          ]
+        : [],
+    );
   }
 
   private async requireGuardedBaseUrl(

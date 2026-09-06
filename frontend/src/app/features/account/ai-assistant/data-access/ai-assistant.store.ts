@@ -8,6 +8,7 @@ import {
   AiConversationDetail,
   AiConversationSummary,
   AiMessage,
+  AiModelInfo,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../domain/ai-assistant.models';
@@ -26,6 +27,10 @@ export class AiAssistantStore {
   readonly connectionsLoading = signal(false);
   readonly connectionMutating = signal<string | 'new' | null>(null);
   readonly connectionsError = signal<string | null>(null);
+  readonly models = signal<readonly AiModelInfo[]>([]);
+  readonly modelsConnectionId = signal<string | null>(null);
+  readonly modelsLoading = signal(false);
+  readonly modelsError = signal<string | null>(null);
   readonly conversations = signal<readonly AiConversationSummary[]>([]);
   readonly conversationsLoading = signal(false);
   readonly creating = signal(false);
@@ -100,6 +105,35 @@ export class AiAssistantStore {
       });
   }
 
+  loadModels(connectionId: string, refresh = false): void {
+    this.modelsConnectionId.set(connectionId);
+    this.models.set([]);
+    this.modelsLoading.set(true);
+    this.modelsError.set(null);
+    this.repository
+      .listModels(connectionId, refresh)
+      .pipe(
+        finalize(() => {
+          if (this.modelsConnectionId() === connectionId) {
+            this.modelsLoading.set(false);
+          }
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (models) => {
+          if (this.modelsConnectionId() === connectionId) {
+            this.models.set(models);
+          }
+        },
+        error: (error: unknown) => {
+          if (this.modelsConnectionId() === connectionId) {
+            this.modelsError.set(getApiErrorMessage(error));
+          }
+        },
+      });
+  }
+
   loadConversations(): void {
     this.conversationsLoading.set(true);
     this.error.set(null);
@@ -115,13 +149,13 @@ export class AiAssistantStore {
       });
   }
 
-  createConversation(connectionId: string): void {
+  createConversation(connectionId: string, modelId?: string): void {
     if (this.creating()) return;
 
     this.creating.set(true);
     this.error.set(null);
     this.repository
-      .createConversation(connectionId)
+      .createConversation(connectionId, modelId)
       .pipe(
         finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),

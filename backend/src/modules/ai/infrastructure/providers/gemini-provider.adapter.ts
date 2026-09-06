@@ -5,6 +5,7 @@ import {
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
+  AiModelInfo,
   AiProtocolAdapter,
   AiProtocolRequestError,
   AiStreamDelta,
@@ -36,7 +37,12 @@ interface GenerateContentPayload {
 }
 
 interface ListModelsPayload {
-  models?: { name?: string }[];
+  models?: {
+    name?: string;
+    displayName?: string;
+    inputTokenLimit?: number;
+    outputTokenLimit?: number;
+  }[];
   error?: { message?: string };
 }
 
@@ -195,7 +201,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
 
   async listModels(
     connection: ResolvedAiConnection,
-  ): Promise<readonly string[]> {
+  ): Promise<readonly AiModelInfo[]> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
@@ -223,9 +229,22 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
       );
     }
 
-    return (payload?.models ?? [])
-      .map((model) => model.name?.replace(/^models\//, ''))
-      .filter((name): name is string => Boolean(name));
+    return (payload?.models ?? []).flatMap((model) => {
+      const id = model.name?.replace(/^models\//, '');
+      if (!id) return [];
+      return [
+        {
+          id,
+          ...(model.displayName ? { displayName: model.displayName } : {}),
+          ...(model.inputTokenLimit !== undefined
+            ? { contextLength: model.inputTokenLimit }
+            : {}),
+          ...(model.outputTokenLimit !== undefined
+            ? { maxOutputTokens: model.outputTokenLimit }
+            : {}),
+        },
+      ];
+    });
   }
 
   private async requireGuardedBaseUrl(

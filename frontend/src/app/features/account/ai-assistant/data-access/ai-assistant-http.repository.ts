@@ -10,6 +10,7 @@ import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 import {
   AiConnection,
   AiConnectionTestResult,
+  AiModelInfo,
   AiFallbackPolicy,
   AiPolicy,
   AiProfile,
@@ -92,16 +93,30 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
       .pipe(map((response) => response.data));
   }
 
+  listModels(connectionId: string, refresh = false): Observable<readonly AiModelInfo[]> {
+    return this.http
+      .get<ApiSuccessEnvelope<readonly AiModelInfo[]>>(
+        `${this.connectionsUrl}/${connectionId}/models`,
+        { params: refresh ? { refresh: 'true' } : {} },
+      )
+      .pipe(map((response) => response.data));
+  }
+
   listConversations(): Observable<readonly AiConversationSummary[]> {
     return this.http
       .get<ApiSuccessEnvelope<readonly AiConversationSummary[]>>(this.conversationsUrl)
       .pipe(map((response) => response.data));
   }
 
-  createConversation(connectionId: string, title?: string): Observable<AiConversationSummary> {
+  createConversation(
+    connectionId: string,
+    modelId?: string,
+    title?: string,
+  ): Observable<AiConversationSummary> {
     return this.http
       .post<ApiSuccessEnvelope<AiConversationSummary>>(this.conversationsUrl, {
         connectionId,
+        modelId,
         title,
       })
       .pipe(map((response) => response.data));

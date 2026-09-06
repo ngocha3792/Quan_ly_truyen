@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
+import { CacheModule } from '@/infrastructure/cache';
 import { AuthAuthorizationModule } from '@/modules/auth';
 import { AuthorsModule } from '@/modules/authors';
 import { ChaptersModule } from '@/modules/chapters';
@@ -10,6 +11,7 @@ import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AI_CREDENTIAL_VAULT_PORT,
   AI_GATEWAY_PORT,
+  AI_MODEL_CACHE_PORT,
   AI_PROTOCOL_REGISTRY_PORT,
   AI_POLICY_PERSISTENCE_PORT,
   AI_PROFILE_PERSISTENCE_PORT,
@@ -41,6 +43,7 @@ import {
 import {
   AiApiKeyCipherAdapter,
   AiGatewayService,
+  AiModelCacheAdapter,
   AiProtocolRegistry,
   AnthropicMessagesProtocolAdapter,
   ChapterTranslationQueueAdapter,
@@ -81,6 +84,10 @@ const portProviders = [
   {
     provide: AI_GATEWAY_PORT,
     useExisting: AiGatewayService,
+  },
+  {
+    provide: AI_MODEL_CACHE_PORT,
+    useExisting: AiModelCacheAdapter,
   },
   {
     provide: AI_USAGE_PERSISTENCE_PORT,
@@ -132,6 +139,7 @@ const applicationHandlers = [
 @Module({
   imports: [
     PrismaModule,
+    CacheModule,
     AuthAuthorizationModule,
     ChaptersModule,
     AuthorsModule,
@@ -156,6 +164,7 @@ const applicationHandlers = [
     PrismaChapterTranslationPersistence,
     AiApiKeyCipherAdapter,
     AiGatewayService,
+    AiModelCacheAdapter,
     AiPolicyManager,
     AiProfileManager,
     AiRateLimiter,

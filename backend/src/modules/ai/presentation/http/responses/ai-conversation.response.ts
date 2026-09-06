@@ -9,6 +9,7 @@ import type { SendAiMessageResultView } from '../../../application/commands/send
 export interface AiConversationSummaryResponse {
   readonly id: string;
   readonly connectionId: string | null;
+  readonly modelId: string | null;
   /** @deprecated UI preset compatibility; routing uses protocol. */
   readonly provider: string;
   readonly vendorHint: string | null;
@@ -40,6 +41,7 @@ function toSummary(
   return {
     id: record.id,
     connectionId: record.connectionId,
+    modelId: record.modelId,
     provider: record.vendorHint ?? record.protocol,
     vendorHint: record.vendorHint,
     protocol: record.protocol,

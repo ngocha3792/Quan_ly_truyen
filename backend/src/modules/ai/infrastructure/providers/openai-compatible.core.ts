@@ -3,6 +3,7 @@ import {
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
+  AiModelInfo,
   AiMessage,
   AiProtocolRequestError,
   AiStreamDelta,
@@ -47,7 +48,18 @@ interface ChatCompletionStreamChunkPayload {
 }
 
 interface ModelListPayload {
-  data?: { id?: string }[];
+  data?: {
+    id?: string;
+    name?: string;
+    display_name?: string;
+    context_length?: number;
+    max_output_tokens?: number;
+    capabilities?: {
+      reasoning?: boolean;
+      vision?: boolean;
+      tools?: boolean;
+    };
+  }[];
   error?: { message?: string };
 }
 
@@ -180,7 +192,7 @@ export async function* openAiCompatibleGenerateStream(
 export async function openAiCompatibleListModels(
   connection: ResolvedAiConnection,
   baseUrl: string,
-): Promise<readonly string[]> {
+): Promise<readonly AiModelInfo[]> {
   let response: Response;
 
   try {
@@ -207,9 +219,32 @@ export async function openAiCompatibleListModels(
     );
   }
 
-  return (payload?.data ?? [])
-    .map((item) => item.id)
-    .filter((id): id is string => Boolean(id));
+  return (payload?.data ?? []).flatMap((item) => {
+    if (!item.id) return [];
+    return [
+      {
+        id: item.id,
+        ...(item.display_name || item.name
+          ? { displayName: item.display_name ?? item.name }
+          : {}),
+        ...(item.context_length !== undefined
+          ? { contextLength: item.context_length }
+          : {}),
+        ...(item.max_output_tokens !== undefined
+          ? { maxOutputTokens: item.max_output_tokens }
+          : {}),
+        ...(item.capabilities?.reasoning !== undefined
+          ? { reasoning: item.capabilities.reasoning }
+          : {}),
+        ...(item.capabilities?.vision !== undefined
+          ? { vision: item.capabilities.vision }
+          : {}),
+        ...(item.capabilities?.tools !== undefined
+          ? { tools: item.capabilities.tools }
+          : {}),
+      },
+    ];
+  });
 }
 
 export async function openAiCompatibleTestConnection(

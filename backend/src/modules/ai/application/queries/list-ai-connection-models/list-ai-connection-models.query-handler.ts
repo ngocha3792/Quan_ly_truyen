@@ -12,6 +12,16 @@ import {
   AI_PROTOCOL_REGISTRY_PORT,
   AiProtocolRegistryPort,
 } from '../../ports/ai-protocol-registry.port';
+import {
+  AiModelInfo,
+  AiProtocolRequestError,
+} from '../../ports/ai-protocol-adapter.port';
+import {
+  AI_MODEL_CACHE_PORT,
+  AiModelCachePort,
+} from '../../ports/ai-model-cache.port';
+
+const MODEL_CACHE_TTL_SECONDS = 10 * 60;
 
 @Injectable()
 export class ListAiConnectionModelsQueryHandler {
@@ -21,11 +31,13 @@ export class ListAiConnectionModelsQueryHandler {
     private readonly resolvedConnections: AiResolvedConnectionFactory,
     @Inject(AI_PROTOCOL_REGISTRY_PORT)
     private readonly protocols: AiProtocolRegistryPort,
+    @Inject(AI_MODEL_CACHE_PORT)
+    private readonly cache: AiModelCachePort,
   ) {}
 
   async execute(
     query: ListAiConnectionModelsQuery,
-  ): Promise<readonly string[]> {
+  ): Promise<readonly AiModelInfo[]> {
     const connection = await this.persistence.findByOwnerAndId(
       query.userId,
       query.connectionId,
@@ -38,7 +50,30 @@ export class ListAiConnectionModelsQueryHandler {
       });
     }
 
+    if (query.refresh) {
+      await this.cache.delete(connection.id);
+    } else {
+      const cached = await this.cache.get(connection.id);
+      if (cached) return cached;
+    }
+
     const resolved = await this.resolvedConnections.fromRecord(connection);
-    return this.protocols.getAdapter(connection.protocol).listModels(resolved);
+    let models: readonly AiModelInfo[];
+    try {
+      models = await this.protocols
+        .getAdapter(connection.protocol)
+        .listModels(resolved);
+    } catch (error) {
+      if (
+        error instanceof AiProtocolRequestError &&
+        [404, 405, 501].includes(error.upstreamStatus ?? 0)
+      ) {
+        models = [];
+      } else {
+        throw error;
+      }
+    }
+    await this.cache.set(connection.id, models, MODEL_CACHE_TTL_SECONDS);
+    return models;
   }
 }

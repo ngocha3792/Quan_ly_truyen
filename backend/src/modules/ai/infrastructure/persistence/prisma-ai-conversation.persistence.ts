@@ -28,6 +28,7 @@ function toDomainAiConversationRecord(
     id: record.id,
     userId: record.userId,
     connectionId: record.connectionId,
+    modelId: record.modelId,
     vendorHint:
       record.vendorHint ?? vendorHintFromLegacyProvider(record.legacyProvider),
     protocol: toDomainAiProtocol(record.protocol, record.legacyProvider),
@@ -82,6 +83,7 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
   async create(
     userId: string,
     connectionId: string | null,
+    modelId: string | null,
     vendorHint: string | null,
     protocol: AiProtocol,
     title: string,
@@ -90,6 +92,7 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
       data: {
         userId,
         connectionId,
+        modelId,
         vendorHint,
         protocol: toPrismaAiProtocol(protocol),
         legacyProvider: toLegacyPrismaAiProvider(protocol, vendorHint),

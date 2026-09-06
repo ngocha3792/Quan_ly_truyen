@@ -103,14 +103,14 @@ export class AiChatContextBuilder {
 
     const resolvedConnection = await this.resolvedConnections.fromRecord(
       plan.primary,
-      profile.model,
+      conversation.modelId ?? profile.model,
     );
     const systemFallback = plan.systemFallback
       ? {
           connection: plan.systemFallback,
           resolvedConnection: await this.resolvedConnections.fromRecord(
             plan.systemFallback,
-            profile.model,
+            conversation.modelId ?? profile.model,
           ),
         }
       : null;

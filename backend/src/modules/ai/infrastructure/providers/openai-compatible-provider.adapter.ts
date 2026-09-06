@@ -5,6 +5,7 @@ import {
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
+  AiModelInfo,
   AiProtocolAdapter,
   AiStreamDelta,
 } from '../../application/ports/ai-protocol-adapter.port';
@@ -44,7 +45,7 @@ export class OpenAiChatCompletionsProtocolAdapter implements AiProtocolAdapter {
 
   async listModels(
     connection: ResolvedAiConnection,
-  ): Promise<readonly string[]> {
+  ): Promise<readonly AiModelInfo[]> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     return openAiCompatibleListModels(connection, baseUrl);
   }

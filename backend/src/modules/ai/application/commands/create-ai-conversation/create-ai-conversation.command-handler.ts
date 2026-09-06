@@ -36,6 +36,7 @@ export class CreateAiConversationCommandHandler {
     return this.persistence.create(
       command.userId,
       connection.id,
+      command.modelId,
       connection.vendorHint,
       connection.protocol,
       command.title,

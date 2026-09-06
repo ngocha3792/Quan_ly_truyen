@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { RequirePermissions } from '@/common/decorators';
@@ -26,7 +27,10 @@ import {
   UpdateAiConnectionCommand,
   UpdateAiConnectionCommandHandler,
 } from '../../../application';
-import { AiConnectionTestResult } from '../../../application/ports/ai-protocol-adapter.port';
+import {
+  AiConnectionTestResult,
+  AiModelInfo,
+} from '../../../application/ports/ai-protocol-adapter.port';
 import {
   CreateAiConnectionRequest,
   UpdateAiConnectionRequest,
@@ -122,9 +126,14 @@ export class AdminAiConnectionsController {
   async models(
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
-  ): Promise<readonly string[]> {
+    @Query('refresh') refresh?: string,
+  ): Promise<readonly AiModelInfo[]> {
     return this.listModels.execute(
-      new ListAiConnectionModelsQuery(null, connectionId),
+      new ListAiConnectionModelsQuery(
+        null,
+        connectionId,
+        refresh === 'true' || refresh === '1',
+      ),
     );
   }
 }

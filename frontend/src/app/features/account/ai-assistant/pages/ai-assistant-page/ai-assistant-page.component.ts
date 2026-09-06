@@ -70,6 +70,7 @@ export class AiAssistantPageComponent implements OnInit {
   protected editAuthHeaderName = '';
 
   protected newConversationConnectionId = '';
+  protected newConversationModelId = '';
   protected draft = '';
   protected profileModel = '';
   protected profileSystemPrompt = '';
@@ -87,6 +88,16 @@ export class AiAssistantPageComponent implements OnInit {
       this.profileSystemPrompt = profile.systemPrompt ?? '';
       this.profileLanguage = profile.defaultTranslationLanguageCode;
       this.profileAutoTranslate = profile.autoTranslateOnPublish;
+    });
+    effect(() => {
+      const models = this.store.models();
+      if (
+        this.store.modelsConnectionId() === this.newConversationConnectionId &&
+        !this.newConversationModelId &&
+        models.length > 0
+      ) {
+        this.newConversationModelId = models[0].id;
+      }
     });
   }
 
@@ -211,7 +222,30 @@ export class AiAssistantPageComponent implements OnInit {
 
   protected createConversation(): void {
     if (!this.newConversationConnectionId) return;
-    this.store.createConversation(this.newConversationConnectionId);
+    this.store.createConversation(
+      this.newConversationConnectionId,
+      this.newConversationModelId.trim() || undefined,
+    );
+  }
+
+  protected selectConversationConnection(connectionId: string): void {
+    this.newConversationConnectionId = connectionId;
+    const connection = this.store.connections().find((item) => item.id === connectionId);
+    this.newConversationModelId = connection?.defaultModel ?? '';
+    if (connectionId) this.store.loadModels(connectionId);
+  }
+
+  protected refreshModels(): void {
+    if (this.newConversationConnectionId) {
+      this.store.loadModels(this.newConversationConnectionId, true);
+    }
+  }
+
+  protected hasSelectedModelOutsideDiscovery(): boolean {
+    return (
+      Boolean(this.newConversationModelId) &&
+      !this.store.models().some((model) => model.id === this.newConversationModelId)
+    );
   }
 
   protected deleteConversation(conversationId: string, event: Event): void {

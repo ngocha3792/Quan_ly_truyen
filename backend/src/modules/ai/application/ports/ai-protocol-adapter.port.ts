@@ -47,6 +47,16 @@ export interface AiConnectionTestResult {
   readonly message?: string;
 }
 
+export interface AiModelInfo {
+  readonly id: string;
+  readonly displayName?: string;
+  readonly contextLength?: number;
+  readonly maxOutputTokens?: number;
+  readonly reasoning?: boolean;
+  readonly vision?: boolean;
+  readonly tools?: boolean;
+}
+
 export type AiStreamDelta =
   { readonly text: string } | { readonly usage: AiUsageTokens };
 
@@ -79,5 +89,5 @@ export interface AiProtocolAdapter {
     connection: ResolvedAiConnection,
   ): Promise<AiConnectionTestResult>;
 
-  listModels(connection: ResolvedAiConnection): Promise<readonly string[]>;
+  listModels(connection: ResolvedAiConnection): Promise<readonly AiModelInfo[]>;
 }

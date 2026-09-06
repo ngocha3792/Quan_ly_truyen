@@ -534,6 +534,7 @@ model AiConversation {
   id           String      @id @default(uuid()) @db.Uuid
   userId       String      @map("user_id") @db.Uuid
   connectionId String?     @map("connection_id") @db.Uuid
+  modelId      String?     @map("model_id") @db.VarChar(200)
   vendorHint   String?     @map("vendor_hint") @db.VarChar(80)
   protocol     AiProtocol?
   title        String      @db.VarChar(200)

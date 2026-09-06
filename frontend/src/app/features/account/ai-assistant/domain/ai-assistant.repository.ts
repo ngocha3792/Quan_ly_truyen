@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import {
   AiConnection,
   AiConnectionTestResult,
+  AiModelInfo,
   AiFallbackPolicy,
   AiPolicy,
   AiProfile,
@@ -29,10 +30,12 @@ export abstract class AiAssistantRepository {
   ): Observable<AiConnection>;
   abstract deleteConnection(connectionId: string): Observable<void>;
   abstract testConnection(connectionId: string): Observable<AiConnectionTestResult>;
+  abstract listModels(connectionId: string, refresh?: boolean): Observable<readonly AiModelInfo[]>;
 
   abstract listConversations(): Observable<readonly AiConversationSummary[]>;
   abstract createConversation(
     connectionId: string,
+    modelId?: string,
     title?: string,
   ): Observable<AiConversationSummary>;
   abstract getConversation(conversationId: string): Observable<AiConversationDetail>;

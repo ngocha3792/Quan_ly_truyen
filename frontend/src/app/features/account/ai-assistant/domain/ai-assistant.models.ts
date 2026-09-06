@@ -76,6 +76,16 @@ export interface AiConnectionTestResult {
   readonly message?: string;
 }
 
+export interface AiModelInfo {
+  readonly id: string;
+  readonly displayName?: string;
+  readonly contextLength?: number;
+  readonly maxOutputTokens?: number;
+  readonly reasoning?: boolean;
+  readonly vision?: boolean;
+  readonly tools?: boolean;
+}
+
 export type AiFallbackPolicy = 'NONE' | 'SYSTEM';
 export type AiRateLimitTier = 'FREE' | 'PRO' | 'ENTERPRISE';
 
@@ -113,6 +123,7 @@ export interface UpdateAiProfilePayload {
 export interface AiConversationSummary {
   readonly id: string;
   readonly connectionId: string | null;
+  readonly modelId: string | null;
   readonly provider: AiProviderId;
   readonly title: string;
   readonly createdAt: string;

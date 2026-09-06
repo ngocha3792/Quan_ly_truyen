@@ -14,5 +14,11 @@ export class CreateAiConversationRequest {
   @IsString()
   @MinLength(1)
   @MaxLength(200)
+  modelId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
   title?: string;
 }
