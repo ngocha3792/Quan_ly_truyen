@@ -15,9 +15,7 @@ import {
 } from '../../application/ports/chapter-translation-queue.port';
 
 @Injectable()
-export class ChapterTranslationQueueAdapter
-  implements ChapterTranslationQueuePort
-{
+export class ChapterTranslationQueueAdapter implements ChapterTranslationQueuePort {
   constructor(
     @Optional()
     @InjectQueue(QUEUE_NAMES.AI)

@@ -44,7 +44,7 @@ describe('RequestChapterTranslationCommandHandler', () => {
       chapters as never,
       translations as never,
       resolver as never,
-      queue as never,
+      queue,
     );
   });
 
@@ -53,7 +53,12 @@ describe('RequestChapterTranslationCommandHandler', () => {
 
     await expect(
       handler.execute(
-        new RequestChapterTranslationCommand(USER_ID, STORY_ID, CHAPTER_ID, 'en'),
+        new RequestChapterTranslationCommand(
+          USER_ID,
+          STORY_ID,
+          CHAPTER_ID,
+          'en',
+        ),
       ),
     ).rejects.toBeInstanceOf(ResourceNotFoundException);
   });
@@ -63,7 +68,12 @@ describe('RequestChapterTranslationCommandHandler', () => {
 
     await expect(
       handler.execute(
-        new RequestChapterTranslationCommand(USER_ID, STORY_ID, CHAPTER_ID, 'en'),
+        new RequestChapterTranslationCommand(
+          USER_ID,
+          STORY_ID,
+          CHAPTER_ID,
+          'en',
+        ),
       ),
     ).rejects.toBeInstanceOf(BusinessRuleViolationException);
     expect(translations.upsertPending).not.toHaveBeenCalled();

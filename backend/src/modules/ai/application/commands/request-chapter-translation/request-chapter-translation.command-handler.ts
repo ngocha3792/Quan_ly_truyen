@@ -9,6 +9,8 @@ import {
   ChapterPersistencePort,
 } from '@/modules/chapters';
 
+import { ChapterTranslationStatus } from '../../../domain/enums';
+
 import {
   CHAPTER_TRANSLATION_PERSISTENCE_PORT,
   ChapterTranslationPersistencePort,
@@ -76,7 +78,7 @@ export class RequestChapterTranslationCommandHandler {
 
     if (
       existing &&
-      existing.status === 'COMPLETED' &&
+      existing.status === ChapterTranslationStatus.COMPLETED &&
       existing.sourceContentHash === sourceContentHash
     ) {
       return {

@@ -10,7 +10,10 @@ import {
   CreateAiConnectionInput,
   UpdateAiConnectionInput,
 } from '../../application/ports/ai-connection.persistence.port';
-import { toDomainAiProvider, toPrismaAiProvider } from './ai-persistence.mappers';
+import {
+  toDomainAiProvider,
+  toPrismaAiProvider,
+} from './ai-persistence.mappers';
 
 function toDomainAiConnectionRecord(
   record: PrismaAiConnection,

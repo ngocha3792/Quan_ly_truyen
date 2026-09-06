@@ -28,6 +28,7 @@ import {
   CHAPTER_TRANSLATION_PERSISTENCE_PORT,
   ChapterTranslationPersistencePort,
 } from '../../application/ports/chapter-translation.persistence.port';
+import { ChapterTranslationStatus } from '../../domain/enums';
 import { AiProviderRegistry } from '../providers/ai-provider.registry';
 
 function buildTranslationSystemPrompt(targetLanguageCode: string): string {
@@ -76,7 +77,7 @@ export class AiTranslationProcessor extends WorkerHost {
       return;
     }
 
-    if (translation.status === 'COMPLETED') {
+    if (translation.status === ChapterTranslationStatus.COMPLETED) {
       return;
     }
 
