@@ -31,6 +31,7 @@ import {
   AnthropicMessagesProtocolAdapter,
   GeminiGenerateContentProtocolAdapter,
   OpenAiChatCompletionsProtocolAdapter,
+  OpenAiResponsesProtocolAdapter,
   PrismaAiConnectionPersistence,
   PrismaAiPolicyPersistence,
   PrismaAiProfilePersistence,
@@ -59,6 +60,7 @@ import {
     ChapterTranslationQueueAdapter,
     GeminiGenerateContentProtocolAdapter,
     AnthropicMessagesProtocolAdapter,
+    OpenAiResponsesProtocolAdapter,
     OpenAiChatCompletionsProtocolAdapter,
     AiProtocolRegistry,
     {
