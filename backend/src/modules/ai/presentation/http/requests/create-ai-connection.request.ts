@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { AiProvider } from '../../../domain/enums';
+import { AiConnectionPresetId } from '../ai-connection-presets';
 
 export class CreateAiConnectionRequest {
   @IsString()
@@ -15,8 +15,8 @@ export class CreateAiConnectionRequest {
   @MaxLength(120)
   name!: string;
 
-  @IsEnum(AiProvider)
-  provider!: AiProvider;
+  @IsEnum(AiConnectionPresetId)
+  provider!: AiConnectionPresetId;
 
   @IsString()
   @MinLength(8)

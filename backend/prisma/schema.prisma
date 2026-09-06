@@ -85,6 +85,24 @@ enum AiProvider {
   @@map("ai_provider")
 }
 
+enum AiProtocol {
+  OPENAI_RESPONSES        @map("openai_responses")
+  OPENAI_CHAT_COMPLETIONS @map("openai_chat_completions")
+  ANTHROPIC_MESSAGES      @map("anthropic_messages")
+  GEMINI_GENERATE_CONTENT @map("gemini_generate_content")
+
+  @@map("ai_protocol")
+}
+
+enum AiAuthType {
+  BEARER         @map("bearer")
+  X_API_KEY      @map("x_api_key")
+  API_KEY_HEADER @map("api_key_header")
+  QUERY_PARAM    @map("query_param")
+
+  @@map("ai_auth_type")
+}
+
 enum AiMessageRole {
   USER      @map("user")
   ASSISTANT @map("assistant")
@@ -483,16 +501,23 @@ model MfaRecoveryCode {
 }
 
 model AiConnection {
-  id              String     @id @default(uuid()) @db.Uuid
-  userId          String?    @map("user_id") @db.Uuid
-  name            String     @db.VarChar(120)
-  provider        AiProvider
-  encryptedApiKey String     @map("encrypted_api_key") @db.Text
-  baseUrl         String?    @map("base_url") @db.Text
-  defaultModel    String?    @map("default_model") @db.VarChar(200)
-  enabled         Boolean    @default(true)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                  String      @id @default(uuid()) @db.Uuid
+  userId              String?     @map("user_id") @db.Uuid
+  name                String      @db.VarChar(120)
+  vendorHint          String?     @map("vendor_hint") @db.VarChar(80)
+  protocol            AiProtocol?
+  authType            AiAuthType? @map("auth_type")
+  authHeaderName      String?     @map("auth_header_name") @db.VarChar(120)
+  encryptedCredential String?     @map("encrypted_credential") @db.Text
+  baseUrl             String?     @map("base_url") @db.Text
+  defaultModel        String?     @map("default_model") @db.VarChar(200)
+  enabled             Boolean     @default(true)
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Transitional mirrors for zero-downtime expand/contract deployment.
+  legacyProvider        AiProvider @map("provider")
+  legacyEncryptedApiKey String     @map("encrypted_api_key") @db.Text
 
   user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations       AiConversation[]
@@ -500,18 +525,23 @@ model AiConnection {
   chapterTranslations ChapterTranslation[]
 
   @@index([userId])
-  @@index([provider])
+  @@index([protocol])
+  @@index([legacyProvider], map: "ai_connections_provider_idx")
   @@map("ai_connections")
 }
 
 model AiConversation {
-  id           String     @id @default(uuid()) @db.Uuid
-  userId       String     @map("user_id") @db.Uuid
-  connectionId String?    @map("connection_id") @db.Uuid
-  provider     AiProvider
-  title        String     @db.VarChar(200)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id           String      @id @default(uuid()) @db.Uuid
+  userId       String      @map("user_id") @db.Uuid
+  connectionId String?     @map("connection_id") @db.Uuid
+  vendorHint   String?     @map("vendor_hint") @db.VarChar(80)
+  protocol     AiProtocol?
+  title        String      @db.VarChar(200)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Transitional mirror; protocol is the domain routing key.
+  legacyProvider AiProvider @map("provider")
 
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
@@ -539,7 +569,7 @@ model AiUsage {
   id           String            @id @default(uuid()) @db.Uuid
   userId       String?           @map("user_id") @db.Uuid
   connectionId String?           @map("connection_id") @db.Uuid
-  provider     AiProvider
+  protocol     AiProtocol?
   model        String            @db.VarChar(200)
   capability   AiUsageCapability @default(CHAT)
   inputTokens  Int?              @map("input_tokens")
@@ -549,11 +579,15 @@ model AiUsage {
   errorCode    String?           @map("error_code") @db.VarChar(50)
   createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
+  // Transitional mirror; retained for one compatibility release.
+  legacyProvider AiProvider @map("provider")
+
   user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([connectionId])
+  @@index([protocol, createdAt])
   @@map("ai_usages")
 }
 

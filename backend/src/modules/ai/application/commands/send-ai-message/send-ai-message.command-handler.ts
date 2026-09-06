@@ -36,16 +36,16 @@ export class SendAiMessageCommandHandler {
     );
 
     const generateResult = await this.gateway.generate(
-      context.providerConfig,
+      context.resolvedConnection,
       {
         systemPrompt: context.systemPrompt,
-        messages: context.providerMessages,
+        messages: context.protocolMessages,
       },
       { userId: command.userId, connectionId: context.connection.id },
       'CHAT',
       context.systemFallback
         ? {
-            config: context.systemFallback.providerConfig,
+            connection: context.systemFallback.resolvedConnection,
             connectionId: context.systemFallback.connection.id,
           }
         : null,

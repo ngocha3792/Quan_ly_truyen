@@ -2,11 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { BusinessRuleViolationException } from '@/common/exceptions';
 
-import { AiProvider } from '../../../domain/enums';
 import {
-  AI_PROVIDER_REGISTRY_PORT,
-  AiProviderRegistryPort,
-} from '../../ports/ai-provider-registry.port';
+  AI_PROTOCOL_REGISTRY_PORT,
+  AiProtocolRegistryPort,
+} from '../../ports/ai-protocol-registry.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -25,32 +24,34 @@ export class CreateAiConnectionCommandHandler {
     private readonly persistence: AiConnectionPersistencePort,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
-    @Inject(AI_PROVIDER_REGISTRY_PORT)
-    private readonly registry: AiProviderRegistryPort,
+    @Inject(AI_PROTOCOL_REGISTRY_PORT)
+    private readonly registry: AiProtocolRegistryPort,
   ) {}
 
   async execute(
     command: CreateAiConnectionCommand,
   ): Promise<AiConnectionRecord> {
-    const { userId, name, provider, apiKey, baseUrl, defaultModel } = command;
-
-    if (
-      provider === AiProvider.OPENAI_COMPATIBLE &&
-      (!baseUrl || !defaultModel)
-    ) {
-      throw new BusinessRuleViolationException({
-        message:
-          'Kết nối OpenAI Compatible cần khai báo Base URL và Model mặc định.',
-        rule: 'ai-connection.compatible-requires-base-url-and-model',
-      });
-    }
-
-    const model = defaultModel ?? this.registry.getModel(provider);
-    const client = this.registry.getClient(provider);
-    const testResult = await client.testConnection({
-      provider,
-      apiKey,
+    const {
+      userId,
+      name,
+      vendorHint,
+      protocol,
+      authType,
+      authHeaderName,
+      credential,
       baseUrl,
+      defaultModel,
+    } = command;
+
+    const model = defaultModel ?? this.registry.getDefaultModel(protocol);
+    const adapter = this.registry.getAdapter(protocol);
+    const testResult = await adapter.testConnection({
+      protocol,
+      vendorHint,
+      baseUrl,
+      authType,
+      authHeaderName,
+      credential,
       model,
     });
 
@@ -61,13 +62,16 @@ export class CreateAiConnectionCommandHandler {
       });
     }
 
-    const encryptedApiKey = await this.vault.encrypt(apiKey);
+    const encryptedCredential = await this.vault.encrypt(credential);
 
     return this.persistence.create({
       userId,
       name,
-      provider,
-      encryptedApiKey,
+      vendorHint,
+      protocol,
+      authType,
+      authHeaderName,
+      encryptedCredential,
       baseUrl,
       defaultModel,
     });

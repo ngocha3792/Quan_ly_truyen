@@ -18,7 +18,7 @@ import {
 import type {
   AiGenerateRequest,
   AiUsageTokens,
-} from '../ports/ai-provider-client.port';
+} from '../ports/ai-protocol-adapter.port';
 
 export interface AiRateLimitReservation {
   readonly userId: string;

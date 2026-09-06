@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/infrastructure/database';
 import type { AiConnection as PrismaAiConnection } from '@/generated/prisma/client';
 
-import type { AiProvider } from '../../domain/enums';
+import type { AiProtocol } from '../../domain/enums';
 import {
   AiConnectionPersistencePort,
   AiConnectionRecord,
@@ -11,20 +11,37 @@ import {
   UpdateAiConnectionInput,
 } from '../../application/ports/ai-connection.persistence.port';
 import {
-  toDomainAiProvider,
-  toPrismaAiProvider,
+  baseUrlFromPersistence,
+  legacyPrismaProvidersForProtocol,
+  toDomainAiAuthType,
+  toDomainAiProtocol,
+  toLegacyPrismaAiProvider,
+  toPrismaAiAuthType,
+  toPrismaAiProtocol,
+  vendorHintFromLegacyProvider,
 } from './ai-persistence.mappers';
 
 function toDomainAiConnectionRecord(
   record: PrismaAiConnection,
 ): AiConnectionRecord {
+  const protocol = toDomainAiProtocol(record.protocol, record.legacyProvider);
+
   return {
     id: record.id,
     userId: record.userId,
     name: record.name,
-    provider: toDomainAiProvider(record.provider),
-    encryptedApiKey: record.encryptedApiKey,
-    baseUrl: record.baseUrl,
+    vendorHint:
+      record.vendorHint ?? vendorHintFromLegacyProvider(record.legacyProvider),
+    protocol,
+    authType: toDomainAiAuthType(record.authType, protocol),
+    authHeaderName: record.authHeaderName,
+    encryptedCredential:
+      record.encryptedCredential ?? record.legacyEncryptedApiKey,
+    baseUrl: baseUrlFromPersistence(
+      record.baseUrl,
+      protocol,
+      record.legacyProvider,
+    ),
     defaultModel: record.defaultModel,
     enabled: record.enabled,
     createdAt: record.createdAt,
@@ -63,12 +80,24 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
     return record ? toDomainAiConnectionRecord(record) : null;
   }
 
-  async findFirstEnabledByOwnerAndProvider(
+  async findFirstEnabledByOwnerAndProtocol(
     userId: string | null,
-    provider: AiProvider,
+    protocol: AiProtocol,
   ): Promise<AiConnectionRecord | null> {
     const record = await this.prisma.aiConnection.findFirst({
-      where: { userId, provider: toPrismaAiProvider(provider), enabled: true },
+      where: {
+        userId,
+        enabled: true,
+        OR: [
+          { protocol: toPrismaAiProtocol(protocol) },
+          {
+            protocol: null,
+            legacyProvider: {
+              in: [...legacyPrismaProvidersForProtocol(protocol)],
+            },
+          },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
     });
     return record ? toDomainAiConnectionRecord(record) : null;
@@ -89,8 +118,16 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
       data: {
         userId: input.userId,
         name: input.name,
-        provider: toPrismaAiProvider(input.provider),
-        encryptedApiKey: input.encryptedApiKey,
+        vendorHint: input.vendorHint,
+        protocol: toPrismaAiProtocol(input.protocol),
+        authType: toPrismaAiAuthType(input.authType),
+        authHeaderName: input.authHeaderName,
+        encryptedCredential: input.encryptedCredential,
+        legacyProvider: toLegacyPrismaAiProvider(
+          input.protocol,
+          input.vendorHint,
+        ),
+        legacyEncryptedApiKey: input.encryptedCredential,
         baseUrl: input.baseUrl,
         defaultModel: input.defaultModel,
       },
@@ -106,8 +143,11 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
       where: { id: connectionId },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.encryptedApiKey !== undefined
-          ? { encryptedApiKey: input.encryptedApiKey }
+        ...(input.encryptedCredential !== undefined
+          ? {
+              encryptedCredential: input.encryptedCredential,
+              legacyEncryptedApiKey: input.encryptedCredential,
+            }
           : {}),
         ...(input.baseUrl !== undefined ? { baseUrl: input.baseUrl } : {}),
         ...(input.defaultModel !== undefined

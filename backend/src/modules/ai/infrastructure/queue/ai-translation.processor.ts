@@ -15,28 +15,24 @@ import {
 } from '@/infrastructure/queue/contracts';
 import { getWorkerConcurrency } from '@/infrastructure/queue/worker-options';
 
-import { AiConnectionRecord } from '../../application/ports/ai-connection.persistence.port';
-import { AiConnectionResolver } from '../../application/connection-resolution';
+import {
+  AiConnectionResolver,
+  AiResolvedConnectionFactory,
+} from '../../application/connection-resolution';
 import { AiProfileManager } from '../../application/profile';
 import {
   RequestChapterTranslationCommand,
   RequestChapterTranslationCommandHandler,
 } from '../../application/commands/request-chapter-translation';
 import {
-  AI_CREDENTIAL_VAULT_PORT,
-  AiCredentialVaultPort,
-} from '../../application/ports/ai-credential-vault.port';
-import {
   AI_GATEWAY_PORT,
   AiGatewayPort,
 } from '../../application/ports/ai-gateway.port';
-import { AiConnectionConfig } from '../../application/ports/ai-provider-client.port';
 import {
   CHAPTER_TRANSLATION_PERSISTENCE_PORT,
   ChapterTranslationPersistencePort,
 } from '../../application/ports/chapter-translation.persistence.port';
 import { ChapterTranslationStatus } from '../../domain/enums';
-import { AiProviderRegistry } from '../providers/ai-provider.registry';
 
 function buildTranslationSystemPrompt(
   targetLanguageCode: string,
@@ -61,11 +57,9 @@ export class AiTranslationProcessor extends WorkerHost {
     private readonly resolver: AiConnectionResolver,
     private readonly profiles: AiProfileManager,
     private readonly requestTranslation: RequestChapterTranslationCommandHandler,
-    @Inject(AI_CREDENTIAL_VAULT_PORT)
-    private readonly vault: AiCredentialVaultPort,
     @Inject(AI_GATEWAY_PORT)
     private readonly gateway: AiGatewayPort,
-    private readonly registry: AiProviderRegistry,
+    private readonly resolvedConnections: AiResolvedConnectionFactory,
   ) {
     super();
   }
@@ -134,10 +128,13 @@ export class AiTranslationProcessor extends WorkerHost {
     await this.translations.markProcessing(translationId);
 
     const connection = originalConnection.primary;
-    const config = await this.toProviderConfig(connection, profile.model);
+    const resolvedConnection = await this.resolvedConnections.fromRecord(
+      connection,
+      profile.model,
+    );
     const systemFallback = originalConnection.systemFallback
       ? {
-          config: await this.toProviderConfig(
+          connection: await this.resolvedConnections.fromRecord(
             originalConnection.systemFallback,
             profile.model,
           ),
@@ -157,7 +154,7 @@ export class AiTranslationProcessor extends WorkerHost {
 
     try {
       const titleResult = await this.gateway.generate(
-        config,
+        resolvedConnection,
         { systemPrompt, messages: [{ role: 'user', content: chapter.title }] },
         usageContext,
         'TRANSLATE',
@@ -165,7 +162,7 @@ export class AiTranslationProcessor extends WorkerHost {
       );
 
       const contentResult = await this.gateway.generate(
-        config,
+        resolvedConnection,
         {
           systemPrompt,
           messages: [{ role: 'user', content: chapter.content }],
@@ -227,20 +224,5 @@ export class AiTranslationProcessor extends WorkerHost {
         profile.defaultTranslationLanguageCode,
       ),
     );
-  }
-
-  private async toProviderConfig(
-    connection: AiConnectionRecord,
-    profileModel: string | null,
-  ): Promise<AiConnectionConfig> {
-    return {
-      provider: connection.provider,
-      apiKey: await this.vault.decrypt(connection.encryptedApiKey),
-      baseUrl: connection.baseUrl,
-      model:
-        profileModel ??
-        connection.defaultModel ??
-        this.registry.getModel(connection.provider),
-    };
   }
 }

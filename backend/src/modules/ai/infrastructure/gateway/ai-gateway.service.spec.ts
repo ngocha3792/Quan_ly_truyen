@@ -1,56 +1,66 @@
 import { Logger } from '@nestjs/common';
 
-import { AiErrorCode, AiProvider } from '../../domain/enums';
-import { AiProviderRequestError } from '../../application/ports/ai-provider-client.port';
+import { AiAuthType, AiErrorCode, AiProtocol } from '../../domain/enums';
+import { AiProtocolRequestError } from '../../application/ports/ai-protocol-adapter.port';
 import { AiGatewayService } from './ai-gateway.service';
 
 describe('AiGatewayService explicit system fallback', () => {
   const primary = {
-    provider: AiProvider.OPENAI,
-    apiKey: 'personal-secret',
+    protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+    vendorHint: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    authType: AiAuthType.BEARER,
+    authHeaderName: null,
+    credential: 'personal-secret',
     model: 'personal-model',
   };
   const system = {
-    provider: AiProvider.OPENAI,
-    apiKey: 'system-secret',
+    protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+    vendorHint: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    authType: AiAuthType.BEARER,
+    authHeaderName: null,
+    credential: 'system-secret',
     model: 'system-model',
   };
   const request = { messages: [{ role: 'user' as const, content: 'hello' }] };
   const usageContext = { userId: 'user-id', connectionId: 'personal-id' };
-  let client: { generate: jest.Mock };
+  let adapter: { generate: jest.Mock };
   let usage: { record: jest.Mock };
   let rateLimits: { reserve: jest.Mock; reconcile: jest.Mock };
   let gateway: AiGatewayService;
 
   beforeEach(() => {
-    client = { generate: jest.fn() };
+    adapter = { generate: jest.fn() };
     usage = { record: jest.fn() };
     rateLimits = {
       reserve: jest.fn().mockResolvedValue({ reservation: true }),
       reconcile: jest.fn(),
     };
     gateway = new AiGatewayService(
-      { getClient: jest.fn().mockReturnValue(client) } as never,
+      { getAdapter: jest.fn().mockReturnValue(adapter) } as never,
       usage,
       rateLimits as never,
     );
   });
 
   it('không fallback nếu caller không truyền execution plan SYSTEM', async () => {
-    client.generate.mockRejectedValue(new AiProviderRequestError('quota', 429));
+    adapter.generate.mockRejectedValue(
+      new AiProtocolRequestError('quota', 429),
+    );
 
     await expect(
       gateway.generate(primary, request, usageContext),
     ).rejects.toMatchObject({ code: 'RATE_LIMIT_EXCEEDED' });
-    expect(client.generate).toHaveBeenCalledTimes(1);
+    expect(adapter.generate).toHaveBeenCalledTimes(1);
   });
 
   it('fallback đúng một lần sang system config đã được policy cho phép', async () => {
-    client.generate
-      .mockRejectedValueOnce(new AiProviderRequestError('quota', 429))
+    adapter.generate
+      .mockRejectedValueOnce(new AiProtocolRequestError('quota', 429))
       .mockResolvedValueOnce({
         content: 'ok',
-        provider: AiProvider.OPENAI,
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
         model: 'system-model',
         latencyMs: 10,
         usage: { inputTokens: 2, outputTokens: 1 },
@@ -58,13 +68,13 @@ describe('AiGatewayService explicit system fallback', () => {
 
     await expect(
       gateway.generate(primary, request, usageContext, 'CHAT', {
-        config: system,
+        connection: system,
         connectionId: 'system-id',
       }),
     ).resolves.toMatchObject({ content: 'ok' });
 
-    expect(client.generate).toHaveBeenNthCalledWith(1, primary, request);
-    expect(client.generate).toHaveBeenNthCalledWith(2, system, request);
+    expect(adapter.generate).toHaveBeenNthCalledWith(1, primary, request);
+    expect(adapter.generate).toHaveBeenNthCalledWith(2, system, request);
     expect(rateLimits.reserve).toHaveBeenCalledTimes(1);
     expect(usage.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -90,8 +100,8 @@ describe('AiGatewayService explicit system fallback', () => {
         { role: 'user' as const, content: 'do-not-log-private-message' },
       ],
     };
-    client.generate.mockRejectedValueOnce(
-      new AiProviderRequestError('provider-safe-error', 429),
+    adapter.generate.mockRejectedValueOnce(
+      new AiProtocolRequestError('protocol-safe-error', 429),
     );
 
     await expect(
@@ -99,10 +109,10 @@ describe('AiGatewayService explicit system fallback', () => {
     ).rejects.toBeDefined();
 
     const serialized = JSON.stringify([...log.mock.calls, ...warn.mock.calls]);
-    expect(serialized).toContain('ai.provider-attempt.completed');
-    expect(serialized).not.toContain(primary.apiKey);
+    expect(serialized).toContain('ai.protocol-attempt.completed');
+    expect(serialized).not.toContain(primary.credential);
     expect(serialized).not.toContain(sensitiveRequest.systemPrompt);
     expect(serialized).not.toContain(sensitiveRequest.messages[0].content);
-    expect(serialized).not.toContain('provider-safe-error');
+    expect(serialized).not.toContain('protocol-safe-error');
   });
 });

@@ -1,4 +1,4 @@
-import type { AiProvider } from '../../../domain/enums';
+import type { AiAuthType, AiProtocol } from '../../../domain/enums';
 import type { AiConnectionRecord } from '../../../application/ports/ai-connection.persistence.port';
 
 /**
@@ -8,7 +8,12 @@ import type { AiConnectionRecord } from '../../../application/ports/ai-connectio
 export interface AiConnectionResponse {
   readonly id: string;
   readonly name: string;
-  readonly provider: AiProvider;
+  /** @deprecated UI preset compatibility; routing uses protocol. */
+  readonly provider: string;
+  readonly vendorHint: string | null;
+  readonly protocol: AiProtocol;
+  readonly authType: AiAuthType;
+  readonly authHeaderName: string | null;
   readonly baseUrl: string | null;
   readonly defaultModel: string | null;
   readonly enabled: boolean;
@@ -22,7 +27,11 @@ export function toAiConnectionResponse(
   return {
     id: record.id,
     name: record.name,
-    provider: record.provider,
+    provider: record.vendorHint ?? record.protocol,
+    vendorHint: record.vendorHint,
+    protocol: record.protocol,
+    authType: record.authType,
+    authHeaderName: record.authHeaderName,
     baseUrl: record.baseUrl,
     defaultModel: record.defaultModel,
     enabled: record.enabled,

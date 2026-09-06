@@ -4,7 +4,7 @@ import {
   BusinessRuleViolationException,
   RateLimitExceededException,
 } from '@/common/exceptions';
-import { AiProvider } from '@/generated/prisma/client';
+import { AiAuthType, AiProtocol } from '../../domain/enums';
 import {
   AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
   TRANSLATE_CHAPTER_JOB,
@@ -43,9 +43,8 @@ describe('AiTranslationProcessor', () => {
   let resolver: { resolvePlan: jest.Mock };
   let profiles: { resolve: jest.Mock };
   let requestTranslation: { execute: jest.Mock };
-  let vault: { decrypt: jest.Mock };
   let gateway: { generate: jest.Mock };
-  let registry: { getModel: jest.Mock };
+  let resolvedConnections: { fromRecord: jest.Mock };
   let processor: AiTranslationProcessor;
 
   beforeEach(() => {
@@ -69,9 +68,12 @@ describe('AiTranslationProcessor', () => {
       resolvePlan: jest.fn().mockResolvedValue({
         primary: {
           id: CONNECTION_ID,
-          provider: AiProvider.OPENAI,
-          encryptedApiKey: 'enc',
-          baseUrl: null,
+          vendorHint: 'openai',
+          protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+          authType: AiAuthType.BEARER,
+          authHeaderName: null,
+          encryptedCredential: 'enc',
+          baseUrl: 'https://api.openai.com/v1',
           defaultModel: 'gpt-4o-mini',
         },
         systemFallback: null,
@@ -87,23 +89,31 @@ describe('AiTranslationProcessor', () => {
       }),
     };
     requestTranslation = { execute: jest.fn() };
-    vault = { decrypt: jest.fn().mockResolvedValue('plain-api-key') };
     gateway = {
       generate: jest
         .fn()
         .mockResolvedValueOnce({ content: 'Chapter 1' })
         .mockResolvedValueOnce({ content: 'Content' }),
     };
-    registry = { getModel: jest.fn().mockReturnValue('default-model') };
+    resolvedConnections = {
+      fromRecord: jest.fn().mockResolvedValue({
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+        vendorHint: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        authType: AiAuthType.BEARER,
+        authHeaderName: null,
+        credential: 'plain-api-key',
+        model: 'gpt-4o-mini',
+      }),
+    };
 
     processor = new AiTranslationProcessor(
       translations as never,
       resolver as never,
       profiles as never,
       requestTranslation as never,
-      vault as never,
       gateway as never,
-      registry as never,
+      resolvedConnections as never,
     );
   });
 

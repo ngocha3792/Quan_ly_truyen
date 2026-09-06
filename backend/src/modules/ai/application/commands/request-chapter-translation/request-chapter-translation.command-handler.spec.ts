@@ -2,7 +2,7 @@ import {
   BusinessRuleViolationException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
-import { AiProvider } from '../../../domain/enums';
+import { AiProtocol } from '../../../domain/enums';
 
 import { computeChapterTranslationHash } from '../../chapter-translation/chapter-translation-hash.util';
 import { RequestChapterTranslationCommand } from './request-chapter-translation.command';
@@ -18,7 +18,7 @@ const CHAPTER = { title: 'Chương 1', content: 'Nội dung chương 1' };
 
 const CONNECTION = {
   id: CONNECTION_ID,
-  provider: AiProvider.OPENAI,
+  protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
 };
 
 describe('RequestChapterTranslationCommandHandler', () => {

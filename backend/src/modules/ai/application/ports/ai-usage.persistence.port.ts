@@ -1,4 +1,4 @@
-import type { AiProvider } from '../../domain/enums';
+import type { AiProtocol } from '../../domain/enums';
 
 export const AI_USAGE_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.usage-persistence',
@@ -10,7 +10,9 @@ export type AiUsageCapabilityValue =
 export interface RecordAiUsageInput {
   readonly userId: string | null;
   readonly connectionId: string | null;
-  readonly provider: AiProvider;
+  readonly protocol: AiProtocol;
+  /** Transitional metadata used only to keep the legacy provider mirror exact. */
+  readonly vendorHint: string | null;
   readonly model: string;
   readonly capability: AiUsageCapabilityValue;
   readonly inputTokens?: number;

@@ -1,4 +1,4 @@
-import type { AiMessageRole, AiProvider } from '../../../domain/enums';
+import type { AiMessageRole, AiProtocol } from '../../../domain/enums';
 import type {
   AiConversationRecord,
   AiMessageRecord,
@@ -9,7 +9,10 @@ import type { SendAiMessageResultView } from '../../../application/commands/send
 export interface AiConversationSummaryResponse {
   readonly id: string;
   readonly connectionId: string | null;
-  readonly provider: AiProvider;
+  /** @deprecated UI preset compatibility; routing uses protocol. */
+  readonly provider: string;
+  readonly vendorHint: string | null;
+  readonly protocol: AiProtocol;
   readonly title: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -37,7 +40,9 @@ function toSummary(
   return {
     id: record.id,
     connectionId: record.connectionId,
-    provider: record.provider,
+    provider: record.vendorHint ?? record.protocol,
+    vendorHint: record.vendorHint,
+    protocol: record.protocol,
     title: record.title,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),

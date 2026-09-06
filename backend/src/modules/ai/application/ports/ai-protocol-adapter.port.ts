@@ -1,7 +1,8 @@
 import {
+  AiAuthType,
   AiErrorCode,
+  AiProtocol,
   classifyAiErrorStatus,
-  type AiProvider,
 } from '../../domain/enums';
 
 export type AiMessageRole = 'system' | 'user' | 'assistant';
@@ -11,10 +12,13 @@ export interface AiMessage {
   readonly content: string;
 }
 
-export interface AiConnectionConfig {
-  readonly provider: AiProvider;
-  readonly apiKey: string;
-  readonly baseUrl?: string | null;
+export interface ResolvedAiConnection {
+  readonly protocol: AiProtocol;
+  readonly vendorHint: string | null;
+  readonly baseUrl: string;
+  readonly authType: AiAuthType;
+  readonly authHeaderName: string | null;
+  readonly credential: string;
   readonly model: string;
 }
 
@@ -32,7 +36,7 @@ export interface AiUsageTokens {
 
 export interface AiGenerateResponse {
   readonly content: string;
-  readonly provider: AiProvider;
+  readonly protocol: AiProtocol;
   readonly model: string;
   readonly latencyMs: number;
   readonly usage?: AiUsageTokens;
@@ -46,31 +50,34 @@ export interface AiConnectionTestResult {
 export type AiStreamDelta =
   { readonly text: string } | { readonly usage: AiUsageTokens };
 
-export class AiProviderRequestError extends Error {
+export class AiProtocolRequestError extends Error {
   readonly code: AiErrorCode;
 
   constructor(
     message: string,
     readonly upstreamStatus: number | null,
+    code?: AiErrorCode,
   ) {
     super(message);
-    this.name = 'AiProviderRequestError';
-    this.code = classifyAiErrorStatus(upstreamStatus);
+    this.name = 'AiProtocolRequestError';
+    this.code = code ?? classifyAiErrorStatus(upstreamStatus);
   }
 }
 
-export interface AiProviderClientPort {
+export interface AiProtocolAdapter {
   generate(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): Promise<AiGenerateResponse>;
 
   generateStream(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): AsyncIterable<AiStreamDelta>;
 
-  testConnection(config: AiConnectionConfig): Promise<AiConnectionTestResult>;
+  testConnection(
+    connection: ResolvedAiConnection,
+  ): Promise<AiConnectionTestResult>;
 
-  listModels(config: AiConnectionConfig): Promise<readonly string[]>;
+  listModels(connection: ResolvedAiConnection): Promise<readonly string[]>;
 }

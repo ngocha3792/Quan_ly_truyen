@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { AiFallbackPolicy, type AiProvider } from '../../domain/enums';
+import { AiFallbackPolicy, type AiProtocol } from '../../domain/enums';
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
   AiConnectionPersistencePort,
@@ -14,7 +14,7 @@ import {
 export interface ResolveAiConnectionParams {
   readonly userId: string;
   readonly connectionId?: string | null;
-  readonly provider?: AiProvider;
+  readonly protocol?: AiProtocol;
 }
 
 export interface ResolvedAiConnectionPlan {
@@ -27,7 +27,7 @@ export interface ResolvedAiConnectionPlan {
  * Picks which AiConnection a request should use: an explicitly requested
  * connection first (if it still belongs to the user or is a system
  * connection and is enabled), otherwise the user's own connection for the
- * given provider, otherwise a system-wide one for that provider.
+ * given protocol, otherwise a system-wide one for that protocol.
  */
 @Injectable()
 export class AiConnectionResolver {
@@ -70,7 +70,7 @@ export class AiConnectionResolver {
       }
     }
 
-    if (!params.provider) {
+    if (!params.protocol) {
       const personal = await this.connections.findFirstEnabledByOwner(
         params.userId,
       );
@@ -83,9 +83,9 @@ export class AiConnectionResolver {
         : null;
     }
 
-    const personal = await this.connections.findFirstEnabledByOwnerAndProvider(
+    const personal = await this.connections.findFirstEnabledByOwnerAndProtocol(
       params.userId,
-      params.provider,
+      params.protocol,
     );
     if (personal) {
       return this.planForPersonal(personal, fallbackPolicy);
@@ -93,9 +93,9 @@ export class AiConnectionResolver {
 
     if (fallbackPolicy !== AiFallbackPolicy.SYSTEM) return null;
 
-    const system = await this.connections.findFirstEnabledByOwnerAndProvider(
+    const system = await this.connections.findFirstEnabledByOwnerAndProtocol(
       null,
-      params.provider,
+      params.protocol,
     );
     return system
       ? { primary: system, systemFallback: null, fallbackPolicy }
@@ -108,9 +108,9 @@ export class AiConnectionResolver {
   ): Promise<ResolvedAiConnectionPlan> {
     const systemFallback =
       fallbackPolicy === AiFallbackPolicy.SYSTEM
-        ? await this.connections.findFirstEnabledByOwnerAndProvider(
+        ? await this.connections.findFirstEnabledByOwnerAndProtocol(
             null,
-            personal.provider,
+            personal.protocol,
           )
         : null;
 

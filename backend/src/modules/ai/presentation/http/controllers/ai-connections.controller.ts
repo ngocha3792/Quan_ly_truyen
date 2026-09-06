@@ -27,7 +27,7 @@ import {
   UpdateAiConnectionCommand,
   UpdateAiConnectionCommandHandler,
 } from '../../../application';
-import { AiConnectionTestResult } from '../../../application/ports/ai-provider-client.port';
+import { AiConnectionTestResult } from '../../../application/ports/ai-protocol-adapter.port';
 import {
   CreateAiConnectionRequest,
   UpdateAiConnectionRequest,
@@ -37,6 +37,7 @@ import {
   toAiConnectionResponse,
   toAiConnectionResponseList,
 } from '../responses';
+import { resolveAiConnectionPreset } from '../ai-connection-presets';
 
 @Controller('ai/connections')
 @RequirePermissions(PermissionCode.AI_CHAT_USE)
@@ -65,14 +66,23 @@ export class AiConnectionsController {
     @CurrentUserId() userId: string | undefined,
     @Body() request: CreateAiConnectionRequest,
   ): Promise<AiConnectionResponse> {
+    const defaultModel = request.defaultModel ?? null;
+    const preset = resolveAiConnectionPreset(
+      request.provider,
+      request.baseUrl ?? null,
+      defaultModel,
+    );
     const result = await this.createConnection.execute(
       new CreateAiConnectionCommand(
         this.requireUserId(userId),
         request.name,
-        request.provider,
+        preset.vendorHint,
+        preset.protocol,
+        preset.authType,
+        preset.authHeaderName,
         request.apiKey,
-        request.baseUrl ?? null,
-        request.defaultModel ?? null,
+        preset.baseUrl,
+        defaultModel,
       ),
     );
     return toAiConnectionResponse(result);

@@ -4,11 +4,10 @@ import {
   BusinessRuleViolationException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
-import { AiProvider } from '../../../domain/enums';
 import {
-  AI_PROVIDER_REGISTRY_PORT,
-  AiProviderRegistryPort,
-} from '../../ports/ai-provider-registry.port';
+  AI_PROTOCOL_REGISTRY_PORT,
+  AiProtocolRegistryPort,
+} from '../../ports/ai-protocol-registry.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -28,8 +27,8 @@ export class UpdateAiConnectionCommandHandler {
     private readonly persistence: AiConnectionPersistencePort,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
-    @Inject(AI_PROVIDER_REGISTRY_PORT)
-    private readonly registry: AiProviderRegistryPort,
+    @Inject(AI_PROTOCOL_REGISTRY_PORT)
+    private readonly registry: AiProtocolRegistryPort,
   ) {}
 
   async execute(
@@ -48,35 +47,27 @@ export class UpdateAiConnectionCommandHandler {
     }
 
     const { changes } = command;
-    const nextBaseUrl =
-      changes.baseUrl !== undefined ? changes.baseUrl : existing.baseUrl;
+    const nextBaseUrl = changes.baseUrl || existing.baseUrl;
     const nextModel =
       changes.defaultModel !== undefined
         ? changes.defaultModel
         : existing.defaultModel;
 
-    if (
-      existing.provider === AiProvider.OPENAI_COMPATIBLE &&
-      (!nextBaseUrl || !nextModel)
-    ) {
-      throw new BusinessRuleViolationException({
-        message:
-          'Kết nối OpenAI Compatible cần khai báo Base URL và Model mặc định.',
-        rule: 'ai-connection.compatible-requires-base-url-and-model',
-      });
-    }
-
-    let encryptedApiKey: string | undefined;
+    let encryptedCredential: string | undefined;
 
     if (changes.apiKey !== undefined || changes.baseUrl !== undefined) {
-      const apiKeyToTest =
-        changes.apiKey ?? (await this.vault.decrypt(existing.encryptedApiKey));
-      const client = this.registry.getClient(existing.provider);
-      const result = await client.testConnection({
-        provider: existing.provider,
-        apiKey: apiKeyToTest,
+      const credentialToTest =
+        changes.apiKey ??
+        (await this.vault.decrypt(existing.encryptedCredential));
+      const adapter = this.registry.getAdapter(existing.protocol);
+      const result = await adapter.testConnection({
+        protocol: existing.protocol,
+        vendorHint: existing.vendorHint,
         baseUrl: nextBaseUrl,
-        model: nextModel ?? this.registry.getModel(existing.provider),
+        authType: existing.authType,
+        authHeaderName: existing.authHeaderName,
+        credential: credentialToTest,
+        model: nextModel ?? this.registry.getDefaultModel(existing.protocol),
       });
 
       if (!result.ok) {
@@ -87,14 +78,14 @@ export class UpdateAiConnectionCommandHandler {
       }
 
       if (changes.apiKey !== undefined) {
-        encryptedApiKey = await this.vault.encrypt(changes.apiKey);
+        encryptedCredential = await this.vault.encrypt(changes.apiKey);
       }
     }
 
     const update: UpdateAiConnectionInput = {
       ...(changes.name !== undefined ? { name: changes.name } : {}),
-      ...(encryptedApiKey !== undefined ? { encryptedApiKey } : {}),
-      ...(changes.baseUrl !== undefined ? { baseUrl: changes.baseUrl } : {}),
+      ...(encryptedCredential !== undefined ? { encryptedCredential } : {}),
+      ...(changes.baseUrl !== undefined ? { baseUrl: nextBaseUrl } : {}),
       ...(changes.defaultModel !== undefined
         ? { defaultModel: changes.defaultModel }
         : {}),

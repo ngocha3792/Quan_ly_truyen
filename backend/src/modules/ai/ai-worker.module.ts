@@ -7,6 +7,7 @@ import {
   AI_CONNECTION_PERSISTENCE_PORT,
   AI_CREDENTIAL_VAULT_PORT,
   AI_GATEWAY_PORT,
+  AI_PROTOCOL_REGISTRY_PORT,
   AI_POLICY_PERSISTENCE_PORT,
   AI_PROFILE_PERSISTENCE_PORT,
   AI_RATE_LIMIT_PERSISTENCE_PORT,
@@ -16,6 +17,7 @@ import {
 } from './application/ports';
 import {
   AiConnectionResolver,
+  AiResolvedConnectionFactory,
   AiProfileManager,
   AiRateLimiter,
   RequestChapterTranslationCommandHandler,
@@ -23,13 +25,12 @@ import {
 import {
   AiApiKeyCipherAdapter,
   AiGatewayService,
-  AiProviderRegistry,
+  AiProtocolRegistry,
   AiTranslationProcessor,
   ChapterTranslationQueueAdapter,
-  AnthropicProviderAdapter,
-  GeminiProviderAdapter,
-  OpenAiCompatibleProviderAdapter,
-  OpenAiProviderAdapter,
+  AnthropicMessagesProtocolAdapter,
+  GeminiGenerateContentProtocolAdapter,
+  OpenAiChatCompletionsProtocolAdapter,
   PrismaAiConnectionPersistence,
   PrismaAiPolicyPersistence,
   PrismaAiProfilePersistence,
@@ -53,13 +54,13 @@ import {
     AiRateLimiter,
     AiProfileManager,
     AiConnectionResolver,
+    AiResolvedConnectionFactory,
     RequestChapterTranslationCommandHandler,
     ChapterTranslationQueueAdapter,
-    GeminiProviderAdapter,
-    OpenAiProviderAdapter,
-    AnthropicProviderAdapter,
-    OpenAiCompatibleProviderAdapter,
-    AiProviderRegistry,
+    GeminiGenerateContentProtocolAdapter,
+    AnthropicMessagesProtocolAdapter,
+    OpenAiChatCompletionsProtocolAdapter,
+    AiProtocolRegistry,
     {
       provide: AI_CONNECTION_PERSISTENCE_PORT,
       useExisting: PrismaAiConnectionPersistence,
@@ -87,6 +88,10 @@ import {
     {
       provide: AI_GATEWAY_PORT,
       useExisting: AiGatewayService,
+    },
+    {
+      provide: AI_PROTOCOL_REGISTRY_PORT,
+      useExisting: AiProtocolRegistry,
     },
     {
       provide: CHAPTER_TRANSLATION_PERSISTENCE_PORT,

@@ -7,38 +7,35 @@ import {
   RateLimitExceededException,
   RequestTimeoutException,
 } from '@/common/exceptions';
-import { AiErrorCode, AiProvider } from '../../domain/enums';
+import { AiErrorCode, AiProtocol } from '../../domain/enums';
 import {
   AiGatewayPort,
   AiSystemFallback,
   AiUsageContext,
 } from '../../application/ports/ai-gateway.port';
 import {
-  AiConnectionConfig,
+  ResolvedAiConnection,
   AiGenerateRequest,
   AiGenerateResponse,
-  AiProviderRequestError,
+  AiProtocolRequestError,
   AiStreamDelta,
-} from '../../application/ports/ai-provider-client.port';
+} from '../../application/ports/ai-protocol-adapter.port';
 import {
   AI_USAGE_PERSISTENCE_PORT,
   AiUsageCapabilityValue,
   AiUsagePersistencePort,
 } from '../../application/ports/ai-usage.persistence.port';
-import { AiProviderRegistry } from '../providers/ai-provider.registry';
+import {
+  AI_PROTOCOL_REGISTRY_PORT,
+  AiProtocolRegistryPort,
+} from '../../application/ports/ai-protocol-registry.port';
 import { AiRateLimiter } from '../../application/policy/ai-rate-limiter';
-
-const PROVIDER_LABELS: Record<AiProvider, string> = {
-  [AiProvider.GEMINI]: 'Gemini',
-  [AiProvider.OPENAI]: 'ChatGPT',
-  [AiProvider.ANTHROPIC]: 'Claude',
-  [AiProvider.OPENAI_COMPATIBLE]: 'AI (OpenAI Compatible)',
-};
 
 interface RecordUsageParams {
   readonly usageContext: AiUsageContext;
   readonly capability: AiUsageCapabilityValue;
-  readonly provider: AiProvider;
+  readonly protocol: AiProtocol;
+  readonly vendorHint: string | null;
   readonly model: string;
   readonly latencyMs: number;
   readonly success: boolean;
@@ -52,14 +49,15 @@ export class AiGatewayService implements AiGatewayPort {
   private readonly logger = new Logger(AiGatewayService.name);
 
   constructor(
-    private readonly registry: AiProviderRegistry,
+    @Inject(AI_PROTOCOL_REGISTRY_PORT)
+    private readonly registry: AiProtocolRegistryPort,
     @Inject(AI_USAGE_PERSISTENCE_PORT)
     private readonly usagePersistence: AiUsagePersistencePort,
     private readonly rateLimits: AiRateLimiter,
   ) {}
 
   async generate(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability: AiUsageCapabilityValue = 'CHAT',
@@ -73,7 +71,7 @@ export class AiGatewayService implements AiGatewayPort {
 
     try {
       result = await this.generateAttempt(
-        config,
+        connection,
         request,
         usageContext,
         capability,
@@ -88,13 +86,13 @@ export class AiGatewayService implements AiGatewayPort {
         capability,
         primaryConnectionId: usageContext.connectionId,
         fallbackConnectionId: systemFallback.connectionId,
-        primaryProvider: config.provider,
-        fallbackProvider: systemFallback.config.provider,
+        primaryProtocol: connection.protocol,
+        fallbackProtocol: systemFallback.connection.protocol,
         reasonCode: this.errorCode(error),
       });
 
       result = await this.generateAttempt(
-        systemFallback.config,
+        systemFallback.connection,
         request,
         {
           userId: usageContext.userId,
@@ -113,7 +111,7 @@ export class AiGatewayService implements AiGatewayPort {
   }
 
   async *generateStream(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability: AiUsageCapabilityValue = 'CHAT',
@@ -123,7 +121,7 @@ export class AiGatewayService implements AiGatewayPort {
       usageContext.userId,
       request,
     );
-    let activeConfig = config;
+    let activeConnection = connection;
     let activeUsageContext = usageContext;
     let pendingFallback = systemFallback ?? null;
     let completedUsage:
@@ -134,14 +132,14 @@ export class AiGatewayService implements AiGatewayPort {
     try {
       for (;;) {
         const startedAt = Date.now();
-        const client = this.registry.getClient(activeConfig.provider);
+        const adapter = this.registry.getAdapter(activeConnection.protocol);
         let inputTokens: number | undefined;
         let outputTokens: number | undefined;
         let attemptText = '';
 
         try {
-          for await (const delta of client.generateStream(
-            activeConfig,
+          for await (const delta of adapter.generateStream(
+            activeConnection,
             request,
           )) {
             if ('usage' in delta) {
@@ -159,8 +157,9 @@ export class AiGatewayService implements AiGatewayPort {
           await this.recordUsage({
             usageContext: activeUsageContext,
             capability,
-            provider: activeConfig.provider,
-            model: activeConfig.model,
+            protocol: activeConnection.protocol,
+            vendorHint: activeConnection.vendorHint,
+            model: activeConnection.model,
             latencyMs: Date.now() - startedAt,
             success: true,
             inputTokens,
@@ -169,8 +168,9 @@ export class AiGatewayService implements AiGatewayPort {
           this.logAttempt({
             usageContext: activeUsageContext,
             capability,
-            provider: activeConfig.provider,
-            model: activeConfig.model,
+            protocol: activeConnection.protocol,
+            vendorHint: activeConnection.vendorHint,
+            model: activeConnection.model,
             latencyMs: Date.now() - startedAt,
             success: true,
             inputTokens,
@@ -181,14 +181,15 @@ export class AiGatewayService implements AiGatewayPort {
           const failedAttempt: RecordUsageParams = {
             usageContext: activeUsageContext,
             capability,
-            provider: activeConfig.provider,
-            model: activeConfig.model,
+            protocol: activeConnection.protocol,
+            vendorHint: activeConnection.vendorHint,
+            model: activeConnection.model,
             latencyMs: Date.now() - startedAt,
             success: false,
             inputTokens,
             outputTokens,
             errorCode:
-              error instanceof AiProviderRequestError
+              error instanceof AiProtocolRequestError
                 ? error.code
                 : AiErrorCode.UNKNOWN,
           };
@@ -202,11 +203,11 @@ export class AiGatewayService implements AiGatewayPort {
               capability,
               primaryConnectionId: activeUsageContext.connectionId,
               fallbackConnectionId: pendingFallback.connectionId,
-              primaryProvider: activeConfig.provider,
-              fallbackProvider: pendingFallback.config.provider,
+              primaryProtocol: activeConnection.protocol,
+              fallbackProtocol: pendingFallback.connection.protocol,
               reasonCode: this.errorCode(error),
             });
-            activeConfig = pendingFallback.config;
+            activeConnection = pendingFallback.connection;
             activeUsageContext = {
               userId: usageContext.userId,
               connectionId: pendingFallback.connectionId,
@@ -215,7 +216,7 @@ export class AiGatewayService implements AiGatewayPort {
             continue;
           }
 
-          throw this.toDomainException(error, activeConfig.provider);
+          throw this.toDomainException(error, activeConnection);
         }
       }
     } finally {
@@ -228,7 +229,7 @@ export class AiGatewayService implements AiGatewayPort {
   }
 
   private async generateAttempt(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability: AiUsageCapabilityValue,
@@ -236,14 +237,15 @@ export class AiGatewayService implements AiGatewayPort {
     const startedAt = Date.now();
 
     try {
-      const client = this.registry.getClient(config.provider);
-      const result = await client.generate(config, request);
+      const adapter = this.registry.getAdapter(connection.protocol);
+      const result = await adapter.generate(connection, request);
 
       await this.recordUsage({
         usageContext,
         capability,
-        provider: config.provider,
-        model: config.model,
+        protocol: connection.protocol,
+        vendorHint: connection.vendorHint,
+        model: connection.model,
         latencyMs: result.latencyMs,
         success: true,
         inputTokens: result.usage?.inputTokens,
@@ -252,8 +254,9 @@ export class AiGatewayService implements AiGatewayPort {
       this.logAttempt({
         usageContext,
         capability,
-        provider: config.provider,
-        model: config.model,
+        protocol: connection.protocol,
+        vendorHint: connection.vendorHint,
+        model: connection.model,
         latencyMs: result.latencyMs,
         success: true,
         inputTokens: result.usage?.inputTokens,
@@ -265,29 +268,31 @@ export class AiGatewayService implements AiGatewayPort {
       const failedAttempt: RecordUsageParams = {
         usageContext,
         capability,
-        provider: config.provider,
-        model: config.model,
+        protocol: connection.protocol,
+        vendorHint: connection.vendorHint,
+        model: connection.model,
         latencyMs: Date.now() - startedAt,
         success: false,
         errorCode:
-          error instanceof AiProviderRequestError
+          error instanceof AiProtocolRequestError
             ? error.code
             : AiErrorCode.UNKNOWN,
       };
       await this.recordUsage(failedAttempt);
       this.logAttempt(failedAttempt);
 
-      throw this.toDomainException(error, config.provider);
+      throw this.toDomainException(error, connection);
     }
   }
 
   private logAttempt(params: RecordUsageParams): void {
     const event = {
-      event: 'ai.provider-attempt.completed',
+      event: 'ai.protocol-attempt.completed',
       userId: params.usageContext.userId,
       connectionId: params.usageContext.connectionId,
       capability: params.capability,
-      provider: params.provider,
+      protocol: params.protocol,
+      vendorHint: params.vendorHint,
       model: params.model,
       latencyMs: params.latencyMs,
       success: params.success,
@@ -302,7 +307,7 @@ export class AiGatewayService implements AiGatewayPort {
 
   private errorCode(error: unknown): string {
     if (error instanceof AppException) return error.code;
-    if (error instanceof AiProviderRequestError) return error.code;
+    if (error instanceof AiProtocolRequestError) return error.code;
     return AiErrorCode.UNKNOWN;
   }
 
@@ -311,7 +316,8 @@ export class AiGatewayService implements AiGatewayPort {
       await this.usagePersistence.record({
         userId: params.usageContext.userId,
         connectionId: params.usageContext.connectionId,
-        provider: params.provider,
+        protocol: params.protocol,
+        vendorHint: params.vendorHint,
         model: params.model,
         capability: params.capability,
         inputTokens: params.inputTokens,
@@ -327,11 +333,11 @@ export class AiGatewayService implements AiGatewayPort {
 
   private toDomainException(
     error: unknown,
-    provider: AiProvider,
+    connection: ResolvedAiConnection,
   ): AppException {
-    const label = PROVIDER_LABELS[provider];
+    const label = connection.vendorHint ?? connection.protocol;
 
-    if (error instanceof AiProviderRequestError) {
+    if (error instanceof AiProtocolRequestError) {
       switch (error.code) {
         case AiErrorCode.RATE_LIMITED:
           return new RateLimitExceededException({
@@ -350,10 +356,22 @@ export class AiGatewayService implements AiGatewayPort {
             rule: 'ai-connection.key-rejected',
           });
 
+        case AiErrorCode.INSUFFICIENT_CREDIT:
+          return new BusinessRuleViolationException({
+            message: `Kết nối ${label} không còn đủ số dư để thực hiện yêu cầu.`,
+            rule: 'ai-connection.insufficient-credit',
+          });
+
         case AiErrorCode.MODEL_NOT_FOUND:
           return new BusinessRuleViolationException({
             message: `Model không tồn tại hoặc bạn không có quyền dùng model này trên ${label}.`,
             rule: 'ai-connection.model-not-found',
+          });
+
+        case AiErrorCode.MODEL_NOT_ALLOWED:
+          return new BusinessRuleViolationException({
+            message: `Kết nối ${label} không được phép sử dụng model này.`,
+            rule: 'ai-connection.model-not-allowed',
           });
 
         case AiErrorCode.CONTEXT_TOO_LARGE:

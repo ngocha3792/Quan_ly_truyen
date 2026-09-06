@@ -1,0 +1,6 @@
+export enum AiAuthType {
+  BEARER = 'BEARER',
+  X_API_KEY = 'X_API_KEY',
+  API_KEY_HEADER = 'API_KEY_HEADER',
+  QUERY_PARAM = 'QUERY_PARAM',
+}

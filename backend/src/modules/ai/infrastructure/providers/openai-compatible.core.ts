@@ -1,12 +1,12 @@
 import {
-  AiConnectionConfig,
+  ResolvedAiConnection,
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
   AiMessage,
-  AiProviderRequestError,
+  AiProtocolRequestError,
   AiStreamDelta,
-} from '../../application/ports/ai-provider-client.port';
+} from '../../application/ports/ai-protocol-adapter.port';
 import {
   readBodyWithLimit,
   safeExternalFetch,
@@ -16,6 +16,7 @@ import {
   readSseEventBlocks,
   safeJsonParse,
 } from './sse-reader.util';
+import { applyAiCredential } from './ai-auth.util';
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1024;
@@ -51,7 +52,7 @@ interface ModelListPayload {
 }
 
 export async function openAiCompatibleGenerate(
-  config: AiConnectionConfig,
+  connection: ResolvedAiConnection,
   request: AiGenerateRequest,
   baseUrl: string,
 ): Promise<AiGenerateResponse> {
@@ -59,14 +60,16 @@ export async function openAiCompatibleGenerate(
   let response: Response;
 
   try {
-    response = await safeExternalFetch(`${baseUrl}/chat/completions`, {
+    const authenticated = applyAiCredential(
+      connection,
+      `${baseUrl}/chat/completions`,
+      { 'Content-Type': 'application/json' },
+    );
+    response = await safeExternalFetch(authenticated.url, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authenticated.headers,
       body: JSON.stringify({
-        model: config.model,
+        model: connection.model,
         messages: buildMessages(request),
         temperature: request.temperature,
         max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
@@ -74,7 +77,7 @@ export async function openAiCompatibleGenerate(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
       null,
     );
@@ -84,7 +87,7 @@ export async function openAiCompatibleGenerate(
   const payload = safeJsonParse<ChatCompletionPayload>(body);
 
   if (!response.ok) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
       response.status,
     );
@@ -92,7 +95,7 @@ export async function openAiCompatibleGenerate(
 
   const content = payload?.choices?.[0]?.message?.content;
   if (!content) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       'Máy chủ AI không trả về nội dung phản hồi',
       response.status,
     );
@@ -100,8 +103,8 @@ export async function openAiCompatibleGenerate(
 
   return {
     content,
-    provider: config.provider,
-    model: config.model,
+    protocol: connection.protocol,
+    model: connection.model,
     latencyMs: Date.now() - startedAt,
     usage: payload?.usage
       ? {
@@ -113,21 +116,23 @@ export async function openAiCompatibleGenerate(
 }
 
 export async function* openAiCompatibleGenerateStream(
-  config: AiConnectionConfig,
+  connection: ResolvedAiConnection,
   request: AiGenerateRequest,
   baseUrl: string,
 ): AsyncIterable<AiStreamDelta> {
   let response: Response;
 
   try {
-    response = await safeExternalFetch(`${baseUrl}/chat/completions`, {
+    const authenticated = applyAiCredential(
+      connection,
+      `${baseUrl}/chat/completions`,
+      { 'Content-Type': 'application/json' },
+    );
+    response = await safeExternalFetch(authenticated.url, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authenticated.headers,
       body: JSON.stringify({
-        model: config.model,
+        model: connection.model,
         messages: buildMessages(request),
         temperature: request.temperature,
         max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
@@ -137,7 +142,7 @@ export async function* openAiCompatibleGenerateStream(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
       null,
     );
@@ -146,7 +151,7 @@ export async function* openAiCompatibleGenerateStream(
   if (!response.ok) {
     const body = await readBodyWithLimit(response);
     const payload = safeJsonParse<ChatCompletionPayload>(body);
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
       response.status,
     );
@@ -173,19 +178,20 @@ export async function* openAiCompatibleGenerateStream(
 }
 
 export async function openAiCompatibleListModels(
-  config: AiConnectionConfig,
+  connection: ResolvedAiConnection,
   baseUrl: string,
 ): Promise<readonly string[]> {
   let response: Response;
 
   try {
-    response = await safeExternalFetch(`${baseUrl}/models`, {
+    const authenticated = applyAiCredential(connection, `${baseUrl}/models`);
+    response = await safeExternalFetch(authenticated.url, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: authenticated.headers,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
       null,
     );
@@ -195,7 +201,7 @@ export async function openAiCompatibleListModels(
   const payload = safeJsonParse<ModelListPayload>(body);
 
   if (!response.ok) {
-    throw new AiProviderRequestError(
+    throw new AiProtocolRequestError(
       payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
       response.status,
     );
@@ -207,14 +213,14 @@ export async function openAiCompatibleListModels(
 }
 
 export async function openAiCompatibleTestConnection(
-  config: AiConnectionConfig,
+  connection: ResolvedAiConnection,
   baseUrl: string,
 ): Promise<AiConnectionTestResult> {
   try {
-    await openAiCompatibleListModels(config, baseUrl);
+    await openAiCompatibleListModels(connection, baseUrl);
     return { ok: true };
   } catch (error) {
-    if (error instanceof AiProviderRequestError) {
+    if (error instanceof AiProtocolRequestError) {
       return { ok: false, message: error.message };
     }
     return { ok: false, message: (error as Error).message };

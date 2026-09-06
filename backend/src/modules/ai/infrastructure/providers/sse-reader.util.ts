@@ -1,4 +1,4 @@
-import { AiProviderRequestError } from '../../application/ports/ai-provider-client.port';
+import { AiProtocolRequestError } from '../../application/ports/ai-protocol-adapter.port';
 
 const MAX_STREAM_BYTES = 2 * 1024 * 1024;
 
@@ -25,7 +25,7 @@ export async function* readSseEventBlocks(
       received += value.byteLength;
       if (received > MAX_STREAM_BYTES) {
         await reader.cancel();
-        throw new AiProviderRequestError(
+        throw new AiProtocolRequestError(
           'Phản hồi từ máy chủ AI vượt quá giới hạn cho phép.',
           null,
         );

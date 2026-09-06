@@ -3,18 +3,15 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ResourceNotFoundException } from '@/common/exceptions';
 
 import {
-  AI_PROVIDER_REGISTRY_PORT,
-  AiProviderRegistryPort,
-} from '../../ports/ai-provider-registry.port';
-import {
-  AI_CREDENTIAL_VAULT_PORT,
-  AiCredentialVaultPort,
-} from '../../ports/ai-credential-vault.port';
-import {
   AI_CONNECTION_PERSISTENCE_PORT,
   AiConnectionPersistencePort,
 } from '../../ports/ai-connection.persistence.port';
-import { AiConnectionTestResult } from '../../ports/ai-provider-client.port';
+import { AiConnectionTestResult } from '../../ports/ai-protocol-adapter.port';
+import { AiResolvedConnectionFactory } from '../../connection-resolution';
+import {
+  AI_PROTOCOL_REGISTRY_PORT,
+  AiProtocolRegistryPort,
+} from '../../ports/ai-protocol-registry.port';
 import { TestAiConnectionCommand } from './test-ai-connection.command';
 
 @Injectable()
@@ -22,10 +19,9 @@ export class TestAiConnectionCommandHandler {
   constructor(
     @Inject(AI_CONNECTION_PERSISTENCE_PORT)
     private readonly persistence: AiConnectionPersistencePort,
-    @Inject(AI_CREDENTIAL_VAULT_PORT)
-    private readonly vault: AiCredentialVaultPort,
-    @Inject(AI_PROVIDER_REGISTRY_PORT)
-    private readonly registry: AiProviderRegistryPort,
+    private readonly resolvedConnections: AiResolvedConnectionFactory,
+    @Inject(AI_PROTOCOL_REGISTRY_PORT)
+    private readonly protocols: AiProtocolRegistryPort,
   ) {}
 
   async execute(
@@ -43,15 +39,9 @@ export class TestAiConnectionCommandHandler {
       });
     }
 
-    const apiKey = await this.vault.decrypt(connection.encryptedApiKey);
-    const client = this.registry.getClient(connection.provider);
-
-    return client.testConnection({
-      provider: connection.provider,
-      apiKey,
-      baseUrl: connection.baseUrl,
-      model:
-        connection.defaultModel ?? this.registry.getModel(connection.provider),
-    });
+    const resolved = await this.resolvedConnections.fromRecord(connection);
+    return this.protocols
+      .getAdapter(connection.protocol)
+      .testConnection(resolved);
   }
 }

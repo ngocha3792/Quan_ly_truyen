@@ -1,21 +1,25 @@
 import { Injectable } from '@nestjs/common';
 
 import {
-  AiConnectionConfig,
+  ResolvedAiConnection,
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
-  AiProviderClientPort,
-  AiProviderRequestError,
+  AiProtocolAdapter,
+  AiProtocolRequestError,
   AiStreamDelta,
-} from '../../application/ports/ai-provider-client.port';
+} from '../../application/ports/ai-protocol-adapter.port';
+import {
+  assertPublicHttpsUrl,
+  safeExternalFetch,
+} from '../security/ssrf-guard.util';
+import { applyAiCredential } from './ai-auth.util';
 import {
   extractSseDataLines,
   readSseEventBlocks,
   safeJsonParse,
 } from './sse-reader.util';
 
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1024;
 
@@ -66,25 +70,29 @@ function toUsage(usage: UsageMetadataPayload | undefined) {
 }
 
 @Injectable()
-export class GeminiProviderAdapter implements AiProviderClientPort {
+export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
   async generate(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): Promise<AiGenerateResponse> {
     const startedAt = Date.now();
-    const url = `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
+    const url = `${baseUrl}/models/${encodeURIComponent(connection.model)}:generateContent`;
 
     let response: Response;
 
     try {
-      response = await fetch(url, {
+      const authenticated = applyAiCredential(connection, url, {
+        'Content-Type': 'application/json',
+      });
+      response = await safeExternalFetch(authenticated.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Gemini: ${(error as Error).message}`,
         null,
       );
@@ -95,7 +103,7 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       .catch(() => null)) as GenerateContentPayload | null;
 
     if (!response.ok) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Gemini trả về lỗi ${response.status}`,
         response.status,
       );
@@ -105,7 +113,7 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       ?.map((part) => part.text ?? '')
       .join('');
     if (!text) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         'Gemini không trả về nội dung phản hồi',
         response.status,
       );
@@ -113,30 +121,34 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
 
     return {
       content: text,
-      provider: config.provider,
-      model: config.model,
+      protocol: connection.protocol,
+      model: connection.model,
       latencyMs: Date.now() - startedAt,
       usage: toUsage(payload?.usageMetadata),
     };
   }
 
   async *generateStream(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): AsyncIterable<AiStreamDelta> {
-    const url = `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(config.apiKey)}`;
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
+    const url = `${baseUrl}/models/${encodeURIComponent(connection.model)}:streamGenerateContent?alt=sse`;
 
     let response: Response;
 
     try {
-      response = await fetch(url, {
+      const authenticated = applyAiCredential(connection, url, {
+        'Content-Type': 'application/json',
+      });
+      response = await safeExternalFetch(authenticated.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Gemini: ${(error as Error).message}`,
         null,
       );
@@ -146,7 +158,7 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       const payload = (await response
         .json()
         .catch(() => null)) as GenerateContentPayload | null;
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Gemini trả về lỗi ${response.status}`,
         response.status,
       );
@@ -167,10 +179,10 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
   }
 
   async testConnection(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
   ): Promise<AiConnectionTestResult> {
     try {
-      await this.listModels(config);
+      await this.listModels(connection);
       return { ok: true };
     } catch (error) {
       return {
@@ -180,16 +192,20 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
     }
   }
 
-  async listModels(config: AiConnectionConfig): Promise<readonly string[]> {
+  async listModels(
+    connection: ResolvedAiConnection,
+  ): Promise<readonly string[]> {
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
     try {
-      response = await fetch(
-        `${GEMINI_BASE_URL}/models?key=${encodeURIComponent(config.apiKey)}`,
-        { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
-      );
+      const authenticated = applyAiCredential(connection, `${baseUrl}/models`);
+      response = await safeExternalFetch(authenticated.url, {
+        headers: authenticated.headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Gemini: ${(error as Error).message}`,
         null,
       );
@@ -200,7 +216,7 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
       .catch(() => null)) as ListModelsPayload | null;
 
     if (!response.ok) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Gemini trả về lỗi ${response.status}`,
         response.status,
       );
@@ -209,5 +225,12 @@ export class GeminiProviderAdapter implements AiProviderClientPort {
     return (payload?.models ?? [])
       .map((model) => model.name?.replace(/^models\//, ''))
       .filter((name): name is string => Boolean(name));
+  }
+
+  private async requireGuardedBaseUrl(
+    connection: ResolvedAiConnection,
+  ): Promise<string> {
+    const url = await assertPublicHttpsUrl(connection.baseUrl);
+    return url.toString().replace(/\/+$/, '');
   }
 }

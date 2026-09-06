@@ -1,4 +1,4 @@
-import { AiFallbackPolicy, AiProvider } from '../../domain/enums';
+import { AiAuthType, AiFallbackPolicy, AiProtocol } from '../../domain/enums';
 import { AiConnectionResolver } from './ai-connection-resolver';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -8,9 +8,12 @@ function connection(id: string, userId: string | null) {
     id,
     userId,
     name: id,
-    provider: AiProvider.OPENAI,
-    encryptedApiKey: 'encrypted',
-    baseUrl: null,
+    vendorHint: 'openai',
+    protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+    authType: AiAuthType.BEARER,
+    authHeaderName: null,
+    encryptedCredential: 'encrypted',
+    baseUrl: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o-mini',
     enabled: true,
     createdAt: new Date(),
@@ -23,14 +26,14 @@ describe('AiConnectionResolver fallback policy', () => {
   const system = connection('system', null);
   let connections: {
     findById: jest.Mock;
-    findFirstEnabledByOwnerAndProvider: jest.Mock;
+    findFirstEnabledByOwnerAndProtocol: jest.Mock;
   };
   let policies: { findByUserId: jest.Mock };
 
   beforeEach(() => {
     connections = {
       findById: jest.fn().mockResolvedValue(personal),
-      findFirstEnabledByOwnerAndProvider: jest.fn((owner) =>
+      findFirstEnabledByOwnerAndProtocol: jest.fn((owner) =>
         owner === null ? system : personal,
       ),
     };
@@ -57,7 +60,7 @@ describe('AiConnectionResolver fallback policy', () => {
       }),
     );
     expect(
-      connections.findFirstEnabledByOwnerAndProvider,
+      connections.findFirstEnabledByOwnerAndProtocol,
     ).not.toHaveBeenCalled();
   });
 
@@ -66,18 +69,21 @@ describe('AiConnectionResolver fallback policy', () => {
       fallbackPolicy: AiFallbackPolicy.NONE,
     });
     connections.findById.mockResolvedValue(null);
-    connections.findFirstEnabledByOwnerAndProvider.mockResolvedValue(null);
+    connections.findFirstEnabledByOwnerAndProtocol.mockResolvedValue(null);
     const resolver = new AiConnectionResolver(
       connections as never,
       policies as never,
     );
 
     await expect(
-      resolver.resolvePlan({ userId: USER_ID, provider: AiProvider.OPENAI }),
+      resolver.resolvePlan({
+        userId: USER_ID,
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+      }),
     ).resolves.toBeNull();
     expect(
-      connections.findFirstEnabledByOwnerAndProvider,
-    ).not.toHaveBeenCalledWith(null, AiProvider.OPENAI);
+      connections.findFirstEnabledByOwnerAndProtocol,
+    ).not.toHaveBeenCalledWith(null, AiProtocol.OPENAI_CHAT_COMPLETIONS);
   });
 
   it('SYSTEM tạo fallback plan rõ ràng cho personal connection', async () => {
@@ -96,9 +102,9 @@ describe('AiConnectionResolver fallback policy', () => {
 
     expect(plan?.primary).toBe(personal);
     expect(plan?.systemFallback).toBe(system);
-    expect(connections.findFirstEnabledByOwnerAndProvider).toHaveBeenCalledWith(
+    expect(connections.findFirstEnabledByOwnerAndProtocol).toHaveBeenCalledWith(
       null,
-      AiProvider.OPENAI,
+      AiProtocol.OPENAI_CHAT_COMPLETIONS,
     );
   });
 });

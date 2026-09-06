@@ -6,7 +6,7 @@ import type {
   AiMessage as PrismaAiMessage,
 } from '@/generated/prisma/client';
 
-import type { AiMessageRole, AiProvider } from '../../domain/enums';
+import type { AiMessageRole, AiProtocol } from '../../domain/enums';
 import {
   AiConversationPersistencePort,
   AiConversationRecord,
@@ -14,9 +14,11 @@ import {
 } from '../../application/ports/ai-conversation.persistence.port';
 import {
   toDomainAiMessageRole,
-  toDomainAiProvider,
+  toDomainAiProtocol,
+  toLegacyPrismaAiProvider,
   toPrismaAiMessageRole,
-  toPrismaAiProvider,
+  toPrismaAiProtocol,
+  vendorHintFromLegacyProvider,
 } from './ai-persistence.mappers';
 
 function toDomainAiConversationRecord(
@@ -26,7 +28,9 @@ function toDomainAiConversationRecord(
     id: record.id,
     userId: record.userId,
     connectionId: record.connectionId,
-    provider: toDomainAiProvider(record.provider),
+    vendorHint:
+      record.vendorHint ?? vendorHintFromLegacyProvider(record.legacyProvider),
+    protocol: toDomainAiProtocol(record.protocol, record.legacyProvider),
     title: record.title,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -78,14 +82,17 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
   async create(
     userId: string,
     connectionId: string | null,
-    provider: AiProvider,
+    vendorHint: string | null,
+    protocol: AiProtocol,
     title: string,
   ): Promise<AiConversationRecord> {
     const record = await this.prisma.aiConversation.create({
       data: {
         userId,
         connectionId,
-        provider: toPrismaAiProvider(provider),
+        vendorHint,
+        protocol: toPrismaAiProtocol(protocol),
+        legacyProvider: toLegacyPrismaAiProvider(protocol, vendorHint),
         title,
       },
     });

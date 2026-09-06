@@ -38,16 +38,16 @@ export class SendAiMessageStreamCommandHandler {
     let fullText = '';
 
     for await (const delta of this.gateway.generateStream(
-      context.providerConfig,
+      context.resolvedConnection,
       {
         systemPrompt: context.systemPrompt,
-        messages: context.providerMessages,
+        messages: context.protocolMessages,
       },
       { userId: command.userId, connectionId: context.connection.id },
       'CHAT',
       context.systemFallback
         ? {
-            config: context.systemFallback.providerConfig,
+            connection: context.systemFallback.resolvedConnection,
             connectionId: context.systemFallback.connection.id,
           }
         : null,

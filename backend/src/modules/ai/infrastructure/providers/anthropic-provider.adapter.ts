@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
 
 import {
-  AiConnectionConfig,
+  ResolvedAiConnection,
   AiConnectionTestResult,
   AiGenerateRequest,
   AiGenerateResponse,
-  AiProviderClientPort,
-  AiProviderRequestError,
+  AiProtocolAdapter,
+  AiProtocolRequestError,
   AiStreamDelta,
-} from '../../application/ports/ai-provider-client.port';
+} from '../../application/ports/ai-protocol-adapter.port';
+import {
+  assertPublicHttpsUrl,
+  safeExternalFetch,
+} from '../security/ssrf-guard.util';
+import { applyAiCredential } from './ai-auth.util';
 import {
   extractSseDataLines,
   extractSseEventName,
@@ -16,7 +21,6 @@ import {
   safeJsonParse,
 } from './sse-reader.util';
 
-const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_API_VERSION = '2023-06-01';
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1024;
@@ -50,12 +54,12 @@ interface ListModelsPayload {
 }
 
 function buildRequestBody(
-  config: AiConnectionConfig,
+  connection: ResolvedAiConnection,
   request: AiGenerateRequest,
   stream: boolean,
 ) {
   return {
-    model: config.model,
+    model: connection.model,
     max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
     stream,
     ...(request.systemPrompt ? { system: request.systemPrompt } : {}),
@@ -69,27 +73,32 @@ function buildRequestBody(
 }
 
 @Injectable()
-export class AnthropicProviderAdapter implements AiProviderClientPort {
+export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
   async generate(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): Promise<AiGenerateResponse> {
     const startedAt = Date.now();
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
     try {
-      response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
-        method: 'POST',
-        headers: {
-          'x-api-key': config.apiKey,
+      const authenticated = applyAiCredential(
+        connection,
+        `${baseUrl}/messages`,
+        {
           'anthropic-version': ANTHROPIC_API_VERSION,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(buildRequestBody(config, request, false)),
+      );
+      response = await safeExternalFetch(authenticated.url, {
+        method: 'POST',
+        headers: authenticated.headers,
+        body: JSON.stringify(buildRequestBody(connection, request, false)),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
         null,
       );
@@ -100,7 +109,7 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
       .catch(() => null)) as MessagesPayload | null;
 
     if (!response.ok) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
         response.status,
       );
@@ -108,7 +117,7 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
 
     const text = payload?.content?.find((block) => block.type === 'text')?.text;
     if (!text) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         'Anthropic không trả về nội dung phản hồi',
         response.status,
       );
@@ -116,8 +125,8 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
 
     return {
       content: text,
-      provider: config.provider,
-      model: config.model,
+      protocol: connection.protocol,
+      model: connection.model,
       latencyMs: Date.now() - startedAt,
       usage: payload?.usage
         ? {
@@ -129,24 +138,29 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
   }
 
   async *generateStream(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
   ): AsyncIterable<AiStreamDelta> {
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
     try {
-      response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
-        method: 'POST',
-        headers: {
-          'x-api-key': config.apiKey,
+      const authenticated = applyAiCredential(
+        connection,
+        `${baseUrl}/messages`,
+        {
           'anthropic-version': ANTHROPIC_API_VERSION,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(buildRequestBody(config, request, true)),
+      );
+      response = await safeExternalFetch(authenticated.url, {
+        method: 'POST',
+        headers: authenticated.headers,
+        body: JSON.stringify(buildRequestBody(connection, request, true)),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
         null,
       );
@@ -156,7 +170,7 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
       const payload = (await response
         .json()
         .catch(() => null)) as MessagesPayload | null;
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
         response.status,
       );
@@ -195,10 +209,10 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
   }
 
   async testConnection(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
   ): Promise<AiConnectionTestResult> {
     try {
-      await this.listModels(config);
+      await this.listModels(connection);
       return { ok: true };
     } catch (error) {
       return {
@@ -208,19 +222,22 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
     }
   }
 
-  async listModels(config: AiConnectionConfig): Promise<readonly string[]> {
+  async listModels(
+    connection: ResolvedAiConnection,
+  ): Promise<readonly string[]> {
+    const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
     try {
-      response = await fetch(`${ANTHROPIC_BASE_URL}/models`, {
-        headers: {
-          'x-api-key': config.apiKey,
-          'anthropic-version': ANTHROPIC_API_VERSION,
-        },
+      const authenticated = applyAiCredential(connection, `${baseUrl}/models`, {
+        'anthropic-version': ANTHROPIC_API_VERSION,
+      });
+      response = await safeExternalFetch(authenticated.url, {
+        headers: authenticated.headers,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
         null,
       );
@@ -231,7 +248,7 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
       .catch(() => null)) as ListModelsPayload | null;
 
     if (!response.ok) {
-      throw new AiProviderRequestError(
+      throw new AiProtocolRequestError(
         payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
         response.status,
       );
@@ -240,5 +257,12 @@ export class AnthropicProviderAdapter implements AiProviderClientPort {
     return (payload?.data ?? [])
       .map((model) => model.id)
       .filter((id): id is string => Boolean(id));
+  }
+
+  private async requireGuardedBaseUrl(
+    connection: ResolvedAiConnection,
+  ): Promise<string> {
+    const url = await assertPublicHttpsUrl(connection.baseUrl);
+    return url.toString().replace(/\/+$/, '');
   }
 }

@@ -1,4 +1,4 @@
-import type { AiMessageRole, AiProvider } from '../../domain/enums';
+import type { AiMessageRole, AiProtocol } from '../../domain/enums';
 
 export const AI_CONVERSATION_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.conversation-persistence',
@@ -8,7 +8,8 @@ export interface AiConversationRecord {
   readonly id: string;
   readonly userId: string;
   readonly connectionId: string | null;
-  readonly provider: AiProvider;
+  readonly vendorHint: string | null;
+  readonly protocol: AiProtocol;
   readonly title: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -35,7 +36,8 @@ export interface AiConversationPersistencePort {
   create(
     userId: string,
     connectionId: string | null,
-    provider: AiProvider,
+    vendorHint: string | null,
+    protocol: AiProtocol,
     title: string,
   ): Promise<AiConversationRecord>;
 

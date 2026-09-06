@@ -11,57 +11,49 @@ import {
   MAX_RECENT_MESSAGES,
 } from '../constants/ai-chat.constants';
 import {
-  AI_PROVIDER_REGISTRY_PORT,
-  AiProviderRegistryPort,
-} from '../ports/ai-provider-registry.port';
-import {
-  AI_CREDENTIAL_VAULT_PORT,
-  AiCredentialVaultPort,
-} from '../ports/ai-credential-vault.port';
-import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AiConversationPersistencePort,
   AiConversationRecord,
 } from '../ports/ai-conversation.persistence.port';
 import { AiConnectionRecord } from '../ports/ai-connection.persistence.port';
 import {
-  AiConnectionConfig,
   AiMessage,
-} from '../ports/ai-provider-client.port';
-import { AiConnectionResolver } from '../connection-resolution/ai-connection-resolver';
+  ResolvedAiConnection,
+} from '../ports/ai-protocol-adapter.port';
+import {
+  AiConnectionResolver,
+  AiResolvedConnectionFactory,
+} from '../connection-resolution';
 import { AiProfileManager } from '../profile';
 
-const PROVIDER_LABEL_FALLBACK = 'nhà cung cấp AI';
+const CONNECTION_LABEL_FALLBACK = 'kết nối AI';
 
 export interface AiChatContext {
   readonly conversation: AiConversationRecord;
   readonly connection: AiConnectionRecord;
-  readonly providerConfig: AiConnectionConfig;
+  readonly resolvedConnection: ResolvedAiConnection;
   readonly systemFallback: {
     readonly connection: AiConnectionRecord;
-    readonly providerConfig: AiConnectionConfig;
+    readonly resolvedConnection: ResolvedAiConnection;
   } | null;
   readonly systemPrompt: string;
-  readonly providerMessages: readonly AiMessage[];
+  readonly protocolMessages: readonly AiMessage[];
 }
 
 /**
  * Shared by the regular and streaming send-message handlers: loads the
  * conversation, resolves which connection to use (falling back if the
  * conversation's original connection was deleted), and builds the
- * provider-ready message list (existing history + the new user turn).
+ * protocol-ready message list (existing history + the new user turn).
  */
 @Injectable()
 export class AiChatContextBuilder {
   constructor(
     @Inject(AI_CONVERSATION_PERSISTENCE_PORT)
     private readonly conversations: AiConversationPersistencePort,
-    @Inject(AI_CREDENTIAL_VAULT_PORT)
-    private readonly vault: AiCredentialVaultPort,
     private readonly resolver: AiConnectionResolver,
     private readonly profiles: AiProfileManager,
-    @Inject(AI_PROVIDER_REGISTRY_PORT)
-    private readonly registry: AiProviderRegistryPort,
+    private readonly resolvedConnections: AiResolvedConnectionFactory,
   ) {}
 
   async build(
@@ -84,13 +76,13 @@ export class AiChatContextBuilder {
     const plan = await this.resolver.resolvePlan({
       userId,
       connectionId: conversation.connectionId,
-      provider: conversation.provider,
+      protocol: conversation.protocol,
     });
     const profile = await this.profiles.resolve(userId);
 
     if (!plan) {
       throw new BusinessRuleViolationException({
-        message: `Chưa cấu hình kết nối cho ${PROVIDER_LABEL_FALLBACK} này. Vui lòng thêm kết nối cá nhân trong phần cài đặt hoặc liên hệ quản trị viên.`,
+        message: `Chưa cấu hình ${CONNECTION_LABEL_FALLBACK} này. Vui lòng thêm kết nối cá nhân trong phần cài đặt hoặc liên hệ quản trị viên.`,
         rule: 'ai-connection.required',
       });
     }
@@ -98,7 +90,7 @@ export class AiChatContextBuilder {
     const history = await this.conversations.findMessages(conversationId);
     const recentHistory = history.slice(-MAX_RECENT_MESSAGES);
 
-    const providerMessages: AiMessage[] = [
+    const protocolMessages: AiMessage[] = [
       ...recentHistory.map((message) => ({
         role:
           message.role === AiMessageRole.ASSISTANT
@@ -109,14 +101,14 @@ export class AiChatContextBuilder {
       { role: 'user' as const, content: newUserContent },
     ];
 
-    const providerConfig = await this.toProviderConfig(
+    const resolvedConnection = await this.resolvedConnections.fromRecord(
       plan.primary,
       profile.model,
     );
     const systemFallback = plan.systemFallback
       ? {
           connection: plan.systemFallback,
-          providerConfig: await this.toProviderConfig(
+          resolvedConnection: await this.resolvedConnections.fromRecord(
             plan.systemFallback,
             profile.model,
           ),
@@ -126,25 +118,10 @@ export class AiChatContextBuilder {
     return {
       conversation,
       connection: plan.primary,
-      providerConfig,
+      resolvedConnection,
       systemFallback,
       systemPrompt: profile.systemPrompt ?? DEFAULT_CHAT_SYSTEM_PROMPT,
-      providerMessages,
-    };
-  }
-
-  private async toProviderConfig(
-    connection: AiConnectionRecord,
-    profileModel: string | null,
-  ): Promise<AiConnectionConfig> {
-    return {
-      provider: connection.provider,
-      apiKey: await this.vault.decrypt(connection.encryptedApiKey),
-      baseUrl: connection.baseUrl,
-      model:
-        profileModel ??
-        connection.defaultModel ??
-        this.registry.getModel(connection.provider),
+      protocolMessages,
     };
   }
 }

@@ -1,9 +1,9 @@
 import type {
-  AiConnectionConfig,
+  ResolvedAiConnection,
   AiGenerateRequest,
   AiGenerateResponse,
   AiStreamDelta,
-} from './ai-provider-client.port';
+} from './ai-protocol-adapter.port';
 import type { AiUsageCapabilityValue } from './ai-usage.persistence.port';
 
 export const AI_GATEWAY_PORT = Symbol.for('modules.ai.gateway');
@@ -14,13 +14,13 @@ export interface AiUsageContext {
 }
 
 export interface AiSystemFallback {
-  readonly config: AiConnectionConfig;
+  readonly connection: ResolvedAiConnection;
   readonly connectionId: string;
 }
 
 export interface AiGatewayPort {
   generate(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability?: AiUsageCapabilityValue,
@@ -28,7 +28,7 @@ export interface AiGatewayPort {
   ): Promise<AiGenerateResponse>;
 
   generateStream(
-    config: AiConnectionConfig,
+    connection: ResolvedAiConnection,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability?: AiUsageCapabilityValue,
