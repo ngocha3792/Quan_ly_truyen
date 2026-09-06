@@ -1,7 +1,10 @@
 import { lookup } from 'node:dns/promises';
 
 import { AiAuthType, AiProtocol } from '../../domain/enums';
-import type { ResolvedAiConnection } from '../../application/ports';
+import type {
+  AiStreamDelta,
+  ResolvedAiConnection,
+} from '../../application/ports';
 import { GeminiGenerateContentProtocolAdapter } from './gemini-provider.adapter';
 import { OpenAiResponsesProtocolAdapter } from './openai-responses-provider.adapter';
 
@@ -110,7 +113,7 @@ describe('native protocol adapters', () => {
       .mockResolvedValue(new Response(`${events}\n\n`, { status: 200 }));
     const adapter = new OpenAiResponsesProtocolAdapter();
 
-    const chunks = [];
+    const chunks: AiStreamDelta[] = [];
     for await (const chunk of adapter.generateStream(
       connection(AiProtocol.OPENAI_RESPONSES),
       REQUEST,
