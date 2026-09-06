@@ -19,6 +19,7 @@ import {
   AiModelInfo,
   AiProviderId,
   AiProtocol,
+  CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../../domain/ai-assistant.models';
 
@@ -115,25 +116,31 @@ export class AiConnectionManagerComponent {
 
   protected save(): void {
     if (!this.canSave) return;
-    const payload: UpdateAiConnectionPayload = {
-      name: this.editName.trim(),
-      apiKey: this.editApiKey.trim() || undefined,
-      baseUrl: this.isAdvanced ? this.editBaseUrl.trim() || null : undefined,
-      defaultModel: this.editDefaultModel.trim() || null,
-      enabled: this.editEnabled,
-      authType: this.isAdvanced ? this.editAuthType : undefined,
-      authHeaderName: this.isAdvanced ? this.editAuthHeaderName.trim() || null : undefined,
-      protocol: this.isCustom ? this.editProtocol : undefined,
-    };
+
     if (this.editing) {
+      const payload: UpdateAiConnectionPayload = {
+        name: this.editName.trim(),
+        apiKey: this.editApiKey.trim() || undefined,
+        baseUrl: this.isAdvanced ? this.editBaseUrl.trim() || null : undefined,
+        defaultModel: this.editDefaultModel.trim() || null,
+        enabled: this.editEnabled,
+        authType: this.isAdvanced ? this.editAuthType : undefined,
+        authHeaderName: this.isAdvanced ? this.editAuthHeaderName.trim() || null : undefined,
+        protocol: this.isCustom ? this.editProtocol : undefined,
+      };
       this.store.update(this.editing.id, payload);
     } else {
-      this.store.create({
-        ...payload,
+      const payload: CreateAiConnectionPayload = {
         name: this.editName.trim(),
         provider: this.editProvider,
         apiKey: this.editApiKey.trim(),
-      });
+        baseUrl: this.isAdvanced ? this.editBaseUrl.trim() || null : undefined,
+        defaultModel: this.editDefaultModel.trim() || null,
+        authType: this.isAdvanced ? this.editAuthType : undefined,
+        authHeaderName: this.isAdvanced ? this.editAuthHeaderName.trim() || null : undefined,
+        protocol: this.isCustom ? this.editProtocol : undefined,
+      };
+      this.store.create(payload);
     }
     this.editorOpen.set(false);
   }
