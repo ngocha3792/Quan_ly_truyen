@@ -185,6 +185,9 @@ function Invoke-DockerComposePull {
   param(
     [string[]]$Services = @(),
 
+    [ValidateSet('always', 'missing')]
+    [string]$Policy = 'missing',
+
     [ValidateRange(1, 10)]
     [int]$MaxAttempts = 4,
 
@@ -192,7 +195,7 @@ function Invoke-DockerComposePull {
     [int]$BaseDelaySeconds = 10
   )
 
-  $PullArguments = @('pull') + $Services
+  $PullArguments = @('pull', '--policy', $Policy) + $Services
 
   for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt += 1) {
     & docker @Compose @PullArguments
@@ -302,7 +305,9 @@ if ($UseLocalBuild) {
       '[3b/9] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
-    Invoke-DockerComposePull -Services @('postgres', 'redis')
+    Invoke-DockerComposePull `
+      -Policy 'missing' `
+      -Services @('postgres', 'redis')
   }
 }
 elseif (-not $SkipPull) {
@@ -315,7 +320,11 @@ elseif (-not $SkipPull) {
         $FrontendImageTag
   ) -ForegroundColor Cyan
 
-  Invoke-DockerComposePull
+  # Application images use immutable SHA tags, so a missing local tag still
+  # has to be downloaded. Long-lived infrastructure images are already
+  # referenced by running containers and should not make every application
+  # release depend on Docker Hub being reachable again.
+  Invoke-DockerComposePull -Policy 'missing'
 }
 else {
   Write-Host '[3/9] Image pull skipped.' -ForegroundColor Yellow

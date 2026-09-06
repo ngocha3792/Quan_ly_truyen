@@ -40,7 +40,8 @@ function renderComposeConfig(envFile, composeFiles, projectName) {
     'json',
   );
 
-  const dockerExecutable = process.platform === 'win32' ? 'docker.exe' : 'docker';
+  const dockerExecutable =
+    process.platform === 'win32' ? 'docker.exe' : 'docker';
 
   try {
     const stdout = execFileSync(dockerExecutable, args, {
@@ -136,8 +137,23 @@ function validateScriptStaticIsolation() {
     }
   }
 
+  const deployScript = readFileSync(
+    join(OPS_PROD_DIR, 'Deploy-Production.ps1'),
+    'utf-8',
+  );
+
+  if (
+    !deployScript.includes("[ValidateSet('always', 'missing')]") ||
+    !deployScript.includes("@('pull', '--policy', $Policy)") ||
+    !deployScript.includes("Invoke-DockerComposePull -Policy 'missing'")
+  ) {
+    throw new Error(
+      'Deploy-Production.ps1 must pull with policy=missing so cached infrastructure images do not make each release depend on Docker Hub.',
+    );
+  }
+
   console.info(
-    '  ✓ All ops scripts support dynamic $EnvironmentFile parameter and propagate it.',
+    '  ✓ Ops scripts preserve environment isolation and cached infrastructure images.',
   );
 }
 
