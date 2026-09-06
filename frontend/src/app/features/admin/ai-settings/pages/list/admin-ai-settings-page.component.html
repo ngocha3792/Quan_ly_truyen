@@ -1,0 +1,68 @@
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
+    <app-page-heading
+      title="Trợ lý AI"
+      description="Cấu hình API key mặc định dùng chung cho toàn hệ thống. Người dùng có thể ghi đè bằng API key riêng của họ."
+      icon="sparkles"
+    />
+
+    @if (message()) {
+      <app-notice kind="success" [message]="message()" />
+    }
+    @if (error()) {
+      <app-error-alert title="Không thể xử lý yêu cầu" [message]="error()" />
+    }
+
+    @if (loading() && keys().length === 0) {
+      <app-loading-state message="Đang tải cấu hình..." />
+    } @else {
+      <div class="provider-grid">
+        @for (provider of providers; track provider) {
+          <section class="provider-card">
+            <header>
+              <h2>{{ labels[provider] }}</h2>
+              @if (statusFor(provider)?.configured) {
+                <span class="status status--configured">
+                  Đã cấu hình · ••••{{ statusFor(provider)?.lastFour }}
+                </span>
+              } @else {
+                <span class="status status--missing">Chưa cấu hình</span>
+              }
+            </header>
+
+            <label class="key-field">
+              <span>API key mới</span>
+              <input
+                type="password"
+                autocomplete="off"
+                [(ngModel)]="inputValues[provider]"
+                placeholder="Nhập API key"
+              />
+            </label>
+
+            <div class="actions">
+              <app-button
+                variant="primary"
+                [disabled]="!inputValues[provider].trim()"
+                [loading]="mutating() === provider"
+                (click)="save(provider)"
+              >
+                Lưu
+              </app-button>
+              @if (statusFor(provider)?.configured) {
+                <app-button
+                  variant="danger"
+                  [disabled]="mutating() === provider"
+                  (click)="remove(provider)"
+                >
+                  Xóa
+                </app-button>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+  </div>
+</main>

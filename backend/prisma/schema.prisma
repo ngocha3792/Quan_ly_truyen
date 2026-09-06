@@ -76,6 +76,21 @@ enum MfaCredentialStatus {
   @@map("mfa_credential_status")
 }
 
+enum AiProvider {
+  GEMINI    @map("gemini")
+  OPENAI    @map("openai")
+  ANTHROPIC @map("anthropic")
+
+  @@map("ai_provider")
+}
+
+enum AiMessageRole {
+  USER      @map("user")
+  ASSISTANT @map("assistant")
+
+  @@map("ai_message_role")
+}
+
 enum AccountDeletionStatus {
   REQUESTED @map("requested")
   CANCELED  @map("canceled")
@@ -352,6 +367,8 @@ model User {
   notifications              Notification[]
   notificationPreference     NotificationPreference?
   auditLogs                  AuditLog[]
+  aiApiKeys                  AiApiKey[]
+  aiConversations            AiConversation[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -423,6 +440,48 @@ model MfaRecoveryCode {
 
   @@index([credentialId, usedAt])
   @@map("mfa_recovery_codes")
+}
+
+model AiApiKey {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String?    @map("user_id") @db.Uuid
+  provider     AiProvider
+  encryptedKey String     @map("encrypted_key") @db.Text
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("ai_api_keys")
+}
+
+model AiConversation {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  provider  AiProvider
+  title     String     @db.VarChar(200)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @map("conversation_id") @db.Uuid
+  role           AiMessageRole
+  content        String        @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("ai_messages")
 }
 
 model RecoveryEmail {

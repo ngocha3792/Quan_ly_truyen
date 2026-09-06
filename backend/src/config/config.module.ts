@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import productionGateConfig from './production-gate.config';
 import analyticsConfig from './analytics.config';
+import aiConfig from './ai.config';
 import appConfig from './app.config';
 import authConfig from './auth.config';
 import cloudinaryConfig from './cloudinary.config';
@@ -41,6 +42,7 @@ import observabilityConfig from './observability.config';
         observabilityConfig,
         productionGateConfig,
         analyticsConfig,
+        aiConfig,
       ],
       validate: validateEnvironment,
     }),

@@ -59,6 +59,12 @@ export class AccountSidebarComponent {
       icon: 'history',
       exact: false,
     },
+    {
+      label: 'Trợ lý AI',
+      route: '/tai-khoan/tro-ly-ai',
+      icon: 'sparkles',
+      exact: false,
+    },
   ];
 
   protected getRoleLabel(roles: readonly string[]): string {

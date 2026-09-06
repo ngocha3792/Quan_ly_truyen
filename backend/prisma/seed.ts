@@ -82,6 +82,9 @@ const permissions = [
     ["notification.manage.own", "Manage own notifications", "notification", "manage.own"],
     ["audit-log.read", "Read audit logs", "audit-log", "read"],
     ["analytics.read", "Read analytics", "analytics", "read"],
+
+    ["ai-chat.use", "Use the AI assistant chat", "ai-chat", "use"],
+    ["ai-settings.manage", "Manage system-wide AI provider keys", "ai-settings", "manage"],
 ] as const;
 
 type PermissionCode = (typeof permissions)[number][0];
@@ -108,6 +111,7 @@ const userPermissionCodes: PermissionCode[] = [
     "report.create",
     "media.upload",
     "notification.manage.own",
+    "ai-chat.use",
 ];
 
 const securityQuestions = [

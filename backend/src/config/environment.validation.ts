@@ -275,6 +275,22 @@ export class EnvironmentVariables {
   @IsString()
   AUTH_MFA_ENCRYPTION_KEY?: string;
 
+  @IsOptional()
+  @IsString()
+  AI_API_KEY_ENCRYPTION_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  AI_GEMINI_MODEL?: string;
+
+  @IsOptional()
+  @IsString()
+  AI_OPENAI_MODEL?: string;
+
+  @IsOptional()
+  @IsString()
+  AI_ANTHROPIC_MODEL?: string;
+
   @Transform(({ value }) => parseIntegerValue(value ?? 300))
   @IsInt()
   @Min(120)

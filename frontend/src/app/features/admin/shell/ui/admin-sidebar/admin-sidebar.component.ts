@@ -65,6 +65,12 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     icon: 'history',
     permission: AUTH_PERMISSIONS.AUDIT_LOG_READ,
   },
+  {
+    label: 'Trợ lý AI',
+    route: '/admin/settings/ai',
+    icon: 'sparkles',
+    permission: AUTH_PERMISSIONS.AI_SETTINGS_MANAGE,
+  },
 ];
 
 @Component({

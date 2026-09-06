@@ -97,6 +97,13 @@ export const ACCOUNT_ROUTES: Routes = [
           ),
       },
       {
+        path: 'tro-ly-ai',
+        title: appPageTitle('Trợ lý AI'),
+
+        loadComponent: () =>
+          import('../ai-assistant').then((module) => module.AiAssistantPageComponent),
+      },
+      {
         path: 'muc-tieu-doc',
         title: appPageTitle('Mục tiêu đọc'),
 

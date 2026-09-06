@@ -27,6 +27,8 @@ const authorApplicationGuards = [
   permissionGuard(AUTH_PERMISSIONS.AUTHOR_APPLICATION_REVIEW),
 ];
 
+const aiSettingsGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.AI_SETTINGS_MANAGE)];
+
 export const ADMIN_ROUTES: Routes = [
   {
     path: 'admin',
@@ -89,6 +91,15 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('../features/admin/tags/pages/list/admin-tags-list-page.component').then(
             (module) => module.AdminTagsListPageComponent,
+          ),
+      },
+      {
+        path: 'settings/ai',
+        title: appPageTitle('Trợ lý AI'),
+        canActivate: aiSettingsGuards,
+        loadComponent: () =>
+          import('../features/admin/ai-settings/pages/list/admin-ai-settings-page.component').then(
+            (module) => module.AdminAiSettingsPageComponent,
           ),
       },
       {

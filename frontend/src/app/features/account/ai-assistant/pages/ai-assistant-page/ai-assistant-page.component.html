@@ -1,0 +1,154 @@
+<main class="ai-assistant-page page-container">
+  <app-breadcrumb [items]="breadcrumbs" />
+
+  <app-page-heading
+    title="Trợ lý AI"
+    description="Chat với Gemini, ChatGPT hoặc Claude ngay trong TruyenHub."
+  >
+    <app-button variant="secondary" (click)="toggleSettings()">
+      <app-icon name="key" [size]="16" />
+      API key của bạn
+    </app-button>
+  </app-page-heading>
+
+  @if (settingsOpen()) {
+    <section class="key-settings">
+      @if (store.keysError()) {
+        <app-error-alert title="Không thể xử lý yêu cầu" [message]="store.keysError()" />
+      }
+      <div class="key-grid">
+        @for (provider of providers; track provider) {
+          <div class="key-card">
+            <header>
+              <strong>{{ labels[provider] }}</strong>
+              @if (keyStatusFor(provider)?.configured) {
+                <span class="status status--configured">
+                  Đã cấu hình · ••••{{ keyStatusFor(provider)?.lastFour }}
+                </span>
+              } @else {
+                <span class="status status--missing">Dùng key hệ thống (nếu có)</span>
+              }
+            </header>
+            <input
+              type="password"
+              autocomplete="off"
+              [(ngModel)]="keyInputs[provider]"
+              placeholder="Nhập API key riêng của bạn"
+            />
+            <div class="key-actions">
+              <app-button
+                variant="primary"
+                [disabled]="!keyInputs[provider].trim()"
+                [loading]="store.keysMutating() === provider"
+                (click)="saveKey(provider)"
+              >
+                Lưu
+              </app-button>
+              @if (keyStatusFor(provider)?.configured) {
+                <app-button
+                  variant="danger"
+                  [disabled]="store.keysMutating() === provider"
+                  (click)="removeKey(provider)"
+                >
+                  Xóa
+                </app-button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (store.error()) {
+    <app-error-alert title="Không thể hoàn tất yêu cầu" [message]="store.error()" />
+  }
+
+  <div class="chat-layout">
+    <aside class="conversation-sidebar">
+      <div class="new-conversation">
+        <select [(ngModel)]="newConversationProvider">
+          @for (provider of providers; track provider) {
+            <option [value]="provider">{{ labels[provider] }}</option>
+          }
+        </select>
+        <app-button variant="primary" [loading]="store.creating()" (click)="createConversation()">
+          Cuộc trò chuyện mới
+        </app-button>
+      </div>
+
+      @if (store.conversationsLoading()) {
+        <app-loading-state message="Đang tải..." />
+      } @else {
+        <ul class="conversation-list">
+          @for (item of store.conversations(); track item.id) {
+            <li [class.active]="store.activeConversation()?.id === item.id">
+              <button type="button" (click)="store.selectConversation(item.id)">
+                <strong>{{ item.title }}</strong>
+                <small>{{ labels[item.provider] }}</small>
+              </button>
+              <button
+                type="button"
+                class="delete-button"
+                aria-label="Xóa cuộc trò chuyện"
+                (click)="deleteConversation(item.id, $event)"
+              >
+                <app-icon name="close" [size]="14" />
+              </button>
+            </li>
+          } @empty {
+            <app-empty-state
+              icon="sparkles"
+              [iconSize]="26"
+              title="Chưa có cuộc trò chuyện"
+              description="Tạo cuộc trò chuyện mới để bắt đầu."
+            />
+          }
+        </ul>
+      }
+    </aside>
+
+    <section class="chat-panel">
+      @if (store.activeConversation(); as conversation) {
+        <div class="message-list">
+          @for (message of conversation.messages; track message.id) {
+            <div
+              class="message"
+              [class.message--user]="message.role === 'USER'"
+              [class.message--pending]="message.pending"
+            >
+              <p>{{ message.content }}</p>
+            </div>
+          } @empty {
+            <p class="empty-hint">Hãy bắt đầu cuộc trò chuyện bên dưới.</p>
+          }
+        </div>
+
+        <form class="composer" (submit)="submitMessage($event)">
+          <textarea
+            name="draft"
+            [(ngModel)]="draft"
+            placeholder="Nhập tin nhắn..."
+            [disabled]="store.sending()"
+            rows="1"
+          ></textarea>
+          <app-button
+            type="submit"
+            variant="primary"
+            [loading]="store.sending()"
+            [disabled]="!draft.trim()"
+          >
+            Gửi
+          </app-button>
+        </form>
+      } @else {
+        <app-empty-state
+          icon="sparkles"
+          [iconSize]="30"
+          title="Chọn hoặc tạo một cuộc trò chuyện"
+          description="Chọn cuộc trò chuyện bên trái hoặc tạo mới để bắt đầu chat."
+        />
+      }
+    </section>
+  </div>
+</main>

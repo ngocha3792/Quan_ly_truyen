@@ -15,3 +15,4 @@ export { REDIS_CONFIG_KEY } from './redis.config';
 export { OBSERVABILITY_CONFIG_KEY } from './observability.config';
 export { PRODUCTION_GATE_CONFIG_KEY } from './production-gate.config';
 export { ANALYTICS_CONFIG_KEY } from './analytics.config';
+export { AI_CONFIG_KEY } from './ai.config';

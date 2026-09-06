@@ -311,6 +311,19 @@ export interface AnalyticsConfig {
   processingBatchSize: number;
 }
 
+export interface AiConfig {
+  encryptionKeyBase64?: string;
+  gemini: {
+    model: string;
+  };
+  openai: {
+    model: string;
+  };
+  anthropic: {
+    model: string;
+  };
+}
+
 export interface ProductionGateConfig {
   /**
    * Folder chứa Prisma migration trong image production.

@@ -43,6 +43,7 @@ import { MediaModule } from './modules/media';
 import { ModerationModule } from './modules/moderation';
 import { AuditLogsModule } from './modules/audit-logs';
 import { AnalyticsModule } from './modules/analytics';
+import { AiModule } from './modules/ai';
 @Module({
   imports: [
     AppConfigModule,
@@ -66,6 +67,7 @@ import { AnalyticsModule } from './modules/analytics';
     ModerationModule,
     AuditLogsModule,
     AnalyticsModule,
+    AiModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

@@ -50,6 +50,9 @@ export enum PermissionCode {
   AUDIT_LOG_READ = 'audit-log.read',
   ANALYTICS_READ = 'analytics.read',
 
+  AI_CHAT_USE = 'ai-chat.use',
+  AI_SETTINGS_MANAGE = 'ai-settings.manage',
+
   AUTHOR_APPLICATION_CREATE = 'author-application.create',
 
   AUTHOR_APPLICATION_READ_OWN = 'author-application.read.own',

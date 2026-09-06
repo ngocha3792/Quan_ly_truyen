@@ -51,6 +51,9 @@ export const AUTH_PERMISSIONS = {
   TAG_MANAGE: 'tag.manage',
   AUDIT_LOG_READ: 'audit-log.read',
   ANALYTICS_READ: 'analytics.read',
+
+  AI_CHAT_USE: 'ai-chat.use',
+  AI_SETTINGS_MANAGE: 'ai-settings.manage',
 } as const;
 
 export type AuthPermission = (typeof AUTH_PERMISSIONS)[keyof typeof AUTH_PERMISSIONS];
