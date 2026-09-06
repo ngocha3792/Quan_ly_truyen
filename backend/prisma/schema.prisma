@@ -77,10 +77,10 @@ enum MfaCredentialStatus {
 }
 
 enum AiProvider {
-  GEMINI             @map("gemini")
-  OPENAI             @map("openai")
-  ANTHROPIC          @map("anthropic")
-  OPENAI_COMPATIBLE  @map("openai_compatible")
+  GEMINI            @map("gemini")
+  OPENAI            @map("openai")
+  ANTHROPIC         @map("anthropic")
+  OPENAI_COMPATIBLE @map("openai_compatible")
 
   @@map("ai_provider")
 }
@@ -99,6 +99,15 @@ enum AiUsageCapability {
   REWRITE   @map("rewrite")
 
   @@map("ai_usage_capability")
+}
+
+enum ChapterTranslationStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+
+  @@map("chapter_translation_status")
 }
 
 enum AccountDeletionStatus {
@@ -336,50 +345,51 @@ model User {
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  authorApplication          AuthorApplication?       @relation("AuthorApplicationOwner")
-  authorApplicationsReviewed AuthorApplication[]      @relation("AuthorApplicationReviewer")
-  avatarMedia                MediaAsset?              @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
-  authorProfile              AuthorProfile?
-  oauthAccounts              OAuthAccount[]
-  adminMfaCredential         AdminMfaCredential?
-  mfaCredentials             MfaCredential[]
-  recoveryEmail              RecoveryEmail?
-  securityQuestions          UserSecurityQuestion[]
-  trustedDevices             TrustedDevice[]
-  accountDeletionRequests    AccountDeletionRequest[]
-  sessions                   Session[]
-  tokens                     UserToken[]
-  userRoles                  UserRole[]               @relation("UserRoles")
-  rolesAssigned              UserRole[]               @relation("AssignedUserRoles")
-  uploadedMedia              MediaAsset[]             @relation("MediaUploader")
-  storyContributions         StoryContributor[]
-  chaptersCreated            Chapter[]                @relation("ChapterCreatedBy")
-  chaptersUpdated            Chapter[]                @relation("ChapterUpdatedBy")
-  chapterVersions            ChapterVersion[]
-  comments                   Comment[]
-  commentReactions           CommentReaction[]
-  ratings                    Rating[]
-  libraryEntries             LibraryEntry[]
-  storyFollows               StoryFollow[]
-  authorFollows              UserFollowAuthor[]          @relation("UserAuthorFollows")
-  readingProgresses          ReadingProgress[]
-  readingSessions            ReadingSession[]
-  readingBookmarks           ReadingBookmark[]
-  readingGoal                ReadingGoal?
-  readerAnalyticsEvents      ReaderAnalyticsEvent[]
-  reportsFiled               Report[]                 @relation("ReportsFiled")
-  reportsAssigned            Report[]                 @relation("ReportsAssigned")
-  reportedInReports          Report[]                 @relation("ReportedUserReports")
-  storySubmissions           StorySubmission[]        @relation("StorySubmittedBy")
-  storyReviews               StorySubmission[]        @relation("StoryReviewedBy")
-  moderationActions          ModerationAction[]       @relation("ModerationActor")
-  moderationTarget           ModerationAction[]       @relation("ModerationTargetUser")
-  notifications              Notification[]
-  notificationPreference     NotificationPreference?
-  auditLogs                  AuditLog[]
-  aiConnections              AiConnection[]
-  aiConversations            AiConversation[]
-  aiUsages                   AiUsage[]
+  authorApplication            AuthorApplication?       @relation("AuthorApplicationOwner")
+  authorApplicationsReviewed   AuthorApplication[]      @relation("AuthorApplicationReviewer")
+  avatarMedia                  MediaAsset?              @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  authorProfile                AuthorProfile?
+  oauthAccounts                OAuthAccount[]
+  adminMfaCredential           AdminMfaCredential?
+  mfaCredentials               MfaCredential[]
+  recoveryEmail                RecoveryEmail?
+  securityQuestions            UserSecurityQuestion[]
+  trustedDevices               TrustedDevice[]
+  accountDeletionRequests      AccountDeletionRequest[]
+  sessions                     Session[]
+  tokens                       UserToken[]
+  userRoles                    UserRole[]               @relation("UserRoles")
+  rolesAssigned                UserRole[]               @relation("AssignedUserRoles")
+  uploadedMedia                MediaAsset[]             @relation("MediaUploader")
+  storyContributions           StoryContributor[]
+  chaptersCreated              Chapter[]                @relation("ChapterCreatedBy")
+  chaptersUpdated              Chapter[]                @relation("ChapterUpdatedBy")
+  chapterVersions              ChapterVersion[]
+  comments                     Comment[]
+  commentReactions             CommentReaction[]
+  ratings                      Rating[]
+  libraryEntries               LibraryEntry[]
+  storyFollows                 StoryFollow[]
+  authorFollows                UserFollowAuthor[]       @relation("UserAuthorFollows")
+  readingProgresses            ReadingProgress[]
+  readingSessions              ReadingSession[]
+  readingBookmarks             ReadingBookmark[]
+  readingGoal                  ReadingGoal?
+  readerAnalyticsEvents        ReaderAnalyticsEvent[]
+  reportsFiled                 Report[]                 @relation("ReportsFiled")
+  reportsAssigned              Report[]                 @relation("ReportsAssigned")
+  reportedInReports            Report[]                 @relation("ReportedUserReports")
+  storySubmissions             StorySubmission[]        @relation("StorySubmittedBy")
+  storyReviews                 StorySubmission[]        @relation("StoryReviewedBy")
+  moderationActions            ModerationAction[]       @relation("ModerationActor")
+  moderationTarget             ModerationAction[]       @relation("ModerationTargetUser")
+  notifications                Notification[]
+  notificationPreference       NotificationPreference?
+  auditLogs                    AuditLog[]
+  aiConnections                AiConnection[]
+  aiConversations              AiConversation[]
+  aiUsages                     AiUsage[]
+  chapterTranslationsRequested ChapterTranslation[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -465,9 +475,10 @@ model AiConnection {
   createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversations AiConversation[]
-  usages        AiUsage[]
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations       AiConversation[]
+  usages              AiUsage[]
+  chapterTranslations ChapterTranslation[]
 
   @@index([userId])
   @@index([provider])
@@ -475,13 +486,13 @@ model AiConnection {
 }
 
 model AiConversation {
-  id           String        @id @default(uuid()) @db.Uuid
-  userId       String        @map("user_id") @db.Uuid
-  connectionId String?       @map("connection_id") @db.Uuid
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  connectionId String?    @map("connection_id") @db.Uuid
   provider     AiProvider
-  title        String        @db.VarChar(200)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  title        String     @db.VarChar(200)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
@@ -525,6 +536,30 @@ model AiUsage {
   @@index([userId, createdAt])
   @@index([connectionId])
   @@map("ai_usages")
+}
+
+model ChapterTranslation {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  chapterId          String                   @map("chapter_id") @db.Uuid
+  targetLanguageCode String                   @map("target_language_code") @db.VarChar(10)
+  requestedById      String                   @map("requested_by_id") @db.Uuid
+  connectionId       String?                  @map("connection_id") @db.Uuid
+  status             ChapterTranslationStatus @default(PENDING)
+  sourceContentHash  String                   @map("source_content_hash") @db.VarChar(64)
+  translatedTitle    String?                  @map("translated_title") @db.VarChar(255)
+  translatedContent  String?                  @map("translated_content") @db.Text
+  errorCode          String?                  @map("error_code") @db.VarChar(50)
+  errorMessage       String?                  @map("error_message") @db.VarChar(500)
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapter     Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  requestedBy User          @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  connection  AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([chapterId, targetLanguageCode])
+  @@index([status])
+  @@map("chapter_translations")
 }
 
 model RecoveryEmail {
@@ -815,8 +850,8 @@ model AuthorProfile {
   createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bannerMedia MediaAsset? @relation("AuthorBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bannerMedia MediaAsset?        @relation("AuthorBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
   stories     Story[]
   followers   UserFollowAuthor[] @relation("AuthorFollowers")
 
@@ -827,7 +862,6 @@ model AuthorProfile {
   @@index([totalReadCount])
   @@map("author_profiles")
 }
-
 
 model UserFollowAuthor {
   userId    String   @map("user_id") @db.Uuid
@@ -944,8 +978,8 @@ model Story {
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?       @map("deleted_at") @db.Timestamptz(3)
 
-  author            AuthorProfile      @relation(fields: [authorId], references: [userId], onDelete: Restrict)
-  coverMedia        MediaAsset?        @relation("StoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  author            AuthorProfile          @relation(fields: [authorId], references: [userId], onDelete: Restrict)
+  coverMedia        MediaAsset?            @relation("StoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
   contributors      StoryContributor[]
   categories        StoryCategory[]
   tags              StoryTag[]
@@ -958,8 +992,8 @@ model Story {
   readingSessions   ReadingSession[]
   readingBookmarks  ReadingBookmark[]
   submissions       StorySubmission[]
-  reports           Report[]           @relation("StoryReports")
-  moderationActions ModerationAction[] @relation("ModerationStory")
+  reports           Report[]               @relation("StoryReports")
+  moderationActions ModerationAction[]     @relation("ModerationStory")
   dailyStats        StoryDailyStat[]
   analyticsEvents   ReaderAnalyticsEvent[]
 
@@ -1075,20 +1109,21 @@ model Chapter {
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  story             Story              @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  createdBy         User               @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy         User               @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  story             Story                  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy         User                   @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy         User                   @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   versions          ChapterVersion[]
   media             ChapterMedia[]
   comments          Comment[]
-  lastReadEntries   LibraryEntry[]     @relation("LibraryLastReadChapter")
-  currentProgress   ReadingProgress[]  @relation("CurrentProgressChapter")
+  lastReadEntries   LibraryEntry[]         @relation("LibraryLastReadChapter")
+  currentProgress   ReadingProgress[]      @relation("CurrentProgressChapter")
   readingSessions   ReadingSession[]
   readingBookmarks  ReadingBookmark[]
-  reports           Report[]           @relation("ChapterReports")
-  moderationActions ModerationAction[] @relation("ModerationChapter")
+  reports           Report[]               @relation("ChapterReports")
+  moderationActions ModerationAction[]     @relation("ModerationChapter")
   dailyStats        ChapterDailyStat[]
   analyticsEvents   ReaderAnalyticsEvent[]
+  translations      ChapterTranslation[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])
@@ -1540,17 +1575,17 @@ model ReaderAnalyticsEvent {
 // ============================================================
 
 model StoryDailyStat {
-  storyId        String   @map("story_id") @db.Uuid
-  date           DateTime @db.Date
-  viewCount      BigInt   @default(0) @map("view_count")
-  uniqueReaders  Int      @default(0) @map("unique_readers")
-  readingStartCount Int    @default(0) @map("reading_start_count")
-  completionCount Int      @default(0) @map("completion_count")
-  followCount    Int      @default(0) @map("follow_count")
-  ratingCount    Int      @default(0) @map("rating_count")
-  commentCount   Int      @default(0) @map("comment_count")
-  readingSeconds BigInt   @default(0) @map("reading_seconds")
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  storyId           String   @map("story_id") @db.Uuid
+  date              DateTime @db.Date
+  viewCount         BigInt   @default(0) @map("view_count")
+  uniqueReaders     Int      @default(0) @map("unique_readers")
+  readingStartCount Int      @default(0) @map("reading_start_count")
+  completionCount   Int      @default(0) @map("completion_count")
+  followCount       Int      @default(0) @map("follow_count")
+  ratingCount       Int      @default(0) @map("rating_count")
+  commentCount      Int      @default(0) @map("comment_count")
+  readingSeconds    BigInt   @default(0) @map("reading_seconds")
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
@@ -1560,14 +1595,14 @@ model StoryDailyStat {
 }
 
 model ChapterDailyStat {
-  chapterId       String   @map("chapter_id") @db.Uuid
-  date            DateTime @db.Date
-  viewCount       BigInt   @default(0) @map("view_count")
-  uniqueReaders   Int      @default(0) @map("unique_readers")
-  readingStartCount Int    @default(0) @map("reading_start_count")
-  completionCount Int      @default(0) @map("completion_count")
-  readingSeconds  BigInt   @default(0) @map("reading_seconds")
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  chapterId         String   @map("chapter_id") @db.Uuid
+  date              DateTime @db.Date
+  viewCount         BigInt   @default(0) @map("view_count")
+  uniqueReaders     Int      @default(0) @map("unique_readers")
+  readingStartCount Int      @default(0) @map("reading_start_count")
+  completionCount   Int      @default(0) @map("completion_count")
+  readingSeconds    BigInt   @default(0) @map("reading_seconds")
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 

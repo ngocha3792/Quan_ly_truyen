@@ -1,0 +1,80 @@
+:host {
+  display: block;
+}
+
+.translation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+
+header h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.translation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.translation-controls select {
+  min-width: 160px;
+}
+
+.translation-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(59, 130, 246, 0.14);
+  color: #7db2ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.status[data-status='PENDING'],
+.status[data-status='PROCESSING'] {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f4bd53;
+}
+
+.status[data-status='COMPLETED'] {
+  background: rgba(34, 197, 94, 0.13);
+  color: #62da86;
+}
+
+.status[data-status='FAILED'] {
+  background: rgba(239, 68, 68, 0.13);
+  color: #ff8585;
+}
+
+.translation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-strong);
+}
+
+.translation-content p {
+  margin: 0;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.error-message {
+  margin: 0;
+  color: #ff8585;
+  font-size: 13px;
+}

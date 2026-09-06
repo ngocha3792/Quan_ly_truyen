@@ -20,6 +20,10 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
+import { ChapterTranslationStore } from '../../chapter-translation/data-access/chapter-translation.store';
+import { provideChapterTranslation } from '../../chapter-translation/data-access/chapter-translation.providers';
+import { TARGET_LANGUAGE_OPTIONS } from '../../chapter-translation/domain/chapter-translation.models';
+import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/chapter-translation-panel/chapter-translation-panel.component';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
@@ -33,8 +37,9 @@ import { AuthorChapterEditorStore } from '../../data-access/author-chapter-edito
     ButtonComponent,
     LoadingStateComponent,
     NoticeComponent,
+    ChapterTranslationPanelComponent,
   ],
-  providers: [AuthorChapterEditorStore],
+  providers: [AuthorChapterEditorStore, provideChapterTranslation(), ChapterTranslationStore],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrl: './author-chapter-editor-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +47,8 @@ import { AuthorChapterEditorStore } from '../../data-access/author-chapter-edito
 export class AuthorChapterEditorPageComponent implements OnInit {
   @ViewChild('contentArea') private contentArea?: ElementRef<HTMLTextAreaElement>;
   protected readonly store = inject(AuthorChapterEditorStore);
+  protected readonly translationStore = inject(ChapterTranslationStore);
+  protected readonly targetLanguageOptions = TARGET_LANGUAGE_OPTIONS;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -87,6 +94,16 @@ export class AuthorChapterEditorPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.store.load(this.storyId, this.chapterId);
+  }
+
+  protected translateChapter(targetLanguageCode: string): void {
+    if (!this.chapterId) return;
+    this.translationStore.request(this.storyId, this.chapterId, targetLanguageCode);
+  }
+
+  protected refreshTranslation(targetLanguageCode: string): void {
+    if (!this.chapterId) return;
+    this.translationStore.refresh(this.storyId, this.chapterId, targetLanguageCode);
   }
 
   protected save(): void {

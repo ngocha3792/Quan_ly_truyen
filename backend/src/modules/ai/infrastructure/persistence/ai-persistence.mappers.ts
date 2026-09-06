@@ -1,9 +1,14 @@
 import {
   AiMessageRole as PrismaAiMessageRole,
   AiProvider as PrismaAiProvider,
+  ChapterTranslationStatus as PrismaChapterTranslationStatus,
 } from '@/generated/prisma/client';
 
-import { AiMessageRole, AiProvider } from '../../domain/enums';
+import {
+  AiMessageRole,
+  AiProvider,
+  ChapterTranslationStatus,
+} from '../../domain/enums';
 
 export function toDomainAiProvider(provider: PrismaAiProvider): AiProvider {
   switch (provider) {
@@ -50,5 +55,20 @@ export function toPrismaAiMessageRole(
       return PrismaAiMessageRole.USER;
     case AiMessageRole.ASSISTANT:
       return PrismaAiMessageRole.ASSISTANT;
+  }
+}
+
+export function toDomainChapterTranslationStatus(
+  status: PrismaChapterTranslationStatus,
+): ChapterTranslationStatus {
+  switch (status) {
+    case PrismaChapterTranslationStatus.PENDING:
+      return ChapterTranslationStatus.PENDING;
+    case PrismaChapterTranslationStatus.PROCESSING:
+      return ChapterTranslationStatus.PROCESSING;
+    case PrismaChapterTranslationStatus.COMPLETED:
+      return ChapterTranslationStatus.COMPLETED;
+    case PrismaChapterTranslationStatus.FAILED:
+      return ChapterTranslationStatus.FAILED;
   }
 }

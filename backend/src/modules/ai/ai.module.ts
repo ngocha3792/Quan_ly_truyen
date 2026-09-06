@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
+import { AuthorsModule } from '@/modules/authors';
+import { ChaptersModule } from '@/modules/chapters';
 
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
@@ -12,14 +14,18 @@ import {
   AI_USAGE_PERSISTENCE_PORT,
   AiChatContextBuilder,
   AiConnectionResolver,
+  CHAPTER_TRANSLATION_PERSISTENCE_PORT,
+  CHAPTER_TRANSLATION_QUEUE_PORT,
   CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
   DeleteAiConnectionCommandHandler,
   DeleteAiConversationCommandHandler,
   GetAiConversationQueryHandler,
+  GetChapterTranslationQueryHandler,
   ListAiConnectionModelsQueryHandler,
   ListAiConnectionsQueryHandler,
   ListAiConversationsQueryHandler,
+  RequestChapterTranslationCommandHandler,
   SendAiMessageCommandHandler,
   SendAiMessageStreamCommandHandler,
   TestAiConnectionCommandHandler,
@@ -30,17 +36,20 @@ import {
   AiGatewayService,
   AiProviderRegistry,
   AnthropicProviderAdapter,
+  ChapterTranslationQueueAdapter,
   GeminiProviderAdapter,
   OpenAiCompatibleProviderAdapter,
   OpenAiProviderAdapter,
   PrismaAiConnectionPersistence,
   PrismaAiConversationPersistence,
   PrismaAiUsagePersistence,
+  PrismaChapterTranslationPersistence,
 } from './infrastructure';
 import {
   AdminAiConnectionsController,
   AiChatController,
   AiConnectionsController,
+  ChapterTranslationsController,
 } from './presentation/http';
 
 const portProviders = [
@@ -68,6 +77,14 @@ const portProviders = [
     provide: AI_PROVIDER_REGISTRY_PORT,
     useExisting: AiProviderRegistry,
   },
+  {
+    provide: CHAPTER_TRANSLATION_PERSISTENCE_PORT,
+    useExisting: PrismaChapterTranslationPersistence,
+  },
+  {
+    provide: CHAPTER_TRANSLATION_QUEUE_PORT,
+    useExisting: ChapterTranslationQueueAdapter,
+  },
 ];
 
 const applicationHandlers = [
@@ -83,19 +100,28 @@ const applicationHandlers = [
   GetAiConversationQueryHandler,
   SendAiMessageCommandHandler,
   SendAiMessageStreamCommandHandler,
+  RequestChapterTranslationCommandHandler,
+  GetChapterTranslationQueryHandler,
 ];
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    ChaptersModule,
+    AuthorsModule,
+  ],
   controllers: [
     AdminAiConnectionsController,
     AiConnectionsController,
     AiChatController,
+    ChapterTranslationsController,
   ],
   providers: [
     PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
     PrismaAiUsagePersistence,
+    PrismaChapterTranslationPersistence,
     AiApiKeyCipherAdapter,
     AiGatewayService,
     ...portProviders,
@@ -107,6 +133,7 @@ const applicationHandlers = [
     AnthropicProviderAdapter,
     OpenAiCompatibleProviderAdapter,
     AiProviderRegistry,
+    ChapterTranslationQueueAdapter,
   ],
 })
 export class AiModule {}
