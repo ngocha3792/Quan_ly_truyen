@@ -23,6 +23,11 @@ import {
   safeJsonParse,
 } from './sse-reader.util';
 import { applyAiCredential } from './ai-auth.util';
+import { resolveProviderTimeoutMs } from './provider-request-timeout.util';
+import {
+  sanitizeProviderErrorMessage,
+  toProviderTransportError,
+} from './provider-error.util';
 
 function buildMessages(request: AiGenerateRequest): AiMessage[] {
   const messages: AiMessage[] = [];
@@ -89,14 +94,15 @@ export async function openAiCompatibleGenerate(
         max_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
       }),
       signal: AbortSignal.timeout(
-        request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+        resolveProviderTimeoutMs(
+          request.timeoutMs,
+          AI_PROVIDER_REQUEST_TIMEOUT_MS,
+          AI_PROVIDER_REQUEST_TIMEOUT_MS,
+        ),
       ),
     });
   } catch (error) {
-    throw new AiProtocolRequestError(
-      `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
-      null,
-    );
+    throw toProviderTransportError(error, 'máy chủ AI');
   }
 
   const body = await readBodyWithLimit(response);
@@ -104,7 +110,11 @@ export async function openAiCompatibleGenerate(
 
   if (!response.ok) {
     throw new AiProtocolRequestError(
-      payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
+      sanitizeProviderErrorMessage(
+        payload?.error?.message,
+        connection.credential,
+        `Máy chủ AI trả về lỗi ${response.status}`,
+      ),
       response.status,
     );
   }
@@ -155,20 +165,27 @@ export async function* openAiCompatibleGenerateStream(
         stream: true,
         stream_options: { include_usage: true },
       }),
-      signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(
+        resolveProviderTimeoutMs(
+          request.timeoutMs,
+          AI_STREAM_TIMEOUT_MS,
+          AI_STREAM_TIMEOUT_MS,
+        ),
+      ),
     });
   } catch (error) {
-    throw new AiProtocolRequestError(
-      `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
-      null,
-    );
+    throw toProviderTransportError(error, 'máy chủ AI');
   }
 
   if (!response.ok) {
     const body = await readBodyWithLimit(response);
     const payload = safeJsonParse<ChatCompletionPayload>(body);
     throw new AiProtocolRequestError(
-      payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
+      sanitizeProviderErrorMessage(
+        payload?.error?.message,
+        connection.credential,
+        `Máy chủ AI trả về lỗi ${response.status}`,
+      ),
       response.status,
     );
   }
@@ -213,10 +230,7 @@ export async function openAiCompatibleListModels(
       signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new AiProtocolRequestError(
-      `Không thể kết nối tới máy chủ AI: ${(error as Error).message}`,
-      null,
-    );
+    throw toProviderTransportError(error, 'máy chủ AI');
   }
 
   const body = await readBodyWithLimit(response);
@@ -224,7 +238,11 @@ export async function openAiCompatibleListModels(
 
   if (!response.ok) {
     throw new AiProtocolRequestError(
-      payload?.error?.message ?? `Máy chủ AI trả về lỗi ${response.status}`,
+      sanitizeProviderErrorMessage(
+        payload?.error?.message,
+        connection.credential,
+        `Máy chủ AI trả về lỗi ${response.status}`,
+      ),
       response.status,
     );
   }

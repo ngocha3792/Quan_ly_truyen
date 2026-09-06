@@ -14,6 +14,8 @@ import type { AiCredentialVaultPort } from '../../application/ports/ai-credentia
 const AAD = Buffer.from('quan-ly-truyen:ai-api-key:v1', 'utf8');
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
+const MAX_ENVELOPE_LENGTH = 4_096;
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 @Injectable()
 export class AiApiKeyCipherAdapter implements AiCredentialVaultPort {
@@ -49,34 +51,49 @@ export class AiApiKeyCipherAdapter implements AiCredentialVaultPort {
 
   decrypt(envelope: string): Promise<string> {
     const key = this.requireKey();
-    const [version, ivText, ciphertextText, tagText] = envelope.split('.');
-    if (version !== 'v1' || !ivText || !ciphertextText || !tagText) {
-      throw new InvalidTokenException({
-        code: 'AI_API_KEY_INVALID',
-        message: 'Dữ liệu API key không hợp lệ',
-      });
+    if (envelope.length > MAX_ENVELOPE_LENGTH) {
+      throw invalidCredentialEnvelope();
+    }
+
+    const parts = envelope.split('.');
+    const [version, ivText, ciphertextText, tagText] = parts;
+    if (
+      parts.length !== 4 ||
+      version !== 'v1' ||
+      !ivText ||
+      !ciphertextText ||
+      !tagText
+    ) {
+      throw invalidCredentialEnvelope();
+    }
+
+    const iv = decodeCanonicalBase64Url(ivText);
+    const ciphertext = decodeCanonicalBase64Url(ciphertextText);
+    const tag = decodeCanonicalBase64Url(tagText);
+    if (
+      !iv ||
+      !ciphertext ||
+      !tag ||
+      iv.length !== IV_BYTES ||
+      ciphertext.length === 0 ||
+      tag.length !== TAG_BYTES
+    ) {
+      throw invalidCredentialEnvelope();
     }
 
     try {
-      const decipher = createDecipheriv(
-        'aes-256-gcm',
-        key,
-        Buffer.from(ivText, 'base64url'),
-        { authTagLength: TAG_BYTES },
-      );
+      const decipher = createDecipheriv('aes-256-gcm', key, iv, {
+        authTagLength: TAG_BYTES,
+      });
       decipher.setAAD(AAD);
-      decipher.setAuthTag(Buffer.from(tagText, 'base64url'));
+      decipher.setAuthTag(tag);
       return Promise.resolve(
-        Buffer.concat([
-          decipher.update(Buffer.from(ciphertextText, 'base64url')),
-          decipher.final(),
-        ]).toString('utf8'),
+        Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+          'utf8',
+        ),
       );
     } catch {
-      throw new InvalidTokenException({
-        code: 'AI_API_KEY_INVALID',
-        message: 'Dữ liệu API key không hợp lệ',
-      });
+      throw invalidCredentialEnvelope();
     }
   }
 
@@ -89,4 +106,17 @@ export class AiApiKeyCipherAdapter implements AiCredentialVaultPort {
     }
     return this.key;
   }
+}
+
+function decodeCanonicalBase64Url(value: string): Buffer | null {
+  if (!BASE64URL_PATTERN.test(value)) return null;
+  const decoded = Buffer.from(value, 'base64url');
+  return decoded.toString('base64url') === value ? decoded : null;
+}
+
+function invalidCredentialEnvelope(): InvalidTokenException {
+  return new InvalidTokenException({
+    code: 'AI_API_KEY_INVALID',
+    message: 'Dữ liệu API key không hợp lệ',
+  });
 }

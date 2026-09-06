@@ -17,6 +17,7 @@ import {
 } from '../../application/constants/ai-generation.constants';
 import {
   assertPublicHttpsUrl,
+  readBodyWithLimit,
   safeExternalFetch,
 } from '../security/ssrf-guard.util';
 import { applyAiCredential } from './ai-auth.util';
@@ -27,6 +28,11 @@ import {
   safeJsonParse,
 } from './sse-reader.util';
 import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
+import { resolveProviderTimeoutMs } from './provider-request-timeout.util';
+import {
+  sanitizeProviderErrorMessage,
+  toProviderTransportError,
+} from './provider-error.util';
 
 const ANTHROPIC_API_VERSION = '2023-06-01';
 interface UsagePayload {
@@ -100,23 +106,28 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(connection, request, false)),
         signal: AbortSignal.timeout(
-          request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+          resolveProviderTimeoutMs(
+            request.timeoutMs,
+            AI_PROVIDER_REQUEST_TIMEOUT_MS,
+            AI_PROVIDER_REQUEST_TIMEOUT_MS,
+          ),
         ),
       });
     } catch (error) {
-      throw new AiProtocolRequestError(
-        `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
-        null,
-      );
+      throw toProviderTransportError(error, 'Anthropic');
     }
 
-    const payload = (await response
-      .json()
-      .catch(() => null)) as MessagesPayload | null;
+    const payload = safeJsonParse<MessagesPayload>(
+      await readBodyWithLimit(response),
+    );
 
     if (!response.ok) {
       throw new AiProtocolRequestError(
-        payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
+        sanitizeProviderErrorMessage(
+          payload?.error?.message,
+          connection.credential,
+          `Anthropic trả về lỗi ${response.status}`,
+        ),
         response.status,
       );
     }
@@ -166,21 +177,28 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(connection, request, true)),
-        signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          resolveProviderTimeoutMs(
+            request.timeoutMs,
+            AI_STREAM_TIMEOUT_MS,
+            AI_STREAM_TIMEOUT_MS,
+          ),
+        ),
       });
     } catch (error) {
-      throw new AiProtocolRequestError(
-        `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
-        null,
-      );
+      throw toProviderTransportError(error, 'Anthropic');
     }
 
     if (!response.ok) {
-      const payload = (await response
-        .json()
-        .catch(() => null)) as MessagesPayload | null;
+      const payload = safeJsonParse<MessagesPayload>(
+        await readBodyWithLimit(response),
+      );
       throw new AiProtocolRequestError(
-        payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
+        sanitizeProviderErrorMessage(
+          payload?.error?.message,
+          connection.credential,
+          `Anthropic trả về lỗi ${response.status}`,
+        ),
         response.status,
       );
     }
@@ -255,19 +273,20 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new AiProtocolRequestError(
-        `Không thể kết nối tới Anthropic: ${(error as Error).message}`,
-        null,
-      );
+      throw toProviderTransportError(error, 'Anthropic');
     }
 
-    const payload = (await response
-      .json()
-      .catch(() => null)) as ListModelsPayload | null;
+    const payload = safeJsonParse<ListModelsPayload>(
+      await readBodyWithLimit(response),
+    );
 
     if (!response.ok) {
       throw new AiProtocolRequestError(
-        payload?.error?.message ?? `Anthropic trả về lỗi ${response.status}`,
+        sanitizeProviderErrorMessage(
+          payload?.error?.message,
+          connection.credential,
+          `Anthropic trả về lỗi ${response.status}`,
+        ),
         response.status,
       );
     }

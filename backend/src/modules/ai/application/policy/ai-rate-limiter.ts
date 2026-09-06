@@ -101,6 +101,7 @@ export class AiRateLimiter {
       windowStart,
       requestLimit: limits.requests,
       tokenLimit: limits.tokens,
+      requests: 1,
       tokens: reservedTokens,
     });
 
@@ -122,6 +123,61 @@ export class AiRateLimiter {
     }
 
     return { userId, windowStart, reservedTokens, estimatedInputTokens };
+  }
+
+  async reserveExternalRequests(
+    userId: string | null,
+    requests: number,
+  ): Promise<void> {
+    if (!userId) return;
+    if (!Number.isSafeInteger(requests) || requests <= 0) {
+      throw new BusinessRuleViolationException({
+        message: 'Chi phí request AI không hợp lệ.',
+        rule: 'ai.external-request-cost-invalid',
+      });
+    }
+
+    const policy = await this.policies.findByUserId(userId);
+    const tier = policy?.rateLimitTier ?? AiRateLimitTier.FREE;
+    const limits = AI_TIER_LIMITS[tier];
+    const windowStart = this.windowStart(limits.windowSeconds);
+    const retryAfterSeconds = this.retryAfterSeconds(
+      windowStart,
+      limits.windowSeconds,
+    );
+
+    if (requests > limits.requests) {
+      this.logRejection(userId, tier, 'requests', limits.requests);
+      throw this.exceeded(tier, limits.requests, retryAfterSeconds, 'requests');
+    }
+
+    const result = await this.buckets.reserve({
+      userId,
+      windowStart,
+      requestLimit: limits.requests,
+      tokenLimit: limits.tokens,
+      requests,
+      tokens: 0,
+    });
+
+    if (!result.allowed) {
+      const dimension =
+        result.bucket.requestCount + requests > limits.requests
+          ? 'requests'
+          : 'tokens';
+      this.logRejection(
+        userId,
+        tier,
+        dimension,
+        dimension === 'requests' ? limits.requests : limits.tokens,
+      );
+      throw this.exceeded(
+        tier,
+        dimension === 'requests' ? limits.requests : limits.tokens,
+        retryAfterSeconds,
+        dimension,
+      );
+    }
   }
 
   private logRejection(

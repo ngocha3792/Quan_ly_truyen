@@ -11,5 +11,6 @@ export class CreateAiConnectionCommand {
     readonly credential: string,
     readonly baseUrl: string,
     readonly defaultModel: string | null,
+    readonly actorUserId: string | null = userId,
   ) {}
 }

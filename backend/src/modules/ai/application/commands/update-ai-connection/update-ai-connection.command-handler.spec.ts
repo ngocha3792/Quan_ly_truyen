@@ -1,5 +1,8 @@
 import { AiAuthType, AiProtocol } from '../../../domain/enums';
-import type { AiConnectionPersistencePort } from '../../ports';
+import type {
+  AiConnectionPersistencePort,
+  AiSecurityAuditPort,
+} from '../../ports';
 import { UpdateAiConnectionCommand } from './update-ai-connection.command';
 import { UpdateAiConnectionCommandHandler } from './update-ai-connection.command-handler';
 
@@ -24,6 +27,8 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
   let vault: { decrypt: jest.Mock; encrypt: jest.Mock };
   let adapter: { testConnection: jest.Mock };
   let updateMock: jest.Mock;
+  let rateLimits: { reserveExternalRequests: jest.Mock };
+  let audit: jest.Mocked<AiSecurityAuditPort>;
   let handler: UpdateAiConnectionCommandHandler;
 
   beforeEach(() => {
@@ -43,10 +48,20 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
       encrypt: jest.fn(),
     };
     adapter = { testConnection: jest.fn().mockResolvedValue({ ok: true }) };
-    handler = new UpdateAiConnectionCommandHandler(persistence, vault, {
-      getAdapter: jest.fn().mockReturnValue(adapter),
-      getDefaultModel: jest.fn().mockReturnValue('protocol-default'),
-    });
+    rateLimits = {
+      reserveExternalRequests: jest.fn().mockResolvedValue(undefined),
+    };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    handler = new UpdateAiConnectionCommandHandler(
+      persistence,
+      vault,
+      {
+        getAdapter: jest.fn().mockReturnValue(adapter),
+        getDefaultModel: jest.fn().mockReturnValue('protocol-default'),
+      },
+      rateLimits as never,
+      audit,
+    );
   });
 
   it('test rồi persist khi đổi sang custom header auth', async () => {
@@ -75,6 +90,15 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
         capabilitiesProbedAt: null,
       }),
     );
+    expect(rateLimits.reserveExternalRequests).toHaveBeenCalledWith(
+      'user-id',
+      1,
+    );
+    expect(audit.record.mock.calls[0]?.[0]).toMatchObject({
+      action: 'ai.connection.updated',
+      outcome: 'SUCCESS',
+      metadata: { changedFields: ['authType', 'authHeaderName'] },
+    });
   });
 
   it('đổi về Bearer sẽ xóa auth header cũ', async () => {
@@ -106,6 +130,8 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
       persistence,
       vault,
       registry,
+      rateLimits as never,
+      audit,
     );
 
     await handler.execute(

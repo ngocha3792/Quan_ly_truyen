@@ -20,6 +20,8 @@ import {
   AI_MODEL_CACHE_PORT,
   AiModelCachePort,
 } from '../../ports/ai-model-cache.port';
+import { AI_EXTERNAL_OPERATION_REQUEST_COST } from '../../constants/ai-rate-limit.constants';
+import { AiRateLimiter } from '../../policy';
 
 const MODEL_CACHE_TTL_SECONDS = 10 * 60;
 
@@ -33,6 +35,7 @@ export class ListAiConnectionModelsQueryHandler {
     private readonly protocols: AiProtocolRegistryPort,
     @Inject(AI_MODEL_CACHE_PORT)
     private readonly cache: AiModelCachePort,
+    private readonly rateLimits: AiRateLimiter,
   ) {}
 
   async execute(
@@ -60,6 +63,10 @@ export class ListAiConnectionModelsQueryHandler {
     }
 
     const resolved = await this.resolvedConnections.fromRecord(connection);
+    await this.rateLimits.reserveExternalRequests(
+      query.actorUserId ?? query.userId,
+      AI_EXTERNAL_OPERATION_REQUEST_COST.modelDiscovery,
+    );
     let models: readonly AiModelInfo[];
     try {
       models = await this.protocols

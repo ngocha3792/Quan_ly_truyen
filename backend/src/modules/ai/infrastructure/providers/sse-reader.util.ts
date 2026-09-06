@@ -1,7 +1,6 @@
 import { AiProtocolRequestError } from '../../application/ports/ai-protocol-adapter.port';
 import { AiErrorCode } from '../../domain/enums';
-
-const MAX_STREAM_BYTES = 2 * 1024 * 1024;
+import { AI_MAX_RESPONSE_BYTES } from '../security/ssrf-guard.util';
 
 /**
  * Reads a fetch Response body as a stream of raw SSE event blocks (the text
@@ -24,7 +23,7 @@ export async function* readSseEventBlocks(
       if (done) break;
 
       received += value.byteLength;
-      if (received > MAX_STREAM_BYTES) {
+      if (received > AI_MAX_RESPONSE_BYTES) {
         await reader.cancel();
         throw new AiProtocolRequestError(
           'Phản hồi từ máy chủ AI vượt quá giới hạn cho phép.',

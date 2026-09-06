@@ -68,4 +68,27 @@ describe('applyAiCredential', () => {
       ),
     ).toThrow(BusinessRuleViolationException);
   });
+
+  it.each([
+    'Content-Length',
+    'Transfer-Encoding',
+    'X-Forwarded-Host',
+    'Cookie',
+  ])('chặn custom auth header nguy hiểm: %s', (header) => {
+    expect(() =>
+      applyAiCredential(
+        connection(AiAuthType.API_KEY_HEADER, header),
+        'https://ai.example.com/v1/models',
+      ),
+    ).toThrow(BusinessRuleViolationException);
+  });
+
+  it('chặn tên query parameter chứa ký tự dành riêng', () => {
+    expect(() =>
+      applyAiCredential(
+        connection(AiAuthType.QUERY_PARAM, 'key#fragment'),
+        'https://ai.example.com/v1/models',
+      ),
+    ).toThrow(BusinessRuleViolationException);
+  });
 });

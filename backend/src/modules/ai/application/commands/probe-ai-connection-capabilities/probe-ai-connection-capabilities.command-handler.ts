@@ -27,6 +27,12 @@ import {
   AiProtocolRegistryPort,
 } from '../../ports/ai-protocol-registry.port';
 import { ProbeAiConnectionCapabilitiesCommand } from './probe-ai-connection-capabilities.command';
+import {
+  AI_SECURITY_AUDIT_PORT,
+  AiSecurityAuditPort,
+} from '../../ports/ai-security-audit.port';
+import { AI_EXTERNAL_OPERATION_REQUEST_COST } from '../../constants/ai-rate-limit.constants';
+import { AiRateLimiter } from '../../policy';
 
 const BASIC_PROBE_REQUEST: AiGenerateRequest = {
   messages: [{ role: 'user', content: 'Reply with OK.' }],
@@ -54,6 +60,9 @@ export class ProbeAiConnectionCapabilitiesCommandHandler {
     private readonly resolvedConnections: AiResolvedConnectionFactory,
     @Inject(AI_PROTOCOL_REGISTRY_PORT)
     private readonly protocols: AiProtocolRegistryPort,
+    private readonly rateLimits: AiRateLimiter,
+    @Inject(AI_SECURITY_AUDIT_PORT)
+    private readonly audit: AiSecurityAuditPort,
   ) {}
 
   async execute(
@@ -71,6 +80,10 @@ export class ProbeAiConnectionCapabilitiesCommandHandler {
     }
 
     const resolved = await this.resolvedConnections.fromRecord(connection);
+    await this.rateLimits.reserveExternalRequests(
+      command.actorUserId ?? command.userId,
+      AI_EXTERNAL_OPERATION_REQUEST_COST.capabilityProbe,
+    );
     const adapter = this.protocols.getAdapter(resolved.protocol);
     const failedChecks: AiCapabilityName[] = [];
 
@@ -140,6 +153,22 @@ export class ProbeAiConnectionCapabilitiesCommandHandler {
       }
       throw error;
     }
+
+    await this.audit.record({
+      actorUserId: command.actorUserId,
+      ownerUserId: command.userId,
+      action: 'ai.capabilities.probed',
+      connectionId: connection.id,
+      outcome: failedChecks.length === 0 ? 'SUCCESS' : 'FAILURE',
+      metadata: {
+        protocol: connection.protocol,
+        authType: connection.authType,
+        vendorHint: connection.vendorHint,
+        model: resolved.model,
+        capabilities,
+        failedChecks,
+      },
+    });
 
     return {
       connectionId: connection.id,

@@ -4,13 +4,27 @@ import { AiAuthType } from '../../domain/enums';
 import type { ResolvedAiConnection } from '../../application/ports';
 
 const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+const QUERY_NAME_PATTERN = /^[A-Za-z0-9._~-]+$/;
 const FORBIDDEN_AUTH_HEADERS = new Set([
   'connection',
   'content-length',
+  'cookie',
   'forwarded',
   'host',
+  'keep-alive',
+  'origin',
   'proxy-authorization',
+  'proxy-authenticate',
+  'set-cookie',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'via',
   'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+  'x-real-ip',
 ]);
 
 export interface AuthenticatedRequestParts {
@@ -54,7 +68,9 @@ function requireSafeAuthName(
   name: string | null,
   location: 'header' | 'query',
 ): string {
-  if (!name || !HEADER_NAME_PATTERN.test(name)) {
+  const validPattern =
+    location === 'header' ? HEADER_NAME_PATTERN : QUERY_NAME_PATTERN;
+  if (!name || !validPattern.test(name)) {
     throw new BusinessRuleViolationException({
       message: `Tên ${location === 'header' ? 'header' : 'query parameter'} xác thực không hợp lệ.`,
       rule: 'ai-connection.auth-name-invalid',

@@ -34,6 +34,7 @@ describe('ListAiConnectionModelsQueryHandler', () => {
   const resolvedConnections = { fromRecord: jest.fn() };
   const adapter = { listModels: jest.fn() };
   const protocols = { getAdapter: jest.fn().mockReturnValue(adapter) };
+  const rateLimits = { reserveExternalRequests: jest.fn() };
   const cache = {
     get: jest.fn(),
     set: jest.fn(),
@@ -45,6 +46,7 @@ describe('ListAiConnectionModelsQueryHandler', () => {
     resolvedConnections as never,
     protocols as never,
     cache,
+    rateLimits as never,
   );
 
   beforeEach(() => {
@@ -54,6 +56,7 @@ describe('ListAiConnectionModelsQueryHandler', () => {
     adapter.listModels.mockResolvedValue([
       { id: 'model-1', displayName: 'Model One' },
     ]);
+    rateLimits.reserveExternalRequests.mockResolvedValue(undefined);
   });
 
   it('trả model từ cache mà không gọi provider', async () => {
@@ -74,6 +77,10 @@ describe('ListAiConnectionModelsQueryHandler', () => {
 
     expect(models).toEqual([{ id: 'model-1', displayName: 'Model One' }]);
     expect(adapter.listModels).toHaveBeenCalledWith(RESOLVED);
+    expect(rateLimits.reserveExternalRequests).toHaveBeenCalledWith(
+      'user-1',
+      1,
+    );
     expect(cache.set).toHaveBeenCalledWith('connection-1', models, 600);
   });
 
@@ -85,6 +92,27 @@ describe('ListAiConnectionModelsQueryHandler', () => {
     expect(cache.delete).toHaveBeenCalledWith('connection-1');
     expect(cache.get).not.toHaveBeenCalled();
     expect(adapter.listModels).toHaveBeenCalledWith(RESOLVED);
+  });
+
+  it('tính quota cho admin khi model discovery dùng system connection', async () => {
+    persistence.findByOwnerAndId.mockResolvedValue({
+      ...CONNECTION,
+      userId: null,
+    });
+
+    await handler.execute(
+      new ListAiConnectionModelsQuery(
+        null,
+        CONNECTION.id,
+        false,
+        'admin-user-id',
+      ),
+    );
+
+    expect(rateLimits.reserveExternalRequests).toHaveBeenCalledWith(
+      'admin-user-id',
+      1,
+    );
   });
 
   it('trả danh sách rỗng khi protocol không hỗ trợ model discovery', async () => {
@@ -121,5 +149,6 @@ describe('ListAiConnectionModelsQueryHandler', () => {
     expect(cache.get).not.toHaveBeenCalled();
     expect(resolvedConnections.fromRecord).not.toHaveBeenCalled();
     expect(adapter.listModels).not.toHaveBeenCalled();
+    expect(rateLimits.reserveExternalRequests).not.toHaveBeenCalled();
   });
 });

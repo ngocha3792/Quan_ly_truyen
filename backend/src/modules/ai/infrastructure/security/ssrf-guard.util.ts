@@ -1,44 +1,61 @@
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import { BlockList, isIP } from 'node:net';
 
 import { BusinessRuleViolationException } from '@/common/exceptions';
 
-const PRIVATE_IPV4_RANGES: readonly [number, number][] = [
-  [ipToInt('10.0.0.0'), ipToInt('10.255.255.255')],
-  [ipToInt('172.16.0.0'), ipToInt('172.31.255.255')],
-  [ipToInt('192.168.0.0'), ipToInt('192.168.255.255')],
-  [ipToInt('127.0.0.0'), ipToInt('127.255.255.255')],
-  [ipToInt('169.254.0.0'), ipToInt('169.254.255.255')],
-  [ipToInt('0.0.0.0'), ipToInt('0.255.255.255')],
-];
+const BLOCKED_ADDRESSES = new BlockList();
 
-function ipToInt(ip: string): number {
-  return ip.split('.').reduce((acc, octet) => acc * 256 + Number(octet), 0);
+for (const [network, prefix] of [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.0.2.0', 24],
+  ['192.88.99.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15],
+  ['198.51.100.0', 24],
+  ['203.0.113.0', 24],
+  ['224.0.0.0', 4],
+  ['240.0.0.0', 4],
+] as const) {
+  BLOCKED_ADDRESSES.addSubnet(network, prefix, 'ipv4');
 }
 
-function isPrivateIpv4(address: string): boolean {
-  const value = ipToInt(address);
-  return PRIVATE_IPV4_RANGES.some(
-    ([start, end]) => value >= start && value <= end,
-  );
-}
-
-function isPrivateIpv6(address: string): boolean {
-  const normalized = address.toLowerCase();
-  return (
-    normalized === '::1' ||
-    normalized.startsWith('fc') ||
-    normalized.startsWith('fd') ||
-    normalized.startsWith('fe80') ||
-    normalized.startsWith('::ffff:127.') ||
-    normalized.startsWith('::ffff:10.') ||
-    normalized.startsWith('::ffff:192.168.')
-  );
+for (const [network, prefix] of [
+  ['::', 128],
+  ['::1', 128],
+  ['64:ff9b::', 96],
+  ['100::', 64],
+  ['2001:10::', 28],
+  ['2001:db8::', 32],
+  ['2002::', 16],
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['ff00::', 8],
+] as const) {
+  BLOCKED_ADDRESSES.addSubnet(network, prefix, 'ipv6');
 }
 
 function isPrivateAddress(address: string): boolean {
-  return isIP(address) === 4 ? isPrivateIpv4(address) : isPrivateIpv6(address);
+  const family = isIP(address);
+  return (
+    family === 0 ||
+    BLOCKED_ADDRESSES.check(address, family === 4 ? 'ipv4' : 'ipv6')
+  );
 }
+
+const SPECIAL_USE_HOST_SUFFIXES = [
+  '.home.arpa',
+  '.internal',
+  '.invalid',
+  '.local',
+  '.localhost',
+  '.test',
+] as const;
 
 /**
  * Refuses to let user-supplied "OpenAI compatible" base URLs reach internal
@@ -46,6 +63,13 @@ function isPrivateAddress(address: string): boolean {
  * subnets) before any outbound request is made.
  */
 export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
+  return validatePublicHttpsUrl(rawUrl, false);
+}
+
+async function validatePublicHttpsUrl(
+  rawUrl: string,
+  allowQuery: boolean,
+): Promise<URL> {
   let url: URL;
 
   try {
@@ -64,7 +88,7 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
     });
   }
 
-  if (url.username || url.password || url.search || url.hash) {
+  if (url.username || url.password || (!allowQuery && url.search) || url.hash) {
     throw new BusinessRuleViolationException({
       message:
         'Base URL không được chứa thông tin đăng nhập, query string hoặc fragment.',
@@ -72,15 +96,23 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
     });
   }
 
-  if (isIP(url.hostname) && isPrivateAddress(url.hostname)) {
+  const hostname = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+
+  if (isIP(hostname) && isPrivateAddress(hostname)) {
     throw new BusinessRuleViolationException({
       message: 'Base URL không được trỏ tới địa chỉ mạng nội bộ.',
       rule: 'ai-connection.base-url-private-network',
     });
   }
 
-  if (!isIP(url.hostname)) {
-    if (url.hostname === 'localhost') {
+  if (!isIP(hostname)) {
+    const normalizedHostname = hostname.replace(/\.$/, '');
+    if (
+      normalizedHostname === 'localhost' ||
+      SPECIAL_USE_HOST_SUFFIXES.some((suffix) =>
+        normalizedHostname.endsWith(suffix),
+      )
+    ) {
       throw new BusinessRuleViolationException({
         message: 'Base URL không được trỏ tới địa chỉ mạng nội bộ.',
         rule: 'ai-connection.base-url-private-network',
@@ -90,7 +122,7 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
     let resolved: { address: string }[];
 
     try {
-      resolved = await dnsLookup(url.hostname, { all: true });
+      resolved = await dnsLookup(normalizedHostname, { all: true });
     } catch {
       throw new BusinessRuleViolationException({
         message: 'Không thể phân giải tên miền của Base URL.',
@@ -98,7 +130,10 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
       });
     }
 
-    if (resolved.some((entry) => isPrivateAddress(entry.address))) {
+    if (
+      resolved.length === 0 ||
+      resolved.some((entry) => isPrivateAddress(entry.address))
+    ) {
       throw new BusinessRuleViolationException({
         message: 'Base URL không được trỏ tới địa chỉ mạng nội bộ.',
         rule: 'ai-connection.base-url-private-network',
@@ -109,7 +144,7 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
   return url;
 }
 
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const AI_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 /**
  * fetch() wrapper for outbound calls to a user-supplied base URL: no
@@ -120,10 +155,18 @@ export async function safeExternalFetch(
   url: string,
   init: RequestInit,
 ): Promise<Response> {
+  // Re-resolve immediately before every request. This catches records changed
+  // after connection creation and substantially narrows DNS-rebinding windows.
+  await validatePublicHttpsUrl(url, true);
   const response = await fetch(url, { ...init, redirect: 'error' });
 
   const contentLength = response.headers.get('content-length');
-  if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES) {
+  if (
+    contentLength &&
+    Number.isFinite(Number(contentLength)) &&
+    Number(contentLength) > AI_MAX_RESPONSE_BYTES
+  ) {
+    await response.body?.cancel();
     throw new BusinessRuleViolationException({
       message: 'Phản hồi từ máy chủ AI vượt quá giới hạn cho phép.',
       rule: 'ai-connection.response-too-large',
@@ -139,7 +182,14 @@ export async function safeExternalFetch(
  */
 export async function readBodyWithLimit(response: Response): Promise<string> {
   if (!response.body) {
-    return response.text();
+    const text = await response.text();
+    if (Buffer.byteLength(text, 'utf8') > AI_MAX_RESPONSE_BYTES) {
+      throw new BusinessRuleViolationException({
+        message: 'Phản hồi từ máy chủ AI vượt quá giới hạn cho phép.',
+        rule: 'ai-connection.response-too-large',
+      });
+    }
+    return text;
   }
 
   const reader = response.body.getReader();
@@ -152,7 +202,7 @@ export async function readBodyWithLimit(response: Response): Promise<string> {
     if (done) break;
 
     received += value.byteLength;
-    if (received > MAX_RESPONSE_BYTES) {
+    if (received > AI_MAX_RESPONSE_BYTES) {
       await reader.cancel();
       throw new BusinessRuleViolationException({
         message: 'Phản hồi từ máy chủ AI vượt quá giới hạn cho phép.',

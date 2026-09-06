@@ -16,5 +16,6 @@ export class UpdateAiConnectionCommand {
     readonly userId: string | null,
     readonly connectionId: string,
     readonly changes: UpdateAiConnectionChanges,
+    readonly actorUserId: string | null = userId,
   ) {}
 }

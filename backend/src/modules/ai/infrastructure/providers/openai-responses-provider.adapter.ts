@@ -21,6 +21,11 @@ import {
   safeExternalFetch,
 } from '../security/ssrf-guard.util';
 import { applyAiCredential } from './ai-auth.util';
+import { resolveProviderTimeoutMs } from './provider-request-timeout.util';
+import {
+  sanitizeProviderErrorMessage,
+  toProviderTransportError,
+} from './provider-error.util';
 import {
   openAiCompatibleListModels,
   openAiCompatibleTestConnection,
@@ -115,14 +120,15 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           ...buildRequestBody(request, false),
         }),
         signal: AbortSignal.timeout(
-          request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+          resolveProviderTimeoutMs(
+            request.timeoutMs,
+            AI_PROVIDER_REQUEST_TIMEOUT_MS,
+            AI_PROVIDER_REQUEST_TIMEOUT_MS,
+          ),
         ),
       });
     } catch (error) {
-      throw new AiProtocolRequestError(
-        `Không thể kết nối tới OpenAI Responses: ${(error as Error).message}`,
-        null,
-      );
+      throw toProviderTransportError(error, 'OpenAI Responses');
     }
 
     const body = await readBodyWithLimit(response);
@@ -130,7 +136,11 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
 
     if (!response.ok) {
       throw new AiProtocolRequestError(
-        payload?.error?.message ?? `OpenAI trả về lỗi ${response.status}`,
+        sanitizeProviderErrorMessage(
+          payload?.error?.message,
+          connection.credential,
+          `OpenAI trả về lỗi ${response.status}`,
+        ),
         response.status,
       );
     }
@@ -141,7 +151,11 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
         payload?.error?.message ?? payload?.incomplete_details?.reason;
       throw new AiProtocolRequestError(
         detail
-          ? `OpenAI Responses không hoàn tất: ${detail}`
+          ? `OpenAI Responses không hoàn tất: ${sanitizeProviderErrorMessage(
+              detail,
+              connection.credential,
+              'không rõ nguyên nhân',
+            )}`
           : 'OpenAI Responses không trả về nội dung phản hồi',
         response.status,
       );
@@ -176,20 +190,27 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           model: connection.model,
           ...buildRequestBody(request, true),
         }),
-        signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          resolveProviderTimeoutMs(
+            request.timeoutMs,
+            AI_STREAM_TIMEOUT_MS,
+            AI_STREAM_TIMEOUT_MS,
+          ),
+        ),
       });
     } catch (error) {
-      throw new AiProtocolRequestError(
-        `Không thể kết nối tới OpenAI Responses: ${(error as Error).message}`,
-        null,
-      );
+      throw toProviderTransportError(error, 'OpenAI Responses');
     }
 
     if (!response.ok) {
       const body = await readBodyWithLimit(response);
       const payload = safeJsonParse<ResponsesPayload>(body);
       throw new AiProtocolRequestError(
-        payload?.error?.message ?? `OpenAI trả về lỗi ${response.status}`,
+        sanitizeProviderErrorMessage(
+          payload?.error?.message,
+          connection.credential,
+          `OpenAI trả về lỗi ${response.status}`,
+        ),
         response.status,
       );
     }
@@ -219,9 +240,11 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
 
         if (event?.type === 'response.failed' || event?.type === 'error') {
           throw new AiProtocolRequestError(
-            event.error?.message ??
-              event.response?.error?.message ??
+            sanitizeProviderErrorMessage(
+              event.error?.message ?? event.response?.error?.message,
+              connection.credential,
               'OpenAI Responses stream thất bại',
+            ),
             response.status,
           );
         }

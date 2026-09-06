@@ -277,6 +277,10 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @Matches(/^[A-Za-z0-9+/]{43}=$/, {
+    message:
+      'AI_API_KEY_ENCRYPTION_KEY must be a canonical base64 encoded 32-byte key',
+  })
   AI_API_KEY_ENCRYPTION_KEY?: string;
 
   @IsOptional()

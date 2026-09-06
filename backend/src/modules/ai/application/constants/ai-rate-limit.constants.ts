@@ -6,6 +6,13 @@ export interface AiTierLimit {
   readonly tokens: number;
 }
 
+export const AI_EXTERNAL_OPERATION_REQUEST_COST = {
+  connectionValidation: 1,
+  connectionTest: 1,
+  modelDiscovery: 1,
+  capabilityProbe: 4,
+} as const;
+
 export const AI_TIER_LIMITS: Readonly<Record<AiRateLimitTier, AiTierLimit>> = {
   [AiRateLimitTier.FREE]: {
     windowSeconds: 3_600,

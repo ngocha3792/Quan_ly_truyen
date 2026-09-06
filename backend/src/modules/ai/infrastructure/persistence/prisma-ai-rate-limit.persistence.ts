@@ -20,6 +20,7 @@ export class PrismaAiRateLimitPersistence implements AiRateLimitPersistencePort 
   async reserve(
     input: ReserveAiRateLimitInput,
   ): Promise<AiRateLimitReservationResult> {
+    const requests = input.requests ?? 1;
     const rows = await this.prisma.$queryRaw<BucketRow[]>`
       INSERT INTO "ai_rate_limit_buckets" (
         "user_id",
@@ -32,18 +33,18 @@ export class PrismaAiRateLimitPersistence implements AiRateLimitPersistencePort 
       VALUES (
         ${input.userId}::uuid,
         ${input.windowStart},
-        1,
+        ${requests},
         ${input.tokens},
         CURRENT_TIMESTAMP,
         CURRENT_TIMESTAMP
       )
       ON CONFLICT ("user_id", "window_start") DO UPDATE
       SET
-        "request_count" = "ai_rate_limit_buckets"."request_count" + 1,
+        "request_count" = "ai_rate_limit_buckets"."request_count" + ${requests},
         "token_count" = "ai_rate_limit_buckets"."token_count" + ${input.tokens},
         "updated_at" = CURRENT_TIMESTAMP
       WHERE
-        "ai_rate_limit_buckets"."request_count" < ${input.requestLimit}
+        "ai_rate_limit_buckets"."request_count" + ${requests} <= ${input.requestLimit}
         AND "ai_rate_limit_buckets"."token_count" + ${input.tokens} <= ${input.tokenLimit}
       RETURNING "request_count", "token_count"
     `;

@@ -16,6 +16,7 @@ import {
   AI_POLICY_PERSISTENCE_PORT,
   AI_PROFILE_PERSISTENCE_PORT,
   AI_RATE_LIMIT_PERSISTENCE_PORT,
+  AI_SECURITY_AUDIT_PORT,
   AI_USAGE_PERSISTENCE_PORT,
   AiPolicyManager,
   AiProfileManager,
@@ -56,6 +57,7 @@ import {
   PrismaAiPolicyPersistence,
   PrismaAiProfilePersistence,
   PrismaAiRateLimitPersistence,
+  PrismaAiSecurityAuditAdapter,
   PrismaAiUsagePersistence,
   PrismaChapterTranslationPersistence,
 } from './infrastructure';
@@ -106,6 +108,10 @@ const portProviders = [
   {
     provide: AI_RATE_LIMIT_PERSISTENCE_PORT,
     useExisting: PrismaAiRateLimitPersistence,
+  },
+  {
+    provide: AI_SECURITY_AUDIT_PORT,
+    useExisting: PrismaAiSecurityAuditAdapter,
   },
   {
     provide: AI_PROTOCOL_REGISTRY_PORT,
@@ -164,6 +170,7 @@ const applicationHandlers = [
     PrismaAiPolicyPersistence,
     PrismaAiProfilePersistence,
     PrismaAiRateLimitPersistence,
+    PrismaAiSecurityAuditAdapter,
     PrismaChapterTranslationPersistence,
     AiApiKeyCipherAdapter,
     AiGatewayService,

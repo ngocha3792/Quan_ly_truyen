@@ -52,10 +52,24 @@ describe('AiRateLimiter', () => {
         userId: USER_ID,
         requestLimit: 20,
         tokenLimit: 50_000,
+        requests: 1,
         tokens: 10_003,
       }),
     );
     expect(reservation?.reservedTokens).toBe(10_003);
+  });
+
+  it('reserve nhiều diagnostic request trong một thao tác atomic', async () => {
+    await service.reserveExternalRequests(USER_ID, 4);
+
+    expect(reserveBucket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        requestLimit: 20,
+        requests: 4,
+        tokens: 0,
+      }),
+    );
   });
 
   it('ném AI_RATE_LIMITED khi bucket từ chối', async () => {

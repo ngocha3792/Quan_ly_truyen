@@ -7,6 +7,7 @@ export interface ReserveAiRateLimitInput {
   readonly windowStart: Date;
   readonly requestLimit: number;
   readonly tokenLimit: number;
+  readonly requests?: number;
   readonly tokens: number;
 }
 

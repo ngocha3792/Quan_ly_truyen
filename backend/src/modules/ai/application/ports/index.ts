@@ -9,5 +9,6 @@ export * from './chapter-translation.persistence.port';
 export * from './chapter-translation-queue.port';
 export * from './ai-policy.persistence.port';
 export * from './ai-rate-limit.persistence.port';
+export * from './ai-security-audit.port';
 export * from './ai-profile.persistence.port';
 export * from './ai-model-cache.port';

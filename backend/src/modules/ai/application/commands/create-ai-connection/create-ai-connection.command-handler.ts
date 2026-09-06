@@ -6,6 +6,7 @@ import {
   AI_PROTOCOL_REGISTRY_PORT,
   AiProtocolRegistryPort,
 } from '../../ports/ai-protocol-registry.port';
+import type { AiConnectionTestResult } from '../../ports/ai-protocol-adapter.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -15,6 +16,12 @@ import {
   AiConnectionPersistencePort,
   AiConnectionRecord,
 } from '../../ports/ai-connection.persistence.port';
+import {
+  AI_SECURITY_AUDIT_PORT,
+  AiSecurityAuditPort,
+} from '../../ports/ai-security-audit.port';
+import { AI_EXTERNAL_OPERATION_REQUEST_COST } from '../../constants/ai-rate-limit.constants';
+import { AiRateLimiter } from '../../policy';
 import { CreateAiConnectionCommand } from './create-ai-connection.command';
 
 @Injectable()
@@ -26,6 +33,9 @@ export class CreateAiConnectionCommandHandler {
     private readonly vault: AiCredentialVaultPort,
     @Inject(AI_PROTOCOL_REGISTRY_PORT)
     private readonly registry: AiProtocolRegistryPort,
+    private readonly rateLimits: AiRateLimiter,
+    @Inject(AI_SECURITY_AUDIT_PORT)
+    private readonly audit: AiSecurityAuditPort,
   ) {}
 
   async execute(
@@ -44,18 +54,41 @@ export class CreateAiConnectionCommandHandler {
     } = command;
 
     const model = defaultModel ?? this.registry.getDefaultModel(protocol);
+    await this.rateLimits.reserveExternalRequests(
+      command.actorUserId ?? userId,
+      AI_EXTERNAL_OPERATION_REQUEST_COST.connectionValidation,
+    );
     const adapter = this.registry.getAdapter(protocol);
-    const testResult = await adapter.testConnection({
-      protocol,
-      vendorHint,
-      baseUrl,
-      authType,
-      authHeaderName,
-      credential,
-      model,
-    });
+    let testResult: AiConnectionTestResult;
+    try {
+      testResult = await adapter.testConnection({
+        protocol,
+        vendorHint,
+        baseUrl,
+        authType,
+        authHeaderName,
+        credential,
+        model,
+      });
+    } catch (error) {
+      await this.audit.record({
+        actorUserId: command.actorUserId,
+        ownerUserId: userId,
+        action: 'ai.connection.created',
+        outcome: 'FAILURE',
+        metadata: { protocol, authType, vendorHint, model },
+      });
+      throw error;
+    }
 
     if (!testResult.ok) {
+      await this.audit.record({
+        actorUserId: command.actorUserId,
+        ownerUserId: userId,
+        action: 'ai.connection.created',
+        outcome: 'FAILURE',
+        metadata: { protocol, authType, vendorHint, model },
+      });
       throw new BusinessRuleViolationException({
         message: testResult.message ?? 'Không thể kết nối bằng API key này.',
         rule: 'ai-connection.test-failed',
@@ -64,7 +97,7 @@ export class CreateAiConnectionCommandHandler {
 
     const encryptedCredential = await this.vault.encrypt(credential);
 
-    return this.persistence.create({
+    const created = await this.persistence.create({
       userId,
       name,
       vendorHint,
@@ -75,5 +108,15 @@ export class CreateAiConnectionCommandHandler {
       baseUrl,
       defaultModel,
     });
+
+    await this.audit.record({
+      actorUserId: command.actorUserId,
+      ownerUserId: userId,
+      action: 'ai.connection.created',
+      connectionId: created.id,
+      outcome: 'SUCCESS',
+      metadata: { protocol, authType, vendorHint, model },
+    });
+    return created;
   }
 }

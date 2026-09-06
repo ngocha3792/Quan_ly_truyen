@@ -143,6 +143,28 @@ describe('AI policy/profile HTTP E2E', () => {
     });
   });
 
+  it('chặn custom AI Base URL trỏ vào private network trước khi persist', async () => {
+    await request(httpServer())
+      .post('/api/v1/ai/connections')
+      .set('Authorization', authorization())
+      .send({
+        name: 'Blocked internal gateway',
+        provider: 'CUSTOM',
+        apiKey: 'not-sent-anywhere',
+        baseUrl: 'https://127.0.0.1/v1',
+        defaultModel: 'internal-model',
+        protocol: 'OPENAI_CHAT_COMPLETIONS',
+        authType: 'BEARER',
+      })
+      .expect(422);
+
+    await expect(
+      prisma.aiConnection.count({
+        where: { userId, name: 'Blocked internal gateway' },
+      }),
+    ).resolves.toBe(0);
+  });
+
   function authorization(): string {
     return `Bearer ${accessToken}`;
   }

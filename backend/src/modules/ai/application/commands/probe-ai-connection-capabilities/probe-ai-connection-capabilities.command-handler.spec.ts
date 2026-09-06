@@ -48,10 +48,16 @@ describe('ProbeAiConnectionCapabilitiesCommandHandler', () => {
         yield { type: 'DONE' } as const;
       }),
     };
+    const rateLimits = {
+      reserveExternalRequests: jest.fn().mockResolvedValue(undefined),
+    };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
     const handler = new ProbeAiConnectionCapabilitiesCommandHandler(
       persistence as never,
       { fromRecord: jest.fn().mockResolvedValue(resolved) } as never,
       { getAdapter: jest.fn().mockReturnValue(adapter) } as never,
+      rateLimits as never,
+      audit,
     );
 
     const result = await handler.execute(
@@ -79,6 +85,17 @@ describe('ProbeAiConnectionCapabilitiesCommandHandler', () => {
         capabilityModel: 'reasoning-model',
         capabilities: result.capabilities,
         capabilitiesProbedAt: result.probedAt,
+      }),
+    );
+    expect(rateLimits.reserveExternalRequests).toHaveBeenCalledWith(
+      'user-id',
+      4,
+    );
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'ai.capabilities.probed',
+        connectionId: CONNECTION_ID,
+        outcome: 'SUCCESS',
       }),
     );
   });
@@ -124,6 +141,10 @@ describe('ProbeAiConnectionCapabilitiesCommandHandler', () => {
         }),
       } as never,
       { getAdapter: jest.fn().mockReturnValue(adapter) } as never,
+      {
+        reserveExternalRequests: jest.fn().mockResolvedValue(undefined),
+      } as never,
+      { record: jest.fn().mockResolvedValue(undefined) },
     );
 
     await expect(

@@ -8,9 +8,14 @@ import {
   Patch,
   Post,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 
-import { RequestTimeout, RequirePermissions } from '@/common/decorators';
+import {
+  CurrentUserId,
+  RequestTimeout,
+  RequirePermissions,
+} from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 
 import {
@@ -69,6 +74,7 @@ export class AdminAiConnectionsController {
 
   @Post()
   async create(
+    @CurrentUserId() actorUserId: string | undefined,
     @Body() request: CreateAiConnectionRequest,
   ): Promise<AiConnectionResponse> {
     const defaultModel = request.defaultModel ?? null;
@@ -91,6 +97,7 @@ export class AdminAiConnectionsController {
         request.apiKey,
         preset.baseUrl,
         defaultModel,
+        this.requireActorId(actorUserId),
       ),
     );
     return toAiConnectionResponse(result);
@@ -98,38 +105,55 @@ export class AdminAiConnectionsController {
 
   @Patch(':connectionId')
   async update(
+    @CurrentUserId() actorUserId: string | undefined,
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
     @Body() request: UpdateAiConnectionRequest,
   ): Promise<AiConnectionResponse> {
     const result = await this.updateConnection.execute(
-      new UpdateAiConnectionCommand(null, connectionId, request),
+      new UpdateAiConnectionCommand(
+        null,
+        connectionId,
+        request,
+        this.requireActorId(actorUserId),
+      ),
     );
     return toAiConnectionResponse(result);
   }
 
   @Delete(':connectionId')
   async remove(
+    @CurrentUserId() actorUserId: string | undefined,
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
   ): Promise<void> {
     await this.deleteConnection.execute(
-      new DeleteAiConnectionCommand(null, connectionId),
+      new DeleteAiConnectionCommand(
+        null,
+        connectionId,
+        this.requireActorId(actorUserId),
+      ),
     );
   }
 
   @Post(':connectionId/test')
   async test(
+    @CurrentUserId() actorUserId: string | undefined,
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
   ): Promise<AiConnectionTestResult> {
     return this.testConnection.execute(
-      new TestAiConnectionCommand(null, connectionId),
+      new TestAiConnectionCommand(
+        null,
+        connectionId,
+        this.requireActorId(actorUserId),
+      ),
     );
   }
 
   @Get(':connectionId/models')
   async models(
+    @CurrentUserId() actorUserId: string | undefined,
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
     @Query('refresh') refresh?: string,
@@ -139,6 +163,7 @@ export class AdminAiConnectionsController {
         null,
         connectionId,
         refresh === 'true' || refresh === '1',
+        this.requireActorId(actorUserId),
       ),
     );
   }
@@ -146,11 +171,22 @@ export class AdminAiConnectionsController {
   @Post(':connectionId/capabilities/probe')
   @RequestTimeout(AI_CAPABILITY_PROBE_ROUTE_TIMEOUT_MS)
   async probe(
+    @CurrentUserId() actorUserId: string | undefined,
     @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
     connectionId: string,
   ): Promise<AiCapabilityProbeResult> {
     return this.probeCapabilities.execute(
-      new ProbeAiConnectionCapabilitiesCommand(null, connectionId),
+      new ProbeAiConnectionCapabilitiesCommand(
+        null,
+        connectionId,
+        this.requireActorId(actorUserId),
+      ),
     );
+  }
+
+  private requireActorId(actorUserId: string | undefined): string {
+    if (!actorUserId)
+      throw new UnauthorizedException('Authentication required');
+    return actorUserId;
   }
 }

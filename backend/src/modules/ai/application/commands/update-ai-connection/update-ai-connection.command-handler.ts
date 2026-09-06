@@ -20,6 +20,13 @@ import {
 } from '../../ports/ai-connection.persistence.port';
 import { UpdateAiConnectionCommand } from './update-ai-connection.command';
 import { normalizeAiAuthHeaderName } from '../../../domain/value-objects';
+import {
+  AI_SECURITY_AUDIT_PORT,
+  AiSecurityAuditPort,
+} from '../../ports/ai-security-audit.port';
+import { AI_EXTERNAL_OPERATION_REQUEST_COST } from '../../constants/ai-rate-limit.constants';
+import { AiRateLimiter } from '../../policy';
+import type { AiConnectionTestResult } from '../../ports/ai-protocol-adapter.port';
 
 @Injectable()
 export class UpdateAiConnectionCommandHandler {
@@ -30,6 +37,9 @@ export class UpdateAiConnectionCommandHandler {
     private readonly vault: AiCredentialVaultPort,
     @Inject(AI_PROTOCOL_REGISTRY_PORT)
     private readonly registry: AiProtocolRegistryPort,
+    private readonly rateLimits: AiRateLimiter,
+    @Inject(AI_SECURITY_AUDIT_PORT)
+    private readonly audit: AiSecurityAuditPort,
   ) {}
 
   async execute(
@@ -80,21 +90,59 @@ export class UpdateAiConnectionCommandHandler {
       changes.authType !== undefined ||
       changes.authHeaderName !== undefined
     ) {
+      await this.rateLimits.reserveExternalRequests(
+        command.actorUserId ?? command.userId,
+        AI_EXTERNAL_OPERATION_REQUEST_COST.connectionValidation,
+      );
       const credentialToTest =
         changes.apiKey ??
         (await this.vault.decrypt(existing.encryptedCredential));
       const adapter = this.registry.getAdapter(nextProtocol);
-      const result = await adapter.testConnection({
-        protocol: nextProtocol,
-        vendorHint: existing.vendorHint,
-        baseUrl: nextBaseUrl,
-        authType: nextAuthType,
-        authHeaderName: nextAuthHeaderName,
-        credential: credentialToTest,
-        model: nextModel ?? this.registry.getDefaultModel(nextProtocol),
-      });
+      const model = nextModel ?? this.registry.getDefaultModel(nextProtocol);
+      let result: AiConnectionTestResult;
+      try {
+        result = await adapter.testConnection({
+          protocol: nextProtocol,
+          vendorHint: existing.vendorHint,
+          baseUrl: nextBaseUrl,
+          authType: nextAuthType,
+          authHeaderName: nextAuthHeaderName,
+          credential: credentialToTest,
+          model,
+        });
+      } catch (error) {
+        await this.audit.record({
+          actorUserId: command.actorUserId,
+          ownerUserId: command.userId,
+          action: 'ai.connection.updated',
+          connectionId: command.connectionId,
+          outcome: 'FAILURE',
+          metadata: {
+            protocol: nextProtocol,
+            authType: nextAuthType,
+            vendorHint: existing.vendorHint,
+            model,
+            changedFields: Object.keys(changes),
+          },
+        });
+        throw error;
+      }
 
       if (!result.ok) {
+        await this.audit.record({
+          actorUserId: command.actorUserId,
+          ownerUserId: command.userId,
+          action: 'ai.connection.updated',
+          connectionId: command.connectionId,
+          outcome: 'FAILURE',
+          metadata: {
+            protocol: nextProtocol,
+            authType: nextAuthType,
+            vendorHint: existing.vendorHint,
+            model,
+            changedFields: Object.keys(changes),
+          },
+        });
         throw new BusinessRuleViolationException({
           message: result.message ?? 'Không thể kết nối bằng thông tin mới.',
           rule: 'ai-connection.test-failed',
@@ -130,6 +178,23 @@ export class UpdateAiConnectionCommandHandler {
         : {}),
     };
 
-    return this.persistence.update(command.connectionId, update);
+    const updated = await this.persistence.update(command.connectionId, update);
+    await this.audit.record({
+      actorUserId: command.actorUserId,
+      ownerUserId: command.userId,
+      action: 'ai.connection.updated',
+      connectionId: command.connectionId,
+      outcome: 'SUCCESS',
+      metadata: {
+        protocol: updated.protocol,
+        authType: updated.authType,
+        vendorHint: updated.vendorHint,
+        model:
+          updated.defaultModel ??
+          this.registry.getDefaultModel(updated.protocol),
+        changedFields: Object.keys(changes),
+      },
+    });
+    return updated;
   }
 }

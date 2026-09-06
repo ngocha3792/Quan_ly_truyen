@@ -11,6 +11,8 @@ import { AiFallbackPolicy, AiRateLimitTier } from '@/modules/ai/domain/enums';
 import { PrismaAiPolicyPersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-policy.persistence';
 import { PrismaAiProfilePersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-profile.persistence';
 import { PrismaAiRateLimitPersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-rate-limit.persistence';
+import { PrismaAiSecurityAuditAdapter } from '@/modules/ai/infrastructure/security';
+import { RequestContextStore } from '@/common/middlewares';
 
 describe('AI policy/profile PostgreSQL integration', () => {
   let moduleRef: TestingModule;
@@ -18,6 +20,7 @@ describe('AI policy/profile PostgreSQL integration', () => {
   let policies: AiPolicyManager;
   let profiles: AiProfileManager;
   let rateLimits: PrismaAiRateLimitPersistence;
+  let securityAudit: PrismaAiSecurityAuditAdapter;
   const runId = randomUUID();
   let userId = '';
   let storyId = '';
@@ -34,6 +37,10 @@ describe('AI policy/profile PostgreSQL integration', () => {
     policies = new AiPolicyManager(policyPersistence);
     profiles = new AiProfileManager(profilePersistence);
     rateLimits = new PrismaAiRateLimitPersistence(prisma);
+    securityAudit = new PrismaAiSecurityAuditAdapter(
+      prisma,
+      new RequestContextStore(),
+    );
 
     const user = await prisma.user.create({
       data: {
@@ -65,6 +72,9 @@ describe('AI policy/profile PostgreSQL integration', () => {
   });
 
   afterAll(async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityType: 'AiConnection', entityId: runId },
+    });
     if (storyId) await prisma.story.deleteMany({ where: { id: storyId } });
     if (userId) await prisma.user.deleteMany({ where: { id: userId } });
     await moduleRef.close();
@@ -107,6 +117,46 @@ describe('AI policy/profile PostgreSQL integration', () => {
         where: { userId_windowStart: { userId, windowStart } },
       }),
     ).resolves.toMatchObject({ requestCount: 3, tokenCount: 30 });
+  });
+
+  it('reserve diagnostic requests theo một phép ghi atomic', async () => {
+    const windowStart = new Date('2026-09-06T01:00:00Z');
+
+    await expect(
+      rateLimits.reserve({
+        userId,
+        windowStart,
+        requestLimit: 20,
+        tokenLimit: 50_000,
+        requests: 4,
+        tokens: 0,
+      }),
+    ).resolves.toMatchObject({
+      allowed: true,
+      bucket: { requestCount: 4, tokenCount: 0 },
+    });
+  });
+
+  it('ghi AI security audit không chứa credential hoặc prompt', async () => {
+    await securityAudit.record({
+      actorUserId: userId,
+      ownerUserId: userId,
+      action: 'ai.connection.updated',
+      connectionId: runId,
+      outcome: 'SUCCESS',
+      metadata: {
+        changedFields: ['apiKey', 'baseUrl'],
+      },
+    });
+
+    const record = await prisma.auditLog.findFirstOrThrow({
+      where: { entityType: 'AiConnection', entityId: runId },
+      orderBy: { createdAt: 'desc' },
+    });
+    const serialized = JSON.stringify(record);
+    expect(serialized).not.toContain('plain-secret');
+    expect(serialized).not.toContain('systemPrompt');
+    expect(record.action).toBe('ai.connection.updated');
   });
 
   it('story profile override có thể kế thừa từng field từ user profile', async () => {
