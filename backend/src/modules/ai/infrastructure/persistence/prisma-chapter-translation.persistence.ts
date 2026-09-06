@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/infrastructure/database';
-import { ChapterTranslationStatus } from '@/generated/prisma/client';
+import {
+  ChapterTranslation as PrismaChapterTranslation,
+  ChapterTranslationStatus,
+} from '@/generated/prisma/client';
 
 import {
   ChapterSourceForTranslation,
@@ -11,6 +14,27 @@ import {
   FailChapterTranslationInput,
   UpsertPendingChapterTranslationInput,
 } from '../../application/ports/chapter-translation.persistence.port';
+import { toDomainChapterTranslationStatus } from './ai-persistence.mappers';
+
+function toDomainChapterTranslationRecord(
+  record: PrismaChapterTranslation,
+): ChapterTranslationRecord {
+  return {
+    id: record.id,
+    chapterId: record.chapterId,
+    targetLanguageCode: record.targetLanguageCode,
+    requestedById: record.requestedById,
+    connectionId: record.connectionId,
+    status: toDomainChapterTranslationStatus(record.status),
+    sourceContentHash: record.sourceContentHash,
+    translatedTitle: record.translatedTitle,
+    translatedContent: record.translatedContent,
+    errorCode: record.errorCode,
+    errorMessage: record.errorMessage,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
 
 @Injectable()
 export class PrismaChapterTranslationPersistence implements ChapterTranslationPersistencePort {
@@ -20,25 +44,27 @@ export class PrismaChapterTranslationPersistence implements ChapterTranslationPe
     chapterId: string,
     targetLanguageCode: string,
   ): Promise<ChapterTranslationRecord | null> {
-    return this.prisma.chapterTranslation.findUnique({
+    const record = await this.prisma.chapterTranslation.findUnique({
       where: {
         chapterId_targetLanguageCode: { chapterId, targetLanguageCode },
       },
     });
+    return record ? toDomainChapterTranslationRecord(record) : null;
   }
 
   async findById(
     translationId: string,
   ): Promise<ChapterTranslationRecord | null> {
-    return this.prisma.chapterTranslation.findUnique({
+    const record = await this.prisma.chapterTranslation.findUnique({
       where: { id: translationId },
     });
+    return record ? toDomainChapterTranslationRecord(record) : null;
   }
 
   async upsertPending(
     input: UpsertPendingChapterTranslationInput,
   ): Promise<ChapterTranslationRecord> {
-    return this.prisma.chapterTranslation.upsert({
+    const record = await this.prisma.chapterTranslation.upsert({
       where: {
         chapterId_targetLanguageCode: {
           chapterId: input.chapterId,
@@ -64,6 +90,7 @@ export class PrismaChapterTranslationPersistence implements ChapterTranslationPe
         errorMessage: null,
       },
     });
+    return toDomainChapterTranslationRecord(record);
   }
 
   async markProcessing(translationId: string): Promise<void> {

@@ -2,7 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { ResourceNotFoundException } from '@/common/exceptions';
 
-import { AiProviderRegistry } from '../../../infrastructure/providers/ai-provider.registry';
+import {
+  AI_PROVIDER_REGISTRY_PORT,
+  AiProviderRegistryPort,
+} from '../../ports/ai-provider-registry.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -21,7 +24,8 @@ export class TestAiConnectionCommandHandler {
     private readonly persistence: AiConnectionPersistencePort,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
-    private readonly registry: AiProviderRegistry,
+    @Inject(AI_PROVIDER_REGISTRY_PORT)
+    private readonly registry: AiProviderRegistryPort,
   ) {}
 
   async execute(

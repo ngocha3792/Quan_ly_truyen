@@ -1,11 +1,10 @@
 import {
   BusinessRuleViolationException,
-  ExternalServiceException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
-import { AiProvider } from '@/generated/prisma/client';
+import { AiProvider } from '../../../domain/enums';
 
-import { computeChapterTranslationHash } from '../../services/chapter-translation-hash.util';
+import { computeChapterTranslationHash } from '../../chapter-translation/chapter-translation-hash.util';
 import { RequestChapterTranslationCommand } from './request-chapter-translation.command';
 import { RequestChapterTranslationCommandHandler } from './request-chapter-translation.command-handler';
 
@@ -29,7 +28,7 @@ describe('RequestChapterTranslationCommandHandler', () => {
     upsertPending: jest.Mock;
   };
   let resolver: { resolve: jest.Mock };
-  let queue: { add: jest.Mock } | undefined;
+  let queue: { enqueue: jest.Mock };
   let handler: RequestChapterTranslationCommandHandler;
 
   beforeEach(() => {
@@ -39,7 +38,7 @@ describe('RequestChapterTranslationCommandHandler', () => {
       upsertPending: jest.fn(),
     };
     resolver = { resolve: jest.fn().mockResolvedValue(CONNECTION) };
-    queue = { add: jest.fn() };
+    queue = { enqueue: jest.fn() };
 
     handler = new RequestChapterTranslationCommandHandler(
       chapters as never,
@@ -94,7 +93,7 @@ describe('RequestChapterTranslationCommandHandler', () => {
       targetLanguageCode: 'en',
     });
     expect(translations.upsertPending).not.toHaveBeenCalled();
-    expect(queue?.add).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 
   it('upsert PENDING và enqueue job khi chưa có bản dịch hợp lệ', async () => {
@@ -116,36 +115,17 @@ describe('RequestChapterTranslationCommandHandler', () => {
         connectionId: CONNECTION_ID,
       }),
     );
-    expect(queue?.add).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ translationId: TRANSLATION_ID, chapterId: CHAPTER_ID }),
-      expect.objectContaining({ jobId: TRANSLATION_ID }),
+    expect(queue.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        translationId: TRANSLATION_ID,
+        chapterId: CHAPTER_ID,
+        targetLanguageCode: 'en',
+      }),
     );
     expect(result).toEqual({
       id: TRANSLATION_ID,
       status: 'PENDING',
       targetLanguageCode: 'en',
     });
-  });
-
-  it('ném ExternalServiceException khi hàng đợi không khả dụng', async () => {
-    translations.upsertPending.mockResolvedValue({
-      id: TRANSLATION_ID,
-      status: 'PENDING',
-      targetLanguageCode: 'en',
-    });
-
-    const handlerWithoutQueue = new RequestChapterTranslationCommandHandler(
-      chapters as never,
-      translations as never,
-      resolver as never,
-      undefined,
-    );
-
-    await expect(
-      handlerWithoutQueue.execute(
-        new RequestChapterTranslationCommand(USER_ID, STORY_ID, CHAPTER_ID, 'en'),
-      ),
-    ).rejects.toBeInstanceOf(ExternalServiceException);
   });
 });

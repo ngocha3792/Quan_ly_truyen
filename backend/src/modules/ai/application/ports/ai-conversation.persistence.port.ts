@@ -1,4 +1,4 @@
-import type { AiMessageRole, AiProvider } from '@/generated/prisma/client';
+import type { AiMessageRole, AiProvider } from '../../domain/enums';
 
 export const AI_CONVERSATION_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.conversation-persistence',

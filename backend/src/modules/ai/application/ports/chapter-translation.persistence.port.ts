@@ -1,4 +1,4 @@
-import type { ChapterTranslationStatus } from '@/generated/prisma/client';
+import type { ChapterTranslationStatus } from '../../domain/enums';
 
 export const CHAPTER_TRANSLATION_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.chapter-translation-persistence',

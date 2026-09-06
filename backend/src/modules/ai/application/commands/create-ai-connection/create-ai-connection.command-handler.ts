@@ -1,9 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { BusinessRuleViolationException } from '@/common/exceptions';
-import { AiProvider } from '@/generated/prisma/client';
 
-import { AiProviderRegistry } from '../../../infrastructure/providers/ai-provider.registry';
+import { AiProvider } from '../../../domain/enums';
+import {
+  AI_PROVIDER_REGISTRY_PORT,
+  AiProviderRegistryPort,
+} from '../../ports/ai-provider-registry.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -22,7 +25,8 @@ export class CreateAiConnectionCommandHandler {
     private readonly persistence: AiConnectionPersistencePort,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
-    private readonly registry: AiProviderRegistry,
+    @Inject(AI_PROVIDER_REGISTRY_PORT)
+    private readonly registry: AiProviderRegistryPort,
   ) {}
 
   async execute(

@@ -1,17 +1,9 @@
-import { InjectQueue } from '@nestjs/bullmq';
-import { Inject, Injectable, Optional } from '@nestjs/common';
-import type { Queue } from 'bullmq';
+import { Inject, Injectable } from '@nestjs/common';
 
 import {
   BusinessRuleViolationException,
-  ExternalServiceException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
-import { QUEUE_NAMES } from '@/infrastructure/queue';
-import {
-  TRANSLATE_CHAPTER_JOB,
-  TranslateChapterJobV1,
-} from '@/infrastructure/queue/contracts';
 import {
   CHAPTER_PERSISTENCE_PORT,
   ChapterPersistencePort,
@@ -21,8 +13,12 @@ import {
   CHAPTER_TRANSLATION_PERSISTENCE_PORT,
   ChapterTranslationPersistencePort,
 } from '../../ports/chapter-translation.persistence.port';
-import { AiConnectionResolverService } from '../../services/ai-connection-resolver.service';
-import { computeChapterTranslationHash } from '../../services/chapter-translation-hash.util';
+import {
+  CHAPTER_TRANSLATION_QUEUE_PORT,
+  ChapterTranslationQueuePort,
+} from '../../ports/chapter-translation-queue.port';
+import { AiConnectionResolver } from '../../connection-resolution/ai-connection-resolver';
+import { computeChapterTranslationHash } from '../../chapter-translation/chapter-translation-hash.util';
 import { RequestChapterTranslationCommand } from './request-chapter-translation.command';
 import { RequestChapterTranslationResultView } from './request-chapter-translation.view';
 
@@ -33,10 +29,9 @@ export class RequestChapterTranslationCommandHandler {
     private readonly chapters: ChapterPersistencePort,
     @Inject(CHAPTER_TRANSLATION_PERSISTENCE_PORT)
     private readonly translations: ChapterTranslationPersistencePort,
-    private readonly resolver: AiConnectionResolverService,
-    @Optional()
-    @InjectQueue(QUEUE_NAMES.AI)
-    private readonly queue?: Queue,
+    private readonly resolver: AiConnectionResolver,
+    @Inject(CHAPTER_TRANSLATION_QUEUE_PORT)
+    private readonly queue: ChapterTranslationQueuePort,
   ) {}
 
   async execute(
@@ -99,22 +94,10 @@ export class RequestChapterTranslationCommandHandler {
       sourceContentHash,
     });
 
-    if (!this.queue) {
-      throw new ExternalServiceException({
-        service: 'Hàng đợi dịch AI',
-        message: 'Dịch vụ hàng đợi hiện không khả dụng. Vui lòng thử lại sau.',
-      });
-    }
-
-    const payload: TranslateChapterJobV1 = {
-      version: 1,
+    await this.queue.enqueue({
       translationId: translation.id,
       chapterId: command.chapterId,
       targetLanguageCode: command.targetLanguageCode,
-    };
-
-    await this.queue.add(TRANSLATE_CHAPTER_JOB, payload, {
-      jobId: translation.id,
     });
 
     return {

@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { AiProvider } from '@/generated/prisma/client';
+import { AiProvider } from '../../../domain/enums';
 
 export class CreateAiConnectionRequest {
   @IsString()

@@ -2,16 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { AiConfig } from '@/config';
-import { AiProvider } from '@/generated/prisma/client';
 
+import { AiProvider } from '../../domain/enums';
 import { AiProviderClientPort } from '../../application/ports/ai-provider-client.port';
+import { AiProviderRegistryPort } from '../../application/ports/ai-provider-registry.port';
 import { AnthropicProviderAdapter } from './anthropic-provider.adapter';
 import { GeminiProviderAdapter } from './gemini-provider.adapter';
 import { OpenAiCompatibleProviderAdapter } from './openai-compatible-provider.adapter';
 import { OpenAiProviderAdapter } from './openai-provider.adapter';
 
 @Injectable()
-export class AiProviderRegistry {
+export class AiProviderRegistry implements AiProviderRegistryPort {
   private readonly clients: Record<AiProvider, AiProviderClientPort>;
   private readonly models: Record<AiProvider, string>;
 

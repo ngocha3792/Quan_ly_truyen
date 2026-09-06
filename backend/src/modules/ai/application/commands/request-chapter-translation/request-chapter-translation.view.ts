@@ -1,4 +1,4 @@
-import type { ChapterTranslationStatus } from '@/generated/prisma/client';
+import type { ChapterTranslationStatus } from '../../../domain/enums';
 
 export interface RequestChapterTranslationResultView {
   readonly id: string;

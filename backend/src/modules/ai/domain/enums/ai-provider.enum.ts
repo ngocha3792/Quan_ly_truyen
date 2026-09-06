@@ -1,0 +1,6 @@
+export enum AiProvider {
+  GEMINI = 'GEMINI',
+  OPENAI = 'OPENAI',
+  ANTHROPIC = 'ANTHROPIC',
+  OPENAI_COMPATIBLE = 'OPENAI_COMPATIBLE',
+}

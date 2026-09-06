@@ -10,10 +10,12 @@ import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AI_CREDENTIAL_VAULT_PORT,
   AI_GATEWAY_PORT,
+  AI_PROVIDER_REGISTRY_PORT,
   AI_USAGE_PERSISTENCE_PORT,
-  AiChatContextBuilderService,
-  AiConnectionResolverService,
+  AiChatContextBuilder,
+  AiConnectionResolver,
   CHAPTER_TRANSLATION_PERSISTENCE_PORT,
+  CHAPTER_TRANSLATION_QUEUE_PORT,
   CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
   DeleteAiConnectionCommandHandler,
@@ -34,6 +36,7 @@ import {
   AiGatewayService,
   AiProviderRegistry,
   AnthropicProviderAdapter,
+  ChapterTranslationQueueAdapter,
   GeminiProviderAdapter,
   OpenAiCompatibleProviderAdapter,
   OpenAiProviderAdapter,
@@ -71,8 +74,16 @@ const portProviders = [
     useExisting: PrismaAiUsagePersistence,
   },
   {
+    provide: AI_PROVIDER_REGISTRY_PORT,
+    useExisting: AiProviderRegistry,
+  },
+  {
     provide: CHAPTER_TRANSLATION_PERSISTENCE_PORT,
     useExisting: PrismaChapterTranslationPersistence,
+  },
+  {
+    provide: CHAPTER_TRANSLATION_QUEUE_PORT,
+    useExisting: ChapterTranslationQueueAdapter,
   },
 ];
 
@@ -115,13 +126,14 @@ const applicationHandlers = [
     AiGatewayService,
     ...portProviders,
     ...applicationHandlers,
-    AiConnectionResolverService,
-    AiChatContextBuilderService,
+    AiConnectionResolver,
+    AiChatContextBuilder,
     GeminiProviderAdapter,
     OpenAiProviderAdapter,
     AnthropicProviderAdapter,
     OpenAiCompatibleProviderAdapter,
     AiProviderRegistry,
+    ChapterTranslationQueueAdapter,
   ],
 })
 export class AiModule {}

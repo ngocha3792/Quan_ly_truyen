@@ -1,4 +1,4 @@
-import type { ChapterTranslationStatus } from '@/generated/prisma/client';
+import type { ChapterTranslationStatus } from '../../../domain/enums';
 
 import type { ChapterTranslationRecord } from '../../../application/ports/chapter-translation.persistence.port';
 import type { RequestChapterTranslationResultView } from '../../../application/commands/request-chapter-translation/request-chapter-translation.view';

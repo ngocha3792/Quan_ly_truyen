@@ -1,41 +1,78 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/infrastructure/database';
-import type { AiMessageRole, AiProvider } from '@/generated/prisma/client';
+import type {
+  AiConversation as PrismaAiConversation,
+  AiMessage as PrismaAiMessage,
+} from '@/generated/prisma/client';
 
+import type { AiMessageRole, AiProvider } from '../../domain/enums';
 import {
   AiConversationPersistencePort,
   AiConversationRecord,
   AiMessageRecord,
 } from '../../application/ports/ai-conversation.persistence.port';
+import {
+  toDomainAiMessageRole,
+  toDomainAiProvider,
+  toPrismaAiMessageRole,
+  toPrismaAiProvider,
+} from './ai-persistence.mappers';
+
+function toDomainAiConversationRecord(
+  record: PrismaAiConversation,
+): AiConversationRecord {
+  return {
+    id: record.id,
+    userId: record.userId,
+    connectionId: record.connectionId,
+    provider: toDomainAiProvider(record.provider),
+    title: record.title,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function toDomainAiMessageRecord(record: PrismaAiMessage): AiMessageRecord {
+  return {
+    id: record.id,
+    conversationId: record.conversationId,
+    role: toDomainAiMessageRole(record.role),
+    content: record.content,
+    createdAt: record.createdAt,
+  };
+}
 
 @Injectable()
 export class PrismaAiConversationPersistence implements AiConversationPersistencePort {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByUser(userId: string): Promise<readonly AiConversationRecord[]> {
-    return this.prisma.aiConversation.findMany({
+    const records = await this.prisma.aiConversation.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
     });
+    return records.map(toDomainAiConversationRecord);
   }
 
   async findById(
     conversationId: string,
     userId: string,
   ): Promise<AiConversationRecord | null> {
-    return this.prisma.aiConversation.findFirst({
+    const record = await this.prisma.aiConversation.findFirst({
       where: { id: conversationId, userId },
     });
+    return record ? toDomainAiConversationRecord(record) : null;
   }
 
   async findMessages(
     conversationId: string,
   ): Promise<readonly AiMessageRecord[]> {
-    return this.prisma.aiMessage.findMany({
+    const records = await this.prisma.aiMessage.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
     });
+    return records.map(toDomainAiMessageRecord);
   }
 
   async create(
@@ -44,9 +81,15 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
     provider: AiProvider,
     title: string,
   ): Promise<AiConversationRecord> {
-    return this.prisma.aiConversation.create({
-      data: { userId, connectionId, provider, title },
+    const record = await this.prisma.aiConversation.create({
+      data: {
+        userId,
+        connectionId,
+        provider: toPrismaAiProvider(provider),
+        title,
+      },
     });
+    return toDomainAiConversationRecord(record);
   }
 
   async delete(conversationId: string, userId: string): Promise<void> {
@@ -60,9 +103,10 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
     role: AiMessageRole,
     content: string,
   ): Promise<AiMessageRecord> {
-    return this.prisma.aiMessage.create({
-      data: { conversationId, role, content },
+    const record = await this.prisma.aiMessage.create({
+      data: { conversationId, role: toPrismaAiMessageRole(role), content },
     });
+    return toDomainAiMessageRecord(record);
   }
 
   async touch(
