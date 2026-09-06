@@ -1,21 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { AiMessageRole } from '@/generated/prisma/client';
-
+import { AiMessageRole } from '../../../domain/enums';
 import { DEFAULT_CHAT_SYSTEM_PROMPT } from '../../constants/ai-chat.constants';
 import { AiGatewayPort, AI_GATEWAY_PORT } from '../../ports/ai-gateway.port';
 import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AiConversationPersistencePort,
 } from '../../ports/ai-conversation.persistence.port';
-import { AiChatContextBuilderService } from '../../services/ai-chat-context-builder.service';
+import { AiChatContextBuilder } from '../../chat-context/ai-chat-context-builder';
 import { SendAiMessageCommand } from './send-ai-message.command';
 import { SendAiMessageResultView } from './send-ai-message.view';
 
 @Injectable()
 export class SendAiMessageCommandHandler {
   constructor(
-    private readonly contextBuilder: AiChatContextBuilderService,
+    private readonly contextBuilder: AiChatContextBuilder,
     @Inject(AI_CONVERSATION_PERSISTENCE_PORT)
     private readonly conversations: AiConversationPersistencePort,
     @Inject(AI_GATEWAY_PORT)

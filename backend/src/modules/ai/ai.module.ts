@@ -8,9 +8,10 @@ import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AI_CREDENTIAL_VAULT_PORT,
   AI_GATEWAY_PORT,
+  AI_PROVIDER_REGISTRY_PORT,
   AI_USAGE_PERSISTENCE_PORT,
-  AiChatContextBuilderService,
-  AiConnectionResolverService,
+  AiChatContextBuilder,
+  AiConnectionResolver,
   CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
   DeleteAiConnectionCommandHandler,
@@ -63,6 +64,10 @@ const portProviders = [
     provide: AI_USAGE_PERSISTENCE_PORT,
     useExisting: PrismaAiUsagePersistence,
   },
+  {
+    provide: AI_PROVIDER_REGISTRY_PORT,
+    useExisting: AiProviderRegistry,
+  },
 ];
 
 const applicationHandlers = [
@@ -95,8 +100,8 @@ const applicationHandlers = [
     AiGatewayService,
     ...portProviders,
     ...applicationHandlers,
-    AiConnectionResolverService,
-    AiChatContextBuilderService,
+    AiConnectionResolver,
+    AiChatContextBuilder,
     GeminiProviderAdapter,
     OpenAiProviderAdapter,
     AnthropicProviderAdapter,

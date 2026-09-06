@@ -167,6 +167,9 @@ jobs:
       - name: Format, lint and typecheck
         run: npm run format:check && npm run lint:check && npm run typecheck:scripts
 
+      - name: Architecture boundary guardrails
+        run: npm run architecture:check
+
       - name: Validate Prisma schema and migration layout
         run: npm run db:validate
 

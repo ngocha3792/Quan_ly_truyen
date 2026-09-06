@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { AiProvider } from '@/generated/prisma/client';
-
+import type { AiProvider } from '../../domain/enums';
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
   AiConnectionPersistencePort,
@@ -21,7 +20,7 @@ export interface ResolveAiConnectionParams {
  * given provider, otherwise a system-wide one for that provider.
  */
 @Injectable()
-export class AiConnectionResolverService {
+export class AiConnectionResolver {
   constructor(
     @Inject(AI_CONNECTION_PERSISTENCE_PORT)
     private readonly connections: AiConnectionPersistencePort,

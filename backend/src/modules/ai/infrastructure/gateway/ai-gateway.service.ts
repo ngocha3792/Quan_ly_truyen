@@ -7,9 +7,7 @@ import {
   RateLimitExceededException,
   RequestTimeoutException,
 } from '@/common/exceptions';
-import { AiProvider } from '@/generated/prisma/client';
-
-import { AiErrorCode } from '../../domain/errors/ai-error-code.enum';
+import { AiErrorCode, AiProvider } from '../../domain/enums';
 import {
   AiGatewayPort,
   AiUsageContext,

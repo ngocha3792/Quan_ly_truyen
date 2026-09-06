@@ -4,10 +4,13 @@ import {
   BusinessRuleViolationException,
   ResourceNotFoundException,
 } from '@/common/exceptions';
-import { AiMessageRole } from '@/generated/prisma/client';
 
+import { AiMessageRole } from '../../domain/enums';
 import { MAX_RECENT_MESSAGES } from '../constants/ai-chat.constants';
-import { AiProviderRegistry } from '../../infrastructure/providers/ai-provider.registry';
+import {
+  AI_PROVIDER_REGISTRY_PORT,
+  AiProviderRegistryPort,
+} from '../ports/ai-provider-registry.port';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -22,7 +25,7 @@ import {
   AiConnectionConfig,
   AiMessage,
 } from '../ports/ai-provider-client.port';
-import { AiConnectionResolverService } from './ai-connection-resolver.service';
+import { AiConnectionResolver } from '../connection-resolution/ai-connection-resolver';
 
 const PROVIDER_LABEL_FALLBACK = 'nhà cung cấp AI';
 
@@ -40,14 +43,15 @@ export interface AiChatContext {
  * provider-ready message list (existing history + the new user turn).
  */
 @Injectable()
-export class AiChatContextBuilderService {
+export class AiChatContextBuilder {
   constructor(
     @Inject(AI_CONVERSATION_PERSISTENCE_PORT)
     private readonly conversations: AiConversationPersistencePort,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
-    private readonly resolver: AiConnectionResolverService,
-    private readonly registry: AiProviderRegistry,
+    private readonly resolver: AiConnectionResolver,
+    @Inject(AI_PROVIDER_REGISTRY_PORT)
+    private readonly registry: AiProviderRegistryPort,
   ) {}
 
   async build(

@@ -1,9 +1,8 @@
-import type { AiProvider } from '@/generated/prisma/client';
-
 import {
   AiErrorCode,
   classifyAiErrorStatus,
-} from '../../domain/errors/ai-error-code.enum';
+  type AiProvider,
+} from '../../domain/enums';
 
 export type AiMessageRole = 'system' | 'user' | 'assistant';
 

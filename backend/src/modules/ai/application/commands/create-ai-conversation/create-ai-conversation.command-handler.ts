@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { BusinessRuleViolationException } from '@/common/exceptions';
 
-import { AiConnectionResolverService } from '../../services/ai-connection-resolver.service';
+import { AiConnectionResolver } from '../../connection-resolution/ai-connection-resolver';
 import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AiConversationPersistencePort,
@@ -15,7 +15,7 @@ export class CreateAiConversationCommandHandler {
   constructor(
     @Inject(AI_CONVERSATION_PERSISTENCE_PORT)
     private readonly persistence: AiConversationPersistencePort,
-    private readonly resolver: AiConnectionResolverService,
+    private readonly resolver: AiConnectionResolver,
   ) {}
 
   async execute(

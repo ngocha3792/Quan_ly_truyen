@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/generated/prisma/client';
+import type { AiProvider } from '../../../domain/enums';
 import type { AiConnectionRecord } from '../../../application/ports/ai-connection.persistence.port';
 
 /**

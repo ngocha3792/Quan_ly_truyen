@@ -7,6 +7,7 @@ import {
   AiUsagePersistencePort,
   RecordAiUsageInput,
 } from '../../application/ports/ai-usage.persistence.port';
+import { toPrismaAiProvider } from './ai-persistence.mappers';
 
 @Injectable()
 export class PrismaAiUsagePersistence implements AiUsagePersistencePort {
@@ -17,7 +18,7 @@ export class PrismaAiUsagePersistence implements AiUsagePersistencePort {
       data: {
         userId: input.userId,
         connectionId: input.connectionId,
-        provider: input.provider,
+        provider: toPrismaAiProvider(input.provider),
         model: input.model,
         capability: AiUsageCapability[input.capability],
         inputTokens: input.inputTokens,

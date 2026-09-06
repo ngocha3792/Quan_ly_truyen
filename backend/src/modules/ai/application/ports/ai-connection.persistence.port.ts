@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/generated/prisma/client';
+import type { AiProvider } from '../../domain/enums';
 
 export const AI_CONNECTION_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.connection-persistence',
