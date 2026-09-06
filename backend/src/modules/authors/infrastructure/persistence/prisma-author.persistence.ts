@@ -187,6 +187,14 @@ export class PrismaAuthorPersistence implements AuthorPersistencePort {
             ratingAverage: true,
             ratingCount: true,
             publishedAt: true,
+            coverMedia: {
+              select: {
+                secureUrl: true,
+                publicUrl: true,
+                status: true,
+                deletedAt: true,
+              },
+            },
             categories: {
               orderBy: { isPrimary: 'desc' },
               select: {

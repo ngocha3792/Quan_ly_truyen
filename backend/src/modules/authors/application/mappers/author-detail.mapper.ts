@@ -66,20 +66,8 @@ export class AuthorDetailMapper {
         penName: author.penName,
         joinedAt: String(author.createdAt.getFullYear()),
         verified: author.verificationStatus === 'VERIFIED',
-        avatarUrl:
-          author.user.avatarMedia?.status === 'READY' &&
-          !author.user.avatarMedia.deletedAt
-            ? (author.user.avatarMedia.secureUrl ??
-              author.user.avatarMedia.publicUrl ??
-              null)
-            : null,
-        bannerUrl:
-          author.bannerMedia?.status === 'READY' &&
-          !author.bannerMedia.deletedAt
-            ? (author.bannerMedia.secureUrl ??
-              author.bannerMedia.publicUrl ??
-              null)
-            : null,
+        avatarUrl: AuthorDetailMapper.mediaUrl(author.user.avatarMedia),
+        bannerUrl: AuthorDetailMapper.mediaUrl(author.bannerMedia),
         socialLinks: {
           website: author.websiteUrl,
           facebook: AuthorDetailMapper.stringValue(socialLinks['facebook']),
@@ -108,6 +96,7 @@ export class AuthorDetailMapper {
           chapters: story.chapterCount,
           rating: Number(story.ratingAverage.toString()).toFixed(1),
           reads: AuthorDetailMapper.formatCompact(story.viewCount),
+          coverUrl: AuthorDetailMapper.mediaUrl(story.coverMedia),
           tone: WORK_TONES[index % WORK_TONES.length],
         })),
       timeline,
@@ -124,9 +113,22 @@ export class AuthorDetailMapper {
         title: story.title,
         genre: story.categories[0]?.category.name ?? 'Đa thể loại',
         reads: AuthorDetailMapper.formatCompact(story.viewCount),
+        coverUrl: AuthorDetailMapper.mediaUrl(story.coverMedia),
         tone: WORK_TONES[index % WORK_TONES.length],
       })),
     };
+  }
+
+  private static mediaUrl(
+    media: {
+      readonly secureUrl: string | null;
+      readonly publicUrl: string | null;
+      readonly status: string;
+      readonly deletedAt: Date | null;
+    } | null,
+  ): string | null {
+    if (!media || media.status !== 'READY' || media.deletedAt) return null;
+    return media.secureUrl ?? media.publicUrl ?? null;
   }
 
   private static weightedAverageRating(

@@ -40,6 +40,7 @@ export interface AuthorWork {
   readonly chapters: number;
   readonly rating: string;
   readonly reads: string;
+  readonly coverUrl: string | null;
   readonly tone: AuthorWorkTone;
 }
 
@@ -61,6 +62,7 @@ export interface AuthorHotWork {
   readonly title: string;
   readonly genre: string;
   readonly reads: string;
+  readonly coverUrl: string | null;
   readonly tone: AuthorWorkTone;
 }
 

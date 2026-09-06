@@ -83,6 +83,12 @@ export interface AuthorProfileDetailRecord {
     readonly ratingAverage: { toString(): string };
     readonly ratingCount: number;
     readonly publishedAt: Date | null;
+    readonly coverMedia: {
+      readonly secureUrl: string | null;
+      readonly publicUrl: string | null;
+      readonly status: string;
+      readonly deletedAt: Date | null;
+    } | null;
     readonly categories: readonly {
       readonly category: { readonly name: string };
     }[];

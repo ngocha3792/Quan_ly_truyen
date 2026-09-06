@@ -24,9 +24,13 @@
     @for (work of works; track work.id) {
       <a class="work-card" [routerLink]="['/truyen', work.slug]">
         <div class="work-cover" [class]="'work-cover work-cover--' + work.tone">
-          <span>{{ work.title.slice(0, 1) }}</span>
+          @if (work.coverUrl) {
+            <img [src]="work.coverUrl" [alt]="work.title" loading="lazy" decoding="async" />
+          } @else {
+            <span>{{ work.title.slice(0, 1) }}</span>
 
-          <span class="cover-glow"></span>
+            <span class="cover-glow"></span>
+          }
         </div>
 
         <div class="work-content">
