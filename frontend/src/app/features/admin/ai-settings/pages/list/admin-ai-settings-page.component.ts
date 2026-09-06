@@ -15,6 +15,8 @@ import { AdminAiConnectionManagerStore } from '../../data-access/admin-ai-connec
 import {
   AI_AUTH_TYPE_LABELS,
   AI_AUTH_TYPES,
+  AI_CAPABILITY_KEYS,
+  AI_CAPABILITY_LABELS,
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
   AI_PROTOCOL_LABELS,
@@ -50,6 +52,7 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected readonly loading = this.manager.loading;
   protected readonly mutating = this.manager.mutating;
   protected readonly testingId = this.manager.testingId;
+  protected readonly probingId = this.manager.probingId;
   protected readonly error = this.manager.error;
   protected readonly message = this.manager.message;
   protected readonly modelBrowserOpen = this.manager.modelBrowserOpen;
@@ -69,6 +72,8 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected readonly authLabels = AI_AUTH_TYPE_LABELS;
   protected readonly protocols = AI_PROTOCOLS;
   protected readonly protocolLabels = AI_PROTOCOL_LABELS;
+  protected readonly capabilityKeys = AI_CAPABILITY_KEYS;
+  protected readonly capabilityLabels = AI_CAPABILITY_LABELS;
 
   protected editing: AiConnection | null = null;
   protected editName = '';

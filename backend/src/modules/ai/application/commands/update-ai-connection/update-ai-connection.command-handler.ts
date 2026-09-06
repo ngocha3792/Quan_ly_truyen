@@ -63,6 +63,13 @@ export class UpdateAiConnectionCommandHandler {
           ? null
           : existing.authHeaderName,
     );
+    const invalidatesCapabilities =
+      changes.apiKey !== undefined ||
+      changes.baseUrl !== undefined ||
+      changes.defaultModel !== undefined ||
+      changes.protocol !== undefined ||
+      changes.authType !== undefined ||
+      changes.authHeaderName !== undefined;
 
     let encryptedCredential: string | undefined;
 
@@ -113,6 +120,13 @@ export class UpdateAiConnectionCommandHandler {
         : {}),
       ...(changes.protocol !== undefined
         ? { protocol: nextProtocol, vendorHint: existing.vendorHint }
+        : {}),
+      ...(invalidatesCapabilities
+        ? {
+            capabilityModel: null,
+            capabilities: null,
+            capabilitiesProbedAt: null,
+          }
         : {}),
     };
 

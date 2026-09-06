@@ -103,4 +103,37 @@ describe('AdminAiSettingsApiService', () => {
       protocol: 'OPENAI_CHAT_COMPLETIONS',
     });
   });
+
+  it('chỉ probe capability khi gọi endpoint chủ động', async () => {
+    const resultPromise = firstValueFrom(service.probeCapabilities('connection-id'));
+    const request = http.expectOne('/api/v1/admin/ai/connections/connection-id/capabilities/probe');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({
+      success: true,
+      data: {
+        connectionId: 'connection-id',
+        model: 'model-1',
+        capabilities: {
+          chat: true,
+          modelDiscovery: true,
+          streaming: true,
+          systemPrompt: true,
+          tools: false,
+          vision: false,
+          reasoning: true,
+        },
+        probedAt: '2026-09-06T16:30:00.000Z',
+        failedChecks: [],
+      },
+      requestId: 'request-test',
+      timestamp: '2026-09-06T16:30:00.000Z',
+    });
+
+    await expect(resultPromise).resolves.toMatchObject({
+      model: 'model-1',
+      capabilities: { streaming: true, tools: false },
+    });
+  });
 });

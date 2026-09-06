@@ -138,9 +138,15 @@ export class AiGatewayService implements AiGatewayPort {
         let attemptText = '';
 
         try {
-          for await (const event of adapter.generateStream(
+          const effectiveRequest = this.applyConnectionCapabilities(
             activeConnection,
             request,
+            capability,
+            true,
+          );
+          for await (const event of adapter.generateStream(
+            activeConnection,
+            effectiveRequest,
           )) {
             if (event.type === 'USAGE') {
               inputTokens = event.usage.inputTokens ?? inputTokens;
@@ -249,8 +255,14 @@ export class AiGatewayService implements AiGatewayPort {
     const startedAt = Date.now();
 
     try {
+      const effectiveRequest = this.applyConnectionCapabilities(
+        connection,
+        request,
+        capability,
+        false,
+      );
       const adapter = this.registry.getAdapter(connection.protocol);
-      const result = await adapter.generate(connection, request);
+      const result = await adapter.generate(connection, effectiveRequest);
 
       await this.recordUsage({
         usageContext,
@@ -315,6 +327,58 @@ export class AiGatewayService implements AiGatewayPort {
 
     if (params.success) this.logger.log(event);
     else this.logger.warn(event);
+  }
+
+  private applyConnectionCapabilities(
+    connection: ResolvedAiConnection,
+    request: AiGenerateRequest,
+    usageCapability: AiUsageCapabilityValue,
+    streaming: boolean,
+  ): AiGenerateRequest {
+    const capabilities = connection.capabilities;
+    const unsupported =
+      capabilities?.chat === false
+        ? 'chat'
+        : streaming && capabilities?.streaming === false
+          ? 'streaming'
+          : request.systemPrompt &&
+              capabilities?.systemPrompt === false &&
+              usageCapability !== 'CHAT'
+            ? 'systemPrompt'
+            : null;
+
+    if (unsupported) {
+      throw new BusinessRuleViolationException({
+        message: `Kết nối AI này đã được xác nhận không hỗ trợ ${unsupported}. Hãy chọn kết nối hoặc model khác.`,
+        rule: 'ai-connection.capability-unsupported',
+        details: { capability: unsupported, model: connection.model },
+      });
+    }
+
+    if (!request.systemPrompt || capabilities?.systemPrompt !== false) {
+      return request;
+    }
+
+    this.logger.warn({
+      event: 'ai.capability-degradation.applied',
+      protocol: connection.protocol,
+      vendorHint: connection.vendorHint,
+      model: connection.model,
+      capability: 'systemPrompt',
+    });
+
+    return {
+      messages: request.messages,
+      ...(request.temperature !== undefined
+        ? { temperature: request.temperature }
+        : {}),
+      ...(request.maxOutputTokens !== undefined
+        ? { maxOutputTokens: request.maxOutputTokens }
+        : {}),
+      ...(request.timeoutMs !== undefined
+        ? { timeoutMs: request.timeoutMs }
+        : {}),
+    };
   }
 
   private errorCode(error: unknown): string {

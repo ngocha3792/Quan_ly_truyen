@@ -9,6 +9,7 @@ import { readBrowserCookie } from '../../../../core/http/browser-cookie.util';
 import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 import {
   AiConnection,
+  AiCapabilityProbeResult,
   AiConnectionTestResult,
   AiModelInfo,
   AiFallbackPolicy,
@@ -89,6 +90,15 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
     return this.http
       .post<ApiSuccessEnvelope<AiConnectionTestResult>>(
         `${this.connectionsUrl}/${connectionId}/test`,
+        {},
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  probeConnectionCapabilities(connectionId: string): Observable<AiCapabilityProbeResult> {
+    return this.http
+      .post<ApiSuccessEnvelope<AiCapabilityProbeResult>>(
+        `${this.connectionsUrl}/${connectionId}/capabilities/probe`,
         {},
       )
       .pipe(map((response) => response.data));

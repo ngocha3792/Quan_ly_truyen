@@ -1,4 +1,5 @@
 import type { AiAuthType, AiProtocol } from '../../domain/enums';
+import type { AiCapabilities } from './ai-protocol-adapter.port';
 
 export const AI_CONNECTION_PERSISTENCE_PORT = Symbol.for(
   'modules.ai.connection-persistence',
@@ -16,6 +17,9 @@ export interface AiConnectionRecord {
   readonly baseUrl: string;
   readonly defaultModel: string | null;
   readonly enabled: boolean;
+  readonly capabilityModel?: string | null;
+  readonly capabilities?: AiCapabilities | null;
+  readonly capabilitiesProbedAt?: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -33,6 +37,7 @@ export interface CreateAiConnectionInput {
 }
 
 export interface UpdateAiConnectionInput {
+  readonly expectedUpdatedAt?: Date;
   readonly name?: string;
   readonly encryptedCredential?: string;
   readonly baseUrl?: string | null;
@@ -42,6 +47,9 @@ export interface UpdateAiConnectionInput {
   readonly authHeaderName?: string | null;
   readonly protocol?: AiProtocol;
   readonly vendorHint?: string | null;
+  readonly capabilityModel?: string | null;
+  readonly capabilities?: AiCapabilities | null;
+  readonly capabilitiesProbedAt?: Date | null;
 }
 
 export interface AiConnectionPersistencePort {

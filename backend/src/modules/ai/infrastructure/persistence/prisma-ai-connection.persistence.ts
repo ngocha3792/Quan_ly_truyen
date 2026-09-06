@@ -10,6 +10,7 @@ import {
   CreateAiConnectionInput,
   UpdateAiConnectionInput,
 } from '../../application/ports/ai-connection.persistence.port';
+import type { AiCapabilities } from '../../application/ports/ai-protocol-adapter.port';
 import {
   baseUrlFromPersistence,
   legacyPrismaProvidersForProtocol,
@@ -44,8 +45,25 @@ function toDomainAiConnectionRecord(
     ),
     defaultModel: record.defaultModel,
     enabled: record.enabled,
+    capabilityModel: record.capabilityModel,
+    capabilities: toCapabilities(record),
+    capabilitiesProbedAt: record.capabilitiesProbedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+  };
+}
+
+function toCapabilities(record: PrismaAiConnection): AiCapabilities | null {
+  if (!record.capabilitiesProbedAt || !record.capabilityModel) return null;
+
+  return {
+    chat: record.supportsChat ?? false,
+    modelDiscovery: record.supportsModelDiscovery ?? false,
+    streaming: record.supportsStreaming ?? false,
+    systemPrompt: record.supportsSystemPrompt ?? false,
+    tools: record.supportsTools ?? false,
+    vision: record.supportsVision ?? false,
+    reasoning: record.supportsReasoning ?? false,
   };
 }
 
@@ -140,7 +158,12 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
     input: UpdateAiConnectionInput,
   ): Promise<AiConnectionRecord> {
     const record = await this.prisma.aiConnection.update({
-      where: { id: connectionId },
+      where: {
+        id: connectionId,
+        ...(input.expectedUpdatedAt
+          ? { updatedAt: input.expectedUpdatedAt }
+          : {}),
+      },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.encryptedCredential !== undefined
@@ -168,6 +191,24 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
                 input.vendorHint ?? null,
               ),
             }
+          : {}),
+        ...(input.capabilityModel !== undefined
+          ? { capabilityModel: input.capabilityModel }
+          : {}),
+        ...(input.capabilities !== undefined
+          ? {
+              supportsChat: input.capabilities?.chat ?? null,
+              supportsModelDiscovery:
+                input.capabilities?.modelDiscovery ?? null,
+              supportsStreaming: input.capabilities?.streaming ?? null,
+              supportsSystemPrompt: input.capabilities?.systemPrompt ?? null,
+              supportsTools: input.capabilities?.tools ?? null,
+              supportsVision: input.capabilities?.vision ?? null,
+              supportsReasoning: input.capabilities?.reasoning ?? null,
+            }
+          : {}),
+        ...(input.capabilitiesProbedAt !== undefined
+          ? { capabilitiesProbedAt: input.capabilitiesProbedAt }
           : {}),
       },
     });

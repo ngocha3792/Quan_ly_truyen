@@ -52,6 +52,30 @@ export const AI_AUTH_TYPE_LABELS: Record<AiAuthType, string> = {
   QUERY_PARAM: 'Query parameter',
 };
 
+export const AI_CAPABILITY_KEYS = [
+  'chat',
+  'modelDiscovery',
+  'streaming',
+  'systemPrompt',
+  'tools',
+  'vision',
+  'reasoning',
+] as const;
+
+export type AiCapabilityName = (typeof AI_CAPABILITY_KEYS)[number];
+
+export const AI_CAPABILITY_LABELS: Record<AiCapabilityName, string> = {
+  chat: 'Chat',
+  modelDiscovery: 'Models',
+  streaming: 'Streaming',
+  systemPrompt: 'System prompt',
+  tools: 'Tools',
+  vision: 'Vision',
+  reasoning: 'Reasoning',
+};
+
+export type AiCapabilities = Record<AiCapabilityName, boolean>;
+
 export interface AiConnection {
   readonly id: string;
   readonly name: string;
@@ -63,6 +87,9 @@ export interface AiConnection {
   readonly baseUrl: string | null;
   readonly defaultModel: string | null;
   readonly enabled: boolean;
+  readonly capabilityModel: string | null;
+  readonly capabilities: AiCapabilities | null;
+  readonly capabilitiesProbedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -92,6 +119,14 @@ export interface UpdateAiConnectionPayload {
 export interface AiConnectionTestResult {
   readonly ok: boolean;
   readonly message?: string;
+}
+
+export interface AiCapabilityProbeResult {
+  readonly connectionId: string;
+  readonly model: string;
+  readonly capabilities: AiCapabilities;
+  readonly probedAt: string;
+  readonly failedChecks: readonly AiCapabilityName[];
 }
 
 export interface AiModelInfo {

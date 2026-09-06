@@ -114,7 +114,9 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           model: connection.model,
           ...buildRequestBody(request, false),
         }),
-        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+        ),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -174,7 +176,7 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           model: connection.model,
           ...buildRequestBody(request, true),
         }),
-        signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
+        signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(

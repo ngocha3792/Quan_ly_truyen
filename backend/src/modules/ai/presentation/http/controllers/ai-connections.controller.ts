@@ -11,7 +11,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { CurrentUserId, RequirePermissions } from '@/common/decorators';
+import {
+  CurrentUserId,
+  RequestTimeout,
+  RequirePermissions,
+} from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 
 import {
@@ -23,12 +27,16 @@ import {
   ListAiConnectionModelsQueryHandler,
   ListAiConnectionsQuery,
   ListAiConnectionsQueryHandler,
+  ProbeAiConnectionCapabilitiesCommand,
+  ProbeAiConnectionCapabilitiesCommandHandler,
   TestAiConnectionCommand,
   TestAiConnectionCommandHandler,
   UpdateAiConnectionCommand,
   UpdateAiConnectionCommandHandler,
 } from '../../../application';
+import { AI_CAPABILITY_PROBE_ROUTE_TIMEOUT_MS } from '../../../application/constants/ai-generation.constants';
 import {
+  AiCapabilityProbeResult,
   AiConnectionTestResult,
   AiModelInfo,
 } from '../../../application/ports/ai-protocol-adapter.port';
@@ -53,6 +61,7 @@ export class AiConnectionsController {
     private readonly updateConnection: UpdateAiConnectionCommandHandler,
     private readonly deleteConnection: DeleteAiConnectionCommandHandler,
     private readonly testConnection: TestAiConnectionCommandHandler,
+    private readonly probeCapabilities: ProbeAiConnectionCapabilitiesCommandHandler,
   ) {}
 
   @Get()
@@ -146,6 +155,21 @@ export class AiConnectionsController {
         this.requireUserId(userId),
         connectionId,
         refresh === 'true' || refresh === '1',
+      ),
+    );
+  }
+
+  @Post(':connectionId/capabilities/probe')
+  @RequestTimeout(AI_CAPABILITY_PROBE_ROUTE_TIMEOUT_MS)
+  async probe(
+    @CurrentUserId() userId: string | undefined,
+    @Param('connectionId', new ParseUUIDPipe({ version: '4' }))
+    connectionId: string,
+  ): Promise<AiCapabilityProbeResult> {
+    return this.probeCapabilities.execute(
+      new ProbeAiConnectionCapabilitiesCommand(
+        this.requireUserId(userId),
+        connectionId,
       ),
     );
   }

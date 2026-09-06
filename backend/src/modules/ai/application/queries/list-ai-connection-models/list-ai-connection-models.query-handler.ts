@@ -50,6 +50,8 @@ export class ListAiConnectionModelsQueryHandler {
       });
     }
 
+    if (connection.capabilities?.modelDiscovery === false) return [];
+
     if (query.refresh) {
       await this.cache.delete(connection.id);
     } else {

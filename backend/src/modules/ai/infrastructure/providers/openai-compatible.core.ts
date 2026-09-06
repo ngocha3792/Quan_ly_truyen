@@ -88,7 +88,9 @@ export async function openAiCompatibleGenerate(
         temperature: request.temperature,
         max_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
       }),
-      signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(
+        request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+      ),
     });
   } catch (error) {
     throw new AiProtocolRequestError(
@@ -153,7 +155,7 @@ export async function* openAiCompatibleGenerateStream(
         stream: true,
         stream_options: { include_usage: true },
       }),
-      signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
     });
   } catch (error) {
     throw new AiProtocolRequestError(

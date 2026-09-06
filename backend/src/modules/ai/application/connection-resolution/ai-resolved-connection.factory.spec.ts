@@ -37,6 +37,7 @@ describe('AiResolvedConnectionFactory', () => {
       authHeaderName: null,
       credential: 'plain-secret',
       model: 'connection-model',
+      capabilities: null,
     });
     expect(vault.decrypt).toHaveBeenCalledWith('encrypted-secret');
   });
@@ -48,5 +49,34 @@ describe('AiResolvedConnectionFactory', () => {
     await expect(
       factory.fromRecord({ ...CONNECTION, defaultModel: null }),
     ).resolves.toMatchObject({ model: 'default' });
+  });
+
+  it('chỉ áp capability cho đúng model đã probe', async () => {
+    const capabilities = {
+      chat: true,
+      modelDiscovery: true,
+      streaming: false,
+      systemPrompt: true,
+      tools: false,
+      vision: false,
+      reasoning: true,
+    };
+    const probed = {
+      ...CONNECTION,
+      capabilityModel: 'connection-model',
+      capabilities,
+      capabilitiesProbedAt: new Date(1),
+    };
+
+    await expect(factory.fromRecord(probed)).resolves.toMatchObject({
+      model: 'connection-model',
+      capabilities,
+    });
+    await expect(
+      factory.fromRecord(probed, 'other-model'),
+    ).resolves.toMatchObject({
+      model: 'other-model',
+      capabilities: null,
+    });
   });
 });

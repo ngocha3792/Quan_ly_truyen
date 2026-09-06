@@ -37,6 +37,23 @@
               {{ protocolLabels[connection.protocol] }} · {{ authLabels[connection.authType] }}
             </small>
 
+            @if (connection.capabilities; as capabilities) {
+              <div class="capability-list">
+                @for (capability of capabilityKeys; track capability) {
+                  <span
+                    class="capability"
+                    [class.capability--unsupported]="!capabilities[capability]"
+                  >
+                    {{ capabilities[capability] ? '✓' : '×' }}
+                    {{ capabilityLabels[capability] }}
+                  </span>
+                }
+              </div>
+              <small>Đã dò cho model {{ connection.capabilityModel }}</small>
+            } @else {
+              <small>Chưa dò capability cho model hiện tại.</small>
+            }
+
             <span class="status" [class.status--disabled]="!connection.enabled">
               {{ connection.enabled ? '● Đang bật' : '○ Đã tắt' }}
             </span>
@@ -50,6 +67,13 @@
                 Test
               </app-button>
               <app-button variant="secondary" (click)="openModels(connection)"> Models </app-button>
+              <app-button
+                variant="secondary"
+                [loading]="probingId() === connection.id"
+                (click)="manager.probe(connection)"
+              >
+                Dò khả năng
+              </app-button>
               <app-button variant="secondary" (click)="openEdit(connection)">Sửa</app-button>
               <app-button
                 variant="danger"

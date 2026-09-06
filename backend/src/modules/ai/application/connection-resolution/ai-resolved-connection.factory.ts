@@ -24,6 +24,11 @@ export class AiResolvedConnectionFactory {
     connection: AiConnectionRecord,
     modelOverride?: string | null,
   ): Promise<ResolvedAiConnection> {
+    const model =
+      modelOverride ??
+      connection.defaultModel ??
+      this.protocols.getDefaultModel(connection.protocol);
+
     return {
       protocol: connection.protocol,
       vendorHint: connection.vendorHint,
@@ -31,10 +36,11 @@ export class AiResolvedConnectionFactory {
       authType: connection.authType,
       authHeaderName: connection.authHeaderName,
       credential: await this.vault.decrypt(connection.encryptedCredential),
-      model:
-        modelOverride ??
-        connection.defaultModel ??
-        this.protocols.getDefaultModel(connection.protocol),
+      model,
+      capabilities:
+        connection.capabilityModel === model
+          ? (connection.capabilities ?? null)
+          : null,
     };
   }
 }

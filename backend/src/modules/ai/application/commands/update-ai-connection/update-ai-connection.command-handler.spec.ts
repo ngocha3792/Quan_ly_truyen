@@ -70,6 +70,9 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
       expect.objectContaining({
         authType: AiAuthType.API_KEY_HEADER,
         authHeaderName: 'X-GWAI-Key',
+        capabilityModel: null,
+        capabilities: null,
+        capabilitiesProbedAt: null,
       }),
     );
   });

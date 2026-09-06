@@ -6,6 +6,7 @@ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AiConnection,
+  AiCapabilityProbeResult,
   AiConnectionTestResult,
   AiModelInfo,
   CreateAiConnectionPayload,
@@ -43,6 +44,15 @@ export class AdminAiSettingsApiService {
   test(connectionId: string): Observable<AiConnectionTestResult> {
     return this.http
       .post<ApiSuccessEnvelope<AiConnectionTestResult>>(`${this.url}/${connectionId}/test`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  probeCapabilities(connectionId: string): Observable<AiCapabilityProbeResult> {
+    return this.http
+      .post<ApiSuccessEnvelope<AiCapabilityProbeResult>>(
+        `${this.url}/${connectionId}/capabilities/probe`,
+        {},
+      )
       .pipe(map((response) => response.data));
   }
 

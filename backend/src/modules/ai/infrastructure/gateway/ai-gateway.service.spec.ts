@@ -1,5 +1,7 @@
 import { Logger } from '@nestjs/common';
 
+import { BusinessRuleViolationException } from '@/common/exceptions';
+
 import { AiAuthType, AiErrorCode, AiProtocol } from '../../domain/enums';
 import {
   AiProtocolRequestError,
@@ -119,6 +121,35 @@ describe('AiGatewayService explicit system fallback', () => {
     expect(serialized).not.toContain('protocol-safe-error');
   });
 
+  it('giảm cấp chat bằng cách bỏ system prompt đã probe là không hỗ trợ', async () => {
+    const limited = {
+      ...primary,
+      capabilities: {
+        chat: true,
+        modelDiscovery: true,
+        streaming: true,
+        systemPrompt: false,
+        tools: false,
+        vision: false,
+        reasoning: false,
+      },
+    };
+    adapter.generate.mockResolvedValue({
+      content: 'ok',
+      protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+      model: 'personal-model',
+      latencyMs: 1,
+    });
+
+    await gateway.generate(
+      limited,
+      { ...request, systemPrompt: 'must-not-be-sent' },
+      usageContext,
+    );
+
+    expect(adapter.generate).toHaveBeenCalledWith(limited, request);
+  });
+
   it('stream chỉ phát contract chuẩn hóa và DONE đúng một lần', async () => {
     adapter.generateStream.mockImplementation(async function* () {
       await Promise.resolve();
@@ -184,5 +215,42 @@ describe('AiGatewayService explicit system fallback', () => {
         errorCode: AiErrorCode.INVALID_RESPONSE,
       }),
     );
+  });
+
+  it('không gọi provider khi capability đã probe xác nhận không hỗ trợ stream', async () => {
+    const unsupported = {
+      ...primary,
+      capabilities: {
+        chat: true,
+        modelDiscovery: true,
+        streaming: false,
+        systemPrompt: true,
+        tools: false,
+        vision: false,
+        reasoning: false,
+      },
+    };
+    const consume = async () => {
+      for await (const event of gateway.generateStream(
+        unsupported,
+        request,
+        usageContext,
+      )) {
+        void event;
+      }
+    };
+
+    try {
+      await consume();
+      throw new Error('Expected unsupported capability rejection');
+    } catch (error) {
+      if (!(error instanceof BusinessRuleViolationException)) throw error;
+      expect(error.details).toEqual({
+        rule: 'ai-connection.capability-unsupported',
+        capability: 'streaming',
+        model: 'personal-model',
+      });
+    }
+    expect(adapter.generateStream).not.toHaveBeenCalled();
   });
 });

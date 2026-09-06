@@ -1,5 +1,6 @@
 import type { AiAuthType, AiProtocol } from '../../../domain/enums';
 import type { AiConnectionRecord } from '../../../application/ports/ai-connection.persistence.port';
+import type { AiCapabilities } from '../../../application/ports/ai-protocol-adapter.port';
 
 /**
  * Never includes the encrypted (or decrypted) API key — only metadata a
@@ -17,6 +18,9 @@ export interface AiConnectionResponse {
   readonly baseUrl: string | null;
   readonly defaultModel: string | null;
   readonly enabled: boolean;
+  readonly capabilityModel: string | null;
+  readonly capabilities: AiCapabilities | null;
+  readonly capabilitiesProbedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -35,6 +39,9 @@ export function toAiConnectionResponse(
     baseUrl: record.baseUrl,
     defaultModel: record.defaultModel,
     enabled: record.enabled,
+    capabilityModel: record.capabilityModel ?? null,
+    capabilities: record.capabilities ?? null,
+    capabilitiesProbedAt: record.capabilitiesProbedAt?.toISOString() ?? null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

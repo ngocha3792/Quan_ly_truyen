@@ -97,4 +97,29 @@ describe('ListAiConnectionModelsQueryHandler', () => {
     ).resolves.toEqual([]);
     expect(cache.set).toHaveBeenCalledWith('connection-1', [], 600);
   });
+
+  it('không gọi provider khi capability đã xác nhận model discovery không hỗ trợ', async () => {
+    persistence.findByOwnerAndId.mockResolvedValue({
+      ...CONNECTION,
+      capabilityModel: CONNECTION.defaultModel,
+      capabilities: {
+        chat: true,
+        modelDiscovery: false,
+        streaming: true,
+        systemPrompt: true,
+        tools: false,
+        vision: false,
+        reasoning: false,
+      },
+      capabilitiesProbedAt: new Date(),
+    });
+
+    await expect(
+      handler.execute(new ListAiConnectionModelsQuery('user-1', CONNECTION.id)),
+    ).resolves.toEqual([]);
+
+    expect(cache.get).not.toHaveBeenCalled();
+    expect(resolvedConnections.fromRecord).not.toHaveBeenCalled();
+    expect(adapter.listModels).not.toHaveBeenCalled();
+  });
 });

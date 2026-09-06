@@ -21,6 +21,7 @@ export class AdminAiConnectionManagerStore {
   readonly loading = signal(false);
   readonly mutating = signal(false);
   readonly testingId = signal<string | null>(null);
+  readonly probingId = signal<string | null>(null);
   readonly error = signal('');
   readonly message = signal('');
   readonly modelBrowserOpen = signal(false);
@@ -93,6 +94,45 @@ export class AdminAiConnectionManagerStore {
           } else {
             this.error.set(result.message ?? `Kết nối "${connection.name}" thất bại.`);
           }
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  probe(connection: AiConnection): void {
+    if (
+      this.probingId() ||
+      !window.confirm(
+        `Dò khả năng của "${connection.name}" sẽ gửi một số request AI nhỏ và có thể tốn credit. Tiếp tục?`,
+      )
+    ) {
+      return;
+    }
+
+    this.probingId.set(connection.id);
+    this.error.set('');
+    this.message.set('');
+    this.api
+      .probeCapabilities(connection.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.probingId.set(null)),
+      )
+      .subscribe({
+        next: (result) => {
+          this.connections.update((items) =>
+            items.map((item) =>
+              item.id === connection.id
+                ? {
+                    ...item,
+                    capabilityModel: result.model,
+                    capabilities: result.capabilities,
+                    capabilitiesProbedAt: result.probedAt,
+                  }
+                : item,
+            ),
+          );
+          this.message.set(`Đã dò khả năng của "${connection.name}".`);
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });

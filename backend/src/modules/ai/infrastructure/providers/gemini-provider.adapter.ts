@@ -98,7 +98,9 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
-        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          request.timeoutMs ?? AI_PROVIDER_REQUEST_TIMEOUT_MS,
+        ),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -154,7 +156,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
-        signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
+        signal: AbortSignal.timeout(request.timeoutMs ?? AI_STREAM_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(

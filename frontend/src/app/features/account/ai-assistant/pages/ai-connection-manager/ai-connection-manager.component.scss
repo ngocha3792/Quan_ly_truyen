@@ -96,6 +96,27 @@
   gap: 0.4rem;
 }
 
+.capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.capability {
+  padding: 0.14rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.capability--unsupported {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+}
+
 .editor-fields {
   gap: 0.9rem;
 }

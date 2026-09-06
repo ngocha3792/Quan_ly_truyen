@@ -10,6 +10,8 @@ import { AiConnectionManagerStore } from '../../data-access/ai-connection-manage
 import {
   AI_AUTH_TYPE_LABELS,
   AI_AUTH_TYPES,
+  AI_CAPABILITY_KEYS,
+  AI_CAPABILITY_LABELS,
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
   AI_PROTOCOL_LABELS,
@@ -46,6 +48,8 @@ export class AiConnectionManagerComponent {
   protected readonly authLabels = AI_AUTH_TYPE_LABELS;
   protected readonly protocols = AI_PROTOCOLS;
   protected readonly protocolLabels = AI_PROTOCOL_LABELS;
+  protected readonly capabilityKeys = AI_CAPABILITY_KEYS;
+  protected readonly capabilityLabels = AI_CAPABILITY_LABELS;
   protected readonly editorOpen = signal(false);
   protected readonly modelBrowserOpen = signal(false);
 

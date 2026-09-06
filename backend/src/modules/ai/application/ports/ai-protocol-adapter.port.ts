@@ -20,6 +20,27 @@ export interface ResolvedAiConnection {
   readonly authHeaderName: string | null;
   readonly credential: string;
   readonly model: string;
+  readonly capabilities?: AiCapabilities | null;
+}
+
+export interface AiCapabilities {
+  readonly chat: boolean;
+  readonly modelDiscovery: boolean;
+  readonly streaming: boolean;
+  readonly systemPrompt: boolean;
+  readonly tools: boolean;
+  readonly vision: boolean;
+  readonly reasoning: boolean;
+}
+
+export type AiCapabilityName = keyof AiCapabilities;
+
+export interface AiCapabilityProbeResult {
+  readonly connectionId: string;
+  readonly model: string;
+  readonly capabilities: AiCapabilities;
+  readonly probedAt: Date;
+  readonly failedChecks: readonly AiCapabilityName[];
 }
 
 export interface AiGenerateRequest {
@@ -27,6 +48,8 @@ export interface AiGenerateRequest {
   readonly messages: readonly AiMessage[];
   readonly temperature?: number;
   readonly maxOutputTokens?: number;
+  /** Internal per-call override used by bounded diagnostic probes. */
+  readonly timeoutMs?: number;
 }
 
 export interface AiUsageTokens {
