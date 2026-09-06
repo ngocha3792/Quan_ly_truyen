@@ -181,6 +181,49 @@ function Invoke-DockerCompose {
   }
 }
 
+function Invoke-DockerComposePull {
+  param(
+    [string[]]$Services = @(),
+
+    [ValidateRange(1, 10)]
+    [int]$MaxAttempts = 4,
+
+    [ValidateRange(1, 300)]
+    [int]$BaseDelaySeconds = 10
+  )
+
+  $PullArguments = @('pull') + $Services
+
+  for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt += 1) {
+    & docker @Compose @PullArguments
+
+    if ($LASTEXITCODE -eq 0) {
+      return
+    }
+
+    if ($Attempt -eq $MaxAttempts) {
+      throw (
+        'docker compose failed after {0} attempts: {1}' -f `
+          $MaxAttempts,
+          ($PullArguments -join ' ')
+      )
+    }
+
+    $DelaySeconds = [int](
+      $BaseDelaySeconds * [Math]::Pow(2, $Attempt - 1)
+    )
+
+    Write-Warning (
+      'docker compose pull attempt {0}/{1} failed; retrying in {2}s.' -f `
+        $Attempt,
+        $MaxAttempts,
+        $DelaySeconds
+    )
+
+    Start-Sleep -Seconds $DelaySeconds
+  }
+}
+
 $ObservabilityProjectName = Get-DotEnvValue `
   -Path $EnvironmentFilePath `
   -Name 'OBSERVABILITY_COMPOSE_PROJECT_NAME'
@@ -259,7 +302,7 @@ if ($UseLocalBuild) {
       '[3b/9] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
-    Invoke-DockerCompose pull postgres redis
+    Invoke-DockerComposePull -Services @('postgres', 'redis')
   }
 }
 elseif (-not $SkipPull) {
@@ -272,7 +315,7 @@ elseif (-not $SkipPull) {
         $FrontendImageTag
   ) -ForegroundColor Cyan
 
-  Invoke-DockerCompose pull
+  Invoke-DockerComposePull
 }
 else {
   Write-Host '[3/9] Image pull skipped.' -ForegroundColor Yellow
