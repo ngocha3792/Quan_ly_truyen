@@ -147,10 +147,14 @@ function validateScriptStaticIsolation() {
     !deployScript.includes('& docker image inspect $Image *> $null') ||
     !deployScript.includes(
       "Invoke-DockerComposePull -Services @('api', 'migrate', 'frontend')",
-    )
+    ) ||
+    !deployScript.includes('function Remove-DirectoryWithContainerFallback') ||
+    !deployScript.includes("'--network', 'none'") ||
+    !deployScript.includes("'--cap-add', 'DAC_OVERRIDE'") ||
+    !deployScript.includes("'-c', 'rm -rf -- \"/cleanup/$1\"'")
   ) {
     throw new Error(
-      'Deploy-Production.ps1 must pull immutable application services explicitly and reuse cached infrastructure images without requiring a new Docker Compose version.',
+      'Deploy-Production.ps1 must pull immutable application services explicitly, reuse cached infrastructure images, and safely clean container-owned static assets.',
     );
   }
 

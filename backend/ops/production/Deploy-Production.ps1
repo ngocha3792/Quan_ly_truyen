@@ -260,6 +260,64 @@ function Ensure-InfrastructureImages {
   }
 }
 
+function Remove-DirectoryWithContainerFallback {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  if (-not (Test-Path -LiteralPath $Path)) {
+    return
+  }
+
+  try {
+    Remove-Item -LiteralPath $Path -Recurse -Force
+    return
+  }
+  catch {
+    Write-Warning (
+      'Native cleanup could not remove {0}; retrying through the already-pulled frontend image.' -f `
+        $Path
+    )
+  }
+
+  $FullPath = [IO.Path]::GetFullPath($Path)
+  $ParentDirectory = Split-Path -Parent $FullPath
+  $LeafName = Split-Path -Leaf $FullPath
+
+  if ([string]::IsNullOrWhiteSpace($ParentDirectory) -or
+      [string]::IsNullOrWhiteSpace($LeafName) -or
+      $LeafName -eq '.' -or
+      $LeafName -eq '..') {
+    throw "Refusing unsafe static directory cleanup target: $FullPath"
+  }
+
+  $CleanupImage = "${FrontendImageName}:${FrontendImageTag}"
+  $CleanupArguments = @(
+    'run',
+    '--rm',
+    '--network', 'none',
+    '--read-only',
+    '--cap-drop', 'ALL',
+    '--cap-add', 'DAC_OVERRIDE',
+    '--cap-add', 'FOWNER',
+    '--security-opt', 'no-new-privileges',
+    '--user', '0:0',
+    '--mount', "type=bind,src=$ParentDirectory,dst=/cleanup",
+    '--entrypoint', 'sh',
+    $CleanupImage,
+    '-c', 'rm -rf -- "/cleanup/$1"',
+    'cleanup',
+    $LeafName
+  )
+
+  & docker @CleanupArguments
+
+  if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $FullPath)) {
+    throw "Failed to remove static directory: $FullPath"
+  }
+}
+
 $ObservabilityProjectName = Get-DotEnvValue `
   -Path $EnvironmentFilePath `
   -Name 'OBSERVABILITY_COMPOSE_PROJECT_NAME'
@@ -442,7 +500,7 @@ if (-not [string]::IsNullOrWhiteSpace($FrontendStaticDirectory)) {
   $PreviousDirectory = "$ResolvedStaticDirectory.previous"
 
   if (Test-Path -LiteralPath $StagingDirectory) {
-    Remove-Item -LiteralPath $StagingDirectory -Recurse -Force
+    Remove-DirectoryWithContainerFallback -Path $StagingDirectory
   }
 
   New-Item -ItemType Directory -Path $StagingDirectory -Force | Out-Null
@@ -476,7 +534,7 @@ if (-not [string]::IsNullOrWhiteSpace($FrontendStaticDirectory)) {
     ForEach-Object { chmod 644 $_.FullName }
 
   if (Test-Path -LiteralPath $PreviousDirectory) {
-    Remove-Item -LiteralPath $PreviousDirectory -Recurse -Force
+    Remove-DirectoryWithContainerFallback -Path $PreviousDirectory
   }
 
   if (Test-Path -LiteralPath $ResolvedStaticDirectory) {

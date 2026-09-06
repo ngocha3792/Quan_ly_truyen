@@ -34,6 +34,11 @@ PostgreSQL/Redis/Caddy, script kiểm tra local image trước và chỉ pull kh
 thật sự chưa có. Cách này tương thích cả Docker Compose cũ trên VPS và tránh để
 mỗi release ứng dụng bị chặn chỉ vì Docker Hub tạm thời timeout.
 
+Khi xoay thư mục static, script thử xóa bằng deploy user trước. Nếu asset cũ do
+container sở hữu làm PowerShell báo `Access denied`, script dùng chính frontend
+image đã pull (network bị tắt, mount giới hạn ở thư mục cha) để xóa đúng thư mục
+staging/previous rồi mới thực hiện atomic swap.
+
 Kiểm tra Compose trước deploy mà không cần secret thật:
 
 ```powershell
