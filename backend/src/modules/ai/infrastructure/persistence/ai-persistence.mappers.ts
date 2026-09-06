@@ -36,6 +36,7 @@ export function toDomainAiProtocol(
     case PrismaAiProvider.ANTHROPIC:
       return AiProtocol.ANTHROPIC_MESSAGES;
     case PrismaAiProvider.OPENAI:
+      return AiProtocol.OPENAI_RESPONSES;
     case PrismaAiProvider.OPENAI_COMPATIBLE:
       return AiProtocol.OPENAI_CHAT_COMPLETIONS;
   }
@@ -88,7 +89,7 @@ export function legacyPrismaProvidersForProtocol(
   protocol: AiProtocol,
 ): readonly PrismaAiProvider[] {
   if (protocol === AiProtocol.OPENAI_CHAT_COMPLETIONS) {
-    return [PrismaAiProvider.OPENAI, PrismaAiProvider.OPENAI_COMPATIBLE];
+    return [PrismaAiProvider.OPENAI_COMPATIBLE];
   }
 
   return [toLegacyPrismaAiProvider(protocol, null)];

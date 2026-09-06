@@ -12,6 +12,7 @@ import type {
 import { AnthropicMessagesProtocolAdapter } from './anthropic-provider.adapter';
 import { GeminiGenerateContentProtocolAdapter } from './gemini-provider.adapter';
 import { OpenAiChatCompletionsProtocolAdapter } from './openai-compatible-provider.adapter';
+import { OpenAiResponsesProtocolAdapter } from './openai-responses-provider.adapter';
 
 @Injectable()
 export class AiProtocolRegistry implements AiProtocolRegistryPort {
@@ -20,6 +21,7 @@ export class AiProtocolRegistry implements AiProtocolRegistryPort {
 
   constructor(
     configService: ConfigService,
+    openAiResponses: OpenAiResponsesProtocolAdapter,
     openAiChatCompletions: OpenAiChatCompletionsProtocolAdapter,
     anthropicMessages: AnthropicMessagesProtocolAdapter,
     geminiGenerateContent: GeminiGenerateContentProtocolAdapter,
@@ -27,6 +29,7 @@ export class AiProtocolRegistry implements AiProtocolRegistryPort {
     const config = configService.getOrThrow<AiConfig>('ai');
 
     this.adapters = {
+      [AiProtocol.OPENAI_RESPONSES]: openAiResponses,
       [AiProtocol.OPENAI_CHAT_COMPLETIONS]: openAiChatCompletions,
       [AiProtocol.ANTHROPIC_MESSAGES]: anthropicMessages,
       [AiProtocol.GEMINI_GENERATE_CONTENT]: geminiGenerateContent,

@@ -13,19 +13,25 @@ import {
 } from './ai-persistence.mappers';
 
 describe('AI persistence compatibility mappers', () => {
-  it.each([PrismaAiProvider.OPENAI, PrismaAiProvider.OPENAI_COMPATIBLE])(
-    'đọc legacy %s thành OpenAI Chat Completions protocol',
-    (provider) => {
-      expect(toDomainAiProtocol(null, provider)).toBe(
-        AiProtocol.OPENAI_CHAT_COMPLETIONS,
-      );
-    },
-  );
+  it('đọc legacy OpenAI official thành Responses protocol', () => {
+    expect(toDomainAiProtocol(null, PrismaAiProvider.OPENAI)).toBe(
+      AiProtocol.OPENAI_RESPONSES,
+    );
+  });
 
-  it('legacy lookup của OpenAI Chat nhận cả official và compatible', () => {
+  it('đọc legacy OpenAI-compatible thành Chat Completions protocol', () => {
+    expect(toDomainAiProtocol(null, PrismaAiProvider.OPENAI_COMPATIBLE)).toBe(
+      AiProtocol.OPENAI_CHAT_COMPLETIONS,
+    );
+  });
+
+  it('legacy lookup tách official Responses khỏi compatible Chat', () => {
+    expect(
+      legacyPrismaProvidersForProtocol(AiProtocol.OPENAI_RESPONSES),
+    ).toEqual([PrismaAiProvider.OPENAI]);
     expect(
       legacyPrismaProvidersForProtocol(AiProtocol.OPENAI_CHAT_COMPLETIONS),
-    ).toEqual([PrismaAiProvider.OPENAI, PrismaAiProvider.OPENAI_COMPATIBLE]);
+    ).toEqual([PrismaAiProvider.OPENAI_COMPATIBLE]);
   });
 
   it('dual-write giữ đúng provider official theo vendor hint', () => {

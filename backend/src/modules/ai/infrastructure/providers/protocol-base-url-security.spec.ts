@@ -8,6 +8,7 @@ import type {
 import { AnthropicMessagesProtocolAdapter } from './anthropic-provider.adapter';
 import { GeminiGenerateContentProtocolAdapter } from './gemini-provider.adapter';
 import { OpenAiChatCompletionsProtocolAdapter } from './openai-compatible-provider.adapter';
+import { OpenAiResponsesProtocolAdapter } from './openai-responses-provider.adapter';
 import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const REQUEST = {
@@ -36,6 +37,11 @@ function privateConnection(
 
 describe('protocol adapter base URL security', () => {
   it.each<readonly [string, AiProtocolAdapter, ResolvedAiConnection]>([
+    [
+      'OpenAI Responses',
+      new OpenAiResponsesProtocolAdapter(),
+      privateConnection(AiProtocol.OPENAI_RESPONSES, AiAuthType.BEARER),
+    ],
     [
       'OpenAI Chat Completions',
       new OpenAiChatCompletionsProtocolAdapter(),

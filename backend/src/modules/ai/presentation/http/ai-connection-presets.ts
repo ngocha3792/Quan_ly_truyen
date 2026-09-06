@@ -38,7 +38,7 @@ export function resolveAiConnectionPreset(
     case AiConnectionPresetId.OPENAI:
       return {
         vendorHint: presetId,
-        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+        protocol: AiProtocol.OPENAI_RESPONSES,
         authType: AiAuthType.BEARER,
         authHeaderName: null,
         baseUrl: 'https://api.openai.com/v1',

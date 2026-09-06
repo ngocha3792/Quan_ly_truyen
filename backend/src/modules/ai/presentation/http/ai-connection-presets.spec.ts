@@ -7,6 +7,17 @@ import {
 } from './ai-connection-presets';
 
 describe('resolveAiConnectionPreset compatible APIs', () => {
+  it('dùng Responses API cho preset OpenAI official', () => {
+    expect(
+      resolveAiConnectionPreset(AiConnectionPresetId.OPENAI, null, null),
+    ).toMatchObject({
+      vendorHint: 'OPENAI',
+      protocol: AiProtocol.OPENAI_RESPONSES,
+      authType: AiAuthType.BEARER,
+      baseUrl: 'https://api.openai.com/v1',
+    });
+  });
+
   it('tạo Anthropic-compatible preset mặc định x-api-key', () => {
     expect(
       resolveAiConnectionPreset(
