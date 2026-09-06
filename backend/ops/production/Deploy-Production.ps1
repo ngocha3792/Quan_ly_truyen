@@ -7,7 +7,8 @@ param(
 
   [switch]$SkipPull,
   [switch]$SkipObservability,
-  [switch]$SkipPostdeployGate
+  [switch]$SkipPostdeployGate,
+  [switch]$SkipImagePrune
 )
 
 Set-StrictMode -Version Latest
@@ -208,7 +209,7 @@ function Invoke-ObservabilityCompose {
   }
 }
 
-Write-Host '[1/8] Validating Docker Compose configuration...' `
+Write-Host '[1/9] Validating Docker Compose configuration...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose -Arguments @('config', '--quiet')
@@ -217,9 +218,33 @@ if (-not $SkipObservability) {
   Invoke-ObservabilityCompose -Arguments @('config', '--quiet')
 }
 
+if ($SkipImagePrune) {
+  Write-Host '[2/9] Image prune skipped.' -ForegroundColor Yellow
+}
+else {
+  # Every deploy pulls or builds a fresh ~300MB+ image per service, and the
+  # image it replaces becomes immediately unused (rollback re-pulls the
+  # target SHA from the registry rather than relying on a local cache -- see
+  # Invoke-Rollback.ps1 -> Deploy-Production.ps1 with SkipPull defaulting to
+  # false). Left unpruned, this fills small production disks over repeated
+  # deploys, so reclaim stale images before pulling the next one. The 24h
+  # filter never touches the running image (still referenced) and leaves a
+  # same-day window for manual recovery. A prune failure should not block
+  # the deploy -- the pull step below will surface a clear disk error if
+  # space genuinely ran out.
+  Write-Host '[2/9] Pruning Docker images older than 24h to protect disk space...' `
+    -ForegroundColor Cyan
+
+  & docker image prune -af --filter 'until=24h' | Out-Null
+
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning 'docker image prune failed; continuing deploy without freeing image disk space.'
+  }
+}
+
 if ($UseLocalBuild) {
   Write-Host (
-    "[2/8] Building local images: backend={0}:{1}, frontend={2}:{3}" `
+    "[3/9] Building local images: backend={0}:{1}, frontend={2}:{3}" `
       -f `
         $BackendImageName,
         $BackendImageTag,
@@ -231,7 +256,7 @@ if ($UseLocalBuild) {
 
   if (-not $SkipPull) {
     Write-Host `
-      '[2b/8] Pulling infrastructure images...' `
+      '[3b/9] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
     Invoke-DockerCompose pull postgres redis
@@ -239,7 +264,7 @@ if ($UseLocalBuild) {
 }
 elseif (-not $SkipPull) {
   Write-Host (
-    "[2/8] Pulling registry images: backend={0}:{1}, frontend={2}:{3}" `
+    "[3/9] Pulling registry images: backend={0}:{1}, frontend={2}:{3}" `
       -f `
         $BackendImageName,
         $BackendImageTag,
@@ -250,15 +275,15 @@ elseif (-not $SkipPull) {
   Invoke-DockerCompose pull
 }
 else {
-  Write-Host '[2/8] Image pull skipped.' -ForegroundColor Yellow
+  Write-Host '[3/9] Image pull skipped.' -ForegroundColor Yellow
 }
 
-Write-Host '[3/8] Starting PostgreSQL and Redis...' `
+Write-Host '[4/9] Starting PostgreSQL and Redis...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose -Arguments @('up', '-d', '--wait', 'postgres', 'redis')
 
-Write-Host '[4/8] Applying database migrations...' `
+Write-Host '[5/9] Applying database migrations...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose up `
@@ -267,12 +292,12 @@ Invoke-DockerCompose up `
   --exit-code-from migrate `
   migrate
 
-Write-Host '[5/8] Running predeploy production gate...' `
+Write-Host '[6/9] Running predeploy production gate...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose --profile tools run --rm gate-predeploy
 
-Write-Host '[6/8] Recording initial maintenance heartbeats...' `
+Write-Host '[7/9] Recording initial maintenance heartbeats...' `
   -ForegroundColor Cyan
 
 foreach (
@@ -286,7 +311,7 @@ foreach (
 }
 
 Write-Host `
-  '[7/8] Starting API, worker, recovery metrics and frontend (HTTPS edge is a host-level Nginx reverse proxy, not managed by this script)...' `
+  '[8/9] Starting API, worker, recovery metrics and frontend (HTTPS edge is a host-level Nginx reverse proxy, not managed by this script)...' `
   -ForegroundColor Cyan
 
 Invoke-DockerCompose -Arguments @(
@@ -315,7 +340,7 @@ if (-not [string]::IsNullOrWhiteSpace($FrontendStaticDirectory)) {
   # type="module"> request and refuses to run it -- pages stop
   # rendering with no visible error beyond the console).
   Write-Host `
-    '[7c/8] Refreshing static frontend assets for the host-level edge proxy...' `
+    '[8c/9] Refreshing static frontend assets for the host-level edge proxy...' `
     -ForegroundColor Cyan
 
   $ResolvedStaticDirectory = if (
@@ -380,20 +405,20 @@ if (-not [string]::IsNullOrWhiteSpace($FrontendStaticDirectory)) {
 }
 
 if (-not $SkipObservability) {
-  Write-Host '[7b/8] Starting observability stack...' `
+  Write-Host '[8b/9] Starting observability stack...' `
     -ForegroundColor Cyan
 
   Invoke-ObservabilityCompose -Arguments @('up', '-d')
 }
 
 if (-not $SkipPostdeployGate) {
-  Write-Host '[8/8] Running postdeploy production gate...' `
+  Write-Host '[9/9] Running postdeploy production gate...' `
     -ForegroundColor Cyan
 
   Invoke-DockerCompose --profile tools run --rm gate-postdeploy
 }
 else {
-  Write-Host '[8/8] Postdeploy gate skipped.' `
+  Write-Host '[9/9] Postdeploy gate skipped.' `
     -ForegroundColor Yellow
 }
 

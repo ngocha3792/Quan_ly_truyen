@@ -17,6 +17,7 @@ param(
   [switch]$SkipPull,
   [switch]$SkipObservability,
   [switch]$SkipPostdeployGate,
+  [switch]$SkipImagePrune,
   [switch]$SkipSmoke,
   [switch]$SkipProductionBackup
 )
@@ -147,6 +148,7 @@ try {
     SkipPull = $SkipPull
     SkipObservability = $SkipObservability
     SkipPostdeployGate = $SkipPostdeployGate
+    SkipImagePrune = $SkipImagePrune
   }
 
   & (Join-Path $PSScriptRoot 'Deploy-Production.ps1') @DeployArguments

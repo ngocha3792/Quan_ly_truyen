@@ -14,6 +14,7 @@ param(
   [switch]$SkipPull,
   [switch]$SkipObservability,
   [switch]$SkipPostdeployGate,
+  [switch]$SkipImagePrune,
   [switch]$SkipSmoke
 )
 
@@ -137,7 +138,8 @@ try {
     -EnvironmentFile $EnvironmentFilePath `
     -SkipPull:$SkipPull `
     -SkipObservability:$SkipObservability `
-    -SkipPostdeployGate:$SkipPostdeployGate
+    -SkipPostdeployGate:$SkipPostdeployGate `
+    -SkipImagePrune:$SkipImagePrune
 
   if ($LASTEXITCODE -ne 0) {
     throw 'Rollback deployment failed.'
