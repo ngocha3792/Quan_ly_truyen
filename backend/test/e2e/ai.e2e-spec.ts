@@ -59,7 +59,7 @@ describe('AI policy/profile HTTP E2E', () => {
         passwordHash: await hashPassword(password, { rounds: 10 }),
         displayName: 'AI E2E User',
         emailVerifiedAt: new Date(),
-        roles: { create: { roleId: role.id } },
+        userRoles: { create: { roleId: role.id } },
       },
       select: { id: true, email: true },
     });
