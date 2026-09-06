@@ -1,7 +1,10 @@
 import { Logger } from '@nestjs/common';
 
 import { AiAuthType, AiErrorCode, AiProtocol } from '../../domain/enums';
-import { AiProtocolRequestError } from '../../application/ports/ai-protocol-adapter.port';
+import {
+  AiProtocolRequestError,
+  type AiStreamEvent,
+} from '../../application/ports/ai-protocol-adapter.port';
 import { AiGatewayService } from './ai-gateway.service';
 
 describe('AiGatewayService explicit system fallback', () => {
@@ -25,13 +28,13 @@ describe('AiGatewayService explicit system fallback', () => {
   };
   const request = { messages: [{ role: 'user' as const, content: 'hello' }] };
   const usageContext = { userId: 'user-id', connectionId: 'personal-id' };
-  let adapter: { generate: jest.Mock };
+  let adapter: { generate: jest.Mock; generateStream: jest.Mock };
   let usage: { record: jest.Mock };
   let rateLimits: { reserve: jest.Mock; reconcile: jest.Mock };
   let gateway: AiGatewayService;
 
   beforeEach(() => {
-    adapter = { generate: jest.fn() };
+    adapter = { generate: jest.fn(), generateStream: jest.fn() };
     usage = { record: jest.fn() };
     rateLimits = {
       reserve: jest.fn().mockResolvedValue({ reservation: true }),
@@ -114,5 +117,72 @@ describe('AiGatewayService explicit system fallback', () => {
     expect(serialized).not.toContain(sensitiveRequest.systemPrompt);
     expect(serialized).not.toContain(sensitiveRequest.messages[0].content);
     expect(serialized).not.toContain('protocol-safe-error');
+  });
+
+  it('stream chỉ phát contract chuẩn hóa và DONE đúng một lần', async () => {
+    adapter.generateStream.mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { type: 'TEXT_DELTA', text: 'hello' } as const;
+      yield {
+        type: 'USAGE',
+        usage: { inputTokens: 3, outputTokens: 1 },
+      } as const;
+      yield { type: 'DONE' } as const;
+    });
+
+    const events: AiStreamEvent[] = [];
+    for await (const event of gateway.generateStream(
+      primary,
+      request,
+      usageContext,
+    )) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
+      { type: 'TEXT_DELTA', text: 'hello' },
+      { type: 'USAGE', usage: { inputTokens: 3, outputTokens: 1 } },
+      { type: 'DONE' },
+    ]);
+    expect(usage.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        inputTokens: 3,
+        outputTokens: 1,
+      }),
+    );
+    expect(rateLimits.reconcile).toHaveBeenCalledWith(
+      expect.anything(),
+      { inputTokens: 3, outputTokens: 1 },
+      'hello',
+    );
+  });
+
+  it('không ghi stream rỗng là thành công', async () => {
+    adapter.generateStream.mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { type: 'DONE' } as const;
+    });
+
+    const consume = async () => {
+      for await (const _event of gateway.generateStream(
+        primary,
+        request,
+        usageContext,
+      )) {
+        // Drain the stream so the terminal validation runs.
+        void _event;
+      }
+    };
+
+    await expect(consume()).rejects.toMatchObject({
+      code: 'EXTERNAL_SERVICE_ERROR',
+    });
+    expect(usage.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        errorCode: AiErrorCode.INVALID_RESPONSE,
+      }),
+    );
   });
 });

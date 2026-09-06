@@ -2,7 +2,7 @@ import type {
   ResolvedAiConnection,
   AiGenerateRequest,
   AiGenerateResponse,
-  AiStreamDelta,
+  AiStreamEvent,
 } from './ai-protocol-adapter.port';
 import type { AiUsageCapabilityValue } from './ai-usage.persistence.port';
 
@@ -33,5 +33,5 @@ export interface AiGatewayPort {
     usageContext: AiUsageContext,
     capability?: AiUsageCapabilityValue,
     systemFallback?: AiSystemFallback | null,
-  ): AsyncIterable<AiStreamDelta>;
+  ): AsyncIterable<AiStreamEvent>;
 }

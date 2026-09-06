@@ -167,7 +167,13 @@ export interface AiSendMessageResult {
   readonly assistantMessage: AiMessage;
 }
 
+export interface AiUsage {
+  readonly inputTokens?: number;
+  readonly outputTokens?: number;
+}
+
 export type AiSendMessageStreamEvent =
-  | { readonly type: 'delta'; readonly text: string }
-  | { readonly type: 'done'; readonly userMessage: AiMessage; readonly assistantMessage: AiMessage }
-  | { readonly type: 'error'; readonly message: string };
+  | { readonly type: 'TEXT_DELTA'; readonly text: string }
+  | { readonly type: 'USAGE'; readonly usage: AiUsage }
+  | { readonly type: 'DONE'; readonly userMessage: AiMessage; readonly assistantMessage: AiMessage }
+  | { readonly type: 'ERROR'; readonly message: string };

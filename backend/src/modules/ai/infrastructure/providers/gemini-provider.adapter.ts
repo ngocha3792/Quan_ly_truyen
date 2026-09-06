@@ -8,8 +8,13 @@ import {
   AiModelInfo,
   AiProtocolAdapter,
   AiProtocolRequestError,
-  AiStreamDelta,
+  AiStreamEvent,
 } from '../../application/ports/ai-protocol-adapter.port';
+import {
+  AI_DEFAULT_MAX_OUTPUT_TOKENS,
+  AI_PROVIDER_REQUEST_TIMEOUT_MS,
+  AI_STREAM_TIMEOUT_MS,
+} from '../../application/constants/ai-generation.constants';
 import {
   assertPublicHttpsUrl,
   safeExternalFetch,
@@ -21,9 +26,6 @@ import {
   safeJsonParse,
 } from './sse-reader.util';
 import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
-
-const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 4096;
 
 interface UsageMetadataPayload {
   promptTokenCount?: number;
@@ -60,7 +62,7 @@ function buildRequestBody(request: AiGenerateRequest) {
       : {}),
     contents: buildContents(request),
     generationConfig: {
-      maxOutputTokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+      maxOutputTokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
       ...(request.temperature !== undefined
         ? { temperature: request.temperature }
         : {}),
@@ -96,7 +98,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -138,7 +140,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
   async *generateStream(
     connection: ResolvedAiConnection,
     request: AiGenerateRequest,
-  ): AsyncIterable<AiStreamDelta> {
+  ): AsyncIterable<AiStreamEvent> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     const url = `${baseUrl}/models/${encodeURIComponent(connection.model)}:streamGenerateContent?alt=sse`;
 
@@ -152,7 +154,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(request)),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -177,12 +179,14 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
         const text = chunk?.candidates?.[0]?.content?.parts
           ?.map((part) => part.text ?? '')
           .join('');
-        if (text) yield { text };
+        if (text) yield { type: 'TEXT_DELTA', text };
 
         const usage = toUsage(chunk?.usageMetadata);
-        if (usage) yield { usage };
+        if (usage) yield { type: 'USAGE', usage };
       }
     }
+
+    yield { type: 'DONE' };
   }
 
   async testConnection(
@@ -209,7 +213,7 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
       const authenticated = applyAiCredential(connection, `${baseUrl}/models`);
       response = await safeExternalFetch(authenticated.url, {
         headers: authenticated.headers,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(

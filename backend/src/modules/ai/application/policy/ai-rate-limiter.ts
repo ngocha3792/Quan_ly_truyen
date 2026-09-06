@@ -1,12 +1,18 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { RateLimitExceededException } from '@/common/exceptions';
+import {
+  BusinessRuleViolationException,
+  RateLimitExceededException,
+} from '@/common/exceptions';
 
 import { AiRateLimitTier } from '../../domain/enums';
 import {
+  AI_APPROXIMATE_CHARACTERS_PER_TOKEN,
   AI_DEFAULT_MAX_OUTPUT_TOKENS,
-  AI_TIER_LIMITS,
-} from '../constants/ai-rate-limit.constants';
+  AI_MAX_INPUT_TOKENS,
+  AI_MAX_OUTPUT_TOKENS,
+} from '../constants/ai-generation.constants';
+import { AI_TIER_LIMITS } from '../constants/ai-rate-limit.constants';
 import {
   AI_POLICY_PERSISTENCE_PORT,
   AiPolicyPersistencePort,
@@ -42,15 +48,43 @@ export class AiRateLimiter {
     userId: string | null,
     request: AiGenerateRequest,
   ): Promise<AiRateLimitReservation | null> {
+    const estimatedInputTokens = this.estimateInputTokens(request);
+    if (estimatedInputTokens > AI_MAX_INPUT_TOKENS) {
+      throw new BusinessRuleViolationException({
+        message:
+          'Nội dung gửi lên vượt quá giới hạn 10.000 input token. Hãy rút gọn nội dung hoặc system prompt.',
+        rule: 'ai.input-token-limit-exceeded',
+        details: {
+          estimatedInputTokens,
+          maxInputTokens: AI_MAX_INPUT_TOKENS,
+        },
+      });
+    }
+
+    const requestedOutputTokens =
+      request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS;
+    if (
+      !Number.isSafeInteger(requestedOutputTokens) ||
+      requestedOutputTokens <= 0 ||
+      requestedOutputTokens > AI_MAX_OUTPUT_TOKENS
+    ) {
+      throw new BusinessRuleViolationException({
+        message:
+          'Output token phải là số nguyên dương và không vượt quá 10.000 token.',
+        rule: 'ai.output-token-limit-exceeded',
+        details: {
+          requestedOutputTokens,
+          maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
+        },
+      });
+    }
+
     if (!userId) return null;
 
     const policy = await this.policies.findByUserId(userId);
     const tier = policy?.rateLimitTier ?? AiRateLimitTier.FREE;
     const limits = AI_TIER_LIMITS[tier];
-    const estimatedInputTokens = this.estimateInputTokens(request);
-    const reservedTokens =
-      estimatedInputTokens +
-      (request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS);
+    const reservedTokens = estimatedInputTokens + requestedOutputTokens;
     const windowStart = this.windowStart(limits.windowSeconds);
     const retryAfterSeconds = this.retryAfterSeconds(
       windowStart,
@@ -138,11 +172,19 @@ export class AiRateLimiter {
         (total, message) => total + message.content.length,
         0,
       );
-    return Math.max(1, Math.ceil(characters / 4));
+    return Math.max(
+      1,
+      Math.ceil(characters / AI_APPROXIMATE_CHARACTERS_PER_TOKEN),
+    );
   }
 
   private estimateTextTokens(value: string): number {
-    return value ? Math.max(1, Math.ceil(value.length / 4)) : 0;
+    return value
+      ? Math.max(
+          1,
+          Math.ceil(value.length / AI_APPROXIMATE_CHARACTERS_PER_TOKEN),
+        )
+      : 0;
   }
 
   private windowStart(windowSeconds: number): Date {

@@ -14,7 +14,7 @@ import type { Response } from 'express';
 import {
   CurrentUserId,
   RequirePermissions,
-  SkipRequestTimeout,
+  RequestTimeout,
   SkipResponseEnvelope,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
@@ -34,6 +34,10 @@ import {
   SendAiMessageStreamCommand,
   SendAiMessageStreamCommandHandler,
 } from '../../../application';
+import {
+  AI_STREAM_HEARTBEAT_MS,
+  AI_STREAM_TIMEOUT_MS,
+} from '../../../application/constants/ai-generation.constants';
 import { CreateAiConversationRequest, SendAiMessageRequest } from '../requests';
 import {
   AiConversationDetailResponse,
@@ -133,7 +137,7 @@ export class AiChatController {
 
   @Post(':conversationId/messages/stream')
   @SkipResponseEnvelope()
-  @SkipRequestTimeout()
+  @RequestTimeout(AI_STREAM_TIMEOUT_MS)
   async streamMessage(
     @CurrentUserId() userId: string | undefined,
     @Param('conversationId', new ParseUUIDPipe({ version: '4' }))
@@ -147,6 +151,11 @@ export class AiChatController {
     response.setHeader('Cache-Control', 'no-cache');
     response.setHeader('Connection', 'keep-alive');
     response.flushHeaders();
+    const heartbeat = setInterval(() => {
+      if (!response.destroyed && !response.writableEnded) {
+        response.write(': keep-alive\n\n');
+      }
+    }, AI_STREAM_HEARTBEAT_MS);
 
     try {
       const stream = this.sendMessageStream.execute(
@@ -158,13 +167,28 @@ export class AiChatController {
       );
 
       for await (const event of stream) {
-        if (event.type === 'delta') {
-          writeSseEvent(response, { type: 'delta', text: event.text });
+        if (event.type === 'TEXT_DELTA') {
+          writeSseEvent(response, {
+            type: 'delta',
+            event: event.type,
+            text: event.text,
+          });
+          continue;
+        }
+
+        if (event.type === 'USAGE') {
+          writeSseEvent(response, {
+            type: 'delta',
+            event: event.type,
+            text: '',
+            usage: event.usage,
+          });
           continue;
         }
 
         writeSseEvent(response, {
           type: 'done',
+          event: event.type,
           ...toSendAiMessageResponse({
             userMessage: event.userMessage,
             assistantMessage: event.assistantMessage,
@@ -177,8 +201,9 @@ export class AiChatController {
           ? error.message
           : 'Đã xảy ra lỗi khi kết nối tới AI. Vui lòng thử lại.';
 
-      writeSseEvent(response, { type: 'error', message });
+      writeSseEvent(response, { type: 'error', event: 'ERROR', message });
     } finally {
+      clearInterval(heartbeat);
       response.end();
     }
   }

@@ -57,8 +57,10 @@ export interface AiModelInfo {
   readonly tools?: boolean;
 }
 
-export type AiStreamDelta =
-  { readonly text: string } | { readonly usage: AiUsageTokens };
+export type AiStreamEvent =
+  | { readonly type: 'TEXT_DELTA'; readonly text: string }
+  | { readonly type: 'USAGE'; readonly usage: AiUsageTokens }
+  | { readonly type: 'DONE' };
 
 export class AiProtocolRequestError extends Error {
   readonly code: AiErrorCode;
@@ -83,7 +85,7 @@ export interface AiProtocolAdapter {
   generateStream(
     connection: ResolvedAiConnection,
     request: AiGenerateRequest,
-  ): AsyncIterable<AiStreamDelta>;
+  ): AsyncIterable<AiStreamEvent>;
 
   testConnection(
     connection: ResolvedAiConnection,

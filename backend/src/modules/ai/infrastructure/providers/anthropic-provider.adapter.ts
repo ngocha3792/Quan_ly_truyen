@@ -8,8 +8,13 @@ import {
   AiModelInfo,
   AiProtocolAdapter,
   AiProtocolRequestError,
-  AiStreamDelta,
+  AiStreamEvent,
 } from '../../application/ports/ai-protocol-adapter.port';
+import {
+  AI_DEFAULT_MAX_OUTPUT_TOKENS,
+  AI_PROVIDER_REQUEST_TIMEOUT_MS,
+  AI_STREAM_TIMEOUT_MS,
+} from '../../application/constants/ai-generation.constants';
 import {
   assertPublicHttpsUrl,
   safeExternalFetch,
@@ -24,9 +29,6 @@ import {
 import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const ANTHROPIC_API_VERSION = '2023-06-01';
-const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 4096;
-
 interface UsagePayload {
   input_tokens?: number;
   output_tokens?: number;
@@ -62,7 +64,7 @@ function buildRequestBody(
 ) {
   return {
     model: connection.model,
-    max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+    max_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
     stream,
     ...(request.systemPrompt ? { system: request.systemPrompt } : {}),
     ...(request.temperature !== undefined
@@ -97,7 +99,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(connection, request, false)),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -145,7 +147,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
   async *generateStream(
     connection: ResolvedAiConnection,
     request: AiGenerateRequest,
-  ): AsyncIterable<AiStreamDelta> {
+  ): AsyncIterable<AiStreamEvent> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
@@ -162,7 +164,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         method: 'POST',
         headers: authenticated.headers,
         body: JSON.stringify(buildRequestBody(connection, request, true)),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -196,7 +198,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
         if (eventName === 'content_block_delta') {
           const chunk = safeJsonParse<ContentBlockDeltaEventPayload>(data);
           if (chunk?.delta?.type === 'text_delta' && chunk.delta.text) {
-            yield { text: chunk.delta.text };
+            yield { type: 'TEXT_DELTA', text: chunk.delta.text };
           }
           continue;
         }
@@ -205,12 +207,21 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
           const chunk = safeJsonParse<MessageDeltaEventPayload>(data);
           if (chunk?.usage?.output_tokens !== undefined) {
             yield {
+              type: 'USAGE',
               usage: { inputTokens, outputTokens: chunk.usage.output_tokens },
             };
           }
+          continue;
+        }
+
+        if (eventName === 'message_stop') {
+          yield { type: 'DONE' };
+          return;
         }
       }
     }
+
+    yield { type: 'DONE' };
   }
 
   async testConnection(
@@ -239,7 +250,7 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
       });
       response = await safeExternalFetch(authenticated.url, {
         headers: authenticated.headers,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(

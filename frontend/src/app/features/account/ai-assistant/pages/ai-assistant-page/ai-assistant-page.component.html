@@ -204,6 +204,11 @@
         <header class="chat-context">
           <strong>{{ conversation.title }}</strong>
           <small>Model: {{ conversation.modelId || 'mặc định của kết nối' }}</small>
+          @if (store.streamUsage(); as usage) {
+            <small>
+              Input {{ usage.inputTokens ?? '—' }} · Output {{ usage.outputTokens ?? '—' }} token
+            </small>
+          }
         </header>
         <div class="message-list">
           @for (message of conversation.messages; track message.id) {

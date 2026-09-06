@@ -2,7 +2,7 @@ import { lookup } from 'node:dns/promises';
 
 import { AiAuthType, AiProtocol } from '../../domain/enums';
 import type {
-  AiStreamDelta,
+  AiStreamEvent,
   ResolvedAiConnection,
 } from '../../application/ports';
 import { GeminiGenerateContentProtocolAdapter } from './gemini-provider.adapter';
@@ -113,7 +113,8 @@ describe('native protocol adapters', () => {
       .mockResolvedValue(new Response(`${events}\n\n`, { status: 200 }));
     const adapter = new OpenAiResponsesProtocolAdapter();
 
-    const chunks: AiStreamDelta[] = [];
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const chunks: AiStreamEvent[] = [];
     for await (const chunk of adapter.generateStream(
       connection(AiProtocol.OPENAI_RESPONSES),
       REQUEST,
@@ -122,10 +123,12 @@ describe('native protocol adapters', () => {
     }
 
     expect(chunks).toEqual([
-      { text: 'Hello ' },
-      { text: 'world' },
-      { usage: { inputTokens: 5, outputTokens: 2 } },
+      { type: 'TEXT_DELTA', text: 'Hello ' },
+      { type: 'TEXT_DELTA', text: 'world' },
+      { type: 'USAGE', usage: { inputTokens: 5, outputTokens: 2 } },
+      { type: 'DONE' },
     ]);
+    expect(timeoutSpy).toHaveBeenCalledWith(600_000);
   });
 
   it('OpenAI Responses chỉ ghép output_text từ raw output items', async () => {
@@ -197,6 +200,48 @@ describe('native protocol adapters', () => {
     expect(requestBody(init)).toMatchObject({
       systemInstruction: { parts: [{ text: 'Be concise' }] },
       generationConfig: { maxOutputTokens: 256 },
+    });
+  });
+
+  it('Gemini stream normalize text, usage và DONE', async () => {
+    const events = [
+      'data: {"candidates":[{"content":{"parts":[{"text":"Xin "}]}}]}',
+      'data: {"candidates":[{"content":{"parts":[{"text":"chào"}]}}],"usageMetadata":{"promptTokenCount":7,"candidatesTokenCount":2}}',
+    ].join('\r\n\r\n');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(`${events}\r\n\r\n`, { status: 200 }));
+
+    const chunks: AiStreamEvent[] = [];
+    for await (const chunk of new GeminiGenerateContentProtocolAdapter().generateStream(
+      connection(AiProtocol.GEMINI_GENERATE_CONTENT),
+      REQUEST,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual([
+      { type: 'TEXT_DELTA', text: 'Xin ' },
+      { type: 'TEXT_DELTA', text: 'chào' },
+      { type: 'USAGE', usage: { inputTokens: 7, outputTokens: 2 } },
+      { type: 'DONE' },
+    ]);
+  });
+
+  it('dùng 10.000 output token khi caller không override', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ status: 'completed', output_text: 'ok' }), {
+        status: 200,
+      }),
+    );
+
+    await new OpenAiResponsesProtocolAdapter().generate(
+      connection(AiProtocol.OPENAI_RESPONSES),
+      { ...REQUEST, maxOutputTokens: undefined },
+    );
+
+    expect(requestBody(fetchSpy.mock.calls[0][1])).toMatchObject({
+      max_output_tokens: 10_000,
     });
   });
 });

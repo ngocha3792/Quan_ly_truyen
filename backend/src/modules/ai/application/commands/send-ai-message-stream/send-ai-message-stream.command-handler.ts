@@ -38,7 +38,7 @@ export class SendAiMessageStreamCommandHandler {
 
     let fullText = '';
 
-    for await (const delta of this.gateway.generateStream(
+    for await (const event of this.gateway.generateStream(
       context.resolvedConnection,
       {
         systemPrompt: context.systemPrompt,
@@ -53,9 +53,11 @@ export class SendAiMessageStreamCommandHandler {
           }
         : null,
     )) {
-      if ('text' in delta) {
-        fullText += delta.text;
-        yield { type: 'delta', text: delta.text };
+      if (event.type === 'TEXT_DELTA') {
+        fullText += event.text;
+        yield event;
+      } else if (event.type === 'USAGE') {
+        yield event;
       }
     }
 
@@ -79,6 +81,6 @@ export class SendAiMessageStreamCommandHandler {
         : undefined,
     );
 
-    yield { type: 'done', userMessage, assistantMessage };
+    yield { type: 'DONE', userMessage, assistantMessage };
   }
 }

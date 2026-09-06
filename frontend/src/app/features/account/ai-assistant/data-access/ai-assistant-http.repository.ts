@@ -22,6 +22,7 @@ import {
   UpdateAiConnectionPayload,
   UpdateAiProfilePayload,
 } from '../domain/ai-assistant.models';
+import { parseAiStreamEvent } from './ai-stream-event.parser';
 
 const STREAM_FALLBACK_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ AI. Vui lòng thử lại.';
 
@@ -169,7 +170,7 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
       })
         .then(async (response) => {
           if (!response.ok || !response.body) {
-            subscriber.next({ type: 'error', message: STREAM_FALLBACK_ERROR_MESSAGE });
+            subscriber.next({ type: 'ERROR', message: STREAM_FALLBACK_ERROR_MESSAGE });
             subscriber.complete();
             return;
           }
@@ -183,6 +184,7 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
+            buffer = buffer.replaceAll('\r\n', '\n');
 
             let separatorIndex = buffer.indexOf('\n\n');
             while (separatorIndex !== -1) {
@@ -191,10 +193,10 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
 
               const dataLine = rawEvent.split('\n').find((line) => line.startsWith('data:'));
               if (dataLine) {
-                const event = this.parseStreamEvent(dataLine.slice(5).trim());
+                const event = parseAiStreamEvent(dataLine.slice(5).trim());
                 if (event) {
                   subscriber.next(event);
-                  if (event.type === 'done' || event.type === 'error') {
+                  if (event.type === 'DONE' || event.type === 'ERROR') {
                     subscriber.complete();
                     return;
                   }
@@ -210,7 +212,7 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
         .catch((error: unknown) => {
           if (controller.signal.aborted) return;
           subscriber.next({
-            type: 'error',
+            type: 'ERROR',
             message: error instanceof Error ? error.message : STREAM_FALLBACK_ERROR_MESSAGE,
           });
           subscriber.complete();
@@ -218,13 +220,5 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
 
       return () => controller.abort();
     });
-  }
-
-  private parseStreamEvent(json: string): AiSendMessageStreamEvent | null {
-    try {
-      return JSON.parse(json) as AiSendMessageStreamEvent;
-    } catch {
-      return null;
-    }
   }
 }

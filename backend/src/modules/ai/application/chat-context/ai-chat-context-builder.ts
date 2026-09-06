@@ -10,6 +10,7 @@ import {
   DEFAULT_CHAT_SYSTEM_PROMPT,
   MAX_RECENT_MESSAGES,
 } from '../constants/ai-chat.constants';
+import { AI_MAX_INPUT_TOKENS } from '../constants/ai-generation.constants';
 import {
   AI_CONVERSATION_PERSISTENCE_PORT,
   AiConversationPersistencePort,
@@ -25,6 +26,10 @@ import {
   AiResolvedConnectionFactory,
 } from '../connection-resolution';
 import { AiProfileManager } from '../profile';
+import {
+  estimateAiTokens,
+  fitMessagesToInputTokenBudget,
+} from './ai-input-token-budget';
 
 const CONNECTION_LABEL_FALLBACK = 'kết nối AI';
 
@@ -87,11 +92,21 @@ export class AiChatContextBuilder {
       });
     }
 
-    const history = await this.conversations.findMessages(conversationId);
-    const recentHistory = history.slice(-MAX_RECENT_MESSAGES);
+    const systemPrompt = profile.systemPrompt ?? DEFAULT_CHAT_SYSTEM_PROMPT;
+    if (
+      estimateAiTokens(systemPrompt) + estimateAiTokens(newUserContent) >
+      AI_MAX_INPUT_TOKENS
+    ) {
+      throw new BusinessRuleViolationException({
+        message:
+          'Nội dung gửi lên vượt quá giới hạn 10.000 input token. Hãy rút gọn nội dung hoặc system prompt.',
+        rule: 'ai-chat.input-token-limit-exceeded',
+      });
+    }
 
-    const protocolMessages: AiMessage[] = [
-      ...recentHistory.map((message) => ({
+    const history = await this.conversations.findMessages(conversationId);
+    const candidateMessages: AiMessage[] = [
+      ...history.slice(-MAX_RECENT_MESSAGES).map((message) => ({
         role:
           message.role === AiMessageRole.ASSISTANT
             ? ('assistant' as const)
@@ -100,6 +115,10 @@ export class AiChatContextBuilder {
       })),
       { role: 'user' as const, content: newUserContent },
     ];
+    const protocolMessages = fitMessagesToInputTokenBudget(
+      systemPrompt,
+      candidateMessages,
+    );
 
     const resolvedConnection = await this.resolvedConnections.fromRecord(
       plan.primary,
@@ -120,7 +139,7 @@ export class AiChatContextBuilder {
       connection: plan.primary,
       resolvedConnection,
       systemFallback,
-      systemPrompt: profile.systemPrompt ?? DEFAULT_CHAT_SYSTEM_PROMPT,
+      systemPrompt,
       protocolMessages,
     };
   }

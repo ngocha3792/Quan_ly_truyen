@@ -7,9 +7,14 @@ import {
   AiModelInfo,
   AiProtocolAdapter,
   AiProtocolRequestError,
-  AiStreamDelta,
+  AiStreamEvent,
   ResolvedAiConnection,
 } from '../../application/ports/ai-protocol-adapter.port';
+import {
+  AI_DEFAULT_MAX_OUTPUT_TOKENS,
+  AI_PROVIDER_REQUEST_TIMEOUT_MS,
+  AI_STREAM_TIMEOUT_MS,
+} from '../../application/constants/ai-generation.constants';
 import {
   assertPublicHttpsUrl,
   readBodyWithLimit,
@@ -26,9 +31,6 @@ import {
   readSseEventBlocks,
   safeJsonParse,
 } from './sse-reader.util';
-
-const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 4096;
 
 interface ResponsesUsagePayload {
   input_tokens?: number;
@@ -61,7 +63,7 @@ function buildRequestBody(request: AiGenerateRequest, stream: boolean) {
       content: message.content,
     })),
     ...(request.systemPrompt ? { instructions: request.systemPrompt } : {}),
-    max_output_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+    max_output_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
     ...(request.temperature !== undefined
       ? { temperature: request.temperature }
       : {}),
@@ -112,7 +114,7 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           model: connection.model,
           ...buildRequestBody(request, false),
         }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -155,7 +157,7 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
   async *generateStream(
     connection: ResolvedAiConnection,
     request: AiGenerateRequest,
-  ): AsyncIterable<AiStreamDelta> {
+  ): AsyncIterable<AiStreamEvent> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     let response: Response;
 
@@ -172,7 +174,7 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           model: connection.model,
           ...buildRequestBody(request, true),
         }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
       });
     } catch (error) {
       throw new AiProtocolRequestError(
@@ -192,11 +194,14 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
 
     for await (const eventBlock of readSseEventBlocks(response)) {
       for (const data of extractSseDataLines(eventBlock)) {
-        if (data === '[DONE]') return;
+        if (data === '[DONE]') {
+          yield { type: 'DONE' };
+          return;
+        }
         const event = safeJsonParse<ResponsesStreamPayload>(data);
 
         if (event?.type === 'response.output_text.delta' && event.delta) {
-          yield { text: event.delta };
+          yield { type: 'TEXT_DELTA', text: event.delta };
           continue;
         }
 
@@ -205,7 +210,8 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
           event?.type === 'response.incomplete'
         ) {
           const usage = toUsage(event.response?.usage);
-          if (usage) yield { usage };
+          if (usage) yield { type: 'USAGE', usage };
+          yield { type: 'DONE' };
           return;
         }
 
@@ -219,6 +225,8 @@ export class OpenAiResponsesProtocolAdapter implements AiProtocolAdapter {
         }
       }
     }
+
+    yield { type: 'DONE' };
   }
 
   async testConnection(

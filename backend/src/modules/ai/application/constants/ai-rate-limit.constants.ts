@@ -6,8 +6,6 @@ export interface AiTierLimit {
   readonly tokens: number;
 }
 
-export const AI_DEFAULT_MAX_OUTPUT_TOKENS = 1_024;
-
 export const AI_TIER_LIMITS: Readonly<Record<AiRateLimitTier, AiTierLimit>> = {
   [AiRateLimitTier.FREE]: {
     windowSeconds: 3_600,

@@ -18,7 +18,7 @@ import {
   AiGenerateRequest,
   AiGenerateResponse,
   AiProtocolRequestError,
-  AiStreamDelta,
+  AiStreamEvent,
 } from '../../application/ports/ai-protocol-adapter.port';
 import {
   AI_USAGE_PERSISTENCE_PORT,
@@ -116,7 +116,7 @@ export class AiGatewayService implements AiGatewayPort {
     usageContext: AiUsageContext,
     capability: AiUsageCapabilityValue = 'CHAT',
     systemFallback?: AiSystemFallback | null,
-  ): AsyncIterable<AiStreamDelta> {
+  ): AsyncIterable<AiStreamEvent> {
     const reservation = await this.rateLimits.reserve(
       usageContext.userId,
       request,
@@ -138,18 +138,29 @@ export class AiGatewayService implements AiGatewayPort {
         let attemptText = '';
 
         try {
-          for await (const delta of adapter.generateStream(
+          for await (const event of adapter.generateStream(
             activeConnection,
             request,
           )) {
-            if ('usage' in delta) {
-              inputTokens = delta.usage.inputTokens ?? inputTokens;
-              outputTokens = delta.usage.outputTokens ?? outputTokens;
-            } else {
-              attemptText += delta.text;
+            if (event.type === 'USAGE') {
+              inputTokens = event.usage.inputTokens ?? inputTokens;
+              outputTokens = event.usage.outputTokens ?? outputTokens;
+              yield event;
+              continue;
             }
 
-            yield delta;
+            if (event.type === 'TEXT_DELTA') {
+              attemptText += event.text;
+              yield event;
+            }
+          }
+
+          if (!attemptText.trim()) {
+            throw new AiProtocolRequestError(
+              'AI stream không trả về nội dung phản hồi',
+              null,
+              AiErrorCode.INVALID_RESPONSE,
+            );
           }
 
           completedUsage = { inputTokens, outputTokens };
@@ -176,6 +187,7 @@ export class AiGatewayService implements AiGatewayPort {
             inputTokens,
             outputTokens,
           });
+          yield { type: 'DONE' };
           return;
         } catch (error) {
           const failedAttempt: RecordUsageParams = {

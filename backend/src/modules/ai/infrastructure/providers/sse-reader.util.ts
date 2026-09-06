@@ -1,4 +1,5 @@
 import { AiProtocolRequestError } from '../../application/ports/ai-protocol-adapter.port';
+import { AiErrorCode } from '../../domain/enums';
 
 const MAX_STREAM_BYTES = 2 * 1024 * 1024;
 
@@ -32,6 +33,7 @@ export async function* readSseEventBlocks(
       }
 
       buffer += decoder.decode(value, { stream: true });
+      buffer = normalizeLineEndings(buffer);
 
       let separatorIndex = buffer.indexOf('\n\n');
       while (separatorIndex !== -1) {
@@ -41,12 +43,31 @@ export async function* readSseEventBlocks(
       }
     }
 
+    buffer += decoder.decode();
+    buffer = normalizeLineEndings(buffer);
     if (buffer.trim()) {
       yield buffer;
     }
+  } catch (error) {
+    if (error instanceof AiProtocolRequestError) throw error;
+    if (
+      error instanceof Error &&
+      (error.name === 'AbortError' || error.name === 'TimeoutError')
+    ) {
+      throw new AiProtocolRequestError(
+        'AI stream đã vượt quá thời gian chờ 10 phút.',
+        null,
+        AiErrorCode.TIMEOUT,
+      );
+    }
+    throw error;
   } finally {
     reader.releaseLock();
   }
+}
+
+function normalizeLineEndings(value: string): string {
+  return value.replaceAll('\r\n', '\n');
 }
 
 export function extractSseDataLines(eventBlock: string): readonly string[] {

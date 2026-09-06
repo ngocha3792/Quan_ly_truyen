@@ -1,7 +1,10 @@
 import { lookup } from 'node:dns/promises';
 
 import { AiAuthType, AiProtocol } from '../../domain/enums';
-import type { ResolvedAiConnection } from '../../application/ports';
+import type {
+  AiStreamEvent,
+  ResolvedAiConnection,
+} from '../../application/ports';
 import { AnthropicMessagesProtocolAdapter } from './anthropic-provider.adapter';
 import { OpenAiChatCompletionsProtocolAdapter } from './openai-compatible-provider.adapter';
 
@@ -122,5 +125,60 @@ describe('compatible protocol adapters', () => {
       model: 'claude-sonnet-5',
       max_tokens: 256,
     });
+  });
+
+  it('OpenAI-compatible normalize SSE thành stream event chung', async () => {
+    const events = [
+      'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+      'data: {"choices":[],"usage":{"prompt_tokens":3,"completion_tokens":1}}',
+      'data: [DONE]',
+    ].join('\n\n');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(`${events}\n\n`, { status: 200 }));
+
+    const chunks: AiStreamEvent[] = [];
+    for await (const chunk of new OpenAiChatCompletionsProtocolAdapter().generateStream(
+      connection({}),
+      REQUEST,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual([
+      { type: 'TEXT_DELTA', text: 'Hello' },
+      { type: 'USAGE', usage: { inputTokens: 3, outputTokens: 1 } },
+      { type: 'DONE' },
+    ]);
+  });
+
+  it('Anthropic normalize SSE thành stream event chung', async () => {
+    const events = [
+      'event: message_start\ndata: {"message":{"usage":{"input_tokens":4}}}',
+      'event: content_block_delta\ndata: {"delta":{"type":"text_delta","text":"Hello"}}',
+      'event: message_delta\ndata: {"usage":{"output_tokens":2}}',
+      'event: message_stop\ndata: {}',
+    ].join('\n\n');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(`${events}\n\n`, { status: 200 }));
+
+    const chunks: AiStreamEvent[] = [];
+    for await (const chunk of new AnthropicMessagesProtocolAdapter().generateStream(
+      connection({
+        protocol: AiProtocol.ANTHROPIC_MESSAGES,
+        baseUrl: 'https://1gw.gwai.cloud',
+        authType: AiAuthType.X_API_KEY,
+      }),
+      REQUEST,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual([
+      { type: 'TEXT_DELTA', text: 'Hello' },
+      { type: 'USAGE', usage: { inputTokens: 4, outputTokens: 2 } },
+      { type: 'DONE' },
+    ]);
   });
 });

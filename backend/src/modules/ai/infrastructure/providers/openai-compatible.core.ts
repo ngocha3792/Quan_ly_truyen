@@ -6,8 +6,13 @@ import {
   AiModelInfo,
   AiMessage,
   AiProtocolRequestError,
-  AiStreamDelta,
+  AiStreamEvent,
 } from '../../application/ports/ai-protocol-adapter.port';
+import {
+  AI_DEFAULT_MAX_OUTPUT_TOKENS,
+  AI_PROVIDER_REQUEST_TIMEOUT_MS,
+  AI_STREAM_TIMEOUT_MS,
+} from '../../application/constants/ai-generation.constants';
 import {
   readBodyWithLimit,
   safeExternalFetch,
@@ -18,9 +23,6 @@ import {
   safeJsonParse,
 } from './sse-reader.util';
 import { applyAiCredential } from './ai-auth.util';
-
-const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_TOKENS = 4096;
 
 function buildMessages(request: AiGenerateRequest): AiMessage[] {
   const messages: AiMessage[] = [];
@@ -84,9 +86,9 @@ export async function openAiCompatibleGenerate(
         model: connection.model,
         messages: buildMessages(request),
         temperature: request.temperature,
-        max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+        max_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
       }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     throw new AiProtocolRequestError(
@@ -131,7 +133,7 @@ export async function* openAiCompatibleGenerateStream(
   connection: ResolvedAiConnection,
   request: AiGenerateRequest,
   baseUrl: string,
-): AsyncIterable<AiStreamDelta> {
+): AsyncIterable<AiStreamEvent> {
   let response: Response;
 
   try {
@@ -147,11 +149,11 @@ export async function* openAiCompatibleGenerateStream(
         model: connection.model,
         messages: buildMessages(request),
         temperature: request.temperature,
-        max_tokens: request.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+        max_tokens: request.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS,
         stream: true,
         stream_options: { include_usage: true },
       }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(AI_STREAM_TIMEOUT_MS),
     });
   } catch (error) {
     throw new AiProtocolRequestError(
@@ -171,14 +173,18 @@ export async function* openAiCompatibleGenerateStream(
 
   for await (const eventBlock of readSseEventBlocks(response)) {
     for (const data of extractSseDataLines(eventBlock)) {
-      if (data === '[DONE]') return;
+      if (data === '[DONE]') {
+        yield { type: 'DONE' };
+        return;
+      }
 
       const chunk = safeJsonParse<ChatCompletionStreamChunkPayload>(data);
       const text = chunk?.choices?.[0]?.delta?.content;
-      if (text) yield { text };
+      if (text) yield { type: 'TEXT_DELTA', text };
 
       if (chunk?.usage) {
         yield {
+          type: 'USAGE',
           usage: {
             inputTokens: chunk.usage.prompt_tokens,
             outputTokens: chunk.usage.completion_tokens,
@@ -187,6 +193,8 @@ export async function* openAiCompatibleGenerateStream(
       }
     }
   }
+
+  yield { type: 'DONE' };
 }
 
 export async function openAiCompatibleListModels(
@@ -200,7 +208,7 @@ export async function openAiCompatibleListModels(
     response = await safeExternalFetch(authenticated.url, {
       method: 'GET',
       headers: authenticated.headers,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(AI_PROVIDER_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     throw new AiProtocolRequestError(

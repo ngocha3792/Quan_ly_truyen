@@ -7,6 +7,7 @@ import {
   AiConversationDetail,
   AiConversationSummary,
   AiMessage,
+  AiUsage,
 } from '../domain/ai-assistant.models';
 import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 
@@ -26,6 +27,7 @@ export class AiAssistantStore {
   readonly activeConversation = signal<AiConversationDetail | null>(null);
   readonly sending = signal(false);
   readonly error = signal<string | null>(null);
+  readonly streamUsage = signal<AiUsage | null>(null);
 
   loadConversations(): void {
     this.conversationsLoading.set(true);
@@ -64,6 +66,7 @@ export class AiAssistantStore {
 
   selectConversation(conversationId: string): void {
     this.error.set(null);
+    this.streamUsage.set(null);
     this.repository
       .getConversation(conversationId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -115,6 +118,7 @@ export class AiAssistantStore {
 
     this.sending.set(true);
     this.error.set(null);
+    this.streamUsage.set(null);
     this.activeConversation.set({
       ...conversation,
       messages: [...conversation.messages, optimisticMessage, streamingMessage],
@@ -131,7 +135,7 @@ export class AiAssistantStore {
           const current = this.activeConversation();
           if (!current || current.id !== conversation.id) return;
 
-          if (event.type === 'delta') {
+          if (event.type === 'TEXT_DELTA') {
             this.activeConversation.set({
               ...current,
               messages: current.messages.map((message) =>
@@ -143,7 +147,12 @@ export class AiAssistantStore {
             return;
           }
 
-          if (event.type === 'done') {
+          if (event.type === 'USAGE') {
+            this.streamUsage.set(event.usage);
+            return;
+          }
+
+          if (event.type === 'DONE') {
             this.activeConversation.set({
               ...current,
               messages: [

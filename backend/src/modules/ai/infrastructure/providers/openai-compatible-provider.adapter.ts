@@ -7,7 +7,7 @@ import {
   AiGenerateResponse,
   AiModelInfo,
   AiProtocolAdapter,
-  AiStreamDelta,
+  AiStreamEvent,
 } from '../../application/ports/ai-protocol-adapter.port';
 import { assertPublicHttpsUrl } from '../security/ssrf-guard.util';
 import {
@@ -31,7 +31,7 @@ export class OpenAiChatCompletionsProtocolAdapter implements AiProtocolAdapter {
   async *generateStream(
     connection: ResolvedAiConnection,
     request: AiGenerateRequest,
-  ): AsyncIterable<AiStreamDelta> {
+  ): AsyncIterable<AiStreamEvent> {
     const baseUrl = await this.requireGuardedBaseUrl(connection);
     yield* openAiCompatibleGenerateStream(connection, request, baseUrl);
   }

@@ -1,4 +1,7 @@
-import { RateLimitExceededException } from '@/common/exceptions';
+import {
+  BusinessRuleViolationException,
+  RateLimitExceededException,
+} from '@/common/exceptions';
 
 import { AiFallbackPolicy, AiRateLimitTier } from '../../domain/enums';
 import type { AiPolicyPersistencePort } from '../ports/ai-policy.persistence.port';
@@ -49,10 +52,10 @@ describe('AiRateLimiter', () => {
         userId: USER_ID,
         requestLimit: 20,
         tokenLimit: 50_000,
-        tokens: 1_027,
+        tokens: 10_003,
       }),
     );
-    expect(reservation?.reservedTokens).toBe(1_027);
+    expect(reservation?.reservedTokens).toBe(10_003);
   });
 
   it('ném AI_RATE_LIMITED khi bucket từ chối', async () => {
@@ -75,6 +78,45 @@ describe('AiRateLimiter', () => {
     }
   });
 
+  it('chặn input vượt 10.000 token trước khi giữ quota', async () => {
+    try {
+      await service.reserve(USER_ID, {
+        messages: [{ role: 'user', content: 'a'.repeat(40_001) }],
+      });
+      throw new Error('Expected input token limit rejection');
+    } catch (error) {
+      if (!(error instanceof BusinessRuleViolationException)) throw error;
+      expect(error.details).toEqual({
+        rule: 'ai.input-token-limit-exceeded',
+        estimatedInputTokens: 10_001,
+        maxInputTokens: 10_000,
+      });
+    }
+
+    expect(policies.findByUserId.mock.calls).toHaveLength(0);
+    expect(reserveBucket).not.toHaveBeenCalled();
+  });
+
+  it('chặn output vượt 10.000 token trước khi giữ quota', async () => {
+    try {
+      await service.reserve(USER_ID, {
+        messages: [{ role: 'user', content: 'hello' }],
+        maxOutputTokens: 10_001,
+      });
+      throw new Error('Expected output token limit rejection');
+    } catch (error) {
+      if (!(error instanceof BusinessRuleViolationException)) throw error;
+      expect(error.details).toEqual({
+        rule: 'ai.output-token-limit-exceeded',
+        requestedOutputTokens: 10_001,
+        maxOutputTokens: 10_000,
+      });
+    }
+
+    expect(policies.findByUserId.mock.calls).toHaveLength(0);
+    expect(reserveBucket).not.toHaveBeenCalled();
+  });
+
   it('reconcile trả phần token đã reserve nhưng không dùng', async () => {
     const reservation = await service.reserve(USER_ID, {
       messages: [{ role: 'user', content: '12345678' }],
@@ -89,7 +131,7 @@ describe('AiRateLimiter', () => {
     expect(reconcileTokens).toHaveBeenCalledWith(
       USER_ID,
       reservation?.windowStart,
-      1_026,
+      10_002,
       5,
     );
   });
