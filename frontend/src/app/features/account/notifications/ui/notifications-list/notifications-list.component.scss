@@ -104,6 +104,11 @@
 .notification-icon svg {
   width: 26px;
   height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .notification-content {
@@ -216,26 +221,11 @@ time {
 .save-button svg {
   width: 20px;
   height: 20px;
-}
-
-.notification-row svg {
-  --empty-min-height: 380px;
-
-  --empty-padding: 35px;
-
-  --empty-icon-box-size: 64px;
-
-  --empty-icon-background: rgba(126, 34, 206, 0.14);
-
-  --empty-icon-color: #c084fc;
-
-  --empty-title-color: var(--text-strong);
-
-  --empty-title-size: 18px;
-
-  --empty-description-color: var(--text-muted);
-
-  --empty-description-size: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 @media (max-width: 900px) {

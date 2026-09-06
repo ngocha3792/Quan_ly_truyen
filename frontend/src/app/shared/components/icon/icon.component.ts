@@ -9,6 +9,7 @@ export type { IconName } from './icon.models';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './icon.component.html',
+  styleUrl: './icon.component.scss',
 })
 export class IconComponent {
   readonly name = input.required<IconName>();

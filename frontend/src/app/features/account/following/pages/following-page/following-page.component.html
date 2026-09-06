@@ -1,11 +1,13 @@
-<main class="following-page">
-  <header>
-    <div>
-      <p>Theo dõi</p>
-      <h1>Tác giả đang theo dõi</h1>
-    </div>
-    <a routerLink="/tac-gia">Khám phá tác giả</a>
-  </header>
+<main class="following-page page-container">
+  <app-breadcrumb [items]="breadcrumbs" />
+
+  <app-page-heading
+    title="Tác giả đang theo dõi"
+    description="Quản lý danh sách tác giả bạn đang theo dõi."
+  >
+    <app-link-button routerLink="/tac-gia">Khám phá tác giả</app-link-button>
+  </app-page-heading>
+
   @if (error()) {
     <app-error-alert
       title="Không thể hoàn tất yêu cầu"
@@ -13,53 +15,59 @@
       (retry)="load(page())"
     />
   }
+
   @if (loading() && items().length === 0) {
     <app-loading-state message="Đang tải danh sách tác giả..." />
-  }
-  <section class="following-list">
-    @for (item of items(); track item.author.id) {
-      <article>
-        <a class="author" [routerLink]="['/tac-gia', item.author.slug]">
-          @if (item.author.avatarUrl) {
-            <img [src]="item.author.avatarUrl" [alt]="item.author.displayName" />
-          } @else {
-            <span class="avatar-placeholder">{{ item.author.displayName.slice(0, 2) }}</span>
-          }
-          <div>
-            <strong>{{ item.author.displayName }}</strong
-            ><small
-              >{{ item.author.followersCount }} người theo dõi · Theo dõi từ
-              {{ item.followedAt }}</small
-            >
-          </div>
-        </a>
-        <button
-          type="button"
-          [disabled]="pending().includes(item.author.id)"
-          (click)="unfollow(item.author.id)"
-        >
-          {{ pending().includes(item.author.id) ? 'Đang xử lý...' : 'Bỏ theo dõi' }}
-        </button>
-      </article>
-    } @empty {
-      @if (!loading()) {
-        <p class="empty">Bạn chưa theo dõi tác giả nào.</p>
+  } @else {
+    <section class="following-list">
+      @for (item of items(); track item.author.id) {
+        <article class="following-row">
+          <a class="author" [routerLink]="['/tac-gia', item.author.slug]">
+            <span class="avatar">
+              @if (item.author.avatarUrl) {
+                <img [src]="item.author.avatarUrl" [alt]="item.author.displayName" />
+              } @else {
+                {{ item.author.displayName.slice(0, 2) }}
+              }
+            </span>
+
+            <div class="author-information">
+              <strong>{{ item.author.displayName }}</strong>
+              <small>
+                {{ item.author.followersCount }} người theo dõi · Theo dõi từ
+                {{ item.followedAt }}
+              </small>
+            </div>
+          </a>
+
+          <button
+            class="unfollow-button"
+            type="button"
+            [disabled]="pending().includes(item.author.id)"
+            (click)="unfollow(item.author.id)"
+          >
+            <app-icon name="heart" [size]="15" />
+            {{ pending().includes(item.author.id) ? 'Đang xử lý...' : 'Bỏ theo dõi' }}
+          </button>
+        </article>
+      } @empty {
+        @if (!loading()) {
+          <app-empty-state
+            icon="user"
+            [iconSize]="30"
+            title="Chưa theo dõi tác giả nào"
+            description="Khám phá và theo dõi tác giả yêu thích để nhận thông báo khi có truyện mới."
+          >
+            <a emptyAction routerLink="/tac-gia">Khám phá tác giả</a>
+          </app-empty-state>
+        }
       }
+    </section>
+
+    @if (totalPages() > 1) {
+      <footer class="following-pagination">
+        <app-pagination [page]="page()" [totalPages]="totalPages()" (pageChange)="load($event)" />
+      </footer>
     }
-  </section>
-  @if (totalPages() > 1) {
-    <nav class="pagination" aria-label="Phân trang">
-      <button type="button" [disabled]="page() <= 1 || loading()" (click)="load(page() - 1)">
-        Trước
-      </button>
-      <span>{{ page() }} / {{ totalPages() }}</span>
-      <button
-        type="button"
-        [disabled]="page() >= totalPages() || loading()"
-        (click)="load(page() + 1)"
-      >
-        Sau
-      </button>
-    </nav>
   }
 </main>

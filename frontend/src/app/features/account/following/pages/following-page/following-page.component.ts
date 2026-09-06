@@ -4,13 +4,32 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthorFollowApiService, FollowingAuthorItem } from '@core/author-follow';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '@shared/components/breadcrumb/breadcrumb.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '@shared/components/error-alert/error-alert.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
+import { LinkButtonComponent } from '@shared/components/link-button/link-button.component';
 import { LoadingStateComponent } from '@shared/components/loading-state/loading-state.component';
+import { PageHeadingComponent } from '@shared/components/page-heading/page-heading.component';
+import { PaginationComponent } from '@shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-following-page',
   standalone: true,
-  imports: [RouterLink, ErrorAlertComponent, LoadingStateComponent],
+  imports: [
+    RouterLink,
+    BreadcrumbComponent,
+    PageHeadingComponent,
+    ErrorAlertComponent,
+    LoadingStateComponent,
+    EmptyStateComponent,
+    PaginationComponent,
+    IconComponent,
+    LinkButtonComponent,
+  ],
   templateUrl: './following-page.component.html',
   styleUrl: './following-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +37,11 @@ import { LoadingStateComponent } from '@shared/components/loading-state/loading-
 export class FollowingPageComponent {
   private readonly api = inject(AuthorFollowApiService);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Trang chủ', route: '/' },
+    { label: 'Tác giả đang theo dõi' },
+  ];
 
   protected readonly items = signal<readonly FollowingAuthorItem[]>([]);
   protected readonly page = signal(1);

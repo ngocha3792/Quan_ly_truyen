@@ -72,11 +72,16 @@ h1 {
   text-wrap: balance;
 }
 .hero-content p {
+  display: -webkit-box;
   max-width: 500px;
   margin: 0;
+  overflow: hidden;
   color: #c8cada;
   font-size: 0.91rem;
   line-height: 1.65;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 .hero-actions {
   display: flex;

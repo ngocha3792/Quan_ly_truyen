@@ -36,12 +36,38 @@
 }
 
 .list-card__filters > input,
-.list-card__toolbar > input {
-  padding: 0.65rem;
+.list-card__filters > select,
+.list-card__toolbar > input,
+.list-card__toolbar > select {
+  min-height: 43px;
+  padding: 0 0.85rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: rgba(6, 11, 22, 0.55);
   color: var(--text-strong);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.list-card__filters > label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.list-card__filters > label > input {
+  min-height: 43px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.85rem;
 }
 
 .list-card__table-scroll {

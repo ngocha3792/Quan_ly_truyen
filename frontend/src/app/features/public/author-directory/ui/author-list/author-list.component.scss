@@ -121,6 +121,11 @@
   grid-row: 1 / 3;
   width: 18px;
   height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   color: var(--primary-soft);
 }
 
@@ -165,26 +170,6 @@
 .follow-button svg {
   width: 14px;
   height: 14px;
-}
-
-.author-row svg {
-  --empty-min-height: 350px;
-
-  --empty-padding: 30px;
-
-  --empty-icon-box-size: 58px;
-
-  --empty-icon-background: rgba(126, 34, 206, 0.15);
-
-  --empty-icon-color: #c084fc;
-
-  --empty-title-color: #f5f3fb;
-
-  --empty-title-size: 17px;
-
-  --empty-description-color: #858fa7;
-
-  --empty-description-size: 11px;
 }
 
 @media (max-width: 1050px) {
