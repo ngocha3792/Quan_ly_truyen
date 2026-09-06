@@ -7,6 +7,42 @@
     <app-notice kind="error" [message]="error()" />
   }
 
+  @if (profile()) {
+    <div class="story-profile">
+      <h4>AI Profile của truyện</h4>
+      <div class="story-profile__grid">
+        <label>
+          Model override
+          <input [(ngModel)]="profileModel" maxlength="200" placeholder="Kế thừa profile user" />
+        </label>
+        <label>
+          Ngôn ngữ mặc định
+          <select [(ngModel)]="profileLanguage">
+            <option value="">Kế thừa profile user</option>
+            @for (language of languages(); track language.code) {
+              <option [value]="language.code">{{ language.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="story-profile__prompt">
+          Prompt / phong cách riêng
+          <textarea [(ngModel)]="profileSystemPrompt" rows="3" maxlength="8000"></textarea>
+        </label>
+        <label>
+          Tự động dịch khi publish
+          <select [(ngModel)]="profileAutoTranslate">
+            <option [ngValue]="null">Kế thừa profile user</option>
+            <option [ngValue]="true">Bật</option>
+            <option [ngValue]="false">Tắt</option>
+          </select>
+        </label>
+      </div>
+      <app-button variant="secondary" [loading]="profileSaving()" (click)="saveProfile()">
+        Lưu profile truyện
+      </app-button>
+    </div>
+  }
+
   <div class="translation-controls">
     <select [(ngModel)]="selectedLanguageCode" [disabled]="requesting()">
       @for (language of languages(); track language.code) {

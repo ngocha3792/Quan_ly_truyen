@@ -5,16 +5,23 @@ import { Job, UnrecoverableError } from 'bullmq';
 import { AppException } from '@/common/exceptions';
 import { QUEUE_NAMES } from '@/infrastructure/queue';
 import {
+  AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+  AutoTranslateChapterPublishedV1,
+  isAutoTranslateChapterPublishedV1,
   isTranslateChapterJobV1,
+  OutboxQueueEnvelope,
   TRANSLATE_CHAPTER_JOB,
   TranslateChapterJobV1,
 } from '@/infrastructure/queue/contracts';
 import { getWorkerConcurrency } from '@/infrastructure/queue/worker-options';
 
+import { AiConnectionRecord } from '../../application/ports/ai-connection.persistence.port';
+import { AiConnectionResolver } from '../../application/connection-resolution';
+import { AiProfileManager } from '../../application/profile';
 import {
-  AI_CONNECTION_PERSISTENCE_PORT,
-  AiConnectionPersistencePort,
-} from '../../application/ports/ai-connection.persistence.port';
+  RequestChapterTranslationCommand,
+  RequestChapterTranslationCommandHandler,
+} from '../../application/commands/request-chapter-translation';
 import {
   AI_CREDENTIAL_VAULT_PORT,
   AiCredentialVaultPort,
@@ -31,12 +38,17 @@ import {
 import { ChapterTranslationStatus } from '../../domain/enums';
 import { AiProviderRegistry } from '../providers/ai-provider.registry';
 
-function buildTranslationSystemPrompt(targetLanguageCode: string): string {
-  return (
+function buildTranslationSystemPrompt(
+  targetLanguageCode: string,
+  profilePrompt: string | null,
+): string {
+  const base =
     `Dịch đoạn văn bản sau sang ngôn ngữ có mã "${targetLanguageCode}". ` +
     'Giữ nguyên định dạng Markdown nếu có. CHỈ trả về văn bản đã dịch, ' +
-    'không thêm lời dẫn, giải thích hay trích dẫn nào khác.'
-  );
+    'không thêm lời dẫn, giải thích hay trích dẫn nào khác.';
+  return profilePrompt
+    ? `${base}\n\nYêu cầu phong cách bổ sung:\n${profilePrompt}`
+    : base;
 }
 
 @Processor(QUEUE_NAMES.AI, { concurrency: getWorkerConcurrency() })
@@ -46,8 +58,9 @@ export class AiTranslationProcessor extends WorkerHost {
   constructor(
     @Inject(CHAPTER_TRANSLATION_PERSISTENCE_PORT)
     private readonly translations: ChapterTranslationPersistencePort,
-    @Inject(AI_CONNECTION_PERSISTENCE_PORT)
-    private readonly connections: AiConnectionPersistencePort,
+    private readonly resolver: AiConnectionResolver,
+    private readonly profiles: AiProfileManager,
+    private readonly requestTranslation: RequestChapterTranslationCommandHandler,
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
     @Inject(AI_GATEWAY_PORT)
@@ -57,7 +70,18 @@ export class AiTranslationProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<TranslateChapterJobV1>): Promise<void> {
+  async process(
+    job: Job<TranslateChapterJobV1 | OutboxQueueEnvelope<unknown>>,
+  ): Promise<void> {
+    if (job.name === AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT) {
+      const envelope = job.data as OutboxQueueEnvelope<unknown>;
+      if (!isAutoTranslateChapterPublishedV1(envelope.payload)) {
+        throw new UnrecoverableError('Invalid auto-translate outbox payload');
+      }
+      await this.scheduleAutoTranslation(envelope.payload);
+      return;
+    }
+
     if (
       job.name !== TRANSLATE_CHAPTER_JOB ||
       !isTranslateChapterJobV1(job.data)
@@ -92,10 +116,16 @@ export class AiTranslationProcessor extends WorkerHost {
       throw new UnrecoverableError(`Chapter ${chapterId} not found`);
     }
 
-    const connection = await this.connections.findById(
-      translation.connectionId,
+    const profile = await this.profiles.resolve(
+      translation.requestedById,
+      chapter.storyId,
     );
-    if (!connection) {
+
+    const originalConnection = await this.resolver.resolvePlan({
+      userId: translation.requestedById,
+      connectionId: translation.connectionId,
+    });
+    if (!originalConnection) {
       throw new UnrecoverableError(
         `AI connection ${translation.connectionId} not found`,
       );
@@ -103,20 +133,27 @@ export class AiTranslationProcessor extends WorkerHost {
 
     await this.translations.markProcessing(translationId);
 
-    const config: AiConnectionConfig = {
-      provider: connection.provider,
-      apiKey: await this.vault.decrypt(connection.encryptedApiKey),
-      baseUrl: connection.baseUrl,
-      model:
-        connection.defaultModel ?? this.registry.getModel(connection.provider),
-    };
+    const connection = originalConnection.primary;
+    const config = await this.toProviderConfig(connection, profile.model);
+    const systemFallback = originalConnection.systemFallback
+      ? {
+          config: await this.toProviderConfig(
+            originalConnection.systemFallback,
+            profile.model,
+          ),
+          connectionId: originalConnection.systemFallback.id,
+        }
+      : null;
 
     const usageContext = {
       userId: translation.requestedById,
       connectionId: connection.id,
     };
 
-    const systemPrompt = buildTranslationSystemPrompt(targetLanguageCode);
+    const systemPrompt = buildTranslationSystemPrompt(
+      targetLanguageCode,
+      profile.systemPrompt,
+    );
 
     try {
       const titleResult = await this.gateway.generate(
@@ -124,6 +161,7 @@ export class AiTranslationProcessor extends WorkerHost {
         { systemPrompt, messages: [{ role: 'user', content: chapter.title }] },
         usageContext,
         'TRANSLATE',
+        systemFallback,
       );
 
       const contentResult = await this.gateway.generate(
@@ -134,6 +172,7 @@ export class AiTranslationProcessor extends WorkerHost {
         },
         usageContext,
         'TRANSLATE',
+        systemFallback,
       );
 
       await this.translations.markCompleted({
@@ -161,5 +200,47 @@ export class AiTranslationProcessor extends WorkerHost {
 
       throw new UnrecoverableError(errorMessage);
     }
+  }
+
+  private async scheduleAutoTranslation(
+    payload: AutoTranslateChapterPublishedV1,
+  ): Promise<void> {
+    const profile = await this.profiles.resolve(
+      payload.userId,
+      payload.storyId,
+    );
+    if (!profile.autoTranslateOnPublish) {
+      this.logger.log({
+        event: 'ai.auto-translation.skipped',
+        storyId: payload.storyId,
+        chapterId: payload.chapterId,
+        reason: 'disabled',
+      });
+      return;
+    }
+
+    await this.requestTranslation.execute(
+      new RequestChapterTranslationCommand(
+        payload.userId,
+        payload.storyId,
+        payload.chapterId,
+        profile.defaultTranslationLanguageCode,
+      ),
+    );
+  }
+
+  private async toProviderConfig(
+    connection: AiConnectionRecord,
+    profileModel: string | null,
+  ): Promise<AiConnectionConfig> {
+    return {
+      provider: connection.provider,
+      apiKey: await this.vault.decrypt(connection.encryptedApiKey),
+      baseUrl: connection.baseUrl,
+      model:
+        profileModel ??
+        connection.defaultModel ??
+        this.registry.getModel(connection.provider),
+    };
   }
 }

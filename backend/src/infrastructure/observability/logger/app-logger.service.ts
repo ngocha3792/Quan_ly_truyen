@@ -63,6 +63,8 @@ export class AppLoggerService implements LoggerService, OnApplicationShutdown {
           paths: [
             'password',
             '*.password',
+            'apiKey',
+            '*.apiKey',
             'token',
             '*.token',
             'authorization',

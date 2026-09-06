@@ -30,6 +30,9 @@ import { AdminUserDetailStore } from '../../data-access/admin-user-detail.store'
 import { AdminUsersApiService } from '../../data-access/admin-users-api.service';
 import {
   AdminUserSecurityEvent,
+  AdminUserAiPolicy,
+  AiFallbackPolicy,
+  AiRateLimitTier,
   AdminUserSession,
   ManagedUserStatus,
 } from '../../domain/admin-user.models';
@@ -76,6 +79,12 @@ export class AdminUserDetailPageComponent implements OnInit {
   protected readonly securityError = signal('');
   protected readonly securityMessage = signal('');
   protected readonly pendingStatus = signal<ManagedUserStatus | null>(null);
+  protected readonly aiPolicy = signal<AdminUserAiPolicy | null>(null);
+  protected readonly aiPolicyLoading = signal(false);
+  protected readonly aiPolicyError = signal('');
+  protected readonly aiPolicyMessage = signal('');
+  protected aiRateLimitTier: AiRateLimitTier = 'FREE';
+  protected aiFallbackPolicy: AiFallbackPolicy = 'NONE';
   protected statusReason = '';
 
   protected readonly isSelf = computed(
@@ -90,6 +99,9 @@ export class AdminUserDetailPageComponent implements OnInit {
   protected readonly canManageSecurity = computed(() =>
     this.hasPermission(AUTH_PERMISSIONS.USER_SECURITY_MANAGE),
   );
+  protected readonly canManageAiSettings = computed(() =>
+    this.hasPermission(AUTH_PERMISSIONS.AI_SETTINGS_MANAGE),
+  );
   protected readonly breadcrumbs = computed<readonly BreadcrumbItem[]>(() => [
     { label: 'Trang chủ', route: '/' },
     { label: 'Quản trị' },
@@ -102,6 +114,7 @@ export class AdminUserDetailPageComponent implements OnInit {
     this.actionsStore.clearFeedback();
     this.detailStore.load(this.userId);
     if (this.canReadSecurity()) this.loadSecurity();
+    if (this.canManageAiSettings()) this.loadAiPolicy();
   }
 
   protected changeStatus(status: ManagedUserStatus): void {
@@ -163,6 +176,29 @@ export class AdminUserDetailPageComponent implements OnInit {
     return value ? new Date(value).toLocaleString('vi-VN') : '—';
   }
 
+  protected saveAiPolicy(): void {
+    if (this.aiPolicyLoading()) return;
+    this.aiPolicyLoading.set(true);
+    this.aiPolicyError.set('');
+    this.aiPolicyMessage.set('');
+    this.api
+      .updateAiPolicy(this.userId, {
+        rateLimitTier: this.aiRateLimitTier,
+        fallbackPolicy: this.aiFallbackPolicy,
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.aiPolicyLoading.set(false)),
+      )
+      .subscribe({
+        next: (policy) => {
+          this.applyAiPolicy(policy);
+          this.aiPolicyMessage.set('Đã cập nhật hạn mức và chính sách fallback AI.');
+        },
+        error: (error: unknown) => this.aiPolicyError.set(getApiErrorMessage(error)),
+      });
+  }
+
   private submitStatus(status: ManagedUserStatus, reason?: string): void {
     this.actionsStore
       .updateStatus(status, reason)
@@ -196,6 +232,27 @@ export class AdminUserDetailPageComponent implements OnInit {
         next: (events) => this.securityEvents.set(events),
         error: (error: unknown) => this.securityError.set(getApiErrorMessage(error)),
       });
+  }
+
+  private loadAiPolicy(): void {
+    this.aiPolicyLoading.set(true);
+    this.aiPolicyError.set('');
+    this.api
+      .getAiPolicy(this.userId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.aiPolicyLoading.set(false)),
+      )
+      .subscribe({
+        next: (policy) => this.applyAiPolicy(policy),
+        error: (error: unknown) => this.aiPolicyError.set(getApiErrorMessage(error)),
+      });
+  }
+
+  private applyAiPolicy(policy: AdminUserAiPolicy): void {
+    this.aiPolicy.set(policy);
+    this.aiRateLimitTier = policy.rateLimitTier;
+    this.aiFallbackPolicy = policy.fallbackPolicy;
   }
 
   private runSecurityMutation(request: import('rxjs').Observable<unknown>, message: string): void {

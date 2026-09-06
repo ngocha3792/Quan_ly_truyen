@@ -1,16 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { AiProvider } from '../../domain/enums';
+import { AiFallbackPolicy, type AiProvider } from '../../domain/enums';
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
   AiConnectionPersistencePort,
   AiConnectionRecord,
 } from '../ports/ai-connection.persistence.port';
+import {
+  AI_POLICY_PERSISTENCE_PORT,
+  AiPolicyPersistencePort,
+} from '../ports/ai-policy.persistence.port';
 
 export interface ResolveAiConnectionParams {
   readonly userId: string;
   readonly connectionId?: string | null;
   readonly provider?: AiProvider;
+}
+
+export interface ResolvedAiConnectionPlan {
+  readonly primary: AiConnectionRecord;
+  readonly systemFallback: AiConnectionRecord | null;
+  readonly fallbackPolicy: AiFallbackPolicy;
 }
 
 /**
@@ -24,25 +34,53 @@ export class AiConnectionResolver {
   constructor(
     @Inject(AI_CONNECTION_PERSISTENCE_PORT)
     private readonly connections: AiConnectionPersistencePort,
+    @Inject(AI_POLICY_PERSISTENCE_PORT)
+    private readonly policies: AiPolicyPersistencePort,
   ) {}
 
   async resolve(
     params: ResolveAiConnectionParams,
   ): Promise<AiConnectionRecord | null> {
+    return (await this.resolvePlan(params))?.primary ?? null;
+  }
+
+  async resolvePlan(
+    params: ResolveAiConnectionParams,
+  ): Promise<ResolvedAiConnectionPlan | null> {
+    const policy = await this.policies.findByUserId(params.userId);
+    const fallbackPolicy = policy?.fallbackPolicy ?? AiFallbackPolicy.NONE;
+
     if (params.connectionId) {
       const requested = await this.connections.findById(params.connectionId);
 
+      if (requested?.enabled && requested.userId === params.userId) {
+        return this.planForPersonal(requested, fallbackPolicy);
+      }
+
       if (
-        requested &&
-        requested.enabled &&
-        (requested.userId === params.userId || requested.userId === null)
+        requested?.enabled &&
+        requested.userId === null &&
+        fallbackPolicy === AiFallbackPolicy.SYSTEM
       ) {
-        return requested;
+        return {
+          primary: requested,
+          systemFallback: null,
+          fallbackPolicy,
+        };
       }
     }
 
     if (!params.provider) {
-      return null;
+      const personal = await this.connections.findFirstEnabledByOwner(
+        params.userId,
+      );
+      if (personal) return this.planForPersonal(personal, fallbackPolicy);
+
+      if (fallbackPolicy !== AiFallbackPolicy.SYSTEM) return null;
+      const system = await this.connections.findFirstEnabledByOwner(null);
+      return system
+        ? { primary: system, systemFallback: null, fallbackPolicy }
+        : null;
     }
 
     const personal = await this.connections.findFirstEnabledByOwnerAndProvider(
@@ -50,12 +88,32 @@ export class AiConnectionResolver {
       params.provider,
     );
     if (personal) {
-      return personal;
+      return this.planForPersonal(personal, fallbackPolicy);
     }
 
-    return this.connections.findFirstEnabledByOwnerAndProvider(
+    if (fallbackPolicy !== AiFallbackPolicy.SYSTEM) return null;
+
+    const system = await this.connections.findFirstEnabledByOwnerAndProvider(
       null,
       params.provider,
     );
+    return system
+      ? { primary: system, systemFallback: null, fallbackPolicy }
+      : null;
+  }
+
+  private async planForPersonal(
+    personal: AiConnectionRecord,
+    fallbackPolicy: AiFallbackPolicy,
+  ): Promise<ResolvedAiConnectionPlan> {
+    const systemFallback =
+      fallbackPolicy === AiFallbackPolicy.SYSTEM
+        ? await this.connections.findFirstEnabledByOwnerAndProvider(
+            null,
+            personal.provider,
+          )
+        : null;
+
+    return { primary: personal, systemFallback, fallbackPolicy };
   }
 }

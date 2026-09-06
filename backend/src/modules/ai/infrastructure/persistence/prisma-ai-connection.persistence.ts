@@ -74,6 +74,16 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
     return record ? toDomainAiConnectionRecord(record) : null;
   }
 
+  async findFirstEnabledByOwner(
+    userId: string | null,
+  ): Promise<AiConnectionRecord | null> {
+    const record = await this.prisma.aiConnection.findFirst({
+      where: { userId, enabled: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    return record ? toDomainAiConnectionRecord(record) : null;
+  }
+
   async create(input: CreateAiConnectionInput): Promise<AiConnectionRecord> {
     const record = await this.prisma.aiConnection.create({
       data: {

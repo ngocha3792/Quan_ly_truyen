@@ -28,6 +28,108 @@
   font-size: 1rem;
 }
 
+.fallback-policy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  gap: 0.45rem 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  border-radius: 0.65rem;
+  background: rgba(120, 53, 15, 0.14);
+}
+
+.fallback-policy strong {
+  color: var(--text-strong);
+}
+
+.fallback-policy p,
+.fallback-policy small {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.fallback-policy small {
+  grid-column: 1 / -1;
+}
+
+.fallback-policy select {
+  min-height: 40px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: rgba(6, 11, 22, 0.72);
+  color: var(--text-strong);
+}
+
+.profile-settings {
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: rgba(6, 11, 22, 0.35);
+}
+
+.profile-settings h3,
+.profile-settings p {
+  margin: 0 0 0.5rem;
+}
+
+.profile-settings h3 {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.profile-settings p {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.profile-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.8rem 0;
+}
+
+.profile-settings__fields label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.profile-settings__fields input,
+.profile-settings__fields select,
+.profile-settings__fields textarea {
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: rgba(6, 11, 22, 0.72);
+  color: var(--text-strong);
+  font: inherit;
+}
+
+.profile-settings__prompt {
+  grid-column: 1 / -1;
+}
+
+.profile-settings__fields .profile-settings__checkbox {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+}
+
+.profile-settings__checkbox input {
+  min-height: auto;
+}
+
 .connection-list {
   display: grid;
   gap: 0.5rem;
@@ -315,5 +417,13 @@
 
   .connection-row {
     flex-wrap: wrap;
+  }
+
+  .fallback-policy {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-settings__fields {
+    grid-template-columns: 1fr;
   }
 }

@@ -6,7 +6,10 @@ import {
 } from '@/common/exceptions';
 
 import { AiMessageRole } from '../../domain/enums';
-import { MAX_RECENT_MESSAGES } from '../constants/ai-chat.constants';
+import {
+  DEFAULT_CHAT_SYSTEM_PROMPT,
+  MAX_RECENT_MESSAGES,
+} from '../constants/ai-chat.constants';
 import {
   AI_PROVIDER_REGISTRY_PORT,
   AiProviderRegistryPort,
@@ -26,6 +29,7 @@ import {
   AiMessage,
 } from '../ports/ai-provider-client.port';
 import { AiConnectionResolver } from '../connection-resolution/ai-connection-resolver';
+import { AiProfileManager } from '../profile';
 
 const PROVIDER_LABEL_FALLBACK = 'nhà cung cấp AI';
 
@@ -33,6 +37,11 @@ export interface AiChatContext {
   readonly conversation: AiConversationRecord;
   readonly connection: AiConnectionRecord;
   readonly providerConfig: AiConnectionConfig;
+  readonly systemFallback: {
+    readonly connection: AiConnectionRecord;
+    readonly providerConfig: AiConnectionConfig;
+  } | null;
+  readonly systemPrompt: string;
   readonly providerMessages: readonly AiMessage[];
 }
 
@@ -50,6 +59,7 @@ export class AiChatContextBuilder {
     @Inject(AI_CREDENTIAL_VAULT_PORT)
     private readonly vault: AiCredentialVaultPort,
     private readonly resolver: AiConnectionResolver,
+    private readonly profiles: AiProfileManager,
     @Inject(AI_PROVIDER_REGISTRY_PORT)
     private readonly registry: AiProviderRegistryPort,
   ) {}
@@ -71,13 +81,14 @@ export class AiChatContextBuilder {
       });
     }
 
-    const connection = await this.resolver.resolve({
+    const plan = await this.resolver.resolvePlan({
       userId,
       connectionId: conversation.connectionId,
       provider: conversation.provider,
     });
+    const profile = await this.profiles.resolve(userId);
 
-    if (!connection) {
+    if (!plan) {
       throw new BusinessRuleViolationException({
         message: `Chưa cấu hình kết nối cho ${PROVIDER_LABEL_FALLBACK} này. Vui lòng thêm kết nối cá nhân trong phần cài đặt hoặc liên hệ quản trị viên.`,
         rule: 'ai-connection.required',
@@ -98,14 +109,42 @@ export class AiChatContextBuilder {
       { role: 'user' as const, content: newUserContent },
     ];
 
-    const providerConfig: AiConnectionConfig = {
+    const providerConfig = await this.toProviderConfig(
+      plan.primary,
+      profile.model,
+    );
+    const systemFallback = plan.systemFallback
+      ? {
+          connection: plan.systemFallback,
+          providerConfig: await this.toProviderConfig(
+            plan.systemFallback,
+            profile.model,
+          ),
+        }
+      : null;
+
+    return {
+      conversation,
+      connection: plan.primary,
+      providerConfig,
+      systemFallback,
+      systemPrompt: profile.systemPrompt ?? DEFAULT_CHAT_SYSTEM_PROMPT,
+      providerMessages,
+    };
+  }
+
+  private async toProviderConfig(
+    connection: AiConnectionRecord,
+    profileModel: string | null,
+  ): Promise<AiConnectionConfig> {
+    return {
       provider: connection.provider,
       apiKey: await this.vault.decrypt(connection.encryptedApiKey),
       baseUrl: connection.baseUrl,
       model:
-        connection.defaultModel ?? this.registry.getModel(connection.provider),
+        profileModel ??
+        connection.defaultModel ??
+        this.registry.getModel(connection.provider),
     };
-
-    return { conversation, connection, providerConfig, providerMessages };
   }
 }

@@ -49,6 +49,10 @@ export interface AiConnectionPersistencePort {
     provider: AiProvider,
   ): Promise<AiConnectionRecord | null>;
 
+  findFirstEnabledByOwner(
+    userId: string | null,
+  ): Promise<AiConnectionRecord | null>;
+
   create(input: CreateAiConnectionInput): Promise<AiConnectionRecord>;
 
   update(

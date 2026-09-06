@@ -101,6 +101,21 @@ enum AiUsageCapability {
   @@map("ai_usage_capability")
 }
 
+enum AiRateLimitTier {
+  FREE       @map("free")
+  PRO        @map("pro")
+  ENTERPRISE @map("enterprise")
+
+  @@map("ai_rate_limit_tier")
+}
+
+enum AiFallbackPolicy {
+  NONE   @map("none")
+  SYSTEM @map("system")
+
+  @@map("ai_fallback_policy")
+}
+
 enum ChapterTranslationStatus {
   PENDING    @map("pending")
   PROCESSING @map("processing")
@@ -389,6 +404,10 @@ model User {
   aiConnections                AiConnection[]
   aiConversations              AiConversation[]
   aiUsages                     AiUsage[]
+  aiPolicy                     AiUserPolicy?
+  aiProfile                    AiUserProfile?
+  aiStoryProfiles              AiStoryProfile[]
+  aiRateLimitBuckets           AiRateLimitBucket[]
   chapterTranslationsRequested ChapterTranslation[]
 
   @@index([status, createdAt])
@@ -536,6 +555,65 @@ model AiUsage {
   @@index([userId, createdAt])
   @@index([connectionId])
   @@map("ai_usages")
+}
+
+model AiUserPolicy {
+  userId         String           @id @map("user_id") @db.Uuid
+  rateLimitTier  AiRateLimitTier  @default(FREE) @map("rate_limit_tier")
+  fallbackPolicy AiFallbackPolicy @default(NONE) @map("fallback_policy")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([rateLimitTier])
+  @@map("ai_user_policies")
+}
+
+model AiUserProfile {
+  userId                         String   @id @map("user_id") @db.Uuid
+  model                          String?  @db.VarChar(200)
+  systemPrompt                   String?  @map("system_prompt") @db.Text
+  defaultTranslationLanguageCode String   @default("en") @map("default_translation_language_code") @db.VarChar(10)
+  autoTranslateOnPublish         Boolean  @default(false) @map("auto_translate_on_publish")
+  createdAt                      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_user_profiles")
+}
+
+model AiStoryProfile {
+  storyId                        String   @id @map("story_id") @db.Uuid
+  userId                         String   @map("user_id") @db.Uuid
+  model                          String?  @db.VarChar(200)
+  systemPrompt                   String?  @map("system_prompt") @db.Text
+  defaultTranslationLanguageCode String?  @map("default_translation_language_code") @db.VarChar(10)
+  autoTranslateOnPublish         Boolean? @map("auto_translate_on_publish")
+  createdAt                      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ai_story_profiles")
+}
+
+model AiRateLimitBucket {
+  userId       String   @map("user_id") @db.Uuid
+  windowStart  DateTime @map("window_start") @db.Timestamptz(3)
+  requestCount Int      @default(0) @map("request_count")
+  tokenCount   Int      @default(0) @map("token_count")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, windowStart])
+  @@index([windowStart])
+  @@map("ai_rate_limit_buckets")
 }
 
 model ChapterTranslation {
@@ -983,6 +1061,7 @@ model Story {
   contributors      StoryContributor[]
   categories        StoryCategory[]
   tags              StoryTag[]
+  aiProfile         AiStoryProfile?
   chapters          Chapter[]
   comments          Comment[]
   ratings           Rating[]

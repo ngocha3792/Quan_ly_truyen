@@ -41,6 +41,7 @@ export interface FailChapterTranslationInput {
 }
 
 export interface ChapterSourceForTranslation {
+  readonly storyId: string;
   readonly title: string;
   readonly content: string;
 }

@@ -6,15 +6,18 @@ describe('sanitizeLogValue', () => {
     const input = {
       profile: { name: 'Reader', password: 'secret' },
       authorization: 'Bearer token',
+      apiKey: 'provider-key',
       smtp: { credential: 'smtp-password' },
     };
 
     expect(sanitizeLogValue(input)).toEqual({
       profile: { name: 'Reader', password: REDACTED_LOG_VALUE },
       authorization: REDACTED_LOG_VALUE,
+      apiKey: REDACTED_LOG_VALUE,
       smtp: { credential: REDACTED_LOG_VALUE },
     });
     expect(input.profile.password).toBe('secret');
+    expect(input.apiKey).toBe('provider-key');
   });
 
   it('sanitizes URL credentials and signed query values', () => {

@@ -10,6 +10,7 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 
 import type {
   AdminUserDetail,
+  AdminUserAiPolicy,
   AdminUserListResponse,
   AdminUserSecurityEvent,
   AdminUserSession,
@@ -17,6 +18,8 @@ import type {
   ManagedUserRoleFilter,
   ManagedUserStatus,
   ManagedUserStatusFilter,
+  AiFallbackPolicy,
+  AiRateLimitTier,
 } from '../domain/admin-user.models';
 
 @Injectable({
@@ -28,6 +31,8 @@ export class AdminUsersApiService {
   private readonly config = inject(APP_RUNTIME_CONFIG);
 
   private readonly baseUrl = `${this.config.apiBaseUrl}/admin/users`;
+
+  private readonly aiPolicyBaseUrl = `${this.config.apiBaseUrl}/admin/ai/users`;
 
   list(input: {
     readonly keyword: string;
@@ -92,6 +97,27 @@ export class AdminUsersApiService {
   getOne(userId: string): Observable<AdminUserDetail> {
     return this.http
       .get<ApiSuccessEnvelope<AdminUserDetail>>(`${this.baseUrl}/${userId}`)
+      .pipe(map((response) => response.data));
+  }
+
+  getAiPolicy(userId: string): Observable<AdminUserAiPolicy> {
+    return this.http
+      .get<ApiSuccessEnvelope<AdminUserAiPolicy>>(`${this.aiPolicyBaseUrl}/${userId}/policy`)
+      .pipe(map((response) => response.data));
+  }
+
+  updateAiPolicy(
+    userId: string,
+    input: {
+      readonly rateLimitTier: AiRateLimitTier;
+      readonly fallbackPolicy: AiFallbackPolicy;
+    },
+  ): Observable<AdminUserAiPolicy> {
+    return this.http
+      .patch<ApiSuccessEnvelope<AdminUserAiPolicy>>(
+        `${this.aiPolicyBaseUrl}/${userId}/policy`,
+        input,
+      )
       .pipe(map((response) => response.data));
   }
 

@@ -82,10 +82,13 @@
           [languages]="targetLanguageOptions"
           [requesting]="translationStore.requesting()"
           [translation]="translationStore.translation()"
-          [error]="translationStore.error()"
+          [error]="translationStore.error() || storyProfileStore.error()"
+          [profile]="storyProfileStore.profile()"
+          [profileSaving]="storyProfileStore.saving()"
           (translateRequested)="translateChapter($event)"
           (refreshRequested)="refreshTranslation($event)"
-          (errorDismissed)="translationStore.clearError()"
+          (errorDismissed)="translationStore.clearError(); storyProfileStore.clearError()"
+          (profileUpdated)="updateStoryAiProfile($event)"
         />
       }
     }

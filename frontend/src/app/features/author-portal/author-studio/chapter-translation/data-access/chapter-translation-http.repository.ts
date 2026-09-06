@@ -4,13 +4,37 @@ import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
-import { ChapterTranslation } from '../domain/chapter-translation.models';
+import {
+  AiStoryProfile,
+  ChapterTranslation,
+  UpdateAiStoryProfilePayload,
+} from '../domain/chapter-translation.models';
 import { ChapterTranslationRepository } from '../domain/chapter-translation.repository';
 
 @Injectable()
 export class ChapterTranslationHttpRepository extends ChapterTranslationRepository {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
+
+  getStoryProfile(storyId: string): Observable<AiStoryProfile> {
+    return this.http
+      .get<ApiSuccessEnvelope<AiStoryProfile>>(
+        `${this.config.apiBaseUrl}/author/stories/${storyId}/ai-profile`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  updateStoryProfile(
+    storyId: string,
+    payload: UpdateAiStoryProfilePayload,
+  ): Observable<AiStoryProfile> {
+    return this.http
+      .patch<ApiSuccessEnvelope<AiStoryProfile>>(
+        `${this.config.apiBaseUrl}/author/stories/${storyId}/ai-profile`,
+        payload,
+      )
+      .pipe(map((response) => response.data));
+  }
 
   request(
     storyId: string,

@@ -5,7 +5,10 @@ import {
   RateLimitExceededException,
 } from '@/common/exceptions';
 import { AiProvider } from '@/generated/prisma/client';
-import { TRANSLATE_CHAPTER_JOB } from '@/infrastructure/queue/contracts';
+import {
+  AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+  TRANSLATE_CHAPTER_JOB,
+} from '@/infrastructure/queue/contracts';
 
 import { AiTranslationProcessor } from './ai-translation.processor';
 
@@ -37,7 +40,9 @@ describe('AiTranslationProcessor', () => {
     markCompleted: jest.Mock;
     markFailed: jest.Mock;
   };
-  let connections: { findById: jest.Mock };
+  let resolver: { resolvePlan: jest.Mock };
+  let profiles: { resolve: jest.Mock };
+  let requestTranslation: { execute: jest.Mock };
   let vault: { decrypt: jest.Mock };
   let gateway: { generate: jest.Mock };
   let registry: { getModel: jest.Mock };
@@ -51,22 +56,37 @@ describe('AiTranslationProcessor', () => {
         connectionId: CONNECTION_ID,
         requestedById: USER_ID,
       }),
-      findChapterSource: jest
-        .fn()
-        .mockResolvedValue({ title: 'Chương 1', content: 'Nội dung' }),
+      findChapterSource: jest.fn().mockResolvedValue({
+        storyId: '22222222-2222-4222-8222-222222222222',
+        title: 'Chương 1',
+        content: 'Nội dung',
+      }),
       markProcessing: jest.fn(),
       markCompleted: jest.fn(),
       markFailed: jest.fn(),
     };
-    connections = {
-      findById: jest.fn().mockResolvedValue({
-        id: CONNECTION_ID,
-        provider: AiProvider.OPENAI,
-        encryptedApiKey: 'enc',
-        baseUrl: null,
-        defaultModel: 'gpt-4o-mini',
+    resolver = {
+      resolvePlan: jest.fn().mockResolvedValue({
+        primary: {
+          id: CONNECTION_ID,
+          provider: AiProvider.OPENAI,
+          encryptedApiKey: 'enc',
+          baseUrl: null,
+          defaultModel: 'gpt-4o-mini',
+        },
+        systemFallback: null,
+        fallbackPolicy: 'NONE',
       }),
     };
+    profiles = {
+      resolve: jest.fn().mockResolvedValue({
+        model: null,
+        systemPrompt: null,
+        defaultTranslationLanguageCode: 'en',
+        autoTranslateOnPublish: false,
+      }),
+    };
+    requestTranslation = { execute: jest.fn() };
     vault = { decrypt: jest.fn().mockResolvedValue('plain-api-key') };
     gateway = {
       generate: jest
@@ -78,7 +98,9 @@ describe('AiTranslationProcessor', () => {
 
     processor = new AiTranslationProcessor(
       translations as never,
-      connections as never,
+      resolver as never,
+      profiles as never,
+      requestTranslation as never,
       vault as never,
       gateway as never,
       registry as never,
@@ -89,6 +111,51 @@ describe('AiTranslationProcessor', () => {
     await expect(
       processor.process(fakeJob({ name: 'unknown.job' })),
     ).rejects.toBeInstanceOf(UnrecoverableError);
+  });
+
+  it('auto-translate outbox chỉ tạo request khi profile bật rõ ràng', async () => {
+    profiles.resolve.mockResolvedValue({
+      model: null,
+      systemPrompt: null,
+      defaultTranslationLanguageCode: 'ja',
+      autoTranslateOnPublish: true,
+    });
+
+    await processor.process({
+      name: AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+      data: {
+        payload: {
+          version: 1,
+          userId: USER_ID,
+          storyId: '22222222-2222-4222-8222-222222222222',
+          chapterId: CHAPTER_ID,
+        },
+      },
+    } as never);
+
+    expect(requestTranslation.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: USER_ID,
+        chapterId: CHAPTER_ID,
+        targetLanguageCode: 'ja',
+      }),
+    );
+  });
+
+  it('auto-translate outbox no-op khi profile tắt', async () => {
+    await processor.process({
+      name: AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+      data: {
+        payload: {
+          version: 1,
+          userId: USER_ID,
+          storyId: '22222222-2222-4222-8222-222222222222',
+          chapterId: CHAPTER_ID,
+        },
+      },
+    } as never);
+
+    expect(requestTranslation.execute).not.toHaveBeenCalled();
   });
 
   it('bỏ qua (no-op) khi không tìm thấy dòng translation', async () => {
@@ -130,7 +197,7 @@ describe('AiTranslationProcessor', () => {
   });
 
   it('ném UnrecoverableError khi không tìm thấy connection', async () => {
-    connections.findById.mockResolvedValue(null);
+    resolver.resolvePlan.mockResolvedValue(null);
 
     await expect(processor.process(fakeJob())).rejects.toBeInstanceOf(
       UnrecoverableError,
@@ -150,6 +217,7 @@ describe('AiTranslationProcessor', () => {
       }),
       expect.any(Object),
       'TRANSLATE',
+      null,
     );
     expect(translations.markCompleted).toHaveBeenCalledWith({
       translationId: TRANSLATION_ID,

@@ -17,6 +17,65 @@ header h3 {
   font-size: 14px;
 }
 
+.story-profile {
+  padding: 14px;
+  border: 1px solid rgba(126, 34, 206, 0.28);
+  border-radius: 10px;
+  background: rgba(126, 34, 206, 0.07);
+}
+
+.story-profile h4 {
+  margin: 0 0 10px;
+  color: var(--text-strong);
+}
+
+.story-profile__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.story-profile__grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.story-profile__grid input,
+.story-profile__grid select,
+.story-profile__grid textarea {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
+}
+
+.story-profile__prompt,
+.story-profile__checkbox {
+  grid-column: 1 / -1;
+}
+
+.story-profile__grid .story-profile__checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.story-profile__checkbox input {
+  min-height: auto;
+}
+
+@media (max-width: 700px) {
+  .story-profile__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .translation-controls {
   display: flex;
   flex-wrap: wrap;

@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AiMessageRole } from '../../../domain/enums';
-import { DEFAULT_CHAT_SYSTEM_PROMPT } from '../../constants/ai-chat.constants';
 import { AiGatewayPort, AI_GATEWAY_PORT } from '../../ports/ai-gateway.port';
 import {
   AI_CONVERSATION_PERSISTENCE_PORT,
@@ -39,10 +38,17 @@ export class SendAiMessageCommandHandler {
     const generateResult = await this.gateway.generate(
       context.providerConfig,
       {
-        systemPrompt: DEFAULT_CHAT_SYSTEM_PROMPT,
+        systemPrompt: context.systemPrompt,
         messages: context.providerMessages,
       },
       { userId: command.userId, connectionId: context.connection.id },
+      'CHAT',
+      context.systemFallback
+        ? {
+            config: context.systemFallback.providerConfig,
+            connectionId: context.systemFallback.connection.id,
+          }
+        : null,
     );
 
     const assistantMessage = await this.conversations.appendMessage(

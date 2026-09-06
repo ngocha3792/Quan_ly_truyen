@@ -53,6 +53,53 @@
         (removeAdmin)="removeAdmin()"
       />
 
+      @if (canManageAiSettings()) {
+        <section class="security-card ai-policy-card">
+          <header>
+            <h3>Hạn mức & fallback AI</h3>
+            <p>
+              Fallback mặc định là NONE. Chỉ SYSTEM mới cho phép dùng system key khi key cá nhân hết
+              tiền hoặc gặp lỗi.
+            </p>
+          </header>
+
+          @if (aiPolicyMessage()) {
+            <app-notice kind="success" [message]="aiPolicyMessage()" />
+          }
+          @if (aiPolicyError()) {
+            <app-notice kind="error" [message]="aiPolicyError()" />
+          }
+
+          <div class="ai-policy-fields">
+            <label>
+              Tier rate limit
+              <select [(ngModel)]="aiRateLimitTier" [disabled]="aiPolicyLoading()">
+                <option value="FREE">FREE</option>
+                <option value="PRO">PRO</option>
+                <option value="ENTERPRISE">ENTERPRISE</option>
+              </select>
+            </label>
+            <label>
+              Fallback policy
+              <select [(ngModel)]="aiFallbackPolicy" [disabled]="aiPolicyLoading()">
+                <option value="NONE">NONE — không dùng system key</option>
+                <option value="SYSTEM">SYSTEM — cho phép system key</option>
+              </select>
+            </label>
+            <app-button variant="primary" [loading]="aiPolicyLoading()" (click)="saveAiPolicy()">
+              Lưu chính sách AI
+            </app-button>
+          </div>
+
+          @if (aiPolicy(); as policy) {
+            <small>
+              Hạn mức hiện tại: {{ policy.limits.requests }} request và
+              {{ policy.limits.tokens }} token mỗi {{ policy.limits.windowSeconds / 60 }} phút.
+            </small>
+          }
+        </section>
+      }
+
       @if (canReadSecurity()) {
         <section class="security-card">
           <header class="security-card__header">

@@ -687,6 +687,24 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             createdAt: input.publishedAt,
           },
         });
+        await tx.outboxEvent.create({
+          data: {
+            idempotencyKey: `ai-auto-translate-chapter:${current.id}`,
+            aggregateType: 'ai',
+            aggregateId: current.id,
+            eventType: 'ai.auto-translate-chapter-published.v1',
+            payload: {
+              version: 1,
+              userId: story.authorId,
+              storyId: story.id,
+              chapterId: updated.id,
+            },
+            metadata: {
+              requestId: input.audit.requestId ?? null,
+            },
+            createdAt: input.publishedAt,
+          },
+        });
         return { status: 'published', chapter: this.toRecord(updated) };
       });
     } catch (error: unknown) {

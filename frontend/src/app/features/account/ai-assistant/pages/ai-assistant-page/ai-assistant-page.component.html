@@ -21,6 +21,77 @@
       @if (store.connectionsError()) {
         <app-error-alert title="Không thể xử lý yêu cầu" [message]="store.connectionsError()" />
       }
+      @if (profileStore.error()) {
+        <app-error-alert title="Không thể lưu cấu hình AI" [message]="profileStore.error()" />
+      }
+
+      @if (profileStore.policy(); as policy) {
+        <div class="fallback-policy">
+          <div>
+            <strong>Fallback sang system key</strong>
+            <p>
+              Mặc định bị tắt. Chỉ khi bạn chọn “Cho phép”, hệ thống mới có thể dùng key chung nếu
+              key cá nhân hết tiền hoặc nhà cung cấp báo lỗi.
+            </p>
+          </div>
+          <select
+            aria-label="Chính sách fallback sang system key"
+            [ngModel]="policy.fallbackPolicy"
+            [disabled]="profileStore.policyLoading()"
+            (ngModelChange)="setFallbackPolicy($event)"
+          >
+            <option value="NONE">Không cho phép (NONE)</option>
+            <option value="SYSTEM">Cho phép system key (SYSTEM)</option>
+          </select>
+          <small>
+            Tier {{ policy.rateLimitTier }} · {{ policy.limits.requests }} request / giờ ·
+            {{ policy.limits.tokens }} token / giờ
+          </small>
+        </div>
+      }
+
+      @if (profileStore.profile()) {
+        <div class="profile-settings">
+          <h3>AI Profile mặc định</h3>
+          <p>Model và prompt này áp dụng cho chat, đồng thời làm mặc định cho các truyện.</p>
+          <div class="profile-settings__fields">
+            <label>
+              Model override
+              <input
+                [(ngModel)]="profileModel"
+                maxlength="200"
+                placeholder="Để trống để dùng model kết nối"
+              />
+            </label>
+            <label>
+              Ngôn ngữ dịch mặc định
+              <select [(ngModel)]="profileLanguage">
+                <option value="en">Tiếng Anh</option>
+                <option value="zh">Tiếng Trung</option>
+                <option value="ja">Tiếng Nhật</option>
+                <option value="ko">Tiếng Hàn</option>
+                <option value="fr">Tiếng Pháp</option>
+                <option value="es">Tiếng Tây Ban Nha</option>
+              </select>
+            </label>
+            <label class="profile-settings__prompt">
+              System prompt / phong cách dịch
+              <textarea [(ngModel)]="profileSystemPrompt" rows="4" maxlength="8000"></textarea>
+            </label>
+            <label class="checkbox profile-settings__checkbox">
+              <input type="checkbox" [(ngModel)]="profileAutoTranslate" />
+              Tự động dịch khi publish chương mới
+            </label>
+          </div>
+          <app-button
+            variant="primary"
+            [loading]="profileStore.profileLoading()"
+            (click)="saveProfile()"
+          >
+            Lưu AI Profile
+          </app-button>
+        </div>
+      }
 
       @if (store.connectionsLoading() && store.connections().length === 0) {
         <app-loading-state message="Đang tải kết nối..." />

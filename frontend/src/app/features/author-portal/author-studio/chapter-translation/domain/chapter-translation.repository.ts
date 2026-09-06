@@ -1,8 +1,18 @@
 import { Observable } from 'rxjs';
 
-import { ChapterTranslation } from './chapter-translation.models';
+import {
+  AiStoryProfile,
+  ChapterTranslation,
+  UpdateAiStoryProfilePayload,
+} from './chapter-translation.models';
 
 export abstract class ChapterTranslationRepository {
+  abstract getStoryProfile(storyId: string): Observable<AiStoryProfile>;
+  abstract updateStoryProfile(
+    storyId: string,
+    payload: UpdateAiStoryProfilePayload,
+  ): Observable<AiStoryProfile>;
+
   abstract request(
     storyId: string,
     chapterId: string,

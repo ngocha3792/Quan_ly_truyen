@@ -17,6 +17,25 @@ export interface TargetLanguageOption {
   readonly label: string;
 }
 
+export interface AiStoryProfile {
+  readonly scope: 'STORY';
+  readonly userId: string;
+  readonly storyId: string;
+  readonly model: string | null;
+  readonly systemPrompt: string | null;
+  readonly defaultTranslationLanguageCode: string;
+  readonly autoTranslateOnPublish: boolean;
+  readonly inherits: readonly string[];
+  readonly updatedAt: string | null;
+}
+
+export interface UpdateAiStoryProfilePayload {
+  readonly model: string | null;
+  readonly systemPrompt: string | null;
+  readonly defaultTranslationLanguageCode: string | null;
+  readonly autoTranslateOnPublish: boolean | null;
+}
+
 export const TARGET_LANGUAGE_OPTIONS: readonly TargetLanguageOption[] = [
   { code: 'en', label: 'Tiếng Anh' },
   { code: 'zh', label: 'Tiếng Trung' },

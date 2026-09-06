@@ -10,12 +10,16 @@ import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 import {
   AiConnection,
   AiConnectionTestResult,
+  AiFallbackPolicy,
+  AiPolicy,
+  AiProfile,
   AiConversationDetail,
   AiConversationSummary,
   AiSendMessageResult,
   AiSendMessageStreamEvent,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
+  UpdateAiProfilePayload,
 } from '../domain/ai-assistant.models';
 
 const STREAM_FALLBACK_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ AI. Vui lòng thử lại.';
@@ -27,6 +31,32 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
   private readonly tokenStore = inject(TokenStore);
   private readonly connectionsUrl = `${this.config.apiBaseUrl}/ai/connections`;
   private readonly conversationsUrl = `${this.config.apiBaseUrl}/ai/conversations`;
+  private readonly policyUrl = `${this.config.apiBaseUrl}/ai/policy`;
+  private readonly profileUrl = `${this.config.apiBaseUrl}/ai/profile`;
+
+  getPolicy(): Observable<AiPolicy> {
+    return this.http
+      .get<ApiSuccessEnvelope<AiPolicy>>(this.policyUrl)
+      .pipe(map((response) => response.data));
+  }
+
+  updateFallbackPolicy(fallbackPolicy: AiFallbackPolicy): Observable<AiPolicy> {
+    return this.http
+      .patch<ApiSuccessEnvelope<AiPolicy>>(this.policyUrl, { fallbackPolicy })
+      .pipe(map((response) => response.data));
+  }
+
+  getProfile(): Observable<AiProfile> {
+    return this.http
+      .get<ApiSuccessEnvelope<AiProfile>>(this.profileUrl)
+      .pipe(map((response) => response.data));
+  }
+
+  updateProfile(payload: UpdateAiProfilePayload): Observable<AiProfile> {
+    return this.http
+      .patch<ApiSuccessEnvelope<AiProfile>>(this.profileUrl, payload)
+      .pipe(map((response) => response.data));
+  }
 
   listConnections(): Observable<readonly AiConnection[]> {
     return this.http

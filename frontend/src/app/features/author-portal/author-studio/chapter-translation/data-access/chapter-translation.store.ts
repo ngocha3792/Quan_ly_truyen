@@ -14,7 +14,6 @@ export class ChapterTranslationStore {
   readonly requesting = signal(false);
   readonly translation = signal<ChapterTranslation | null>(null);
   readonly error = signal<string | null>(null);
-
   request(storyId: string, chapterId: string, targetLanguageCode: string): void {
     if (this.requesting()) return;
 

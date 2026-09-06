@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
   AppException,
@@ -10,6 +10,7 @@ import {
 import { AiErrorCode, AiProvider } from '../../domain/enums';
 import {
   AiGatewayPort,
+  AiSystemFallback,
   AiUsageContext,
 } from '../../application/ports/ai-gateway.port';
 import {
@@ -25,6 +26,7 @@ import {
   AiUsagePersistencePort,
 } from '../../application/ports/ai-usage.persistence.port';
 import { AiProviderRegistry } from '../providers/ai-provider.registry';
+import { AiRateLimiter } from '../../application/policy/ai-rate-limiter';
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   [AiProvider.GEMINI]: 'Gemini',
@@ -47,10 +49,13 @@ interface RecordUsageParams {
 
 @Injectable()
 export class AiGatewayService implements AiGatewayPort {
+  private readonly logger = new Logger(AiGatewayService.name);
+
   constructor(
     private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_PERSISTENCE_PORT)
     private readonly usagePersistence: AiUsagePersistencePort,
+    private readonly rateLimits: AiRateLimiter,
   ) {}
 
   async generate(
@@ -58,6 +63,175 @@ export class AiGatewayService implements AiGatewayPort {
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability: AiUsageCapabilityValue = 'CHAT',
+    systemFallback?: AiSystemFallback | null,
+  ): Promise<AiGenerateResponse> {
+    const reservation = await this.rateLimits.reserve(
+      usageContext.userId,
+      request,
+    );
+    let result: AiGenerateResponse | undefined;
+
+    try {
+      result = await this.generateAttempt(
+        config,
+        request,
+        usageContext,
+        capability,
+      );
+      return result;
+    } catch (error) {
+      if (!systemFallback) throw error;
+
+      this.logger.warn({
+        event: 'ai.system-fallback.activated',
+        userId: usageContext.userId,
+        capability,
+        primaryConnectionId: usageContext.connectionId,
+        fallbackConnectionId: systemFallback.connectionId,
+        primaryProvider: config.provider,
+        fallbackProvider: systemFallback.config.provider,
+        reasonCode: this.errorCode(error),
+      });
+
+      result = await this.generateAttempt(
+        systemFallback.config,
+        request,
+        {
+          userId: usageContext.userId,
+          connectionId: systemFallback.connectionId,
+        },
+        capability,
+      );
+      return result;
+    } finally {
+      await this.rateLimits.reconcile(
+        reservation,
+        result?.usage,
+        result?.content ?? '',
+      );
+    }
+  }
+
+  async *generateStream(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+    usageContext: AiUsageContext,
+    capability: AiUsageCapabilityValue = 'CHAT',
+    systemFallback?: AiSystemFallback | null,
+  ): AsyncIterable<AiStreamDelta> {
+    const reservation = await this.rateLimits.reserve(
+      usageContext.userId,
+      request,
+    );
+    let activeConfig = config;
+    let activeUsageContext = usageContext;
+    let pendingFallback = systemFallback ?? null;
+    let completedUsage:
+      | { readonly inputTokens?: number; readonly outputTokens?: number }
+      | undefined;
+    let completedText = '';
+
+    try {
+      for (;;) {
+        const startedAt = Date.now();
+        const client = this.registry.getClient(activeConfig.provider);
+        let inputTokens: number | undefined;
+        let outputTokens: number | undefined;
+        let attemptText = '';
+
+        try {
+          for await (const delta of client.generateStream(
+            activeConfig,
+            request,
+          )) {
+            if ('usage' in delta) {
+              inputTokens = delta.usage.inputTokens ?? inputTokens;
+              outputTokens = delta.usage.outputTokens ?? outputTokens;
+            } else {
+              attemptText += delta.text;
+            }
+
+            yield delta;
+          }
+
+          completedUsage = { inputTokens, outputTokens };
+          completedText = attemptText;
+          await this.recordUsage({
+            usageContext: activeUsageContext,
+            capability,
+            provider: activeConfig.provider,
+            model: activeConfig.model,
+            latencyMs: Date.now() - startedAt,
+            success: true,
+            inputTokens,
+            outputTokens,
+          });
+          this.logAttempt({
+            usageContext: activeUsageContext,
+            capability,
+            provider: activeConfig.provider,
+            model: activeConfig.model,
+            latencyMs: Date.now() - startedAt,
+            success: true,
+            inputTokens,
+            outputTokens,
+          });
+          return;
+        } catch (error) {
+          const failedAttempt: RecordUsageParams = {
+            usageContext: activeUsageContext,
+            capability,
+            provider: activeConfig.provider,
+            model: activeConfig.model,
+            latencyMs: Date.now() - startedAt,
+            success: false,
+            inputTokens,
+            outputTokens,
+            errorCode:
+              error instanceof AiProviderRequestError
+                ? error.code
+                : AiErrorCode.UNKNOWN,
+          };
+          await this.recordUsage(failedAttempt);
+          this.logAttempt(failedAttempt);
+
+          if (pendingFallback && attemptText.length === 0) {
+            this.logger.warn({
+              event: 'ai.system-fallback.activated',
+              userId: usageContext.userId,
+              capability,
+              primaryConnectionId: activeUsageContext.connectionId,
+              fallbackConnectionId: pendingFallback.connectionId,
+              primaryProvider: activeConfig.provider,
+              fallbackProvider: pendingFallback.config.provider,
+              reasonCode: this.errorCode(error),
+            });
+            activeConfig = pendingFallback.config;
+            activeUsageContext = {
+              userId: usageContext.userId,
+              connectionId: pendingFallback.connectionId,
+            };
+            pendingFallback = null;
+            continue;
+          }
+
+          throw this.toDomainException(error, activeConfig.provider);
+        }
+      }
+    } finally {
+      await this.rateLimits.reconcile(
+        reservation,
+        completedUsage,
+        completedText,
+      );
+    }
+  }
+
+  private async generateAttempt(
+    config: AiConnectionConfig,
+    request: AiGenerateRequest,
+    usageContext: AiUsageContext,
+    capability: AiUsageCapabilityValue,
   ): Promise<AiGenerateResponse> {
     const startedAt = Date.now();
 
@@ -75,10 +249,20 @@ export class AiGatewayService implements AiGatewayPort {
         inputTokens: result.usage?.inputTokens,
         outputTokens: result.usage?.outputTokens,
       });
+      this.logAttempt({
+        usageContext,
+        capability,
+        provider: config.provider,
+        model: config.model,
+        latencyMs: result.latencyMs,
+        success: true,
+        inputTokens: result.usage?.inputTokens,
+        outputTokens: result.usage?.outputTokens,
+      });
 
       return result;
     } catch (error) {
-      await this.recordUsage({
+      const failedAttempt: RecordUsageParams = {
         usageContext,
         capability,
         provider: config.provider,
@@ -89,62 +273,37 @@ export class AiGatewayService implements AiGatewayPort {
           error instanceof AiProviderRequestError
             ? error.code
             : AiErrorCode.UNKNOWN,
-      });
+      };
+      await this.recordUsage(failedAttempt);
+      this.logAttempt(failedAttempt);
 
       throw this.toDomainException(error, config.provider);
     }
   }
 
-  async *generateStream(
-    config: AiConnectionConfig,
-    request: AiGenerateRequest,
-    usageContext: AiUsageContext,
-    capability: AiUsageCapabilityValue = 'CHAT',
-  ): AsyncIterable<AiStreamDelta> {
-    const startedAt = Date.now();
-    const client = this.registry.getClient(config.provider);
+  private logAttempt(params: RecordUsageParams): void {
+    const event = {
+      event: 'ai.provider-attempt.completed',
+      userId: params.usageContext.userId,
+      connectionId: params.usageContext.connectionId,
+      capability: params.capability,
+      provider: params.provider,
+      model: params.model,
+      latencyMs: params.latencyMs,
+      success: params.success,
+      inputTokens: params.inputTokens,
+      outputTokens: params.outputTokens,
+      errorCode: params.errorCode,
+    };
 
-    let inputTokens: number | undefined;
-    let outputTokens: number | undefined;
+    if (params.success) this.logger.log(event);
+    else this.logger.warn(event);
+  }
 
-    try {
-      for await (const delta of client.generateStream(config, request)) {
-        if ('usage' in delta) {
-          inputTokens = delta.usage.inputTokens ?? inputTokens;
-          outputTokens = delta.usage.outputTokens ?? outputTokens;
-        }
-
-        yield delta;
-      }
-
-      await this.recordUsage({
-        usageContext,
-        capability,
-        provider: config.provider,
-        model: config.model,
-        latencyMs: Date.now() - startedAt,
-        success: true,
-        inputTokens,
-        outputTokens,
-      });
-    } catch (error) {
-      await this.recordUsage({
-        usageContext,
-        capability,
-        provider: config.provider,
-        model: config.model,
-        latencyMs: Date.now() - startedAt,
-        success: false,
-        inputTokens,
-        outputTokens,
-        errorCode:
-          error instanceof AiProviderRequestError
-            ? error.code
-            : AiErrorCode.UNKNOWN,
-      });
-
-      throw this.toDomainException(error, config.provider);
-    }
+  private errorCode(error: unknown): string {
+    if (error instanceof AppException) return error.code;
+    if (error instanceof AiProviderRequestError) return error.code;
+    return AiErrorCode.UNKNOWN;
   }
 
   private async recordUsage(params: RecordUsageParams): Promise<void> {

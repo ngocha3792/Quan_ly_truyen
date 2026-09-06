@@ -46,6 +46,40 @@ export interface AiConnectionTestResult {
   readonly message?: string;
 }
 
+export type AiFallbackPolicy = 'NONE' | 'SYSTEM';
+export type AiRateLimitTier = 'FREE' | 'PRO' | 'ENTERPRISE';
+
+export interface AiPolicy {
+  readonly userId: string;
+  readonly rateLimitTier: AiRateLimitTier;
+  readonly fallbackPolicy: AiFallbackPolicy;
+  readonly limits: {
+    readonly windowSeconds: number;
+    readonly requests: number;
+    readonly tokens: number;
+  };
+  readonly updatedAt: string | null;
+}
+
+export interface AiProfile {
+  readonly scope: 'USER' | 'STORY';
+  readonly userId: string;
+  readonly storyId: string | null;
+  readonly model: string | null;
+  readonly systemPrompt: string | null;
+  readonly defaultTranslationLanguageCode: string;
+  readonly autoTranslateOnPublish: boolean;
+  readonly inherits: readonly string[];
+  readonly updatedAt: string | null;
+}
+
+export interface UpdateAiProfilePayload {
+  readonly model?: string | null;
+  readonly systemPrompt?: string | null;
+  readonly defaultTranslationLanguageCode?: string;
+  readonly autoTranslateOnPublish?: boolean;
+}
+
 export interface AiConversationSummary {
   readonly id: string;
   readonly connectionId: string | null;

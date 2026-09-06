@@ -20,9 +20,13 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
+import { AiStoryProfileStore } from '../../chapter-translation/data-access/ai-story-profile.store';
 import { ChapterTranslationStore } from '../../chapter-translation/data-access/chapter-translation.store';
 import { provideChapterTranslation } from '../../chapter-translation/data-access/chapter-translation.providers';
-import { TARGET_LANGUAGE_OPTIONS } from '../../chapter-translation/domain/chapter-translation.models';
+import {
+  TARGET_LANGUAGE_OPTIONS,
+  UpdateAiStoryProfilePayload,
+} from '../../chapter-translation/domain/chapter-translation.models';
 import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/chapter-translation-panel/chapter-translation-panel.component';
 
 @Component({
@@ -39,7 +43,12 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
     NoticeComponent,
     ChapterTranslationPanelComponent,
   ],
-  providers: [AuthorChapterEditorStore, provideChapterTranslation(), ChapterTranslationStore],
+  providers: [
+    AuthorChapterEditorStore,
+    provideChapterTranslation(),
+    ChapterTranslationStore,
+    AiStoryProfileStore,
+  ],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrl: './author-chapter-editor-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +57,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   @ViewChild('contentArea') private contentArea?: ElementRef<HTMLTextAreaElement>;
   protected readonly store = inject(AuthorChapterEditorStore);
   protected readonly translationStore = inject(ChapterTranslationStore);
+  protected readonly storyProfileStore = inject(AiStoryProfileStore);
   protected readonly targetLanguageOptions = TARGET_LANGUAGE_OPTIONS;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -94,6 +104,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.store.load(this.storyId, this.chapterId);
+    this.storyProfileStore.load(this.storyId);
   }
 
   protected translateChapter(targetLanguageCode: string): void {
@@ -104,6 +115,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected refreshTranslation(targetLanguageCode: string): void {
     if (!this.chapterId) return;
     this.translationStore.refresh(this.storyId, this.chapterId, targetLanguageCode);
+  }
+
+  protected updateStoryAiProfile(payload: UpdateAiStoryProfilePayload): void {
+    this.storyProfileStore.update(this.storyId, payload);
   }
 
   protected save(): void {

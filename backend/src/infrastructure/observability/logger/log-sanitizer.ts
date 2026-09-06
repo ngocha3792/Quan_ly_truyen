@@ -8,7 +8,7 @@ const MAX_STRING_LENGTH = 8192;
 const MAX_STACK_LENGTH = 16_384;
 
 const SENSITIVE_KEY_PATTERN =
-  /(?:password|passphrase|credential|authorization|cookie|secret|access.?token|refresh.?token|reset.?token|verification.?token|idempotency.?key|private.?key|raw.?body|email.?body|signed.?url|signature)/i;
+  /(?:password|passphrase|credential|authorization|cookie|secret|api.?key|access.?token|refresh.?token|reset.?token|verification.?token|idempotency.?key|private.?key|raw.?body|email.?body|signed.?url|signature)/i;
 
 export interface SanitizedLogError {
   type: string;

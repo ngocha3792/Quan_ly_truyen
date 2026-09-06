@@ -20,6 +20,32 @@
   gap: 16px;
   align-items: flex-start;
 }
+.ai-policy-card header p,
+.ai-policy-card small {
+  color: #94a3b8;
+}
+.ai-policy-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 14px 0;
+}
+.ai-policy-fields label {
+  display: grid;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+.ai-policy-fields select {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(6, 11, 22, 0.55);
+  color: var(--text-strong);
+}
 .security-actions,
 .dialog-actions {
   display: flex;
@@ -75,5 +101,8 @@ td {
   }
   .security-actions {
     margin-top: 10px;
+  }
+  .ai-policy-fields {
+    grid-template-columns: 1fr;
   }
 }

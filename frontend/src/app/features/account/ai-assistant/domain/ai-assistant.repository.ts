@@ -3,15 +3,24 @@ import { Observable } from 'rxjs';
 import {
   AiConnection,
   AiConnectionTestResult,
+  AiFallbackPolicy,
+  AiPolicy,
+  AiProfile,
   AiConversationDetail,
   AiConversationSummary,
   AiSendMessageResult,
   AiSendMessageStreamEvent,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
+  UpdateAiProfilePayload,
 } from './ai-assistant.models';
 
 export abstract class AiAssistantRepository {
+  abstract getPolicy(): Observable<AiPolicy>;
+  abstract updateFallbackPolicy(fallbackPolicy: AiFallbackPolicy): Observable<AiPolicy>;
+  abstract getProfile(): Observable<AiProfile>;
+  abstract updateProfile(payload: UpdateAiProfilePayload): Observable<AiProfile>;
+
   abstract listConnections(): Observable<readonly AiConnection[]>;
   abstract createConnection(payload: CreateAiConnectionPayload): Observable<AiConnection>;
   abstract updateConnection(

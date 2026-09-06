@@ -93,3 +93,18 @@ export interface AdminUserSecurityEvent {
   readonly requestId: string | null;
   readonly createdAt: string;
 }
+
+export type AiRateLimitTier = 'FREE' | 'PRO' | 'ENTERPRISE';
+export type AiFallbackPolicy = 'NONE' | 'SYSTEM';
+
+export interface AdminUserAiPolicy {
+  readonly userId: string;
+  readonly rateLimitTier: AiRateLimitTier;
+  readonly fallbackPolicy: AiFallbackPolicy;
+  readonly limits: {
+    readonly windowSeconds: number;
+    readonly requests: number;
+    readonly tokens: number;
+  };
+  readonly updatedAt: string | null;
+}

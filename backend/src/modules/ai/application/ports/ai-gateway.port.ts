@@ -13,12 +13,18 @@ export interface AiUsageContext {
   readonly connectionId: string | null;
 }
 
+export interface AiSystemFallback {
+  readonly config: AiConnectionConfig;
+  readonly connectionId: string;
+}
+
 export interface AiGatewayPort {
   generate(
     config: AiConnectionConfig,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability?: AiUsageCapabilityValue,
+    systemFallback?: AiSystemFallback | null,
   ): Promise<AiGenerateResponse>;
 
   generateStream(
@@ -26,5 +32,6 @@ export interface AiGatewayPort {
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
     capability?: AiUsageCapabilityValue,
+    systemFallback?: AiSystemFallback | null,
   ): AsyncIterable<AiStreamDelta>;
 }

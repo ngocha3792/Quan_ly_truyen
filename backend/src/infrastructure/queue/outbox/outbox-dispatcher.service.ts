@@ -62,6 +62,7 @@ export class OutboxDispatcherService {
     @InjectQueue(QUEUE_NAMES.MAIL) private readonly mailQueue: Queue,
     @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
     private readonly notificationQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.AI) private readonly aiQueue: Queue,
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
     private readonly propagation: TracePropagationService,
@@ -317,6 +318,7 @@ export class OutboxDispatcherService {
     const queueMap: Record<string, Queue> = {
       mail: this.mailQueue,
       notifications: this.notificationQueue,
+      ai: this.aiQueue,
     };
 
     return queueMap[aggregateType.toLowerCase()] ?? null;

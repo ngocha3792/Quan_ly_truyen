@@ -26,7 +26,6 @@ export class AiAssistantStore {
   readonly connectionsLoading = signal(false);
   readonly connectionMutating = signal<string | 'new' | null>(null);
   readonly connectionsError = signal<string | null>(null);
-
   readonly conversations = signal<readonly AiConversationSummary[]>([]);
   readonly conversationsLoading = signal(false);
   readonly creating = signal(false);

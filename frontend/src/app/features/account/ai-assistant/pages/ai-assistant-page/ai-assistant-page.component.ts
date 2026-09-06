@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -14,10 +14,12 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { provideAiAssistant } from '../../data-access/ai-assistant.providers';
 import { AiAssistantStore } from '../../data-access/ai-assistant.store';
+import { AiProfileStore } from '../../data-access/ai-profile.store';
 import {
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
   AiConnection,
+  AiFallbackPolicy,
   AiProviderId,
 } from '../../domain/ai-assistant.models';
 
@@ -35,7 +37,7 @@ import {
     LoadingStateComponent,
     DialogShellComponent,
   ],
-  providers: [...provideAiAssistant(), AiAssistantStore],
+  providers: [...provideAiAssistant(), AiAssistantStore, AiProfileStore],
   templateUrl: './ai-assistant-page.component.html',
   styleUrl: './ai-assistant-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,12 +64,30 @@ export class AiAssistantPageComponent implements OnInit {
 
   protected newConversationConnectionId = '';
   protected draft = '';
+  protected profileModel = '';
+  protected profileSystemPrompt = '';
+  protected profileLanguage = 'en';
+  protected profileAutoTranslate = false;
 
   protected readonly store = inject(AiAssistantStore);
+  protected readonly profileStore = inject(AiProfileStore);
+
+  constructor() {
+    effect(() => {
+      const profile = this.profileStore.profile();
+      if (!profile) return;
+      this.profileModel = profile.model ?? '';
+      this.profileSystemPrompt = profile.systemPrompt ?? '';
+      this.profileLanguage = profile.defaultTranslationLanguageCode;
+      this.profileAutoTranslate = profile.autoTranslateOnPublish;
+    });
+  }
 
   ngOnInit(): void {
     this.store.loadConnections();
     this.store.loadConversations();
+    this.profileStore.loadPolicy();
+    this.profileStore.loadProfile();
   }
 
   protected get isCompatible(): boolean {
@@ -76,6 +96,20 @@ export class AiAssistantPageComponent implements OnInit {
 
   protected toggleSettings(): void {
     this.settingsOpen.set(!this.settingsOpen());
+  }
+
+  protected setFallbackPolicy(value: string): void {
+    if (value !== 'NONE' && value !== 'SYSTEM') return;
+    this.profileStore.updateFallbackPolicy(value as AiFallbackPolicy);
+  }
+
+  protected saveProfile(): void {
+    this.profileStore.updateProfile({
+      model: this.profileModel.trim() || null,
+      systemPrompt: this.profileSystemPrompt.trim() || null,
+      defaultTranslationLanguageCode: this.profileLanguage,
+      autoTranslateOnPublish: this.profileAutoTranslate,
+    });
   }
 
   protected openCreateConnection(): void {

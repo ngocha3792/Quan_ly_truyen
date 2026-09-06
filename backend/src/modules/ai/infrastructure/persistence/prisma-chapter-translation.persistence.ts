@@ -129,7 +129,7 @@ export class PrismaChapterTranslationPersistence implements ChapterTranslationPe
   ): Promise<ChapterSourceForTranslation | null> {
     return this.prisma.chapter.findUnique({
       where: { id: chapterId },
-      select: { title: true, content: true },
+      select: { storyId: true, title: true, content: true },
     });
   }
 }

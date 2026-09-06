@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { OutboxStatus } from '@/generated/prisma/enums';
 import {
+  AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
   AUTHOR_CHAPTER_PUBLISHED_NOTIFICATION_EVENT,
   SEND_MAIL_JOB,
 } from '@/infrastructure/queue/contracts';
@@ -129,6 +130,39 @@ describe('OutboxDispatcherService', () => {
         outboxEventId: 'notification-event-1',
       }),
       { jobId: 'outbox-notification-event-1' },
+    );
+  });
+
+  it('routes auto-translation outbox events to the AI queue', async () => {
+    const aiQueue = { add: jest.fn().mockResolvedValue({ id: 'ai-job' }) };
+    const routedService = createService(prisma, queue, queue, aiQueue);
+    prisma.$queryRaw.mockResolvedValue([claimed('ai-event-1', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      event({
+        id: 'ai-event-1',
+        aggregateType: 'ai',
+        aggregateId: 'chapter-1',
+        eventType: AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+        payload: {
+          version: 1,
+          userId: 'user-1',
+          storyId: 'story-1',
+          chapterId: 'chapter-1',
+        },
+      }),
+    ]);
+
+    await expect(routedService.dispatchBatch()).resolves.toBe(1);
+
+    expect(queue.add).not.toHaveBeenCalled();
+    expect(aiQueue.add).toHaveBeenCalledWith(
+      AUTO_TRANSLATE_CHAPTER_PUBLISHED_EVENT,
+      expect.objectContaining({
+        aggregateType: 'ai',
+        aggregateId: 'chapter-1',
+        outboxEventId: 'ai-event-1',
+      }),
+      { jobId: 'outbox-ai-event-1' },
     );
   });
 
@@ -405,6 +439,7 @@ function createService(
   prisma: object,
   queue: object,
   notificationQueue: object = queue,
+  aiQueue: object = queue,
 ): OutboxDispatcherService {
   const config = new ConfigService({
     queue: {
@@ -450,6 +485,7 @@ function createService(
     config,
     queue as never,
     notificationQueue as never,
+    aiQueue as never,
     metrics as never,
     tracing as never,
     propagation as never,
