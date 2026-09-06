@@ -10,6 +10,8 @@ const USER_ID = '11111111-1111-4111-8111-111111111111';
 describe('AiRateLimiter', () => {
   let policies: jest.Mocked<AiPolicyPersistencePort>;
   let buckets: jest.Mocked<AiRateLimitPersistencePort>;
+  let reserveBucket: jest.Mock;
+  let reconcileTokens: jest.Mock;
   let service: AiRateLimiter;
 
   beforeEach(() => {
@@ -24,12 +26,14 @@ describe('AiRateLimiter', () => {
       userExists: jest.fn(),
       upsert: jest.fn(),
     };
+    reserveBucket = jest.fn().mockResolvedValue({
+      allowed: true,
+      bucket: { requestCount: 1, tokenCount: 1_030 },
+    });
+    reconcileTokens = jest.fn();
     buckets = {
-      reserve: jest.fn().mockResolvedValue({
-        allowed: true,
-        bucket: { requestCount: 1, tokenCount: 1_030 },
-      }),
-      reconcileTokens: jest.fn(),
+      reserve: reserveBucket,
+      reconcileTokens,
     };
     service = new AiRateLimiter(policies, buckets);
   });
@@ -40,7 +44,7 @@ describe('AiRateLimiter', () => {
       messages: [{ role: 'user', content: 'abcdefgh' }],
     });
 
-    expect(buckets.reserve).toHaveBeenCalledWith(
+    expect(reserveBucket).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: USER_ID,
         requestLimit: 20,
@@ -52,7 +56,7 @@ describe('AiRateLimiter', () => {
   });
 
   it('ném AI_RATE_LIMITED khi bucket từ chối', async () => {
-    buckets.reserve.mockResolvedValue({
+    reserveBucket.mockResolvedValue({
       allowed: false,
       bucket: { requestCount: 20, tokenCount: 10_000 },
     });
@@ -82,7 +86,7 @@ describe('AiRateLimiter', () => {
       'ignored',
     );
 
-    expect(buckets.reconcileTokens).toHaveBeenCalledWith(
+    expect(reconcileTokens).toHaveBeenCalledWith(
       USER_ID,
       reservation?.windowStart,
       1_026,

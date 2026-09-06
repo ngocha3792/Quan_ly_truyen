@@ -4,9 +4,11 @@ import { AiProfileManager } from './ai-profile.manager';
 describe('AiProfileManager', () => {
   const updatedAt = new Date('2026-09-06T00:00:00Z');
   let persistence: jest.Mocked<AiProfilePersistencePort>;
+  let findStory: jest.Mock;
   let manager: AiProfileManager;
 
   beforeEach(() => {
+    findStory = jest.fn().mockResolvedValue(null);
     persistence = {
       userExists: jest.fn().mockResolvedValue(true),
       storyExistsForOwner: jest.fn().mockResolvedValue(true),
@@ -18,7 +20,7 @@ describe('AiProfileManager', () => {
         autoTranslateOnPublish: true,
         updatedAt,
       }),
-      findStory: jest.fn().mockResolvedValue(null),
+      findStory,
       upsertUser: jest.fn(),
       upsertStory: jest.fn(),
     };
@@ -42,7 +44,7 @@ describe('AiProfileManager', () => {
   });
 
   it('story override từng field và vẫn kế thừa các field null', async () => {
-    persistence.findStory.mockResolvedValue({
+    findStory.mockResolvedValue({
       storyId: 'story-1',
       userId: 'user-1',
       model: 'story-model',
@@ -69,6 +71,6 @@ describe('AiProfileManager', () => {
     ).rejects.toMatchObject({
       code: 'RESOURCE_NOT_FOUND',
     });
-    expect(persistence.findStory).not.toHaveBeenCalled();
+    expect(findStory).not.toHaveBeenCalled();
   });
 });
