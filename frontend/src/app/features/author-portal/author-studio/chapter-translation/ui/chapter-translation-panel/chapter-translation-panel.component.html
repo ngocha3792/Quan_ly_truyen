@@ -1,0 +1,44 @@
+<section class="translation-panel">
+  <header>
+    <h3>Dịch chương bằng AI</h3>
+  </header>
+
+  @if (error()) {
+    <app-notice kind="error" [message]="error()" />
+  }
+
+  <div class="translation-controls">
+    <select [(ngModel)]="selectedLanguageCode" [disabled]="requesting()">
+      @for (language of languages(); track language.code) {
+        <option [value]="language.code">{{ language.label }}</option>
+      }
+    </select>
+
+    <app-button variant="primary" [loading]="requesting()" (click)="translateChapter()">
+      Dịch chương
+    </app-button>
+
+    <app-button variant="secondary" [loading]="requesting()" (click)="refreshStatus()">
+      Kiểm tra trạng thái
+    </app-button>
+  </div>
+
+  @if (translation(); as result) {
+    <div class="translation-result">
+      <span class="status" [attr.data-status]="result.status">
+        {{ statusLabels[result.status] }}
+      </span>
+
+      @if (result.status === 'COMPLETED') {
+        <div class="translation-content">
+          <strong>{{ result.translatedTitle }}</strong>
+          <p>{{ result.translatedContent }}</p>
+        </div>
+      }
+
+      @if (result.status === 'FAILED' && result.errorMessage) {
+        <p class="error-message">{{ result.errorMessage }}</p>
+      }
+    </div>
+  }
+</section>

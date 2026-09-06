@@ -4,6 +4,7 @@ import type {
   AiGenerateResponse,
   AiStreamDelta,
 } from './ai-provider-client.port';
+import type { AiUsageCapabilityValue } from './ai-usage.persistence.port';
 
 export const AI_GATEWAY_PORT = Symbol.for('modules.ai.gateway');
 
@@ -17,11 +18,13 @@ export interface AiGatewayPort {
     config: AiConnectionConfig,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
+    capability?: AiUsageCapabilityValue,
   ): Promise<AiGenerateResponse>;
 
   generateStream(
     config: AiConnectionConfig,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
+    capability?: AiUsageCapabilityValue,
   ): AsyncIterable<AiStreamDelta>;
 }

@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
+import { AuthorsModule } from '@/modules/authors';
+import { ChaptersModule } from '@/modules/chapters';
 
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
@@ -11,14 +13,17 @@ import {
   AI_USAGE_PERSISTENCE_PORT,
   AiChatContextBuilderService,
   AiConnectionResolverService,
+  CHAPTER_TRANSLATION_PERSISTENCE_PORT,
   CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
   DeleteAiConnectionCommandHandler,
   DeleteAiConversationCommandHandler,
   GetAiConversationQueryHandler,
+  GetChapterTranslationQueryHandler,
   ListAiConnectionModelsQueryHandler,
   ListAiConnectionsQueryHandler,
   ListAiConversationsQueryHandler,
+  RequestChapterTranslationCommandHandler,
   SendAiMessageCommandHandler,
   SendAiMessageStreamCommandHandler,
   TestAiConnectionCommandHandler,
@@ -35,11 +40,13 @@ import {
   PrismaAiConnectionPersistence,
   PrismaAiConversationPersistence,
   PrismaAiUsagePersistence,
+  PrismaChapterTranslationPersistence,
 } from './infrastructure';
 import {
   AdminAiConnectionsController,
   AiChatController,
   AiConnectionsController,
+  ChapterTranslationsController,
 } from './presentation/http';
 
 const portProviders = [
@@ -63,6 +70,10 @@ const portProviders = [
     provide: AI_USAGE_PERSISTENCE_PORT,
     useExisting: PrismaAiUsagePersistence,
   },
+  {
+    provide: CHAPTER_TRANSLATION_PERSISTENCE_PORT,
+    useExisting: PrismaChapterTranslationPersistence,
+  },
 ];
 
 const applicationHandlers = [
@@ -78,19 +89,28 @@ const applicationHandlers = [
   GetAiConversationQueryHandler,
   SendAiMessageCommandHandler,
   SendAiMessageStreamCommandHandler,
+  RequestChapterTranslationCommandHandler,
+  GetChapterTranslationQueryHandler,
 ];
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    ChaptersModule,
+    AuthorsModule,
+  ],
   controllers: [
     AdminAiConnectionsController,
     AiConnectionsController,
     AiChatController,
+    ChapterTranslationsController,
   ],
   providers: [
     PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
     PrismaAiUsagePersistence,
+    PrismaChapterTranslationPersistence,
     AiApiKeyCipherAdapter,
     AiGatewayService,
     ...portProviders,

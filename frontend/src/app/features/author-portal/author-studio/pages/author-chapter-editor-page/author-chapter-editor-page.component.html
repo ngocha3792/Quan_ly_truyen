@@ -76,6 +76,18 @@
           </app-button>
         </footer>
       </form>
+
+      @if (!isCreate) {
+        <app-chapter-translation-panel
+          [languages]="targetLanguageOptions"
+          [requesting]="translationStore.requesting()"
+          [translation]="translationStore.translation()"
+          [error]="translationStore.error()"
+          (translateRequested)="translateChapter($event)"
+          (refreshRequested)="refreshTranslation($event)"
+          (errorDismissed)="translationStore.clearError()"
+        />
+      }
     }
   </div>
 </main>

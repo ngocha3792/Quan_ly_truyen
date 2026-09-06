@@ -23,6 +23,7 @@ import {
 } from '../../application/ports/ai-provider-client.port';
 import {
   AI_USAGE_PERSISTENCE_PORT,
+  AiUsageCapabilityValue,
   AiUsagePersistencePort,
 } from '../../application/ports/ai-usage.persistence.port';
 import { AiProviderRegistry } from '../providers/ai-provider.registry';
@@ -36,6 +37,7 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
 
 interface RecordUsageParams {
   readonly usageContext: AiUsageContext;
+  readonly capability: AiUsageCapabilityValue;
   readonly provider: AiProvider;
   readonly model: string;
   readonly latencyMs: number;
@@ -57,6 +59,7 @@ export class AiGatewayService implements AiGatewayPort {
     config: AiConnectionConfig,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
+    capability: AiUsageCapabilityValue = 'CHAT',
   ): Promise<AiGenerateResponse> {
     const startedAt = Date.now();
 
@@ -66,6 +69,7 @@ export class AiGatewayService implements AiGatewayPort {
 
       await this.recordUsage({
         usageContext,
+        capability,
         provider: config.provider,
         model: config.model,
         latencyMs: result.latencyMs,
@@ -78,6 +82,7 @@ export class AiGatewayService implements AiGatewayPort {
     } catch (error) {
       await this.recordUsage({
         usageContext,
+        capability,
         provider: config.provider,
         model: config.model,
         latencyMs: Date.now() - startedAt,
@@ -96,6 +101,7 @@ export class AiGatewayService implements AiGatewayPort {
     config: AiConnectionConfig,
     request: AiGenerateRequest,
     usageContext: AiUsageContext,
+    capability: AiUsageCapabilityValue = 'CHAT',
   ): AsyncIterable<AiStreamDelta> {
     const startedAt = Date.now();
     const client = this.registry.getClient(config.provider);
@@ -115,6 +121,7 @@ export class AiGatewayService implements AiGatewayPort {
 
       await this.recordUsage({
         usageContext,
+        capability,
         provider: config.provider,
         model: config.model,
         latencyMs: Date.now() - startedAt,
@@ -125,6 +132,7 @@ export class AiGatewayService implements AiGatewayPort {
     } catch (error) {
       await this.recordUsage({
         usageContext,
+        capability,
         provider: config.provider,
         model: config.model,
         latencyMs: Date.now() - startedAt,
@@ -148,7 +156,7 @@ export class AiGatewayService implements AiGatewayPort {
         connectionId: params.usageContext.connectionId,
         provider: params.provider,
         model: params.model,
-        capability: 'CHAT',
+        capability: params.capability,
         inputTokens: params.inputTokens,
         outputTokens: params.outputTokens,
         latencyMs: params.latencyMs,

@@ -11,6 +11,7 @@ import { QueueModule } from './infrastructure/queue';
 import { OutboxModule } from './infrastructure/queue/outbox';
 import { NotificationsWorkerModule } from './modules/notifications';
 import { AnalyticsWorkerModule } from './modules/analytics';
+import { AiWorkerModule } from './modules/ai';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -31,6 +32,7 @@ const queueWorkersEnabled =
           MailModule,
           NotificationsWorkerModule,
           AnalyticsWorkerModule,
+          AiWorkerModule,
         ]
       : []),
   ],
