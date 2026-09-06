@@ -1,3 +1,5 @@
-export * from './ai-key.persistence.port';
+export * from './ai-connection.persistence.port';
 export * from './ai-conversation.persistence.port';
 export * from './ai-provider-client.port';
+export * from './ai-gateway.port';
+export * from './ai-credential-vault.port';

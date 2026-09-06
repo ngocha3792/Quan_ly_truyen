@@ -1,16 +1,14 @@
 import {
-  IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
 
-import { AiProvider } from '@/generated/prisma/client';
-
 export class CreateAiConversationRequest {
-  @IsEnum(AiProvider)
-  provider!: AiProvider;
+  @IsUUID('4')
+  connectionId!: string;
 
   @IsOptional()
   @IsString()

@@ -9,12 +9,14 @@ import {
 } from '@/common/exceptions';
 import type { AiConfig } from '@/config';
 
+import type { AiCredentialVaultPort } from '../../application/ports/ai-credential-vault.port';
+
 const AAD = Buffer.from('quan-ly-truyen:ai-api-key:v1', 'utf8');
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 
 @Injectable()
-export class AiApiKeyCipherAdapter {
+export class AiApiKeyCipherAdapter implements AiCredentialVaultPort {
   private readonly key: Buffer | null;
 
   constructor(configService: ConfigService) {
@@ -23,7 +25,7 @@ export class AiApiKeyCipherAdapter {
     this.key = encoded ? Buffer.from(encoded, 'base64') : null;
   }
 
-  encrypt(secret: string): string {
+  encrypt(secret: string): Promise<string> {
     const key = this.requireKey();
     const iv = randomBytes(IV_BYTES);
     const cipher = createCipheriv('aes-256-gcm', key, iv, {
@@ -35,15 +37,17 @@ export class AiApiKeyCipherAdapter {
       cipher.final(),
     ]);
 
-    return [
-      'v1',
-      iv.toString('base64url'),
-      ciphertext.toString('base64url'),
-      cipher.getAuthTag().toString('base64url'),
-    ].join('.');
+    return Promise.resolve(
+      [
+        'v1',
+        iv.toString('base64url'),
+        ciphertext.toString('base64url'),
+        cipher.getAuthTag().toString('base64url'),
+      ].join('.'),
+    );
   }
 
-  decrypt(envelope: string): string {
+  decrypt(envelope: string): Promise<string> {
     const key = this.requireKey();
     const [version, ivText, ciphertextText, tagText] = envelope.split('.');
     if (version !== 'v1' || !ivText || !ciphertextText || !tagText) {
@@ -62,10 +66,12 @@ export class AiApiKeyCipherAdapter {
       );
       decipher.setAAD(AAD);
       decipher.setAuthTag(Buffer.from(tagText, 'base64url'));
-      return Buffer.concat([
-        decipher.update(Buffer.from(ciphertextText, 'base64url')),
-        decipher.final(),
-      ]).toString('utf8');
+      return Promise.resolve(
+        Buffer.concat([
+          decipher.update(Buffer.from(ciphertextText, 'base64url')),
+          decipher.final(),
+        ]).toString('utf8'),
+      );
     } catch {
       throw new InvalidTokenException({
         code: 'AI_API_KEY_INVALID',

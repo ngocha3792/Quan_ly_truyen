@@ -1,21 +1,28 @@
 import { Observable } from 'rxjs';
 
 import {
+  AiConnection,
+  AiConnectionTestResult,
   AiConversationDetail,
   AiConversationSummary,
-  AiKeyStatus,
-  AiProviderId,
   AiSendMessageResult,
+  CreateAiConnectionPayload,
+  UpdateAiConnectionPayload,
 } from './ai-assistant.models';
 
 export abstract class AiAssistantRepository {
-  abstract listKeys(): Observable<readonly AiKeyStatus[]>;
-  abstract saveKey(provider: AiProviderId, apiKey: string): Observable<void>;
-  abstract removeKey(provider: AiProviderId): Observable<void>;
+  abstract listConnections(): Observable<readonly AiConnection[]>;
+  abstract createConnection(payload: CreateAiConnectionPayload): Observable<AiConnection>;
+  abstract updateConnection(
+    connectionId: string,
+    payload: UpdateAiConnectionPayload,
+  ): Observable<AiConnection>;
+  abstract deleteConnection(connectionId: string): Observable<void>;
+  abstract testConnection(connectionId: string): Observable<AiConnectionTestResult>;
 
   abstract listConversations(): Observable<readonly AiConversationSummary[]>;
   abstract createConversation(
-    provider: AiProviderId,
+    connectionId: string,
     title?: string,
   ): Observable<AiConversationSummary>;
   abstract getConversation(conversationId: string): Observable<AiConversationDetail>;

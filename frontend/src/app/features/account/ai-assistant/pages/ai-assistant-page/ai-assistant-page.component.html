@@ -7,56 +7,50 @@
   >
     <app-button variant="secondary" (click)="toggleSettings()">
       <app-icon name="key" [size]="16" />
-      API key của bạn
+      Kết nối AI của bạn
     </app-button>
   </app-page-heading>
 
   @if (settingsOpen()) {
-    <section class="key-settings">
-      @if (store.keysError()) {
-        <app-error-alert title="Không thể xử lý yêu cầu" [message]="store.keysError()" />
+    <section class="connections-panel">
+      <header>
+        <h2>Kết nối AI của bạn</h2>
+        <app-button variant="primary" (click)="openCreateConnection()">Thêm kết nối</app-button>
+      </header>
+
+      @if (store.connectionsError()) {
+        <app-error-alert title="Không thể xử lý yêu cầu" [message]="store.connectionsError()" />
       }
-      <div class="key-grid">
-        @for (provider of providers; track provider) {
-          <div class="key-card">
-            <header>
-              <strong>{{ labels[provider] }}</strong>
-              @if (keyStatusFor(provider)?.configured) {
-                <span class="status status--configured">
-                  Đã cấu hình · ••••{{ keyStatusFor(provider)?.lastFour }}
-                </span>
-              } @else {
-                <span class="status status--missing">Dùng key hệ thống (nếu có)</span>
-              }
-            </header>
-            <input
-              type="password"
-              autocomplete="off"
-              [(ngModel)]="keyInputs[provider]"
-              placeholder="Nhập API key riêng của bạn"
-            />
-            <div class="key-actions">
-              <app-button
-                variant="primary"
-                [disabled]="!keyInputs[provider].trim()"
-                [loading]="store.keysMutating() === provider"
-                (click)="saveKey(provider)"
-              >
-                Lưu
-              </app-button>
-              @if (keyStatusFor(provider)?.configured) {
-                <app-button
-                  variant="danger"
-                  [disabled]="store.keysMutating() === provider"
-                  (click)="removeKey(provider)"
+
+      @if (store.connectionsLoading() && store.connections().length === 0) {
+        <app-loading-state message="Đang tải kết nối..." />
+      } @else {
+        <div class="connection-list">
+          @for (connection of store.connections(); track connection.id) {
+            <article class="connection-row">
+              <div class="connection-info">
+                <strong>{{ connection.name }}</strong>
+                <small
+                  >{{ labels[connection.provider] }} · {{ connection.defaultModel || '—' }}</small
                 >
+              </div>
+              <span class="status" [class.status--disabled]="!connection.enabled">
+                {{ connection.enabled ? 'Đang bật' : 'Đã tắt' }}
+              </span>
+              <div class="row-actions">
+                <app-button variant="secondary" (click)="openEditConnection(connection)">
+                  Sửa
+                </app-button>
+                <app-button variant="danger" (click)="removeConnection(connection, $event)">
                   Xóa
                 </app-button>
-              }
-            </div>
-          </div>
-        }
-      </div>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty-hint">Chưa có kết nối nào. Bấm "Thêm kết nối" để bắt đầu.</p>
+          }
+        </div>
+      }
     </section>
   }
 
@@ -67,12 +61,20 @@
   <div class="chat-layout">
     <aside class="conversation-sidebar">
       <div class="new-conversation">
-        <select [(ngModel)]="newConversationProvider">
-          @for (provider of providers; track provider) {
-            <option [value]="provider">{{ labels[provider] }}</option>
+        <select [(ngModel)]="newConversationConnectionId">
+          <option value="">Chọn kết nối...</option>
+          @for (connection of store.connections(); track connection.id) {
+            <option [value]="connection.id">
+              {{ connection.name }} ({{ labels[connection.provider] }})
+            </option>
           }
         </select>
-        <app-button variant="primary" [loading]="store.creating()" (click)="createConversation()">
+        <app-button
+          variant="primary"
+          [disabled]="!newConversationConnectionId"
+          [loading]="store.creating()"
+          (click)="createConversation()"
+        >
           Cuộc trò chuyện mới
         </app-button>
       </div>
@@ -151,4 +153,57 @@
       }
     </section>
   </div>
+
+  @if (editorOpen()) {
+    <app-dialog-shell
+      [open]="true"
+      [title]="editing ? 'Sửa kết nối' : 'Thêm kết nối AI'"
+      dialogTitleId="ai-connection-editor-title"
+      (closed)="editorOpen.set(false)"
+    >
+      <div class="editor-fields">
+        @if (!editing) {
+          <label
+            >Nhà cung cấp
+            <select [(ngModel)]="editProvider">
+              @for (provider of providers; track provider) {
+                <option [value]="provider">{{ labels[provider] }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        <label>Tên kết nối *<input [(ngModel)]="editName" maxlength="120" /></label>
+
+        <label
+          >API key {{ editing ? '(để trống nếu không đổi)' : '*' }}
+          <input type="password" autocomplete="off" [(ngModel)]="editApiKey" />
+        </label>
+
+        @if (isCompatible) {
+          <label
+            >Base URL *
+            <input [(ngModel)]="editBaseUrl" placeholder="https://openrouter.ai/api/v1" />
+          </label>
+        }
+
+        <label
+          >Model mặc định {{ isCompatible ? '*' : '' }}
+          <input [(ngModel)]="editDefaultModel" placeholder="vd: gpt-4o-mini" />
+        </label>
+
+        @if (editing) {
+          <label class="checkbox"
+            ><input type="checkbox" [(ngModel)]="editEnabled" /> Đang bật</label
+          >
+        }
+      </div>
+      <div class="modal-actions">
+        <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
+        <app-button variant="primary" [disabled]="!editName.trim()" (click)="saveConnection()">
+          Lưu
+        </app-button>
+      </div>
+    </app-dialog-shell>
+  }
 </main>

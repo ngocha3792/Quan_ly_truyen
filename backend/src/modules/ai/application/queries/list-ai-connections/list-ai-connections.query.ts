@@ -1,3 +1,3 @@
-export class ListAiKeysQuery {
+export class ListAiConnectionsQuery {
   constructor(readonly userId: string | null) {}
 }

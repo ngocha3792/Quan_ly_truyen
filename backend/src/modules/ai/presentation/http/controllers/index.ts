@@ -1,3 +1,3 @@
-export * from './admin-ai-settings.controller';
-export * from './ai-keys.controller';
+export * from './admin-ai-connections.controller';
+export * from './ai-connections.controller';
 export * from './ai-chat.controller';

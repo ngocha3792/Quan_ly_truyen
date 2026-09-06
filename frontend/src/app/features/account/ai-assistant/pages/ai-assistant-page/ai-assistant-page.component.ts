@@ -6,6 +6,7 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
@@ -16,7 +17,7 @@ import { AiAssistantStore } from '../../data-access/ai-assistant.store';
 import {
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
-  AiKeyStatus,
+  AiConnection,
   AiProviderId,
 } from '../../domain/ai-assistant.models';
 
@@ -32,6 +33,7 @@ import {
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    DialogShellComponent,
   ],
   providers: [...provideAiAssistant(), AiAssistantStore],
   templateUrl: './ai-assistant-page.component.html',
@@ -39,53 +41,107 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AiAssistantPageComponent implements OnInit {
+  protected readonly providers = AI_PROVIDERS;
+  protected readonly labels = AI_PROVIDER_LABELS;
+
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
     { label: 'Trang chủ', route: '/' },
     { label: 'Trợ lý AI' },
   ];
 
-  protected readonly providers = AI_PROVIDERS;
-  protected readonly labels = AI_PROVIDER_LABELS;
-
   protected readonly settingsOpen = signal(false);
-  protected readonly keyInputs: Record<AiProviderId, string> = {
-    GEMINI: '',
-    OPENAI: '',
-    ANTHROPIC: '',
-  };
+  protected readonly editorOpen = signal(false);
 
-  protected newConversationProvider: AiProviderId = 'GEMINI';
+  protected editing: AiConnection | null = null;
+  protected editName = '';
+  protected editProvider: AiProviderId = 'GEMINI';
+  protected editApiKey = '';
+  protected editBaseUrl = '';
+  protected editDefaultModel = '';
+  protected editEnabled = true;
+
+  protected newConversationConnectionId = '';
   protected draft = '';
 
   protected readonly store = inject(AiAssistantStore);
 
   ngOnInit(): void {
-    this.store.loadKeys();
+    this.store.loadConnections();
     this.store.loadConversations();
+  }
+
+  protected get isCompatible(): boolean {
+    return this.editProvider === 'OPENAI_COMPATIBLE';
   }
 
   protected toggleSettings(): void {
     this.settingsOpen.set(!this.settingsOpen());
   }
 
-  protected keyStatusFor(provider: AiProviderId): AiKeyStatus | null {
-    return this.store.keys().find((key) => key.provider === provider) ?? null;
+  protected openCreateConnection(): void {
+    this.editing = null;
+    this.editName = '';
+    this.editProvider = 'GEMINI';
+    this.editApiKey = '';
+    this.editBaseUrl = '';
+    this.editDefaultModel = '';
+    this.editEnabled = true;
+    this.editorOpen.set(true);
   }
 
-  protected saveKey(provider: AiProviderId): void {
-    const apiKey = this.keyInputs[provider].trim();
-    if (!apiKey) return;
-    this.store.saveKey(provider, apiKey);
-    this.keyInputs[provider] = '';
+  protected openEditConnection(connection: AiConnection): void {
+    this.editing = connection;
+    this.editName = connection.name;
+    this.editProvider = connection.provider;
+    this.editApiKey = '';
+    this.editBaseUrl = connection.baseUrl ?? '';
+    this.editDefaultModel = connection.defaultModel ?? '';
+    this.editEnabled = connection.enabled;
+    this.editorOpen.set(true);
   }
 
-  protected removeKey(provider: AiProviderId): void {
-    if (!window.confirm(`Xóa API key ${AI_PROVIDER_LABELS[provider]} của bạn?`)) return;
-    this.store.removeKey(provider);
+  protected saveConnection(): void {
+    const name = this.editName.trim();
+    if (!name) return;
+
+    if (this.editing) {
+      this.updateAndClose(this.editing.id, {
+        name,
+        apiKey: this.editApiKey.trim() || undefined,
+        baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+        defaultModel: this.editDefaultModel.trim() || null,
+        enabled: this.editEnabled,
+      });
+      return;
+    }
+
+    this.store.createConnection({
+      name,
+      provider: this.editProvider,
+      apiKey: this.editApiKey.trim(),
+      baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+      defaultModel: this.editDefaultModel.trim() || null,
+    });
+    this.editorOpen.set(false);
+  }
+
+  private updateAndClose(
+    connectionId: string,
+    payload: Parameters<AiAssistantStore['updateConnection']>[1],
+  ): void {
+    this.store.updateConnection(connectionId, payload);
+    this.editorOpen.set(false);
+  }
+
+  protected removeConnection(connection: AiConnection, event: Event): void {
+    event.stopPropagation();
+    if (!window.confirm(`Xóa kết nối "${connection.name}"?`)) return;
+    this.store.deleteConnection(connection.id);
   }
 
   protected createConversation(): void {
-    this.store.createConversation(this.newConversationProvider);
+    if (!this.newConversationConnectionId) return;
+    this.store.createConversation(this.newConversationConnectionId);
   }
 
   protected deleteConversation(conversationId: string, event: Event): void {

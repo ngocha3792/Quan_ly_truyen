@@ -7,6 +7,7 @@ export const AI_CONVERSATION_PERSISTENCE_PORT = Symbol.for(
 export interface AiConversationRecord {
   readonly id: string;
   readonly userId: string;
+  readonly connectionId: string | null;
   readonly provider: AiProvider;
   readonly title: string;
   readonly createdAt: Date;
@@ -33,6 +34,7 @@ export interface AiConversationPersistencePort {
 
   create(
     userId: string,
+    connectionId: string | null,
     provider: AiProvider,
     title: string,
   ): Promise<AiConversationRecord>;
@@ -45,5 +47,5 @@ export interface AiConversationPersistencePort {
     content: string,
   ): Promise<AiMessageRecord>;
 
-  touch(conversationId: string): Promise<void>;
+  touch(conversationId: string, connectionId?: string | null): Promise<void>;
 }

@@ -6,32 +6,54 @@ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 import {
+  AiConnection,
+  AiConnectionTestResult,
   AiConversationDetail,
   AiConversationSummary,
-  AiKeyStatus,
-  AiProviderId,
   AiSendMessageResult,
+  CreateAiConnectionPayload,
+  UpdateAiConnectionPayload,
 } from '../domain/ai-assistant.models';
 
 @Injectable()
 export class AiAssistantHttpRepository implements AiAssistantRepository {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
-  private readonly keysUrl = `${this.config.apiBaseUrl}/ai/keys`;
+  private readonly connectionsUrl = `${this.config.apiBaseUrl}/ai/connections`;
   private readonly conversationsUrl = `${this.config.apiBaseUrl}/ai/conversations`;
 
-  listKeys(): Observable<readonly AiKeyStatus[]> {
+  listConnections(): Observable<readonly AiConnection[]> {
     return this.http
-      .get<ApiSuccessEnvelope<readonly AiKeyStatus[]>>(this.keysUrl)
+      .get<ApiSuccessEnvelope<readonly AiConnection[]>>(this.connectionsUrl)
       .pipe(map((response) => response.data));
   }
 
-  saveKey(provider: AiProviderId, apiKey: string): Observable<void> {
-    return this.http.put<void>(`${this.keysUrl}/${provider}`, { apiKey });
+  createConnection(payload: CreateAiConnectionPayload): Observable<AiConnection> {
+    return this.http
+      .post<ApiSuccessEnvelope<AiConnection>>(this.connectionsUrl, payload)
+      .pipe(map((response) => response.data));
   }
 
-  removeKey(provider: AiProviderId): Observable<void> {
-    return this.http.delete<void>(`${this.keysUrl}/${provider}`);
+  updateConnection(
+    connectionId: string,
+    payload: UpdateAiConnectionPayload,
+  ): Observable<AiConnection> {
+    return this.http
+      .patch<ApiSuccessEnvelope<AiConnection>>(`${this.connectionsUrl}/${connectionId}`, payload)
+      .pipe(map((response) => response.data));
+  }
+
+  deleteConnection(connectionId: string): Observable<void> {
+    return this.http.delete<void>(`${this.connectionsUrl}/${connectionId}`);
+  }
+
+  testConnection(connectionId: string): Observable<AiConnectionTestResult> {
+    return this.http
+      .post<ApiSuccessEnvelope<AiConnectionTestResult>>(
+        `${this.connectionsUrl}/${connectionId}/test`,
+        {},
+      )
+      .pipe(map((response) => response.data));
   }
 
   listConversations(): Observable<readonly AiConversationSummary[]> {
@@ -40,10 +62,10 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
       .pipe(map((response) => response.data));
   }
 
-  createConversation(provider: AiProviderId, title?: string): Observable<AiConversationSummary> {
+  createConversation(connectionId: string, title?: string): Observable<AiConversationSummary> {
     return this.http
       .post<ApiSuccessEnvelope<AiConversationSummary>>(this.conversationsUrl, {
-        provider,
+        connectionId,
         title,
       })
       .pipe(map((response) => response.data));

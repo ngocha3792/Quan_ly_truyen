@@ -16,6 +16,7 @@ import {
   BreadcrumbItem,
 } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
+import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
@@ -23,11 +24,10 @@ import { PageHeadingComponent } from '../../../../../shared/components/page-head
 import { AdminAiSettingsApiService } from '../../data-access/admin-ai-settings-api.service';
 import {
   AI_PROVIDER_LABELS,
+  AI_PROVIDERS,
+  AiConnection,
   AiProviderId,
-  AiProviderKeyStatus,
 } from '../../domain/admin-ai-settings.models';
-
-const PROVIDERS: readonly AiProviderId[] = ['GEMINI', 'OPENAI', 'ANTHROPIC'];
 
 @Component({
   selector: 'app-admin-ai-settings-page',
@@ -40,6 +40,7 @@ const PROVIDERS: readonly AiProviderId[] = ['GEMINI', 'OPENAI', 'ANTHROPIC'];
     LoadingStateComponent,
     NoticeComponent,
     ButtonComponent,
+    DialogShellComponent,
   ],
   templateUrl: './admin-ai-settings-page.component.html',
   styleUrl: './admin-ai-settings-page.component.scss',
@@ -55,66 +56,133 @@ export class AdminAiSettingsPageComponent implements OnInit {
     { label: 'Trợ lý AI' },
   ];
 
-  protected readonly providers = PROVIDERS;
+  protected readonly providers = AI_PROVIDERS;
   protected readonly labels = AI_PROVIDER_LABELS;
 
-  protected readonly keys = signal<readonly AiProviderKeyStatus[]>([]);
+  protected readonly connections = signal<readonly AiConnection[]>([]);
   protected readonly loading = signal(false);
-  protected readonly mutating = signal<AiProviderId | null>(null);
+  protected readonly mutating = signal(false);
+  protected readonly testingId = signal<string | null>(null);
   protected readonly error = signal('');
   protected readonly message = signal('');
+  protected readonly editorOpen = signal(false);
 
-  protected readonly inputValues: Record<AiProviderId, string> = {
-    GEMINI: '',
-    OPENAI: '',
-    ANTHROPIC: '',
-  };
+  protected editing: AiConnection | null = null;
+  protected editName = '';
+  protected editProvider: AiProviderId = 'GEMINI';
+  protected editApiKey = '';
+  protected editBaseUrl = '';
+  protected editDefaultModel = '';
+  protected editEnabled = true;
 
   ngOnInit(): void {
     this.load();
   }
 
-  protected statusFor(provider: AiProviderId): AiProviderKeyStatus | null {
-    return this.keys().find((key) => key.provider === provider) ?? null;
+  protected get isCompatible(): boolean {
+    return this.editProvider === 'OPENAI_COMPATIBLE';
   }
 
-  protected save(provider: AiProviderId): void {
-    const apiKey = this.inputValues[provider].trim();
-    if (!apiKey || this.mutating()) return;
-
-    this.mutating.set(provider);
+  protected openCreate(): void {
+    this.editing = null;
+    this.editName = '';
+    this.editProvider = 'GEMINI';
+    this.editApiKey = '';
+    this.editBaseUrl = '';
+    this.editDefaultModel = '';
+    this.editEnabled = true;
     this.error.set('');
-    this.api
-      .save(provider, apiKey)
+    this.editorOpen.set(true);
+  }
+
+  protected openEdit(connection: AiConnection): void {
+    this.editing = connection;
+    this.editName = connection.name;
+    this.editProvider = connection.provider;
+    this.editApiKey = '';
+    this.editBaseUrl = connection.baseUrl ?? '';
+    this.editDefaultModel = connection.defaultModel ?? '';
+    this.editEnabled = connection.enabled;
+    this.error.set('');
+    this.editorOpen.set(true);
+  }
+
+  protected saveEditor(): void {
+    const name = this.editName.trim();
+    if (!name || this.mutating()) return;
+
+    this.mutating.set(true);
+    this.error.set('');
+
+    const request$ = this.editing
+      ? this.api.update(this.editing.id, {
+          name,
+          apiKey: this.editApiKey.trim() || undefined,
+          baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+          defaultModel: this.editDefaultModel.trim() || null,
+          enabled: this.editEnabled,
+        })
+      : this.api.create({
+          name,
+          provider: this.editProvider,
+          apiKey: this.editApiKey.trim(),
+          baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+          defaultModel: this.editDefaultModel.trim() || null,
+        });
+
+    request$
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.mutating.set(null)),
+        finalize(() => this.mutating.set(false)),
       )
       .subscribe({
         next: () => {
-          this.inputValues[provider] = '';
-          this.message.set(`Đã lưu API key ${AI_PROVIDER_LABELS[provider]}.`);
+          this.editorOpen.set(false);
+          this.message.set(this.editing ? 'Đã cập nhật kết nối.' : 'Đã thêm kết nối AI.');
           this.load();
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
   }
 
-  protected remove(provider: AiProviderId): void {
-    if (this.mutating()) return;
-    if (!window.confirm(`Xóa API key ${AI_PROVIDER_LABELS[provider]} khỏi hệ thống?`)) return;
+  protected test(connection: AiConnection): void {
+    if (this.testingId()) return;
 
-    this.mutating.set(provider);
+    this.testingId.set(connection.id);
     this.error.set('');
     this.api
-      .remove(provider)
+      .test(connection.id)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.mutating.set(null)),
+        finalize(() => this.testingId.set(null)),
+      )
+      .subscribe({
+        next: (result) => {
+          this.message.set(
+            result.ok
+              ? `Kết nối "${connection.name}" hoạt động tốt.`
+              : (result.message ?? `Kết nối "${connection.name}" thất bại.`),
+          );
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  protected remove(connection: AiConnection): void {
+    if (this.mutating()) return;
+    if (!window.confirm(`Xóa kết nối "${connection.name}"?`)) return;
+
+    this.mutating.set(true);
+    this.error.set('');
+    this.api
+      .remove(connection.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.mutating.set(false)),
       )
       .subscribe({
         next: () => {
-          this.message.set(`Đã xóa API key ${AI_PROVIDER_LABELS[provider]}.`);
+          this.message.set(`Đã xóa "${connection.name}".`);
           this.load();
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
@@ -131,7 +199,7 @@ export class AdminAiSettingsPageComponent implements OnInit {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: (result) => this.keys.set(result),
+        next: (result) => this.connections.set(result),
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
   }

@@ -40,11 +40,12 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
 
   async create(
     userId: string,
+    connectionId: string | null,
     provider: AiProvider,
     title: string,
   ): Promise<AiConversationRecord> {
     return this.prisma.aiConversation.create({
-      data: { userId, provider, title },
+      data: { userId, connectionId, provider, title },
     });
   }
 
@@ -64,10 +65,16 @@ export class PrismaAiConversationPersistence implements AiConversationPersistenc
     });
   }
 
-  async touch(conversationId: string): Promise<void> {
+  async touch(
+    conversationId: string,
+    connectionId?: string | null,
+  ): Promise<void> {
     await this.prisma.aiConversation.update({
       where: { id: conversationId },
-      data: { updatedAt: new Date() },
+      data: {
+        updatedAt: new Date(),
+        ...(connectionId !== undefined ? { connectionId } : {}),
+      },
     });
   }
 }

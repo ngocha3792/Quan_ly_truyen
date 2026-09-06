@@ -4,47 +4,66 @@ import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
+  AI_CONNECTION_PERSISTENCE_PORT,
   AI_CONVERSATION_PERSISTENCE_PORT,
-  AI_KEY_PERSISTENCE_PORT,
+  AI_CREDENTIAL_VAULT_PORT,
+  AI_GATEWAY_PORT,
+  AiConnectionResolverService,
+  CreateAiConnectionCommandHandler,
   CreateAiConversationCommandHandler,
+  DeleteAiConnectionCommandHandler,
   DeleteAiConversationCommandHandler,
   GetAiConversationQueryHandler,
+  ListAiConnectionModelsQueryHandler,
+  ListAiConnectionsQueryHandler,
   ListAiConversationsQueryHandler,
-  ListAiKeysQueryHandler,
-  RemoveAiKeyCommandHandler,
-  SaveAiKeyCommandHandler,
   SendAiMessageCommandHandler,
+  TestAiConnectionCommandHandler,
+  UpdateAiConnectionCommandHandler,
 } from './application';
 import {
   AiApiKeyCipherAdapter,
+  AiGatewayService,
   AiProviderRegistry,
   AnthropicProviderAdapter,
   GeminiProviderAdapter,
+  OpenAiCompatibleProviderAdapter,
   OpenAiProviderAdapter,
+  PrismaAiConnectionPersistence,
   PrismaAiConversationPersistence,
-  PrismaAiKeyPersistence,
 } from './infrastructure';
 import {
-  AdminAiSettingsController,
+  AdminAiConnectionsController,
   AiChatController,
-  AiKeysController,
+  AiConnectionsController,
 } from './presentation/http';
 
 const portProviders = [
   {
-    provide: AI_KEY_PERSISTENCE_PORT,
-    useExisting: PrismaAiKeyPersistence,
+    provide: AI_CONNECTION_PERSISTENCE_PORT,
+    useExisting: PrismaAiConnectionPersistence,
   },
   {
     provide: AI_CONVERSATION_PERSISTENCE_PORT,
     useExisting: PrismaAiConversationPersistence,
   },
+  {
+    provide: AI_CREDENTIAL_VAULT_PORT,
+    useExisting: AiApiKeyCipherAdapter,
+  },
+  {
+    provide: AI_GATEWAY_PORT,
+    useExisting: AiGatewayService,
+  },
 ];
 
 const applicationHandlers = [
-  SaveAiKeyCommandHandler,
-  RemoveAiKeyCommandHandler,
-  ListAiKeysQueryHandler,
+  CreateAiConnectionCommandHandler,
+  UpdateAiConnectionCommandHandler,
+  DeleteAiConnectionCommandHandler,
+  TestAiConnectionCommandHandler,
+  ListAiConnectionsQueryHandler,
+  ListAiConnectionModelsQueryHandler,
   CreateAiConversationCommandHandler,
   DeleteAiConversationCommandHandler,
   ListAiConversationsQueryHandler,
@@ -54,16 +73,23 @@ const applicationHandlers = [
 
 @Module({
   imports: [PrismaModule, AuthAuthorizationModule],
-  controllers: [AdminAiSettingsController, AiKeysController, AiChatController],
+  controllers: [
+    AdminAiConnectionsController,
+    AiConnectionsController,
+    AiChatController,
+  ],
   providers: [
-    PrismaAiKeyPersistence,
+    PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
+    AiApiKeyCipherAdapter,
+    AiGatewayService,
     ...portProviders,
     ...applicationHandlers,
-    AiApiKeyCipherAdapter,
+    AiConnectionResolverService,
     GeminiProviderAdapter,
     OpenAiProviderAdapter,
     AnthropicProviderAdapter,
+    OpenAiCompatibleProviderAdapter,
     AiProviderRegistry,
   ],
 })

@@ -3,9 +3,11 @@
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
       title="Trợ lý AI"
-      description="Cấu hình API key mặc định dùng chung cho toàn hệ thống. Người dùng có thể ghi đè bằng API key riêng của họ."
+      description="Quản lý các kết nối AI dùng chung cho toàn hệ thống. Người dùng có thể ghi đè bằng kết nối riêng của họ."
       icon="sparkles"
-    />
+    >
+      <app-button variant="primary" (click)="openCreate()">Thêm kết nối</app-button>
+    </app-page-heading>
 
     @if (message()) {
       <app-notice kind="success" [message]="message()" />
@@ -14,55 +16,105 @@
       <app-error-alert title="Không thể xử lý yêu cầu" [message]="error()" />
     }
 
-    @if (loading() && keys().length === 0) {
-      <app-loading-state message="Đang tải cấu hình..." />
+    @if (loading() && connections().length === 0) {
+      <app-loading-state message="Đang tải danh sách kết nối..." />
     } @else {
-      <div class="provider-grid">
-        @for (provider of providers; track provider) {
-          <section class="provider-card">
+      <div class="connection-grid">
+        @for (connection of connections(); track connection.id) {
+          <section class="connection-card">
             <header>
-              <h2>{{ labels[provider] }}</h2>
-              @if (statusFor(provider)?.configured) {
-                <span class="status status--configured">
-                  Đã cấu hình · ••••{{ statusFor(provider)?.lastFour }}
-                </span>
-              } @else {
-                <span class="status status--missing">Chưa cấu hình</span>
-              }
+              <h2>{{ connection.name }}</h2>
+              <span class="provider-badge">{{ labels[connection.provider] }}</span>
             </header>
 
-            <label class="key-field">
-              <span>API key mới</span>
-              <input
-                type="password"
-                autocomplete="off"
-                [(ngModel)]="inputValues[provider]"
-                placeholder="Nhập API key"
-              />
-            </label>
+            @if (connection.defaultModel) {
+              <p class="model">{{ connection.defaultModel }}</p>
+            }
+            @if (connection.baseUrl) {
+              <p class="base-url">{{ connection.baseUrl }}</p>
+            }
+
+            <span class="status" [class.status--disabled]="!connection.enabled">
+              {{ connection.enabled ? '● Đang bật' : '○ Đã tắt' }}
+            </span>
 
             <div class="actions">
               <app-button
-                variant="primary"
-                [disabled]="!inputValues[provider].trim()"
-                [loading]="mutating() === provider"
-                (click)="save(provider)"
+                variant="secondary"
+                [loading]="testingId() === connection.id"
+                (click)="test(connection)"
               >
-                Lưu
+                Test
               </app-button>
-              @if (statusFor(provider)?.configured) {
-                <app-button
-                  variant="danger"
-                  [disabled]="mutating() === provider"
-                  (click)="remove(provider)"
-                >
-                  Xóa
-                </app-button>
-              }
+              <app-button variant="secondary" (click)="openEdit(connection)">Sửa</app-button>
+              <app-button variant="danger" [disabled]="mutating()" (click)="remove(connection)">
+                Xóa
+              </app-button>
             </div>
           </section>
+        } @empty {
+          <p class="empty-hint">Chưa có kết nối AI nào. Bấm "Thêm kết nối" để bắt đầu.</p>
         }
       </div>
+    }
+
+    @if (editorOpen()) {
+      <app-dialog-shell
+        [open]="true"
+        [busy]="mutating()"
+        [title]="editing ? 'Sửa kết nối' : 'Thêm kết nối AI'"
+        dialogTitleId="ai-connection-editor-title"
+        (closed)="editorOpen.set(false)"
+      >
+        <div class="editor-fields">
+          @if (!editing) {
+            <label
+              >Nhà cung cấp
+              <select [(ngModel)]="editProvider">
+                @for (provider of providers; track provider) {
+                  <option [value]="provider">{{ labels[provider] }}</option>
+                }
+              </select>
+            </label>
+          }
+
+          <label>Tên kết nối *<input [(ngModel)]="editName" maxlength="120" /></label>
+
+          <label
+            >API key {{ editing ? '(để trống nếu không đổi)' : '*' }}
+            <input type="password" autocomplete="off" [(ngModel)]="editApiKey" />
+          </label>
+
+          @if (isCompatible) {
+            <label
+              >Base URL *
+              <input [(ngModel)]="editBaseUrl" placeholder="https://openrouter.ai/api/v1" />
+            </label>
+          }
+
+          <label
+            >Model mặc định {{ isCompatible ? '*' : '' }}
+            <input [(ngModel)]="editDefaultModel" placeholder="vd: gpt-4o-mini" />
+          </label>
+
+          @if (editing) {
+            <label class="checkbox"
+              ><input type="checkbox" [(ngModel)]="editEnabled" /> Đang bật</label
+            >
+          }
+        </div>
+        <div class="modal-actions">
+          <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
+          <app-button
+            variant="primary"
+            [disabled]="!editName.trim() || mutating()"
+            [loading]="mutating()"
+            (click)="saveEditor()"
+          >
+            Lưu
+          </app-button>
+        </div>
+      </app-dialog-shell>
     }
   </div>
 </main>

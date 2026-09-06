@@ -8,6 +8,7 @@ import type { SendAiMessageResultView } from '../../../application/commands/send
 
 export interface AiConversationSummaryResponse {
   readonly id: string;
+  readonly connectionId: string | null;
   readonly provider: AiProvider;
   readonly title: string;
   readonly createdAt: string;
@@ -35,6 +36,7 @@ function toSummary(
 ): AiConversationSummaryResponse {
   return {
     id: record.id,
+    connectionId: record.connectionId,
     provider: record.provider,
     title: record.title,
     createdAt: record.createdAt.toISOString(),

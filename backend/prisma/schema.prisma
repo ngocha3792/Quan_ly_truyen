@@ -77,9 +77,10 @@ enum MfaCredentialStatus {
 }
 
 enum AiProvider {
-  GEMINI    @map("gemini")
-  OPENAI    @map("openai")
-  ANTHROPIC @map("anthropic")
+  GEMINI             @map("gemini")
+  OPENAI             @map("openai")
+  ANTHROPIC          @map("anthropic")
+  OPENAI_COMPATIBLE  @map("openai_compatible")
 
   @@map("ai_provider")
 }
@@ -367,7 +368,7 @@ model User {
   notifications              Notification[]
   notificationPreference     NotificationPreference?
   auditLogs                  AuditLog[]
-  aiApiKeys                  AiApiKey[]
+  aiConnections              AiConnection[]
   aiConversations            AiConversation[]
 
   @@index([status, createdAt])
@@ -442,32 +443,41 @@ model MfaRecoveryCode {
   @@map("mfa_recovery_codes")
 }
 
-model AiApiKey {
-  id           String     @id @default(uuid()) @db.Uuid
-  userId       String?    @map("user_id") @db.Uuid
-  provider     AiProvider
-  encryptedKey String     @map("encrypted_key") @db.Text
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+model AiConnection {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String?    @map("user_id") @db.Uuid
+  name            String     @db.VarChar(120)
+  provider        AiProvider
+  encryptedApiKey String     @map("encrypted_api_key") @db.Text
+  baseUrl         String?    @map("base_url") @db.Text
+  defaultModel    String?    @map("default_model") @db.VarChar(200)
+  enabled         Boolean    @default(true)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations AiConversation[]
 
-  @@unique([userId, provider])
-  @@map("ai_api_keys")
+  @@index([userId])
+  @@index([provider])
+  @@map("ai_connections")
 }
 
 model AiConversation {
-  id        String     @id @default(uuid()) @db.Uuid
-  userId    String     @map("user_id") @db.Uuid
-  provider  AiProvider
-  title     String     @db.VarChar(200)
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  connectionId String?       @map("connection_id") @db.Uuid
+  provider     AiProvider
+  title        String        @db.VarChar(200)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages AiMessage[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  messages   AiMessage[]
 
   @@index([userId, updatedAt])
+  @@index([connectionId])
   @@map("ai_conversations")
 }
 

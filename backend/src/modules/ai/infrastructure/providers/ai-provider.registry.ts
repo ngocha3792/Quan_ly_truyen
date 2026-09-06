@@ -7,6 +7,7 @@ import { AiProvider } from '@/generated/prisma/client';
 import { AiProviderClientPort } from '../../application/ports/ai-provider-client.port';
 import { AnthropicProviderAdapter } from './anthropic-provider.adapter';
 import { GeminiProviderAdapter } from './gemini-provider.adapter';
+import { OpenAiCompatibleProviderAdapter } from './openai-compatible-provider.adapter';
 import { OpenAiProviderAdapter } from './openai-provider.adapter';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class AiProviderRegistry {
     gemini: GeminiProviderAdapter,
     openai: OpenAiProviderAdapter,
     anthropic: AnthropicProviderAdapter,
+    openaiCompatible: OpenAiCompatibleProviderAdapter,
   ) {
     const config = configService.getOrThrow<AiConfig>('ai');
 
@@ -26,12 +28,14 @@ export class AiProviderRegistry {
       [AiProvider.GEMINI]: gemini,
       [AiProvider.OPENAI]: openai,
       [AiProvider.ANTHROPIC]: anthropic,
+      [AiProvider.OPENAI_COMPATIBLE]: openaiCompatible,
     };
 
     this.models = {
       [AiProvider.GEMINI]: config.gemini.model,
       [AiProvider.OPENAI]: config.openai.model,
       [AiProvider.ANTHROPIC]: config.anthropic.model,
+      [AiProvider.OPENAI_COMPATIBLE]: '',
     };
   }
 

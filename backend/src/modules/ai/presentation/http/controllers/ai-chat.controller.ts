@@ -65,7 +65,7 @@ export class AiChatController {
     const result = await this.createConversation.execute(
       new CreateAiConversationCommand(
         this.requireUserId(userId),
-        request.provider,
+        request.connectionId,
         request.title?.trim() || DEFAULT_TITLE,
       ),
     );

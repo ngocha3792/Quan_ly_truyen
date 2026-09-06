@@ -4,11 +4,12 @@ import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
+  AiConnection,
   AiConversationDetail,
   AiConversationSummary,
-  AiKeyStatus,
   AiMessage,
-  AiProviderId,
+  CreateAiConnectionPayload,
+  UpdateAiConnectionPayload,
 } from '../domain/ai-assistant.models';
 import { AiAssistantRepository } from '../domain/ai-assistant.repository';
 
@@ -21,66 +22,82 @@ export class AiAssistantStore {
   private readonly repository = inject(AiAssistantRepository);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly keys = signal<readonly AiKeyStatus[]>([]);
-  readonly keysLoading = signal(false);
-  readonly keysMutating = signal<AiProviderId | null>(null);
-  readonly keysError = signal<string | null>(null);
+  readonly connections = signal<readonly AiConnection[]>([]);
+  readonly connectionsLoading = signal(false);
+  readonly connectionMutating = signal<string | 'new' | null>(null);
+  readonly connectionsError = signal<string | null>(null);
 
   readonly conversations = signal<readonly AiConversationSummary[]>([]);
   readonly conversationsLoading = signal(false);
   readonly creating = signal(false);
 
   readonly activeConversation = signal<AiConversationDetail | null>(null);
-  readonly messagesLoading = signal(false);
   readonly sending = signal(false);
   readonly error = signal<string | null>(null);
 
-  loadKeys(): void {
-    this.keysLoading.set(true);
-    this.keysError.set(null);
+  loadConnections(): void {
+    this.connectionsLoading.set(true);
+    this.connectionsError.set(null);
     this.repository
-      .listKeys()
+      .listConnections()
       .pipe(
-        finalize(() => this.keysLoading.set(false)),
+        finalize(() => this.connectionsLoading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (keys) => this.keys.set(keys),
-        error: (error: unknown) => this.keysError.set(getApiErrorMessage(error)),
+        next: (connections) => this.connections.set(connections),
+        error: (error: unknown) => this.connectionsError.set(getApiErrorMessage(error)),
       });
   }
 
-  saveKey(provider: AiProviderId, apiKey: string): void {
-    if (this.keysMutating()) return;
+  createConnection(payload: CreateAiConnectionPayload): void {
+    if (this.connectionMutating()) return;
 
-    this.keysMutating.set(provider);
-    this.keysError.set(null);
+    this.connectionMutating.set('new');
+    this.connectionsError.set(null);
     this.repository
-      .saveKey(provider, apiKey)
+      .createConnection(payload)
       .pipe(
-        finalize(() => this.keysMutating.set(null)),
+        finalize(() => this.connectionMutating.set(null)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => this.loadKeys(),
-        error: (error: unknown) => this.keysError.set(getApiErrorMessage(error)),
+        next: () => this.loadConnections(),
+        error: (error: unknown) => this.connectionsError.set(getApiErrorMessage(error)),
       });
   }
 
-  removeKey(provider: AiProviderId): void {
-    if (this.keysMutating()) return;
+  updateConnection(connectionId: string, payload: UpdateAiConnectionPayload): void {
+    if (this.connectionMutating()) return;
 
-    this.keysMutating.set(provider);
-    this.keysError.set(null);
+    this.connectionMutating.set(connectionId);
+    this.connectionsError.set(null);
     this.repository
-      .removeKey(provider)
+      .updateConnection(connectionId, payload)
       .pipe(
-        finalize(() => this.keysMutating.set(null)),
+        finalize(() => this.connectionMutating.set(null)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => this.loadKeys(),
-        error: (error: unknown) => this.keysError.set(getApiErrorMessage(error)),
+        next: () => this.loadConnections(),
+        error: (error: unknown) => this.connectionsError.set(getApiErrorMessage(error)),
+      });
+  }
+
+  deleteConnection(connectionId: string): void {
+    if (this.connectionMutating()) return;
+
+    this.connectionMutating.set(connectionId);
+    this.connectionsError.set(null);
+    this.repository
+      .deleteConnection(connectionId)
+      .pipe(
+        finalize(() => this.connectionMutating.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => this.loadConnections(),
+        error: (error: unknown) => this.connectionsError.set(getApiErrorMessage(error)),
       });
   }
 
@@ -99,13 +116,13 @@ export class AiAssistantStore {
       });
   }
 
-  createConversation(provider: AiProviderId): void {
+  createConversation(connectionId: string): void {
     if (this.creating()) return;
 
     this.creating.set(true);
     this.error.set(null);
     this.repository
-      .createConversation(provider)
+      .createConversation(connectionId)
       .pipe(
         finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
@@ -120,14 +137,10 @@ export class AiAssistantStore {
   }
 
   selectConversation(conversationId: string): void {
-    this.messagesLoading.set(true);
     this.error.set(null);
     this.repository
       .getConversation(conversationId)
-      .pipe(
-        finalize(() => this.messagesLoading.set(false)),
-        takeUntilDestroyed(this.destroyRef),
-      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (detail) => this.activeConversation.set(detail),
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
