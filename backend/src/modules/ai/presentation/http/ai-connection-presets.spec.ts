@@ -59,4 +59,34 @@ describe('resolveAiConnectionPreset compatible APIs', () => {
       ),
     ).toThrow(BusinessRuleViolationException);
   });
+
+  it('tạo custom gateway từ protocol và auth được chọn rõ ràng', () => {
+    expect(
+      resolveAiConnectionPreset(
+        AiConnectionPresetId.CUSTOM,
+        'https://gateway.example.com/v1',
+        'custom-model',
+        AiAuthType.API_KEY_HEADER,
+        'X-Gateway-Key',
+        AiProtocol.OPENAI_CHAT_COMPLETIONS,
+      ),
+    ).toEqual({
+      vendorHint: 'CUSTOM',
+      protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+      authType: AiAuthType.API_KEY_HEADER,
+      authHeaderName: 'X-Gateway-Key',
+      baseUrl: 'https://gateway.example.com/v1',
+    });
+  });
+
+  it('từ chối custom gateway thiếu protocol', () => {
+    expect(() =>
+      resolveAiConnectionPreset(
+        AiConnectionPresetId.CUSTOM,
+        'https://gateway.example.com/v1',
+        'custom-model',
+        AiAuthType.BEARER,
+      ),
+    ).toThrow(BusinessRuleViolationException);
+  });
 });

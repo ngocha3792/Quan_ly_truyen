@@ -160,6 +160,15 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
         ...(input.authHeaderName !== undefined
           ? { authHeaderName: input.authHeaderName }
           : {}),
+        ...(input.protocol !== undefined
+          ? {
+              protocol: toPrismaAiProtocol(input.protocol),
+              legacyProvider: toLegacyPrismaAiProvider(
+                input.protocol,
+                input.vendorHint ?? null,
+              ),
+            }
+          : {}),
       },
     });
     return toDomainAiConnectionRecord(record);

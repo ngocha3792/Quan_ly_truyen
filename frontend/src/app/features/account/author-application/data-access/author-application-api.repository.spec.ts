@@ -435,7 +435,14 @@ describe('AuthorApplicationApiRepository', () => {
 });
 
 async function waitForRequest(http: HttpTestingController, url: string) {
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  const deadline = Date.now() + 1_000;
+
+  while (Date.now() < deadline) {
+    const requests = http.match(url);
+    if (requests.length === 1) return requests[0];
+    if (requests.length > 1) throw new Error(`Expected one request for ${url}, found multiple.`);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 
   return http.expectOne(url);
 }

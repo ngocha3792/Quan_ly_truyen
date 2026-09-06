@@ -1,17 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import {
-  BreadcrumbComponent,
-  BreadcrumbItem,
-} from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
-import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
-import { AdminAiConnectionManagerStore } from '../../data-access/admin-ai-connection-manager.store';
+import { AiConnectionManagerStore } from '../../data-access/ai-connection-manager.store';
 import {
   AI_AUTH_TYPE_LABELS,
   AI_AUTH_TYPES,
@@ -21,54 +16,37 @@ import {
   AI_PROTOCOLS,
   AiAuthType,
   AiConnection,
+  AiModelInfo,
   AiProviderId,
   AiProtocol,
   UpdateAiConnectionPayload,
-} from '../../domain/admin-ai-settings.models';
+} from '../../domain/ai-assistant.models';
 
 @Component({
-  selector: 'app-admin-ai-settings-page',
+  selector: 'app-ai-connection-manager',
   standalone: true,
   imports: [
     FormsModule,
-    BreadcrumbComponent,
-    PageHeadingComponent,
+    ButtonComponent,
+    DialogShellComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
     NoticeComponent,
-    ButtonComponent,
-    DialogShellComponent,
   ],
-  providers: [AdminAiConnectionManagerStore],
-  templateUrl: './admin-ai-settings-page.component.html',
-  styleUrl: './admin-ai-settings-page.component.scss',
+  templateUrl: './ai-connection-manager.component.html',
+  styleUrl: './ai-connection-manager.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminAiSettingsPageComponent implements OnInit {
-  protected readonly manager = inject(AdminAiConnectionManagerStore);
-  protected readonly connections = this.manager.connections;
-  protected readonly loading = this.manager.loading;
-  protected readonly mutating = this.manager.mutating;
-  protected readonly testingId = this.manager.testingId;
-  protected readonly error = this.manager.error;
-  protected readonly message = this.manager.message;
-  protected readonly modelBrowserOpen = this.manager.modelBrowserOpen;
-  protected readonly modelConnection = this.manager.modelConnection;
-  protected readonly models = this.manager.models;
-  protected readonly modelsLoading = this.manager.modelsLoading;
-  protected readonly modelsError = this.manager.modelsError;
-  protected readonly editorOpen = signal(false);
-  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
-    { label: 'Trang chủ', route: '/' },
-    { label: 'Quản trị' },
-    { label: 'Trợ lý AI' },
-  ];
+export class AiConnectionManagerComponent {
+  protected readonly store = inject(AiConnectionManagerStore);
   protected readonly providers = AI_PROVIDERS;
   protected readonly labels = AI_PROVIDER_LABELS;
   protected readonly authTypes = AI_AUTH_TYPES;
   protected readonly authLabels = AI_AUTH_TYPE_LABELS;
   protected readonly protocols = AI_PROTOCOLS;
   protected readonly protocolLabels = AI_PROTOCOL_LABELS;
+  protected readonly editorOpen = signal(false);
+  protected readonly modelBrowserOpen = signal(false);
 
   protected editing: AiConnection | null = null;
   protected editName = '';
@@ -81,15 +59,9 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected editAuthHeaderName = '';
   protected editProtocol: AiProtocol = 'GEMINI_GENERATE_CONTENT';
 
-  ngOnInit(): void {
-    this.manager.load();
-  }
-
-  protected get isAdvanced(): boolean {
+  protected get isCompatible(): boolean {
     return (
-      this.editProvider === 'CUSTOM' ||
-      this.editProvider === 'OPENAI_COMPATIBLE' ||
-      this.editProvider === 'ANTHROPIC_COMPATIBLE'
+      this.editProvider === 'OPENAI_COMPATIBLE' || this.editProvider === 'ANTHROPIC_COMPATIBLE'
     );
   }
 
@@ -97,12 +69,16 @@ export class AdminAiSettingsPageComponent implements OnInit {
     return this.editProvider === 'CUSTOM';
   }
 
+  protected get isAdvanced(): boolean {
+    return this.isCompatible || this.isCustom;
+  }
+
   protected get needsAuthName(): boolean {
     return this.editAuthType === 'API_KEY_HEADER' || this.editAuthType === 'QUERY_PARAM';
   }
 
-  protected get canSaveEditor(): boolean {
-    if (!this.editName.trim() || this.mutating()) return false;
+  protected get canSave(): boolean {
+    if (!this.editName.trim() || this.store.mutating()) return false;
     if (!this.editing && !this.editApiKey.trim()) return false;
     if (this.isAdvanced && (!this.editBaseUrl.trim() || !this.editDefaultModel.trim()))
       return false;
@@ -120,7 +96,6 @@ export class AdminAiSettingsPageComponent implements OnInit {
     this.editAuthType = 'BEARER';
     this.editAuthHeaderName = '';
     this.editProtocol = 'GEMINI_GENERATE_CONTENT';
-    this.error.set('');
     this.editorOpen.set(true);
   }
 
@@ -135,12 +110,11 @@ export class AdminAiSettingsPageComponent implements OnInit {
     this.editAuthType = connection.authType;
     this.editAuthHeaderName = connection.authHeaderName ?? '';
     this.editProtocol = connection.protocol;
-    this.error.set('');
     this.editorOpen.set(true);
   }
 
-  protected saveEditor(): void {
-    if (!this.canSaveEditor) return;
+  protected save(): void {
+    if (!this.canSave) return;
     const payload: UpdateAiConnectionPayload = {
       name: this.editName.trim(),
       apiKey: this.editApiKey.trim() || undefined,
@@ -151,20 +125,17 @@ export class AdminAiSettingsPageComponent implements OnInit {
       authHeaderName: this.isAdvanced ? this.editAuthHeaderName.trim() || null : undefined,
       protocol: this.isCustom ? this.editProtocol : undefined,
     };
-    const close = () => this.editorOpen.set(false);
     if (this.editing) {
-      this.manager.update(this.editing.id, payload, close);
+      this.store.update(this.editing.id, payload);
     } else {
-      this.manager.create(
-        {
-          ...payload,
-          name: this.editName.trim(),
-          provider: this.editProvider,
-          apiKey: this.editApiKey.trim(),
-        },
-        close,
-      );
+      this.store.create({
+        ...payload,
+        name: this.editName.trim(),
+        provider: this.editProvider,
+        apiKey: this.editApiKey.trim(),
+      });
     }
+    this.editorOpen.set(false);
   }
 
   protected setProvider(provider: AiProviderId): void {
@@ -187,10 +158,27 @@ export class AdminAiSettingsPageComponent implements OnInit {
   }
 
   protected openModels(connection: AiConnection): void {
-    this.manager.openModels(connection);
+    this.modelBrowserOpen.set(true);
+    this.store.loadModels(connection.id);
   }
 
   protected refreshModels(): void {
-    this.manager.refreshModels();
+    const connection = this.modelConnection();
+    if (connection) this.store.loadModels(connection.id, true);
+  }
+
+  protected setDefaultModel(model: AiModelInfo): void {
+    const connection = this.modelConnection();
+    if (connection) this.store.update(connection.id, { defaultModel: model.id });
+  }
+
+  protected modelConnection(): AiConnection | null {
+    const connectionId = this.store.modelsConnectionId();
+    return this.store.connections().find((connection) => connection.id === connectionId) ?? null;
+  }
+
+  protected remove(connection: AiConnection): void {
+    if (!window.confirm(`Xóa kết nối "${connection.name}"?`)) return;
+    this.store.remove(connection.id);
   }
 }

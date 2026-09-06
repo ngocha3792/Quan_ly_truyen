@@ -40,6 +40,8 @@ export interface UpdateAiConnectionInput {
   readonly enabled?: boolean;
   readonly authType?: AiAuthType;
   readonly authHeaderName?: string | null;
+  readonly protocol?: AiProtocol;
+  readonly vendorHint?: string | null;
 }
 
 export interface AiConnectionPersistencePort {

@@ -48,6 +48,7 @@ export class UpdateAiConnectionCommandHandler {
     }
 
     const { changes } = command;
+    const nextProtocol = changes.protocol ?? existing.protocol;
     const nextBaseUrl = changes.baseUrl || existing.baseUrl;
     const nextModel =
       changes.defaultModel !== undefined
@@ -68,21 +69,22 @@ export class UpdateAiConnectionCommandHandler {
     if (
       changes.apiKey !== undefined ||
       changes.baseUrl !== undefined ||
+      changes.protocol !== undefined ||
       changes.authType !== undefined ||
       changes.authHeaderName !== undefined
     ) {
       const credentialToTest =
         changes.apiKey ??
         (await this.vault.decrypt(existing.encryptedCredential));
-      const adapter = this.registry.getAdapter(existing.protocol);
+      const adapter = this.registry.getAdapter(nextProtocol);
       const result = await adapter.testConnection({
-        protocol: existing.protocol,
+        protocol: nextProtocol,
         vendorHint: existing.vendorHint,
         baseUrl: nextBaseUrl,
         authType: nextAuthType,
         authHeaderName: nextAuthHeaderName,
         credential: credentialToTest,
-        model: nextModel ?? this.registry.getDefaultModel(existing.protocol),
+        model: nextModel ?? this.registry.getDefaultModel(nextProtocol),
       });
 
       if (!result.ok) {
@@ -108,6 +110,9 @@ export class UpdateAiConnectionCommandHandler {
       ...(changes.authType !== undefined ? { authType: nextAuthType } : {}),
       ...(changes.authType !== undefined || changes.authHeaderName !== undefined
         ? { authHeaderName: nextAuthHeaderName }
+        : {}),
+      ...(changes.protocol !== undefined
+        ? { protocol: nextProtocol, vendorHint: existing.vendorHint }
         : {}),
     };
 

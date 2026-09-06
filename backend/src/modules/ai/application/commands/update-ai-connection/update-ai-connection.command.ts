@@ -1,4 +1,4 @@
-import type { AiAuthType } from '../../../domain/enums';
+import type { AiAuthType, AiProtocol } from '../../../domain/enums';
 
 export interface UpdateAiConnectionChanges {
   readonly name?: string;
@@ -8,6 +8,7 @@ export interface UpdateAiConnectionChanges {
   readonly enabled?: boolean;
   readonly authType?: AiAuthType;
   readonly authHeaderName?: string | null;
+  readonly protocol?: AiProtocol;
 }
 
 export class UpdateAiConnectionCommand {

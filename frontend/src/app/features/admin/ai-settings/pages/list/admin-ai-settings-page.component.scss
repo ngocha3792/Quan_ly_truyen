@@ -66,6 +66,7 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -121,8 +122,80 @@
   margin-top: 1.25rem;
 }
 
+.model-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.model-toolbar p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.model-list {
+  display: grid;
+  gap: 0.55rem;
+  max-height: min(58vh, 560px);
+  overflow-y: auto;
+}
+
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: rgba(6, 11, 22, 0.4);
+}
+
+.model-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.model-row strong,
+.model-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-row strong {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+}
+
+.model-row small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.default-badge {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
 @media (max-width: 900px) {
   .connection-grid {
     grid-template-columns: 1fr;
+  }
+
+  .model-toolbar,
+  .model-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

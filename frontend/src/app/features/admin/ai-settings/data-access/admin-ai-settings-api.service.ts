@@ -7,6 +7,7 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AiConnection,
   AiConnectionTestResult,
+  AiModelInfo,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../domain/admin-ai-settings.models';
@@ -45,9 +46,11 @@ export class AdminAiSettingsApiService {
       .pipe(map((response) => response.data));
   }
 
-  listModels(connectionId: string): Observable<readonly string[]> {
+  listModels(connectionId: string, refresh = false): Observable<readonly AiModelInfo[]> {
     return this.http
-      .get<ApiSuccessEnvelope<readonly string[]>>(`${this.url}/${connectionId}/models`)
+      .get<ApiSuccessEnvelope<readonly AiModelInfo[]>>(`${this.url}/${connectionId}/models`, {
+        params: refresh ? { refresh: 'true' } : {},
+      })
       .pipe(map((response) => response.data));
   }
 }

@@ -14,13 +14,9 @@
   @if (settingsOpen()) {
     <section class="connections-panel">
       <header>
-        <h2>Kết nối AI của bạn</h2>
-        <app-button variant="primary" (click)="openCreateConnection()">Thêm kết nối</app-button>
+        <h2>Cấu hình AI của bạn</h2>
       </header>
 
-      @if (store.connectionsError()) {
-        <app-error-alert title="Không thể xử lý yêu cầu" [message]="store.connectionsError()" />
-      }
       @if (profileStore.error()) {
         <app-error-alert title="Không thể lưu cấu hình AI" [message]="profileStore.error()" />
       }
@@ -93,35 +89,7 @@
         </div>
       }
 
-      @if (store.connectionsLoading() && store.connections().length === 0) {
-        <app-loading-state message="Đang tải kết nối..." />
-      } @else {
-        <div class="connection-list">
-          @for (connection of store.connections(); track connection.id) {
-            <article class="connection-row">
-              <div class="connection-info">
-                <strong>{{ connection.name }}</strong>
-                <small
-                  >{{ labels[connection.provider] }} · {{ connection.defaultModel || '—' }}</small
-                >
-              </div>
-              <span class="status" [class.status--disabled]="!connection.enabled">
-                {{ connection.enabled ? 'Đang bật' : 'Đã tắt' }}
-              </span>
-              <div class="row-actions">
-                <app-button variant="secondary" (click)="openEditConnection(connection)">
-                  Sửa
-                </app-button>
-                <app-button variant="danger" (click)="removeConnection(connection, $event)">
-                  Xóa
-                </app-button>
-              </div>
-            </article>
-          } @empty {
-            <p class="empty-hint">Chưa có kết nối nào. Bấm "Thêm kết nối" để bắt đầu.</p>
-          }
-        </div>
-      }
+      <app-ai-connection-manager />
     </section>
   }
 
@@ -138,7 +106,7 @@
           (ngModelChange)="selectConversationConnection($event)"
         >
           <option value="">Chọn kết nối...</option>
-          @for (connection of store.connections(); track connection.id) {
+          @for (connection of connectionStore.connections(); track connection.id) {
             <option [value]="connection.id">
               {{ connection.name }} ({{ labels[connection.provider] }})
             </option>
@@ -147,7 +115,7 @@
 
         @if (newConversationConnectionId) {
           <div class="model-picker">
-            @if (store.models().length > 0) {
+            @if (newConversationModels().length > 0) {
               <select
                 aria-label="Model cho cuộc trò chuyện mới"
                 [(ngModel)]="newConversationModelId"
@@ -157,7 +125,7 @@
                     {{ newConversationModelId }} (đang cấu hình)
                   </option>
                 }
-                @for (model of store.models(); track model.id) {
+                @for (model of newConversationModels(); track model.id) {
                   <option [value]="model.id">
                     {{ model.displayName || model.id }}
                   </option>
@@ -169,7 +137,7 @@
                 [(ngModel)]="newConversationModelId"
                 maxlength="200"
                 [placeholder]="
-                  store.modelsLoading()
+                  connectionStore.modelsLoading()
                     ? 'Đang tải model...'
                     : 'Nhập model hoặc để trống dùng mặc định'
                 "
@@ -178,13 +146,13 @@
             <button
               type="button"
               class="refresh-models"
-              [disabled]="store.modelsLoading()"
+              [disabled]="connectionStore.modelsLoading()"
               (click)="refreshModels()"
             >
-              {{ store.modelsLoading() ? 'Đang tải...' : 'Làm mới model' }}
+              {{ connectionStore.modelsLoading() ? 'Đang tải...' : 'Làm mới model' }}
             </button>
           </div>
-          @if (store.modelsError()) {
+          @if (connectionStore.modelsError()) {
             <small class="model-picker__hint">
               Không lấy được danh sách model. Bạn vẫn có thể nhập model thủ công.
             </small>
@@ -279,84 +247,4 @@
       }
     </section>
   </div>
-
-  @if (editorOpen()) {
-    <app-dialog-shell
-      [open]="true"
-      [title]="editing ? 'Sửa kết nối' : 'Thêm kết nối AI'"
-      dialogTitleId="ai-connection-editor-title"
-      (closed)="editorOpen.set(false)"
-    >
-      <div class="editor-fields">
-        @if (!editing) {
-          <label
-            >Nhà cung cấp
-            <select [ngModel]="editProvider" (ngModelChange)="setProvider($event)">
-              @for (provider of providers; track provider) {
-                <option [value]="provider">{{ labels[provider] }}</option>
-              }
-            </select>
-          </label>
-        }
-
-        <label>Tên kết nối *<input [(ngModel)]="editName" maxlength="120" /></label>
-
-        <label
-          >Credential / API key {{ editing ? '(để trống nếu không đổi)' : '*' }}
-          <input type="password" autocomplete="off" [(ngModel)]="editApiKey" />
-        </label>
-
-        @if (isCompatible) {
-          <label
-            >Base URL *
-            <input
-              [(ngModel)]="editBaseUrl"
-              [placeholder]="
-                editProvider === 'ANTHROPIC_COMPATIBLE'
-                  ? 'https://1gw.gwai.cloud'
-                  : 'https://openrouter.ai/api/v1'
-              "
-            />
-          </label>
-
-          <label
-            >Kiểu xác thực *
-            <select [(ngModel)]="editAuthType">
-              @for (authType of authTypes; track authType) {
-                <option [value]="authType">{{ authLabels[authType] }}</option>
-              }
-            </select>
-          </label>
-
-          @if (needsAuthName) {
-            <label
-              >{{ editAuthType === 'QUERY_PARAM' ? 'Tên query parameter' : 'Tên header' }} *
-              <input
-                [(ngModel)]="editAuthHeaderName"
-                [placeholder]="editAuthType === 'QUERY_PARAM' ? 'key' : 'X-Token'"
-                maxlength="120"
-              />
-            </label>
-          }
-        }
-
-        <label
-          >Model mặc định {{ isCompatible ? '*' : '' }}
-          <input [(ngModel)]="editDefaultModel" placeholder="vd: gpt-4o-mini" />
-        </label>
-
-        @if (editing) {
-          <label class="checkbox"
-            ><input type="checkbox" [(ngModel)]="editEnabled" /> Đang bật</label
-          >
-        }
-      </div>
-      <div class="modal-actions">
-        <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
-        <app-button variant="primary" [disabled]="!canSaveConnection" (click)="saveConnection()">
-          Lưu
-        </app-button>
-      </div>
-    </app-dialog-shell>
-  }
 </main>

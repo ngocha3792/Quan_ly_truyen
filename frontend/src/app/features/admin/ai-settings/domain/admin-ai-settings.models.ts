@@ -1,5 +1,5 @@
 export type AiProviderId =
-  'GEMINI' | 'OPENAI' | 'ANTHROPIC' | 'OPENAI_COMPATIBLE' | 'ANTHROPIC_COMPATIBLE';
+  'GEMINI' | 'OPENAI' | 'ANTHROPIC' | 'OPENAI_COMPATIBLE' | 'ANTHROPIC_COMPATIBLE' | 'CUSTOM';
 
 export type AiProtocol =
   'OPENAI_RESPONSES' | 'OPENAI_CHAT_COMPLETIONS' | 'ANTHROPIC_MESSAGES' | 'GEMINI_GENERATE_CONTENT';
@@ -12,6 +12,7 @@ export const AI_PROVIDERS: readonly AiProviderId[] = [
   'ANTHROPIC',
   'OPENAI_COMPATIBLE',
   'ANTHROPIC_COMPATIBLE',
+  'CUSTOM',
 ];
 
 export const AI_PROVIDER_LABELS: Record<AiProviderId, string> = {
@@ -20,6 +21,21 @@ export const AI_PROVIDER_LABELS: Record<AiProviderId, string> = {
   ANTHROPIC: 'Claude (Anthropic)',
   OPENAI_COMPATIBLE: 'OpenAI Compatible',
   ANTHROPIC_COMPATIBLE: 'Anthropic Compatible',
+  CUSTOM: 'Custom gateway',
+};
+
+export const AI_PROTOCOLS: readonly AiProtocol[] = [
+  'OPENAI_RESPONSES',
+  'OPENAI_CHAT_COMPLETIONS',
+  'ANTHROPIC_MESSAGES',
+  'GEMINI_GENERATE_CONTENT',
+];
+
+export const AI_PROTOCOL_LABELS: Record<AiProtocol, string> = {
+  OPENAI_RESPONSES: 'OpenAI Responses',
+  OPENAI_CHAT_COMPLETIONS: 'OpenAI Chat Completions',
+  ANTHROPIC_MESSAGES: 'Anthropic Messages',
+  GEMINI_GENERATE_CONTENT: 'Gemini Generate Content',
 };
 
 export const AI_AUTH_TYPES: readonly AiAuthType[] = [
@@ -59,6 +75,7 @@ export interface CreateAiConnectionPayload {
   readonly defaultModel?: string | null;
   readonly authType?: AiAuthType;
   readonly authHeaderName?: string | null;
+  readonly protocol?: AiProtocol;
 }
 
 export interface UpdateAiConnectionPayload {
@@ -69,9 +86,20 @@ export interface UpdateAiConnectionPayload {
   readonly enabled?: boolean;
   readonly authType?: AiAuthType;
   readonly authHeaderName?: string | null;
+  readonly protocol?: AiProtocol;
 }
 
 export interface AiConnectionTestResult {
   readonly ok: boolean;
   readonly message?: string;
+}
+
+export interface AiModelInfo {
+  readonly id: string;
+  readonly displayName?: string;
+  readonly contextLength?: number;
+  readonly maxOutputTokens?: number;
+  readonly reasoning?: boolean;
+  readonly vision?: boolean;
+  readonly tools?: boolean;
 }

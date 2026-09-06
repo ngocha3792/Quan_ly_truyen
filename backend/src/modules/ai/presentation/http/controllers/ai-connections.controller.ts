@@ -77,6 +77,7 @@ export class AiConnectionsController {
       defaultModel,
       request.authType,
       request.authHeaderName,
+      request.protocol,
     );
     const result = await this.createConnection.execute(
       new CreateAiConnectionCommand(

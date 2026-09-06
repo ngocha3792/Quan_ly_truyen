@@ -33,7 +33,9 @@
             @if (connection.baseUrl) {
               <p class="base-url">{{ connection.baseUrl }}</p>
             }
-            <small>{{ authLabels[connection.authType] }}</small>
+            <small>
+              {{ protocolLabels[connection.protocol] }} · {{ authLabels[connection.authType] }}
+            </small>
 
             <span class="status" [class.status--disabled]="!connection.enabled">
               {{ connection.enabled ? '● Đang bật' : '○ Đã tắt' }}
@@ -43,12 +45,17 @@
               <app-button
                 variant="secondary"
                 [loading]="testingId() === connection.id"
-                (click)="test(connection)"
+                (click)="manager.test(connection)"
               >
                 Test
               </app-button>
+              <app-button variant="secondary" (click)="openModels(connection)"> Models </app-button>
               <app-button variant="secondary" (click)="openEdit(connection)">Sửa</app-button>
-              <app-button variant="danger" [disabled]="mutating()" (click)="remove(connection)">
+              <app-button
+                variant="danger"
+                [disabled]="mutating()"
+                (click)="manager.remove(connection)"
+              >
                 Xóa
               </app-button>
             </div>
@@ -86,7 +93,7 @@
             <input type="password" autocomplete="off" [(ngModel)]="editApiKey" />
           </label>
 
-          @if (isCompatible) {
+          @if (isAdvanced) {
             <label
               >Base URL *
               <input
@@ -98,6 +105,17 @@
                 "
               />
             </label>
+
+            @if (isCustom) {
+              <label
+                >Protocol *
+                <select [(ngModel)]="editProtocol">
+                  @for (protocol of protocols; track protocol) {
+                    <option [value]="protocol">{{ protocolLabels[protocol] }}</option>
+                  }
+                </select>
+              </label>
+            }
 
             <label
               >Kiểu xác thực *
@@ -121,7 +139,7 @@
           }
 
           <label
-            >Model mặc định {{ isCompatible ? '*' : '' }}
+            >Model mặc định {{ isAdvanced ? '*' : '' }}
             <input [(ngModel)]="editDefaultModel" placeholder="vd: gpt-4o-mini" />
           </label>
 
@@ -142,6 +160,63 @@
             Lưu
           </app-button>
         </div>
+      </app-dialog-shell>
+    }
+
+    @if (modelBrowserOpen()) {
+      <app-dialog-shell
+        [open]="true"
+        [busy]="modelsLoading() || mutating()"
+        [title]="'Models · ' + (modelConnection()?.name || '')"
+        dialogTitleId="ai-model-browser-title"
+        (closed)="modelBrowserOpen.set(false)"
+      >
+        <div class="model-toolbar">
+          <p>Chọn model mặc định cho kết nối. Refresh sẽ bỏ qua cache model hiện tại.</p>
+          <app-button variant="secondary" [loading]="modelsLoading()" (click)="refreshModels()">
+            Refresh models
+          </app-button>
+        </div>
+
+        @if (modelsError()) {
+          <app-error-alert title="Không thể tải models" [message]="modelsError()" />
+        }
+
+        @if (modelsLoading()) {
+          <app-loading-state message="Đang khám phá models..." />
+        } @else {
+          <div class="model-list">
+            @for (model of models(); track model.id) {
+              <article class="model-row">
+                <div>
+                  <strong>{{ model.displayName || model.id }}</strong>
+                  <small>{{ model.id }}</small>
+                  @if (model.contextLength || model.maxOutputTokens) {
+                    <small>
+                      Context {{ model.contextLength || '—' }} · Output
+                      {{ model.maxOutputTokens || '—' }}
+                    </small>
+                  }
+                </div>
+                @if (modelConnection()?.defaultModel === model.id) {
+                  <span class="default-badge">Mặc định</span>
+                } @else {
+                  <app-button
+                    variant="secondary"
+                    [disabled]="mutating()"
+                    (click)="manager.setDefaultModel(model)"
+                  >
+                    Đặt mặc định
+                  </app-button>
+                }
+              </article>
+            } @empty {
+              <p class="empty-hint">
+                Gateway không trả danh sách model. Có thể nhập model thủ công trong phần Sửa.
+              </p>
+            }
+          </div>
+        }
       </app-dialog-shell>
     }
   </div>

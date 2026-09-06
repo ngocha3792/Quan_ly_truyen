@@ -8,7 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { AiAuthType } from '../../../domain/enums';
+import { AiAuthType, AiProtocol } from '../../../domain/enums';
 
 export class UpdateAiConnectionRequest {
   @IsOptional()
@@ -39,6 +39,10 @@ export class UpdateAiConnectionRequest {
   @IsOptional()
   @IsEnum(AiAuthType)
   authType?: AiAuthType;
+
+  @IsOptional()
+  @IsEnum(AiProtocol)
+  protocol?: AiProtocol;
 
   @IsOptional()
   @IsString()

@@ -9,6 +9,7 @@ export enum AiConnectionPresetId {
   ANTHROPIC = 'ANTHROPIC',
   OPENAI_COMPATIBLE = 'OPENAI_COMPATIBLE',
   ANTHROPIC_COMPATIBLE = 'ANTHROPIC_COMPATIBLE',
+  CUSTOM = 'CUSTOM',
 }
 
 export interface ResolvedAiConnectionPreset {
@@ -25,6 +26,7 @@ export function resolveAiConnectionPreset(
   defaultModel: string | null,
   customAuthType?: AiAuthType,
   customAuthHeaderName?: string | null,
+  customProtocol?: AiProtocol,
 ): ResolvedAiConnectionPreset {
   switch (presetId) {
     case AiConnectionPresetId.GEMINI:
@@ -79,6 +81,39 @@ export function resolveAiConnectionPreset(
           authType,
           customAuthHeaderName,
         ),
+        baseUrl: customBaseUrl,
+      };
+    }
+    case AiConnectionPresetId.CUSTOM: {
+      if (
+        !customBaseUrl ||
+        !defaultModel ||
+        !customProtocol ||
+        !customAuthType
+      ) {
+        throw new BusinessRuleViolationException({
+          message:
+            'Custom gateway cần khai báo Base URL, Protocol, Auth type và Model mặc định.',
+          rule: 'ai-connection.custom-requires-advanced-settings',
+        });
+      }
+
+      const authHeaderName = normalizeAiAuthHeaderName(
+        customAuthType,
+        customAuthHeaderName,
+      );
+      if (customAuthType === AiAuthType.API_KEY_HEADER && !authHeaderName) {
+        throw new BusinessRuleViolationException({
+          message: 'Custom header auth cần khai báo tên header.',
+          rule: 'ai-connection.custom-header-name-required',
+        });
+      }
+
+      return {
+        vendorHint: AiConnectionPresetId.CUSTOM,
+        protocol: customProtocol,
+        authType: customAuthType,
+        authHeaderName,
         baseUrl: customBaseUrl,
       };
     }

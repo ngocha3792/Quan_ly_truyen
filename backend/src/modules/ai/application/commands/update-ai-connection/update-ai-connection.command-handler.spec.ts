@@ -89,4 +89,43 @@ describe('UpdateAiConnectionCommandHandler compatible auth', () => {
       }),
     );
   });
+
+  it('test bằng adapter mới rồi đồng bộ protocol khi đổi custom gateway', async () => {
+    persistence.findByOwnerAndId.mockResolvedValue({
+      ...EXISTING,
+      vendorHint: 'CUSTOM',
+    });
+    const registry = {
+      getAdapter: jest.fn().mockReturnValue(adapter),
+      getDefaultModel: jest.fn().mockReturnValue('protocol-default'),
+    };
+    handler = new UpdateAiConnectionCommandHandler(
+      persistence,
+      vault,
+      registry,
+    );
+
+    await handler.execute(
+      new UpdateAiConnectionCommand('user-id', 'connection-id', {
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+      }),
+    );
+
+    expect(registry.getAdapter).toHaveBeenCalledWith(
+      AiProtocol.OPENAI_CHAT_COMPLETIONS,
+    );
+    expect(adapter.testConnection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+        credential: 'plain-secret',
+      }),
+    );
+    expect(updateMock).toHaveBeenCalledWith(
+      'connection-id',
+      expect.objectContaining({
+        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
+        vendorHint: 'CUSTOM',
+      }),
+    );
+  });
 });
