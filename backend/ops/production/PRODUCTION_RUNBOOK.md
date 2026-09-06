@@ -29,10 +29,10 @@ Các mục sau không thể được tự động hóa chỉ bằng repository:
 
 Server chỉ pull image đã được CI publish. `Deploy-Production.ps1` từ chối tag application không phải full Git SHA trong registry mode. Build trực tiếp trên server chỉ dùng cho staging/local qua `compose.production.build.yml`.
 
-Lệnh deploy dùng `docker compose pull --policy missing`: image application mang
-tag Git SHA mới vẫn được tải bắt buộc, còn PostgreSQL/Redis/Caddy và các image
-hạ tầng đang có trên host được tái sử dụng. Việc release ứng dụng vì vậy không
-bị chặn chỉ vì Docker Hub tạm thời timeout.
+Lệnh deploy pull riêng các image application mang tag Git SHA từ GHCR. Với
+PostgreSQL/Redis/Caddy, script kiểm tra local image trước và chỉ pull khi image
+thật sự chưa có. Cách này tương thích cả Docker Compose cũ trên VPS và tránh để
+mỗi release ứng dụng bị chặn chỉ vì Docker Hub tạm thời timeout.
 
 Kiểm tra Compose trước deploy mà không cần secret thật:
 

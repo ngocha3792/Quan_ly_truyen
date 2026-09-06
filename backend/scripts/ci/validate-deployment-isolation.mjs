@@ -143,12 +143,14 @@ function validateScriptStaticIsolation() {
   );
 
   if (
-    !deployScript.includes("[ValidateSet('always', 'missing')]") ||
-    !deployScript.includes("@('pull', '--policy', $Policy)") ||
-    !deployScript.includes("Invoke-DockerComposePull -Policy 'missing'")
+    !deployScript.includes('function Ensure-InfrastructureImages') ||
+    !deployScript.includes('& docker image inspect $Image *> $null') ||
+    !deployScript.includes(
+      "Invoke-DockerComposePull -Services @('api', 'migrate', 'frontend')",
+    )
   ) {
     throw new Error(
-      'Deploy-Production.ps1 must pull with policy=missing so cached infrastructure images do not make each release depend on Docker Hub.',
+      'Deploy-Production.ps1 must pull immutable application services explicitly and reuse cached infrastructure images without requiring a new Docker Compose version.',
     );
   }
 

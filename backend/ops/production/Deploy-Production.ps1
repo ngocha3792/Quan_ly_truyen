@@ -185,9 +185,6 @@ function Invoke-DockerComposePull {
   param(
     [string[]]$Services = @(),
 
-    [ValidateSet('always', 'missing')]
-    [string]$Policy = 'missing',
-
     [ValidateRange(1, 10)]
     [int]$MaxAttempts = 4,
 
@@ -195,7 +192,7 @@ function Invoke-DockerComposePull {
     [int]$BaseDelaySeconds = 10
   )
 
-  $PullArguments = @('pull', '--policy', $Policy) + $Services
+  $PullArguments = @('pull') + $Services
 
   for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt += 1) {
     & docker @Compose @PullArguments
@@ -224,6 +221,42 @@ function Invoke-DockerComposePull {
     )
 
     Start-Sleep -Seconds $DelaySeconds
+  }
+}
+
+function Ensure-InfrastructureImages {
+  $InfrastructureImages = @(
+    @{
+      Service = 'postgres'
+      Image = Get-DotEnvValue -Path $EnvironmentFilePath -Name 'POSTGRES_IMAGE'
+    },
+    @{
+      Service = 'redis'
+      Image = Get-DotEnvValue -Path $EnvironmentFilePath -Name 'REDIS_IMAGE'
+    },
+    @{
+      Service = 'caddy'
+      Image = Get-DotEnvValue -Path $EnvironmentFilePath -Name 'CADDY_IMAGE'
+    }
+  )
+
+  foreach ($InfrastructureImage in $InfrastructureImages) {
+    $Service = [string]$InfrastructureImage.Service
+    $Image = [string]$InfrastructureImage.Image
+
+    if ([string]::IsNullOrWhiteSpace($Image)) {
+      throw "Image configuration is missing for infrastructure service: $Service"
+    }
+
+    & docker image inspect $Image *> $null
+
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "Reusing cached infrastructure image: $Image"
+      continue
+    }
+
+    Write-Host "Infrastructure image is missing; pulling service: $Service"
+    Invoke-DockerComposePull -Services @($Service)
   }
 }
 
@@ -305,9 +338,7 @@ if ($UseLocalBuild) {
       '[3b/9] Pulling infrastructure images...' `
       -ForegroundColor Cyan
 
-    Invoke-DockerComposePull `
-      -Policy 'missing' `
-      -Services @('postgres', 'redis')
+    Ensure-InfrastructureImages
   }
 }
 elseif (-not $SkipPull) {
@@ -320,11 +351,14 @@ elseif (-not $SkipPull) {
         $FrontendImageTag
   ) -ForegroundColor Cyan
 
-  # Application images use immutable SHA tags, so a missing local tag still
-  # has to be downloaded. Long-lived infrastructure images are already
-  # referenced by running containers and should not make every application
-  # release depend on Docker Hub being reachable again.
-  Invoke-DockerComposePull -Policy 'missing'
+  # Pull only the three unique immutable application images from GHCR. Worker
+  # and recovery-metrics share the api image; tools share the migrate image.
+  Invoke-DockerComposePull -Services @('api', 'migrate', 'frontend')
+
+  # Docker Compose on older production hosts has no `pull --policy missing`.
+  # Inspect locally instead and contact Docker Hub only when an infrastructure
+  # image is genuinely absent.
+  Ensure-InfrastructureImages
 }
 else {
   Write-Host '[3/9] Image pull skipped.' -ForegroundColor Yellow
