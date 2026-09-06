@@ -64,6 +64,14 @@ export async function assertPublicHttpsUrl(rawUrl: string): Promise<URL> {
     });
   }
 
+  if (url.username || url.password || url.search || url.hash) {
+    throw new BusinessRuleViolationException({
+      message:
+        'Base URL không được chứa thông tin đăng nhập, query string hoặc fragment.',
+      rule: 'ai-connection.base-url-components',
+    });
+  }
+
   if (isIP(url.hostname) && isPrivateAddress(url.hostname)) {
     throw new BusinessRuleViolationException({
       message: 'Base URL không được trỏ tới địa chỉ mạng nội bộ.',

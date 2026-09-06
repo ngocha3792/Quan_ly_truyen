@@ -237,7 +237,7 @@
         @if (!editing) {
           <label
             >Nhà cung cấp
-            <select [(ngModel)]="editProvider">
+            <select [ngModel]="editProvider" (ngModelChange)="setProvider($event)">
               @for (provider of providers; track provider) {
                 <option [value]="provider">{{ labels[provider] }}</option>
               }
@@ -248,15 +248,42 @@
         <label>Tên kết nối *<input [(ngModel)]="editName" maxlength="120" /></label>
 
         <label
-          >API key {{ editing ? '(để trống nếu không đổi)' : '*' }}
+          >Credential / API key {{ editing ? '(để trống nếu không đổi)' : '*' }}
           <input type="password" autocomplete="off" [(ngModel)]="editApiKey" />
         </label>
 
         @if (isCompatible) {
           <label
             >Base URL *
-            <input [(ngModel)]="editBaseUrl" placeholder="https://openrouter.ai/api/v1" />
+            <input
+              [(ngModel)]="editBaseUrl"
+              [placeholder]="
+                editProvider === 'ANTHROPIC_COMPATIBLE'
+                  ? 'https://1gw.gwai.cloud'
+                  : 'https://openrouter.ai/api/v1'
+              "
+            />
           </label>
+
+          <label
+            >Kiểu xác thực *
+            <select [(ngModel)]="editAuthType">
+              @for (authType of authTypes; track authType) {
+                <option [value]="authType">{{ authLabels[authType] }}</option>
+              }
+            </select>
+          </label>
+
+          @if (needsAuthName) {
+            <label
+              >{{ editAuthType === 'QUERY_PARAM' ? 'Tên query parameter' : 'Tên header' }} *
+              <input
+                [(ngModel)]="editAuthHeaderName"
+                [placeholder]="editAuthType === 'QUERY_PARAM' ? 'key' : 'X-Token'"
+                maxlength="120"
+              />
+            </label>
+          }
         }
 
         <label
@@ -272,7 +299,7 @@
       </div>
       <div class="modal-actions">
         <app-button variant="secondary" (click)="editorOpen.set(false)">Hủy</app-button>
-        <app-button variant="primary" [disabled]="!editName.trim()" (click)="saveConnection()">
+        <app-button variant="primary" [disabled]="!canSaveConnection" (click)="saveConnection()">
           Lưu
         </app-button>
       </div>

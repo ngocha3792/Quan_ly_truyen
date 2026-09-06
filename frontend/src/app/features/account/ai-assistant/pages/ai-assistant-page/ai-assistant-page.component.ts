@@ -16,8 +16,11 @@ import { provideAiAssistant } from '../../data-access/ai-assistant.providers';
 import { AiAssistantStore } from '../../data-access/ai-assistant.store';
 import { AiProfileStore } from '../../data-access/ai-profile.store';
 import {
+  AI_AUTH_TYPE_LABELS,
+  AI_AUTH_TYPES,
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
+  AiAuthType,
   AiConnection,
   AiFallbackPolicy,
   AiProviderId,
@@ -45,6 +48,8 @@ import {
 export class AiAssistantPageComponent implements OnInit {
   protected readonly providers = AI_PROVIDERS;
   protected readonly labels = AI_PROVIDER_LABELS;
+  protected readonly authTypes = AI_AUTH_TYPES;
+  protected readonly authLabels = AI_AUTH_TYPE_LABELS;
 
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
     { label: 'Trang chủ', route: '/' },
@@ -61,6 +66,8 @@ export class AiAssistantPageComponent implements OnInit {
   protected editBaseUrl = '';
   protected editDefaultModel = '';
   protected editEnabled = true;
+  protected editAuthType: AiAuthType = 'BEARER';
+  protected editAuthHeaderName = '';
 
   protected newConversationConnectionId = '';
   protected draft = '';
@@ -91,7 +98,22 @@ export class AiAssistantPageComponent implements OnInit {
   }
 
   protected get isCompatible(): boolean {
-    return this.editProvider === 'OPENAI_COMPATIBLE';
+    return (
+      this.editProvider === 'OPENAI_COMPATIBLE' || this.editProvider === 'ANTHROPIC_COMPATIBLE'
+    );
+  }
+
+  protected get needsAuthName(): boolean {
+    return this.editAuthType === 'API_KEY_HEADER' || this.editAuthType === 'QUERY_PARAM';
+  }
+
+  protected get canSaveConnection(): boolean {
+    if (!this.editName.trim()) return false;
+    if (!this.editing && !this.editApiKey.trim()) return false;
+    if (this.isCompatible && (!this.editBaseUrl.trim() || !this.editDefaultModel.trim())) {
+      return false;
+    }
+    return !this.needsAuthName || Boolean(this.editAuthHeaderName.trim());
   }
 
   protected toggleSettings(): void {
@@ -120,6 +142,8 @@ export class AiAssistantPageComponent implements OnInit {
     this.editBaseUrl = '';
     this.editDefaultModel = '';
     this.editEnabled = true;
+    this.editAuthType = 'BEARER';
+    this.editAuthHeaderName = '';
     this.editorOpen.set(true);
   }
 
@@ -131,20 +155,24 @@ export class AiAssistantPageComponent implements OnInit {
     this.editBaseUrl = connection.baseUrl ?? '';
     this.editDefaultModel = connection.defaultModel ?? '';
     this.editEnabled = connection.enabled;
+    this.editAuthType = connection.authType;
+    this.editAuthHeaderName = connection.authHeaderName ?? '';
     this.editorOpen.set(true);
   }
 
   protected saveConnection(): void {
     const name = this.editName.trim();
-    if (!name) return;
+    if (!this.canSaveConnection) return;
 
     if (this.editing) {
       this.updateAndClose(this.editing.id, {
         name,
         apiKey: this.editApiKey.trim() || undefined,
-        baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+        baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : undefined,
         defaultModel: this.editDefaultModel.trim() || null,
         enabled: this.editEnabled,
+        authType: this.isCompatible ? this.editAuthType : undefined,
+        authHeaderName: this.isCompatible ? this.editAuthHeaderName.trim() || null : undefined,
       });
       return;
     }
@@ -155,8 +183,16 @@ export class AiAssistantPageComponent implements OnInit {
       apiKey: this.editApiKey.trim(),
       baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
       defaultModel: this.editDefaultModel.trim() || null,
+      authType: this.isCompatible ? this.editAuthType : undefined,
+      authHeaderName: this.isCompatible ? this.editAuthHeaderName.trim() || null : undefined,
     });
     this.editorOpen.set(false);
+  }
+
+  protected setProvider(provider: AiProviderId): void {
+    this.editProvider = provider;
+    this.editAuthType = provider === 'ANTHROPIC_COMPATIBLE' ? 'X_API_KEY' : 'BEARER';
+    this.editAuthHeaderName = '';
   }
 
   private updateAndClose(

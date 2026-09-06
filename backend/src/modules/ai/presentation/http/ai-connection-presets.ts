@@ -1,12 +1,14 @@
 import { BusinessRuleViolationException } from '@/common/exceptions';
 
 import { AiAuthType, AiProtocol } from '../../domain/enums';
+import { normalizeAiAuthHeaderName } from '../../domain/value-objects';
 
 export enum AiConnectionPresetId {
   GEMINI = 'GEMINI',
   OPENAI = 'OPENAI',
   ANTHROPIC = 'ANTHROPIC',
   OPENAI_COMPATIBLE = 'OPENAI_COMPATIBLE',
+  ANTHROPIC_COMPATIBLE = 'ANTHROPIC_COMPATIBLE',
 }
 
 export interface ResolvedAiConnectionPreset {
@@ -21,6 +23,8 @@ export function resolveAiConnectionPreset(
   presetId: AiConnectionPresetId,
   customBaseUrl: string | null,
   defaultModel: string | null,
+  customAuthType?: AiAuthType,
+  customAuthHeaderName?: string | null,
 ): ResolvedAiConnectionPreset {
   switch (presetId) {
     case AiConnectionPresetId.GEMINI:
@@ -48,19 +52,35 @@ export function resolveAiConnectionPreset(
         baseUrl: 'https://api.anthropic.com/v1',
       };
     case AiConnectionPresetId.OPENAI_COMPATIBLE:
+    case AiConnectionPresetId.ANTHROPIC_COMPATIBLE: {
       if (!customBaseUrl || !defaultModel) {
         throw new BusinessRuleViolationException({
           message:
-            'Kết nối OpenAI Compatible cần khai báo Base URL và Model mặc định.',
+            'Kết nối compatible cần khai báo Base URL và Model mặc định.',
           rule: 'ai-connection.compatible-requires-base-url-and-model',
         });
       }
+
+      const protocol =
+        presetId === AiConnectionPresetId.ANTHROPIC_COMPATIBLE
+          ? AiProtocol.ANTHROPIC_MESSAGES
+          : AiProtocol.OPENAI_CHAT_COMPLETIONS;
+      const authType =
+        customAuthType ??
+        (protocol === AiProtocol.ANTHROPIC_MESSAGES
+          ? AiAuthType.X_API_KEY
+          : AiAuthType.BEARER);
+
       return {
         vendorHint: presetId,
-        protocol: AiProtocol.OPENAI_CHAT_COMPLETIONS,
-        authType: AiAuthType.BEARER,
-        authHeaderName: null,
+        protocol,
+        authType,
+        authHeaderName: normalizeAiAuthHeaderName(
+          authType,
+          customAuthHeaderName,
+        ),
         baseUrl: customBaseUrl,
       };
+    }
   }
 }

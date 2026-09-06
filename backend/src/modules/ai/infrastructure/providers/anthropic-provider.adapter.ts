@@ -20,6 +20,7 @@ import {
   readSseEventBlocks,
   safeJsonParse,
 } from './sse-reader.util';
+import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const ANTHROPIC_API_VERSION = '2023-06-01';
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -115,7 +116,10 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
       );
     }
 
-    const text = payload?.content?.find((block) => block.type === 'text')?.text;
+    const text = (payload?.content ?? [])
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text ?? '')
+      .join('');
     if (!text) {
       throw new AiProtocolRequestError(
         'Anthropic không trả về nội dung phản hồi',
@@ -263,6 +267,6 @@ export class AnthropicMessagesProtocolAdapter implements AiProtocolAdapter {
     connection: ResolvedAiConnection,
   ): Promise<string> {
     const url = await assertPublicHttpsUrl(connection.baseUrl);
-    return url.toString().replace(/\/+$/, '');
+    return normalizeProtocolBaseUrl(url, 'v1');
   }
 }

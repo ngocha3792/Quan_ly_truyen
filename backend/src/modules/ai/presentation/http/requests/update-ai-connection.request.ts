@@ -1,11 +1,14 @@
 import {
   IsBoolean,
+  IsEnum,
   IsOptional,
   IsString,
   IsUrl,
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+import { AiAuthType } from '../../../domain/enums';
 
 export class UpdateAiConnectionRequest {
   @IsOptional()
@@ -32,4 +35,14 @@ export class UpdateAiConnectionRequest {
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
+
+  @IsOptional()
+  @IsEnum(AiAuthType)
+  authType?: AiAuthType;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  authHeaderName?: string | null;
 }

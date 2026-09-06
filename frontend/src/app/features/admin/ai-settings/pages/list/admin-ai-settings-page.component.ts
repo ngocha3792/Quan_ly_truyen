@@ -23,8 +23,11 @@ import { NoticeComponent } from '../../../../../shared/components/notice/notice.
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAiSettingsApiService } from '../../data-access/admin-ai-settings-api.service';
 import {
+  AI_AUTH_TYPE_LABELS,
+  AI_AUTH_TYPES,
   AI_PROVIDER_LABELS,
   AI_PROVIDERS,
+  AiAuthType,
   AiConnection,
   AiProviderId,
 } from '../../domain/admin-ai-settings.models';
@@ -58,6 +61,8 @@ export class AdminAiSettingsPageComponent implements OnInit {
 
   protected readonly providers = AI_PROVIDERS;
   protected readonly labels = AI_PROVIDER_LABELS;
+  protected readonly authTypes = AI_AUTH_TYPES;
+  protected readonly authLabels = AI_AUTH_TYPE_LABELS;
 
   protected readonly connections = signal<readonly AiConnection[]>([]);
   protected readonly loading = signal(false);
@@ -74,13 +79,30 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected editBaseUrl = '';
   protected editDefaultModel = '';
   protected editEnabled = true;
+  protected editAuthType: AiAuthType = 'BEARER';
+  protected editAuthHeaderName = '';
 
   ngOnInit(): void {
     this.load();
   }
 
   protected get isCompatible(): boolean {
-    return this.editProvider === 'OPENAI_COMPATIBLE';
+    return (
+      this.editProvider === 'OPENAI_COMPATIBLE' || this.editProvider === 'ANTHROPIC_COMPATIBLE'
+    );
+  }
+
+  protected get needsAuthName(): boolean {
+    return this.editAuthType === 'API_KEY_HEADER' || this.editAuthType === 'QUERY_PARAM';
+  }
+
+  protected get canSaveEditor(): boolean {
+    if (!this.editName.trim() || this.mutating()) return false;
+    if (!this.editing && !this.editApiKey.trim()) return false;
+    if (this.isCompatible && (!this.editBaseUrl.trim() || !this.editDefaultModel.trim())) {
+      return false;
+    }
+    return !this.needsAuthName || Boolean(this.editAuthHeaderName.trim());
   }
 
   protected openCreate(): void {
@@ -91,6 +113,8 @@ export class AdminAiSettingsPageComponent implements OnInit {
     this.editBaseUrl = '';
     this.editDefaultModel = '';
     this.editEnabled = true;
+    this.editAuthType = 'BEARER';
+    this.editAuthHeaderName = '';
     this.error.set('');
     this.editorOpen.set(true);
   }
@@ -103,13 +127,15 @@ export class AdminAiSettingsPageComponent implements OnInit {
     this.editBaseUrl = connection.baseUrl ?? '';
     this.editDefaultModel = connection.defaultModel ?? '';
     this.editEnabled = connection.enabled;
+    this.editAuthType = connection.authType;
+    this.editAuthHeaderName = connection.authHeaderName ?? '';
     this.error.set('');
     this.editorOpen.set(true);
   }
 
   protected saveEditor(): void {
     const name = this.editName.trim();
-    if (!name || this.mutating()) return;
+    if (!this.canSaveEditor) return;
 
     this.mutating.set(true);
     this.error.set('');
@@ -118,9 +144,11 @@ export class AdminAiSettingsPageComponent implements OnInit {
       ? this.api.update(this.editing.id, {
           name,
           apiKey: this.editApiKey.trim() || undefined,
-          baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
+          baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : undefined,
           defaultModel: this.editDefaultModel.trim() || null,
           enabled: this.editEnabled,
+          authType: this.isCompatible ? this.editAuthType : undefined,
+          authHeaderName: this.isCompatible ? this.editAuthHeaderName.trim() || null : undefined,
         })
       : this.api.create({
           name,
@@ -128,6 +156,8 @@ export class AdminAiSettingsPageComponent implements OnInit {
           apiKey: this.editApiKey.trim(),
           baseUrl: this.isCompatible ? this.editBaseUrl.trim() || null : null,
           defaultModel: this.editDefaultModel.trim() || null,
+          authType: this.isCompatible ? this.editAuthType : undefined,
+          authHeaderName: this.isCompatible ? this.editAuthHeaderName.trim() || null : undefined,
         });
 
     request$
@@ -143,6 +173,12 @@ export class AdminAiSettingsPageComponent implements OnInit {
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
+  }
+
+  protected setProvider(provider: AiProviderId): void {
+    this.editProvider = provider;
+    this.editAuthType = provider === 'ANTHROPIC_COMPATIBLE' ? 'X_API_KEY' : 'BEARER';
+    this.editAuthHeaderName = '';
   }
 
   protected test(connection: AiConnection): void {

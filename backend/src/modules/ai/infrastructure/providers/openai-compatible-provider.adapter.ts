@@ -15,6 +15,7 @@ import {
   openAiCompatibleListModels,
   openAiCompatibleTestConnection,
 } from './openai-compatible.core';
+import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 @Injectable()
 export class OpenAiChatCompletionsProtocolAdapter implements AiProtocolAdapter {
@@ -52,6 +53,6 @@ export class OpenAiChatCompletionsProtocolAdapter implements AiProtocolAdapter {
     connection: ResolvedAiConnection,
   ): Promise<string> {
     const url = await assertPublicHttpsUrl(connection.baseUrl);
-    return url.toString().replace(/\/+$/, '');
+    return normalizeProtocolBaseUrl(url, 'v1');
   }
 }

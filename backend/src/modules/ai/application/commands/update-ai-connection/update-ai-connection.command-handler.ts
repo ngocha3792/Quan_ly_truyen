@@ -19,6 +19,7 @@ import {
   UpdateAiConnectionInput,
 } from '../../ports/ai-connection.persistence.port';
 import { UpdateAiConnectionCommand } from './update-ai-connection.command';
+import { normalizeAiAuthHeaderName } from '../../../domain/value-objects';
 
 @Injectable()
 export class UpdateAiConnectionCommandHandler {
@@ -52,10 +53,24 @@ export class UpdateAiConnectionCommandHandler {
       changes.defaultModel !== undefined
         ? changes.defaultModel
         : existing.defaultModel;
+    const nextAuthType = changes.authType ?? existing.authType;
+    const nextAuthHeaderName = normalizeAiAuthHeaderName(
+      nextAuthType,
+      changes.authHeaderName !== undefined
+        ? changes.authHeaderName
+        : changes.authType !== undefined
+          ? null
+          : existing.authHeaderName,
+    );
 
     let encryptedCredential: string | undefined;
 
-    if (changes.apiKey !== undefined || changes.baseUrl !== undefined) {
+    if (
+      changes.apiKey !== undefined ||
+      changes.baseUrl !== undefined ||
+      changes.authType !== undefined ||
+      changes.authHeaderName !== undefined
+    ) {
       const credentialToTest =
         changes.apiKey ??
         (await this.vault.decrypt(existing.encryptedCredential));
@@ -64,8 +79,8 @@ export class UpdateAiConnectionCommandHandler {
         protocol: existing.protocol,
         vendorHint: existing.vendorHint,
         baseUrl: nextBaseUrl,
-        authType: existing.authType,
-        authHeaderName: existing.authHeaderName,
+        authType: nextAuthType,
+        authHeaderName: nextAuthHeaderName,
         credential: credentialToTest,
         model: nextModel ?? this.registry.getDefaultModel(existing.protocol),
       });
@@ -90,6 +105,10 @@ export class UpdateAiConnectionCommandHandler {
         ? { defaultModel: changes.defaultModel }
         : {}),
       ...(changes.enabled !== undefined ? { enabled: changes.enabled } : {}),
+      ...(changes.authType !== undefined ? { authType: nextAuthType } : {}),
+      ...(changes.authType !== undefined || changes.authHeaderName !== undefined
+        ? { authHeaderName: nextAuthHeaderName }
+        : {}),
     };
 
     return this.persistence.update(command.connectionId, update);

@@ -67,6 +67,8 @@ export class AdminAiConnectionsController {
       request.provider,
       request.baseUrl ?? null,
       defaultModel,
+      request.authType,
+      request.authHeaderName,
     );
     const result = await this.createConnection.execute(
       new CreateAiConnectionCommand(

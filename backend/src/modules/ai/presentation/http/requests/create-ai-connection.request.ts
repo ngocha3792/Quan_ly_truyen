@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 
 import { AiConnectionPresetId } from '../ai-connection-presets';
+import { AiAuthType } from '../../../domain/enums';
 
 export class CreateAiConnectionRequest {
   @IsString()
@@ -31,4 +32,14 @@ export class CreateAiConnectionRequest {
   @IsString()
   @MaxLength(200)
   defaultModel?: string | null;
+
+  @IsOptional()
+  @IsEnum(AiAuthType)
+  authType?: AiAuthType;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  authHeaderName?: string | null;
 }

@@ -8,6 +8,7 @@ import type {
 import { AnthropicMessagesProtocolAdapter } from './anthropic-provider.adapter';
 import { GeminiGenerateContentProtocolAdapter } from './gemini-provider.adapter';
 import { OpenAiChatCompletionsProtocolAdapter } from './openai-compatible-provider.adapter';
+import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const REQUEST = {
   messages: [{ role: 'user' as const, content: 'hello' }],
@@ -61,4 +62,42 @@ describe('protocol adapter base URL security', () => {
       ).rejects.toBeInstanceOf(BusinessRuleViolationException);
     },
   );
+
+  it.each([
+    'https://user:password@proxy.example.com',
+    'https://proxy.example.com?credential=secret',
+    'https://proxy.example.com#fragment',
+  ])('chặn thành phần không an toàn trong Base URL: %s', async (baseUrl) => {
+    const adapter = new OpenAiChatCompletionsProtocolAdapter();
+
+    await expect(
+      adapter.generate(
+        {
+          ...privateConnection(
+            AiProtocol.OPENAI_CHAT_COMPLETIONS,
+            AiAuthType.BEARER,
+          ),
+          baseUrl,
+        },
+        REQUEST,
+      ),
+    ).rejects.toBeInstanceOf(BusinessRuleViolationException);
+  });
+});
+
+describe('normalizeProtocolBaseUrl', () => {
+  it('thêm version mặc định khi user chỉ nhập origin', () => {
+    expect(
+      normalizeProtocolBaseUrl(new URL('https://proxy.example.com'), 'v1'),
+    ).toBe('https://proxy.example.com/v1');
+  });
+
+  it('giữ nguyên version/path riêng của gateway', () => {
+    expect(
+      normalizeProtocolBaseUrl(
+        new URL('https://proxy.example.com/custom/v2/'),
+        'v1',
+      ),
+    ).toBe('https://proxy.example.com/custom/v2');
+  });
 });

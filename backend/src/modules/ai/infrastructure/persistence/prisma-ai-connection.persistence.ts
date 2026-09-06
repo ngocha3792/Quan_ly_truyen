@@ -154,6 +154,12 @@ export class PrismaAiConnectionPersistence implements AiConnectionPersistencePor
           ? { defaultModel: input.defaultModel }
           : {}),
         ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+        ...(input.authType !== undefined
+          ? { authType: toPrismaAiAuthType(input.authType) }
+          : {}),
+        ...(input.authHeaderName !== undefined
+          ? { authHeaderName: input.authHeaderName }
+          : {}),
       },
     });
     return toDomainAiConnectionRecord(record);

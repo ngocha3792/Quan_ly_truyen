@@ -19,6 +19,7 @@ import {
   readSseEventBlocks,
   safeJsonParse,
 } from './sse-reader.util';
+import { normalizeProtocolBaseUrl } from './protocol-base-url.util';
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1024;
@@ -231,6 +232,6 @@ export class GeminiGenerateContentProtocolAdapter implements AiProtocolAdapter {
     connection: ResolvedAiConnection,
   ): Promise<string> {
     const url = await assertPublicHttpsUrl(connection.baseUrl);
-    return url.toString().replace(/\/+$/, '');
+    return normalizeProtocolBaseUrl(url, 'v1beta');
   }
 }
