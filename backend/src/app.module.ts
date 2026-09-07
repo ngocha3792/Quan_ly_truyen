@@ -123,10 +123,10 @@ export class AppModule implements NestModule {
 
     consumer
       .apply(JsonContentTypeMiddleware)
-      .exclude(
-        { path: `${API_PREFIX}/media/upload`, method: RequestMethod.POST },
-        { path: `${API_PREFIX}/webhooks/{*path}`, method: RequestMethod.ALL },
-      )
+      .exclude({
+        path: `${API_PREFIX}/webhooks/{*path}`,
+        method: RequestMethod.ALL,
+      })
       .forRoutes({
         path: `${API_PREFIX}/{*path}`,
         method: RequestMethod.ALL,

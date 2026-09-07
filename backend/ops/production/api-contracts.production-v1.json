@@ -96,7 +96,13 @@
     {
       "id": "password-recovery",
       "title": "Forgot / reset password",
-      "frontendRoute": "/quen-mat-khau + /dat-lai-mat-khau",
+      "frontendRoute": "/forgot-password + /reset-password",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/auth.routes.ts",
+          "tokens": ["path: 'forgot-password'", "path: 'reset-password'"]
+        }
+      ],
       "contracts": [
         {
           "method": "POST",
@@ -157,7 +163,17 @@
     {
       "id": "account-profile",
       "title": "Account profile / preferences / security",
-      "frontendRoute": "/tai-khoan/*",
+      "frontendRoute": "/tai-khoan/thong-tin-ca-nhan + /tai-khoan/bao-mat/doi-mat-khau",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'tai-khoan'"]
+        },
+        {
+          "file": "frontend/src/app/features/account/profile/account.routes.ts",
+          "tokens": ["path: 'thong-tin-ca-nhan'", "path: 'bao-mat/doi-mat-khau'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -219,7 +235,13 @@
     {
       "id": "public-catalog-story",
       "title": "Public catalog / story detail",
-      "frontendRoute": "/truyen + /truyen/:slug",
+      "frontendRoute": "/danh-sach + /truyen/:slug",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/public.routes.ts",
+          "tokens": ["path: 'danh-sach'", "path: 'truyen/:slug'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -263,7 +285,13 @@
     {
       "id": "chapter-reader",
       "title": "Chapter reader / progress / bookmark",
-      "frontendRoute": "/truyen/:slug/chuong-:chapter",
+      "frontendRoute": "/truyen/:storySlug/chuong/:chapterNumber",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/public.routes.ts",
+          "tokens": ["path: 'truyen/:storySlug/chuong/:chapterNumber'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -362,6 +390,12 @@
       "id": "my-library",
       "title": "My Library",
       "frontendRoute": "/thu-vien",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'thu-vien'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -404,7 +438,13 @@
     {
       "id": "reading-history",
       "title": "Reading history",
-      "frontendRoute": "/lich-su-doc",
+      "frontendRoute": "/lich-su",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'lich-su'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -447,7 +487,17 @@
     {
       "id": "author-following",
       "title": "Follow authors / following list",
-      "frontendRoute": "/dang-theo-doi + public author surfaces",
+      "frontendRoute": "/dang-theo-doi + /tac-gia + /tac-gia/:authorSlug",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'dang-theo-doi'"]
+        },
+        {
+          "file": "frontend/src/app/routes/public.routes.ts",
+          "tokens": ["path: 'tac-gia'", "path: 'tac-gia/:authorSlug'"]
+        }
+      ],
       "contracts": [
         {
           "method": "POST",
@@ -509,6 +559,12 @@
       "id": "notifications",
       "title": "Notifications",
       "frontendRoute": "/thong-bao",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'thong-bao'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -571,6 +627,12 @@
       "id": "author-application",
       "title": "Author application",
       "frontendRoute": "/dang-ky-tac-gia",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'dang-ky-tac-gia'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -631,7 +693,13 @@
     {
       "id": "author-dashboard-profile",
       "title": "Author dashboard / profile",
-      "frontendRoute": "/author-studio + /author-studio/profile",
+      "frontendRoute": "/author-studio/tong-quan + /author-studio/ho-so",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/author-studio.routes.ts",
+          "tokens": ["path: 'author-studio'", "path: 'tong-quan'", "path: 'ho-so'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -694,7 +762,21 @@
     {
       "id": "author-story-studio",
       "title": "Author story / chapter studio",
-      "frontendRoute": "/author-studio/truyen/*",
+      "frontendRoute": "/author-studio/truyen + /author-studio/truyen/tao-moi + /author-studio/truyen/:storyId + /author-studio/truyen/:storyId/chuong + /author-studio/truyen/:storyId/chuong/tao-moi + /author-studio/truyen/:storyId/chuong/:chapterId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/author-studio.routes.ts",
+          "tokens": [
+            "path: 'author-studio'",
+            "path: 'truyen'",
+            "path: 'truyen/tao-moi'",
+            "path: 'truyen/:storyId'",
+            "path: 'truyen/:storyId/chuong'",
+            "path: 'truyen/:storyId/chuong/tao-moi'",
+            "path: 'truyen/:storyId/chuong/:chapterId'"
+          ]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -775,7 +857,13 @@
     {
       "id": "author-analytics",
       "title": "Author analytics",
-      "frontendRoute": "/author-studio/analytics/*",
+      "frontendRoute": "/author-studio/thong-ke + /author-studio/thong-ke/truyen/:storyId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/author-studio.routes.ts",
+          "tokens": ["path: 'author-studio'", "path: 'thong-ke'", "path: 'thong-ke/truyen/:storyId'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -818,7 +906,13 @@
     {
       "id": "admin-users",
       "title": "Admin users",
-      "frontendRoute": "/admin/users/*",
+      "frontendRoute": "/admin/users + /admin/users/:userId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'users'", "path: 'users/:userId'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -862,7 +956,13 @@
     {
       "id": "admin-authors",
       "title": "Admin authors",
-      "frontendRoute": "/admin/authors/*",
+      "frontendRoute": "/admin/authors + /admin/authors/:authorId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'authors'", "path: 'authors/:authorId'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -906,7 +1006,13 @@
     {
       "id": "admin-story-review",
       "title": "Admin story review",
-      "frontendRoute": "/admin/stories/*",
+      "frontendRoute": "/admin/stories + /admin/story-submissions/:submissionId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'stories'", "path: 'story-submissions/:submissionId'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -968,7 +1074,13 @@
     {
       "id": "admin-reports",
       "title": "Admin reports / moderation",
-      "frontendRoute": "/admin/reports/*",
+      "frontendRoute": "/admin/reports + /admin/reports/:reportId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'reports'", "path: 'reports/:reportId'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -1031,6 +1143,12 @@
       "id": "admin-taxonomy",
       "title": "Admin categories / tags",
       "frontendRoute": "/admin/categories + /admin/tags",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'categories'", "path: 'tags'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -1093,7 +1211,17 @@
     {
       "id": "admin-author-applications",
       "title": "Admin author applications",
-      "frontendRoute": "/admin/author-applications/*",
+      "frontendRoute": "/admin/author-applications + /admin/author-applications/:applicationId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": [
+            "path: 'admin'",
+            "path: 'author-applications'",
+            "path: 'author-applications/:applicationId'"
+          ]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",
@@ -1155,7 +1283,13 @@
     {
       "id": "admin-audit",
       "title": "Admin audit logs",
-      "frontendRoute": "/admin/audit-logs/*",
+      "frontendRoute": "/admin/audit-logs + /admin/audit-logs/:id",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'audit-logs'", "path: 'audit-logs/:id'"]
+        }
+      ],
       "contracts": [
         {
           "method": "GET",

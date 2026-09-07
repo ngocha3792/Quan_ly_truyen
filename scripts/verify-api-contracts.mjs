@@ -32,9 +32,41 @@ for (const screen of manifest.screens ?? []) {
     continue;
   }
 
+  if (screen.frontendRoute.startsWith('/')) {
+    if (!Array.isArray(screen.frontendRouteBindings) || screen.frontendRouteBindings.length === 0) {
+      errors.push(`Screen ${screen.id} phải bind frontendRoute vào file Angular route.`);
+    } else {
+      for (const binding of screen.frontendRouteBindings) {
+        validateFrontendRouteBinding(screen.id, binding);
+      }
+    }
+  }
+
   for (const contract of screen.contracts) {
     contractCount += 1;
     validateContract(screen.id, contract);
+  }
+}
+
+function validateFrontendRouteBinding(screenId, binding) {
+  if (!binding || typeof binding.file !== 'string' || !Array.isArray(binding.tokens) || binding.tokens.length === 0) {
+    errors.push(`${screenId}: frontendRoute binding không hợp lệ.`);
+    return;
+  }
+
+  const absolutePath = path.join(repoRoot, binding.file);
+  if (!fs.existsSync(absolutePath)) {
+    errors.push(`${screenId}: thiếu frontend route file ${binding.file}`);
+    return;
+  }
+
+  const source = fs.readFileSync(absolutePath, 'utf8');
+  for (const token of binding.tokens) {
+    if (!source.includes(token)) {
+      errors.push(
+        `${screenId}: frontend route token ${JSON.stringify(token)} không còn trong ${binding.file}`,
+      );
+    }
   }
 }
 
@@ -124,6 +156,7 @@ function renderMatrix(value) {
     '## Enforcement',
     '',
     '- `node scripts/verify-api-contracts.mjs` verifies every declared backend/frontend binding and fails on matrix drift.',
+    '- Route-like screen entries are also bound to Angular route source tokens, so renamed frontend paths fail the check until this manifest is updated.',
     '- `node scripts/verify-api-contracts.mjs --write` regenerates this table after an intentional contract change.',
     '- A new Production V1 screen that performs HTTP I/O must add its important contracts to the manifest in the same change.',
     '- Backend-only operational/webhook/maintenance endpoints are not evidence of a missing UI; they are deliberately outside this screen-oriented contract.',
