@@ -236,6 +236,27 @@ describe('Phase 6 reader analytics', () => {
         where: { id: { in: ids }, processedAt: { not: null } },
       }),
     ).toBe(5);
+    const dateKey = analyticsDateKey(
+      occurredAt,
+      process.env.ANALYTICS_TIME_ZONE ?? 'Asia/Ho_Chi_Minh',
+    );
+    await reconcile.recomputeUniqueReaders(dateKey);
+    const detail = await authorAnalytics.story(
+      authorId,
+      storyId,
+      dateKey,
+      dateKey,
+    );
+    expect(detail.totals).toMatchObject({
+      views: 1,
+      uniqueReaders: 1,
+      readingStarts: 1,
+      completions: 1,
+      readingSeconds: 15,
+      readingStartRate: 1,
+      completionRate: 1,
+      averageReadingSecondsPerReaderDay: 15,
+    });
     expect(authorId).toBeTruthy();
   });
 
@@ -373,14 +394,30 @@ describe('Phase 6 reader analytics', () => {
       occurredAt: new Date(),
     });
     await aggregate.processEventIds([ownView.id]);
+    const fromDate = new Date(today + 'T00:00:00.000Z');
+    fromDate.setUTCDate(fromDate.getUTCDate() - 1);
     const detail = await authorAnalytics.story(
       own.authorId,
       own.storyId,
-      today,
+      fromDate.toISOString().slice(0, 10),
       today,
     );
     expect(detail.totals.views).toBe(1);
     expect(detail.totals.completionRate).toBeNull();
+    expect(detail.totals.readingStartRate).toBe(0);
+    expect(detail.totals.averageReadingSecondsPerReaderDay).toBeNull();
+    expect(detail.series).toHaveLength(1);
+    expect(detail.series[0]?.date).toBe(today);
+    expect(detail.dataAvailability).toMatchObject({
+      requestedDays: 2,
+      recordedDays: 1,
+      unrecordedDays: 1,
+      seriesMode: 'recorded_days_only',
+      audienceMetric: 'sum_of_story_daily_unique_readers',
+    });
+    expect(detail.dataAvailability.lastAggregatedAt).toEqual(
+      expect.any(String),
+    );
     await expect(
       authorAnalytics.story(own.authorId, other.storyId, today, today),
     ).rejects.toMatchObject({ code: 'AUTHOR_ANALYTICS_STORY_NOT_FOUND' });

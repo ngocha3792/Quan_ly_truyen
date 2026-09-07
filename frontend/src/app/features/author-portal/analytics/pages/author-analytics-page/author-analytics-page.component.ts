@@ -77,10 +77,21 @@ export class AuthorAnalyticsPageComponent {
     return new Intl.NumberFormat('vi-VN').format(value);
   }
 
-  protected formatDuration(seconds: number): string {
+  protected formatDuration(seconds: number | null): string {
+    if (seconds === null) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours} giờ ${minutes} phút` : `${minutes} phút`;
+    if (hours > 0) return `${hours} giờ ${minutes} phút`;
+    if (minutes > 0) return `${minutes} phút`;
+    return `${Math.round(seconds)} giây`;
+  }
+
+  protected formatTimestamp(value: string | null): string {
+    if (!value) return 'Chưa có bản ghi';
+    return new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(value));
   }
 
   protected formatRate(value: number | null): string {
@@ -88,6 +99,7 @@ export class AuthorAnalyticsPageComponent {
   }
 
   protected barHeight(views: number): number {
+    if (views <= 0) return 0;
     const series = this.overview()?.series ?? [];
     const max = Math.max(1, ...series.map((point) => point.views));
     return Math.max(4, Math.round((views / max) * 100));

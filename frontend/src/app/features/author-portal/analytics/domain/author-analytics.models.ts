@@ -11,16 +11,28 @@ export interface AnalyticsTotals {
   readonly completions: number;
   readonly readingSeconds: number;
   readonly completionRate: number | null;
+  readonly readingStartRate: number | null;
+  readonly averageReadingSecondsPerReaderDay: number | null;
 }
 
 export interface AnalyticsSeriesPoint extends AnalyticsTotals {
   readonly date: string;
 }
 
+export interface AnalyticsDataAvailability {
+  readonly requestedDays: number;
+  readonly recordedDays: number;
+  readonly unrecordedDays: number;
+  readonly lastAggregatedAt: string | null;
+  readonly seriesMode: 'recorded_days_only';
+  readonly audienceMetric: 'sum_of_story_daily_unique_readers';
+}
+
 export interface AuthorAnalyticsOverview {
   readonly range: AnalyticsRange;
   readonly totals: AnalyticsTotals;
   readonly series: readonly AnalyticsSeriesPoint[];
+  readonly dataAvailability: AnalyticsDataAvailability;
   readonly freshness: string;
 }
 
@@ -28,6 +40,8 @@ export interface StoryAnalyticsListItem extends AnalyticsTotals {
   readonly id: string;
   readonly title: string;
   readonly slug: string;
+  readonly recordedDays: number;
+  readonly lastAggregatedAt: string | null;
 }
 
 export interface StoryAnalyticsList {
@@ -52,5 +66,6 @@ export interface StoryAnalyticsDetail {
   readonly range: AnalyticsRange;
   readonly totals: AnalyticsTotals;
   readonly series: readonly AnalyticsSeriesPoint[];
+  readonly dataAvailability: AnalyticsDataAvailability;
   readonly chapters: readonly ChapterAnalyticsItem[];
 }

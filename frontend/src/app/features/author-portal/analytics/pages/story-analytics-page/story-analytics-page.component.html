@@ -17,8 +17,9 @@
     <div class="summary-grid">
       <app-stat-card label="Lượt xem" [value]="formatNumber(analytics.totals.views)" icon="eye" />
       <app-stat-card
-        label="Độc giả"
+        label="Độc giả-ngày"
         [value]="formatNumber(analytics.totals.uniqueReaders)"
+        description="Tổng distinct theo ngày"
         icon="users"
         tone="blue"
       />
@@ -46,17 +47,53 @@
         icon="clock"
         tone="pink"
       />
+      <app-stat-card
+        label="Tỷ lệ bắt đầu đọc"
+        [value]="formatRate(analytics.totals.readingStartRate)"
+        description="Bắt đầu đọc / lượt xem trong cùng kỳ"
+        icon="activity"
+        tone="indigo"
+      />
+      <app-stat-card
+        label="TB đọc / độc giả-ngày"
+        [value]="formatDuration(analytics.totals.averageReadingSecondsPerReaderDay)"
+        description="Chỉ tính thời gian active đã ghi nhận"
+        icon="clock"
+        tone="blue"
+      />
     </div>
-    <article class="panel">
-      <h2>Xu hướng</h2>
-      <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày">
-        @for (point of analytics.series; track point.date) {
-          <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'">
-            <div class="bar" [style.height.%]="barHeight(point.views)"></div>
-            <span>{{ point.date.slice(5) }}</span>
-          </div>
-        }
+    <aside class="data-note" aria-label="Nguồn và độ phủ dữ liệu">
+      <div>
+        <strong>Dữ liệu quan sát được</strong>
+        <span>
+          {{ analytics.dataAvailability.recordedDays }}/{{
+            analytics.dataAvailability.requestedDays
+          }}
+          ngày có bản ghi aggregate. Biểu đồ không tự điền 0 cho ngày không có bản ghi.
+        </span>
       </div>
+      <span>
+        Cập nhật gần nhất: {{ formatTimestamp(analytics.dataAvailability.lastAggregatedAt) }}
+      </span>
+    </aside>
+    <article class="panel">
+      <h2>Hoạt động đã ghi nhận</h2>
+      @if (analytics.series.length === 0) {
+        <app-empty-state
+          icon="activity"
+          title="Chưa có ngày nào được ghi nhận"
+          description="Không có aggregate analytics thật trong khoảng thời gian này."
+        />
+      } @else {
+        <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày có bản ghi">
+          @for (point of analytics.series; track point.date) {
+            <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'">
+              <div class="bar" [style.height.%]="barHeight(point.views)"></div>
+              <span>{{ point.date.slice(5) }}</span>
+            </div>
+          }
+        </div>
+      }
     </article>
     <article class="panel">
       <h2>Theo chương</h2>
@@ -73,10 +110,12 @@
               <tr>
                 <th>Chương</th>
                 <th>Lượt xem</th>
-                <th>Độc giả</th>
+                <th>Độc giả-ngày</th>
                 <th>Bắt đầu đọc</th>
                 <th>Hoàn thành</th>
+                <th>Tỷ lệ bắt đầu</th>
                 <th>Tỷ lệ hoàn thành</th>
+                <th>TB đọc / độc giả-ngày</th>
               </tr>
             </thead>
             <tbody>
@@ -92,7 +131,9 @@
                   <td>{{ formatNumber(chapter.uniqueReaders) }}</td>
                   <td>{{ formatNumber(chapter.readingStarts) }}</td>
                   <td>{{ formatNumber(chapter.completions) }}</td>
+                  <td>{{ formatRate(chapter.readingStartRate) }}</td>
                   <td>{{ formatRate(chapter.completionRate) }}</td>
+                  <td>{{ formatDuration(chapter.averageReadingSecondsPerReaderDay) }}</td>
                 </tr>
               }
             </tbody>

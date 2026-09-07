@@ -9,7 +9,7 @@ import {
 } from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database';
 import {
-  completionRate,
+  derivedAnalyticsMetrics,
   safeBigInt,
 } from '../../domain/policies/analytics-metrics.policy';
 import {
@@ -61,6 +61,7 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
         readingStartCount: true,
         completionCount: true,
         readingSeconds: true,
+        updatedAt: true,
       },
       orderBy: { date: 'asc' },
     });
@@ -79,10 +80,11 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
     return {
       range: { from: range.fromKey, to: range.toKey, timeZone: range.timeZone },
       totals: this.withRate(totals),
-      series: this.dateKeys(range).map((date) => ({
+      series: [...byDate.entries()].map(([date, value]) => ({
         date,
-        ...this.withRate(byDate.get(date) ?? this.emptyTotals()),
+        ...this.withRate(value),
       })),
+      dataAvailability: this.dataAvailability(range, rows),
       freshness: 'Dữ liệu có thể chậm vài phút.',
     };
   }
@@ -112,15 +114,19 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
           },
           select: {
             storyId: true,
+            date: true,
             viewCount: true,
             uniqueReaders: true,
             readingStartCount: true,
             completionCount: true,
             readingSeconds: true,
+            updatedAt: true,
           },
         })
       : [];
     const totalsByStory = new Map<string, MutableAnalyticsTotals>();
+    const datesByStory = new Map<string, Set<string>>();
+    const latestUpdateByStory = new Map<string, Date>();
     for (const row of stats) {
       const current = totalsByStory.get(row.storyId) ?? this.emptyTotals();
       current.views += safeBigInt(row.viewCount);
@@ -129,12 +135,22 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
       current.completions += row.completionCount;
       current.readingSeconds += safeBigInt(row.readingSeconds);
       totalsByStory.set(row.storyId, current);
+      const dates = datesByStory.get(row.storyId) ?? new Set<string>();
+      dates.add(dateKeyFromUtcDate(row.date));
+      datesByStory.set(row.storyId, dates);
+      const latest = latestUpdateByStory.get(row.storyId);
+      if (!latest || row.updatedAt > latest) {
+        latestUpdateByStory.set(row.storyId, row.updatedAt);
+      }
     }
     return {
       range: { from: range.fromKey, to: range.toKey, timeZone: range.timeZone },
       items: stories.map((story) => ({
         ...story,
         ...this.withRate(totalsByStory.get(story.id) ?? this.emptyTotals()),
+        recordedDays: datesByStory.get(story.id)?.size ?? 0,
+        lastAggregatedAt:
+          latestUpdateByStory.get(story.id)?.toISOString() ?? null,
       })),
       pagination: {
         page: input.page,
@@ -175,6 +191,7 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
           readingStartCount: true,
           completionCount: true,
           readingSeconds: true,
+          updatedAt: true,
         },
       }),
       this.prisma.chapter.findMany({
@@ -214,10 +231,11 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
       story,
       range: { from: range.fromKey, to: range.toKey, timeZone: range.timeZone },
       totals: this.withRate(totals),
-      series: this.dateKeys(range).map((date) => ({
+      series: [...byDate.entries()].map(([date, value]) => ({
         date,
-        ...(byDate.get(date) ?? this.withRate(this.emptyTotals())),
+        ...value,
       })),
+      dataAvailability: this.dataAvailability(range, daily),
       chapters: chapters.map((chapter) => {
         const chapterTotals = chapter.dailyStats.reduce((sum, row) => {
           sum.views += safeBigInt(row.viewCount);
@@ -300,7 +318,7 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
   private withRate<T extends MutableAnalyticsTotals>(value: T) {
     return {
       ...value,
-      completionRate: completionRate(value.completions, value.readingStarts),
+      ...derivedAnalyticsMetrics(value),
     };
   }
 
@@ -333,5 +351,26 @@ export class PrismaAuthorAnalyticsReader implements AuthorAnalyticsReaderPort {
       keys.push(dateKeyFromUtcDate(current));
     }
     return keys;
+  }
+
+  private dataAvailability(
+    range: ResolvedRange,
+    rows: readonly { date: Date; updatedAt: Date }[],
+  ) {
+    const requestedDays = this.dateKeys(range).length;
+    const dates = new Set(rows.map((row) => dateKeyFromUtcDate(row.date)));
+    const lastAggregatedAt = rows.reduce<Date | null>(
+      (latest, row) =>
+        !latest || row.updatedAt > latest ? row.updatedAt : latest,
+      null,
+    );
+    return {
+      requestedDays,
+      recordedDays: dates.size,
+      unrecordedDays: requestedDays - dates.size,
+      lastAggregatedAt: lastAggregatedAt?.toISOString() ?? null,
+      seriesMode: 'recorded_days_only' as const,
+      audienceMetric: 'sum_of_story_daily_unique_readers' as const,
+    };
   }
 }

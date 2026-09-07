@@ -20,6 +20,25 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.75rem;
 }
+.data-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary-soft) 35%, var(--border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--primary-soft) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+.data-note div {
+  display: grid;
+  gap: 0.25rem;
+}
+.data-note strong {
+  color: var(--text-strong);
+}
 .panel {
   border: 1px solid var(--border);
   background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
@@ -52,7 +71,6 @@
 }
 .bar {
   width: 70%;
-  min-height: 4px;
   border-radius: 4px 4px 0 0;
   background: currentColor;
   opacity: 0.65;
@@ -89,5 +107,9 @@ td a {
 @media (max-width: 640px) {
   .story-analytics {
     padding: 20px 18px 40px;
+  }
+  .data-note {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

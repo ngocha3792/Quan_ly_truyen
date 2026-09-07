@@ -71,12 +71,23 @@ export class StoryAnalyticsPageComponent {
   protected formatRate(value: number | null): string {
     return value === null ? '—' : `${(value * 100).toFixed(1)}%`;
   }
-  protected formatDuration(seconds: number): string {
+  protected formatDuration(seconds: number | null): string {
+    if (seconds === null) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours} giờ ${minutes} phút` : `${minutes} phút`;
+    if (hours > 0) return `${hours} giờ ${minutes} phút`;
+    if (minutes > 0) return `${minutes} phút`;
+    return `${Math.round(seconds)} giây`;
+  }
+  protected formatTimestamp(value: string | null): string {
+    if (!value) return 'Chưa có bản ghi';
+    return new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(value));
   }
   protected barHeight(views: number): number {
+    if (views <= 0) return 0;
     const series = this.data()?.series ?? [];
     const max = Math.max(1, ...series.map((point) => point.views));
     return Math.max(4, Math.round((views / max) * 100));
