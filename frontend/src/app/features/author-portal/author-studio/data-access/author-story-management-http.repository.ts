@@ -6,6 +6,8 @@ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AuthorChapterDraftInput,
+  AuthorChapterVersion,
+  AuthorChapterVersionPage,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
@@ -20,6 +22,7 @@ import {
   AuthorStoryUpdateInput,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
+import { AuthorChapterVersionHttpService } from './author-chapter-version-http.service';
 import { AuthorMediaUploadService } from './author-media-upload.service';
 
 @Injectable()
@@ -27,6 +30,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
   private readonly mediaUpload = inject(AuthorMediaUploadService);
+  private readonly chapterVersions = inject(AuthorChapterVersionHttpService);
   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
   private storyCreateRetry: CreateRetryState | null = null;
@@ -163,6 +167,31 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
         input,
       )
       .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+  }
+
+  listChapterVersions(
+    storyId: string,
+    chapterId: string,
+    page: number,
+    pageSize: number,
+  ): Observable<AuthorChapterVersionPage> {
+    return this.chapterVersions.list(storyId, chapterId, page, pageSize);
+  }
+
+  getChapterVersion(
+    storyId: string,
+    chapterId: string,
+    version: number,
+  ): Observable<AuthorChapterVersion> {
+    return this.chapterVersions.get(storyId, chapterId, version);
+  }
+
+  restoreChapterVersion(
+    storyId: string,
+    chapterId: string,
+    version: number,
+  ): Observable<AuthorManagedChapter> {
+    return this.chapterVersions.restore(storyId, chapterId, version);
   }
 
   deleteChapter(storyId: string, chapterId: string): Observable<void> {

@@ -6,13 +6,16 @@ import {
   CreateAuthorChapterCommandHandler,
   DeleteAuthorChapterCommandHandler,
   GetAuthorChapterQueryHandler,
+  GetAuthorChapterVersionQueryHandler,
   GetPublicChapterReaderQueryHandler,
   ListAuthorChaptersQueryHandler,
+  ListAuthorChapterVersionsQueryHandler,
   ListPublicStoryChaptersQueryHandler,
   PublishAuthorChapterCommandHandler,
   ScheduleAuthorChapterCommandHandler,
   CancelAuthorChapterScheduleCommandHandler,
   UpdateAuthorChapterCommandHandler,
+  RestoreAuthorChapterVersionCommandHandler,
 } from './application';
 import { PrismaChapterPersistence } from './infrastructure';
 import {
@@ -29,6 +32,9 @@ import {
     DeleteAuthorChapterCommandHandler,
     ListAuthorChaptersQueryHandler,
     GetAuthorChapterQueryHandler,
+    GetAuthorChapterVersionQueryHandler,
+    ListAuthorChapterVersionsQueryHandler,
+    RestoreAuthorChapterVersionCommandHandler,
     PublishAuthorChapterCommandHandler,
     ScheduleAuthorChapterCommandHandler,
     CancelAuthorChapterScheduleCommandHandler,

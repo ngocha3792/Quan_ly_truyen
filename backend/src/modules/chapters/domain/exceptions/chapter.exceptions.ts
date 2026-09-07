@@ -42,6 +42,17 @@ export class ChapterNotFoundException extends ResourceNotFoundException {
   }
 }
 
+export class ChapterVersionNotFoundException extends ResourceNotFoundException {
+  constructor(chapterId: string, version: number) {
+    super({
+      code: 'CHAPTER_VERSION_NOT_FOUND',
+      resource: 'phiên bản chương',
+      identifier: `${chapterId}:${version}`,
+      message: `Không tìm thấy phiên bản ${version} của chương`,
+    });
+  }
+}
+
 export class ChapterDraftOnlyMutationException extends ResourceConflictException {
   constructor() {
     super({

@@ -2,6 +2,8 @@ import { Observable } from 'rxjs';
 
 import {
   AuthorChapterDraftInput,
+  AuthorChapterVersion,
+  AuthorChapterVersionPage,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
@@ -39,6 +41,22 @@ export abstract class AuthorStoryManagementRepository {
     storyId: string,
     chapterId: string,
     input: AuthorChapterDraftInput,
+  ): Observable<AuthorManagedChapter>;
+  abstract listChapterVersions(
+    storyId: string,
+    chapterId: string,
+    page: number,
+    pageSize: number,
+  ): Observable<AuthorChapterVersionPage>;
+  abstract getChapterVersion(
+    storyId: string,
+    chapterId: string,
+    version: number,
+  ): Observable<AuthorChapterVersion>;
+  abstract restoreChapterVersion(
+    storyId: string,
+    chapterId: string,
+    version: number,
   ): Observable<AuthorManagedChapter>;
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
   abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;

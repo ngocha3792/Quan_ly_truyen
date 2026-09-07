@@ -57,6 +57,30 @@ export interface ChapterSummaryRecord {
   readonly updatedAt: Date;
 }
 
+export interface ChapterVersionSummaryRecord {
+  readonly id: string;
+  readonly chapterId: string;
+  readonly createdById: string;
+  readonly createdByDisplayName: string;
+  readonly version: number;
+  readonly title: string;
+  readonly wordCount: number;
+  readonly changeSummary: string | null;
+  readonly createdAt: Date;
+}
+
+export interface ChapterVersionRecord extends ChapterVersionSummaryRecord {
+  readonly content: string;
+  readonly contentFormat: string;
+}
+
+export interface ChapterVersionPageRecord {
+  readonly items: readonly ChapterVersionSummaryRecord[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
 export interface CreateAuthorChapterInput {
   readonly userId: string;
 
@@ -119,6 +143,40 @@ export type UpdateAuthorChapterResult =
   | {
       readonly status: 'story_pending_review';
     };
+
+export interface ListAuthorChapterVersionsInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+export interface FindAuthorChapterVersionInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly version: number;
+}
+
+export interface RestoreAuthorChapterVersionInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly version: number;
+  readonly restoredAt: Date;
+  readonly audit: ChapterAuditContext;
+}
+
+export type RestoreAuthorChapterVersionResult =
+  | {
+      readonly status: 'restored';
+      readonly chapter: ChapterRecord;
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'version_not_found' }
+  | { readonly status: 'not_draft' }
+  | { readonly status: 'story_pending_review' };
 
 export interface DeleteAuthorChapterInput {
   readonly userId: string;
@@ -237,6 +295,18 @@ export interface ChapterPersistencePort {
   updateDraft(
     input: UpdateAuthorChapterInput,
   ): Promise<UpdateAuthorChapterResult>;
+
+  listOwnedVersions(
+    input: ListAuthorChapterVersionsInput,
+  ): Promise<ChapterVersionPageRecord | null>;
+
+  findOwnedVersion(
+    input: FindAuthorChapterVersionInput,
+  ): Promise<ChapterVersionRecord | null>;
+
+  restoreDraftVersion(
+    input: RestoreAuthorChapterVersionInput,
+  ): Promise<RestoreAuthorChapterVersionResult>;
 
   deleteDraft(
     input: DeleteAuthorChapterInput,

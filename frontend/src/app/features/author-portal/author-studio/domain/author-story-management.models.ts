@@ -72,6 +72,30 @@ export interface AuthorManagedChapter extends AuthorManagedChapterSummary {
   readonly contentFormat: string;
 }
 
+export interface AuthorChapterVersionSummary {
+  readonly id: string;
+  readonly chapterId: string;
+  readonly createdById: string;
+  readonly createdByDisplayName: string;
+  readonly version: number;
+  readonly title: string;
+  readonly wordCount: number;
+  readonly changeSummary: string | null;
+  readonly createdAt: string;
+}
+
+export interface AuthorChapterVersion extends AuthorChapterVersionSummary {
+  readonly content: string;
+  readonly contentFormat: string;
+}
+
+export interface AuthorChapterVersionPage {
+  readonly items: readonly AuthorChapterVersionSummary[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
 export interface AuthorStoryMetadataCategory {
   readonly id: string;
   readonly parentId: string | null;

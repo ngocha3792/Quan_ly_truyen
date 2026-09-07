@@ -158,6 +158,79 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
     ).toBe(chapter.id);
     await expect(prisma.chapter.count({ where: { storyId } })).resolves.toBe(1);
 
+    const mistakenEditResponse = await request(httpServer())
+      .patch(`/api/v1/author/stories/${storyId}/chapters/${chapter.id}`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({
+        title: 'Workflow chapter edited by mistake',
+        content: 'Nội dung bị chỉnh sửa nhầm.',
+      })
+      .expect(200);
+    expect(
+      unwrap<{ version: number }>(mistakenEditResponse.body as unknown).version,
+    ).toBe(2);
+
+    const versionListResponse = await request(httpServer())
+      .get(`/api/v1/author/stories/${storyId}/chapters/${chapter.id}/versions`)
+      .query({ page: 1, pageSize: 10 })
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(
+      unwrap<{
+        items: Array<{ version: number; changeSummary: string | null }>;
+        total: number;
+      }>(versionListResponse.body as unknown),
+    ).toMatchObject({
+      items: [
+        { version: 2, changeSummary: 'Chỉnh sửa tiêu đề và nội dung' },
+        { version: 1, changeSummary: 'Tạo bản nháp' },
+      ],
+      total: 2,
+    });
+
+    const originalVersionResponse = await request(httpServer())
+      .get(
+        `/api/v1/author/stories/${storyId}/chapters/${chapter.id}/versions/1`,
+      )
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(
+      unwrap<{ title: string; content: string }>(
+        originalVersionResponse.body as unknown,
+      ),
+    ).toMatchObject(chapterBody);
+
+    await request(httpServer())
+      .get(`/api/v1/author/stories/${storyId}/chapters/${chapter.id}/versions`)
+      .set('Authorization', `Bearer ${token(intruderId, intruderSessionId)}`)
+      .expect(404);
+
+    const restoreKey = `chapter-version-restore-${runId}`;
+    const restoredResponse = await request(httpServer())
+      .post(
+        `/api/v1/author/stories/${storyId}/chapters/${chapter.id}/versions/1/restore`,
+      )
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', restoreKey)
+      .expect(200);
+    expect(
+      unwrap<{ title: string; content: string; version: number }>(
+        restoredResponse.body as unknown,
+      ),
+    ).toMatchObject({ ...chapterBody, version: 3 });
+
+    const replayRestoreResponse = await request(httpServer())
+      .post(
+        `/api/v1/author/stories/${storyId}/chapters/${chapter.id}/versions/1/restore`,
+      )
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', restoreKey)
+      .expect(200);
+    expect(replayRestoreResponse.headers['x-idempotent-replayed']).toBe('true');
+    await expect(
+      prisma.chapterVersion.count({ where: { chapterId: chapter.id } }),
+    ).resolves.toBe(3);
+
     const intruderResponse = await request(httpServer())
       .patch(`/api/v1/author/stories/${storyId}`)
       .set('Authorization', `Bearer ${token(intruderId, intruderSessionId)}`)

@@ -12,25 +12,16 @@
           "path": "/auth/client-config",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-client-config.controller.ts",
-            "tokens": [
-              "@Controller('auth')",
-              "@Get('client-config')"
-            ]
+            "tokens": ["@Controller('auth')", "@Get('client-config')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/config/app-runtime-config.loader.ts",
-              "tokens": [
-                "/auth/client-config",
-                "parseAuthClientConfigResponse"
-              ]
+              "tokens": ["/auth/client-config", "parseAuthClientConfigResponse"]
             },
             {
               "file": "frontend/src/app/core/config/app-runtime-config.server.ts",
-              "tokens": [
-                "/auth/client-config",
-                "parseAuthClientConfigResponse"
-              ]
+              "tokens": ["/auth/client-config", "parseAuthClientConfigResponse"]
             }
           ]
         },
@@ -39,17 +30,12 @@
           "path": "/auth/login",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-token.controller.ts",
-            "tokens": [
-              "@Controller('auth')",
-              "@Post('login')"
-            ]
+            "tokens": ["@Controller('auth')", "@Post('login')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/login`"
-              ]
+              "tokens": ["`${this.baseUrl}/login`"]
             }
           ]
         },
@@ -58,17 +44,12 @@
           "path": "/auth/register",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
-            "tokens": [
-              "@Controller('auth')",
-              "@Post('register')"
-            ]
+            "tokens": ["@Controller('auth')", "@Post('register')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/register`"
-              ]
+              "tokens": ["`${this.baseUrl}/register`"]
             }
           ]
         },
@@ -77,17 +58,12 @@
           "path": "/auth/me",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-account.controller.ts",
-            "tokens": [
-              "@Controller('auth')",
-              "@Get('me')"
-            ]
+            "tokens": ["@Controller('auth')", "@Get('me')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/me`"
-              ]
+              "tokens": ["`${this.baseUrl}/me`"]
             }
           ]
         }
@@ -109,16 +85,12 @@
           "path": "/auth/forgot-password",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
-            "tokens": [
-              "@Post('forgot-password')"
-            ]
+            "tokens": ["@Post('forgot-password')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/forgot-password`"
-              ]
+              "tokens": ["`${this.baseUrl}/forgot-password`"]
             }
           ]
         },
@@ -127,16 +99,12 @@
           "path": "/auth/reset-password/validate",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
-            "tokens": [
-              "@Post('reset-password/validate')"
-            ]
+            "tokens": ["@Post('reset-password/validate')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/reset-password/validate`"
-              ]
+              "tokens": ["`${this.baseUrl}/reset-password/validate`"]
             }
           ]
         },
@@ -145,16 +113,12 @@
           "path": "/auth/reset-password",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
-            "tokens": [
-              "@Post('reset-password')"
-            ]
+            "tokens": ["@Post('reset-password')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/auth/auth-api.service.ts",
-              "tokens": [
-                "`${this.baseUrl}/reset-password`"
-              ]
+              "tokens": ["`${this.baseUrl}/reset-password`"]
             }
           ]
         }
@@ -171,7 +135,10 @@
         },
         {
           "file": "frontend/src/app/features/account/profile/account.routes.ts",
-          "tokens": ["path: 'thong-tin-ca-nhan'", "path: 'bao-mat/doi-mat-khau'"]
+          "tokens": [
+            "path: 'thong-tin-ca-nhan'",
+            "path: 'bao-mat/doi-mat-khau'"
+          ]
         }
       ],
       "contracts": [
@@ -180,17 +147,12 @@
           "path": "/users/me",
           "backend": {
             "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
-            "tokens": [
-              "@Controller('users')",
-              "@Get('me')"
-            ]
+            "tokens": ["@Controller('users')", "@Get('me')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
-              "tokens": [
-                "`${this.usersUrl}/me`"
-              ]
+              "tokens": ["`${this.usersUrl}/me`"]
             }
           ]
         },
@@ -199,16 +161,12 @@
           "path": "/users/me",
           "backend": {
             "file": "backend/src/modules/users/presentation/http/controllers/users.controller.ts",
-            "tokens": [
-              "@Patch('me')"
-            ]
+            "tokens": ["@Patch('me')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts",
-              "tokens": [
-                "`${this.usersUrl}/me`"
-              ]
+              "tokens": ["`${this.usersUrl}/me`"]
             }
           ]
         },
@@ -217,16 +175,12 @@
           "path": "/auth/change-password",
           "backend": {
             "file": "backend/src/modules/auth/presentation/http/controllers/auth-credentials.controller.ts",
-            "tokens": [
-              "@Post('change-password')"
-            ]
+            "tokens": ["@Post('change-password')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/profile/security/data/account-security-api.service.ts",
-              "tokens": [
-                "`${this.authUrl}/change-password`"
-              ]
+              "tokens": ["`${this.authUrl}/change-password`"]
             }
           ]
         }
@@ -248,17 +202,12 @@
           "path": "/stories",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
-            "tokens": [
-              "@Controller('stories')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('stories')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/public-stories-api.client.ts",
-              "tokens": [
-                "/stories"
-              ]
+              "tokens": ["/stories"]
             }
           ]
         },
@@ -267,16 +216,12 @@
           "path": "/stories/:slug",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/public-stories.controller.ts",
-            "tokens": [
-              "@Get(':slug')"
-            ]
+            "tokens": ["@Get(':slug')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/public-stories-api.client.ts",
-              "tokens": [
-                "encodeURIComponent(slug)"
-              ]
+              "tokens": ["encodeURIComponent(slug)"]
             }
           ]
         }
@@ -298,16 +243,12 @@
           "path": "/stories/:storySlug/chapters/:chapterNumber",
           "backend": {
             "file": "backend/src/modules/chapters/presentation/http/controllers/public-chapters.controller.ts",
-            "tokens": [
-              "@Get(':storySlug/chapters/:chapterNumber')"
-            ]
+            "tokens": ["@Get(':storySlug/chapters/:chapterNumber')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/public/chapter-reader/data-access/chapter-reader-http.repository.ts",
-              "tokens": [
-                "getChapter"
-              ]
+              "tokens": ["getChapter"]
             }
           ]
         },
@@ -316,16 +257,12 @@
           "path": "/reading-progress/:storyId",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
-            "tokens": [
-              "@Put('reading-progress/:storyId')"
-            ]
+            "tokens": ["@Put('reading-progress/:storyId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
-              "tokens": [
-                "/reading-progress/"
-              ]
+              "tokens": ["/reading-progress/"]
             }
           ]
         },
@@ -334,17 +271,12 @@
           "path": "/reading-bookmarks/:chapterId",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
-            "tokens": [
-              "@Controller('reading-bookmarks')",
-              "@Get(':chapterId')"
-            ]
+            "tokens": ["@Controller('reading-bookmarks')", "@Get(':chapterId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
-              "tokens": [
-                "getReadingBookmark"
-              ]
+              "tokens": ["getReadingBookmark"]
             }
           ]
         },
@@ -353,16 +285,12 @@
           "path": "/reading-bookmarks/:chapterId",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
-            "tokens": [
-              "@Put(':chapterId')"
-            ]
+            "tokens": ["@Put(':chapterId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
-              "tokens": [
-                "upsertReadingBookmark"
-              ]
+              "tokens": ["upsertReadingBookmark"]
             }
           ]
         },
@@ -371,16 +299,12 @@
           "path": "/reading-bookmarks/:chapterId",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
-            "tokens": [
-              "@Delete(':chapterId')"
-            ]
+            "tokens": ["@Delete(':chapterId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/http/reader-engagement-api.client.ts",
-              "tokens": [
-                "removeReadingBookmark"
-              ]
+              "tokens": ["removeReadingBookmark"]
             }
           ]
         }
@@ -402,16 +326,12 @@
           "path": "/library",
           "backend": {
             "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
-            "tokens": [
-              "@Get('library')"
-            ]
+            "tokens": ["@Get('library')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
-              "tokens": [
-                "listLibrary"
-              ]
+              "tokens": ["listLibrary"]
             }
           ]
         },
@@ -420,16 +340,12 @@
           "path": "/library/:storyId",
           "backend": {
             "file": "backend/src/modules/libraries/presentation/http/controllers/libraries.controller.ts",
-            "tokens": [
-              "@Put('library/:storyId')"
-            ]
+            "tokens": ["@Put('library/:storyId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/my-library/data-access/my-library-http.repository.ts",
-              "tokens": [
-                "upsertLibrary"
-              ]
+              "tokens": ["upsertLibrary"]
             }
           ]
         }
@@ -451,16 +367,12 @@
           "path": "/reading-history",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
-            "tokens": [
-              "@Get('reading-history')"
-            ]
+            "tokens": ["@Get('reading-history')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
-              "tokens": [
-                "listReadingHistory"
-              ]
+              "tokens": ["listReadingHistory"]
             }
           ]
         },
@@ -469,16 +381,12 @@
           "path": "/reading-bookmarks",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",
-            "tokens": [
-              "@Get()"
-            ]
+            "tokens": ["@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
-              "tokens": [
-                "listReadingBookmarks"
-              ]
+              "tokens": ["listReadingBookmarks"]
             }
           ]
         }
@@ -504,16 +412,12 @@
           "path": "/authors/:authorId/follow",
           "backend": {
             "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
-            "tokens": [
-              "@Post('authors/:authorId/follow')"
-            ]
+            "tokens": ["@Post('authors/:authorId/follow')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
-              "tokens": [
-                "/follow"
-              ]
+              "tokens": ["/follow"]
             }
           ]
         },
@@ -522,16 +426,12 @@
           "path": "/authors/:authorId/follow",
           "backend": {
             "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
-            "tokens": [
-              "@Delete('authors/:authorId/follow')"
-            ]
+            "tokens": ["@Delete('authors/:authorId/follow')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
-              "tokens": [
-                "/follow"
-              ]
+              "tokens": ["/follow"]
             }
           ]
         },
@@ -540,16 +440,12 @@
           "path": "/me/following",
           "backend": {
             "file": "backend/src/modules/follows/presentation/http/controllers/author-follow.controller.ts",
-            "tokens": [
-              "@Get('me/following')"
-            ]
+            "tokens": ["@Get('me/following')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/core/author-follow/data-access/author-follow-api.service.ts",
-              "tokens": [
-                "/me/following"
-              ]
+              "tokens": ["/me/following"]
             }
           ]
         }
@@ -571,17 +467,12 @@
           "path": "/notifications",
           "backend": {
             "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
-            "tokens": [
-              "@Controller('notifications')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('notifications')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
-              "tokens": [
-                "this.baseUrl"
-              ]
+              "tokens": ["this.baseUrl"]
             }
           ]
         },
@@ -590,16 +481,12 @@
           "path": "/notifications/:notificationId/read",
           "backend": {
             "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
-            "tokens": [
-              "@Patch(':notificationId/read')"
-            ]
+            "tokens": ["@Patch(':notificationId/read')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
-              "tokens": [
-                "/read"
-              ]
+              "tokens": ["/read"]
             }
           ]
         },
@@ -608,16 +495,12 @@
           "path": "/notifications/settings",
           "backend": {
             "file": "backend/src/modules/notifications/presentation/http/controllers/notifications.controller.ts",
-            "tokens": [
-              "@Patch('settings')"
-            ]
+            "tokens": ["@Patch('settings')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/notifications/data-access/notifications-http.repository.ts",
-              "tokens": [
-                "/settings"
-              ]
+              "tokens": ["/settings"]
             }
           ]
         }
@@ -639,16 +522,12 @@
           "path": "/author-applications/config",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
-            "tokens": [
-              "@Get('config')"
-            ]
+            "tokens": ["@Get('config')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
-              "tokens": [
-                "/config"
-              ]
+              "tokens": ["/config"]
             }
           ]
         },
@@ -657,16 +536,12 @@
           "path": "/author-applications/me/draft",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
-            "tokens": [
-              "@Put('me/draft')"
-            ]
+            "tokens": ["@Put('me/draft')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
-              "tokens": [
-                "/me/draft"
-              ]
+              "tokens": ["/me/draft"]
             }
           ]
         },
@@ -675,16 +550,12 @@
           "path": "/author-applications/me/submit",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/author-applications.controller.ts",
-            "tokens": [
-              "@Post('me/submit')"
-            ]
+            "tokens": ["@Post('me/submit')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/account/author-application/data-access/author-application-api.repository.ts",
-              "tokens": [
-                "/me/submit"
-              ]
+              "tokens": ["/me/submit"]
             }
           ]
         }
@@ -697,7 +568,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/author-studio.routes.ts",
-          "tokens": ["path: 'author-studio'", "path: 'tong-quan'", "path: 'ho-so'"]
+          "tokens": [
+            "path: 'author-studio'",
+            "path: 'tong-quan'",
+            "path: 'ho-so'"
+          ]
         }
       ],
       "contracts": [
@@ -706,17 +581,12 @@
           "path": "/author/dashboard",
           "backend": {
             "file": "backend/src/modules/authors/presentation/http/controllers/author-dashboard.controller.ts",
-            "tokens": [
-              "@Controller('author/dashboard')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('author/dashboard')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-studio-http.repository.ts",
-              "tokens": [
-                "/author/dashboard"
-              ]
+              "tokens": ["/author/dashboard"]
             }
           ]
         },
@@ -725,17 +595,12 @@
           "path": "/author/profile",
           "backend": {
             "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
-            "tokens": [
-              "@Controller('author/profile')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('author/profile')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
-              "tokens": [
-                "/author/profile"
-              ]
+              "tokens": ["/author/profile"]
             }
           ]
         },
@@ -744,16 +609,12 @@
           "path": "/author/profile",
           "backend": {
             "file": "backend/src/modules/authors/presentation/http/controllers/author-profile.controller.ts",
-            "tokens": [
-              "@Patch()"
-            ]
+            "tokens": ["@Patch()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-profile/data-access/author-profile-http.repository.ts",
-              "tokens": [
-                "/author/profile"
-              ]
+              "tokens": ["/author/profile"]
             }
           ]
         }
@@ -783,17 +644,12 @@
           "path": "/author/stories",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
-            "tokens": [
-              "@Controller('author/stories')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('author/stories')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
-              "tokens": [
-                "this.storiesUrl"
-              ]
+              "tokens": ["this.storiesUrl"]
             }
           ]
         },
@@ -802,16 +658,12 @@
           "path": "/author/stories",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/author-stories.controller.ts",
-            "tokens": [
-              "@Post()"
-            ]
+            "tokens": ["@Post()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
-              "tokens": [
-                "this.storiesUrl, input"
-              ]
+              "tokens": ["this.storiesUrl, input"]
             }
           ]
         },
@@ -828,9 +680,49 @@
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
-              "tokens": [
-                "/chapters`"
-              ]
+              "tokens": ["/chapters`"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/stories/:storyId/chapters/:chapterId/versions",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
+            "tokens": ["@Get(':chapterId/versions')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-version-http.service.ts",
+              "tokens": ["list(", "this.versionUrl(storyId, chapterId)"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/stories/:storyId/chapters/:chapterId/versions/:version",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
+            "tokens": ["@Get(':chapterId/versions/:version')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-version-http.service.ts",
+              "tokens": ["get(", "${this.versionUrl(storyId, chapterId)}/${version}`"]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/chapters/:chapterId/versions/:version/restore",
+          "backend": {
+            "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
+            "tokens": ["@Post(':chapterId/versions/:version/restore')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-version-http.service.ts",
+              "tokens": ["restore(", "${this.versionUrl(storyId, chapterId)}/${version}/restore`"]
             }
           ]
         },
@@ -839,16 +731,12 @@
           "path": "/author/stories/:storyId/chapters/:chapterId/publish",
           "backend": {
             "file": "backend/src/modules/chapters/presentation/http/controllers/author-chapters.controller.ts",
-            "tokens": [
-              "@Post(':chapterId/publish')"
-            ]
+            "tokens": ["@Post(':chapterId/publish')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-story-management-http.repository.ts",
-              "tokens": [
-                "/publish`"
-              ]
+              "tokens": ["/publish`"]
             }
           ]
         }
@@ -861,7 +749,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/author-studio.routes.ts",
-          "tokens": ["path: 'author-studio'", "path: 'thong-ke'", "path: 'thong-ke/truyen/:storyId'"]
+          "tokens": [
+            "path: 'author-studio'",
+            "path: 'thong-ke'",
+            "path: 'thong-ke/truyen/:storyId'"
+          ]
         }
       ],
       "contracts": [
@@ -870,16 +762,12 @@
           "path": "/author/analytics/overview",
           "backend": {
             "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
-            "tokens": [
-              "@Get('overview')"
-            ]
+            "tokens": ["@Get('overview')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
-              "tokens": [
-                "/author/analytics/overview"
-              ]
+              "tokens": ["/author/analytics/overview"]
             }
           ]
         },
@@ -888,16 +776,12 @@
           "path": "/author/analytics/stories",
           "backend": {
             "file": "backend/src/modules/analytics/presentation/http/controllers/author-analytics.controller.ts",
-            "tokens": [
-              "@Get('stories')"
-            ]
+            "tokens": ["@Get('stories')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/analytics/data-access/author-analytics-http.service.ts",
-              "tokens": [
-                "/author/analytics/stories"
-              ]
+              "tokens": ["/author/analytics/stories"]
             }
           ]
         }
@@ -919,17 +803,12 @@
           "path": "/admin/users",
           "backend": {
             "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
-            "tokens": [
-              "@Controller('admin/users')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/users')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
-              "tokens": [
-                "this.baseUrl"
-              ]
+              "tokens": ["this.baseUrl"]
             }
           ]
         },
@@ -938,16 +817,12 @@
           "path": "/admin/users/:userId/status",
           "backend": {
             "file": "backend/src/modules/users/presentation/http/controllers/admin-users.controller.ts",
-            "tokens": [
-              "@Patch(':userId/status')"
-            ]
+            "tokens": ["@Patch(':userId/status')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/users/data-access/admin-users-api.service.ts",
-              "tokens": [
-                "/status"
-              ]
+              "tokens": ["/status"]
             }
           ]
         }
@@ -960,7 +835,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/admin.routes.ts",
-          "tokens": ["path: 'admin'", "path: 'authors'", "path: 'authors/:authorId'"]
+          "tokens": [
+            "path: 'admin'",
+            "path: 'authors'",
+            "path: 'authors/:authorId'"
+          ]
         }
       ],
       "contracts": [
@@ -969,17 +848,12 @@
           "path": "/admin/authors",
           "backend": {
             "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
-            "tokens": [
-              "@Controller('admin/authors')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/authors')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
-              "tokens": [
-                "this.baseUrl"
-              ]
+              "tokens": ["this.baseUrl"]
             }
           ]
         },
@@ -988,16 +862,12 @@
           "path": "/admin/authors/:authorId/status",
           "backend": {
             "file": "backend/src/modules/authors/presentation/http/controllers/admin-authors.controller.ts",
-            "tokens": [
-              "@Patch(':authorId/status')"
-            ]
+            "tokens": ["@Patch(':authorId/status')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/authors/data-access/admin-authors-api.service.ts",
-              "tokens": [
-                "/status"
-              ]
+              "tokens": ["/status"]
             }
           ]
         }
@@ -1010,7 +880,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/admin.routes.ts",
-          "tokens": ["path: 'admin'", "path: 'stories'", "path: 'story-submissions/:submissionId'"]
+          "tokens": [
+            "path: 'admin'",
+            "path: 'stories'",
+            "path: 'story-submissions/:submissionId'"
+          ]
         }
       ],
       "contracts": [
@@ -1019,17 +893,12 @@
           "path": "/admin/story-submissions",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-moderation.controller.ts",
-            "tokens": [
-              "@Controller('admin/story-submissions')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/story-submissions')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
-              "tokens": [
-                "/admin/story-submissions"
-              ]
+              "tokens": ["/admin/story-submissions"]
             }
           ]
         },
@@ -1038,16 +907,12 @@
           "path": "/admin/story-submissions/:submissionId/approve",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
-            "tokens": [
-              "@Post(':submissionId/approve')"
-            ]
+            "tokens": ["@Post(':submissionId/approve')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
-              "tokens": [
-                "/approve"
-              ]
+              "tokens": ["/approve"]
             }
           ]
         },
@@ -1056,16 +921,12 @@
           "path": "/admin/story-submissions/:submissionId/reject",
           "backend": {
             "file": "backend/src/modules/stories/presentation/http/controllers/admin-story-publication.controller.ts",
-            "tokens": [
-              "@Post(':submissionId/reject')"
-            ]
+            "tokens": ["@Post(':submissionId/reject')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/stories/data-access/admin-stories-api.service.ts",
-              "tokens": [
-                "/reject"
-              ]
+              "tokens": ["/reject"]
             }
           ]
         }
@@ -1078,7 +939,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/admin.routes.ts",
-          "tokens": ["path: 'admin'", "path: 'reports'", "path: 'reports/:reportId'"]
+          "tokens": [
+            "path: 'admin'",
+            "path: 'reports'",
+            "path: 'reports/:reportId'"
+          ]
         }
       ],
       "contracts": [
@@ -1087,17 +952,12 @@
           "path": "/admin/reports",
           "backend": {
             "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
-            "tokens": [
-              "@Controller('admin/reports')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/reports')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
-              "tokens": [
-                "this.reportsUrl"
-              ]
+              "tokens": ["this.reportsUrl"]
             }
           ]
         },
@@ -1106,16 +966,12 @@
           "path": "/admin/reports/:reportId/resolve",
           "backend": {
             "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
-            "tokens": [
-              "@Post(':reportId/resolve')"
-            ]
+            "tokens": ["@Post(':reportId/resolve')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
-              "tokens": [
-                "resolve"
-              ]
+              "tokens": ["resolve"]
             }
           ]
         },
@@ -1124,16 +980,12 @@
           "path": "/admin/reports/:reportId/reject",
           "backend": {
             "file": "backend/src/modules/reports/presentation/http/controllers/admin-reports.controller.ts",
-            "tokens": [
-              "@Post(':reportId/reject')"
-            ]
+            "tokens": ["@Post(':reportId/reject')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts",
-              "tokens": [
-                "reject"
-              ]
+              "tokens": ["reject"]
             }
           ]
         }
@@ -1155,17 +1007,12 @@
           "path": "/admin/categories",
           "backend": {
             "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
-            "tokens": [
-              "@Controller('admin/categories')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/categories')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
-              "tokens": [
-                "/admin/categories"
-              ]
+              "tokens": ["/admin/categories"]
             }
           ]
         },
@@ -1174,16 +1021,12 @@
           "path": "/admin/categories",
           "backend": {
             "file": "backend/src/modules/categories/presentation/http/controllers/admin-categories.controller.ts",
-            "tokens": [
-              "@Post()"
-            ]
+            "tokens": ["@Post()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts",
-              "tokens": [
-                "this.url, input"
-              ]
+              "tokens": ["this.url, input"]
             }
           ]
         },
@@ -1192,17 +1035,12 @@
           "path": "/admin/tags",
           "backend": {
             "file": "backend/src/modules/tags/presentation/http/controllers/admin-tags.controller.ts",
-            "tokens": [
-              "@Controller('admin/tags')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/tags')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/tags/data-access/admin-tags-api.service.ts",
-              "tokens": [
-                "/admin/tags"
-              ]
+              "tokens": ["/admin/tags"]
             }
           ]
         }
@@ -1228,17 +1066,12 @@
           "path": "/author-applications/admin",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
-            "tokens": [
-              "@Controller('author-applications/admin')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('author-applications/admin')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
-              "tokens": [
-                "/author-applications/admin"
-              ]
+              "tokens": ["/author-applications/admin"]
             }
           ]
         },
@@ -1247,16 +1080,12 @@
           "path": "/author-applications/admin/:applicationId/approve",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
-            "tokens": [
-              "@Post(':applicationId/approve')"
-            ]
+            "tokens": ["@Post(':applicationId/approve')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
-              "tokens": [
-                "/approve"
-              ]
+              "tokens": ["/approve"]
             }
           ]
         },
@@ -1265,16 +1094,12 @@
           "path": "/author-applications/admin/:applicationId/reject",
           "backend": {
             "file": "backend/src/modules/author-applications/presentation/http/controllers/admin-author-applications.controller.ts",
-            "tokens": [
-              "@Post(':applicationId/reject')"
-            ]
+            "tokens": ["@Post(':applicationId/reject')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts",
-              "tokens": [
-                "/reject"
-              ]
+              "tokens": ["/reject"]
             }
           ]
         }
@@ -1287,7 +1112,11 @@
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/admin.routes.ts",
-          "tokens": ["path: 'admin'", "path: 'audit-logs'", "path: 'audit-logs/:id'"]
+          "tokens": [
+            "path: 'admin'",
+            "path: 'audit-logs'",
+            "path: 'audit-logs/:id'"
+          ]
         }
       ],
       "contracts": [
@@ -1296,17 +1125,12 @@
           "path": "/admin/audit-logs",
           "backend": {
             "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
-            "tokens": [
-              "@Controller('admin/audit-logs')",
-              "@Get()"
-            ]
+            "tokens": ["@Controller('admin/audit-logs')", "@Get()"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
-              "tokens": [
-                "/admin/audit-logs"
-              ]
+              "tokens": ["/admin/audit-logs"]
             }
           ]
         },
@@ -1315,16 +1139,12 @@
           "path": "/admin/audit-logs/:auditLogId",
           "backend": {
             "file": "backend/src/modules/audit-logs/presentation/http/controllers/admin-audit-logs.controller.ts",
-            "tokens": [
-              "@Get(':auditLogId')"
-            ]
+            "tokens": ["@Get(':auditLogId')"]
           },
           "frontend": [
             {
               "file": "frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts",
-              "tokens": [
-                "encodeURIComponent(id)"
-              ]
+              "tokens": ["encodeURIComponent(id)"]
             }
           ]
         }

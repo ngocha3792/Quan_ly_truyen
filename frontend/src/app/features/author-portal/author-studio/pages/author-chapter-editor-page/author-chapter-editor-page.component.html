@@ -14,6 +14,9 @@
     @if (store.error()) {
       <app-notice kind="error" [message]="store.error()" />
     }
+    @if (store.success()) {
+      <app-notice kind="success" [message]="store.success()" />
+    }
     @if (store.loading()) {
       <app-loading-state message="Đang tải chương..." />
     } @else {
@@ -76,6 +79,106 @@
           </app-button>
         </footer>
       </form>
+
+      @if (!isCreate) {
+        <section class="version-history" aria-labelledby="version-history-title">
+          <header class="version-history__header">
+            <div>
+              <span class="eyebrow">An toàn chỉnh sửa</span>
+              <h2 id="version-history-title">Lịch sử phiên bản</h2>
+              <p>Mỗi lần lưu tạo một snapshot. Khôi phục luôn tạo phiên bản mới.</p>
+            </div>
+            <span class="version-count">{{ store.historyTotal() }} phiên bản</span>
+          </header>
+
+          @if (store.loadingHistory() && store.history().length === 0) {
+            <app-loading-state message="Đang tải lịch sử phiên bản..." />
+          } @else if (store.history().length === 0) {
+            <p class="version-empty">Chưa có snapshot nào cho chương này.</p>
+          } @else {
+            <div class="version-list">
+              @for (version of store.history(); track version.id) {
+                <article
+                  class="version-row"
+                  [class.version-row--current]="version.version === store.chapter()?.version"
+                >
+                  <div class="version-row__main">
+                    <div class="version-row__title">
+                      <strong>v{{ version.version }} · {{ version.title }}</strong>
+                      @if (version.version === store.chapter()?.version) {
+                        <span class="current-badge">Hiện tại</span>
+                      }
+                    </div>
+                    <span>{{ version.changeSummary || 'Bản lưu chương' }}</span>
+                    <small>
+                      {{ version.createdByDisplayName }} ·
+                      {{ version.createdAt | date: 'dd/MM/yyyy HH:mm' }} ·
+                      {{ version.wordCount }} từ
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    class="version-view"
+                    [disabled]="store.loadingVersion()"
+                    (click)="viewVersion(version.version)"
+                  >
+                    Xem bản này
+                  </button>
+                </article>
+              }
+            </div>
+
+            @if (store.history().length < store.historyTotal()) {
+              <button
+                type="button"
+                class="load-more"
+                [disabled]="store.loadingHistory()"
+                (click)="loadMoreVersions()"
+              >
+                {{ store.loadingHistory() ? 'Đang tải...' : 'Tải thêm phiên bản' }}
+              </button>
+            }
+          }
+
+          @if (store.selectedVersion(); as selected) {
+            <article class="version-preview">
+              <header>
+                <div>
+                  <span class="eyebrow">Bản xem trước</span>
+                  <h3>Phiên bản {{ selected.version }} · {{ selected.title }}</h3>
+                </div>
+                <button
+                  type="button"
+                  class="preview-close"
+                  aria-label="Đóng bản xem trước"
+                  (click)="store.clearSelectedVersion()"
+                >
+                  ×
+                </button>
+              </header>
+              <p class="preview-meta">
+                {{ selected.createdByDisplayName }} ·
+                {{ selected.createdAt | date: 'dd/MM/yyyy HH:mm' }} · {{ selected.wordCount }} từ
+              </p>
+              <pre>{{ selected.content }}</pre>
+              @if (selected.version !== store.chapter()?.version) {
+                <footer>
+                  <span>Bản hiện tại vẫn được giữ trong lịch sử sau khi khôi phục.</span>
+                  <app-button
+                    variant="secondary"
+                    [disabled]="!isEditable()"
+                    [loading]="store.restoringVersion() === selected.version"
+                    (click)="restoreVersion(selected.version)"
+                  >
+                    <app-icon icon name="history" [size]="16" />
+                    Khôi phục phiên bản này
+                  </app-button>
+                </footer>
+              }
+            </article>
+          }
+        </section>
+      }
 
       @if (!isCreate) {
         <app-chapter-translation-panel

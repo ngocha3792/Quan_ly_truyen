@@ -6,10 +6,12 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -31,8 +33,12 @@ import {
   DeleteAuthorChapterCommandHandler,
   GetAuthorChapterQuery,
   GetAuthorChapterQueryHandler,
+  GetAuthorChapterVersionQuery,
+  GetAuthorChapterVersionQueryHandler,
   ListAuthorChaptersQuery,
   ListAuthorChaptersQueryHandler,
+  ListAuthorChapterVersionsQuery,
+  ListAuthorChapterVersionsQueryHandler,
   PublishAuthorChapterCommand,
   PublishAuthorChapterCommandHandler,
   ScheduleAuthorChapterCommand,
@@ -41,17 +47,24 @@ import {
   CancelAuthorChapterScheduleCommandHandler,
   UpdateAuthorChapterCommand,
   UpdateAuthorChapterCommandHandler,
+  RestoreAuthorChapterVersionCommand,
+  RestoreAuthorChapterVersionCommandHandler,
 } from '../../../application';
 import {
   CreateAuthorChapterRequest,
+  ListAuthorChapterVersionsRequest,
   ScheduleAuthorChapterRequest,
   UpdateAuthorChapterRequest,
 } from '../requests';
 import {
   type ChapterResponse,
   type ChapterSummaryResponse,
+  type ChapterVersionPageResponse,
+  type ChapterVersionResponse,
   toChapterResponse,
   toChapterSummaryResponse,
+  toChapterVersionPageResponse,
+  toChapterVersionResponse,
 } from '../responses';
 
 @Controller('author/stories/:storyId/chapters')
@@ -63,10 +76,77 @@ export class AuthorChaptersController {
     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
     private readonly listChapters: ListAuthorChaptersQueryHandler,
     private readonly getChapter: GetAuthorChapterQueryHandler,
+    private readonly listChapterVersions: ListAuthorChapterVersionsQueryHandler,
+    private readonly getChapterVersion: GetAuthorChapterVersionQueryHandler,
+    private readonly restoreChapterVersion: RestoreAuthorChapterVersionCommandHandler,
     private readonly publishChapter: PublishAuthorChapterCommandHandler,
     private readonly scheduleChapter: ScheduleAuthorChapterCommandHandler,
     private readonly cancelChapterSchedule: CancelAuthorChapterScheduleCommandHandler,
   ) {}
+
+  @Get(':chapterId/versions')
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async listVersions(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Query() request: ListAuthorChapterVersionsRequest,
+  ): Promise<ChapterVersionPageResponse> {
+    const result = await this.listChapterVersions.execute(
+      new ListAuthorChapterVersionsQuery(
+        userId,
+        storyId,
+        chapterId,
+        request.page,
+        request.pageSize,
+      ),
+    );
+
+    return toChapterVersionPageResponse(result);
+  }
+
+  @Get(':chapterId/versions/:version')
+  @RequirePermissions(PermissionCode.STORY_CREATE)
+  async findVersion(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Param('version', ParseIntPipe) version: number,
+  ): Promise<ChapterVersionResponse> {
+    const result = await this.getChapterVersion.execute(
+      new GetAuthorChapterVersionQuery(userId, storyId, chapterId, version),
+    );
+
+    return toChapterVersionResponse(result);
+  }
+
+  @Post(':chapterId/versions/:version/restore')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
+  async restoreVersion(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Param('version', ParseIntPipe) version: number,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<ChapterResponse> {
+    const result = await this.restoreChapterVersion.execute(
+      new RestoreAuthorChapterVersionCommand(
+        userId,
+        storyId,
+        chapterId,
+        version,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterResponse(result);
+  }
 
   @Get()
   @RequirePermissions(PermissionCode.STORY_CREATE)

@@ -16,6 +16,8 @@ import type {
   ChapterPersistencePort,
   ChapterRecord,
   ChapterSummaryRecord,
+  ChapterVersionPageRecord,
+  ChapterVersionRecord,
   PublicChapterReaderDto,
   PublicStoryChapterListDto,
   PublicStoryChapterListItemDto,
@@ -25,9 +27,13 @@ import type {
   CancelAuthorChapterScheduleResult,
   DeleteAuthorChapterInput,
   DeleteAuthorChapterResult,
+  FindAuthorChapterVersionInput,
+  ListAuthorChapterVersionsInput,
   PublishDueScheduledChaptersInput,
   PublishAuthorChapterInput,
   PublishAuthorChapterResult,
+  RestoreAuthorChapterVersionInput,
+  RestoreAuthorChapterVersionResult,
   ScheduleAuthorChapterInput,
   ScheduleAuthorChapterResult,
   UpdateAuthorChapterInput,
@@ -75,6 +81,32 @@ const CHAPTER_SUMMARY_SELECT = {
 
 type ChapterSummaryRow = Prisma.ChapterGetPayload<{
   select: typeof CHAPTER_SUMMARY_SELECT;
+}>;
+
+const CHAPTER_VERSION_SUMMARY_SELECT = {
+  id: true,
+  chapterId: true,
+  createdById: true,
+  version: true,
+  title: true,
+  wordCount: true,
+  changeSummary: true,
+  createdAt: true,
+  createdBy: {
+    select: {
+      displayName: true,
+    },
+  },
+} satisfies Prisma.ChapterVersionSelect;
+
+const CHAPTER_VERSION_SELECT = {
+  ...CHAPTER_VERSION_SUMMARY_SELECT,
+  content: true,
+  contentFormat: true,
+} satisfies Prisma.ChapterVersionSelect;
+
+type ChapterVersionRow = Prisma.ChapterVersionGetPayload<{
+  select: typeof CHAPTER_VERSION_SELECT;
 }>;
 
 const PUBLIC_CHAPTER_READER_SELECT = {
@@ -189,6 +221,91 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
   }
 
+  async listOwnedVersions(
+    input: ListAuthorChapterVersionsInput,
+  ): Promise<ChapterVersionPageRecord | null> {
+    try {
+      const chapter = await this.prisma.chapter.findFirst({
+        where: {
+          id: input.chapterId,
+          storyId: input.storyId,
+          deletedAt: null,
+          story: {
+            authorId: input.userId,
+            deletedAt: null,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!chapter) return null;
+
+      const [total, versions] = await this.prisma.$transaction([
+        this.prisma.chapterVersion.count({
+          where: { chapterId: chapter.id },
+        }),
+        this.prisma.chapterVersion.findMany({
+          where: { chapterId: chapter.id },
+          orderBy: [{ version: 'desc' }, { id: 'desc' }],
+          skip: (input.page - 1) * input.pageSize,
+          take: input.pageSize,
+          select: CHAPTER_VERSION_SUMMARY_SELECT,
+        }),
+      ]);
+
+      return {
+        items: versions.map((version) => ({
+          id: version.id,
+          chapterId: version.chapterId,
+          createdById: version.createdById,
+          createdByDisplayName: version.createdBy.displayName,
+          version: version.version,
+          title: version.title,
+          wordCount: version.wordCount,
+          changeSummary: version.changeSummary,
+          createdAt: version.createdAt,
+        })),
+        total,
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'author-chapter-version-list',
+        resource: 'Lịch sử chương',
+      });
+    }
+  }
+
+  async findOwnedVersion(
+    input: FindAuthorChapterVersionInput,
+  ): Promise<ChapterVersionRecord | null> {
+    try {
+      const version = await this.prisma.chapterVersion.findFirst({
+        where: {
+          chapterId: input.chapterId,
+          version: input.version,
+          chapter: {
+            storyId: input.storyId,
+            deletedAt: null,
+            story: {
+              authorId: input.userId,
+              deletedAt: null,
+            },
+          },
+        },
+        select: CHAPTER_VERSION_SELECT,
+      });
+
+      return version ? toChapterVersionRecord(version) : null;
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'author-chapter-version-detail',
+        resource: 'Phiên bản chương',
+      });
+    }
+  }
+
   async createDraft(
     input: CreateAuthorChapterInput,
   ): Promise<CreateAuthorChapterResult> {
@@ -269,6 +386,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 content: input.content,
                 contentFormat: ContentFormat.MARKDOWN,
                 wordCount: input.wordCount,
+                changeSummary: 'Tạo bản nháp',
                 createdAt: input.createdAt,
               },
             },
@@ -425,6 +543,10 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 content: nextContent,
                 contentFormat: current.contentFormat,
                 wordCount: nextWordCount,
+                changeSummary: describeChapterChanges(
+                  titleChanged,
+                  contentChanged,
+                ),
                 createdAt: input.updatedAt,
               },
             },
@@ -473,6 +595,131 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       throw mapPrismaError(error, {
         operation: 'chapter-draft-update',
         resource: 'Chương',
+      });
+    }
+  }
+
+  async restoreDraftVersion(
+    input: RestoreAuthorChapterVersionInput,
+  ): Promise<RestoreAuthorChapterVersionResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const story = await lockAndFindOwnedStory(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+
+        if (!story) return { status: 'not_found' };
+        if (story.status === StoryStatus.PENDING_REVIEW) {
+          return { status: 'story_pending_review' };
+        }
+
+        const chapterLocked = await lockChapterRowForStory(
+          tx,
+          input.chapterId,
+          story.id,
+        );
+        if (!chapterLocked) return { status: 'not_found' };
+
+        const current = await tx.chapter.findFirst({
+          where: {
+            id: input.chapterId,
+            storyId: story.id,
+            deletedAt: null,
+          },
+          select: CHAPTER_SELECT,
+        });
+        if (!current) return { status: 'not_found' };
+        if (current.status !== ChapterStatus.DRAFT) {
+          return { status: 'not_draft' };
+        }
+
+        const source = await tx.chapterVersion.findUnique({
+          where: {
+            chapterId_version: {
+              chapterId: current.id,
+              version: input.version,
+            },
+          },
+          select: {
+            version: true,
+            title: true,
+            content: true,
+            contentFormat: true,
+            wordCount: true,
+          },
+        });
+        if (!source) return { status: 'version_not_found' };
+
+        if (
+          source.title === current.title &&
+          source.content === current.content &&
+          source.contentFormat === current.contentFormat
+        ) {
+          return { status: 'restored', chapter: this.toRecord(current) };
+        }
+
+        const nextVersion = current.version + 1;
+        const updated = await tx.chapter.update({
+          where: { id: current.id },
+          data: {
+            title: source.title,
+            slug: createChapterSlug(current.number.toNumber(), source.title),
+            content: source.content,
+            contentFormat: source.contentFormat,
+            wordCount: source.wordCount,
+            updatedById: input.userId,
+            updatedAt: input.restoredAt,
+            version: nextVersion,
+            versions: {
+              create: {
+                createdById: input.userId,
+                version: nextVersion,
+                title: source.title,
+                content: source.content,
+                contentFormat: source.contentFormat,
+                wordCount: source.wordCount,
+                changeSummary: `Khôi phục từ phiên bản ${source.version}`,
+                createdAt: input.restoredAt,
+              },
+            },
+          },
+          select: CHAPTER_SELECT,
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action: 'chapter.version.restored',
+            entityType: 'chapter',
+            entityId: current.id,
+            oldValues: {
+              title: current.title,
+              contentLength: current.content.length,
+              wordCount: current.wordCount,
+              version: current.version,
+            },
+            newValues: {
+              title: updated.title,
+              contentLength: updated.content.length,
+              wordCount: updated.wordCount,
+              version: updated.version,
+              restoredFromVersion: source.version,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.restoredAt,
+          },
+        });
+
+        return { status: 'restored', chapter: this.toRecord(updated) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-version-restore',
+        resource: 'Phiên bản chương',
       });
     }
   }
@@ -1404,4 +1651,31 @@ function createChapterSlug(number: number, title: string): string {
 
 function formatChapterNumber(number: number): string {
   return String(number).replace('.', '-');
+}
+
+function toChapterVersionRecord(
+  version: ChapterVersionRow,
+): ChapterVersionRecord {
+  return {
+    id: version.id,
+    chapterId: version.chapterId,
+    createdById: version.createdById,
+    createdByDisplayName: version.createdBy.displayName,
+    version: version.version,
+    title: version.title,
+    content: version.content,
+    contentFormat: version.contentFormat,
+    wordCount: version.wordCount,
+    changeSummary: version.changeSummary,
+    createdAt: version.createdAt,
+  };
+}
+
+function describeChapterChanges(
+  titleChanged: boolean,
+  contentChanged: boolean,
+): string {
+  if (titleChanged && contentChanged) return 'Chỉnh sửa tiêu đề và nội dung';
+  if (titleChanged) return 'Chỉnh sửa tiêu đề';
+  return 'Chỉnh sửa nội dung';
 }

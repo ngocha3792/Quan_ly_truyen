@@ -9,6 +9,7 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -34,6 +35,7 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    DatePipe,
     RouterLink,
     BreadcrumbComponent,
     PageHeadingComponent,
@@ -104,7 +106,38 @@ export class AuthorChapterEditorPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.store.load(this.storyId, this.chapterId);
+    if (this.chapterId) this.store.loadHistory(this.storyId, this.chapterId);
     this.storyProfileStore.load(this.storyId);
+  }
+
+  protected viewVersion(version: number): void {
+    if (!this.chapterId) return;
+    this.store.selectVersion(this.storyId, this.chapterId, version);
+  }
+
+  protected loadMoreVersions(): void {
+    if (!this.chapterId) return;
+    this.store.loadMoreHistory(this.storyId, this.chapterId);
+  }
+
+  protected restoreVersion(version: number): void {
+    if (!this.chapterId || !this.isEditable() || this.store.restoringVersion() !== null) return;
+
+    const unsavedWarning = this.form.dirty
+      ? ' Các thay đổi chưa lưu trong trình soạn thảo sẽ bị thay thế.'
+      : '';
+    if (
+      !window.confirm(
+        `Khôi phục phiên bản ${version}? Hệ thống sẽ tạo một phiên bản mới; lịch sử cũ vẫn được giữ.${unsavedWarning}`,
+      )
+    ) {
+      return;
+    }
+
+    this.store
+      .restoreVersion(this.storyId, this.chapterId, version)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: (error: unknown) => this.store.setError(error) });
   }
 
   protected translateChapter(targetLanguageCode: string): void {

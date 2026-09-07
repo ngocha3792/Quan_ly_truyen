@@ -5,6 +5,8 @@ import { finalize, forkJoin, Observable, of, tap } from 'rxjs';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
   AuthorChapterDraftInput,
+  AuthorChapterVersion,
+  AuthorChapterVersionSummary,
   AuthorManagedChapter,
   AuthorManagedStory,
   AuthorStoryMedia,
@@ -21,11 +23,24 @@ export class AuthorChapterEditorStore {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly uploadingImage = signal(false);
+  readonly history = signal<readonly AuthorChapterVersionSummary[]>([]);
+  readonly historyTotal = signal(0);
+  readonly selectedVersion = signal<AuthorChapterVersion | null>(null);
+  readonly loadingHistory = signal(false);
+  readonly loadingVersion = signal(false);
+  readonly restoringVersion = signal<number | null>(null);
+  readonly success = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  private readonly historyPageSize = 10;
+  private readonly historyPage = signal(0);
 
   load(storyId: string, chapterId: string | null): void {
     this.loading.set(true);
     this.error.set(null);
+    this.success.set(null);
+    this.history.set([]);
+    this.historyTotal.set(0);
+    this.selectedVersion.set(null);
 
     forkJoin({
       story: this.repository.getStory(storyId),
@@ -48,6 +63,73 @@ export class AuthorChapterEditorStore {
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
+  }
+
+  loadHistory(storyId: string, chapterId: string, page: number = 1): void {
+    if (this.loadingHistory()) return;
+    this.loadingHistory.set(true);
+    this.error.set(null);
+
+    this.repository
+      .listChapterVersions(storyId, chapterId, page, this.historyPageSize)
+      .pipe(
+        finalize(() => this.loadingHistory.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result) => {
+          this.history.set(page === 1 ? result.items : [...this.history(), ...result.items]);
+          this.historyTotal.set(result.total);
+          this.historyPage.set(result.page);
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  loadMoreHistory(storyId: string, chapterId: string): void {
+    if (this.history().length >= this.historyTotal()) return;
+    this.loadHistory(storyId, chapterId, this.historyPage() + 1);
+  }
+
+  selectVersion(storyId: string, chapterId: string, version: number): void {
+    if (this.loadingVersion()) return;
+    this.loadingVersion.set(true);
+    this.error.set(null);
+
+    this.repository
+      .getChapterVersion(storyId, chapterId, version)
+      .pipe(
+        finalize(() => this.loadingVersion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result) => this.selectedVersion.set(result),
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  restoreVersion(
+    storyId: string,
+    chapterId: string,
+    version: number,
+  ): Observable<AuthorManagedChapter> {
+    this.restoringVersion.set(version);
+    this.error.set(null);
+    this.success.set(null);
+
+    return this.repository.restoreChapterVersion(storyId, chapterId, version).pipe(
+      tap((chapter) => {
+        this.chapter.set(chapter);
+        this.selectedVersion.set(null);
+        this.success.set(`Đã khôi phục phiên bản ${version} thành phiên bản ${chapter.version}.`);
+        this.loadHistory(storyId, chapterId);
+      }),
+      finalize(() => this.restoringVersion.set(null)),
+    );
+  }
+
+  clearSelectedVersion(): void {
+    this.selectedVersion.set(null);
   }
 
   save(
