@@ -66,4 +66,3 @@ loaded. Full paid content must not cross the API boundary for a locked viewer.
   rebuild the projection from ledger only through an audited runbook.
 - Entitlement cache stale: database remains authoritative and cache is invalidated after
   commit.
-

@@ -77,6 +77,22 @@ export const EXPECTED_PRODUCTION_INDEXES = [
    * Đã thêm trong phase retention.
    */
   'outbox_events_retention_idx',
+
+  'wallets_user_currency_unique',
+
+  'wallets_user_id_updated_at_idx',
+
+  'wallet_ledger_transactions_idempotency_key_unique',
+
+  'wallet_ledger_transactions_business_reference_unique',
+
+  'wallet_ledger_transactions_wallet_history_idx',
+
+  'wallet_ledger_entries_transaction_wallet_unique',
+
+  'wallet_ledger_entries_transaction_system_unique',
+
+  'wallet_ledger_entries_wallet_history_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -141,6 +157,30 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'reader_analytics_events_version_valid',
 
   'reader_analytics_events_context_valid',
+
+  'wallets_balance_non_negative',
+
+  'wallets_balance_within_limit',
+
+  'wallets_version_non_negative',
+
+  'wallet_ledger_transactions_wallet_amount_non_zero',
+
+  'wallet_ledger_transactions_wallet_amount_within_limit',
+
+  'wallet_ledger_transactions_balance_non_negative',
+
+  'wallet_ledger_transactions_balance_within_limit',
+
+  'wallet_ledger_transactions_request_hash_format',
+
+  'wallet_ledger_entries_amount_non_zero',
+
+  'wallet_ledger_entries_amount_within_limit',
+
+  'wallet_ledger_entries_exactly_one_account',
+
+  'wallet_ledger_transaction_balanced',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

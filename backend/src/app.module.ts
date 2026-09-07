@@ -44,6 +44,7 @@ import { ModerationModule } from './modules/moderation';
 import { AuditLogsModule } from './modules/audit-logs';
 import { AnalyticsModule } from './modules/analytics';
 import { AiModule } from './modules/ai';
+import { WalletsModule } from './modules/wallets';
 @Module({
   imports: [
     AppConfigModule,
@@ -68,6 +69,7 @@ import { AiModule } from './modules/ai';
     AuditLogsModule,
     AnalyticsModule,
     AiModule,
+    WalletsModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

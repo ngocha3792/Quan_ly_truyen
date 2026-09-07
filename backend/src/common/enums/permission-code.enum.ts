@@ -34,6 +34,7 @@ export enum PermissionCode {
   READING_HISTORY_MANAGE_OWN = 'reading-history.manage.own',
   READING_BOOKMARK_MANAGE_OWN = 'reading-bookmark.manage.own',
   READING_GOAL_MANAGE_OWN = 'reading-goal.manage.own',
+  WALLET_READ_SELF = 'wallet.read.self',
 
   REPORT_CREATE = 'report.create',
   REPORT_REVIEW = 'report.review',

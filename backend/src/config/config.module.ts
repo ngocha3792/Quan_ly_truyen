@@ -17,6 +17,7 @@ import queueConfig from './queue.config';
 import redisConfig from './redis.config';
 import { resolveEnvFilePaths } from './environment-files';
 import observabilityConfig from './observability.config';
+import monetizationConfig from './monetization.config';
 
 @Global()
 @Module({
@@ -43,6 +44,7 @@ import observabilityConfig from './observability.config';
         productionGateConfig,
         analyticsConfig,
         aiConfig,
+        monetizationConfig,
       ],
       validate: validateEnvironment,
     }),

@@ -358,6 +358,30 @@ enum ReaderAnalyticsEventType {
   @@map("reader_analytics_event_type")
 }
 
+enum WalletCurrency {
+  CREDIT @map("credit")
+
+  @@map("wallet_currency")
+}
+
+enum WalletTransactionType {
+  TOP_UP           @map("top_up")
+  CHAPTER_PURCHASE @map("chapter_purchase")
+  REFUND           @map("refund")
+  REVERSAL         @map("reversal")
+  ADMIN_ADJUSTMENT @map("admin_adjustment")
+
+  @@map("wallet_transaction_type")
+}
+
+enum WalletSystemAccount {
+  PAYMENT_CLEARING @map("payment_clearing")
+  PLATFORM_REVENUE @map("platform_revenue")
+  ADJUSTMENT       @map("adjustment")
+
+  @@map("wallet_system_account")
+}
+
 // ============================================================
 // IDENTITY, AUTHENTICATION, AUTHORIZATION
 // ============================================================
@@ -427,10 +451,73 @@ model User {
   aiStoryProfiles              AiStoryProfile[]
   aiRateLimitBuckets           AiRateLimitBucket[]
   chapterTranslationsRequested ChapterTranslation[]
+  wallets                      Wallet[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
   @@map("users")
+}
+
+// ============================================================
+// WALLET AND IMMUTABLE DOUBLE-ENTRY LEDGER
+// ============================================================
+
+model Wallet {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  currency  WalletCurrency @default(CREDIT)
+  balance   BigInt         @default(0)
+  version   Int            @default(0)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user         User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions WalletLedgerTransaction[]
+  ledgerEntries WalletLedgerEntry[]
+
+  @@unique([userId, currency], map: "wallets_user_currency_unique")
+  @@index([userId, updatedAt])
+  @@map("wallets")
+}
+
+model WalletLedgerTransaction {
+  id                 String                @id @default(uuid()) @db.Uuid
+  walletId           String                @map("wallet_id") @db.Uuid
+  currency           WalletCurrency
+  type               WalletTransactionType
+  idempotencyKey     String                @unique(map: "wallet_ledger_transactions_idempotency_key_unique") @map("idempotency_key") @db.VarChar(200)
+  requestHash        String                @map("request_hash") @db.VarChar(64)
+  referenceType      String                @map("reference_type") @db.VarChar(100)
+  referenceId        String                @map("reference_id") @db.VarChar(100)
+  walletAmount       BigInt                @map("wallet_amount")
+  walletBalanceAfter BigInt                @map("wallet_balance_after")
+  metadata           Json?
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  wallet  Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  entries WalletLedgerEntry[]
+
+  @@unique([walletId, type, referenceType, referenceId], map: "wallet_ledger_transactions_business_reference_unique")
+  @@index([walletId, createdAt, id], map: "wallet_ledger_transactions_wallet_history_idx")
+  @@map("wallet_ledger_transactions")
+}
+
+model WalletLedgerEntry {
+  id            String               @id @default(uuid()) @db.Uuid
+  transactionId String               @map("transaction_id") @db.Uuid
+  walletId      String?              @map("wallet_id") @db.Uuid
+  systemAccount WalletSystemAccount? @map("system_account")
+  currency      WalletCurrency
+  amount        BigInt
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  transaction WalletLedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  wallet      Wallet?                 @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@unique([transactionId, walletId], map: "wallet_ledger_entries_transaction_wallet_unique")
+  @@unique([transactionId, systemAccount], map: "wallet_ledger_entries_transaction_system_unique")
+  @@index([walletId, createdAt, id], map: "wallet_ledger_entries_wallet_history_idx")
+  @@map("wallet_ledger_entries")
 }
 
 model OAuthAccount {

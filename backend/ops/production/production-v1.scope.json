@@ -167,6 +167,15 @@
       "notes": "Author dashboards expose recorded daily aggregates, source coverage and freshness. Missing dates are not zero-filled and synthetic trends remain prohibited."
     },
     {
+      "id": "monetization-wallet-paywall",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "backend/wallets + planned billing/monetization + frontend/account",
+      "nextPhase": "post-v1",
+      "notes": "Sprint 1 wallet and immutable ledger foundation exists behind MONETIZATION_ENABLED=false. Payment order creation, chapter pricing, entitlement gating and production rollout are not ready."
+    },
+    {
       "id": "personalized-recommendations",
       "decision": "deferred",
       "readiness": "deferred",
@@ -186,6 +195,11 @@
     }
   ],
   "sourceGuards": [
+    {
+      "featureId": "monetization-wallet-paywall",
+      "path": "backend/src/config/monetization.config.ts",
+      "forbidden": ["enabled: process.env.MONETIZATION_ENABLED !== 'false'"]
+    },
     {
       "featureId": "personalized-recommendations",
       "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",

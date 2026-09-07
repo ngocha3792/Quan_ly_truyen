@@ -70,6 +70,7 @@ const permissions = [
     ["reading-history.manage.own", "Manage own reading history", "reading-history", "manage.own"],
     ["reading-bookmark.manage.own", "Manage own reading bookmarks", "reading-bookmark", "manage.own"],
     ["reading-goal.manage.own", "Manage own reading goal", "reading-goal", "manage.own"],
+    ["wallet.read.self", "Read own wallet and transaction history", "wallet", "read.self"],
 
     ["report.create", "Create reports", "report", "create"],
     ["report.review", "Review and resolve reports", "report", "review"],
@@ -108,6 +109,7 @@ const userPermissionCodes: PermissionCode[] = [
     "reading-history.manage.own",
     "reading-bookmark.manage.own",
     "reading-goal.manage.own",
+    "wallet.read.self",
     "report.create",
     "media.upload",
     "notification.manage.own",

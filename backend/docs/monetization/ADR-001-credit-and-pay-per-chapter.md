@@ -104,4 +104,3 @@ system because they introduce materially different operational requirements.
 - Automated author revenue allocation and payout.
 - Cross-provider smart routing.
 - Offline purchases.
-

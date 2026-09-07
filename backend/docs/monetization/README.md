@@ -2,7 +2,7 @@
 
 Status: **accepted for implementation**  
 Decision date: **2026-09-07**  
-Implementation state: **policy and architecture only; monetization is not live**
+Implementation state: **Sprint 1 wallet foundation implemented; monetization is not live**
 
 This directory is the source of truth for the first monetization release. Sprint 1
 must not introduce behavior that conflicts with these decisions without a new ADR.
@@ -37,10 +37,11 @@ must not introduce behavior that conflicts with these decisions without a new AD
   mitigations.
 - [SPRINT_0_ACCEPTANCE.md](./SPRINT_0_ACCEPTANCE.md) records permissions, feature
   flags, rollout gates, and unresolved external dependencies.
+- [SPRINT_1_IMPLEMENTATION.md](./SPRINT_1_IMPLEMENTATION.md) records the wallet,
+  ledger, API, reconciliation, and verification contract now implemented.
 
 ## Public policy
 
 The Vietnamese customer-facing policy is implemented at
 `/chinh-sach-credit`. It deliberately describes only the accepted V1 behavior and
 states that its payment provisions apply when monetization is enabled.
-

@@ -73,4 +73,3 @@ The adapter contract is mandatory even when only one provider is initially selec
 
 The unchecked item is an external readiness gate, not authorization to weaken or skip
 the provider adapter, webhook verification, or reconciliation requirements.
-

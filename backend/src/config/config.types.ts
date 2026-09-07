@@ -315,6 +315,13 @@ export interface AnalyticsConfig {
   processingBatchSize: number;
 }
 
+export interface MonetizationConfig {
+  enabled: boolean;
+  authorPricingEnabled: boolean;
+  paymentProviderEnabled: boolean;
+  paywallEnforcementEnabled: boolean;
+}
+
 export interface AiConfig {
   encryptionKeyBase64?: string;
   gemini: {

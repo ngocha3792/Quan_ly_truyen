@@ -159,6 +159,34 @@ describe('validateEnvironment', () => {
     ).toThrow('IDEMPOTENCY_FAILURE_MODE must be closed in production');
   });
 
+  it('keeps every monetization sub-feature disabled by default', () => {
+    const result = validateEnvironment(validBase);
+
+    expect(result).toMatchObject({
+      MONETIZATION_ENABLED: false,
+      AUTHOR_PRICING_ENABLED: false,
+      PAYMENT_PROVIDER_ENABLED: false,
+      PAYWALL_ENFORCEMENT_ENABLED: false,
+    });
+  });
+
+  it('requires the parent monetization flag before enabling a sub-feature', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        PAYWALL_ENFORCEMENT_ENABLED: 'true',
+      }),
+    ).toThrow('MONETIZATION_ENABLED must be true');
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYWALL_ENFORCEMENT_ENABLED: 'true',
+      }),
+    ).not.toThrow();
+  });
+
   it('rejects mail payload encryption keys that are not 32 bytes', () => {
     expect(() =>
       validateEnvironment({

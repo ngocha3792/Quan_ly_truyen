@@ -592,6 +592,22 @@ export class EnvironmentVariables {
   @IsBoolean()
   ANALYTICS_ENABLED = false;
 
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  MONETIZATION_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  AUTHOR_PRICING_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  PAYMENT_PROVIDER_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  PAYWALL_ENFORCEMENT_ENABLED = false;
+
   @IsString()
   @IsNotEmpty()
   ANALYTICS_TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -936,6 +952,17 @@ export function validateEnvironment(
 
 function validateCrossFieldRules(config: EnvironmentVariables): void {
   const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
+
+  if (
+    !config.MONETIZATION_ENABLED &&
+    (config.AUTHOR_PRICING_ENABLED ||
+      config.PAYMENT_PROVIDER_ENABLED ||
+      config.PAYWALL_ENFORCEMENT_ENABLED)
+  ) {
+    throw new Error(
+      'MONETIZATION_ENABLED must be true before enabling author pricing, a payment provider, or paywall enforcement',
+    );
+  }
 
   if (
     config.IDEMPOTENCY_PROCESSING_LEASE_TTL_SECONDS * 1000 <=
