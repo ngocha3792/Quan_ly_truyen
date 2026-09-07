@@ -329,6 +329,8 @@ export interface ChapterPersistencePort {
   findPublicReader(
     storySlug: string,
     chapterNumber: string,
+    viewerId: string | undefined,
+    enforcePaywall: boolean,
   ): Promise<PublicChapterReaderDto | null>;
 
   listPublishedByStory(

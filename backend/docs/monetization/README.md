@@ -1,11 +1,12 @@
-# Monetization and paywall — Sprint 0 contract
+# Monetization and paywall
 
 Status: **accepted for implementation**  
 Decision date: **2026-09-07**  
-Implementation state: **Sprint 1 wallet foundation implemented; monetization is not live**
+Implementation state: **Sprint 2 chapter pricing and entitlement foundation implemented; monetization is not live**
 
-This directory is the source of truth for the first monetization release. Sprint 1
-must not introduce behavior that conflicts with these decisions without a new ADR.
+This directory is the source of truth for the first monetization release. Later
+sprints must not introduce behavior that conflicts with these decisions without a new
+ADR.
 
 ## Product baseline
 
@@ -39,6 +40,8 @@ must not introduce behavior that conflicts with these decisions without a new AD
   flags, rollout gates, and unresolved external dependencies.
 - [SPRINT_1_IMPLEMENTATION.md](./SPRINT_1_IMPLEMENTATION.md) records the wallet,
   ledger, API, reconciliation, and verification contract now implemented.
+- [SPRINT_2_IMPLEMENTATION.md](./SPRINT_2_IMPLEMENTATION.md) records chapter price
+  bands, purchase/entitlement atomicity, content gating, APIs, and rollout state.
 
 ## Public policy
 

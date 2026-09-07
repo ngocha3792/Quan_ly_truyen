@@ -1,5 +1,13 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { Public } from '@/common/decorators';
+import {
+  Controller,
+  Get,
+  Header,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUserId, Public } from '@/common/decorators';
+import { OptionalJwtAuthGuard } from '@/common/guards';
 import {
   GetPublicChapterReaderQuery,
   GetPublicChapterReaderQueryHandler,
@@ -39,12 +47,15 @@ export class PublicChaptersController {
   }
 
   @Get(':storySlug/chapters/:chapterNumber')
+  @UseGuards(OptionalJwtAuthGuard)
+  @Header('Cache-Control', 'private, no-store')
   async chapterReader(
+    @CurrentUserId() viewerId: string | undefined,
     @Param('storySlug') storySlug: string,
     @Param('chapterNumber') chapterNumber: string,
   ): Promise<PublicChapterReaderResponse> {
     const result = await this.getChapterReader.execute(
-      new GetPublicChapterReaderQuery(storySlug, chapterNumber),
+      new GetPublicChapterReaderQuery(storySlug, chapterNumber, viewerId),
     );
 
     return toPublicChapterReaderResponse(result);

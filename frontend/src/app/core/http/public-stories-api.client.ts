@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
@@ -11,6 +11,7 @@ import {
   PublicStoryChapterListApiResponse,
   PublicStoryListParams,
   StoryRecommendationFeedApi,
+  UnlockChapterApiResponse,
 } from './public-stories-api.model';
 
 @Injectable({ providedIn: 'root' })
@@ -56,6 +57,16 @@ export class PublicStoriesApiClient {
     return this.http
       .get<ApiSuccessEnvelope<PublicChapterReaderApiResponse>>(
         `${this.config.apiBaseUrl}/stories/${encodeURIComponent(storySlug)}/chapters/${encodeURIComponent(chapterNumber)}`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  unlockChapter(chapterId: string): Observable<UnlockChapterApiResponse> {
+    return this.http
+      .post<ApiSuccessEnvelope<UnlockChapterApiResponse>>(
+        `${this.config.apiBaseUrl}/monetization/chapters/${encodeURIComponent(chapterId)}/unlock`,
+        {},
+        { headers: new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() }) },
       )
       .pipe(map((response) => response.data));
   }

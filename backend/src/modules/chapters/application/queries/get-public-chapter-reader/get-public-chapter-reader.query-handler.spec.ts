@@ -12,7 +12,12 @@ describe('GetPublicChapterReaderQueryHandler', () => {
 
   beforeEach(() => {
     persistence = { findPublicReader: jest.fn() };
-    handler = new GetPublicChapterReaderQueryHandler(persistence as never);
+    handler = new GetPublicChapterReaderQueryHandler(
+      persistence as never,
+      {
+        paywallEnforcementEnabled: false,
+      } as never,
+    );
   });
 
   it('normalize story slug và hỗ trợ chapter number thập phân', async () => {
@@ -26,6 +31,8 @@ describe('GetPublicChapterReaderQueryHandler', () => {
     expect(persistence.findPublicReader).toHaveBeenCalledWith(
       'truyen-moi',
       '1.50',
+      undefined,
+      false,
     );
     expect(result).toBe(reader);
   });

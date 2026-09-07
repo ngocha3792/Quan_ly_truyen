@@ -33,6 +33,10 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
     return this.api.chapter(storySlug, chapterNumber).pipe(map(toChapterReaderView));
   }
 
+  unlockChapter(chapterId: string): Observable<void> {
+    return this.api.unlockChapter(chapterId).pipe(map(() => undefined));
+  }
+
   listChapters(storySlug: string, page: number, pageSize: number): Observable<ChapterListPage> {
     return this.api.chapters(storySlug, page, pageSize).pipe(
       map((result) => ({
@@ -165,15 +169,19 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
 }
 
 function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterReaderView {
+  const content =
+    'previewContent' in result.chapter ? result.chapter.previewContent : result.chapter.content;
   return {
     story: result.story,
     chapter: {
       id: result.chapter.id,
       number: result.chapter.number,
       title: result.chapter.title,
-      paragraphs: toParagraphs(result.chapter.content),
+      paragraphs: toParagraphs(content),
       publishedAt: result.chapter.publishedAt,
       views: result.chapter.views,
+      accessState: result.chapter.access.state,
+      priceCredits: result.chapter.access.priceCredits,
     },
     navigation: {
       previous: toNavigation(result.story.slug, result.navigation.previous),

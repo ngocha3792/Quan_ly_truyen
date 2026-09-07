@@ -83,29 +83,62 @@ export interface PublicStoryListParams {
   readonly pageSize?: number;
 }
 
+interface PublicChapterReaderChapterBaseApi {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  readonly slug: string;
+  readonly wordCount: number;
+  readonly views: number;
+  readonly comments: number;
+  readonly publishedAt: string;
+  readonly updatedAt: string;
+}
+
+export interface PublicUnlockedChapterReaderApi extends PublicChapterReaderChapterBaseApi {
+  readonly access: {
+    readonly state: 'FREE' | 'ENTITLED' | 'BYPASS';
+    readonly priceCredits: string | null;
+  };
+  readonly content: string;
+  readonly contentFormat: string;
+}
+
+export interface PublicLockedChapterReaderApi extends PublicChapterReaderChapterBaseApi {
+  readonly access: {
+    readonly state: 'LOCKED';
+    readonly priceCredits: string;
+  };
+  readonly previewContent: string;
+  readonly previewFormat: string;
+}
+
+export type PublicChapterReaderChapterApi =
+  PublicUnlockedChapterReaderApi | PublicLockedChapterReaderApi;
+
 export interface PublicChapterReaderApiResponse {
   readonly story: {
     readonly id: string;
     readonly slug: string;
     readonly title: string;
   };
-  readonly chapter: {
-    readonly id: string;
-    readonly number: number;
-    readonly title: string;
-    readonly slug: string;
-    readonly content: string;
-    readonly contentFormat: string;
-    readonly wordCount: number;
-    readonly views: number;
-    readonly comments: number;
-    readonly publishedAt: string;
-    readonly updatedAt: string;
-  };
+  readonly chapter: PublicChapterReaderChapterApi;
   readonly navigation: {
     readonly previous: PublicChapterNavigationApiItem | null;
     readonly next: PublicChapterNavigationApiItem | null;
   };
+}
+
+export interface UnlockChapterApiResponse {
+  readonly purchase: {
+    readonly id: string;
+    readonly chapterId: string;
+    readonly creditPrice: string;
+    readonly entitlementId: string | null;
+  };
+  readonly walletBalance: string;
+  readonly replayed: boolean;
+  readonly alreadyOwned: boolean;
 }
 
 export interface PublicChapterNavigationApiItem {

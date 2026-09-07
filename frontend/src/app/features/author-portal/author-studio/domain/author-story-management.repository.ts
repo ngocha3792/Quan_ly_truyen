@@ -4,6 +4,7 @@ import {
   AuthorChapterDraftInput,
   AuthorChapterVersion,
   AuthorChapterVersionPage,
+  AuthorChapterMonetization,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
@@ -14,6 +15,7 @@ import {
   AuthorStoryMedia,
   AuthorStoryMetadataCategory,
   AuthorStoryMetadataTag,
+  MonetizationPriceBand,
   AuthorStoryPublication,
   AuthorStoryUpdateInput,
 } from './author-story-management.models';
@@ -42,6 +44,16 @@ export abstract class AuthorStoryManagementRepository {
     chapterId: string,
     input: AuthorChapterDraftInput,
   ): Observable<AuthorManagedChapter>;
+  abstract listMonetizationPriceBands(): Observable<readonly MonetizationPriceBand[]>;
+  abstract getChapterMonetization(
+    storyId: string,
+    chapterId: string,
+  ): Observable<AuthorChapterMonetization>;
+  abstract updateChapterMonetization(
+    storyId: string,
+    chapterId: string,
+    input: { readonly accessType: 'FREE' | 'PAID'; readonly priceBandId?: string },
+  ): Observable<AuthorChapterMonetization>;
   abstract listChapterVersions(
     storyId: string,
     chapterId: string,

@@ -7,7 +7,12 @@ import type {
   CommentReportReasonApi,
 } from '../../../../core/http/reader-engagement-api.model';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
-import { ChapterComment, ChapterReaderView } from '../domain/chapter-reader.models';
+import { ChapterReaderView } from '../domain/chapter-reader.models';
+import {
+  applyOptimisticReaction,
+  findCommentInTree,
+  updateCommentTree,
+} from './chapter-comment-state.util';
 import { ChapterReaderRepository } from './chapter-reader.repository';
 
 @Injectable()
@@ -41,6 +46,11 @@ export class ChapterReaderStore {
               tap(() => this.loadComments(storySlug, chapterNumber)),
               switchMap((result) => {
                 if (result !== 'authenticated') {
+                  this.bookmarked.set(false);
+                  return of(undefined);
+                }
+
+                if (view.chapter.accessState === 'LOCKED') {
                   this.bookmarked.set(false);
                   return of(undefined);
                 }
@@ -110,7 +120,7 @@ export class ChapterReaderStore {
             current
               ? {
                   ...current,
-                  comments: this.updateComment(current.comments, commentId, () => updated),
+                  comments: updateCommentTree(current.comments, commentId, () => updated),
                 }
               : current,
           ),
@@ -155,7 +165,7 @@ export class ChapterReaderStore {
             current
               ? {
                   ...current,
-                  comments: this.updateComment(current.comments, rootCommentId, (comment) => ({
+                  comments: updateCommentTree(current.comments, rootCommentId, (comment) => ({
                     ...comment,
                     replies,
                   })),
@@ -183,7 +193,7 @@ export class ChapterReaderStore {
             current
               ? {
                   ...current,
-                  comments: this.updateComment(current.comments, rootCommentId, (root) => ({
+                  comments: updateCommentTree(current.comments, rootCommentId, (root) => ({
                     ...root,
                     replies: [...root.replies, reply],
                     threadReplyCount: root.threadReplyCount + 1,
@@ -205,7 +215,7 @@ export class ChapterReaderStore {
   react(commentId: string, type: CommentReactionApiType): void {
     const view = this.viewState();
     if (!view) return;
-    const current = this.findComment(view.comments, commentId);
+    const current = findCommentInTree(view.comments, commentId);
     if (!current || current.displayState !== 'VISIBLE') return;
     const snapshot = view.comments;
     const clearing = current.viewerReaction === type;
@@ -213,8 +223,8 @@ export class ChapterReaderStore {
       state
         ? {
             ...state,
-            comments: this.updateComment(snapshot, commentId, (comment) =>
-              this.optimisticReaction(comment, clearing ? null : type),
+            comments: updateCommentTree(snapshot, commentId, (comment) =>
+              applyOptimisticReaction(comment, clearing ? null : type),
             ),
           }
         : state,
@@ -233,7 +243,7 @@ export class ChapterReaderStore {
             state
               ? {
                   ...state,
-                  comments: this.updateComment(state.comments, commentId, (comment) => ({
+                  comments: updateCommentTree(state.comments, commentId, (comment) => ({
                     ...comment,
                     viewerReaction: summary.viewerReaction,
                     reactions: summary.reactions,
@@ -278,7 +288,13 @@ export class ChapterReaderStore {
   }
   toggleBookmark(): void {
     const view = this.viewState();
-    if (!view || !this.auth.isAuthenticated() || this.bookmarkPending()) return;
+    if (
+      !view ||
+      view.chapter.accessState === 'LOCKED' ||
+      !this.auth.isAuthenticated() ||
+      this.bookmarkPending()
+    )
+      return;
 
     const previous = this.bookmarked();
     const next = !previous;
@@ -298,43 +314,6 @@ export class ChapterReaderStore {
         finalize(() => this.bookmarkPending.set(false)),
       )
       .subscribe();
-  }
-
-  private optimisticReaction(
-    comment: ChapterComment,
-    next: CommentReactionApiType | null,
-  ): ChapterComment {
-    const reactions = { ...comment.reactions };
-    if (comment.viewerReaction)
-      reactions[comment.viewerReaction] = Math.max(0, reactions[comment.viewerReaction] - 1);
-    if (next) reactions[next] = reactions[next] + 1;
-    return { ...comment, viewerReaction: next, reactions };
-  }
-
-  private updateComment(
-    items: readonly ChapterComment[],
-    id: string,
-    update: (comment: ChapterComment) => ChapterComment,
-  ): readonly ChapterComment[] {
-    return items.map((item) => {
-      if (item.id === id) return update(item);
-      if (item.replies.some((reply) => reply.id === id)) {
-        return {
-          ...item,
-          replies: item.replies.map((reply) => (reply.id === id ? update(reply) : reply)),
-        };
-      }
-      return item;
-    });
-  }
-
-  private findComment(items: readonly ChapterComment[], id: string): ChapterComment | null {
-    for (const item of items) {
-      if (item.id === id) return item;
-      const reply = item.replies.find((candidate) => candidate.id === id);
-      if (reply) return reply;
-    }
-    return null;
   }
 
   private loadComments(storySlug: string, chapterNumber: string): void {

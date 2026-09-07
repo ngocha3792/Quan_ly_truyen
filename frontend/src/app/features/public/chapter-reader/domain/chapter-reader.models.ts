@@ -19,6 +19,8 @@ export interface ChapterDetail {
   readonly paragraphs: readonly string[];
   readonly publishedAt: string;
   readonly views: number;
+  readonly accessState: 'FREE' | 'ENTITLED' | 'BYPASS' | 'LOCKED';
+  readonly priceCredits: string | null;
 }
 
 export type ChapterCommentAuthor = PublicCommentAuthor;

@@ -126,6 +126,25 @@ export interface AuthorChapterDraftInput {
   readonly content: string;
 }
 
+export interface MonetizationPriceBand {
+  readonly id: string;
+  readonly code: string;
+  readonly label: string;
+  readonly creditPrice: string;
+  readonly isActive: boolean;
+  readonly sortOrder: number;
+}
+
+export interface AuthorChapterMonetization {
+  readonly chapterId: string;
+  readonly accessType: 'FREE' | 'PAID';
+  readonly priceBandId: string | null;
+  readonly creditPrice: string | null;
+  readonly previewContent: string | null;
+  readonly version: number;
+  readonly updatedAt: string;
+}
+
 export interface AuthorStorySubmission {
   readonly id: string;
   readonly storyId: string;

@@ -382,6 +382,28 @@ enum WalletSystemAccount {
   @@map("wallet_system_account")
 }
 
+enum ChapterAccessType {
+  FREE @map("free")
+  PAID @map("paid")
+
+  @@map("chapter_access_type")
+}
+
+enum ChapterPurchaseStatus {
+  COMPLETED @map("completed")
+  REFUNDED  @map("refunded")
+  REVERSED  @map("reversed")
+
+  @@map("chapter_purchase_status")
+}
+
+enum ChapterEntitlementStatus {
+  ACTIVE  @map("active")
+  REVOKED @map("revoked")
+
+  @@map("chapter_entitlement_status")
+}
+
 // ============================================================
 // IDENTITY, AUTHENTICATION, AUTHORIZATION
 // ============================================================
@@ -452,6 +474,10 @@ model User {
   aiRateLimitBuckets           AiRateLimitBucket[]
   chapterTranslationsRequested ChapterTranslation[]
   wallets                      Wallet[]
+  chapterPurchases             ChapterPurchase[]
+  chapterEntitlements          ChapterEntitlement[]
+  chapterMonetizationUpdates   ChapterMonetization[]    @relation("ChapterMonetizationUpdatedBy")
+  chapterPricingVersions       ChapterPricingVersion[]  @relation("ChapterPricingVersionChangedBy")
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -471,8 +497,8 @@ model Wallet {
   createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user         User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
-  transactions WalletLedgerTransaction[]
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions  WalletLedgerTransaction[]
   ledgerEntries WalletLedgerEntry[]
 
   @@unique([userId, currency], map: "wallets_user_currency_unique")
@@ -494,8 +520,9 @@ model WalletLedgerTransaction {
   metadata           Json?
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  wallet  Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
-  entries WalletLedgerEntry[]
+  wallet          Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  entries         WalletLedgerEntry[]
+  chapterPurchase ChapterPurchase?
 
   @@unique([walletId, type, referenceType, referenceId], map: "wallet_ledger_transactions_business_reference_unique")
   @@index([walletId, createdAt, id], map: "wallet_ledger_transactions_wallet_history_idx")
@@ -518,6 +545,110 @@ model WalletLedgerEntry {
   @@unique([transactionId, systemAccount], map: "wallet_ledger_entries_transaction_system_unique")
   @@index([walletId, createdAt, id], map: "wallet_ledger_entries_wallet_history_idx")
   @@map("wallet_ledger_entries")
+}
+
+// ============================================================
+// CHAPTER MONETIZATION, PURCHASES AND ENTITLEMENTS
+// ============================================================
+
+model MonetizationPriceBand {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  label       String   @db.VarChar(120)
+  creditPrice BigInt   @map("credit_price")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapterMonetizations ChapterMonetization[]
+  pricingVersions      ChapterPricingVersion[]
+  purchases            ChapterPurchase[]
+
+  @@index([isActive, sortOrder])
+  @@map("monetization_price_bands")
+}
+
+model ChapterMonetization {
+  chapterId      String            @id @map("chapter_id") @db.Uuid
+  accessType     ChapterAccessType @default(FREE) @map("access_type")
+  priceBandId    String?           @map("price_band_id") @db.Uuid
+  creditPrice    BigInt?           @map("credit_price")
+  previewContent String?           @map("preview_content") @db.Text
+  version        Int               @default(1)
+  updatedById    String?           @map("updated_by_id") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapter   Chapter                @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  priceBand MonetizationPriceBand? @relation(fields: [priceBandId], references: [id], onDelete: Restrict)
+  updatedBy User?                  @relation("ChapterMonetizationUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([accessType, updatedAt])
+  @@index([priceBandId])
+  @@map("chapter_monetization")
+}
+
+model ChapterPricingVersion {
+  id             String            @id @default(uuid()) @db.Uuid
+  chapterId      String            @map("chapter_id") @db.Uuid
+  version        Int
+  accessType     ChapterAccessType @map("access_type")
+  priceBandId    String?           @map("price_band_id") @db.Uuid
+  creditPrice    BigInt?           @map("credit_price")
+  previewContent String?           @map("preview_content") @db.Text
+  changedById    String            @map("changed_by_id") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter   Chapter                @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  priceBand MonetizationPriceBand? @relation(fields: [priceBandId], references: [id], onDelete: Restrict)
+  changedBy User                   @relation("ChapterPricingVersionChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@unique([chapterId, version])
+  @@index([changedById, createdAt])
+  @@map("chapter_pricing_versions")
+}
+
+model ChapterPurchase {
+  id                  String                @id @default(uuid()) @db.Uuid
+  userId              String                @map("user_id") @db.Uuid
+  chapterId           String                @map("chapter_id") @db.Uuid
+  priceBandId         String?               @map("price_band_id") @db.Uuid
+  creditPrice         BigInt                @map("credit_price")
+  status              ChapterPurchaseStatus @default(COMPLETED)
+  walletTransactionId String                @unique @map("wallet_transaction_id") @db.Uuid
+  idempotencyKey      String                @unique @map("idempotency_key") @db.VarChar(200)
+  requestHash         String                @map("request_hash") @db.VarChar(64)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  refundedAt          DateTime?             @map("refunded_at") @db.Timestamptz(3)
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  chapter           Chapter                 @relation(fields: [chapterId], references: [id], onDelete: Restrict)
+  priceBand         MonetizationPriceBand?  @relation(fields: [priceBandId], references: [id], onDelete: SetNull)
+  walletTransaction WalletLedgerTransaction @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  entitlement       ChapterEntitlement?
+
+  @@index([userId, createdAt, id])
+  @@index([chapterId, createdAt])
+  @@map("chapter_purchases")
+}
+
+model ChapterEntitlement {
+  id         String                   @id @default(uuid()) @db.Uuid
+  userId     String                   @map("user_id") @db.Uuid
+  chapterId  String                   @map("chapter_id") @db.Uuid
+  purchaseId String                   @unique @map("purchase_id") @db.Uuid
+  status     ChapterEntitlementStatus @default(ACTIVE)
+  grantedAt  DateTime                 @default(now()) @map("granted_at") @db.Timestamptz(3)
+  revokedAt  DateTime?                @map("revoked_at") @db.Timestamptz(3)
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  chapter  Chapter         @relation(fields: [chapterId], references: [id], onDelete: Restrict)
+  purchase ChapterPurchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, chapterId])
+  @@index([chapterId, status])
+  @@map("chapter_entitlements")
 }
 
 model OAuthAccount {
@@ -1321,21 +1452,25 @@ model Chapter {
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  story             Story                  @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  createdBy         User                   @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy         User                   @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  story             Story                   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy         User                    @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy         User                    @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   versions          ChapterVersion[]
   media             ChapterMedia[]
   comments          Comment[]
-  lastReadEntries   LibraryEntry[]         @relation("LibraryLastReadChapter")
-  currentProgress   ReadingProgress[]      @relation("CurrentProgressChapter")
+  lastReadEntries   LibraryEntry[]          @relation("LibraryLastReadChapter")
+  currentProgress   ReadingProgress[]       @relation("CurrentProgressChapter")
   readingSessions   ReadingSession[]
   readingBookmarks  ReadingBookmark[]
-  reports           Report[]               @relation("ChapterReports")
-  moderationActions ModerationAction[]     @relation("ModerationChapter")
+  reports           Report[]                @relation("ChapterReports")
+  moderationActions ModerationAction[]      @relation("ModerationChapter")
   dailyStats        ChapterDailyStat[]
   analyticsEvents   ReaderAnalyticsEvent[]
   translations      ChapterTranslation[]
+  monetization      ChapterMonetization?
+  pricingVersions   ChapterPricingVersion[]
+  purchases         ChapterPurchase[]
+  entitlements      ChapterEntitlement[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])

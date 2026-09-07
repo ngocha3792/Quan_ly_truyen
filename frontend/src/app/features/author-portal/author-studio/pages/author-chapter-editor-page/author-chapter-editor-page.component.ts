@@ -52,7 +52,10 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
     AiStoryProfileStore,
   ],
   templateUrl: './author-chapter-editor-page.component.html',
-  styleUrl: './author-chapter-editor-page.component.scss',
+  styleUrls: [
+    './author-chapter-editor-page.component.scss',
+    './author-chapter-editor-page.monetization.component.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorChapterEditorPageComponent implements OnInit {
@@ -72,6 +75,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
     content: [''],
+  });
+  protected readonly pricingForm = this.fb.nonNullable.group({
+    accessType: this.fb.nonNullable.control<'FREE' | 'PAID'>('FREE'),
+    priceBandId: [''],
   });
   protected readonly breadcrumbs = computed(() => [
     { label: 'Author Studio', route: '/author-studio/tong-quan' },
@@ -101,6 +108,18 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       if (this.store.story() && !this.isEditable()) this.form.disable({ emitEvent: false });
       else this.form.enable({ emitEvent: false });
       this.form.markAsPristine();
+
+      const pricing = this.store.monetization();
+      if (pricing) {
+        this.pricingForm.setValue(
+          {
+            accessType: pricing.accessType,
+            priceBandId: pricing.priceBandId ?? '',
+          },
+          { emitEvent: false },
+        );
+        this.pricingForm.markAsPristine();
+      }
     });
   }
 
@@ -171,6 +190,24 @@ export class AuthorChapterEditorPageComponent implements OnInit {
         next: () => void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong']),
         error: (error: unknown) => this.store.setError(error),
       });
+  }
+
+  protected saveMonetization(): void {
+    if (!this.chapterId || this.store.monetizationSaving()) return;
+    const value = this.pricingForm.getRawValue();
+    if (value.accessType === 'PAID' && !value.priceBandId) {
+      this.store.setError('Hãy chọn một mức giá Credit.');
+      return;
+    }
+    this.store
+      .updateMonetization(
+        this.storyId,
+        this.chapterId,
+        value.accessType,
+        value.accessType === 'PAID' ? value.priceBandId : undefined,
+      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: (error: unknown) => this.store.setError(error) });
   }
 
   protected selectChapterImage(event: Event): void {

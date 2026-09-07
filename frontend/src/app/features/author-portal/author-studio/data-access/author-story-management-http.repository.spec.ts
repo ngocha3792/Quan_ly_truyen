@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { AuthorManagedChapter } from '../domain/author-story-management.models';
+import { AuthorChapterMonetizationHttpService } from './author-chapter-monetization-http.service';
 import { AuthorMediaUploadService } from './author-media-upload.service';
 import { AuthorChapterVersionHttpService } from './author-chapter-version-http.service';
 import { AuthorStoryManagementHttpRepository } from './author-story-management-http.repository';
@@ -21,6 +22,7 @@ describe('AuthorStoryManagementHttpRepository chapter scheduling', () => {
         provideHttpClientTesting(),
         AuthorStoryManagementHttpRepository,
         AuthorChapterVersionHttpService,
+        AuthorChapterMonetizationHttpService,
         { provide: AuthorMediaUploadService, useValue: {} },
         {
           provide: APP_RUNTIME_CONFIG,

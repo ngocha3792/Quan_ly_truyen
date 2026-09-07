@@ -20,6 +20,7 @@ import type {
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { ChapterListStore } from '../../data-access/chapter-list.store';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
+import { ChapterUnlockService } from '../../data-access/chapter-unlock.service';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
 import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sidebar.component';
@@ -38,6 +39,7 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
   styleUrls: [
     './chapter-reader-page.component.scss',
     './chapter-reader-page.chapter-list.component.scss',
+    './chapter-reader-page.paywall.component.scss',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -48,6 +50,7 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(ChapterReaderStore);
   protected readonly chapterList = inject(ChapterListStore);
+  protected readonly unlock = inject(ChapterUnlockService);
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
   private trackedChapterId: string | null = null;
@@ -77,7 +80,7 @@ export class ChapterReaderPageComponent implements OnInit {
       url: this.seo.absoluteUrl(canonicalPath),
     });
 
-    if (this.trackedChapterId !== view.chapter.id) {
+    if (view.chapter.accessState !== 'LOCKED' && this.trackedChapterId !== view.chapter.id) {
       this.stopAnalyticsSession?.();
       this.trackedChapterId = view.chapter.id;
       const sessionId = this.analytics.newSessionId();
@@ -151,6 +154,16 @@ export class ChapterReaderPageComponent implements OnInit {
 
   protected toggleBookmark(): void {
     this.runAuthenticated(() => this.store.toggleBookmark());
+  }
+
+  protected unlockChapter(): void {
+    this.runAuthenticated(() => {
+      const view = this.store.view();
+      if (!view || view.chapter.accessState !== 'LOCKED') return;
+      this.unlock.execute(view.chapter.id, () =>
+        this.store.load(view.story.slug, String(view.chapter.number)),
+      );
+    });
   }
 
   private runAuthenticated(action: () => void): void {

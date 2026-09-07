@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
 import {
+  ChapterAccessType,
+  ChapterEntitlementStatus,
   ChapterStatus,
   ContentFormat,
   Prisma,
@@ -109,14 +111,12 @@ type ChapterVersionRow = Prisma.ChapterVersionGetPayload<{
   select: typeof CHAPTER_VERSION_SELECT;
 }>;
 
-const PUBLIC_CHAPTER_READER_SELECT = {
+const PUBLIC_CHAPTER_READER_METADATA_SELECT = {
   id: true,
   storyId: true,
   number: true,
   title: true,
   slug: true,
-  content: true,
-  contentFormat: true,
   wordCount: true,
   viewCount: true,
   commentCount: true,
@@ -127,13 +127,26 @@ const PUBLIC_CHAPTER_READER_SELECT = {
       id: true,
       slug: true,
       title: true,
+      authorId: true,
+    },
+  },
+  monetization: {
+    select: {
+      accessType: true,
+      creditPrice: true,
+      previewContent: true,
     },
   },
 } satisfies Prisma.ChapterSelect;
 
-type PublicChapterReaderRow = Prisma.ChapterGetPayload<{
-  select: typeof PUBLIC_CHAPTER_READER_SELECT;
+type PublicChapterReaderMetadataRow = Prisma.ChapterGetPayload<{
+  select: typeof PUBLIC_CHAPTER_READER_METADATA_SELECT;
 }>;
+
+const PUBLIC_CHAPTER_CONTENT_SELECT = {
+  content: true,
+  contentFormat: true,
+} satisfies Prisma.ChapterSelect;
 
 const PUBLIC_CHAPTER_NAVIGATION_SELECT = {
   id: true,
@@ -1215,6 +1228,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
   async findPublicReader(
     storySlug: string,
     chapterNumber: string,
+    viewerId: string | undefined,
+    enforcePaywall: boolean,
   ): Promise<PublicChapterReaderDto | null> {
     try {
       const chapter = await this.prisma.chapter.findFirst({
@@ -1237,7 +1252,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             },
           },
         },
-        select: PUBLIC_CHAPTER_READER_SELECT,
+        select: PUBLIC_CHAPTER_READER_METADATA_SELECT,
       });
 
       if (!chapter?.publishedAt) {
@@ -1294,11 +1309,36 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         }),
       ]);
 
+      const access = await this.resolveChapterAccess(
+        chapter,
+        viewerId,
+        enforcePaywall,
+      );
+      if (access.state === 'LOCKED') {
+        return toLockedPublicChapterReaderDto(
+          chapter,
+          previous,
+          next,
+          chapter.publishedAt,
+          access.priceCredits,
+        );
+      }
+
+      const content = await this.prisma.chapter.findUnique({
+        where: { id: chapter.id },
+        select: PUBLIC_CHAPTER_CONTENT_SELECT,
+      });
+      if (!content) {
+        return null;
+      }
+
       return toPublicChapterReaderDto(
         chapter,
+        content,
         previous,
         next,
         chapter.publishedAt,
+        access,
       );
     } catch (error: unknown) {
       throw mapPrismaError(error, {
@@ -1306,6 +1346,67 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         resource: 'Chương',
       });
     }
+  }
+
+  private async resolveChapterAccess(
+    chapter: PublicChapterReaderMetadataRow,
+    viewerId: string | undefined,
+    enforcePaywall: boolean,
+  ): Promise<
+    | { readonly state: 'LOCKED'; readonly priceCredits: string }
+    | {
+        readonly state: 'FREE' | 'ENTITLED' | 'BYPASS';
+        readonly priceCredits: string | null;
+      }
+  > {
+    const pricing = chapter.monetization;
+    if (!pricing || pricing.accessType !== ChapterAccessType.PAID) {
+      return { state: 'FREE', priceCredits: null };
+    }
+    // A corrupt paid configuration must never fail open and expose full content.
+    const priceCredits = pricing.creditPrice?.toString() ?? '0';
+    if (!pricing.creditPrice || !pricing.previewContent) {
+      return { state: 'LOCKED', priceCredits };
+    }
+    if (!enforcePaywall) {
+      return { state: 'BYPASS', priceCredits };
+    }
+    if (!viewerId) {
+      return { state: 'LOCKED', priceCredits };
+    }
+    if (chapter.story.authorId === viewerId) {
+      return { state: 'BYPASS', priceCredits };
+    }
+
+    const [contributor, adminRole, entitlement] = await Promise.all([
+      this.prisma.storyContributor.findFirst({
+        where: { storyId: chapter.storyId, userId: viewerId },
+        select: { userId: true },
+      }),
+      this.prisma.userRole.findFirst({
+        where: {
+          userId: viewerId,
+          role: { code: 'ADMIN' },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        select: { userId: true },
+      }),
+      this.prisma.chapterEntitlement.findFirst({
+        where: {
+          userId: viewerId,
+          chapterId: chapter.id,
+          status: ChapterEntitlementStatus.ACTIVE,
+        },
+        select: { id: true },
+      }),
+    ]);
+    if (contributor || adminRole) {
+      return { state: 'BYPASS', priceCredits };
+    }
+    if (entitlement) {
+      return { state: 'ENTITLED', priceCredits };
+    }
+    return { state: 'LOCKED', priceCredits };
   }
 
   async listPublishedByStory(
@@ -1561,10 +1662,17 @@ async function createChapterPublishedOutboxEvents(
 }
 
 function toPublicChapterReaderDto(
-  chapter: PublicChapterReaderRow,
+  chapter: PublicChapterReaderMetadataRow,
+  content: Prisma.ChapterGetPayload<{
+    select: typeof PUBLIC_CHAPTER_CONTENT_SELECT;
+  }>,
   previous: PublicChapterNavigationRow | null,
   next: PublicChapterNavigationRow | null,
   publishedAt: Date,
+  access: {
+    readonly state: 'FREE' | 'ENTITLED' | 'BYPASS';
+    readonly priceCredits: string | null;
+  },
 ): PublicChapterReaderDto {
   return {
     story: {
@@ -1577,8 +1685,43 @@ function toPublicChapterReaderDto(
       number: chapter.number.toNumber(),
       title: chapter.title,
       slug: chapter.slug,
-      content: chapter.content,
-      contentFormat: chapter.contentFormat,
+      access,
+      content: content.content,
+      contentFormat: content.contentFormat,
+      wordCount: chapter.wordCount,
+      views: bigintToSafeNumber(chapter.viewCount),
+      comments: chapter.commentCount,
+      publishedAt,
+      updatedAt: chapter.updatedAt,
+    },
+    navigation: {
+      previous: toPublicChapterNavigation(previous),
+      next: toPublicChapterNavigation(next),
+    },
+  };
+}
+
+function toLockedPublicChapterReaderDto(
+  chapter: PublicChapterReaderMetadataRow,
+  previous: PublicChapterNavigationRow | null,
+  next: PublicChapterNavigationRow | null,
+  publishedAt: Date,
+  priceCredits: string,
+): PublicChapterReaderDto {
+  return {
+    story: {
+      id: chapter.story.id,
+      slug: chapter.story.slug,
+      title: chapter.story.title,
+    },
+    chapter: {
+      id: chapter.id,
+      number: chapter.number.toNumber(),
+      title: chapter.title,
+      slug: chapter.slug,
+      access: { state: 'LOCKED', priceCredits },
+      previewContent: chapter.monetization?.previewContent ?? '',
+      previewFormat: ContentFormat.MARKDOWN,
       wordCount: chapter.wordCount,
       views: bigintToSafeNumber(chapter.viewCount),
       comments: chapter.commentCount,

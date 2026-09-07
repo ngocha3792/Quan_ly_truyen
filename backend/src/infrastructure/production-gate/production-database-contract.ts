@@ -93,6 +93,32 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'wallet_ledger_entries_transaction_system_unique',
 
   'wallet_ledger_entries_wallet_history_idx',
+
+  'monetization_price_bands_code_key',
+
+  'monetization_price_bands_active_sort_idx',
+
+  'chapter_monetization_access_updated_idx',
+
+  'chapter_monetization_price_band_idx',
+
+  'chapter_pricing_versions_chapter_version_key',
+
+  'chapter_pricing_versions_actor_created_idx',
+
+  'chapter_purchases_wallet_transaction_key',
+
+  'chapter_purchases_idempotency_key_key',
+
+  'chapter_purchases_user_history_idx',
+
+  'chapter_purchases_chapter_created_idx',
+
+  'chapter_entitlements_purchase_key',
+
+  'chapter_entitlements_user_chapter_key',
+
+  'chapter_entitlements_chapter_status_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -181,6 +207,30 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'wallet_ledger_entries_exactly_one_account',
 
   'wallet_ledger_transaction_balanced',
+
+  'monetization_price_bands_credit_price_check',
+
+  'monetization_price_bands_code_check',
+
+  'monetization_price_bands_label_check',
+
+  'chapter_monetization_version_check',
+
+  'chapter_monetization_access_shape_check',
+
+  'chapter_pricing_versions_version_check',
+
+  'chapter_pricing_versions_access_shape_check',
+
+  'chapter_purchases_credit_price_check',
+
+  'chapter_purchases_idempotency_key_check',
+
+  'chapter_purchases_request_hash_check',
+
+  'chapter_purchases_refund_shape_check',
+
+  'chapter_entitlements_status_shape_check',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, tap } from 'rxjs';
 
@@ -7,6 +7,7 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AuthorChapterDraftInput,
   AuthorChapterVersion,
+  AuthorChapterMonetization,
   AuthorChapterVersionPage,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
@@ -18,12 +19,15 @@ import {
   AuthorStoryMedia,
   AuthorStoryMetadataCategory,
   AuthorStoryMetadataTag,
+  MonetizationPriceBand,
   AuthorStoryPublication,
   AuthorStoryUpdateInput,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 import { AuthorChapterVersionHttpService } from './author-chapter-version-http.service';
+import { AuthorChapterMonetizationHttpService } from './author-chapter-monetization-http.service';
 import { AuthorMediaUploadService } from './author-media-upload.service';
+import { type CreateRetryState, idempotencyHeaders, reuseCreateKey } from './idempotency-http.util';
 
 @Injectable()
 export class AuthorStoryManagementHttpRepository implements AuthorStoryManagementRepository {
@@ -31,6 +35,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   private readonly config = inject(APP_RUNTIME_CONFIG);
   private readonly mediaUpload = inject(AuthorMediaUploadService);
   private readonly chapterVersions = inject(AuthorChapterVersionHttpService);
+  private readonly chapterMonetization = inject(AuthorChapterMonetizationHttpService);
   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
   private storyCreateRetry: CreateRetryState | null = null;
@@ -169,6 +174,25 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
   }
 
+  listMonetizationPriceBands(): Observable<readonly MonetizationPriceBand[]> {
+    return this.chapterMonetization.listPriceBands();
+  }
+
+  getChapterMonetization(
+    storyId: string,
+    chapterId: string,
+  ): Observable<AuthorChapterMonetization> {
+    return this.chapterMonetization.get(storyId, chapterId);
+  }
+
+  updateChapterMonetization(
+    storyId: string,
+    chapterId: string,
+    input: { readonly accessType: 'FREE' | 'PAID'; readonly priceBandId?: string },
+  ): Observable<AuthorChapterMonetization> {
+    return this.chapterMonetization.update(storyId, chapterId, input);
+  }
+
   listChapterVersions(
     storyId: string,
     chapterId: string,
@@ -238,9 +262,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   }
 
   getMedia(mediaId: string): Observable<AuthorStoryMedia> {
-    return this.http
-      .get<ApiSuccessEnvelope<AuthorStoryMedia>>(`${this.config.apiBaseUrl}/media/${mediaId}`)
-      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryMedia>) => response.data));
+    return this.mediaUpload.getMedia(mediaId);
   }
 
   listContributors(storyId: string): Observable<readonly AuthorStoryContributor[]> {
@@ -272,20 +294,4 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       `${this.storiesUrl}/${storyId}/contributors/${contributorUserId}/${role}`,
     );
   }
-}
-
-interface CreateRetryState {
-  readonly identity: string;
-  readonly key: string;
-}
-
-function reuseCreateKey(current: CreateRetryState | null, payload: unknown): CreateRetryState {
-  const identity = JSON.stringify(payload) ?? 'undefined';
-  if (current?.identity === identity) return current;
-
-  return { identity, key: crypto.randomUUID() };
-}
-
-function idempotencyHeaders(key: string = crypto.randomUUID()): HttpHeaders {
-  return new HttpHeaders({ 'x-idempotency-key': key });
 }

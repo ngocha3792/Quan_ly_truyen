@@ -80,6 +80,50 @@
         </footer>
       </form>
 
+      @if (!isCreate && store.monetization(); as monetization) {
+        <section class="chapter-monetization" aria-labelledby="chapter-monetization-title">
+          <header>
+            <div>
+              <span class="eyebrow">Credit & Paywall</span>
+              <h2 id="chapter-monetization-title">Quyền truy cập chương</h2>
+              <p>
+                Chỉ chọn mức giá do hệ thống cho phép. Preview được backend tự tạo và không thể chứa
+                toàn bộ chương.
+              </p>
+            </div>
+            <span>Phiên bản giá {{ monetization.version }}</span>
+          </header>
+
+          <form [formGroup]="pricingForm" (ngSubmit)="saveMonetization()">
+            <label>
+              <span>Chế độ</span>
+              <select formControlName="accessType">
+                <option value="FREE">Miễn phí</option>
+                <option value="PAID">Trả phí bằng Credit</option>
+              </select>
+            </label>
+
+            @if (pricingForm.controls.accessType.value === 'PAID') {
+              <label>
+                <span>Mức giá</span>
+                <select formControlName="priceBandId" required>
+                  <option value="">Chọn mức giá</option>
+                  @for (band of store.priceBands(); track band.id) {
+                    <option [value]="band.id">
+                      {{ band.label }} · {{ band.creditPrice }} Credit
+                    </option>
+                  }
+                </select>
+              </label>
+            }
+
+            <app-button type="submit" variant="secondary" [loading]="store.monetizationSaving()">
+              Lưu quyền truy cập
+            </app-button>
+          </form>
+        </section>
+      }
+
       @if (!isCreate) {
         <section class="version-history" aria-labelledby="version-history-title">
           <header class="version-history__header">

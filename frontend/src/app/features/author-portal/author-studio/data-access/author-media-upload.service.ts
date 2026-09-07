@@ -46,6 +46,12 @@ export class AuthorMediaUploadService {
     return this.upload(AUTHOR_MEDIA_PURPOSE.chapterImage, chapterId, file);
   }
 
+  getMedia(mediaId: string): Observable<AuthorStoryMedia> {
+    return this.http
+      .get<ApiSuccessEnvelope<AuthorStoryMedia>>(`${this.config.apiBaseUrl}/media/${mediaId}`)
+      .pipe(map((response) => response.data));
+  }
+
   private upload(
     purpose: (typeof AUTHOR_MEDIA_PURPOSE)[keyof typeof AUTHOR_MEDIA_PURPOSE],
     ownerId: string,

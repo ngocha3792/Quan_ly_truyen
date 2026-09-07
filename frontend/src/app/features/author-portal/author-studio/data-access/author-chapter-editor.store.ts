@@ -1,15 +1,17 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
   AuthorChapterDraftInput,
+  AuthorChapterMonetization,
   AuthorChapterVersion,
   AuthorChapterVersionSummary,
   AuthorManagedChapter,
   AuthorManagedStory,
   AuthorStoryMedia,
+  MonetizationPriceBand,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 
@@ -31,6 +33,9 @@ export class AuthorChapterEditorStore {
   readonly restoringVersion = signal<number | null>(null);
   readonly success = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly monetization = signal<AuthorChapterMonetization | null>(null);
+  readonly priceBands = signal<readonly MonetizationPriceBand[]>([]);
+  readonly monetizationSaving = signal(false);
   private readonly historyPageSize = 10;
   private readonly historyPage = signal(0);
 
@@ -45,6 +50,12 @@ export class AuthorChapterEditorStore {
     forkJoin({
       story: this.repository.getStory(storyId),
       chapter: chapterId ? this.repository.getChapter(storyId, chapterId) : of(null),
+      monetization: chapterId
+        ? forkJoin({
+            config: this.repository.getChapterMonetization(storyId, chapterId),
+            bands: this.repository.listMonetizationPriceBands(),
+          }).pipe(catchError(() => of(null)))
+        : of(null),
     })
       .pipe(
         finalize(() => this.loading.set(false)),
@@ -54,15 +65,48 @@ export class AuthorChapterEditorStore {
         next: ({
           story,
           chapter,
+          monetization,
         }: {
           story: AuthorManagedStory;
           chapter: AuthorManagedChapter | null;
+          monetization: {
+            readonly config: AuthorChapterMonetization;
+            readonly bands: readonly MonetizationPriceBand[];
+          } | null;
         }) => {
           this.story.set(story);
           this.chapter.set(chapter);
+          this.monetization.set(monetization?.config ?? null);
+          this.priceBands.set(monetization?.bands ?? []);
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
+  }
+
+  updateMonetization(
+    storyId: string,
+    chapterId: string,
+    accessType: 'FREE' | 'PAID',
+    priceBandId?: string,
+  ): Observable<AuthorChapterMonetization> {
+    this.monetizationSaving.set(true);
+    this.error.set(null);
+    return this.repository
+      .updateChapterMonetization(storyId, chapterId, {
+        accessType,
+        ...(priceBandId ? { priceBandId } : {}),
+      })
+      .pipe(
+        tap((result) => {
+          this.monetization.set(result);
+          this.success.set(
+            result.accessType === 'PAID'
+              ? `Đã đặt giá ${result.creditPrice} Credit cho chương.`
+              : 'Đã chuyển chương về miễn phí.',
+          );
+        }),
+        finalize(() => this.monetizationSaving.set(false)),
+      );
   }
 
   loadHistory(storyId: string, chapterId: string, page: number = 1): void {

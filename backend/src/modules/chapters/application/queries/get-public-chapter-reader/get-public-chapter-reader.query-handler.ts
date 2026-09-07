@@ -1,4 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+
+import { monetizationConfig } from '@/config';
 
 import type { PublicChapterReaderDto } from '../../dto';
 import {
@@ -18,6 +21,8 @@ export class GetPublicChapterReaderQueryHandler {
   constructor(
     @Inject(CHAPTER_PERSISTENCE_PORT)
     private readonly persistence: ChapterPersistencePort,
+    @Inject(monetizationConfig.KEY)
+    private readonly monetization: ConfigType<typeof monetizationConfig>,
   ) {}
 
   async execute(
@@ -34,6 +39,8 @@ export class GetPublicChapterReaderQueryHandler {
     const result = await this.persistence.findPublicReader(
       storySlug,
       chapterNumber,
+      query.viewerId,
+      this.monetization.paywallEnforcementEnabled,
     );
 
     if (!result) {

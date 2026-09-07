@@ -11,6 +11,7 @@ import {
 
 export abstract class ChapterReaderRepository {
   abstract getChapter(storySlug: string, chapterNumber: string): Observable<ChapterReaderView>;
+  abstract unlockChapter(chapterId: string): Observable<void>;
   abstract listChapters(
     storySlug: string,
     page: number,

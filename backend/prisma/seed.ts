@@ -71,6 +71,10 @@ const permissions = [
     ["reading-bookmark.manage.own", "Manage own reading bookmarks", "reading-bookmark", "manage.own"],
     ["reading-goal.manage.own", "Manage own reading goal", "reading-goal", "manage.own"],
     ["wallet.read.self", "Read own wallet and transaction history", "wallet", "read.self"],
+    ["purchase.read.self", "Read own chapter purchases", "purchase", "read.self"],
+    ["purchase.create.self", "Purchase chapter access for self", "purchase", "create.self"],
+    ["chapter.monetization.manage.own", "Manage monetization for own chapters", "chapter.monetization", "manage.own"],
+    ["monetization.price-band.manage", "Manage monetization price bands", "monetization.price-band", "manage"],
 
     ["report.create", "Create reports", "report", "create"],
     ["report.review", "Review and resolve reports", "report", "review"],
@@ -110,6 +114,8 @@ const userPermissionCodes: PermissionCode[] = [
     "reading-bookmark.manage.own",
     "reading-goal.manage.own",
     "wallet.read.self",
+    "purchase.read.self",
+    "purchase.create.self",
     "report.create",
     "media.upload",
     "notification.manage.own",
@@ -137,6 +143,7 @@ const authorPermissionCodes: PermissionCode[] = [
     "chapter.update.own",
     "chapter.delete.own",
     "chapter.publish.own",
+    "chapter.monetization.manage.own",
     "analytics.read",
 ];
 

@@ -35,6 +35,10 @@ export enum PermissionCode {
   READING_BOOKMARK_MANAGE_OWN = 'reading-bookmark.manage.own',
   READING_GOAL_MANAGE_OWN = 'reading-goal.manage.own',
   WALLET_READ_SELF = 'wallet.read.self',
+  PURCHASE_READ_SELF = 'purchase.read.self',
+  PURCHASE_CREATE_SELF = 'purchase.create.self',
+  CHAPTER_MONETIZATION_MANAGE_OWN = 'chapter.monetization.manage.own',
+  MONETIZATION_PRICE_BAND_MANAGE = 'monetization.price-band.manage',
 
   REPORT_CREATE = 'report.create',
   REPORT_REVIEW = 'report.review',
