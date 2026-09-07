@@ -404,6 +404,18 @@ enum ChapterEntitlementStatus {
   @@map("chapter_entitlement_status")
 }
 
+enum PaymentOrderStatus {
+  CREATED  @map("created")
+  PENDING  @map("pending")
+  PAID     @map("paid")
+  FAILED   @map("failed")
+  EXPIRED  @map("expired")
+  REFUNDED @map("refunded")
+  REVERSED @map("reversed")
+
+  @@map("payment_order_status")
+}
+
 // ============================================================
 // IDENTITY, AUTHENTICATION, AUTHORIZATION
 // ============================================================
@@ -478,6 +490,7 @@ model User {
   chapterEntitlements          ChapterEntitlement[]
   chapterMonetizationUpdates   ChapterMonetization[]    @relation("ChapterMonetizationUpdatedBy")
   chapterPricingVersions       ChapterPricingVersion[]  @relation("ChapterPricingVersionChangedBy")
+  paymentOrders                PaymentOrder[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -523,6 +536,7 @@ model WalletLedgerTransaction {
   wallet          Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
   entries         WalletLedgerEntry[]
   chapterPurchase ChapterPurchase?
+  paymentOrder    PaymentOrder?
 
   @@unique([walletId, type, referenceType, referenceId], map: "wallet_ledger_transactions_business_reference_unique")
   @@index([walletId, createdAt, id], map: "wallet_ledger_transactions_wallet_history_idx")
@@ -649,6 +663,59 @@ model ChapterEntitlement {
   @@unique([userId, chapterId])
   @@index([chapterId, status])
   @@map("chapter_entitlements")
+}
+
+// ============================================================
+// BILLING, CREDIT PACKAGES AND PAYMENT ORDERS
+// ============================================================
+
+model CreditPackage {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique @db.VarChar(50)
+  label           String   @db.VarChar(120)
+  creditAmount    BigInt   @map("credit_amount")
+  fiatAmountMinor BigInt   @map("fiat_amount_minor")
+  currency        String   @db.VarChar(3)
+  isActive        Boolean  @default(false) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  orders PaymentOrder[]
+
+  @@index([isActive, sortOrder])
+  @@map("credit_packages")
+}
+
+model PaymentOrder {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  packageId           String             @map("package_id") @db.Uuid
+  provider            String             @db.VarChar(50)
+  providerReference   String?            @map("provider_reference") @db.VarChar(160)
+  creditAmount        BigInt             @map("credit_amount")
+  fiatAmountMinor     BigInt             @map("fiat_amount_minor")
+  currency            String             @db.VarChar(3)
+  status              PaymentOrderStatus @default(CREATED)
+  checkoutUrl         String?            @map("checkout_url") @db.Text
+  idempotencyKey      String             @unique @map("idempotency_key") @db.VarChar(200)
+  requestHash         String             @map("request_hash") @db.VarChar(64)
+  walletTransactionId String?            @unique @map("wallet_transaction_id") @db.Uuid
+  failureCode         String?            @map("failure_code") @db.VarChar(120)
+  expiresAt           DateTime           @map("expires_at") @db.Timestamptz(3)
+  settledAt           DateTime?          @map("settled_at") @db.Timestamptz(3)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creditPackage     CreditPackage            @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  walletTransaction WalletLedgerTransaction? @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerReference], map: "payment_orders_provider_reference_unique")
+  @@index([userId, createdAt, id])
+  @@index([status, expiresAt])
+  @@index([provider, status, updatedAt])
+  @@map("payment_orders")
 }
 
 model OAuthAccount {

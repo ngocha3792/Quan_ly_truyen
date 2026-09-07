@@ -7,12 +7,12 @@ Result: **accepted with one external provider-selection gate**
 
 All flags default to `false` in every environment until their rollout gate passes.
 
-| Flag | Purpose | Prerequisite |
-| --- | --- | --- |
-| `MONETIZATION_ENABLED` | Expose wallet and monetization read models | Sprint 1 reconciliation passes |
-| `AUTHOR_PRICING_ENABLED` | Allow eligible authors to configure paid chapters | Price bands and audit trail exist |
-| `PAYMENT_PROVIDER_ENABLED` | Allow creation of real top-up orders | Sandbox, webhook, and reconciliation pass |
-| `PAYWALL_ENFORCEMENT_ENABLED` | Enforce paid-content access | Entitlement and leak tests pass |
+| Flag                          | Purpose                                           | Prerequisite                              |
+| ----------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| `MONETIZATION_ENABLED`        | Expose wallet and monetization read models        | Sprint 1 reconciliation passes            |
+| `AUTHOR_PRICING_ENABLED`      | Allow eligible authors to configure paid chapters | Price bands and audit trail exist         |
+| `PAYMENT_PROVIDER_ENABLED`    | Allow creation of real top-up orders              | Sandbox, webhook, and reconciliation pass |
+| `PAYWALL_ENFORCEMENT_ENABLED` | Enforce paid-content access                       | Entitlement and leak tests pass           |
 
 `PAYWALL_ENFORCEMENT_ENABLED` must be the final flag enabled. Disabling payment order
 creation must not remove already-purchased access.
@@ -27,6 +27,9 @@ without weakening their boundaries.
 - `chapter.monetization.manage.own`
 - `monetization.price-band.manage`
 - `payment.read.admin`
+- `payment.order.create.self`
+- `payment.order.read.self`
+- `payment.package.manage.admin`
 - `payment.reconcile.admin`
 - `wallet.adjust.admin`
 - `payment.refund.admin`
@@ -46,9 +49,10 @@ content administration. Every privileged command requires a reason and audit rec
 
 ## Provider selection gate
 
-No provider is hard-coded in Sprint 0 because merchant availability, credentials,
-sandbox behavior, settlement, and refund capability are deployment inputs. Before
-Sprint 3 starts, the owner must select a provider that satisfies all of these:
+No production provider is hard-coded because merchant availability, credentials,
+sandbox behavior, settlement, and refund capability are deployment inputs. Before a
+Sprint 3 provider adapter is enabled outside the reference sandbox, the owner must
+select a provider that satisfies all of these:
 
 - Supports the deployment's legal entity and settlement currency.
 - Provides server-verifiable webhook signatures and unique event identifiers.

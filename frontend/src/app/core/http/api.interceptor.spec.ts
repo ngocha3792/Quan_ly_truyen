@@ -29,6 +29,10 @@ describe('apiInterceptor', () => {
     appName: 'TruyenHub',
 
     production: false,
+    features: {
+      monetizationEnabled: false,
+      paymentProviderEnabled: false,
+    },
 
     passwordPolicy: {
       minimumLength: 8,

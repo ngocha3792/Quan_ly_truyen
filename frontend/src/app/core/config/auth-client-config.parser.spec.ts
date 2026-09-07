@@ -6,6 +6,10 @@ describe('parseAuthClientConfigResponse', () => {
       parseAuthClientConfigResponse({
         success: true,
         data: {
+          features: {
+            monetizationEnabled: true,
+            paymentProviderEnabled: false,
+          },
           passwordPolicy: {
             minimumLength: 10,
             maximumLength: 64,
@@ -26,6 +30,10 @@ describe('parseAuthClientConfigResponse', () => {
         },
       }),
     ).toEqual({
+      features: {
+        monetizationEnabled: true,
+        paymentProviderEnabled: false,
+      },
       passwordPolicy: {
         minimumLength: 10,
         maximumLength: 64,
@@ -51,6 +59,10 @@ describe('parseAuthClientConfigResponse', () => {
       parseAuthClientConfigResponse({
         success: true,
         data: {
+          features: {
+            monetizationEnabled: false,
+            paymentProviderEnabled: false,
+          },
           passwordPolicy: {
             minimumLength: 72,
             maximumLength: 8,

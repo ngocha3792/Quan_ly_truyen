@@ -24,15 +24,15 @@ Date: 2026-09-07
 
 Routes are unavailable while the corresponding feature flag is false.
 
-| Method  | Route                                                                  | Permission                          |
-| ------- | ---------------------------------------------------------------------- | ----------------------------------- |
-| `GET`   | `/api/v1/monetization/price-bands`                                    | Public while feature is enabled     |
-| `GET`   | `/api/v1/monetization/purchases/me`                                   | `purchase.read.self`                |
-| `POST`  | `/api/v1/monetization/chapters/:chapterId/unlock`                     | `purchase.create.self`              |
-| `GET`   | `/api/v1/author/stories/:storyId/chapters/:chapterId/monetization`    | `chapter.monetization.manage.own`   |
-| `PUT`   | `/api/v1/author/stories/:storyId/chapters/:chapterId/monetization`    | `chapter.monetization.manage.own`   |
-| `GET`   | `/api/v1/admin/monetization/price-bands`                              | `monetization.price-band.manage`    |
-| `PATCH` | `/api/v1/admin/monetization/price-bands/:priceBandId`                 | `monetization.price-band.manage`    |
+| Method  | Route                                                              | Permission                        |
+| ------- | ------------------------------------------------------------------ | --------------------------------- |
+| `GET`   | `/api/v1/monetization/price-bands`                                 | Public while feature is enabled   |
+| `GET`   | `/api/v1/monetization/purchases/me`                                | `purchase.read.self`              |
+| `POST`  | `/api/v1/monetization/chapters/:chapterId/unlock`                  | `purchase.create.self`            |
+| `GET`   | `/api/v1/author/stories/:storyId/chapters/:chapterId/monetization` | `chapter.monetization.manage.own` |
+| `PUT`   | `/api/v1/author/stories/:storyId/chapters/:chapterId/monetization` | `chapter.monetization.manage.own` |
+| `GET`   | `/api/v1/admin/monetization/price-bands`                           | `monetization.price-band.manage`  |
+| `PATCH` | `/api/v1/admin/monetization/price-bands/:priceBandId`              | `monetization.price-band.manage`  |
 
 Unlock requests require `Idempotency-Key`. BigInt monetary values are serialized as
 decimal strings. Existing chapter price snapshots do not change when an administrator
@@ -75,7 +75,8 @@ PAYMENT_PROVIDER_ENABLED=false
 PAYWALL_ENFORCEMENT_ENABLED=false
 ```
 
-Sprint 2 does not provide a payment provider or authorize production monetization.
+Sprint 2 did not provide a payment provider or authorize production monetization.
 Before enabling enforcement, production must pass migrations, wallet reconciliation,
 content-leak tests, support/refund procedures, staged author pricing, and a controlled
-entitlement canary. Fiat top-up/webhook settlement remains Sprint 3 scope.
+entitlement canary. The provider-neutral top-up/webhook foundation is implemented in
+Sprint 3, but real-provider selection and production activation remain external gates.

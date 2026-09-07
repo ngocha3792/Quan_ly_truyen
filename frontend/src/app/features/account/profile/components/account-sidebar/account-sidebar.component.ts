@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { CurrentUser } from '../../../../../core/auth/auth.models';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 
 import { IconComponent, IconName } from '../../../../../shared/components/icon/icon.component';
 
@@ -24,6 +25,7 @@ interface AccountNavigationItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountSidebarComponent {
+  private readonly runtimeConfig = inject(APP_RUNTIME_CONFIG);
   readonly user = input<CurrentUser | null>(null);
 
   readonly logoutRequested = output<void>();
@@ -65,6 +67,16 @@ export class AccountSidebarComponent {
       icon: 'sparkles',
       exact: false,
     },
+    ...(this.runtimeConfig.features.paymentProviderEnabled
+      ? [
+          {
+            label: 'Ví Credit',
+            route: '/tai-khoan/credit',
+            icon: 'wallet' as const,
+            exact: false,
+          },
+        ]
+      : []),
   ];
 
   protected getRoleLabel(roles: readonly string[]): string {

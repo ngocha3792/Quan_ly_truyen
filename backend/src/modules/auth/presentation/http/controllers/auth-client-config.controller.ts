@@ -3,11 +3,15 @@ import { ConfigService } from '@nestjs/config';
 
 import { CSRF_HEADER_NAME } from '@/common/constants';
 import { Public } from '@/common/decorators';
-import type { AuthConfig } from '@/config';
+import type { AuthConfig, MonetizationConfig } from '@/config';
 
 import { PasswordPolicy, PasswordResetPolicy } from '../../../domain';
 
 export interface AuthClientConfigResponse {
+  readonly features: {
+    readonly monetizationEnabled: boolean;
+    readonly paymentProviderEnabled: boolean;
+  };
   readonly passwordPolicy: {
     readonly minimumLength: number;
     readonly maximumLength: number;
@@ -30,9 +34,12 @@ export interface AuthClientConfigResponse {
 @Controller('auth')
 export class AuthClientConfigController {
   private readonly authConfig: AuthConfig;
+  private readonly monetizationConfig: MonetizationConfig;
 
   constructor(configService: ConfigService) {
     this.authConfig = configService.getOrThrow<AuthConfig>('auth');
+    this.monetizationConfig =
+      configService.getOrThrow<MonetizationConfig>('monetization');
   }
 
   @Get('client-config')
@@ -40,6 +47,10 @@ export class AuthClientConfigController {
   @Header('Cache-Control', 'no-store')
   getClientConfig(): AuthClientConfigResponse {
     return {
+      features: {
+        monetizationEnabled: this.monetizationConfig.enabled,
+        paymentProviderEnabled: this.monetizationConfig.paymentProviderEnabled,
+      },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,
         maximumLength: PasswordPolicy.MAX_LENGTH,

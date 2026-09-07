@@ -9,17 +9,25 @@ import { AuthClientConfigController } from './auth-client-config.controller';
 describe('AuthClientConfigController', () => {
   it('trả về auth client config từ domain policy và AuthConfig', () => {
     const configService = {
-      getOrThrow: jest.fn().mockReturnValue({
-        csrf: {
-          enabled: true,
-          cookieName: 'runtime_csrf_cookie',
-        },
-      }),
+      getOrThrow: jest.fn((key: string) =>
+        key === 'auth'
+          ? {
+              csrf: {
+                enabled: true,
+                cookieName: 'runtime_csrf_cookie',
+              },
+            }
+          : { enabled: false, paymentProviderEnabled: false },
+      ),
     } as unknown as ConfigService;
 
     const controller = new AuthClientConfigController(configService);
 
     expect(controller.getClientConfig()).toEqual({
+      features: {
+        monetizationEnabled: false,
+        paymentProviderEnabled: false,
+      },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,
         maximumLength: PasswordPolicy.MAX_LENGTH,
@@ -41,5 +49,7 @@ describe('AuthClientConfigController', () => {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(configService.getOrThrow).toHaveBeenCalledWith('auth');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(configService.getOrThrow).toHaveBeenCalledWith('monetization');
   });
 });

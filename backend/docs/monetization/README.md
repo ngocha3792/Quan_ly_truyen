@@ -2,7 +2,7 @@
 
 Status: **accepted for implementation**  
 Decision date: **2026-09-07**  
-Implementation state: **Sprint 2 chapter pricing and entitlement foundation implemented; monetization is not live**
+Implementation state: **Sprint 3 top-up settlement foundation implemented; monetization is not live**
 
 This directory is the source of truth for the first monetization release. Later
 sprints must not introduce behavior that conflicts with these decisions without a new
@@ -42,6 +42,9 @@ ADR.
   ledger, API, reconciliation, and verification contract now implemented.
 - [SPRINT_2_IMPLEMENTATION.md](./SPRINT_2_IMPLEMENTATION.md) records chapter price
   bands, purchase/entitlement atomicity, content gating, APIs, and rollout state.
+- [SPRINT_3_IMPLEMENTATION.md](./SPRINT_3_IMPLEMENTATION.md) records Credit packages,
+  payment orders, verified webhook settlement, reconciliation, and the remaining
+  provider-selection gate.
 
 ## Public policy
 

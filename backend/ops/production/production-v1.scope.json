@@ -173,7 +173,7 @@
       "productionExposure": "hidden",
       "owner": "backend/wallets + planned billing/monetization + frontend/account",
       "nextPhase": "post-v1",
-      "notes": "Sprint 1 wallet and immutable ledger foundation exists behind MONETIZATION_ENABLED=false. Payment order creation, chapter pricing, entitlement gating and production rollout are not ready."
+      "notes": "Sprint 1-3 wallet, chapter paywall and provider-neutral payment settlement foundations exist behind disabled flags. The HMAC reference adapter is forbidden in production; real-provider selection, sandbox certification and controlled rollout are still required."
     },
     {
       "id": "personalized-recommendations",

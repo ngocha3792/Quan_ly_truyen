@@ -322,6 +322,20 @@ export interface MonetizationConfig {
   paywallEnforcementEnabled: boolean;
 }
 
+export interface BillingConfig {
+  providerMode: 'disabled' | 'hmac-sandbox';
+  checkoutBaseUrl?: string;
+  returnUrl?: string;
+  webhookSecret?: string;
+  webhookSignatureTtlSeconds: number;
+  webhookPollIntervalMs: number;
+  webhookBatchSize: number;
+  webhookMaxAttempts: number;
+  webhookRetryBaseMs: number;
+  orderTtlMinutes: number;
+  pendingOrderLimit: number;
+}
+
 export interface AiConfig {
   encryptionKeyBase64?: string;
   gemini: {

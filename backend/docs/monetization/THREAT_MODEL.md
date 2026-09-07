@@ -22,22 +22,22 @@ Scope: credit top-up, wallet, chapter purchase, entitlement, paid-content delive
 
 ## Required controls
 
-| Threat | Required mitigation | Verification |
-| --- | --- | --- |
-| Client changes price or package amount | Resolve active package and chapter price on the server | Integration tests with tampered payloads |
-| Duplicate unlock or webhook | Unique idempotency/event keys and deterministic replay result | Concurrent and replay tests |
-| Wallet double-spend | PostgreSQL row lock or serializable transaction; balance constraint | Parallel purchase test against one wallet |
-| Forged webhook | Provider signature and timestamp verification over raw payload | Invalid, expired, and modified signature tests |
-| Redirect used as proof of payment | Redirect only displays/polls order state; verified webhook settles | End-to-end negative test |
-| Out-of-order provider events | Explicit state-transition table and event inbox | Reordered event fixtures |
-| IDOR on wallet/order/entitlement | Derive owner from authenticated principal, not request user id | Cross-account API tests |
-| Paid content hidden only in UI | Backend entitlement gate; locked response omits full content | Response-body and SSR snapshot tests |
-| Shared cache leaks content | `private, no-store` for personalized content; cache key review | Proxy/cache integration test |
-| Ledger tampering | Append-only application API, restricted DB role, audit and reconciliation | Permission and reconciliation checks |
-| Privileged fraud | Dedicated permissions, mandatory reason, audit event, alerting | Admin authorization tests |
-| Secret exposure | Secrets only in deployment secret store; redact payload/log fields | Log and configuration scan |
-| Worker retry credits twice | Atomic state transition plus unique ledger reference | Crash-after-commit replay test |
-| Refund creates negative balance silently | Review state when granted credits were spent | Refund scenario tests |
+| Threat                                   | Required mitigation                                                       | Verification                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| Client changes price or package amount   | Resolve active package and chapter price on the server                    | Integration tests with tampered payloads       |
+| Duplicate unlock or webhook              | Unique idempotency/event keys and deterministic replay result             | Concurrent and replay tests                    |
+| Wallet double-spend                      | PostgreSQL row lock or serializable transaction; balance constraint       | Parallel purchase test against one wallet      |
+| Forged webhook                           | Provider signature and timestamp verification over raw payload            | Invalid, expired, and modified signature tests |
+| Redirect used as proof of payment        | Redirect only displays/polls order state; verified webhook settles        | End-to-end negative test                       |
+| Out-of-order provider events             | Explicit state-transition table and event inbox                           | Reordered event fixtures                       |
+| IDOR on wallet/order/entitlement         | Derive owner from authenticated principal, not request user id            | Cross-account API tests                        |
+| Paid content hidden only in UI           | Backend entitlement gate; locked response omits full content              | Response-body and SSR snapshot tests           |
+| Shared cache leaks content               | `private, no-store` for personalized content; cache key review            | Proxy/cache integration test                   |
+| Ledger tampering                         | Append-only application API, restricted DB role, audit and reconciliation | Permission and reconciliation checks           |
+| Privileged fraud                         | Dedicated permissions, mandatory reason, audit event, alerting            | Admin authorization tests                      |
+| Secret exposure                          | Secrets only in deployment secret store; redact payload/log fields        | Log and configuration scan                     |
+| Worker retry credits twice               | Atomic state transition plus unique ledger reference                      | Crash-after-commit replay test                 |
+| Refund creates negative balance silently | Review state when granted credits were spent                              | Refund scenario tests                          |
 
 ## Content delivery rule
 

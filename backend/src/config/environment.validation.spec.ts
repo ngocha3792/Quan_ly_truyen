@@ -187,6 +187,42 @@ describe('validateEnvironment', () => {
     ).not.toThrow();
   });
 
+  it('requires complete payment provider configuration when enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYMENT_PROVIDER_ENABLED: 'true',
+      }),
+    ).toThrow('Enabled payment provider requires');
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYMENT_PROVIDER_ENABLED: 'true',
+        PAYMENT_PROVIDER_MODE: 'hmac-sandbox',
+        PAYMENT_CHECKOUT_BASE_URL: 'https://payments.example.test/checkout',
+        PAYMENT_RETURN_URL: 'https://app.example.test/tai-khoan/credit',
+        PAYMENT_WEBHOOK_SECRET: 'test-payment-webhook-secret-at-least-32-bytes',
+      }),
+    ).not.toThrow();
+  });
+
+  it('forbids the reference sandbox payment adapter in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYMENT_PROVIDER_ENABLED: 'true',
+        PAYMENT_PROVIDER_MODE: 'hmac-sandbox',
+        PAYMENT_CHECKOUT_BASE_URL: 'https://payments.example.com/checkout',
+        PAYMENT_RETURN_URL: 'https://app.example.com/tai-khoan/credit',
+        PAYMENT_WEBHOOK_SECRET: 'production-payment-webhook-secret-123456',
+      }),
+    ).toThrow('hmac-sandbox payment provider is forbidden in production');
+  });
+
   it('rejects mail payload encryption keys that are not 32 bytes', () => {
     expect(() =>
       validateEnvironment({

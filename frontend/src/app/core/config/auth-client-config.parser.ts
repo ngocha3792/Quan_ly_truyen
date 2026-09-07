@@ -2,6 +2,7 @@ import { AppRuntimeConfig } from './app-config.token';
 
 export interface ParsedAuthClientConfig {
   readonly csrf: AppRuntimeConfig['csrf'];
+  readonly features: AppRuntimeConfig['features'];
   readonly passwordPolicy: AppRuntimeConfig['passwordPolicy'];
   readonly passwordReset: AppRuntimeConfig['passwordReset'];
 }
@@ -18,8 +19,19 @@ export function parseAuthClientConfigResponse(value: unknown): ParsedAuthClientC
 
   return {
     csrf: parseCsrfConfig(data['csrf']),
+    features: parseFeatureConfig(data['features']),
     passwordPolicy: parsePasswordPolicy(data['passwordPolicy']),
     passwordReset: parsePasswordReset(data['passwordReset']),
+  };
+}
+
+function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
+  if (!isRecord(value)) {
+    throw new Error('Runtime auth config thiếu feature config.');
+  }
+  return {
+    monetizationEnabled: readBoolean(value, 'monetizationEnabled'),
+    paymentProviderEnabled: readBoolean(value, 'paymentProviderEnabled'),
   };
 }
 

@@ -1,0 +1,81 @@
+<header class="page-header">
+  <div>
+    <p class="eyebrow">VÍ CREDIT</p>
+    <h1>Số dư và nạp Credit</h1>
+    <p>Chỉ webhook đã xác thực mới có thể cộng Credit vào ví của bạn.</p>
+  </div>
+  <a routerLink="/chinh-sach-credit">Chính sách Credit</a>
+</header>
+
+@if (error(); as message) {
+  <section class="notice error" role="alert">
+    <span>{{ message }}</span>
+    <button type="button" (click)="load()">Thử lại</button>
+  </section>
+}
+
+@if (loading()) {
+  <section class="loading-card" aria-live="polite">Đang tải thông tin Credit…</section>
+} @else if (wallet(); as currentWallet) {
+  <section class="balance-card">
+    <span>Số dư khả dụng</span>
+    <strong>{{ currentWallet.availableBalance | number }} Credit</strong>
+    <small>Credit không thể chuyển nhượng hoặc đổi thành tiền mặt.</small>
+  </section>
+
+  <section class="section" aria-labelledby="credit-packages-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="credit-packages-title">Gói Credit</h2>
+        <p>Giá và lượng Credit được chốt trên máy chủ khi tạo đơn.</p>
+      </div>
+    </div>
+    @if (packages().length > 0) {
+      <div class="package-grid">
+        @for (creditPackage of packages(); track creditPackage.id) {
+          <article class="package-card">
+            <span>{{ creditPackage.label }}</span>
+            <strong>{{ creditPackage.creditAmount | number }} Credit</strong>
+            <b>{{ formatFiat(creditPackage.fiatAmountMinor, creditPackage.currency) }}</b>
+            <button
+              type="button"
+              [disabled]="purchasingPackageId() !== null"
+              (click)="buy(creditPackage)"
+            >
+              {{ purchasingPackageId() === creditPackage.id ? 'Đang tạo đơn…' : 'Nạp Credit' }}
+            </button>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="empty">Hiện chưa có gói Credit nào được mở bán.</p>
+    }
+  </section>
+
+  <section class="section" aria-labelledby="payment-history-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="payment-history-title">Đơn nạp gần đây</h2>
+        <p>Trạng thái redirect không phải bằng chứng thanh toán.</p>
+      </div>
+    </div>
+    @if (orders().length > 0) {
+      <div class="orders">
+        @for (order of orders(); track order.id) {
+          <article class="order-row">
+            <div>
+              <strong>{{ order.creditAmount | number }} Credit</strong>
+              <span>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="order-state">
+              <b [attr.data-status]="order.status">{{ statusLabel(order.status) }}</b>
+              <span>{{ formatFiat(order.fiatAmountMinor, order.currency) }}</span>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="empty">Bạn chưa có đơn nạp Credit nào.</p>
+    }
+  </section>
+}

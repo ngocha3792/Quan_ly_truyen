@@ -18,6 +18,10 @@ export interface AppRuntimeConfig {
   readonly apiBaseUrl: string;
   readonly appName: string;
   readonly production: boolean;
+  readonly features: {
+    readonly monetizationEnabled: boolean;
+    readonly paymentProviderEnabled: boolean;
+  };
   readonly passwordPolicy: AuthPasswordPolicyConfig;
   readonly passwordReset: AuthPasswordResetConfig;
   readonly csrf: {

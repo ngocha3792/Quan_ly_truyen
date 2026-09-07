@@ -39,6 +39,13 @@ export enum PermissionCode {
   PURCHASE_CREATE_SELF = 'purchase.create.self',
   CHAPTER_MONETIZATION_MANAGE_OWN = 'chapter.monetization.manage.own',
   MONETIZATION_PRICE_BAND_MANAGE = 'monetization.price-band.manage',
+  PAYMENT_ORDER_CREATE_SELF = 'payment.order.create.self',
+  PAYMENT_ORDER_READ_SELF = 'payment.order.read.self',
+  PAYMENT_READ_ADMIN = 'payment.read.admin',
+  PAYMENT_PACKAGE_MANAGE_ADMIN = 'payment.package.manage.admin',
+  PAYMENT_RECONCILE_ADMIN = 'payment.reconcile.admin',
+  PAYMENT_REFUND_ADMIN = 'payment.refund.admin',
+  WALLET_ADJUST_ADMIN = 'wallet.adjust.admin',
 
   REPORT_CREATE = 'report.create',
   REPORT_REVIEW = 'report.review',

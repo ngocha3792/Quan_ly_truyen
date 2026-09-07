@@ -20,3 +20,4 @@ export {
   default as monetizationConfig,
   MONETIZATION_CONFIG_KEY,
 } from './monetization.config';
+export { default as billingConfig, BILLING_CONFIG_KEY } from './billing.config';

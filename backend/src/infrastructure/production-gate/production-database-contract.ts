@@ -119,6 +119,22 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'chapter_entitlements_user_chapter_key',
 
   'chapter_entitlements_chapter_status_idx',
+
+  'credit_packages_code_key',
+
+  'credit_packages_active_sort_idx',
+
+  'payment_orders_idempotency_key_key',
+
+  'payment_orders_wallet_transaction_id_key',
+
+  'payment_orders_provider_reference_unique',
+
+  'payment_orders_user_created_idx',
+
+  'payment_orders_status_expiry_idx',
+
+  'payment_orders_provider_status_updated_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -231,6 +247,28 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'chapter_purchases_refund_shape_check',
 
   'chapter_entitlements_status_shape_check',
+
+  'credit_packages_amounts_positive_check',
+
+  'credit_packages_code_check',
+
+  'credit_packages_label_check',
+
+  'credit_packages_currency_check',
+
+  'payment_orders_amounts_positive_check',
+
+  'payment_orders_currency_check',
+
+  'payment_orders_provider_check',
+
+  'payment_orders_idempotency_key_check',
+
+  'payment_orders_request_hash_check',
+
+  'payment_orders_expiry_check',
+
+  'payment_orders_status_shape_check',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

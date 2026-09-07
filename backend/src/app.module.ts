@@ -46,6 +46,7 @@ import { AnalyticsModule } from './modules/analytics';
 import { AiModule } from './modules/ai';
 import { WalletsModule } from './modules/wallets';
 import { MonetizationModule } from './modules/monetization';
+import { BillingModule } from './modules/billing';
 @Module({
   imports: [
     AppConfigModule,
@@ -72,6 +73,7 @@ import { MonetizationModule } from './modules/monetization';
     AiModule,
     WalletsModule,
     MonetizationModule,
+    BillingModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

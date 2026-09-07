@@ -104,6 +104,14 @@ export const ACCOUNT_ROUTES: Routes = [
           import('../ai-assistant').then((module) => module.AiAssistantPageComponent),
       },
       {
+        path: 'credit',
+        title: appPageTitle('Ví Credit'),
+        loadComponent: () =>
+          import('./credit/pages/credit-page/credit-page.component').then(
+            (module) => module.CreditPageComponent,
+          ),
+      },
+      {
         path: 'muc-tieu-doc',
         title: appPageTitle('Mục tiêu đọc'),
 

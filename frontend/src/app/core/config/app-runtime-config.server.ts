@@ -25,6 +25,10 @@ export function createRouteDiscoveryRuntimeConfig(): AppRuntimeConfig {
     apiBaseUrl: `${serverApiOrigin()}${environment.apiBaseUrl}`,
     appName: environment.appName,
     production: environment.production,
+    features: {
+      monetizationEnabled: false,
+      paymentProviderEnabled: false,
+    },
     passwordPolicy: {
       minimumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,
       maximumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,

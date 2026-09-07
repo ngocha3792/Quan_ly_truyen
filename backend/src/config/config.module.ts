@@ -18,6 +18,7 @@ import redisConfig from './redis.config';
 import { resolveEnvFilePaths } from './environment-files';
 import observabilityConfig from './observability.config';
 import monetizationConfig from './monetization.config';
+import billingConfig from './billing.config';
 
 @Global()
 @Module({
@@ -45,6 +46,7 @@ import monetizationConfig from './monetization.config';
         analyticsConfig,
         aiConfig,
         monetizationConfig,
+        billingConfig,
       ],
       validate: validateEnvironment,
     }),

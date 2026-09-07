@@ -608,6 +608,62 @@ export class EnvironmentVariables {
   @IsBoolean()
   PAYWALL_ENFORCEMENT_ENABLED = false;
 
+  @IsEnum(['disabled', 'hmac-sandbox'])
+  PAYMENT_PROVIDER_MODE: 'disabled' | 'hmac-sandbox' = 'disabled';
+
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  PAYMENT_CHECKOUT_BASE_URL?: string;
+
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  PAYMENT_RETURN_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  PAYMENT_WEBHOOK_SECRET?: string;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 300))
+  @IsInt()
+  @Min(30)
+  @Max(3600)
+  PAYMENT_WEBHOOK_SIGNATURE_TTL_SECONDS = 300;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 1000))
+  @IsInt()
+  @Min(100)
+  PAYMENT_WEBHOOK_POLL_INTERVAL_MS = 1000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 100))
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  PAYMENT_WEBHOOK_BATCH_SIZE = 100;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  PAYMENT_WEBHOOK_MAX_ATTEMPTS = 5;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 5000))
+  @IsInt()
+  @Min(100)
+  PAYMENT_WEBHOOK_RETRY_BASE_MS = 5000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 30))
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  PAYMENT_ORDER_TTL_MINUTES = 30;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  PAYMENT_PENDING_ORDER_LIMIT = 3;
+
   @IsString()
   @IsNotEmpty()
   ANALYTICS_TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -962,6 +1018,27 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
     throw new Error(
       'MONETIZATION_ENABLED must be true before enabling author pricing, a payment provider, or paywall enforcement',
     );
+  }
+
+  if (config.PAYMENT_PROVIDER_ENABLED) {
+    if (
+      config.PAYMENT_PROVIDER_MODE === 'disabled' ||
+      !config.PAYMENT_CHECKOUT_BASE_URL ||
+      !config.PAYMENT_RETURN_URL ||
+      !config.PAYMENT_WEBHOOK_SECRET
+    ) {
+      throw new Error(
+        'Enabled payment provider requires a provider mode, checkout URL, return URL, and webhook secret',
+      );
+    }
+    if (
+      config.NODE_ENV === AppEnvironment.PRODUCTION &&
+      config.PAYMENT_PROVIDER_MODE === 'hmac-sandbox'
+    ) {
+      throw new Error(
+        'hmac-sandbox payment provider is forbidden in production',
+      );
+    }
   }
 
   if (
