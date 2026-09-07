@@ -143,6 +143,27 @@ describe('AI policy/profile HTTP E2E', () => {
     });
   });
 
+  it('trả usage summary và quota chỉ cho user hiện tại', async () => {
+    const response = await request(httpServer())
+      .get('/api/v1/ai/usage')
+      .set('Authorization', authorization())
+      .expect(200);
+
+    expect(
+      unwrap<Record<string, unknown>>(response.body as unknown),
+    ).toMatchObject({
+      range: { timeZone: 'UTC' },
+      totals: {
+        requests: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        errorRate: 0,
+      },
+      quota: { tier: 'FREE' },
+      pricing: { status: 'NOT_CONFIGURED', estimatedCost: null },
+    });
+  });
+
   it('chặn custom AI Base URL trỏ vào private network trước khi persist', async () => {
     await request(httpServer())
       .post('/api/v1/ai/connections')

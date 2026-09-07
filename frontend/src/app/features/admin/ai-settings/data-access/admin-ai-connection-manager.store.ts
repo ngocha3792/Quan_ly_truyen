@@ -7,6 +7,7 @@ import {
   AiConnection,
   AiConnectionTestResult,
   AiModelInfo,
+  AiUsageSummary,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../domain/admin-ai-settings.models';
@@ -29,6 +30,9 @@ export class AdminAiConnectionManagerStore {
   readonly models = signal<readonly AiModelInfo[]>([]);
   readonly modelsLoading = signal(false);
   readonly modelsError = signal('');
+  readonly usage = signal<AiUsageSummary | null>(null);
+  readonly usageLoading = signal(false);
+  readonly usageError = signal('');
 
   load(): void {
     this.loading.set(true);
@@ -42,6 +46,22 @@ export class AdminAiConnectionManagerStore {
       .subscribe({
         next: (result) => this.connections.set(result),
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  loadUsage(from?: string, to?: string): void {
+    if (this.usageLoading()) return;
+    this.usageLoading.set(true);
+    this.usageError.set('');
+    this.api
+      .usage(from || undefined, to || undefined)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.usageLoading.set(false)),
+      )
+      .subscribe({
+        next: (usage) => this.usage.set(usage),
+        error: (error: unknown) => this.usageError.set(getApiErrorMessage(error)),
       });
   }
 

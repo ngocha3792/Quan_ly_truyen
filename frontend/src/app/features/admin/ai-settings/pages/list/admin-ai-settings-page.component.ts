@@ -60,6 +60,9 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected readonly models = this.manager.models;
   protected readonly modelsLoading = this.manager.modelsLoading;
   protected readonly modelsError = this.manager.modelsError;
+  protected readonly usage = this.manager.usage;
+  protected readonly usageLoading = this.manager.usageLoading;
+  protected readonly usageError = this.manager.usageError;
   protected readonly editorOpen = signal(false);
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
     { label: 'Trang chủ', route: '/' },
@@ -85,9 +88,20 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected editAuthType: AiAuthType = 'BEARER';
   protected editAuthHeaderName = '';
   protected editProtocol: AiProtocol = 'GEMINI_GENERATE_CONTENT';
+  protected usageFrom = '';
+  protected usageTo = '';
 
   ngOnInit(): void {
     this.manager.load();
+    this.manager.loadUsage();
+  }
+
+  protected loadUsage(): void {
+    this.manager.loadUsage(this.usageFrom, this.usageTo);
+  }
+
+  protected formatNumber(value: number): string {
+    return new Intl.NumberFormat('vi-VN').format(value);
   }
 
   protected get isAdvanced(): boolean {

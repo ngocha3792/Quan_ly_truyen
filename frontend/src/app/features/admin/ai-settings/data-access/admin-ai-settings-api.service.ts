@@ -9,6 +9,7 @@ import {
   AiCapabilityProbeResult,
   AiConnectionTestResult,
   AiModelInfo,
+  AiUsageSummary,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
 } from '../domain/admin-ai-settings.models';
@@ -18,10 +19,22 @@ export class AdminAiSettingsApiService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_RUNTIME_CONFIG);
   private readonly url = `${this.config.apiBaseUrl}/admin/ai/connections`;
+  private readonly usageUrl = `${this.config.apiBaseUrl}/admin/ai/usage`;
 
   list(): Observable<readonly AiConnection[]> {
     return this.http
       .get<ApiSuccessEnvelope<readonly AiConnection[]>>(this.url)
+      .pipe(map((response) => response.data));
+  }
+
+  usage(from?: string, to?: string): Observable<AiUsageSummary> {
+    return this.http
+      .get<ApiSuccessEnvelope<AiUsageSummary>>(this.usageUrl, {
+        params: {
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+        },
+      })
       .pipe(map((response) => response.data));
   }
 

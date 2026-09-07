@@ -11,6 +11,149 @@
     </app-button>
   </app-page-heading>
 
+  <section class="usage-panel" aria-labelledby="ai-usage-title">
+    <header class="usage-panel__header">
+      <div>
+        <h2 id="ai-usage-title">Mức sử dụng AI</h2>
+        <p>
+          Số lượt gọi provider, token, độ trễ và lỗi theo model/kết nối. Một request có fallback có
+          thể tạo nhiều lượt gọi. Mặc định hiển thị 30 ngày gần nhất.
+        </p>
+      </div>
+      <div class="usage-filters">
+        <label>Từ ngày <input type="date" [(ngModel)]="usageFrom" /></label>
+        <label>Đến ngày <input type="date" [(ngModel)]="usageTo" /></label>
+        <app-button variant="secondary" [loading]="usageStore.loading()" (click)="loadUsage()">
+          Cập nhật
+        </app-button>
+      </div>
+    </header>
+
+    @if (usageStore.error()) {
+      <app-error-alert title="Không thể tải mức sử dụng AI" [message]="usageStore.error()" />
+    }
+
+    @if (usageStore.loading() && !usageStore.summary()) {
+      <app-loading-state message="Đang tổng hợp mức sử dụng AI..." />
+    } @else if (usageStore.summary(); as usage) {
+      <small class="usage-range">
+        {{ usage.range.from }} — {{ usage.range.to }} · {{ usage.range.timeZone }}
+      </small>
+      <div class="usage-metrics">
+        <article>
+          <span>Requests</span><strong>{{ formatNumber(usage.totals.requests) }}</strong>
+        </article>
+        <article>
+          <span>Input token</span><strong>{{ formatNumber(usage.totals.inputTokens) }}</strong>
+        </article>
+        <article>
+          <span>Output token</span><strong>{{ formatNumber(usage.totals.outputTokens) }}</strong>
+        </article>
+        <article>
+          <span>Độ trễ TB</span
+          ><strong>{{ formatNumber(usage.totals.averageLatencyMs) }} ms</strong>
+        </article>
+        <article>
+          <span>Tỷ lệ lỗi</span><strong>{{ usage.totals.errorRate }}%</strong>
+        </article>
+      </div>
+
+      @if (usage.quota; as quota) {
+        <div class="quota-grid">
+          <div>
+            <span>Request quota · {{ quota.tier }}</span>
+            <strong
+              >{{ formatNumber(quota.requests.used) }} /
+              {{ formatNumber(quota.requests.limit) }}</strong
+            >
+            <progress [value]="quota.requests.used" [max]="quota.requests.limit"></progress>
+          </div>
+          <div>
+            <span>Token quota · {{ quota.tier }}</span>
+            <strong
+              >{{ formatNumber(quota.tokens.used) }} /
+              {{ formatNumber(quota.tokens.limit) }}</strong
+            >
+            <progress [value]="quota.tokens.used" [max]="quota.tokens.limit"></progress>
+          </div>
+        </div>
+      }
+
+      <div class="usage-breakdowns">
+        <div class="usage-table-wrap">
+          <h3>Theo model</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Requests</th>
+                <th>Input</th>
+                <th>Output</th>
+                <th>Lỗi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of usage.byModel; track item.protocol + ':' + item.model) {
+                <tr>
+                  <td>
+                    <strong>{{ item.model }}</strong
+                    ><small>{{ item.protocol || 'Không rõ protocol' }}</small>
+                  </td>
+                  <td>{{ formatNumber(item.requests) }}</td>
+                  <td>{{ formatNumber(item.inputTokens) }}</td>
+                  <td>{{ formatNumber(item.outputTokens) }}</td>
+                  <td>{{ item.errorRate }}%</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">Chưa có lần gọi AI nào trong khoảng này.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="usage-table-wrap">
+          <h3>Theo kết nối</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Kết nối</th>
+                <th>Requests</th>
+                <th>Token</th>
+                <th>Độ trễ</th>
+                <th>Lỗi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (
+                item of usage.byConnection;
+                track (item.connectionId || 'none') + ':' + item.protocol
+              ) {
+                <tr>
+                  <td>
+                    <strong>{{ item.connectionName }}</strong
+                    ><small>{{ item.protocol || 'Không rõ protocol' }}</small>
+                  </td>
+                  <td>{{ formatNumber(item.requests) }}</td>
+                  <td>{{ formatNumber(item.totalTokens) }}</td>
+                  <td>{{ formatNumber(item.averageLatencyMs) }} ms</td>
+                  <td>{{ item.errorRate }}%</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">Chưa có dữ liệu kết nối trong khoảng này.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <small class="pricing-note">
+        Chi phí ước tính chưa bật vì chưa có bảng giá được cấu hình rõ theo connection + model.
+      </small>
+    }
+  </section>
+
   @if (settingsOpen()) {
     <section class="connections-panel">
       <header>

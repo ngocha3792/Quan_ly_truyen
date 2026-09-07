@@ -68,6 +68,35 @@ describe('AdminAiSettingsApiService', () => {
     ]);
   });
 
+  it('đọc usage theo date range qua endpoint admin riêng', async () => {
+    const resultPromise = firstValueFrom(service.usage('2026-09-01', '2026-09-07'));
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === '/api/v1/admin/ai/usage' &&
+        candidate.params.get('from') === '2026-09-01' &&
+        candidate.params.get('to') === '2026-09-07',
+    );
+
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      success: true,
+      data: {
+        range: { from: '2026-09-01', to: '2026-09-07', timeZone: 'UTC' },
+        totals: { requests: 120, inputTokens: 500000, outputTokens: 80000 },
+        byModel: [],
+        byConnection: [],
+        quota: null,
+        pricing: { status: 'NOT_CONFIGURED', currency: 'USD', estimatedCost: null },
+      },
+      requestId: 'request-test',
+      timestamp: '2026-09-07T12:00:00.000Z',
+    });
+
+    await expect(resultPromise).resolves.toMatchObject({
+      totals: { requests: 120, inputTokens: 500000, outputTokens: 80000 },
+    });
+  });
+
   it('gửi protocol rõ ràng khi tạo custom gateway', async () => {
     const payload = {
       name: 'Company gateway',

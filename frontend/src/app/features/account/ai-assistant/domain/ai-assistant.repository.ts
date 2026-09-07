@@ -12,6 +12,7 @@ import {
   AiConversationSummary,
   AiSendMessageResult,
   AiSendMessageStreamEvent,
+  AiUsageSummary,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
   UpdateAiProfilePayload,
@@ -22,6 +23,7 @@ export abstract class AiAssistantRepository {
   abstract updateFallbackPolicy(fallbackPolicy: AiFallbackPolicy): Observable<AiPolicy>;
   abstract getProfile(): Observable<AiProfile>;
   abstract updateProfile(payload: UpdateAiProfilePayload): Observable<AiProfile>;
+  abstract getUsage(from?: string, to?: string): Observable<AiUsageSummary>;
 
   abstract listConnections(): Observable<readonly AiConnection[]>;
   abstract createConnection(payload: CreateAiConnectionPayload): Observable<AiConnection>;

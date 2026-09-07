@@ -15,6 +15,7 @@ import { AiConnectionManagerStore } from '../../data-access/ai-connection-manage
 import { provideAiAssistant } from '../../data-access/ai-assistant.providers';
 import { AiAssistantStore } from '../../data-access/ai-assistant.store';
 import { AiProfileStore } from '../../data-access/ai-profile.store';
+import { AiUsageStore } from '../../data-access/ai-usage.store';
 import {
   AI_PROVIDER_LABELS,
   AiFallbackPolicy,
@@ -36,7 +37,13 @@ import { AiConnectionManagerComponent } from '../ai-connection-manager/ai-connec
     LoadingStateComponent,
     AiConnectionManagerComponent,
   ],
-  providers: [...provideAiAssistant(), AiAssistantStore, AiConnectionManagerStore, AiProfileStore],
+  providers: [
+    ...provideAiAssistant(),
+    AiAssistantStore,
+    AiConnectionManagerStore,
+    AiProfileStore,
+    AiUsageStore,
+  ],
   templateUrl: './ai-assistant-page.component.html',
   styleUrl: './ai-assistant-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +58,7 @@ export class AiAssistantPageComponent implements OnInit {
   protected readonly store = inject(AiAssistantStore);
   protected readonly connectionStore = inject(AiConnectionManagerStore);
   protected readonly profileStore = inject(AiProfileStore);
+  protected readonly usageStore = inject(AiUsageStore);
 
   protected newConversationConnectionId = '';
   protected newConversationModelId = '';
@@ -59,6 +67,8 @@ export class AiAssistantPageComponent implements OnInit {
   protected profileSystemPrompt = '';
   protected profileLanguage = 'en';
   protected profileAutoTranslate = false;
+  protected usageFrom = '';
+  protected usageTo = '';
 
   constructor() {
     effect(() => {
@@ -86,6 +96,15 @@ export class AiAssistantPageComponent implements OnInit {
     this.store.loadConversations();
     this.profileStore.loadPolicy();
     this.profileStore.loadProfile();
+    this.usageStore.load();
+  }
+
+  protected loadUsage(): void {
+    this.usageStore.load(this.usageFrom, this.usageTo);
+  }
+
+  protected formatNumber(value: number): string {
+    return new Intl.NumberFormat('vi-VN').format(value);
   }
 
   protected toggleSettings(): void {

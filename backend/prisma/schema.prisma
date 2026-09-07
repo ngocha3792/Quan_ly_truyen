@@ -596,7 +596,9 @@ model AiUsage {
   connection AiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
-  @@index([connectionId])
+  @@index([createdAt])
+  @@index([connectionId, createdAt])
+  @@index([model, createdAt])
   @@index([protocol, createdAt])
   @@map("ai_usages")
 }

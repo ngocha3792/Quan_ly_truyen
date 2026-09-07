@@ -25,6 +25,11 @@ import type {
   AiGenerateRequest,
   AiUsageTokens,
 } from '../ports/ai-protocol-adapter.port';
+import {
+  aiRateLimitResetAt,
+  aiRateLimitWindowStart,
+} from './ai-rate-limit-window.util';
+import { normalizeAiUsageToken } from '../usage';
 
 export interface AiRateLimitReservation {
   readonly userId: string;
@@ -202,10 +207,12 @@ export class AiRateLimiter {
   ): Promise<void> {
     if (!reservation) return;
 
+    const inputTokens = normalizeAiUsageToken(usage?.inputTokens);
+    const outputTokens = normalizeAiUsageToken(usage?.outputTokens);
     const actualTokens =
-      usage?.inputTokens !== undefined || usage?.outputTokens !== undefined
-        ? (usage.inputTokens ?? reservation.estimatedInputTokens) +
-          (usage.outputTokens ?? this.estimateTextTokens(outputText))
+      inputTokens !== undefined || outputTokens !== undefined
+        ? (inputTokens ?? reservation.estimatedInputTokens) +
+          (outputTokens ?? this.estimateTextTokens(outputText))
         : reservation.estimatedInputTokens +
           this.estimateTextTokens(outputText);
 
@@ -244,12 +251,11 @@ export class AiRateLimiter {
   }
 
   private windowStart(windowSeconds: number): Date {
-    const windowMs = windowSeconds * 1_000;
-    return new Date(Math.floor(Date.now() / windowMs) * windowMs);
+    return aiRateLimitWindowStart(new Date(), windowSeconds);
   }
 
   private retryAfterSeconds(windowStart: Date, windowSeconds: number): number {
-    const resetAt = windowStart.getTime() + windowSeconds * 1_000;
+    const resetAt = aiRateLimitResetAt(windowStart, windowSeconds).getTime();
     return Math.max(1, Math.ceil((resetAt - Date.now()) / 1_000));
   }
 

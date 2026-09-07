@@ -4,6 +4,11 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 
 import { AppConfigModule } from '@/config';
+import {
+  AiProtocol as PrismaAiProtocol,
+  AiProvider as PrismaAiProvider,
+  AiUsageCapability,
+} from '@/generated/prisma/client';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { AiPolicyManager } from '@/modules/ai/application/policy/ai-policy.manager';
 import { AiProfileManager } from '@/modules/ai/application/profile/ai-profile.manager';
@@ -11,6 +16,7 @@ import { AiFallbackPolicy, AiRateLimitTier } from '@/modules/ai/domain/enums';
 import { PrismaAiPolicyPersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-policy.persistence';
 import { PrismaAiProfilePersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-profile.persistence';
 import { PrismaAiRateLimitPersistence } from '@/modules/ai/infrastructure/persistence/prisma-ai-rate-limit.persistence';
+import { PrismaAiUsageReader } from '@/modules/ai/infrastructure/persistence/prisma-ai-usage.reader';
 import { PrismaAiSecurityAuditAdapter } from '@/modules/ai/infrastructure/security';
 import { RequestContextStore } from '@/common/middlewares';
 
@@ -21,6 +27,7 @@ describe('AI policy/profile PostgreSQL integration', () => {
   let profiles: AiProfileManager;
   let rateLimits: PrismaAiRateLimitPersistence;
   let securityAudit: PrismaAiSecurityAuditAdapter;
+  let usageReader: PrismaAiUsageReader;
   const runId = randomUUID();
   let userId = '';
   let storyId = '';
@@ -41,6 +48,7 @@ describe('AI policy/profile PostgreSQL integration', () => {
       prisma,
       new RequestContextStore(),
     );
+    usageReader = new PrismaAiUsageReader(prisma);
 
     const user = await prisma.user.create({
       data: {
@@ -72,6 +80,7 @@ describe('AI policy/profile PostgreSQL integration', () => {
   });
 
   afterAll(async () => {
+    if (userId) await prisma.aiUsage.deleteMany({ where: { userId } });
     await prisma.auditLog.deleteMany({
       where: { entityType: 'AiConnection', entityId: runId },
     });
@@ -157,6 +166,55 @@ describe('AI policy/profile PostgreSQL integration', () => {
     expect(serialized).not.toContain('plain-secret');
     expect(serialized).not.toContain('systemPrompt');
     expect(record.action).toBe('ai.connection.updated');
+  });
+
+  it('tổng hợp usage thật theo model từ PostgreSQL', async () => {
+    await prisma.aiUsage.createMany({
+      data: [
+        {
+          userId,
+          protocol: PrismaAiProtocol.ANTHROPIC_MESSAGES,
+          legacyProvider: PrismaAiProvider.ANTHROPIC,
+          model: 'sonnet-5',
+          capability: AiUsageCapability.CHAT,
+          inputTokens: 500,
+          outputTokens: 80,
+          latencyMs: 250,
+          success: true,
+          createdAt: new Date('2026-09-07T10:00:00.000Z'),
+        },
+        {
+          userId,
+          protocol: PrismaAiProtocol.ANTHROPIC_MESSAGES,
+          legacyProvider: PrismaAiProvider.ANTHROPIC,
+          model: 'sonnet-5',
+          capability: AiUsageCapability.CHAT,
+          latencyMs: 350,
+          success: false,
+          errorCode: 'TIMEOUT',
+          createdAt: new Date('2026-09-07T11:00:00.000Z'),
+        },
+      ],
+    });
+
+    await expect(
+      usageReader.summary({
+        scopeUserId: userId,
+        from: '2026-09-07',
+        to: '2026-09-07',
+      }),
+    ).resolves.toMatchObject({
+      totals: {
+        requests: 2,
+        successfulRequests: 1,
+        failedRequests: 1,
+        inputTokens: 500,
+        outputTokens: 80,
+        averageLatencyMs: 300,
+        errorRate: 50,
+      },
+      byModel: [{ model: 'sonnet-5', requests: 2 }],
+    });
   });
 
   it('story profile override có thể kế thừa từng field từ user profile', async () => {

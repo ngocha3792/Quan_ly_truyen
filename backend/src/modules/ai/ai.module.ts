@@ -18,6 +18,7 @@ import {
   AI_RATE_LIMIT_PERSISTENCE_PORT,
   AI_SECURITY_AUDIT_PORT,
   AI_USAGE_PERSISTENCE_PORT,
+  AI_USAGE_READER_PORT,
   AiPolicyManager,
   AiProfileManager,
   AiRateLimiter,
@@ -32,6 +33,7 @@ import {
   DeleteAiConversationCommandHandler,
   GetAiConversationQueryHandler,
   GetChapterTranslationQueryHandler,
+  GetAiUsageSummaryQueryHandler,
   ListAiConnectionModelsQueryHandler,
   ListAiConnectionsQueryHandler,
   ListAiConversationsQueryHandler,
@@ -59,15 +61,18 @@ import {
   PrismaAiRateLimitPersistence,
   PrismaAiSecurityAuditAdapter,
   PrismaAiUsagePersistence,
+  PrismaAiUsageReader,
   PrismaChapterTranslationPersistence,
 } from './infrastructure';
 import {
   AdminAiConnectionsController,
+  AdminAiUsageController,
   AdminAiPolicyController,
   AiChatController,
   AiConnectionsController,
   AiPolicyController,
   AiProfileController,
+  AiUsageController,
   AiStoryProfileController,
   ChapterTranslationsController,
 } from './presentation/http';
@@ -96,6 +101,10 @@ const portProviders = [
   {
     provide: AI_USAGE_PERSISTENCE_PORT,
     useExisting: PrismaAiUsagePersistence,
+  },
+  {
+    provide: AI_USAGE_READER_PORT,
+    useExisting: PrismaAiUsageReader,
   },
   {
     provide: AI_POLICY_PERSISTENCE_PORT,
@@ -143,6 +152,7 @@ const applicationHandlers = [
   SendAiMessageStreamCommandHandler,
   RequestChapterTranslationCommandHandler,
   GetChapterTranslationQueryHandler,
+  GetAiUsageSummaryQueryHandler,
 ];
 
 @Module({
@@ -155,10 +165,12 @@ const applicationHandlers = [
   ],
   controllers: [
     AdminAiConnectionsController,
+    AdminAiUsageController,
     AdminAiPolicyController,
     AiConnectionsController,
     AiPolicyController,
     AiProfileController,
+    AiUsageController,
     AiStoryProfileController,
     AiChatController,
     ChapterTranslationsController,
@@ -167,6 +179,7 @@ const applicationHandlers = [
     PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
     PrismaAiUsagePersistence,
+    PrismaAiUsageReader,
     PrismaAiPolicyPersistence,
     PrismaAiProfilePersistence,
     PrismaAiRateLimitPersistence,

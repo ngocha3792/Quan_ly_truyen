@@ -19,6 +19,7 @@ import {
   AiConversationSummary,
   AiSendMessageResult,
   AiSendMessageStreamEvent,
+  AiUsageSummary,
   CreateAiConnectionPayload,
   UpdateAiConnectionPayload,
   UpdateAiProfilePayload,
@@ -36,6 +37,7 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
   private readonly conversationsUrl = `${this.config.apiBaseUrl}/ai/conversations`;
   private readonly policyUrl = `${this.config.apiBaseUrl}/ai/policy`;
   private readonly profileUrl = `${this.config.apiBaseUrl}/ai/profile`;
+  private readonly usageUrl = `${this.config.apiBaseUrl}/ai/usage`;
 
   getPolicy(): Observable<AiPolicy> {
     return this.http
@@ -58,6 +60,17 @@ export class AiAssistantHttpRepository implements AiAssistantRepository {
   updateProfile(payload: UpdateAiProfilePayload): Observable<AiProfile> {
     return this.http
       .patch<ApiSuccessEnvelope<AiProfile>>(this.profileUrl, payload)
+      .pipe(map((response) => response.data));
+  }
+
+  getUsage(from?: string, to?: string): Observable<AiUsageSummary> {
+    return this.http
+      .get<ApiSuccessEnvelope<AiUsageSummary>>(this.usageUrl, {
+        params: {
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+        },
+      })
       .pipe(map((response) => response.data));
   }
 

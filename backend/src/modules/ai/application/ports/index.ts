@@ -5,6 +5,7 @@ export * from './ai-protocol-registry.port';
 export * from './ai-gateway.port';
 export * from './ai-credential-vault.port';
 export * from './ai-usage.persistence.port';
+export * from './ai-usage-reader.port';
 export * from './chapter-translation.persistence.port';
 export * from './chapter-translation-queue.port';
 export * from './ai-policy.persistence.port';

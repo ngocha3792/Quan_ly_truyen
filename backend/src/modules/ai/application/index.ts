@@ -6,3 +6,4 @@ export * from './chat-context';
 export * from './chapter-translation';
 export * from './policy';
 export * from './profile';
+export * from './usage';

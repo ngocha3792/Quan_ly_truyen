@@ -207,6 +207,51 @@ export interface AiUsage {
   readonly outputTokens?: number;
 }
 
+export interface AiUsageMetrics {
+  readonly requests: number;
+  readonly successfulRequests: number;
+  readonly failedRequests: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly totalTokens: number;
+  readonly averageLatencyMs: number;
+  readonly errorRate: number;
+}
+
+export interface AiUsageModelStats extends AiUsageMetrics {
+  readonly model: string;
+  readonly protocol: AiProtocol | null;
+}
+
+export interface AiUsageConnectionStats extends AiUsageMetrics {
+  readonly connectionId: string | null;
+  readonly connectionName: string;
+  readonly protocol: AiProtocol | null;
+}
+
+export interface AiUsageSummary {
+  readonly range: { readonly from: string; readonly to: string; readonly timeZone: 'UTC' };
+  readonly totals: AiUsageMetrics;
+  readonly byModel: readonly AiUsageModelStats[];
+  readonly byConnection: readonly AiUsageConnectionStats[];
+  readonly quota: {
+    readonly tier: AiRateLimitTier;
+    readonly windowStart: string;
+    readonly resetsAt: string;
+    readonly requests: {
+      readonly used: number;
+      readonly limit: number;
+      readonly remaining: number;
+    };
+    readonly tokens: { readonly used: number; readonly limit: number; readonly remaining: number };
+  } | null;
+  readonly pricing: {
+    readonly status: 'NOT_CONFIGURED';
+    readonly currency: 'USD';
+    readonly estimatedCost: null;
+  };
+}
+
 export type AiSendMessageStreamEvent =
   | { readonly type: 'TEXT_DELTA'; readonly text: string }
   | { readonly type: 'USAGE'; readonly usage: AiUsage }

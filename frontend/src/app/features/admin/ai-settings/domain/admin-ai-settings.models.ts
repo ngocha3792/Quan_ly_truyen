@@ -138,3 +138,34 @@ export interface AiModelInfo {
   readonly vision?: boolean;
   readonly tools?: boolean;
 }
+
+export interface AiUsageMetrics {
+  readonly requests: number;
+  readonly successfulRequests: number;
+  readonly failedRequests: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly totalTokens: number;
+  readonly averageLatencyMs: number;
+  readonly errorRate: number;
+}
+
+export interface AiUsageSummary {
+  readonly range: { readonly from: string; readonly to: string; readonly timeZone: 'UTC' };
+  readonly totals: AiUsageMetrics;
+  readonly byModel: readonly (AiUsageMetrics & {
+    readonly model: string;
+    readonly protocol: AiProtocol | null;
+  })[];
+  readonly byConnection: readonly (AiUsageMetrics & {
+    readonly connectionId: string | null;
+    readonly connectionName: string;
+    readonly protocol: AiProtocol | null;
+  })[];
+  readonly quota: null;
+  readonly pricing: {
+    readonly status: 'NOT_CONFIGURED';
+    readonly currency: 'USD';
+    readonly estimatedCost: null;
+  };
+}

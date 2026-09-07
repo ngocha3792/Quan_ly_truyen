@@ -16,6 +16,115 @@
       <app-error-alert title="Không thể xử lý yêu cầu" [message]="error()" />
     }
 
+    <section class="usage-panel" aria-labelledby="admin-ai-usage-title">
+      <header class="usage-panel__header">
+        <div>
+          <h2 id="admin-ai-usage-title">Usage toàn hệ thống</h2>
+          <p>Provider attempts, token, latency và error rate trong tối đa 365 ngày.</p>
+        </div>
+        <div class="usage-filters">
+          <label>Từ ngày <input type="date" [(ngModel)]="usageFrom" /></label>
+          <label>Đến ngày <input type="date" [(ngModel)]="usageTo" /></label>
+          <app-button variant="secondary" [loading]="usageLoading()" (click)="loadUsage()">
+            Cập nhật
+          </app-button>
+        </div>
+      </header>
+
+      @if (usageError()) {
+        <app-error-alert title="Không thể tải AI usage" [message]="usageError()" />
+      }
+      @if (usageLoading() && !usage()) {
+        <app-loading-state message="Đang tổng hợp AI usage..." />
+      } @else if (usage(); as stats) {
+        <small>{{ stats.range.from }} — {{ stats.range.to }} · {{ stats.range.timeZone }}</small>
+        <div class="usage-metrics">
+          <article>
+            <span>Requests</span><strong>{{ formatNumber(stats.totals.requests) }}</strong>
+          </article>
+          <article>
+            <span>Input token</span><strong>{{ formatNumber(stats.totals.inputTokens) }}</strong>
+          </article>
+          <article>
+            <span>Output token</span><strong>{{ formatNumber(stats.totals.outputTokens) }}</strong>
+          </article>
+          <article>
+            <span>Độ trễ TB</span
+            ><strong>{{ formatNumber(stats.totals.averageLatencyMs) }} ms</strong>
+          </article>
+          <article>
+            <span>Tỷ lệ lỗi</span><strong>{{ stats.totals.errorRate }}%</strong>
+          </article>
+        </div>
+        <div class="usage-breakdowns">
+          <div class="usage-table-wrap">
+            <h3>Theo model</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Requests</th>
+                  <th>Token</th>
+                  <th>Lỗi</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of stats.byModel; track item.protocol + ':' + item.model) {
+                  <tr>
+                    <td>
+                      <strong>{{ item.model }}</strong
+                      ><small>{{ item.protocol || 'Không rõ' }}</small>
+                    </td>
+                    <td>{{ formatNumber(item.requests) }}</td>
+                    <td>{{ formatNumber(item.totalTokens) }}</td>
+                    <td>{{ item.errorRate }}%</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4">Chưa có dữ liệu.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="usage-table-wrap">
+            <h3>Theo kết nối</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Kết nối</th>
+                  <th>Requests</th>
+                  <th>Latency</th>
+                  <th>Lỗi</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (
+                  item of stats.byConnection;
+                  track (item.connectionId || 'none') + ':' + item.protocol
+                ) {
+                  <tr>
+                    <td>
+                      <strong>{{ item.connectionName }}</strong
+                      ><small>{{ item.protocol || 'Không rõ' }}</small>
+                    </td>
+                    <td>{{ formatNumber(item.requests) }}</td>
+                    <td>{{ formatNumber(item.averageLatencyMs) }} ms</td>
+                    <td>{{ item.errorRate }}%</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4">Chưa có dữ liệu.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <small>Pricing chưa cấu hình; dashboard không tự suy đoán chi phí theo tên model.</small>
+      }
+    </section>
+
     @if (loading() && connections().length === 0) {
       <app-loading-state message="Đang tải danh sách kết nối..." />
     } @else {

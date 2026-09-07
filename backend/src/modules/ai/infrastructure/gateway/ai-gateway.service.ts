@@ -30,6 +30,7 @@ import {
   AiProtocolRegistryPort,
 } from '../../application/ports/ai-protocol-registry.port';
 import { AiRateLimiter } from '../../application/policy/ai-rate-limiter';
+import { normalizeAiUsageToken } from '../../application/usage';
 
 interface RecordUsageParams {
   readonly usageContext: AiUsageContext;
@@ -396,8 +397,8 @@ export class AiGatewayService implements AiGatewayPort {
         vendorHint: params.vendorHint,
         model: params.model,
         capability: params.capability,
-        inputTokens: params.inputTokens,
-        outputTokens: params.outputTokens,
+        inputTokens: normalizeAiUsageToken(params.inputTokens),
+        outputTokens: normalizeAiUsageToken(params.outputTokens),
         latencyMs: params.latencyMs,
         success: params.success,
         errorCode: params.errorCode,
