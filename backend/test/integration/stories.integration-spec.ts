@@ -161,6 +161,101 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(publishAudits).toBe(1);
   });
 
+  it('schedule, reschedule, cancel và worker publish chỉ transition một lần', async () => {
+    const author = await createAuthor('chapter-schedule');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(author.id, story.id, 1);
+    const firstSchedule = new Date(Date.now() + 120_000);
+    const secondSchedule = new Date(Date.now() + 240_000);
+
+    const first = await chapters.schedule({
+      userId: author.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      scheduledAt: firstSchedule,
+      updatedAt: new Date(),
+      audit: audit('schedule-first'),
+    });
+    expect(first.status).toBe('scheduled');
+
+    const rescheduled = await chapters.schedule({
+      userId: author.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      scheduledAt: secondSchedule,
+      updatedAt: new Date(),
+      audit: audit('schedule-second'),
+    });
+    expect(rescheduled.status).toBe('scheduled');
+
+    const canceled = await chapters.cancelSchedule({
+      userId: author.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      canceledAt: new Date(),
+      audit: audit('schedule-cancel'),
+    });
+    expect(canceled.status).toBe('canceled');
+
+    const dueAt = new Date(Date.now() - 1000);
+    await chapters.schedule({
+      userId: author.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      scheduledAt: dueAt,
+      updatedAt: dueAt,
+      audit: audit('schedule-due'),
+    });
+
+    const requestId = `scheduled-worker-${runId}`;
+    const firstBatch = await chapters.publishDueScheduled({
+      dueAt: new Date(),
+      batchSize: 25,
+      requestId,
+    });
+    const replayBatch = await chapters.publishDueScheduled({
+      dueAt: new Date(),
+      batchSize: 25,
+      requestId,
+    });
+
+    expect(firstBatch).toBe(1);
+    expect(replayBatch).toBe(0);
+
+    const [freshStory, freshChapter, outboxCount] = await Promise.all([
+      prisma.story.findUniqueOrThrow({
+        where: { id: story.id },
+        select: { chapterCount: true },
+      }),
+      prisma.chapter.findUniqueOrThrow({
+        where: { id: chapter.id },
+        select: { status: true, scheduledAt: true, publishedAt: true },
+      }),
+      prisma.outboxEvent.count({
+        where: {
+          aggregateId: chapter.id,
+          eventType: {
+            in: [
+              'notification.author-chapter-published.v1',
+              'ai.auto-translate-chapter-published.v1',
+            ],
+          },
+        },
+      }),
+    ]);
+
+    expect(freshStory.chapterCount).toBe(1);
+    expect(freshChapter).toMatchObject({
+      status: ChapterStatus.PUBLISHED,
+      scheduledAt: null,
+    });
+    expect(freshChapter.publishedAt).not.toBeNull();
+    expect(outboxCount).toBe(2);
+  });
+
   it('cancel-vs-approve concurrent chỉ cho phép đúng một terminal transition thắng', async () => {
     const author = await createAuthor('review-race-author');
     const reviewer = await createUser('review-race-reviewer');
@@ -727,7 +822,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     if (userIds.length === 0) return;
 
     await prisma.auditLog.deleteMany({
-      where: { actorId: { in: userIds } },
+      where: {
+        OR: [{ actorId: { in: userIds } }, { requestId: { contains: runId } }],
+      },
     });
     await prisma.moderationAction.deleteMany({
       where: { actorId: { in: userIds } },

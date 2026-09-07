@@ -177,6 +177,47 @@ export type PublishAuthorChapterResult =
       readonly status: 'empty_content';
     };
 
+export interface ScheduleAuthorChapterInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly scheduledAt: Date;
+  readonly updatedAt: Date;
+  readonly audit: ChapterAuditContext;
+}
+
+export type ScheduleAuthorChapterResult =
+  | {
+      readonly status: 'scheduled';
+      readonly chapter: ChapterRecord;
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'story_not_published' }
+  | { readonly status: 'not_schedulable' }
+  | { readonly status: 'empty_content' };
+
+export interface CancelAuthorChapterScheduleInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly canceledAt: Date;
+  readonly audit: ChapterAuditContext;
+}
+
+export type CancelAuthorChapterScheduleResult =
+  | {
+      readonly status: 'canceled';
+      readonly chapter: ChapterRecord;
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'not_scheduled' };
+
+export interface PublishDueScheduledChaptersInput {
+  readonly dueAt: Date;
+  readonly batchSize: number;
+  readonly requestId?: string;
+}
+
 export interface ChapterPersistencePort {
   listOwnedByStory(
     userId: string,
@@ -204,6 +245,16 @@ export interface ChapterPersistencePort {
   publish(
     input: PublishAuthorChapterInput,
   ): Promise<PublishAuthorChapterResult>;
+
+  schedule(
+    input: ScheduleAuthorChapterInput,
+  ): Promise<ScheduleAuthorChapterResult>;
+
+  cancelSchedule(
+    input: CancelAuthorChapterScheduleInput,
+  ): Promise<CancelAuthorChapterScheduleResult>;
+
+  publishDueScheduled(input: PublishDueScheduledChaptersInput): Promise<number>;
 
   findPublicReader(
     storySlug: string,

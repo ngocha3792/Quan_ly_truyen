@@ -120,12 +120,11 @@
     },
     {
       "id": "chapter-scheduling",
-      "decision": "deferred",
-      "readiness": "deferred",
-      "productionExposure": "hidden",
-      "owner": "planned chapters/author-studio",
-      "nextPhase": "post-v1",
-      "notes": "scheduledAt may remain in persistence contracts, but author scheduling controls and dashboard claims are hidden in V1."
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/chapters + worker + frontend/author-studio",
+      "notes": "Authors can schedule, reschedule, cancel or publish early. The worker recovers due chapters and emits publication side effects only after the durable publish transition."
     },
     {
       "id": "reader-weekly-reading-time",
@@ -176,32 +175,12 @@
     {
       "featureId": "reader-weekly-reading-time",
       "path": "frontend/src/app/features/account/reading-history",
-      "forbidden": [
-        "weeklyReadingTime"
-      ]
-    },
-    {
-      "featureId": "chapter-scheduling",
-      "path": "frontend/src/app/features/author-portal/author-studio/pages",
-      "forbidden": [
-        "PublicationScheduleComponent",
-        "<app-publication-schedule"
-      ]
-    },
-    {
-      "featureId": "chapter-scheduling",
-      "path": "backend/src/modules/authors/application/mappers/author-dashboard.mapper.ts",
-      "forbidden": [
-        "id: 'pending-chapters'",
-        "title: 'Chương đã lên lịch'"
-      ]
+      "forbidden": ["weeklyReadingTime"]
     },
     {
       "featureId": "personalized-recommendations",
       "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",
-      "forbidden": [
-        "gợi ý cá nhân hóa"
-      ]
+      "forbidden": ["gợi ý cá nhân hóa"]
     },
     {
       "featureId": "author-dashboard-advanced-goals-and-trends",
@@ -215,10 +194,7 @@
     {
       "featureId": "author-dashboard-advanced-goals-and-trends",
       "path": "frontend/src/app/features/author-portal/author-studio/ui/dashboard-bottom-panels/dashboard-bottom-panels.component.ts",
-      "forbidden": [
-        "Mục tiêu tháng này",
-        "monthlyGoals"
-      ]
+      "forbidden": ["Mục tiêu tháng này", "monthlyGoals"]
     }
   ]
 }

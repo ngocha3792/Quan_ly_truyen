@@ -10,6 +10,8 @@ import {
   ListAuthorChaptersQueryHandler,
   ListPublicStoryChaptersQueryHandler,
   PublishAuthorChapterCommandHandler,
+  ScheduleAuthorChapterCommandHandler,
+  CancelAuthorChapterScheduleCommandHandler,
   UpdateAuthorChapterCommandHandler,
 } from './application';
 import { PrismaChapterPersistence } from './infrastructure';
@@ -28,6 +30,8 @@ import {
     ListAuthorChaptersQueryHandler,
     GetAuthorChapterQueryHandler,
     PublishAuthorChapterCommandHandler,
+    ScheduleAuthorChapterCommandHandler,
+    CancelAuthorChapterScheduleCommandHandler,
     GetPublicChapterReaderQueryHandler,
     ListPublicStoryChaptersQueryHandler,
     PrismaChapterPersistence,

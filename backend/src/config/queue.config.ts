@@ -27,6 +27,14 @@ export default registerAs(QUEUE_CONFIG_KEY, (): QueueConfig => ({
     process.env.OUTBOX_FAILED_ALERT_THRESHOLD ?? 5,
   ),
 
+  chapterSchedulingBatchSize: Number(
+    process.env.CHAPTER_SCHEDULING_BATCH_SIZE ?? 25,
+  ),
+
+  chapterSchedulingPollIntervalMs: Number(
+    process.env.CHAPTER_SCHEDULING_POLL_INTERVAL_MS ?? 10_000,
+  ),
+
   mailJobRetention: {
     completedAgeSeconds: Number(
       process.env.MAIL_QUEUE_COMPLETED_RETENTION_SECONDS ?? 3600,

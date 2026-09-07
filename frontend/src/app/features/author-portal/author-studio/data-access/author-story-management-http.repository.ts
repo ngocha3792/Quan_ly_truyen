@@ -179,6 +179,27 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
   }
 
+  scheduleChapter(
+    storyId: string,
+    chapterId: string,
+    scheduledAt: string,
+  ): Observable<AuthorManagedChapter> {
+    return this.http
+      .put<ApiSuccessEnvelope<AuthorManagedChapter>>(
+        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/schedule`,
+        { scheduledAt },
+      )
+      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+  }
+
+  cancelChapterSchedule(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
+    return this.http
+      .delete<ApiSuccessEnvelope<AuthorManagedChapter>>(
+        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/schedule`,
+      )
+      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+  }
+
   uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia> {
     return this.mediaUpload.uploadStoryCover(storyId, file);
   }

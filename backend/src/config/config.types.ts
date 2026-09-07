@@ -221,6 +221,9 @@ export interface QueueConfig {
   outboxPollIntervalMs: number;
   outboxFailedAlertThreshold: number;
 
+  chapterSchedulingBatchSize: number;
+  chapterSchedulingPollIntervalMs: number;
+
   mailJobRetention: {
     completedAgeSeconds: number;
     completedCount: number;

@@ -29,6 +29,9 @@
       @if (store.error()) {
         <app-notice kind="error" [message]="store.error()" />
       }
+      @if (store.success()) {
+        <app-notice kind="success" [message]="store.success()" />
+      }
 
       <section class="list-card">
         @if (store.chapters().length === 0) {
@@ -64,6 +67,11 @@
                       <span class="status" [attr.data-status]="chapter.status">{{
                         chapter.status
                       }}</span>
+                      @if (chapter.scheduledAt) {
+                        <small class="scheduled-at">
+                          {{ chapter.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
+                        </small>
+                      }
                     </td>
                     <td>{{ chapter.wordCount }}</td>
                     <td>{{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
@@ -88,11 +96,55 @@
                           [disabled]="store.actionChapterId() === chapter.id"
                           (click)="publishChapter(story, chapter)"
                         >
-                          Xuất bản
+                          Xuất bản ngay
+                        </app-button>
+                        <app-button
+                          variant="secondary"
+                          [disabled]="store.actionChapterId() === chapter.id"
+                          (click)="openSchedule(chapter)"
+                        >
+                          {{ chapter.status === 'SCHEDULED' ? 'Đổi lịch' : 'Hẹn giờ' }}
+                        </app-button>
+                      }
+                      @if (chapter.status === 'SCHEDULED') {
+                        <app-button
+                          variant="danger"
+                          [disabled]="store.actionChapterId() === chapter.id"
+                          (click)="cancelSchedule(story, chapter)"
+                        >
+                          Huỷ lịch
                         </app-button>
                       }
                     </td>
                   </tr>
+                  @if (schedulingChapterId() === chapter.id) {
+                    <tr class="schedule-editor-row">
+                      <td colspan="6">
+                        <div class="schedule-editor">
+                          <label [for]="'schedule-' + chapter.id">
+                            Thời điểm xuất bản theo múi giờ {{ timeZone }}
+                          </label>
+                          <input
+                            [id]="'schedule-' + chapter.id"
+                            type="datetime-local"
+                            [min]="minimumScheduleValue()"
+                            [value]="scheduleLocalValue()"
+                            (input)="updateScheduleValue($event)"
+                          />
+                          <app-button
+                            variant="success"
+                            [disabled]="store.actionChapterId() === chapter.id"
+                            (click)="scheduleChapter(story, chapter)"
+                          >
+                            Lưu lịch
+                          </app-button>
+                          <app-button variant="secondary" (click)="closeSchedule()">
+                            Đóng
+                          </app-button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>

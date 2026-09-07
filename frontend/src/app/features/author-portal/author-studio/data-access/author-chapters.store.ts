@@ -21,10 +21,12 @@ export class AuthorChaptersStore {
   readonly loading = signal(false);
   readonly actionChapterId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly success = signal<string | null>(null);
 
   load(storyId: string): void {
     this.loading.set(true);
     this.error.set(null);
+    this.success.set(null);
 
     forkJoin({
       story: this.repository.getStory(storyId),
@@ -54,6 +56,7 @@ export class AuthorChaptersStore {
 
     this.actionChapterId.set(chapterId);
     this.error.set(null);
+    this.success.set(null);
 
     this.repository
       .deleteChapter(storyId, chapterId)
@@ -76,6 +79,7 @@ export class AuthorChaptersStore {
 
     this.actionChapterId.set(chapterId);
     this.error.set(null);
+    this.success.set(null);
 
     this.repository
       .publishChapter(storyId, chapterId)
@@ -85,28 +89,79 @@ export class AuthorChaptersStore {
       )
       .subscribe({
         next: (published: AuthorManagedChapter) => {
-          this.chaptersState.update((chapters: readonly AuthorManagedChapterSummary[]) =>
-            chapters.map((chapter: AuthorManagedChapterSummary) =>
-              chapter.id === published.id
-                ? {
-                    id: published.id,
-                    storyId: published.storyId,
-                    number: published.number,
-                    title: published.title,
-                    slug: published.slug,
-                    status: published.status,
-                    wordCount: published.wordCount,
-                    version: published.version,
-                    scheduledAt: published.scheduledAt,
-                    publishedAt: published.publishedAt,
-                    createdAt: published.createdAt,
-                    updatedAt: published.updatedAt,
-                  }
-                : chapter,
-            ),
-          );
+          this.replaceChapter(published);
+          this.success.set('Chương đã được xuất bản.');
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });
   }
+
+  schedule(storyId: string, chapterId: string, scheduledAt: string): void {
+    if (this.actionChapterId()) return;
+
+    this.actionChapterId.set(chapterId);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.repository
+      .scheduleChapter(storyId, chapterId, scheduledAt)
+      .pipe(
+        finalize(() => this.actionChapterId.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (scheduled: AuthorManagedChapter) => {
+          this.replaceChapter(scheduled);
+          this.success.set('Đã lưu lịch xuất bản chương.');
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  cancelSchedule(storyId: string, chapterId: string): void {
+    if (this.actionChapterId()) return;
+
+    this.actionChapterId.set(chapterId);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.repository
+      .cancelChapterSchedule(storyId, chapterId)
+      .pipe(
+        finalize(() => this.actionChapterId.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (draft: AuthorManagedChapter) => {
+          this.replaceChapter(draft);
+          this.success.set('Đã huỷ lịch; chương trở lại bản nháp.');
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  private replaceChapter(changed: AuthorManagedChapter): void {
+    this.chaptersState.update((chapters: readonly AuthorManagedChapterSummary[]) =>
+      chapters.map((chapter: AuthorManagedChapterSummary) =>
+        chapter.id === changed.id ? toChapterSummary(changed) : chapter,
+      ),
+    );
+  }
+}
+
+function toChapterSummary(chapter: AuthorManagedChapter): AuthorManagedChapterSummary {
+  return {
+    id: chapter.id,
+    storyId: chapter.storyId,
+    number: chapter.number,
+    title: chapter.title,
+    slug: chapter.slug,
+    status: chapter.status,
+    wordCount: chapter.wordCount,
+    version: chapter.version,
+    scheduledAt: chapter.scheduledAt,
+    publishedAt: chapter.publishedAt,
+    createdAt: chapter.createdAt,
+    updatedAt: chapter.updatedAt,
+  };
 }

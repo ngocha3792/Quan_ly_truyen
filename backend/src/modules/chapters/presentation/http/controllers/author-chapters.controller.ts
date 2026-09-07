@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 
@@ -34,11 +35,16 @@ import {
   ListAuthorChaptersQueryHandler,
   PublishAuthorChapterCommand,
   PublishAuthorChapterCommandHandler,
+  ScheduleAuthorChapterCommand,
+  ScheduleAuthorChapterCommandHandler,
+  CancelAuthorChapterScheduleCommand,
+  CancelAuthorChapterScheduleCommandHandler,
   UpdateAuthorChapterCommand,
   UpdateAuthorChapterCommandHandler,
 } from '../../../application';
 import {
   CreateAuthorChapterRequest,
+  ScheduleAuthorChapterRequest,
   UpdateAuthorChapterRequest,
 } from '../requests';
 import {
@@ -58,6 +64,8 @@ export class AuthorChaptersController {
     private readonly listChapters: ListAuthorChaptersQueryHandler,
     private readonly getChapter: GetAuthorChapterQueryHandler,
     private readonly publishChapter: PublishAuthorChapterCommandHandler,
+    private readonly scheduleChapter: ScheduleAuthorChapterCommandHandler,
+    private readonly cancelChapterSchedule: CancelAuthorChapterScheduleCommandHandler,
   ) {}
 
   @Get()
@@ -127,6 +135,56 @@ export class AuthorChaptersController {
   ): Promise<ChapterResponse> {
     const result = await this.publishChapter.execute(
       new PublishAuthorChapterCommand(
+        userId,
+        storyId,
+        chapterId,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterResponse(result);
+  }
+
+  @Put(':chapterId/schedule')
+  @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
+  async schedule(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Body() request: ScheduleAuthorChapterRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<ChapterResponse> {
+    const result = await this.scheduleChapter.execute(
+      new ScheduleAuthorChapterCommand(
+        userId,
+        storyId,
+        chapterId,
+        request.scheduledAt,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterResponse(result);
+  }
+
+  @Delete(':chapterId/schedule')
+  @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
+  async cancelSchedule(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<ChapterResponse> {
+    const result = await this.cancelChapterSchedule.execute(
+      new CancelAuthorChapterScheduleCommand(
         userId,
         storyId,
         chapterId,

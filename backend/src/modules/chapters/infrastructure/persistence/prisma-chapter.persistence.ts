@@ -21,10 +21,15 @@ import type {
   PublicStoryChapterListItemDto,
   CreateAuthorChapterInput,
   CreateAuthorChapterResult,
+  CancelAuthorChapterScheduleInput,
+  CancelAuthorChapterScheduleResult,
   DeleteAuthorChapterInput,
   DeleteAuthorChapterResult,
+  PublishDueScheduledChaptersInput,
   PublishAuthorChapterInput,
   PublishAuthorChapterResult,
+  ScheduleAuthorChapterInput,
+  ScheduleAuthorChapterResult,
   UpdateAuthorChapterInput,
   UpdateAuthorChapterResult,
 } from '../../application';
@@ -615,7 +620,10 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         if (!current) {
           return { status: 'not_found' };
         }
-        if (current.status !== ChapterStatus.DRAFT) {
+        if (
+          current.status !== ChapterStatus.DRAFT &&
+          current.status !== ChapterStatus.SCHEDULED
+        ) {
           return { status: 'not_draft' };
         }
         if (!current.content.trim()) {
@@ -664,46 +672,11 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             createdAt: input.publishedAt,
           },
         });
-        await tx.outboxEvent.create({
-          data: {
-            idempotencyKey: `author-chapter-published:${current.id}`,
-            aggregateType: 'notifications',
-            aggregateId: current.id,
-            eventType: 'notification.author-chapter-published.v1',
-            payload: {
-              version: 1,
-              authorId: story.authorId,
-              storyId: story.id,
-              storySlug: story.slug,
-              storyTitle: story.title,
-              chapterId: updated.id,
-              chapterNumber: updated.number.toString(),
-              chapterTitle: updated.title,
-              publishedAt: input.publishedAt.toISOString(),
-            },
-            metadata: {
-              requestId: input.audit.requestId ?? null,
-            },
-            createdAt: input.publishedAt,
-          },
-        });
-        await tx.outboxEvent.create({
-          data: {
-            idempotencyKey: `ai-auto-translate-chapter:${current.id}`,
-            aggregateType: 'ai',
-            aggregateId: current.id,
-            eventType: 'ai.auto-translate-chapter-published.v1',
-            payload: {
-              version: 1,
-              userId: story.authorId,
-              storyId: story.id,
-              chapterId: updated.id,
-            },
-            metadata: {
-              requestId: input.audit.requestId ?? null,
-            },
-            createdAt: input.publishedAt,
-          },
+        await createChapterPublishedOutboxEvents(tx, {
+          story,
+          chapter: updated,
+          publishedAt: input.publishedAt,
+          requestId: input.audit.requestId,
         });
         return { status: 'published', chapter: this.toRecord(updated) };
       });
@@ -713,6 +686,283 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         resource: 'Chương',
       });
     }
+  }
+
+  async schedule(
+    input: ScheduleAuthorChapterInput,
+  ): Promise<ScheduleAuthorChapterResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const storyLocked = await lockOwnedStoryRow(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+        if (!storyLocked) return { status: 'not_found' };
+
+        const story = await tx.story.findFirst({
+          where: { id: input.storyId, authorId: input.userId, deletedAt: null },
+          select: { id: true, status: true },
+        });
+        if (!story) return { status: 'not_found' };
+        if (story.status !== StoryStatus.PUBLISHED) {
+          return { status: 'story_not_published' };
+        }
+
+        if (!(await lockChapterRowForStory(tx, input.chapterId, story.id))) {
+          return { status: 'not_found' };
+        }
+
+        const current = await tx.chapter.findFirst({
+          where: { id: input.chapterId, storyId: story.id, deletedAt: null },
+          select: CHAPTER_SELECT,
+        });
+        if (!current) return { status: 'not_found' };
+        if (
+          current.status !== ChapterStatus.DRAFT &&
+          current.status !== ChapterStatus.SCHEDULED
+        ) {
+          return { status: 'not_schedulable' };
+        }
+        if (!current.content.trim()) return { status: 'empty_content' };
+
+        const updated = await tx.chapter.update({
+          where: { id: current.id },
+          data: {
+            status: ChapterStatus.SCHEDULED,
+            scheduledAt: input.scheduledAt,
+            publishedAt: null,
+            updatedById: input.userId,
+            updatedAt: input.updatedAt,
+          },
+          select: CHAPTER_SELECT,
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action:
+              current.status === ChapterStatus.SCHEDULED
+                ? 'chapter.rescheduled'
+                : 'chapter.scheduled',
+            entityType: 'chapter',
+            entityId: current.id,
+            oldValues: {
+              storyId: current.storyId,
+              status: current.status,
+              scheduledAt: current.scheduledAt?.toISOString() ?? null,
+            },
+            newValues: {
+              storyId: updated.storyId,
+              status: updated.status,
+              scheduledAt: updated.scheduledAt?.toISOString() ?? null,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.updatedAt,
+          },
+        });
+
+        return { status: 'scheduled', chapter: this.toRecord(updated) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-schedule',
+        resource: 'Chương',
+      });
+    }
+  }
+
+  async cancelSchedule(
+    input: CancelAuthorChapterScheduleInput,
+  ): Promise<CancelAuthorChapterScheduleResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const storyLocked = await lockOwnedStoryRow(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+        if (!storyLocked) return { status: 'not_found' };
+        if (
+          !(await lockChapterRowForStory(tx, input.chapterId, input.storyId))
+        ) {
+          return { status: 'not_found' };
+        }
+
+        const current = await tx.chapter.findFirst({
+          where: {
+            id: input.chapterId,
+            storyId: input.storyId,
+            deletedAt: null,
+          },
+          select: CHAPTER_SELECT,
+        });
+        if (!current) return { status: 'not_found' };
+        if (current.status !== ChapterStatus.SCHEDULED) {
+          return { status: 'not_scheduled' };
+        }
+
+        const updated = await tx.chapter.update({
+          where: { id: current.id },
+          data: {
+            status: ChapterStatus.DRAFT,
+            scheduledAt: null,
+            updatedById: input.userId,
+            updatedAt: input.canceledAt,
+          },
+          select: CHAPTER_SELECT,
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: input.userId,
+            action: 'chapter.schedule.canceled',
+            entityType: 'chapter',
+            entityId: current.id,
+            oldValues: {
+              storyId: current.storyId,
+              status: current.status,
+              scheduledAt: current.scheduledAt?.toISOString() ?? null,
+            },
+            newValues: {
+              storyId: updated.storyId,
+              status: updated.status,
+              scheduledAt: null,
+            },
+            ipAddress: input.audit.ipAddress,
+            userAgent: input.audit.userAgent,
+            requestId: input.audit.requestId,
+            createdAt: input.canceledAt,
+          },
+        });
+
+        return { status: 'canceled', chapter: this.toRecord(updated) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-schedule-cancel',
+        resource: 'Chương',
+      });
+    }
+  }
+
+  async publishDueScheduled(
+    input: PublishDueScheduledChaptersInput,
+  ): Promise<number> {
+    const batchSize = Math.max(1, Math.min(input.batchSize, 100));
+    const candidates = await this.prisma.chapter.findMany({
+      where: {
+        status: ChapterStatus.SCHEDULED,
+        scheduledAt: { lte: input.dueAt },
+        deletedAt: null,
+        story: { status: StoryStatus.PUBLISHED, deletedAt: null },
+      },
+      orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+      take: batchSize,
+      select: { id: true, storyId: true },
+    });
+
+    let publishedCount = 0;
+    for (const candidate of candidates) {
+      const published = await this.prisma.$transaction(async (tx) => {
+        if (!(await lockStoryRowSkipLocked(tx, candidate.storyId)))
+          return false;
+        if (
+          !(await lockChapterRowForStorySkipLocked(
+            tx,
+            candidate.id,
+            candidate.storyId,
+          ))
+        ) {
+          return false;
+        }
+
+        const [story, current] = await Promise.all([
+          tx.story.findFirst({
+            where: {
+              id: candidate.storyId,
+              status: StoryStatus.PUBLISHED,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              authorId: true,
+            },
+          }),
+          tx.chapter.findFirst({
+            where: {
+              id: candidate.id,
+              storyId: candidate.storyId,
+              status: ChapterStatus.SCHEDULED,
+              scheduledAt: { lte: input.dueAt },
+              deletedAt: null,
+            },
+            select: CHAPTER_SELECT,
+          }),
+        ]);
+
+        if (!story || !current || !current.content.trim()) return false;
+
+        const updated = await tx.chapter.update({
+          where: { id: current.id },
+          data: {
+            status: ChapterStatus.PUBLISHED,
+            publishedAt: input.dueAt,
+            scheduledAt: null,
+            updatedById: current.updatedById,
+            updatedAt: input.dueAt,
+          },
+          select: CHAPTER_SELECT,
+        });
+
+        await tx.story.update({
+          where: { id: story.id },
+          data: {
+            chapterCount: { increment: 1 },
+            lastChapterAt: input.dueAt,
+            updatedAt: input.dueAt,
+            version: { increment: 1 },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: null,
+            action: 'chapter.scheduled.published',
+            entityType: 'chapter',
+            entityId: current.id,
+            oldValues: {
+              storyId: current.storyId,
+              status: current.status,
+              scheduledAt: current.scheduledAt?.toISOString() ?? null,
+            },
+            newValues: {
+              storyId: updated.storyId,
+              status: updated.status,
+              publishedAt: updated.publishedAt?.toISOString() ?? null,
+            },
+            metadata: { source: 'story-scheduling-worker' },
+            requestId: input.requestId,
+            createdAt: input.dueAt,
+          },
+        });
+        await createChapterPublishedOutboxEvents(tx, {
+          story,
+          chapter: updated,
+          publishedAt: input.dueAt,
+          requestId: input.requestId,
+        });
+
+        return true;
+      });
+
+      if (published) publishedCount += 1;
+    }
+
+    return publishedCount;
   }
 
   async findPublicReader(
@@ -974,6 +1224,93 @@ async function lockChapterRowForStory(
   `);
 
   return rows.length === 1;
+}
+
+async function lockStoryRowSkipLocked(
+  tx: Prisma.TransactionClient,
+  storyId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id"
+    FROM "stories"
+    WHERE "id" = ${storyId}::uuid
+      AND "deleted_at" IS NULL
+    FOR UPDATE SKIP LOCKED
+  `);
+
+  return rows.length === 1;
+}
+
+async function lockChapterRowForStorySkipLocked(
+  tx: Prisma.TransactionClient,
+  chapterId: string,
+  storyId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id"
+    FROM "chapters"
+    WHERE "id" = ${chapterId}::uuid
+      AND "story_id" = ${storyId}::uuid
+      AND "deleted_at" IS NULL
+    FOR UPDATE SKIP LOCKED
+  `);
+
+  return rows.length === 1;
+}
+
+interface ChapterPublishedOutboxInput {
+  readonly story: {
+    readonly id: string;
+    readonly slug: string;
+    readonly title: string;
+    readonly authorId: string;
+  };
+  readonly chapter: ChapterRow;
+  readonly publishedAt: Date;
+  readonly requestId?: string;
+}
+
+async function createChapterPublishedOutboxEvents(
+  tx: Prisma.TransactionClient,
+  input: ChapterPublishedOutboxInput,
+): Promise<void> {
+  await tx.outboxEvent.create({
+    data: {
+      idempotencyKey: `author-chapter-published:${input.chapter.id}`,
+      aggregateType: 'notifications',
+      aggregateId: input.chapter.id,
+      eventType: 'notification.author-chapter-published.v1',
+      payload: {
+        version: 1,
+        authorId: input.story.authorId,
+        storyId: input.story.id,
+        storySlug: input.story.slug,
+        storyTitle: input.story.title,
+        chapterId: input.chapter.id,
+        chapterNumber: input.chapter.number.toString(),
+        chapterTitle: input.chapter.title,
+        publishedAt: input.publishedAt.toISOString(),
+      },
+      metadata: { requestId: input.requestId ?? null },
+      createdAt: input.publishedAt,
+    },
+  });
+  await tx.outboxEvent.create({
+    data: {
+      idempotencyKey: `ai-auto-translate-chapter:${input.chapter.id}`,
+      aggregateType: 'ai',
+      aggregateId: input.chapter.id,
+      eventType: 'ai.auto-translate-chapter-published.v1',
+      payload: {
+        version: 1,
+        userId: input.story.authorId,
+        storyId: input.story.id,
+        chapterId: input.chapter.id,
+      },
+      metadata: { requestId: input.requestId ?? null },
+      createdAt: input.publishedAt,
+    },
+  });
 }
 
 function toPublicChapterReaderDto(

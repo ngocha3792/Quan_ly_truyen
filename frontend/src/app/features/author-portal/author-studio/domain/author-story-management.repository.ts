@@ -42,6 +42,15 @@ export abstract class AuthorStoryManagementRepository {
   ): Observable<AuthorManagedChapter>;
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
   abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
+  abstract scheduleChapter(
+    storyId: string,
+    chapterId: string,
+    scheduledAt: string,
+  ): Observable<AuthorManagedChapter>;
+  abstract cancelChapterSchedule(
+    storyId: string,
+    chapterId: string,
+  ): Observable<AuthorManagedChapter>;
   abstract uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia>;
   abstract uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia>;
   abstract getMedia(mediaId: string): Observable<AuthorStoryMedia>;

@@ -34,14 +34,14 @@ The second command additionally enforces the release gate: it fails whenever any
 - Story contributor workflow: story owners can add, update and remove contributors by account email, role and edit permission.
 - Existing notification flows, including deduplicated new-chapter fanout for author and story followers.
 - Author application plus admin approval/rejection.
-- Author story management and immediate chapter publishing.
+- Author story management, immediate chapter publishing and scheduled publishing.
 - Production media: Cloudinary upload, confirmation, webhook and cleanup flows, running against verified production configuration (`CLOUDINARY_ENABLED=true` with valid credentials).
 - Admin user/story/report/moderation/taxonomy/audit operations.
 - Public content review: current public static content (terms/privacy/about and marketing/history claims) is accepted for the automated production release baseline.
 
 ### Required but currently blocking production
 
-None. All 15 required capabilities are `ready` in `production-v1.scope.json`, and `node scripts/verify-production-scope.mjs --mode=release` currently passes.
+None. All required capabilities are `ready` in `production-v1.scope.json`; run `node scripts/verify-production-scope.mjs --mode=release` to verify the current checkout.
 
 If a capability regresses (e.g. Cloudinary credentials are pulled, or new public copy needs review), mark its manifest entry `blocked` with an evidence/blocker note in the same commit that introduces the regression — do not let the manifest and this document fall out of sync again.
 
@@ -49,7 +49,6 @@ If a capability regresses (e.g. Cloudinary credentials are pulled, or new public
 
 The following schema or UI concepts may remain in the repository for future work, but they are not Production V1 promises:
 
-- Author chapter scheduling (`scheduledAt`). Immediate publishing remains supported.
 - Weekly reading-time statistics (`ReadingSession`).
 - Chapter version-history workflow (`ChapterVersion`).
 - Personalized recommendation claims.
@@ -74,4 +73,4 @@ To close a required blocker, update only the `readiness`, `productionExposure`, 
 
 ## V1 non-goals
 
-Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history, scheduled publishing or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.
+Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.

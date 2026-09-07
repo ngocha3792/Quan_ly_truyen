@@ -512,6 +512,17 @@ export class EnvironmentVariables {
   @Max(1000)
   OUTBOX_FAILED_ALERT_THRESHOLD = 5;
 
+  @Transform(({ value }) => parseIntegerValue(value ?? 25))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  CHAPTER_SCHEDULING_BATCH_SIZE = 25;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10_000))
+  @IsInt()
+  @Min(1000)
+  CHAPTER_SCHEDULING_POLL_INTERVAL_MS = 10_000;
+
   @Transform(({ value }) => parseIntegerValue(value ?? 10))
   @IsInt()
   @Min(1)

@@ -27,3 +27,41 @@ small {
   flex-wrap: wrap;
   gap: 7px;
 }
+
+.scheduled-at {
+  margin-top: 5px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.schedule-editor-row td {
+  padding: 0 16px 16px;
+}
+
+.schedule-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.schedule-editor label {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.schedule-editor input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-strong);
+  color-scheme: dark;
+}

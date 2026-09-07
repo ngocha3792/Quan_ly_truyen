@@ -67,7 +67,37 @@ export class ChapterNotPublishableException extends ResourceConflictException {
     super({
       code: 'CHAPTER_NOT_PUBLISHABLE',
       resource: 'chương',
-      message: 'Chỉ chương bản nháp mới có thể được xuất bản',
+      message: 'Chỉ chương bản nháp hoặc đã lên lịch mới có thể được xuất bản',
+    });
+  }
+}
+
+export class ChapterNotSchedulableException extends ResourceConflictException {
+  constructor() {
+    super({
+      code: 'CHAPTER_NOT_SCHEDULABLE',
+      resource: 'chương',
+      message: 'Chỉ chương bản nháp hoặc đã lên lịch mới có thể được lên lịch',
+    });
+  }
+}
+
+export class ChapterNotScheduledException extends ResourceConflictException {
+  constructor() {
+    super({
+      code: 'CHAPTER_NOT_SCHEDULED',
+      resource: 'chương',
+      message: 'Chương chưa được lên lịch xuất bản',
+    });
+  }
+}
+
+export class ChapterScheduleMustBeFutureException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'CHAPTER_SCHEDULE_MUST_BE_FUTURE',
+      message: 'Thời điểm xuất bản phải nằm trong tương lai',
+      details: { field: 'scheduledAt' },
     });
   }
 }

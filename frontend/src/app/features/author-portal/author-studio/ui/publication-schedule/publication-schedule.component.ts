@@ -22,31 +22,35 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
       </header>
 
       <div class="schedule-list">
-        @for (item of items; track item.id) {
-          <article>
-            <div class="schedule-date">
-              <strong>{{ item.weekday }}</strong>
-              <span>{{ item.date }}</span>
-            </div>
+        @if (items.length === 0) {
+          <p class="schedule-empty">Chưa có chương nào được hẹn giờ.</p>
+        } @else {
+          @for (item of items; track item.id) {
+            <article>
+              <div class="schedule-date">
+                <strong>{{ item.weekday }}</strong>
+                <span>{{ item.date }}</span>
+              </div>
 
-            <img [src]="item.coverUrl" [alt]="item.storyTitle" />
+              <img [src]="item.coverUrl" [alt]="item.storyTitle" />
 
-            <div class="schedule-information">
-              <strong>
-                {{ item.storyTitle }}
-              </strong>
+              <div class="schedule-information">
+                <strong>
+                  {{ item.storyTitle }}
+                </strong>
 
-              <span>
-                {{ item.chapterTitle }}
+                <span>
+                  {{ item.chapterTitle }}
+                </span>
+              </div>
+
+              <time>{{ item.time }}</time>
+
+              <span class="schedule-status" [attr.data-status]="item.status">
+                {{ item.statusLabel }}
               </span>
-            </div>
-
-            <time>{{ item.time }}</time>
-
-            <span class="schedule-status" [attr.data-status]="item.status">
-              {{ item.statusLabel }}
-            </span>
-          </article>
+            </article>
+          }
         }
       </div>
     </section>
@@ -103,6 +107,12 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
       .schedule-list {
         margin-top: 12px;
+      }
+
+      .schedule-empty {
+        margin: 24px 0 0;
+        color: var(--text-muted);
+        font-size: 13px;
       }
 
       article {
