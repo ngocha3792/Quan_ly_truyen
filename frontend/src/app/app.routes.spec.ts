@@ -88,6 +88,7 @@ describe('application route composition', () => {
       'reports/:reportId',
       'categories',
       'tags',
+      'monetization',
       'settings/ai',
       'stories',
       'story-submissions/:submissionId',
