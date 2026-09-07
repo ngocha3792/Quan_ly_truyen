@@ -88,6 +88,7 @@ $RestoreStatusPath = Join-Path $BackupDirectory 'restore-drill/restore-drill-las
 $BackupRpoHours = Get-EnvValue -Name 'BACKUP_RPO_HOURS'
 $RestoreDrillMaxAgeDays = Get-EnvValue -Name 'RESTORE_DRILL_MAX_AGE_DAYS'
 $OffsiteEnabled = (Get-EnvValue -Name 'OFFSITE_BACKUP_ENABLED') -eq 'true'
+$MonetizationEnabled = (Get-EnvValue -Name 'MONETIZATION_ENABLED') -eq 'true'
 
 if (-not $BackupRpoHours) {
   $BackupRpoHours = '26'
@@ -115,6 +116,10 @@ if ($OffsiteEnabled -and $BackupStatus.offsiteVerified -ne $true) {
   throw 'Latest backup did not complete encrypted off-site verification.'
 }
 
+if ($MonetizationEnabled -and -not $OffsiteEnabled) {
+  throw 'Monetization requires encrypted off-site backup and a ledger restore drill.'
+}
+
 # The restore drill (Test-PostgresRestoreDrill.ps1) only ever restores
 # from off-site storage, so it can't produce a status file until
 # off-site backup is actually configured. Skip this half of the gate
@@ -132,6 +137,10 @@ if ($OffsiteEnabled) {
         $RestoreAgeDays, `
         $RestoreDrillMaxAgeDays
     )
+  }
+
+  if ($MonetizationEnabled -and $RestoreStatus.ledgerVerified -ne $true) {
+    throw 'Latest restore drill did not verify the complete Credit ledger.'
   }
 }
 

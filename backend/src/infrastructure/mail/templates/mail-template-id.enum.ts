@@ -6,4 +6,5 @@ export enum MailTemplateId {
   MODERATION_RESULT = 'moderation-result.v1',
   NEW_CHAPTER = 'new-chapter.v1',
   WEEKLY_READING_RECAP = 'weekly-reading-recap.v1',
+  CREDIT_ACTIVITY = 'credit-activity.v1',
 }

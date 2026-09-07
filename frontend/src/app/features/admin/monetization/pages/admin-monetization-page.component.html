@@ -1,0 +1,248 @@
+<header class="page-header">
+  <div>
+    <p class="eyebrow">ADMIN · CREDIT OPS</p>
+    <h1>Thanh toán, purchase và doanh thu</h1>
+    <p>Explorer và số liệu được lấy trực tiếp từ payment records cùng immutable ledger.</p>
+  </div>
+  <form class="search" (ngSubmit)="load()">
+    <input
+      name="search"
+      [(ngModel)]="search"
+      placeholder="Email, tên, mã giao dịch hoặc truyện"
+      maxlength="120"
+    />
+    <button type="submit" [disabled]="loading()">Tìm</button>
+  </form>
+</header>
+
+@if (error(); as message) {
+  <p class="notice error" role="alert">{{ message }}</p>
+}
+@if (success(); as message) {
+  <p class="notice success" role="status">{{ message }}</p>
+}
+
+@if (loading()) {
+  <section class="panel loading">Đang tải dữ liệu ledger…</section>
+} @else {
+  @if (revenue(); as report) {
+    <section class="metric-grid" aria-label="Tổng quan doanh thu Credit">
+      <article>
+        <span>Gross</span>
+        <strong>{{ report.totals.grossCredits | number }} Credit</strong>
+        <small>{{ report.totals.purchaseCount | number }} lượt mua</small>
+      </article>
+      <article>
+        <span>Refund</span>
+        <strong>{{ report.totals.refundedCredits | number }} Credit</strong>
+        <small>{{ report.totals.refundCount | number }} lượt hoàn</small>
+      </article>
+      <article class="net">
+        <span>Net revenue</span>
+        <strong>{{ report.totals.netCredits | number }} Credit</strong>
+        <small>Từ entry PLATFORM_REVENUE</small>
+      </article>
+    </section>
+
+    <section class="analytics-grid">
+      <article class="panel">
+        <h2>Theo tác giả</h2>
+        @for (item of report.byAuthor.slice(0, 8); track item.id) {
+          <div class="rank-row">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.netCredits | number }}</strong>
+          </div>
+        } @empty {
+          <p class="empty">Chưa có doanh thu.</p>
+        }
+      </article>
+      <article class="panel">
+        <h2>Theo truyện</h2>
+        @for (item of report.byStory.slice(0, 8); track item.id) {
+          <div class="rank-row">
+            <span
+              >{{ item.label }} <small>{{ item.secondaryLabel }}</small></span
+            >
+            <strong>{{ item.netCredits | number }}</strong>
+          </div>
+        } @empty {
+          <p class="empty">Chưa có doanh thu.</p>
+        }
+      </article>
+      <article class="panel">
+        <h2>Theo chapter</h2>
+        @for (item of report.byChapter.slice(0, 8); track item.id) {
+          <div class="rank-row">
+            <span
+              >{{ item.label }} <small>{{ item.secondaryLabel }}</small></span
+            >
+            <strong>{{ item.netCredits | number }}</strong>
+          </div>
+        } @empty {
+          <p class="empty">Chưa có doanh thu.</p>
+        }
+      </article>
+    </section>
+  }
+
+  @if (canAdjust()) {
+    <section class="panel operation-form">
+      <div>
+        <p class="eyebrow">SUPPORT ACTION</p>
+        <h2>Điều chỉnh ví thủ công</h2>
+        <p>Mọi thao tác tạo double-entry transaction và audit log; không sửa balance trực tiếp.</p>
+      </div>
+      <form (ngSubmit)="submitAdjustment()">
+        <label>
+          User ID
+          <input name="userId" [(ngModel)]="adjustmentUserId" required />
+        </label>
+        <label>
+          Chiều
+          <select name="direction" [(ngModel)]="adjustmentDirection">
+            <option value="CREDIT">Cộng</option>
+            <option value="DEBIT">Trừ</option>
+          </select>
+        </label>
+        <label>
+          Credit
+          <input name="amount" [(ngModel)]="adjustmentAmount" inputmode="numeric" required />
+        </label>
+        <label class="reason">
+          Lý do (tối thiểu 10 ký tự)
+          <textarea
+            name="reason"
+            [(ngModel)]="adjustmentReason"
+            maxlength="500"
+            required
+          ></textarea>
+        </label>
+        <button type="submit" [disabled]="actionPending()">Ghi điều chỉnh</button>
+      </form>
+    </section>
+  }
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">PURCHASE EXPLORER</p>
+        <h2>Mua chapter</h2>
+      </div>
+      <span>{{ purchases().length }} bản ghi gần nhất</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Người mua</th>
+            <th>Chapter</th>
+            <th>Credit</th>
+            <th>Trạng thái</th>
+            <th>Thời gian</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (purchase of purchases(); track purchase.id) {
+            <tr>
+              <td>
+                <strong>{{ purchase.userDisplayName }}</strong
+                ><small>{{ purchase.userEmail }}</small>
+              </td>
+              <td>
+                <strong>{{ purchase.storyTitle }}</strong
+                ><small>Chương {{ purchase.chapterNumber }} · {{ purchase.chapterTitle }}</small>
+              </td>
+              <td>{{ purchase.creditPrice | number }}</td>
+              <td>
+                <span class="status {{ statusClass(purchase.status) }}">{{ purchase.status }}</span>
+              </td>
+              <td>{{ purchase.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                @if (canRefund() && purchase.status === 'COMPLETED') {
+                  <button class="secondary" type="button" (click)="selectRefund(purchase)">
+                    Hoàn
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Không có purchase phù hợp.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (refundPurchaseId) {
+    <section class="panel refund-form">
+      <h2>Hoàn purchase {{ refundPurchaseId }}</h2>
+      <p>Credit sẽ được trả lại, entitlement bị revoke và doanh thu net giảm tương ứng.</p>
+      <textarea
+        [(ngModel)]="refundReason"
+        aria-label="Lý do hoàn"
+        placeholder="Nhập lý do hỗ trợ, tối thiểu 10 ký tự"
+        maxlength="500"
+      ></textarea>
+      <div>
+        <button type="button" class="secondary" (click)="refundPurchaseId = null">Hủy</button>
+        <button type="button" class="danger" [disabled]="actionPending()" (click)="submitRefund()">
+          Xác nhận hoàn
+        </button>
+      </div>
+    </section>
+  }
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">PAYMENT EXPLORER</p>
+        <h2>Đơn nạp Credit</h2>
+      </div>
+      <span>{{ orders().length }} bản ghi gần nhất</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Người dùng</th>
+            <th>Gói</th>
+            <th>Provider</th>
+            <th>Credit</th>
+            <th>Trạng thái</th>
+            <th>Thời gian</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td>
+                <strong>{{ order.userDisplayName }}</strong
+                ><small>{{ order.userEmail }}</small>
+              </td>
+              <td>
+                <strong>{{ order.packageLabel }}</strong
+                ><small>{{ order.id }}</small>
+              </td>
+              <td>
+                {{ order.provider
+                }}<small>{{ order.providerReference || 'Chưa có reference' }}</small>
+              </td>
+              <td>{{ order.creditAmount | number }}</td>
+              <td>
+                <span class="status {{ statusClass(order.status) }}">{{ order.status }}</span>
+              </td>
+              <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">Không có payment order phù hợp.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

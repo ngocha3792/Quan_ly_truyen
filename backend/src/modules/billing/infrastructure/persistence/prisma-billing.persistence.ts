@@ -14,6 +14,7 @@ import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
   BillingPersistencePort,
+  AdminPaymentOrderPageRecord,
   CreditPackageRecord,
   NormalizedPaymentEvent,
   PaymentOrderPageRecord,
@@ -62,6 +63,16 @@ type PackageRow = Prisma.CreditPackageGetPayload<{
   select: typeof PACKAGE_SELECT;
 }>;
 type OrderRow = Prisma.PaymentOrderGetPayload<{ select: typeof ORDER_SELECT }>;
+
+const ADMIN_ORDER_SELECT = {
+  ...ORDER_SELECT,
+  user: { select: { email: true, displayName: true } },
+  creditPackage: { select: { label: true } },
+} satisfies Prisma.PaymentOrderSelect;
+
+type AdminOrderRow = Prisma.PaymentOrderGetPayload<{
+  select: typeof ADMIN_ORDER_SELECT;
+}>;
 
 interface PaymentReconciliationRow {
   paidOrders: bigint;
@@ -335,6 +346,79 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
     };
   }
 
+  async listAdminOrders(input: {
+    page: number;
+    pageSize: number;
+    status?: import('../../domain').PaymentOrderStatusName;
+    provider?: string;
+    query?: string;
+    from?: Date;
+    to?: Date;
+  }): Promise<AdminPaymentOrderPageRecord> {
+    const query = input.query?.trim();
+    const where = {
+      ...(input.status ? { status: PaymentOrderStatus[input.status] } : {}),
+      ...(input.provider?.trim()
+        ? {
+            provider: {
+              equals: input.provider.trim(),
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(input.from || input.to
+        ? {
+            createdAt: {
+              ...(input.from ? { gte: input.from } : {}),
+              ...(input.to ? { lte: input.to } : {}),
+            },
+          }
+        : {}),
+      ...(query
+        ? {
+            OR: [
+              ...(isUuid(query) ? [{ id: query }] : []),
+              {
+                providerReference: {
+                  contains: query,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                user: {
+                  email: { contains: query, mode: 'insensitive' as const },
+                },
+              },
+              {
+                user: {
+                  displayName: {
+                    contains: query,
+                    mode: 'insensitive' as const,
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    } satisfies Prisma.PaymentOrderWhereInput;
+    const [items, total] = await Promise.all([
+      this.prisma.paymentOrder.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (input.page - 1) * input.pageSize,
+        take: input.pageSize,
+        select: ADMIN_ORDER_SELECT,
+      }),
+      this.prisma.paymentOrder.count({ where }),
+    ]);
+    return {
+      items: items.map(toAdminOrderRecord),
+      page: input.page,
+      pageSize: input.pageSize,
+      total,
+    };
+  }
+
   async reconcile(): Promise<PaymentReconciliationRecord> {
     const [row] = await this.prisma.$queryRaw<
       PaymentReconciliationRow[]
@@ -375,6 +459,21 @@ function toPackageRecord(row: PackageRow): CreditPackageRecord {
 
 function toOrderRecord(row: OrderRow): PaymentOrderRecord {
   return row;
+}
+
+function toAdminOrderRecord(row: AdminOrderRow) {
+  return {
+    ...toOrderRecord(row),
+    userEmail: row.user.email,
+    userDisplayName: row.user.displayName,
+    packageLabel: row.creditPackage.label,
+  };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+    value,
+  );
 }
 
 function serializePackage(row: PackageRow): Prisma.InputJsonObject {

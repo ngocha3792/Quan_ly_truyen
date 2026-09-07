@@ -183,6 +183,8 @@ describe('validateEnvironment', () => {
         ...validBase,
         MONETIZATION_ENABLED: 'true',
         PAYWALL_ENFORCEMENT_ENABLED: 'true',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+        MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
       }),
     ).not.toThrow();
   });
@@ -193,6 +195,8 @@ describe('validateEnvironment', () => {
         ...validBase,
         MONETIZATION_ENABLED: 'true',
         PAYMENT_PROVIDER_ENABLED: 'true',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+        MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
       }),
     ).toThrow('Enabled payment provider requires');
 
@@ -202,6 +206,8 @@ describe('validateEnvironment', () => {
         MONETIZATION_ENABLED: 'true',
         PAYMENT_PROVIDER_ENABLED: 'true',
         PAYMENT_PROVIDER_MODE: 'hmac-sandbox',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+        MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
         PAYMENT_CHECKOUT_BASE_URL: 'https://payments.example.test/checkout',
         PAYMENT_RETURN_URL: 'https://app.example.test/tai-khoan/credit',
         PAYMENT_WEBHOOK_SECRET: 'test-payment-webhook-secret-at-least-32-bytes',
@@ -216,11 +222,44 @@ describe('validateEnvironment', () => {
         MONETIZATION_ENABLED: 'true',
         PAYMENT_PROVIDER_ENABLED: 'true',
         PAYMENT_PROVIDER_MODE: 'hmac-sandbox',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+        MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
         PAYMENT_CHECKOUT_BASE_URL: 'https://payments.example.com/checkout',
         PAYMENT_RETURN_URL: 'https://app.example.com/tai-khoan/credit',
         PAYMENT_WEBHOOK_SECRET: 'production-payment-webhook-secret-123456',
       }),
     ).toThrow('hmac-sandbox payment provider is forbidden in production');
+  });
+
+  it('requires explicit UUID allowlists for restricted rollout stages', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYWALL_ENFORCEMENT_ENABLED: 'true',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+      }),
+    ).toThrow('MONETIZATION_INTERNAL_USER_IDS');
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYWALL_ENFORCEMENT_ENABLED: 'true',
+        MONETIZATION_ROLLOUT_STAGE: 'story_allowlist',
+        MONETIZATION_STORY_ALLOWLIST_IDS: 'not-a-uuid',
+      }),
+    ).toThrow('comma-separated UUIDs');
+  });
+
+  it('forbids sandbox rollout on a production runtime', () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        MONETIZATION_ENABLED: 'true',
+        MONETIZATION_ROLLOUT_STAGE: 'sandbox',
+      }),
+    ).toThrow('Sandbox monetization rollout is forbidden in production');
   });
 
   it('rejects mail payload encryption keys that are not 32 bytes', () => {

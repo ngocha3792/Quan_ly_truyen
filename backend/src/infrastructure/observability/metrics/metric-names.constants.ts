@@ -51,4 +51,13 @@ export const METRIC_NAMES = {
     'qlt_reader_analytics_reconciliation_age_seconds',
   READER_ANALYTICS_SNAPSHOT_HEALTH:
     'qlt_reader_analytics_metrics_snapshot_healthy',
+  MONETIZATION_ENABLED: 'qlt_monetization_enabled',
+  MONETIZATION_ROLLOUT_STAGE: 'qlt_monetization_rollout_stage',
+  MONETIZATION_FINANCIAL_INTEGRITY_MISMATCHES:
+    'qlt_monetization_financial_integrity_mismatches',
+  MONETIZATION_INTEGRITY_SNAPSHOT_HEALTHY:
+    'qlt_monetization_integrity_snapshot_healthy',
+  PAYMENT_WEBHOOK_BACKLOG: 'qlt_payment_webhook_backlog_events',
+  PAYMENT_WEBHOOK_OLDEST_PENDING:
+    'qlt_payment_webhook_oldest_pending_age_seconds',
 } as const;

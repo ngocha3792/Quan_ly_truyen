@@ -41,3 +41,17 @@ export interface CreatePaymentOrderResultDto {
   readonly order: PaymentOrderResultDto;
   readonly replayed: boolean;
 }
+
+export interface AdminPaymentOrderResultDto extends PaymentOrderResultDto {
+  readonly userId: string;
+  readonly userEmail: string;
+  readonly userDisplayName: string;
+  readonly packageLabel: string;
+  readonly walletTransactionId: string | null;
+  readonly failureCode: string | null;
+}
+
+export interface AdminPaymentOrderPageResultDto {
+  readonly items: readonly AdminPaymentOrderResultDto[];
+  readonly pagination: PaymentOrderPageResultDto['pagination'];
+}

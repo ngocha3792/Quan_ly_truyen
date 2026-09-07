@@ -147,6 +147,8 @@
     "test:billing:prepare": "node -r ts-node/register -r tsconfig-paths/register scripts/testing/prepare-postgres-test-environment.ts",
     "test:billing:integration": "npm run test:billing:prepare && jest --config ./test/jest-billing-integration.json --runInBand",
     "loadtest:reader-analytics": "tsx scripts/analytics/load-test-reader-analytics.ts",
+    "security:test:monetization-content": "tsx scripts/monetization/test-content-leak.ts",
+    "loadtest:monetization-unlock": "tsx scripts/monetization/load-test-unlock-concurrency.ts",
     "architecture:check": "node scripts/architecture/check-boundaries.mjs && node ../scripts/check-centralized-constants.mjs",
     "production:scope:check": "node ../scripts/verify-production-scope.mjs --mode=contract",
     "production:scope:release": "node ../scripts/verify-production-scope.mjs --mode=release",

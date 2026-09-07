@@ -1,10 +1,12 @@
 import type {
   CreditPackageRecord,
+  AdminPaymentOrderPageRecord,
   PaymentOrderPageRecord,
   PaymentOrderRecord,
 } from '../ports';
 import type {
   CreditPackageResultDto,
+  AdminPaymentOrderPageResultDto,
   PaymentOrderPageResultDto,
   PaymentOrderResultDto,
 } from '../dto';
@@ -16,6 +18,28 @@ export function toCreditPackageResult(
     ...record,
     creditAmount: record.creditAmount.toString(),
     fiatAmountMinor: record.fiatAmountMinor.toString(),
+  };
+}
+
+export function toAdminPaymentOrderPageResult(
+  record: AdminPaymentOrderPageRecord,
+): AdminPaymentOrderPageResultDto {
+  return {
+    items: record.items.map((item) => ({
+      ...toPaymentOrderResult(item),
+      userId: item.userId,
+      userEmail: item.userEmail,
+      userDisplayName: item.userDisplayName,
+      packageLabel: item.packageLabel,
+      walletTransactionId: item.walletTransactionId,
+      failureCode: item.failureCode,
+    })),
+    pagination: {
+      page: record.page,
+      pageSize: record.pageSize,
+      totalItems: record.total,
+      totalPages: Math.ceil(record.total / record.pageSize),
+    },
   };
 }
 

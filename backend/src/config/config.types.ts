@@ -320,6 +320,10 @@ export interface MonetizationConfig {
   authorPricingEnabled: boolean;
   paymentProviderEnabled: boolean;
   paywallEnforcementEnabled: boolean;
+  rolloutStage: 'sandbox' | 'internal' | 'story_allowlist' | 'general';
+  internalUserIds: readonly string[];
+  storyAllowlistIds: readonly string[];
+  integrityMetricsIntervalMs: number;
 }
 
 export interface BillingConfig {

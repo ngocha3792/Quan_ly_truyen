@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
+import { OutboxCoreModule } from '@/infrastructure/queue/outbox';
 
 import {
   GetNotificationViewQueryHandler,
@@ -11,7 +12,10 @@ import {
   SetNotificationSavedCommandHandler,
   UpdateNotificationSettingsCommandHandler,
 } from './application';
-import { PrismaNotificationPersistence } from './infrastructure';
+import {
+  PrismaNotificationPersistence,
+  TransactionalReceiptService,
+} from './infrastructure';
 import { NotificationsController } from './presentation/http';
 
 const portProviders = [
@@ -30,12 +34,14 @@ const applicationHandlers = [
 ];
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule],
+  imports: [PrismaModule, AuthAuthorizationModule, OutboxCoreModule],
   controllers: [NotificationsController],
   providers: [
     PrismaNotificationPersistence,
+    TransactionalReceiptService,
     ...portProviders,
     ...applicationHandlers,
   ],
+  exports: [TransactionalReceiptService],
 })
 export class NotificationsModule {}

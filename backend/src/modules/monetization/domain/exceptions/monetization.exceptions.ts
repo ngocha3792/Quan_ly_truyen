@@ -45,3 +45,25 @@ export class ChapterNotPurchasableException extends BusinessRuleViolationExcepti
     });
   }
 }
+
+export class ChapterPurchaseNotRefundableException extends BusinessRuleViolationException {
+  constructor(status: string) {
+    super({
+      code: 'CHAPTER_PURCHASE_NOT_REFUNDABLE',
+      message: `Giao dịch mua chương ở trạng thái ${status} không thể hoàn`,
+      rule: 'only_completed_chapter_purchase_can_be_refunded',
+      details: { status },
+    });
+  }
+}
+
+export class MonetizationRolloutRestrictedException extends BusinessRuleViolationException {
+  constructor() {
+    super({
+      code: 'MONETIZATION_ROLLOUT_RESTRICTED',
+      message:
+        'Tính năng mua chương chưa được mở cho tài khoản hoặc truyện này',
+      rule: 'account_or_story_must_be_in_monetization_rollout',
+    });
+  }
+}

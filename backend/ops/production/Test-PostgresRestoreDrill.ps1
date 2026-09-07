@@ -318,8 +318,83 @@ BEGIN
   IF to_regclass('public.users') IS NULL
      OR to_regclass('public.stories') IS NULL
      OR to_regclass('public.chapters') IS NULL
-     OR to_regclass('public.outbox_events') IS NULL THEN
+     OR to_regclass('public.outbox_events') IS NULL
+     OR to_regclass('public.wallets') IS NULL
+     OR to_regclass('public.wallet_ledger_transactions') IS NULL
+     OR to_regclass('public.wallet_ledger_entries') IS NULL
+     OR to_regclass('public.chapter_purchases') IS NULL
+     OR to_regclass('public.chapter_entitlements') IS NULL
+     OR to_regclass('public.payment_orders') IS NULL THEN
     RAISE EXCEPTION 'One or more critical application tables are missing';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM wallet_ledger_transactions AS ledger_transaction
+    LEFT JOIN wallet_ledger_entries AS ledger_entry
+      ON ledger_entry.transaction_id = ledger_transaction.id
+    GROUP BY ledger_transaction.id
+    HAVING COUNT(ledger_entry.id) <> 2
+       OR COALESCE(SUM(ledger_entry.amount), 0) <> 0
+       OR COUNT(ledger_entry.id) FILTER (
+         WHERE ledger_entry.wallet_id = ledger_transaction.wallet_id
+       ) <> 1
+       OR COUNT(ledger_entry.id) FILTER (
+         WHERE ledger_entry.system_account IS NOT NULL
+       ) <> 1
+       OR COALESCE(SUM(ledger_entry.amount) FILTER (
+         WHERE ledger_entry.wallet_id = ledger_transaction.wallet_id
+       ), 0) <> ledger_transaction.wallet_amount
+  ) THEN
+    RAISE EXCEPTION 'Restored ledger contains an unbalanced transaction';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM wallets AS wallet
+    LEFT JOIN (
+      SELECT wallet_id, COALESCE(SUM(amount), 0) AS ledger_balance
+      FROM wallet_ledger_entries
+      WHERE wallet_id IS NOT NULL
+      GROUP BY wallet_id
+    ) AS ledger ON ledger.wallet_id = wallet.id
+    WHERE wallet.balance <> COALESCE(ledger.ledger_balance, 0)
+  ) THEN
+    RAISE EXCEPTION 'Restored wallet balance does not match ledger';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM chapter_purchases AS purchase
+    LEFT JOIN wallet_ledger_transactions AS debit
+      ON debit.id = purchase.wallet_transaction_id
+    LEFT JOIN wallet_ledger_transactions AS refund
+      ON refund.id = purchase.refund_wallet_transaction_id
+    WHERE debit.type IS DISTINCT FROM 'chapter_purchase'
+       OR debit.wallet_amount IS DISTINCT FROM -purchase.credit_price
+       OR (
+         purchase.status = 'refunded'
+         AND (
+           refund.type IS DISTINCT FROM 'refund'
+           OR refund.wallet_amount IS DISTINCT FROM purchase.credit_price
+         )
+       )
+  ) THEN
+    RAISE EXCEPTION 'Restored chapter purchase ledger references are invalid';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM payment_orders AS payment
+    LEFT JOIN wallet_ledger_transactions AS ledger_transaction
+      ON ledger_transaction.id = payment.wallet_transaction_id
+    WHERE payment.status = 'paid'
+      AND (
+        ledger_transaction.type IS DISTINCT FROM 'top_up'
+        OR ledger_transaction.wallet_amount IS DISTINCT FROM payment.credit_amount
+      )
+  ) THEN
+    RAISE EXCEPTION 'Restored paid order ledger references are invalid';
   END IF;
 END
 $$;
@@ -328,6 +403,12 @@ SELECT json_build_object(
   'users', (SELECT COUNT(*) FROM users),
   'stories', (SELECT COUNT(*) FROM stories),
   'chapters', (SELECT COUNT(*) FROM chapters),
+  'wallets', (SELECT COUNT(*) FROM wallets),
+  'ledgerTransactions', (SELECT COUNT(*) FROM wallet_ledger_transactions),
+  'ledgerEntries', (SELECT COUNT(*) FROM wallet_ledger_entries),
+  'chapterPurchases', (SELECT COUNT(*) FROM chapter_purchases),
+  'chapterEntitlements', (SELECT COUNT(*) FROM chapter_entitlements),
+  'paymentOrders', (SELECT COUNT(*) FROM payment_orders),
   'migrations', (
     SELECT COUNT(*)
     FROM "_prisma_migrations"
@@ -370,11 +451,12 @@ SELECT json_build_object(
   Out-Null
 
   $RestoreStatus = [ordered]@{
-    version = 1
+    version = 2
     completedAt = [DateTime]::UtcNow.ToString('o')
     dumpFile = $Dump.Name
     source = 'offsite-restic'
     sha256 = $ActualHash
+    ledgerVerified = $true
   }
 
   $RestoreStatusPath =

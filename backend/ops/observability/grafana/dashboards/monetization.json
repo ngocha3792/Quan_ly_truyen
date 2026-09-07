@@ -1,0 +1,65 @@
+{
+  "uid": "qlt-monetization",
+  "title": "Monetization Safety",
+  "schemaVersion": 41,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Monetization enabled",
+      "targets": [{ "expr": "qlt_monetization_enabled" }]
+    },
+    {
+      "type": "stat",
+      "title": "Active rollout stage",
+      "targets": [
+        { "expr": "qlt_monetization_rollout_stage == 1", "legendFormat": "{{stage}}" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Integrity snapshot healthy",
+      "targets": [{ "expr": "qlt_monetization_integrity_snapshot_healthy" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Financial integrity mismatches",
+      "targets": [
+        {
+          "expr": "qlt_monetization_financial_integrity_mismatches",
+          "legendFormat": "{{check}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Money movement HTTP P95",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(qlt_http_server_request_duration_seconds_bucket{route=~\".*(monetization|billing|wallet).*\"}[5m])))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Receipt delivery outcomes",
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(qlt_mail_deliveries_total{template=\"credit-activity.v1\"}[10m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Payment webhook backlog",
+      "targets": [
+        {
+          "expr": "qlt_payment_webhook_backlog_events",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ]
+}

@@ -68,6 +68,9 @@ Chạy hằng ngày:
 ./ops/production/Backup-Postgres.ps1
 ```
 
+Monetization has an additional staged rollout and accounting incident runbook at
+`ops/production/MONETIZATION_RUNBOOK.md`. Do not jump directly to the `general` stage.
+
 Backup chỉ được ghi nhận thành công sau khi SHA-256 khớp, `pg_restore --list` đọc được archive và (khi bật off-site) Restic upload + repository check hoàn tất. Trạng thái cuối cùng nằm ở `backup-last-success.json`.
 
 Windows dùng `Register-ScheduledTasks.ps1`. Linux dùng `cron.example` hoặc systemd timer.
@@ -81,7 +84,7 @@ Mặc định mục tiêu là backup không cũ hơn 26 giờ (`BACKUP_RPO_HOURS
 ./ops/production/Test-RecoveryReadiness.ps1
 ```
 
-Restore drill luôn lấy snapshot encrypted off-site, verify checksum/archive, restore vào PostgreSQL disposable và xác nhận Prisma migrations cùng các bảng `users`, `stories`, `chapters`, `outbox_events`.
+Restore drill luôn lấy snapshot encrypted off-site, verify checksum/archive, restore vào PostgreSQL disposable và xác nhận Prisma migrations, bảng ứng dụng, toàn bộ Credit ledger, wallet balances, purchases, entitlements và payment orders.
 
 Khi phải restore production thật:
 

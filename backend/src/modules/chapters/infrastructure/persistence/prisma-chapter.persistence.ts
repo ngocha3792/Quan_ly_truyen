@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 
 import {
   ChapterAccessType,
@@ -12,6 +13,7 @@ import {
   StoryVisibility,
 } from '@/generated/prisma/client';
 import { slugify } from '@/common/utils';
+import { monetizationConfig, shouldEnforceChapterPaywall } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
@@ -168,7 +170,11 @@ const PUBLIC_STORY_STATUSES = [
 
 @Injectable()
 export class PrismaChapterPersistence implements ChapterPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(monetizationConfig.KEY)
+    private readonly monetization: ConfigType<typeof monetizationConfig>,
+  ) {}
 
   async listOwnedByStory(
     userId: string,
@@ -1368,7 +1374,14 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     if (!pricing.creditPrice || !pricing.previewContent) {
       return { state: 'LOCKED', priceCredits };
     }
-    if (!enforcePaywall) {
+    const effectivePaywall =
+      enforcePaywall &&
+      shouldEnforceChapterPaywall({
+        config: this.monetization,
+        userId: viewerId,
+        storyId: chapter.storyId,
+      });
+    if (!effectivePaywall) {
       return { state: 'BYPASS', priceCredits };
     }
     if (!viewerId) {

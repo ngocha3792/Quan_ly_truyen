@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Headers,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
@@ -27,6 +28,8 @@ import {
   ListPriceBandsQueryHandler,
   UnlockChapterCommand,
   UnlockChapterCommandHandler,
+  MONETIZATION_RATE_LIMITER_PORT,
+  type MonetizationRateLimiterPort,
 } from '../../../application';
 import { MonetizationFeatureGuard } from '../guards';
 import { ListPurchasesRequest } from '../requests';
@@ -38,6 +41,8 @@ export class ReaderMonetizationController {
     private readonly listPriceBands: ListPriceBandsQueryHandler,
     private readonly unlockChapter: UnlockChapterCommandHandler,
     private readonly listPurchases: ListMyPurchasesQueryHandler,
+    @Inject(MONETIZATION_RATE_LIMITER_PORT)
+    private readonly rateLimiter: MonetizationRateLimiterPort,
   ) {}
 
   @Get('price-bands')
@@ -60,7 +65,7 @@ export class ReaderMonetizationController {
   @Post('chapters/:chapterId/unlock')
   @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.PURCHASE_CREATE_SELF)
-  unlock(
+  async unlock(
     @CurrentUserId() userId: string | undefined,
     @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
     @Headers('x-idempotency-key') idempotencyKey: string | undefined,
@@ -68,6 +73,16 @@ export class ReaderMonetizationController {
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
   ) {
+    await this.rateLimiter.consume({
+      operation: 'chapter_unlock',
+      subject: `user:${userId ?? 'missing'}`,
+    });
+    if (ipAddress) {
+      await this.rateLimiter.consume({
+        operation: 'chapter_unlock',
+        subject: `ip:${ipAddress}`,
+      });
+    }
     return this.unlockChapter.execute(
       new UnlockChapterCommand(
         userId,

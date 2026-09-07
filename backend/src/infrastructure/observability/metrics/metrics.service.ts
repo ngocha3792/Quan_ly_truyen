@@ -38,7 +38,12 @@ type MailTemplate =
   | 'moderation-result.v1'
   | 'new-chapter.v1'
   | 'weekly-reading-recap.v1'
+  | 'credit-activity.v1'
   | 'unknown';
+type MonetizationRolloutStage =
+  'sandbox' | 'internal' | 'story_allowlist' | 'general';
+type FinancialIntegrityCheck =
+  'ledger_balance' | 'wallet_balance' | 'chapter_purchase' | 'payment_order';
 type CloudinaryEventType =
   | 'upload'
   | 'resource_created'
@@ -299,6 +304,39 @@ export class MetricsService implements OnModuleDestroy {
     name: METRIC_NAMES.DEPENDENCY_HEALTH,
     help: 'Dependency health (1 up/configured, 0 down, -1 disabled)',
     labelNames: ['dependency'] as const,
+    registers: [this.registry],
+  });
+  private readonly monetizationEnabled = new Gauge({
+    name: METRIC_NAMES.MONETIZATION_ENABLED,
+    help: 'Monetization runtime enablement (1 enabled, 0 disabled)',
+    registers: [this.registry],
+  });
+  private readonly monetizationRolloutStage = new Gauge({
+    name: METRIC_NAMES.MONETIZATION_ROLLOUT_STAGE,
+    help: 'Current monetization rollout stage as a one-hot gauge',
+    labelNames: ['stage'] as const,
+    registers: [this.registry],
+  });
+  private readonly monetizationFinancialIntegrityMismatches = new Gauge({
+    name: METRIC_NAMES.MONETIZATION_FINANCIAL_INTEGRITY_MISMATCHES,
+    help: 'Financial integrity mismatches by bounded invariant',
+    labelNames: ['check'] as const,
+    registers: [this.registry],
+  });
+  private readonly monetizationIntegritySnapshotHealthy = new Gauge({
+    name: METRIC_NAMES.MONETIZATION_INTEGRITY_SNAPSHOT_HEALTHY,
+    help: 'Latest monetization integrity snapshot status (1 healthy, 0 failed)',
+    registers: [this.registry],
+  });
+  private readonly paymentWebhookBacklog = new Gauge({
+    name: METRIC_NAMES.PAYMENT_WEBHOOK_BACKLOG,
+    help: 'Payment webhook inbox backlog by bounded status',
+    labelNames: ['status'] as const,
+    registers: [this.registry],
+  });
+  private readonly paymentWebhookOldestPending = new Gauge({
+    name: METRIC_NAMES.PAYMENT_WEBHOOK_OLDEST_PENDING,
+    help: 'Age of the oldest pending or failed payment webhook in seconds',
     registers: [this.registry],
   });
 
@@ -601,6 +639,64 @@ export class MetricsService implements OnModuleDestroy {
     );
   }
 
+  setMonetizationRollout(input: {
+    enabled: boolean;
+    stage: MonetizationRolloutStage;
+  }): void {
+    if (!this.enabled) return;
+    this.monetizationEnabled.set(input.enabled ? 1 : 0);
+    for (const stage of [
+      'sandbox',
+      'internal',
+      'story_allowlist',
+      'general',
+    ] as const) {
+      this.monetizationRolloutStage.set(
+        { stage },
+        stage === input.stage ? 1 : 0,
+      );
+    }
+  }
+
+  setMonetizationFinancialIntegrity(
+    mismatches: Record<FinancialIntegrityCheck, number>,
+  ): void {
+    if (!this.enabled) return;
+    for (const check of [
+      'ledger_balance',
+      'wallet_balance',
+      'chapter_purchase',
+      'payment_order',
+    ] as const) {
+      this.monetizationFinancialIntegrityMismatches.set(
+        { check },
+        Math.max(0, mismatches[check]),
+      );
+    }
+    this.monetizationIntegritySnapshotHealthy.set(1);
+  }
+
+  setMonetizationIntegritySnapshotHealthy(healthy: boolean): void {
+    if (this.enabled) {
+      this.monetizationIntegritySnapshotHealthy.set(healthy ? 1 : 0);
+    }
+  }
+
+  setPaymentWebhookBacklog(input: {
+    pending: number;
+    processing: number;
+    failed: number;
+    oldestPendingAgeSeconds: number;
+  }): void {
+    if (!this.enabled) return;
+    for (const status of ['pending', 'processing', 'failed'] as const) {
+      this.paymentWebhookBacklog.set({ status }, Math.max(0, input[status]));
+    }
+    this.paymentWebhookOldestPending.set(
+      Math.max(0, input.oldestPendingAgeSeconds),
+    );
+  }
+
   onModuleDestroy(): void {
     this.registry.clear();
   }
@@ -637,6 +733,7 @@ function normalizeMailTemplate(template: string): MailTemplate {
     'moderation-result.v1',
     'new-chapter.v1',
     'weekly-reading-recap.v1',
+    'credit-activity.v1',
   ];
   return allowed.includes(template as MailTemplate)
     ? (template as MailTemplate)

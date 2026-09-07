@@ -13,6 +13,7 @@ import {
   PostWalletTransactionCommand,
   PostWalletTransactionCommandHandler,
 } from '@/modules/wallets';
+import { TransactionalReceiptService } from '@/modules/notifications';
 
 import type { NormalizedPaymentEvent } from '../../application';
 import {
@@ -34,6 +35,7 @@ export class PaymentWebhookInboxProcessor {
   constructor(
     private readonly prisma: PrismaService,
     private readonly postWalletTransaction: PostWalletTransactionCommandHandler,
+    private readonly receipts: TransactionalReceiptService,
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
   ) {}
@@ -174,14 +176,28 @@ export class PaymentWebhookInboxProcessor {
           },
         ),
       );
-      await this.prisma.paymentOrder.updateMany({
-        where: { id: order.id, status: PaymentOrderStatus.PENDING },
-        data: {
-          status: PaymentOrderStatus.PAID,
-          walletTransactionId: result.transaction.id,
-          settledAt: new Date(event.occurredAt),
-          failureCode: null,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.paymentOrder.updateMany({
+          where: { id: order.id, status: PaymentOrderStatus.PENDING },
+          data: {
+            status: PaymentOrderStatus.PAID,
+            walletTransactionId: result.transaction.id,
+            settledAt: new Date(event.occurredAt),
+            failureCode: null,
+          },
+        });
+        if (updated.count !== 1) return;
+        await this.receipts.enqueue(tx, {
+          userId: order.userId,
+          dedupeKey: `payment-order-paid:${order.id}`,
+          type: 'credit_top_up',
+          title: 'Nạp Credit thành công',
+          body: `${order.creditAmount.toString()} Credit đã được cộng vào ví của bạn.`,
+          tag: 'Nạp Credit',
+          transactionId: result.transaction.id,
+          amountCredits: order.creditAmount,
+          data: { paymentOrderId: order.id, provider: order.provider },
+        });
       });
       return;
     }
@@ -213,12 +229,12 @@ export class PaymentWebhookInboxProcessor {
         },
       ),
     );
-    await this.prisma.$transaction([
-      this.prisma.paymentOrder.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.paymentOrder.update({
         where: { id: order.id },
         data: { status: targetStatus },
-      }),
-      this.prisma.auditLog.create({
+      });
+      await tx.auditLog.create({
         data: {
           action: `payment.order.${targetStatus.toLowerCase()}`,
           entityType: 'payment_order',
@@ -228,8 +244,22 @@ export class PaymentWebhookInboxProcessor {
             eventId: event.eventId,
           },
         },
-      }),
-    ]);
+      });
+      const reversed = targetStatus === PaymentOrderStatus.REVERSED;
+      await this.receipts.enqueue(tx, {
+        userId: order.userId,
+        dedupeKey: `payment-order-${targetStatus.toLowerCase()}:${order.id}`,
+        type: 'payment_refund',
+        title: reversed
+          ? 'Giao dịch nạp Credit bị đảo'
+          : 'Khoản nạp đã được hoàn',
+        body: `${order.creditAmount.toString()} Credit đã được trừ khỏi ví theo xác nhận của nhà cung cấp thanh toán.`,
+        tag: reversed ? 'Đảo giao dịch' : 'Hoàn tiền',
+        transactionId: result.transaction.id,
+        amountCredits: order.creditAmount,
+        data: { paymentOrderId: order.id, provider: order.provider },
+      });
+    });
   }
 
   private async expireStaleOrders(now: Date): Promise<void> {

@@ -41,6 +41,19 @@ export interface PaymentOrderPageRecord {
   readonly total: number;
 }
 
+export interface AdminPaymentOrderRecord extends PaymentOrderRecord {
+  readonly userEmail: string;
+  readonly userDisplayName: string;
+  readonly packageLabel: string;
+}
+
+export interface AdminPaymentOrderPageRecord {
+  readonly items: readonly AdminPaymentOrderRecord[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}
+
 export interface PreparePaymentOrderInput {
   readonly userId: string;
   readonly packageId: string;
@@ -93,5 +106,14 @@ export interface BillingPersistencePort {
     page: number;
     pageSize: number;
   }): Promise<PaymentOrderPageRecord>;
+  listAdminOrders(input: {
+    page: number;
+    pageSize: number;
+    status?: PaymentOrderStatusName;
+    provider?: string;
+    query?: string;
+    from?: Date;
+    to?: Date;
+  }): Promise<AdminPaymentOrderPageRecord>;
   reconcile(): Promise<PaymentReconciliationRecord>;
 }

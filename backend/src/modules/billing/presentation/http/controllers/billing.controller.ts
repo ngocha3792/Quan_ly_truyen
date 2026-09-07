@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Inject,
   Param,
   ParseUUIDPipe,
   Post,
@@ -13,6 +14,10 @@ import {
 import { CurrentUserId, Public, RequirePermissions } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
+import {
+  MONETIZATION_RATE_LIMITER_PORT,
+  type MonetizationRateLimiterPort,
+} from '@/modules/monetization';
 
 import {
   CreatePaymentOrderCommand,
@@ -38,6 +43,8 @@ export class BillingController {
     private readonly createOrder: CreatePaymentOrderCommandHandler,
     private readonly getOrder: GetOwnPaymentOrderQueryHandler,
     private readonly listOrders: ListOwnPaymentOrdersQueryHandler,
+    @Inject(MONETIZATION_RATE_LIMITER_PORT)
+    private readonly rateLimiter: MonetizationRateLimiterPort,
   ) {}
 
   @Get('credit-packages')
@@ -49,11 +56,15 @@ export class BillingController {
   @Post('top-up-orders')
   @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.PAYMENT_ORDER_CREATE_SELF)
-  create(
+  async create(
     @CurrentUserId() userId: string | undefined,
     @Headers('x-idempotency-key') idempotencyKey: string | undefined,
     @Body() request: CreatePaymentOrderRequest,
   ) {
+    await this.rateLimiter.consume({
+      operation: 'order_create',
+      subject: `user:${userId ?? 'missing'}`,
+    });
     return this.createOrder.execute(
       new CreatePaymentOrderCommand(userId, request.packageId, idempotencyKey),
     );
@@ -61,10 +72,14 @@ export class BillingController {
 
   @Get('top-up-orders/me')
   @RequirePermissions(PermissionCode.PAYMENT_ORDER_READ_SELF)
-  history(
+  async history(
     @CurrentUserId() userId: string | undefined,
     @Query() request: ListPaymentOrdersRequest,
   ) {
+    await this.rateLimiter.consume({
+      operation: 'order_poll',
+      subject: `user:${userId ?? 'missing'}`,
+    });
     return this.listOrders.execute(
       new ListOwnPaymentOrdersQuery(userId, request.page, request.pageSize),
     );
@@ -72,10 +87,14 @@ export class BillingController {
 
   @Get('top-up-orders/:orderId')
   @RequirePermissions(PermissionCode.PAYMENT_ORDER_READ_SELF)
-  get(
+  async get(
     @CurrentUserId() userId: string | undefined,
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
   ) {
+    await this.rateLimiter.consume({
+      operation: 'order_poll',
+      subject: `user:${userId ?? 'missing'}`,
+    });
     return this.getOrder.execute(new GetOwnPaymentOrderQuery(userId, orderId));
   }
 }

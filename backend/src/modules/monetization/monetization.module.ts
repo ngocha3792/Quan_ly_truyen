@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
 import { AuthorsModule } from '@/modules/authors';
+import { NotificationsModule } from '@/modules/notifications';
 
 import {
   ListMyPurchasesQueryHandler,
@@ -12,22 +13,37 @@ import {
   SetChapterMonetizationCommandHandler,
   UnlockChapterCommandHandler,
   UpdatePriceBandCommandHandler,
+  ListAdminPurchasesQueryHandler,
+  RefundChapterPurchaseCommandHandler,
+  GetRevenueAnalyticsQueryHandler,
 } from './application';
-import { PrismaMonetizationPersistence } from './infrastructure';
+import {
+  MonetizationIntegrityMetricsObserver,
+  PrismaMonetizationPersistence,
+} from './infrastructure';
 import {
   AdminMonetizationController,
+  AdminMonetizationOperationsController,
   AuthorMonetizationController,
   AuthorPricingFeatureGuard,
   MonetizationFeatureGuard,
   ReaderMonetizationController,
 } from './presentation';
+import { MonetizationSecurityModule } from './monetization-security.module';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    AuthorsModule,
+    NotificationsModule,
+    MonetizationSecurityModule,
+  ],
   controllers: [
     ReaderMonetizationController,
     AuthorMonetizationController,
     AdminMonetizationController,
+    AdminMonetizationOperationsController,
   ],
   providers: [
     ListPriceBandsQueryHandler,
@@ -36,8 +52,12 @@ import {
     SetChapterMonetizationCommandHandler,
     UnlockChapterCommandHandler,
     UpdatePriceBandCommandHandler,
+    ListAdminPurchasesQueryHandler,
+    RefundChapterPurchaseCommandHandler,
+    GetRevenueAnalyticsQueryHandler,
     MonetizationFeatureGuard,
     AuthorPricingFeatureGuard,
+    MonetizationIntegrityMetricsObserver,
     PrismaMonetizationPersistence,
     {
       provide: MONETIZATION_PERSISTENCE_PORT,

@@ -1,0 +1,263 @@
+:host {
+  display: block;
+  padding: 1.5rem;
+  color: #e5e7eb;
+}
+
+.page-header,
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+h1 {
+  margin-top: 0.25rem;
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+}
+h2 {
+  font-size: 1.05rem;
+}
+.eyebrow {
+  color: #a78bfa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.page-header > div > p:last-child,
+.operation-form > div > p:last-child,
+.refund-form > p {
+  margin-top: 0.4rem;
+  color: #9ca3af;
+}
+
+input,
+select,
+textarea,
+button {
+  border: 1px solid #374151;
+  border-radius: 0.65rem;
+  background: #111827;
+  color: #f9fafb;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border-color: #7c3aed;
+  background: #7c3aed;
+  font-weight: 700;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+button.secondary {
+  border-color: #4b5563;
+  background: transparent;
+}
+button.danger {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+.search {
+  display: flex;
+  gap: 0.5rem;
+}
+.search input {
+  width: min(32rem, 45vw);
+}
+
+.notice,
+.panel,
+.metric-grid article {
+  margin-top: 1rem;
+  border: 1px solid #263244;
+  border-radius: 0.9rem;
+  background: #101827;
+  padding: 1rem;
+}
+.notice.error {
+  border-color: #7f1d1d;
+  color: #fecaca;
+}
+.notice.success {
+  border-color: #14532d;
+  color: #bbf7d0;
+}
+.loading {
+  color: #9ca3af;
+}
+
+.metric-grid,
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.metric-grid article {
+  display: grid;
+  gap: 0.35rem;
+}
+.metric-grid span,
+.metric-grid small,
+.rank-row small,
+td small {
+  color: #9ca3af;
+}
+.metric-grid strong {
+  font-size: 1.35rem;
+}
+.metric-grid .net {
+  border-color: #6d28d9;
+}
+
+.rank-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #263244;
+}
+.rank-row span,
+td {
+  display: grid;
+  gap: 0.2rem;
+}
+.rank-row strong {
+  color: #c4b5fd;
+}
+
+.operation-form {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.7fr) 1.3fr;
+  gap: 1.5rem;
+}
+.operation-form form {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.7fr;
+  gap: 0.75rem;
+}
+label {
+  display: grid;
+  gap: 0.35rem;
+  color: #d1d5db;
+  font-size: 0.8rem;
+}
+label.reason {
+  grid-column: 1 / -1;
+}
+textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+.operation-form button {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.table-wrap {
+  margin-top: 0.8rem;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 56rem;
+}
+th,
+td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #263244;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+td {
+  font-size: 0.84rem;
+}
+td small {
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status {
+  width: fit-content;
+  border-radius: 999px;
+  background: #374151;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+}
+.status.completed,
+.status.paid {
+  background: #14532d;
+  color: #bbf7d0;
+}
+.status.refunded,
+.status.reversed {
+  background: #78350f;
+  color: #fde68a;
+}
+.status.failed,
+.status.expired {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+.empty {
+  padding: 1rem 0;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.refund-form {
+  border-color: #92400e;
+}
+.refund-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.8rem 0;
+}
+.refund-form > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+@media (max-width: 900px) {
+  :host {
+    padding: 1rem;
+  }
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .search input {
+    width: 100%;
+  }
+  .metric-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  .operation-form {
+    grid-template-columns: 1fr;
+  }
+  .operation-form form {
+    grid-template-columns: 1fr;
+  }
+  label.reason,
+  .operation-form button {
+    grid-column: 1;
+  }
+}

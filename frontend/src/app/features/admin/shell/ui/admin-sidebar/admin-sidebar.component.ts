@@ -7,6 +7,7 @@ import {
   Output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { AUTH_PERMISSIONS, AuthPermission } from '../../../../../core/auth/authorization.models';
@@ -19,6 +20,7 @@ import {
 interface AdminNavigationItem extends ShellNavigationItem {
   readonly icon: IconName;
   readonly permission: AuthPermission;
+  readonly requiresMonetization?: boolean;
 }
 
 const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
@@ -66,6 +68,13 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     permission: AUTH_PERMISSIONS.AUDIT_LOG_READ,
   },
   {
+    label: 'Vận hành Credit',
+    route: '/admin/monetization',
+    icon: 'wallet',
+    permission: AUTH_PERMISSIONS.PAYMENT_READ_ADMIN,
+    requiresMonetization: true,
+  },
+  {
     label: 'Trợ lý AI',
     route: '/admin/settings/ai',
     icon: 'sparkles',
@@ -87,6 +96,7 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
 })
 export class AdminSidebarComponent {
   private readonly authStore = inject(AuthStore);
+  private readonly config = inject(APP_RUNTIME_CONFIG);
 
   protected readonly user = this.authStore.user;
 
@@ -95,7 +105,11 @@ export class AdminSidebarComponent {
 
   protected readonly navigationItems = computed(() => {
     const permissions = new Set(this.user()?.permissions ?? []);
-    return NAVIGATION_ITEMS.filter((item) => permissions.has(item.permission));
+    return NAVIGATION_ITEMS.filter(
+      (item) =>
+        permissions.has(item.permission) &&
+        (!item.requiresMonetization || this.config.features.monetizationEnabled),
+    );
   });
 
   protected initial(displayName: string): string {

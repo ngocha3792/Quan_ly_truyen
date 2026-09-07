@@ -1,6 +1,8 @@
 import { Transform } from 'class-transformer';
 import {
+  IsDateString,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +12,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { PAYMENT_ORDER_STATUSES } from '../../../domain';
 
 export class CreatePaymentOrderRequest {
   @IsUUID('4')
@@ -55,4 +58,28 @@ export class UpdateCreditPackageRequest {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+}
+
+export class AdminPaymentOrderExplorerRequest extends ListPaymentOrdersRequest {
+  @IsOptional()
+  @IsIn(PAYMENT_ORDER_STATUSES)
+  status?: (typeof PAYMENT_ORDER_STATUSES)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  provider?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @IsOptional()
+  @IsDateString()
+  to?: string;
 }

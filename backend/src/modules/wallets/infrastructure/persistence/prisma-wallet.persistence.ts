@@ -242,6 +242,37 @@ export class PrismaWalletPersistence implements WalletPersistencePort {
           select: WALLET_TRANSACTION_SELECT,
         });
 
+        if (input.audit) {
+          await tx.auditLog.create({
+            data: {
+              actorId: input.audit.actorId,
+              action: 'wallet.admin-adjustment.posted',
+              entityType: 'wallet_ledger_transaction',
+              entityId: transaction.id,
+              oldValues: { balance: wallet.balance.toString() },
+              newValues: {
+                userId: input.userId,
+                direction: input.walletAmount > 0n ? 'CREDIT' : 'DEBIT',
+                amount: (input.walletAmount > 0n
+                  ? input.walletAmount
+                  : -input.walletAmount
+                ).toString(),
+                balance: balanceAfter.toString(),
+                reason: input.audit.reason,
+              },
+              ...(input.audit.ipAddress
+                ? { ipAddress: input.audit.ipAddress }
+                : {}),
+              ...(input.audit.userAgent
+                ? { userAgent: input.audit.userAgent }
+                : {}),
+              ...(input.audit.requestId
+                ? { requestId: input.audit.requestId }
+                : {}),
+            },
+          });
+        }
+
         return {
           transaction: toTransactionRecord(transaction),
           replayed: false,

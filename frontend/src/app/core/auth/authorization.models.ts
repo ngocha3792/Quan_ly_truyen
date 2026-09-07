@@ -51,6 +51,9 @@ export const AUTH_PERMISSIONS = {
   TAG_MANAGE: 'tag.manage',
   AUDIT_LOG_READ: 'audit-log.read',
   ANALYTICS_READ: 'analytics.read',
+  PAYMENT_READ_ADMIN: 'payment.read.admin',
+  PAYMENT_REFUND_ADMIN: 'payment.refund.admin',
+  WALLET_ADJUST_ADMIN: 'wallet.adjust.admin',
 
   AI_CHAT_USE: 'ai-chat.use',
   AI_SETTINGS_MANAGE: 'ai-settings.manage',

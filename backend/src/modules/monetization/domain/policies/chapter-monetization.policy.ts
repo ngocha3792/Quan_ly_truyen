@@ -69,6 +69,32 @@ export function assertUnlockChapterInput(input: {
   }
 }
 
+export function assertRefundChapterPurchaseInput(input: {
+  actorId: string;
+  purchaseId: string;
+  reason: string;
+}): void {
+  if (!isUuidV4(input.actorId)) {
+    throw new InvalidMonetizationInputException(
+      'Quản trị viên không hợp lệ',
+      'actorId',
+    );
+  }
+  if (!isUuidV4(input.purchaseId)) {
+    throw new InvalidMonetizationInputException(
+      'Giao dịch mua chương không hợp lệ',
+      'purchaseId',
+    );
+  }
+  const reasonLength = input.reason.trim().length;
+  if (reasonLength < 10 || reasonLength > 500) {
+    throw new InvalidMonetizationInputException(
+      'Lý do hoàn phải có độ dài từ 10 đến 500 ký tự',
+      'reason',
+    );
+  }
+}
+
 export function assertCreditPrice(price: bigint): void {
   if (price <= 0n || price > MAX_CHAPTER_PRICE_CREDITS) {
     throw new InvalidMonetizationInputException(

@@ -47,6 +47,13 @@ export interface PostWalletTransactionInput {
   readonly referenceType: string;
   readonly referenceId: string;
   readonly metadata?: WalletMetadata;
+  readonly audit?: {
+    readonly actorId: string;
+    readonly reason: string;
+    readonly ipAddress?: string;
+    readonly userAgent?: string;
+    readonly requestId?: string;
+  };
 }
 
 export interface PostWalletTransactionRecord {

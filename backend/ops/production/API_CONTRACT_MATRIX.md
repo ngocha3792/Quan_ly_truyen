@@ -25,6 +25,7 @@
 | Admin reports / moderation | /admin/reports + /admin/reports/:reportId | `GET /admin/reports`<br>`POST /admin/reports/:reportId/resolve`<br>`POST /admin/reports/:reportId/reject` | `frontend/src/app/features/admin/reports/data-access/admin-reports-api.service.ts` |
 | Admin categories / tags | /admin/categories + /admin/tags | `GET /admin/categories`<br>`POST /admin/categories`<br>`GET /admin/tags` | `frontend/src/app/features/admin/categories/data-access/admin-categories-api.service.ts`<br>`frontend/src/app/features/admin/tags/data-access/admin-tags-api.service.ts` |
 | Admin author applications | /admin/author-applications + /admin/author-applications/:applicationId | `GET /author-applications/admin`<br>`POST /author-applications/admin/:applicationId/approve`<br>`POST /author-applications/admin/:applicationId/reject` | `frontend/src/app/features/admin/author-applications/data-access/admin-author-applications-api.service.ts` |
+| Admin payment, purchase and revenue operations | /admin/monetization | `GET /admin/billing/payment-orders`<br>`GET /admin/monetization/purchases`<br>`POST /admin/monetization/purchases/:purchaseId/refund`<br>`GET /admin/monetization/revenue`<br>`POST /admin/wallets/:userId/adjustments` | `frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts` |
 | Admin audit logs | /admin/audit-logs + /admin/audit-logs/:id | `GET /admin/audit-logs`<br>`GET /admin/audit-logs/:auditLogId` | `frontend/src/app/features/admin/audit-logs/data-access/admin-audit-logs-api.service.ts` |
 
 ## Enforcement

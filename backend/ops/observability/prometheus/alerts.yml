@@ -120,6 +120,34 @@ groups:
         annotations:
           summary: Reader analytics metrics snapshot cannot be refreshed
           runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenMonetizationIntegritySnapshotFailed
+        expr: qlt_monetization_enabled == 1 and qlt_monetization_integrity_snapshot_healthy != 1
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Monetization financial integrity snapshot cannot be refreshed
+          runbook_url: http://localhost:3001/d/qlt-monetization/monetization-safety
+      - alert: QuanLyTruyenMonetizationFinancialMismatch
+        expr: qlt_monetization_enabled == 1 and qlt_monetization_financial_integrity_mismatches > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: Wallet, ledger, purchase, or payment invariants are inconsistent
+          runbook_url: http://localhost:3001/d/qlt-monetization/monetization-safety
+      - alert: QuanLyTruyenPaymentWebhookFailed
+        expr: qlt_monetization_enabled == 1 and qlt_payment_webhook_backlog_events{status="failed"} > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Payment webhook events require operator review
+          runbook_url: http://localhost:3001/d/qlt-monetization/monetization-safety
+      - alert: QuanLyTruyenPaymentWebhookStuck
+        expr: qlt_monetization_enabled == 1 and qlt_payment_webhook_oldest_pending_age_seconds > 300
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: A payment webhook has been pending or failed for over five minutes
+          runbook_url: http://localhost:3001/d/qlt-monetization/monetization-safety
       - alert: QuanLyTruyenBackupStatusMissing
         expr: qlt_recovery_status_file_valid{kind="backup"} != 1
         for: 10m

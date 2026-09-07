@@ -2,7 +2,7 @@
 
 Status: **accepted for implementation**  
 Decision date: **2026-09-07**  
-Implementation state: **Sprint 3 top-up settlement foundation implemented; monetization is not live**
+Implementation state: **Sprint 5 production hardening implemented; monetization is not live**
 
 This directory is the source of truth for the first monetization release. Later
 sprints must not introduce behavior that conflicts with these decisions without a new
@@ -45,6 +45,11 @@ ADR.
 - [SPRINT_3_IMPLEMENTATION.md](./SPRINT_3_IMPLEMENTATION.md) records Credit packages,
   payment orders, verified webhook settlement, reconciliation, and the remaining
   provider-selection gate.
+- [SPRINT_4_IMPLEMENTATION.md](./SPRINT_4_IMPLEMENTATION.md) records admin explorers,
+  compensating chapter refunds, audited wallet adjustments, ledger-backed revenue,
+  and transactional receipts.
+- [SPRINT_5_IMPLEMENTATION.md](./SPRINT_5_IMPLEMENTATION.md) records staged rollout,
+  content-leak/concurrency probes, financial metrics/alerts, and ledger restore gates.
 
 ## Public policy
 

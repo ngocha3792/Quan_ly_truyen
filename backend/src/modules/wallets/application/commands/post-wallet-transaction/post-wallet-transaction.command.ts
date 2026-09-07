@@ -4,7 +4,7 @@ import type {
   WalletSystemAccountName,
   WalletTransactionTypeName,
 } from '../../../domain';
-import type { WalletMetadata } from '../../ports';
+import type { PostWalletTransactionInput, WalletMetadata } from '../../ports';
 
 export class PostWalletTransactionCommand {
   constructor(
@@ -18,5 +18,6 @@ export class PostWalletTransactionCommand {
     public readonly referenceType: string,
     public readonly referenceId: string,
     public readonly metadata?: WalletMetadata,
+    public readonly audit?: PostWalletTransactionInput['audit'],
   ) {}
 }

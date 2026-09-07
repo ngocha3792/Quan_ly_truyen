@@ -34,3 +34,22 @@ export class PaymentProviderFeatureGuard implements CanActivate {
     return true;
   }
 }
+
+@Injectable()
+export class BillingOperationsFeatureGuard implements CanActivate {
+  constructor(
+    @Inject(monetizationConfig.KEY)
+    private readonly monetization: ConfigType<typeof monetizationConfig>,
+  ) {}
+
+  canActivate(_context: ExecutionContext): boolean {
+    void _context;
+    if (!this.monetization.enabled) {
+      throw new ServiceUnavailableException({
+        code: 'MONETIZATION_DISABLED',
+        message: 'Tính năng Credit hiện chưa được bật',
+      });
+    }
+    return true;
+  }
+}

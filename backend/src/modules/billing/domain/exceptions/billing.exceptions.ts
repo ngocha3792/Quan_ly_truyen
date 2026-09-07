@@ -1,4 +1,5 @@
 import {
+  BusinessRuleViolationException,
   InvalidInputException,
   InvalidStateTransitionException,
   ResourceNotFoundException,
@@ -39,6 +40,16 @@ export class PaymentOrderTransitionException extends InvalidStateTransitionExcep
       resource: 'payment_order',
       from,
       to,
+    });
+  }
+}
+
+export class PaymentRolloutRestrictedException extends BusinessRuleViolationException {
+  constructor() {
+    super({
+      code: 'PAYMENT_ROLLOUT_RESTRICTED',
+      message: 'Nạp Credit chưa được mở cho tài khoản này',
+      rule: 'account_must_be_in_payment_rollout',
     });
   }
 }

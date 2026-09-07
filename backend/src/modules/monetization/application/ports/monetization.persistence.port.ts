@@ -40,6 +40,9 @@ export interface ChapterPurchaseRecord {
   readonly walletTransactionId: string;
   readonly entitlementId: string | null;
   readonly createdAt: Date;
+  readonly refundedAt: Date | null;
+  readonly refundReason: string | null;
+  readonly refundWalletTransactionId: string | null;
 }
 
 export interface ChapterPurchasePageRecord {
@@ -54,6 +57,51 @@ export interface UnlockChapterRecord {
   readonly walletBalance: bigint;
   readonly replayed: boolean;
   readonly alreadyOwned: boolean;
+}
+
+export interface AdminChapterPurchaseRecord extends ChapterPurchaseRecord {
+  readonly userId: string;
+  readonly userEmail: string;
+  readonly userDisplayName: string;
+  readonly authorId: string;
+  readonly authorName: string;
+  readonly refundedById: string | null;
+}
+
+export interface AdminChapterPurchasePageRecord {
+  readonly items: readonly AdminChapterPurchaseRecord[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+}
+
+export interface RefundChapterPurchaseRecord {
+  readonly purchase: ChapterPurchaseRecord;
+  readonly walletBalance: bigint;
+  readonly replayed: boolean;
+}
+
+export interface RevenueDimensionRecord {
+  readonly id: string;
+  readonly label: string;
+  readonly secondaryLabel: string | null;
+  readonly purchaseCount: number;
+  readonly refundCount: number;
+  readonly grossCredits: bigint;
+  readonly refundedCredits: bigint;
+  readonly netCredits: bigint;
+}
+
+export interface RevenueAnalyticsRecord {
+  readonly from: Date | null;
+  readonly to: Date | null;
+  readonly totals: Omit<
+    RevenueDimensionRecord,
+    'id' | 'label' | 'secondaryLabel'
+  >;
+  readonly byChapter: readonly RevenueDimensionRecord[];
+  readonly byStory: readonly RevenueDimensionRecord[];
+  readonly byAuthor: readonly RevenueDimensionRecord[];
 }
 
 export interface SetChapterMonetizationInput {
@@ -89,6 +137,28 @@ export interface UnlockChapterInput {
   readonly requestId?: string;
 }
 
+export interface RefundChapterPurchaseInput {
+  readonly actorId: string;
+  readonly purchaseId: string;
+  readonly reason: string;
+  readonly requestHash: string;
+  readonly ipAddress?: string;
+  readonly userAgent?: string;
+  readonly requestId?: string;
+}
+
+export interface AdminPurchaseExplorerInput {
+  readonly page: number;
+  readonly pageSize: number;
+  readonly status?: ChapterPurchaseStatusName;
+  readonly query?: string;
+  readonly userId?: string;
+  readonly storyId?: string;
+  readonly authorId?: string;
+  readonly from?: Date;
+  readonly to?: Date;
+}
+
 export interface MonetizationPersistencePort {
   listPriceBands(
     activeOnly: boolean,
@@ -110,4 +180,15 @@ export interface MonetizationPersistencePort {
     page: number;
     pageSize: number;
   }): Promise<ChapterPurchasePageRecord>;
+  listAdminPurchases(
+    input: AdminPurchaseExplorerInput,
+  ): Promise<AdminChapterPurchasePageRecord>;
+  refundChapterPurchase(
+    input: RefundChapterPurchaseInput,
+  ): Promise<RefundChapterPurchaseRecord>;
+  getRevenueAnalytics(input: {
+    from?: Date;
+    to?: Date;
+    limit: number;
+  }): Promise<RevenueAnalyticsRecord>;
 }

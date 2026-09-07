@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -14,29 +15,40 @@ import { PermissionCode } from '@/common/enums';
 import {
   ListCreditPackagesQuery,
   ListCreditPackagesQueryHandler,
+  ListAdminPaymentOrdersQuery,
+  ListAdminPaymentOrdersQueryHandler,
   ReconcilePaymentsQueryHandler,
   UpdateCreditPackageCommand,
   UpdateCreditPackageCommandHandler,
 } from '../../../application';
-import { PaymentProviderFeatureGuard } from '../guards';
-import { UpdateCreditPackageRequest } from '../requests';
+import {
+  BillingOperationsFeatureGuard,
+  PaymentProviderFeatureGuard,
+} from '../guards';
+import {
+  AdminPaymentOrderExplorerRequest,
+  UpdateCreditPackageRequest,
+} from '../requests';
 
 @Controller('admin/billing')
-@UseGuards(PaymentProviderFeatureGuard)
+@UseGuards(BillingOperationsFeatureGuard)
 export class AdminBillingController {
   constructor(
     private readonly listPackages: ListCreditPackagesQueryHandler,
     private readonly updatePackage: UpdateCreditPackageCommandHandler,
     private readonly reconcilePayments: ReconcilePaymentsQueryHandler,
+    private readonly listPaymentOrders: ListAdminPaymentOrdersQueryHandler,
   ) {}
 
   @Get('credit-packages')
+  @UseGuards(PaymentProviderFeatureGuard)
   @RequirePermissions(PermissionCode.PAYMENT_READ_ADMIN)
   packages() {
     return this.listPackages.execute(new ListCreditPackagesQuery(false));
   }
 
   @Patch('credit-packages/:packageId')
+  @UseGuards(PaymentProviderFeatureGuard)
   @RequirePermissions(PermissionCode.PAYMENT_PACKAGE_MANAGE_ADMIN)
   update(
     @CurrentUserId() actorId: string | undefined,
@@ -58,8 +70,25 @@ export class AdminBillingController {
   }
 
   @Get('reconciliation')
+  @UseGuards(PaymentProviderFeatureGuard)
   @RequirePermissions(PermissionCode.PAYMENT_RECONCILE_ADMIN)
   reconcile() {
     return this.reconcilePayments.execute();
+  }
+
+  @Get('payment-orders')
+  @RequirePermissions(PermissionCode.PAYMENT_READ_ADMIN)
+  orders(@Query() request: AdminPaymentOrderExplorerRequest) {
+    return this.listPaymentOrders.execute(
+      new ListAdminPaymentOrdersQuery(
+        request.page,
+        request.pageSize,
+        request.status,
+        request.provider,
+        request.search,
+        request.from,
+        request.to,
+      ),
+    );
   }
 }

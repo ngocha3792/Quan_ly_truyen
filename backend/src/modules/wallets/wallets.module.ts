@@ -7,19 +7,25 @@ import {
   GetMyWalletQueryHandler,
   ListMyWalletTransactionsQueryHandler,
   PostWalletTransactionCommandHandler,
+  AdminAdjustWalletCommandHandler,
   ReconcileWalletQueryHandler,
   WALLET_PERSISTENCE_PORT,
 } from './application';
 import { PrismaWalletPersistence } from './infrastructure';
-import { MonetizationEnabledGuard, WalletsController } from './presentation';
+import {
+  AdminWalletsController,
+  MonetizationEnabledGuard,
+  WalletsController,
+} from './presentation';
 
 @Module({
   imports: [PrismaModule, AuthAuthorizationModule],
-  controllers: [WalletsController],
+  controllers: [WalletsController, AdminWalletsController],
   providers: [
     GetMyWalletQueryHandler,
     ListMyWalletTransactionsQueryHandler,
     PostWalletTransactionCommandHandler,
+    AdminAdjustWalletCommandHandler,
     ReconcileWalletQueryHandler,
     MonetizationEnabledGuard,
     PrismaWalletPersistence,

@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 
 import {
   AppException,
   IdempotencyConflictException,
 } from '@/common/exceptions';
+import { isChapterInMonetizationRollout, monetizationConfig } from '@/config';
 import {
   AccountStatus,
   ChapterAccessType,
@@ -21,9 +23,16 @@ import {
 } from '@/generated/prisma/client';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { WalletInsufficientFundsException } from '@/modules/wallets';
+import {
+  MAX_WALLET_CREDIT_AMOUNT,
+  WalletBalanceLimitExceededException,
+} from '@/modules/wallets';
+import { TransactionalReceiptService } from '@/modules/notifications';
 
 import type {
   ChapterMonetizationRecord,
+  AdminChapterPurchasePageRecord,
+  AdminPurchaseExplorerInput,
   ChapterPurchasePageRecord,
   ChapterPurchaseRecord,
   MonetizationPersistencePort,
@@ -31,11 +40,16 @@ import type {
   SetChapterMonetizationInput,
   UnlockChapterInput,
   UnlockChapterRecord,
+  RefundChapterPurchaseInput,
+  RefundChapterPurchaseRecord,
+  RevenueAnalyticsRecord,
   UpdatePriceBandInput,
 } from '../../application';
 import {
   buildServerControlledPreview,
   ChapterNotPurchasableException,
+  ChapterPurchaseNotRefundableException,
+  MonetizationRolloutRestrictedException,
   MonetizationResourceNotFoundException,
 } from '../../domain';
 
@@ -57,6 +71,9 @@ const PURCHASE_SELECT = {
   walletTransactionId: true,
   requestHash: true,
   createdAt: true,
+  refundedAt: true,
+  refundReason: true,
+  refundWalletTransactionId: true,
   entitlement: { select: { id: true } },
   chapter: {
     select: {
@@ -74,9 +91,52 @@ type PurchaseRow = Prisma.ChapterPurchaseGetPayload<{
   select: typeof PURCHASE_SELECT;
 }>;
 
+const ADMIN_PURCHASE_SELECT = {
+  ...PURCHASE_SELECT,
+  userId: true,
+  refundedById: true,
+  user: { select: { email: true, displayName: true } },
+  chapter: {
+    select: {
+      number: true,
+      title: true,
+      story: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          authorId: true,
+          author: { select: { penName: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ChapterPurchaseSelect;
+
+type AdminPurchaseRow = Prisma.ChapterPurchaseGetPayload<{
+  select: typeof ADMIN_PURCHASE_SELECT;
+}>;
+
+interface RevenueRow {
+  dimension: 'total' | 'chapter' | 'story' | 'author';
+  id: string | null;
+  label: string | null;
+  secondaryLabel: string | null;
+  purchaseCount: bigint;
+  refundCount: bigint;
+  grossCredits: bigint;
+  refundedCredits: bigint;
+  netCredits: bigint;
+}
+
 @Injectable()
 export class PrismaMonetizationPersistence implements MonetizationPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly receipts: TransactionalReceiptService,
+    @Inject(monetizationConfig.KEY)
+    private readonly monetization: ConfigType<typeof monetizationConfig>,
+  ) {}
 
   async listPriceBands(
     activeOnly: boolean,
@@ -405,6 +465,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             id: true,
             story: {
               select: {
+                id: true,
                 authorId: true,
                 contributors: {
                   where: { userId: input.userId, canEdit: true },
@@ -427,6 +488,15 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             'chương đã xuất bản',
             input.chapterId,
           );
+        }
+        if (
+          !isChapterInMonetizationRollout({
+            config: this.monetization,
+            userId: input.userId,
+            storyId: chapter.story.id,
+          })
+        ) {
+          throw new MonetizationRolloutRestrictedException();
         }
         if (
           chapter.story.authorId === input.userId ||
@@ -498,7 +568,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           where: { id: wallet.id },
           data: { balance: balanceAfter, version: { increment: 1 } },
         });
-        const purchase = await tx.chapterPurchase.create({
+        const createdPurchase = await tx.chapterPurchase.create({
           data: {
             id: purchaseId,
             userId: input.userId,
@@ -509,14 +579,31 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             walletTransactionId: walletTransaction.id,
             idempotencyKey: input.idempotencyKey,
             requestHash: input.requestHash,
-            entitlement: {
-              create: {
-                userId: input.userId,
-                chapterId: input.chapterId,
-                status: ChapterEntitlementStatus.ACTIVE,
-              },
+          },
+          select: { id: true },
+        });
+        await tx.chapterEntitlement.upsert({
+          where: {
+            userId_chapterId: {
+              userId: input.userId,
+              chapterId: input.chapterId,
             },
           },
+          create: {
+            userId: input.userId,
+            chapterId: input.chapterId,
+            purchaseId: createdPurchase.id,
+            status: ChapterEntitlementStatus.ACTIVE,
+          },
+          update: {
+            purchaseId: createdPurchase.id,
+            status: ChapterEntitlementStatus.ACTIVE,
+            grantedAt: new Date(),
+            revokedAt: null,
+          },
+        });
+        const purchase = await tx.chapterPurchase.findUniqueOrThrow({
+          where: { id: createdPurchase.id },
           select: PURCHASE_SELECT,
         });
         await tx.auditLog.create({
@@ -533,6 +620,21 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             ...(input.ipAddress ? { ipAddress: input.ipAddress } : {}),
             ...(input.userAgent ? { userAgent: input.userAgent } : {}),
             ...(input.requestId ? { requestId: input.requestId } : {}),
+          },
+        });
+        await this.receipts.enqueue(tx, {
+          userId: input.userId,
+          dedupeKey: `chapter-purchase:${purchase.id}`,
+          type: 'chapter_purchase',
+          title: 'Mua chương thành công',
+          body: `Bạn đã mở khóa ${purchase.chapter.story.title} — Chương ${purchase.chapter.number.toString()}: ${purchase.chapter.title}.`,
+          tag: 'Mua chương',
+          transactionId: walletTransaction.id,
+          amountCredits: pricing.creditPrice,
+          data: {
+            purchaseId: purchase.id,
+            chapterId: input.chapterId,
+            storyId: purchase.chapter.story.id,
           },
         });
         return {
@@ -583,6 +685,352 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
       });
     }
   }
+
+  async listAdminPurchases(
+    input: AdminPurchaseExplorerInput,
+  ): Promise<AdminChapterPurchasePageRecord> {
+    try {
+      const query = input.query?.trim();
+      const where = {
+        ...(input.status
+          ? { status: ChapterPurchaseStatus[input.status] }
+          : {}),
+        ...(input.userId ? { userId: input.userId } : {}),
+        ...(input.storyId || input.authorId
+          ? {
+              chapter: {
+                ...(input.storyId ? { storyId: input.storyId } : {}),
+                ...(input.authorId
+                  ? { story: { authorId: input.authorId } }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(input.from || input.to
+          ? {
+              createdAt: {
+                ...(input.from ? { gte: input.from } : {}),
+                ...(input.to ? { lte: input.to } : {}),
+              },
+            }
+          : {}),
+        ...(query
+          ? {
+              OR: [
+                ...(isUuid(query) ? [{ id: query }] : []),
+                { user: { email: { contains: query, mode: 'insensitive' } } },
+                {
+                  user: {
+                    displayName: { contains: query, mode: 'insensitive' },
+                  },
+                },
+                {
+                  chapter: {
+                    story: { title: { contains: query, mode: 'insensitive' } },
+                  },
+                },
+                {
+                  chapter: { title: { contains: query, mode: 'insensitive' } },
+                },
+              ],
+            }
+          : {}),
+      } satisfies Prisma.ChapterPurchaseWhereInput;
+      const [rows, total] = await Promise.all([
+        this.prisma.chapterPurchase.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (input.page - 1) * input.pageSize,
+          take: input.pageSize,
+          select: ADMIN_PURCHASE_SELECT,
+        }),
+        this.prisma.chapterPurchase.count({ where }),
+      ]);
+      return {
+        items: rows.map(toAdminPurchaseRecord),
+        page: input.page,
+        pageSize: input.pageSize,
+        total,
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'monetization-list-admin-purchases',
+        resource: 'Purchase explorer',
+      });
+    }
+  }
+
+  async refundChapterPurchase(
+    input: RefundChapterPurchaseInput,
+  ): Promise<RefundChapterPurchaseRecord> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw(Prisma.sql`
+          SELECT pg_advisory_xact_lock(hashtext('chapter-refund:' || ${input.purchaseId}))
+        `);
+        const purchase = await tx.chapterPurchase.findUnique({
+          where: { id: input.purchaseId },
+          select: {
+            ...PURCHASE_SELECT,
+            userId: true,
+            refundWalletTransaction: { select: { requestHash: true } },
+          },
+        });
+        if (!purchase) {
+          throw new MonetizationResourceNotFoundException(
+            'giao dịch mua chương',
+            input.purchaseId,
+          );
+        }
+        if (purchase.status === ChapterPurchaseStatus.REFUNDED) {
+          if (
+            purchase.refundWalletTransaction?.requestHash !== input.requestHash
+          ) {
+            throw new IdempotencyConflictException({
+              key: `chapter-refund:${input.purchaseId}`,
+              existingRequestHash:
+                purchase.refundWalletTransaction?.requestHash ?? 'missing',
+              currentRequestHash: input.requestHash,
+            });
+          }
+          return {
+            purchase: toPurchaseRecord(purchase),
+            walletBalance: await findWalletBalance(tx, purchase.userId),
+            replayed: true,
+          };
+        }
+        if (purchase.status !== ChapterPurchaseStatus.COMPLETED) {
+          throw new ChapterPurchaseNotRefundableException(purchase.status);
+        }
+
+        await lockWallet(tx, purchase.userId);
+        const wallet = await tx.wallet.findUnique({
+          where: {
+            userId_currency: {
+              userId: purchase.userId,
+              currency: WalletCurrency.CREDIT,
+            },
+          },
+          select: { id: true, balance: true },
+        });
+        if (!wallet) {
+          throw new MonetizationResourceNotFoundException(
+            'ví Credit của người mua',
+            purchase.userId,
+          );
+        }
+        const balanceAfter = wallet.balance + purchase.creditPrice;
+        if (balanceAfter > MAX_WALLET_CREDIT_AMOUNT) {
+          throw new WalletBalanceLimitExceededException(
+            MAX_WALLET_CREDIT_AMOUNT,
+          );
+        }
+        const refundTransaction = await tx.walletLedgerTransaction.create({
+          data: {
+            walletId: wallet.id,
+            currency: WalletCurrency.CREDIT,
+            type: WalletTransactionType.REFUND,
+            idempotencyKey: `chapter-refund:${purchase.id}`,
+            requestHash: input.requestHash,
+            referenceType: 'chapter_refund',
+            referenceId: purchase.id,
+            walletAmount: purchase.creditPrice,
+            walletBalanceAfter: balanceAfter,
+            metadata: { purchaseId: purchase.id, reason: input.reason },
+            entries: {
+              create: [
+                {
+                  walletId: wallet.id,
+                  currency: WalletCurrency.CREDIT,
+                  amount: purchase.creditPrice,
+                },
+                {
+                  systemAccount: WalletSystemAccount.PLATFORM_REVENUE,
+                  currency: WalletCurrency.CREDIT,
+                  amount: -purchase.creditPrice,
+                },
+              ],
+            },
+          },
+          select: { id: true },
+        });
+        const refundedAt = new Date();
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: balanceAfter, version: { increment: 1 } },
+        });
+        await tx.chapterEntitlement.updateMany({
+          where: {
+            purchaseId: purchase.id,
+            status: ChapterEntitlementStatus.ACTIVE,
+          },
+          data: {
+            status: ChapterEntitlementStatus.REVOKED,
+            revokedAt: refundedAt,
+          },
+        });
+        const updated = await tx.chapterPurchase.update({
+          where: { id: purchase.id },
+          data: {
+            status: ChapterPurchaseStatus.REFUNDED,
+            refundedAt,
+            refundReason: input.reason,
+            refundedById: input.actorId,
+            refundWalletTransactionId: refundTransaction.id,
+          },
+          select: PURCHASE_SELECT,
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: input.actorId,
+            action: 'chapter.purchase.refunded',
+            entityType: 'chapter_purchase',
+            entityId: purchase.id,
+            oldValues: { status: purchase.status },
+            newValues: {
+              status: ChapterPurchaseStatus.REFUNDED,
+              reason: input.reason,
+              refundWalletTransactionId: refundTransaction.id,
+              entitlementRevoked: true,
+            },
+            ...(input.ipAddress ? { ipAddress: input.ipAddress } : {}),
+            ...(input.userAgent ? { userAgent: input.userAgent } : {}),
+            ...(input.requestId ? { requestId: input.requestId } : {}),
+          },
+        });
+        await this.receipts.enqueue(tx, {
+          userId: purchase.userId,
+          dedupeKey: `chapter-refund:${purchase.id}`,
+          type: 'chapter_refund',
+          title: 'Hoàn Credit mua chương',
+          body: `${purchase.creditPrice.toString()} Credit đã được hoàn cho ${purchase.chapter.story.title} — Chương ${purchase.chapter.number.toString()}.`,
+          tag: 'Hoàn Credit',
+          transactionId: refundTransaction.id,
+          amountCredits: purchase.creditPrice,
+          data: { purchaseId: purchase.id, chapterId: purchase.chapterId },
+        });
+        return {
+          purchase: toPurchaseRecord(updated),
+          walletBalance: balanceAfter,
+          replayed: false,
+        };
+      });
+    } catch (error: unknown) {
+      if (error instanceof AppException) throw error;
+      throw mapPrismaError(error, {
+        operation: 'monetization-refund-chapter-purchase',
+        resource: 'Hoàn giao dịch mua chương',
+      });
+    }
+  }
+
+  async getRevenueAnalytics(input: {
+    from?: Date;
+    to?: Date;
+    limit: number;
+  }): Promise<RevenueAnalyticsRecord> {
+    try {
+      const rows = await this.prisma.$queryRaw<RevenueRow[]>(Prisma.sql`
+        WITH revenue_events AS (
+          SELECT
+            purchase.id AS purchase_id,
+            chapter.id AS chapter_id,
+            chapter.title AS chapter_title,
+            chapter.number::text AS chapter_number,
+            story.id AS story_id,
+            story.title AS story_title,
+            author.user_id AS author_id,
+            author.pen_name AS author_name,
+            ledger_transaction.type,
+            entry.amount
+          FROM wallet_ledger_transactions ledger_transaction
+          INNER JOIN wallet_ledger_entries entry
+            ON entry.transaction_id = ledger_transaction.id
+           AND entry.system_account = 'platform_revenue'
+          INNER JOIN chapter_purchases purchase
+            ON purchase.id::text = ledger_transaction.reference_id
+           AND ledger_transaction.reference_type IN ('chapter_purchase', 'chapter_refund')
+          INNER JOIN chapters chapter ON chapter.id = purchase.chapter_id
+          INNER JOIN stories story ON story.id = chapter.story_id
+          INNER JOIN author_profiles author ON author.user_id = story.author_id
+          WHERE ledger_transaction.type IN ('chapter_purchase', 'refund')
+            ${input.from ? Prisma.sql`AND ledger_transaction.created_at >= ${input.from}` : Prisma.empty}
+            ${input.to ? Prisma.sql`AND ledger_transaction.created_at <= ${input.to}` : Prisma.empty}
+        )
+        SELECT
+          CASE
+            WHEN GROUPING(chapter_id) = 0 THEN 'chapter'
+            WHEN GROUPING(story_id) = 0 THEN 'story'
+            WHEN GROUPING(author_id) = 0 THEN 'author'
+            ELSE 'total'
+          END AS dimension,
+          CASE
+            WHEN GROUPING(chapter_id) = 0 THEN chapter_id::text
+            WHEN GROUPING(story_id) = 0 THEN story_id::text
+            WHEN GROUPING(author_id) = 0 THEN author_id::text
+            ELSE NULL
+          END AS id,
+          CASE
+            WHEN GROUPING(chapter_id) = 0 THEN chapter_title
+            WHEN GROUPING(story_id) = 0 THEN story_title
+            WHEN GROUPING(author_id) = 0 THEN author_name
+            ELSE 'Tổng'
+          END AS label,
+          CASE
+            WHEN GROUPING(chapter_id) = 0 THEN story_title || ' · Chương ' || chapter_number
+            WHEN GROUPING(story_id) = 0 THEN author_name
+            ELSE NULL
+          END AS "secondaryLabel",
+          COUNT(DISTINCT purchase_id) FILTER (WHERE type = 'chapter_purchase')::bigint AS "purchaseCount",
+          COUNT(DISTINCT purchase_id) FILTER (WHERE type = 'refund')::bigint AS "refundCount",
+          COALESCE(SUM(amount) FILTER (WHERE amount > 0), 0)::bigint AS "grossCredits",
+          ABS(COALESCE(SUM(amount) FILTER (WHERE amount < 0), 0))::bigint AS "refundedCredits",
+          COALESCE(SUM(amount), 0)::bigint AS "netCredits"
+        FROM revenue_events
+        GROUP BY GROUPING SETS (
+          (chapter_id, chapter_title, chapter_number, story_title),
+          (story_id, story_title, author_name),
+          (author_id, author_name),
+          ()
+        )
+        ORDER BY "netCredits" DESC
+      `);
+      const total = rows.find((row) => row.dimension === 'total');
+      const mapDimension = (dimension: RevenueRow['dimension']) =>
+        rows
+          .filter((row) => row.dimension === dimension && row.id && row.label)
+          .slice(0, input.limit)
+          .map((row) => ({
+            id: row.id!,
+            label: row.label!,
+            secondaryLabel: row.secondaryLabel,
+            purchaseCount: Number(row.purchaseCount),
+            refundCount: Number(row.refundCount),
+            grossCredits: row.grossCredits,
+            refundedCredits: row.refundedCredits,
+            netCredits: row.netCredits,
+          }));
+      return {
+        from: input.from ?? null,
+        to: input.to ?? null,
+        totals: {
+          purchaseCount: Number(total?.purchaseCount ?? 0n),
+          refundCount: Number(total?.refundCount ?? 0n),
+          grossCredits: total?.grossCredits ?? 0n,
+          refundedCredits: total?.refundedCredits ?? 0n,
+          netCredits: total?.netCredits ?? 0n,
+        },
+        byChapter: mapDimension('chapter'),
+        byStory: mapDimension('story'),
+        byAuthor: mapDimension('author'),
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'monetization-revenue-analytics',
+        resource: 'Báo cáo doanh thu Credit',
+      });
+    }
+  }
 }
 
 function toPriceBandRecord(row: PriceBandRow): MonetizationPriceBandRecord {
@@ -603,7 +1051,28 @@ function toPurchaseRecord(row: PurchaseRow): ChapterPurchaseRecord {
     walletTransactionId: row.walletTransactionId,
     entitlementId: row.entitlement?.id ?? null,
     createdAt: row.createdAt,
+    refundedAt: row.refundedAt,
+    refundReason: row.refundReason,
+    refundWalletTransactionId: row.refundWalletTransactionId,
   };
+}
+
+function toAdminPurchaseRecord(row: AdminPurchaseRow) {
+  return {
+    ...toPurchaseRecord(row),
+    userId: row.userId,
+    userEmail: row.user.email,
+    userDisplayName: row.user.displayName,
+    authorId: row.chapter.story.authorId,
+    authorName: row.chapter.story.author.penName,
+    refundedById: row.refundedById,
+  };
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+    value,
+  );
 }
 
 function toPrismaAccessType(value: 'FREE' | 'PAID'): ChapterAccessType {

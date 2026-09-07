@@ -29,6 +29,11 @@ const authorApplicationGuards = [
 
 const aiSettingsGuards = [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.AI_SETTINGS_MANAGE)];
 
+const monetizationOperationsGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.PAYMENT_READ_ADMIN),
+];
+
 export const ADMIN_ROUTES: Routes = [
   {
     path: 'admin',
@@ -91,6 +96,15 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('../features/admin/tags/pages/list/admin-tags-list-page.component').then(
             (module) => module.AdminTagsListPageComponent,
+          ),
+      },
+      {
+        path: 'monetization',
+        title: appPageTitle('Vận hành Credit'),
+        canActivate: monetizationOperationsGuards,
+        loadComponent: () =>
+          import('../features/admin/monetization/pages/admin-monetization-page.component').then(
+            (module) => module.AdminMonetizationPageComponent,
           ),
       },
       {

@@ -487,6 +487,7 @@ model User {
   chapterTranslationsRequested ChapterTranslation[]
   wallets                      Wallet[]
   chapterPurchases             ChapterPurchase[]
+  chapterPurchasesRefunded     ChapterPurchase[]         @relation("ChapterPurchaseRefundedBy")
   chapterEntitlements          ChapterEntitlement[]
   chapterMonetizationUpdates   ChapterMonetization[]    @relation("ChapterMonetizationUpdatedBy")
   chapterPricingVersions       ChapterPricingVersion[]  @relation("ChapterPricingVersionChangedBy")
@@ -535,7 +536,8 @@ model WalletLedgerTransaction {
 
   wallet          Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
   entries         WalletLedgerEntry[]
-  chapterPurchase ChapterPurchase?
+  chapterPurchase       ChapterPurchase? @relation("ChapterPurchaseDebit")
+  chapterPurchaseRefund ChapterPurchase? @relation("ChapterPurchaseRefund")
   paymentOrder    PaymentOrder?
 
   @@unique([walletId, type, referenceType, referenceId], map: "wallet_ledger_transactions_business_reference_unique")
@@ -630,20 +632,27 @@ model ChapterPurchase {
   priceBandId         String?               @map("price_band_id") @db.Uuid
   creditPrice         BigInt                @map("credit_price")
   status              ChapterPurchaseStatus @default(COMPLETED)
-  walletTransactionId String                @unique @map("wallet_transaction_id") @db.Uuid
+  walletTransactionId String                @unique(map: "chapter_purchases_wallet_transaction_key") @map("wallet_transaction_id") @db.Uuid
+  refundWalletTransactionId String?          @unique(map: "chapter_purchases_refund_wallet_transaction_key") @map("refund_wallet_transaction_id") @db.Uuid
   idempotencyKey      String                @unique @map("idempotency_key") @db.VarChar(200)
   requestHash         String                @map("request_hash") @db.VarChar(64)
   createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   refundedAt          DateTime?             @map("refunded_at") @db.Timestamptz(3)
+  refundReason        String?               @map("refund_reason") @db.VarChar(500)
+  refundedById        String?               @map("refunded_by_id") @db.Uuid
 
   user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   chapter           Chapter                 @relation(fields: [chapterId], references: [id], onDelete: Restrict)
   priceBand         MonetizationPriceBand?  @relation(fields: [priceBandId], references: [id], onDelete: SetNull)
-  walletTransaction WalletLedgerTransaction @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  walletTransaction       WalletLedgerTransaction  @relation("ChapterPurchaseDebit", fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  refundWalletTransaction WalletLedgerTransaction? @relation("ChapterPurchaseRefund", fields: [refundWalletTransactionId], references: [id], onDelete: Restrict)
+  refundedBy              User?                    @relation("ChapterPurchaseRefundedBy", fields: [refundedById], references: [id], onDelete: Restrict)
   entitlement       ChapterEntitlement?
 
   @@index([userId, createdAt, id])
   @@index([chapterId, createdAt])
+  @@index([status, createdAt, id], map: "chapter_purchases_status_created_idx")
+  @@index([refundedById, refundedAt], map: "chapter_purchases_refunder_refunded_idx")
   @@map("chapter_purchases")
 }
 

@@ -1,11 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 
-import { billingConfig } from '@/config';
+import {
+  billingConfig,
+  canCreateTopUpOrder,
+  monetizationConfig,
+} from '@/config';
 
 import {
   assertCreatePaymentOrderInput,
   buildPaymentOrderRequestHash,
+  PaymentRolloutRestrictedException,
   requireBillingUserId,
 } from '../../../domain';
 import type { CreatePaymentOrderResultDto } from '../../dto';
@@ -27,6 +32,8 @@ export class CreatePaymentOrderCommandHandler {
     private readonly provider: PaymentProviderPort,
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
+    @Inject(monetizationConfig.KEY)
+    private readonly monetization: ConfigType<typeof monetizationConfig>,
   ) {}
 
   async execute(
@@ -39,6 +46,9 @@ export class CreatePaymentOrderCommandHandler {
       packageId: command.packageId,
       idempotencyKey,
     });
+    if (!canCreateTopUpOrder(this.monetization, userId)) {
+      throw new PaymentRolloutRestrictedException();
+    }
     const prepared = await this.persistence.prepareOrder({
       userId,
       packageId: command.packageId,

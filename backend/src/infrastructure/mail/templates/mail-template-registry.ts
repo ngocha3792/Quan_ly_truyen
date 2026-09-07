@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type { MailTemplate } from '../contracts';
 import { MailTemplateNotFoundException } from '../exceptions';
 import { changeEmailTemplate } from './change-email.template';
+import { creditActivityTemplate } from './credit-activity.template';
 import { emailVerificationTemplate } from './email-verification.template';
 import { moderationResultTemplate } from './moderation-result.template';
 import { newChapterTemplate } from './new-chapter.template';
@@ -21,6 +22,7 @@ export class MailTemplateRegistry {
       moderationResultTemplate,
       newChapterTemplate,
       weeklyReadingRecapTemplate,
+      creditActivityTemplate,
     ].map((template) => [template.id, template]),
   );
 

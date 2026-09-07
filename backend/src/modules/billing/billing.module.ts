@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
 import { WalletsModule } from '@/modules/wallets';
+import { NotificationsModule } from '@/modules/notifications';
+import { MonetizationSecurityModule } from '@/modules/monetization';
 
 import {
   BILLING_PERSISTENCE_PORT,
@@ -10,6 +12,7 @@ import {
   GetOwnPaymentOrderQueryHandler,
   ListCreditPackagesQueryHandler,
   ListOwnPaymentOrdersQueryHandler,
+  ListAdminPaymentOrdersQueryHandler,
   PAYMENT_PROVIDER_PORT,
   ProcessPaymentWebhookCommandHandler,
   ReconcilePaymentsQueryHandler,
@@ -22,13 +25,20 @@ import {
 } from './infrastructure';
 import {
   AdminBillingController,
+  BillingOperationsFeatureGuard,
   BillingController,
   PaymentProviderFeatureGuard,
   PaymentWebhookController,
 } from './presentation';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule, WalletsModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    WalletsModule,
+    NotificationsModule,
+    MonetizationSecurityModule,
+  ],
   controllers: [
     BillingController,
     AdminBillingController,
@@ -41,7 +51,9 @@ import {
     GetOwnPaymentOrderQueryHandler,
     ListCreditPackagesQueryHandler,
     ListOwnPaymentOrdersQueryHandler,
+    ListAdminPaymentOrdersQueryHandler,
     ReconcilePaymentsQueryHandler,
+    BillingOperationsFeatureGuard,
     PaymentProviderFeatureGuard,
     PrismaBillingPersistence,
     ConfiguredPaymentProviderAdapter,

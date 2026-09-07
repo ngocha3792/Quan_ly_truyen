@@ -114,6 +114,12 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'chapter_purchases_chapter_created_idx',
 
+  'chapter_purchases_refund_wallet_transaction_key',
+
+  'chapter_purchases_status_created_idx',
+
+  'chapter_purchases_refunder_refunded_idx',
+
   'chapter_entitlements_purchase_key',
 
   'chapter_entitlements_user_chapter_key',

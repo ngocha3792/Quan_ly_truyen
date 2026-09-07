@@ -66,3 +66,32 @@ loaded. Full paid content must not cross the API boundary for a locked viewer.
   rebuild the projection from ledger only through an audited runbook.
 - Entitlement cache stale: database remains authoritative and cache is invalidated after
   commit.
+
+## Sprint 5 review outcome
+
+Implemented repository controls:
+
+- Rollout is enforced in backend purchase, top-up and chapter-delivery paths; restricted
+  cohorts default closed and cannot be bypassed by changing frontend state.
+- Money movement and payment status routes have separate Redis buckets for unlock,
+  order creation, polling and webhooks. Protection fails closed while monetization is
+  enabled and Redis is unavailable.
+- Locked chapter serialization is allow-listed and covered by a unique full-content
+  sentinel test. A staging probe repeats the check for anonymous and non-entitled users.
+- Concurrent unlock probing uses distinct idempotency keys and verifies a single
+  purchase, ledger transaction and wallet debit.
+- Financial integrity metrics reconcile double-entry transactions, wallet projections,
+  purchases, refunds, paid orders and payment-webhook backlog.
+- Restore readiness requires the financial tables and a successful full-ledger invariant
+  check before monetization can be treated as recoverable.
+
+Residual risks that require live evidence before widening rollout:
+
+- SSR/Nginx/CDN cache behavior must pass the external content-leak probe with a real paid
+  chapter and non-entitled account.
+- Database locking and latency must pass the concurrent unlock probe under staging load;
+  unit tests do not demonstrate production capacity.
+- Alert routing, backup media and restore timing require an operator drill against the
+  deployed stack.
+- A reviewed production payment-provider adapter is still absent. The `hmac-sandbox`
+  adapter is intentionally rejected in production.

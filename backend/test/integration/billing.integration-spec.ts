@@ -33,6 +33,7 @@ describe('billing top-up integration', () => {
       new PostWalletTransactionCommandHandler(
         moduleRef.get(PrismaWalletPersistence),
       ),
+      { enqueue: jest.fn() } as never,
       {
         providerMode: 'hmac-sandbox',
         checkoutBaseUrl: 'https://payments.example.test/checkout',

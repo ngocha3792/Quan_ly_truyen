@@ -127,4 +127,38 @@ describe('MetricsService', () => {
       'qlt_reader_analytics_metrics_snapshot_healthy{service="test-service"} 0',
     );
   });
+
+  it('publishes rollout and financial integrity gauges', async () => {
+    const service = new MetricsService(config);
+    service.setMonetizationRollout({ enabled: true, stage: 'story_allowlist' });
+    service.setMonetizationFinancialIntegrity({
+      ledger_balance: 0,
+      wallet_balance: 1,
+      chapter_purchase: 0,
+      payment_order: 0,
+    });
+
+    const rendered = await service.render();
+    expect(rendered).toContain(
+      'qlt_monetization_enabled{service="test-service"} 1',
+    );
+    expect(rendered).toContain(
+      'qlt_monetization_rollout_stage{stage="story_allowlist",service="test-service"} 1',
+    );
+    expect(rendered).toContain(
+      'qlt_monetization_financial_integrity_mismatches{check="wallet_balance",service="test-service"} 1',
+    );
+    expect(rendered).toContain(
+      'qlt_monetization_integrity_snapshot_healthy{service="test-service"} 1',
+    );
+    service.setPaymentWebhookBacklog({
+      pending: 2,
+      processing: 1,
+      failed: 3,
+      oldestPendingAgeSeconds: 90,
+    });
+    expect(await service.render()).toContain(
+      'qlt_payment_webhook_backlog_events{status="failed",service="test-service"} 3',
+    );
+  });
 });

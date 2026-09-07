@@ -18,6 +18,9 @@ import {
 import { AppEnvironment } from '@/common/enums';
 import { API_PATHS, APP_NAME, CLOUDINARY_DEFAULTS } from '@/common/constants';
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 function parseBooleanValue(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -608,6 +611,22 @@ export class EnvironmentVariables {
   @IsBoolean()
   PAYWALL_ENFORCEMENT_ENABLED = false;
 
+  @IsIn(['sandbox', 'internal', 'story_allowlist', 'general'])
+  MONETIZATION_ROLLOUT_STAGE:
+    'sandbox' | 'internal' | 'story_allowlist' | 'general' = 'sandbox';
+
+  @IsString()
+  MONETIZATION_INTERNAL_USER_IDS = '';
+
+  @IsString()
+  MONETIZATION_STORY_ALLOWLIST_IDS = '';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 60_000))
+  @IsInt()
+  @Min(10_000)
+  @Max(900_000)
+  MONETIZATION_INTEGRITY_METRICS_INTERVAL_MS = 60_000;
+
   @IsEnum(['disabled', 'hmac-sandbox'])
   PAYMENT_PROVIDER_MODE: 'disabled' | 'hmac-sandbox' = 'disabled';
 
@@ -1017,6 +1036,45 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   ) {
     throw new Error(
       'MONETIZATION_ENABLED must be true before enabling author pricing, a payment provider, or paywall enforcement',
+    );
+  }
+
+  const internalUserIds = parseCsv(config.MONETIZATION_INTERNAL_USER_IDS);
+  const rolloutStoryIds = parseCsv(config.MONETIZATION_STORY_ALLOWLIST_IDS);
+  for (const value of [...internalUserIds, ...rolloutStoryIds]) {
+    if (!UUID_PATTERN.test(value)) {
+      throw new Error(
+        'Monetization rollout allowlists must contain comma-separated UUIDs',
+      );
+    }
+  }
+  if (
+    config.MONETIZATION_ENABLED &&
+    (config.PAYWALL_ENFORCEMENT_ENABLED || config.PAYMENT_PROVIDER_ENABLED) &&
+    ['sandbox', 'internal'].includes(config.MONETIZATION_ROLLOUT_STAGE) &&
+    internalUserIds.length === 0
+  ) {
+    throw new Error(
+      'Sandbox/internal monetization rollout requires MONETIZATION_INTERNAL_USER_IDS',
+    );
+  }
+  if (
+    config.MONETIZATION_ENABLED &&
+    (config.PAYWALL_ENFORCEMENT_ENABLED || config.PAYMENT_PROVIDER_ENABLED) &&
+    config.MONETIZATION_ROLLOUT_STAGE === 'story_allowlist' &&
+    rolloutStoryIds.length === 0
+  ) {
+    throw new Error(
+      'Story allowlist monetization rollout requires MONETIZATION_STORY_ALLOWLIST_IDS',
+    );
+  }
+  if (
+    config.NODE_ENV === AppEnvironment.PRODUCTION &&
+    config.MONETIZATION_ENABLED &&
+    config.MONETIZATION_ROLLOUT_STAGE === 'sandbox'
+  ) {
+    throw new Error(
+      'Sandbox monetization rollout is forbidden in production; use staging',
     );
   }
 

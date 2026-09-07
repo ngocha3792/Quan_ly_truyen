@@ -57,6 +57,7 @@ export class PostWalletTransactionCommandHandler {
       referenceType,
       referenceId,
       ...(command.metadata ? { metadata: command.metadata } : {}),
+      ...(command.audit ? { audit: command.audit } : {}),
     });
 
     return toWalletMutationResult(result);

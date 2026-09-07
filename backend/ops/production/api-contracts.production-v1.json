@@ -1134,6 +1134,89 @@
       ]
     },
     {
+      "id": "admin-monetization",
+      "title": "Admin payment, purchase and revenue operations",
+      "frontendRoute": "/admin/monetization",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": ["path: 'admin'", "path: 'monetization'"]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/billing/payment-orders",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-billing.controller.ts",
+            "tokens": ["@Controller('admin/billing')", "@Get('payment-orders')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts",
+              "tokens": ["/admin/billing/payment-orders"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/admin/monetization/purchases",
+          "backend": {
+            "file": "backend/src/modules/monetization/presentation/http/controllers/admin-monetization-operations.controller.ts",
+            "tokens": ["@Controller('admin/monetization')", "@Get('purchases')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts",
+              "tokens": ["/admin/monetization/purchases"]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/monetization/purchases/:purchaseId/refund",
+          "backend": {
+            "file": "backend/src/modules/monetization/presentation/http/controllers/admin-monetization-operations.controller.ts",
+            "tokens": ["@Post('purchases/:purchaseId/refund')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts",
+              "tokens": ["/refund`"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/admin/monetization/revenue",
+          "backend": {
+            "file": "backend/src/modules/monetization/presentation/http/controllers/admin-monetization-operations.controller.ts",
+            "tokens": ["@Get('revenue')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts",
+              "tokens": ["/admin/monetization/revenue"]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/wallets/:userId/adjustments",
+          "backend": {
+            "file": "backend/src/modules/wallets/presentation/http/controllers/admin-wallets.controller.ts",
+            "tokens": ["@Controller('admin/wallets')", "@Post(':userId/adjustments')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/monetization/admin-monetization-api.service.ts",
+              "tokens": ["/adjustments`"]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "admin-audit",
       "title": "Admin audit logs",
       "frontendRoute": "/admin/audit-logs + /admin/audit-logs/:id",
