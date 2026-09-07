@@ -37,6 +37,7 @@ type MailTemplate =
   | 'change-email.v1'
   | 'moderation-result.v1'
   | 'new-chapter.v1'
+  | 'weekly-reading-recap.v1'
   | 'unknown';
 type CloudinaryEventType =
   | 'upload'
@@ -635,6 +636,7 @@ function normalizeMailTemplate(template: string): MailTemplate {
     'change-email.v1',
     'moderation-result.v1',
     'new-chapter.v1',
+    'weekly-reading-recap.v1',
   ];
   return allowed.includes(template as MailTemplate)
     ? (template as MailTemplate)

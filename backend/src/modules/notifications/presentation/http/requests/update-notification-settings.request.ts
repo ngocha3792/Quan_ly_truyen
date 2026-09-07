@@ -16,4 +16,12 @@ export class UpdateNotificationSettingsRequest {
   @IsOptional()
   @IsBoolean()
   readonly promotions?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  readonly weeklyRecapInApp?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  readonly weeklyRecapEmail?: boolean;
 }

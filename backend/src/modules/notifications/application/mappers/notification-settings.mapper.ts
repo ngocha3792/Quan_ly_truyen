@@ -17,6 +17,8 @@ export class NotificationSettingsMapper {
         typeof preferences['promotionsEnabled'] === 'boolean'
           ? preferences['promotionsEnabled']
           : true,
+      weeklyRecapInApp: preferences['weeklyRecapInApp'] === true,
+      weeklyRecapEmail: preferences['weeklyRecapEmail'] === true,
     };
   }
 

@@ -112,6 +112,8 @@ export class NotificationsController {
         request.comments,
         request.system,
         request.promotions,
+        request.weeklyRecapInApp,
+        request.weeklyRecapEmail,
       ),
     );
   }

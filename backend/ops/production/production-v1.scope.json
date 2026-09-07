@@ -68,7 +68,7 @@
       "readiness": "ready",
       "productionExposure": "enabled",
       "owner": "backend/notifications + frontend/account",
-      "notes": "Notification flows include deduplicated new-chapter fanout for author and story followers."
+      "notes": "Notification flows include deduplicated new-chapter fanout and explicit per-channel opt-in weekly reading recaps. Recap email uses the encrypted outbox and recorded ReadingSession totals only."
     },
     {
       "id": "author-application",

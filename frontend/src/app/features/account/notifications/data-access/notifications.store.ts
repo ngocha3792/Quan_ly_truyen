@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
 import {
+  DEFAULT_NOTIFICATION_SETTINGS,
   NotificationCategory,
   NotificationSettingKey,
   NotificationSettings,
@@ -32,12 +33,7 @@ export class NotificationsStore {
   readonly page = signal(1);
   readonly pageSize = 8;
 
-  readonly settings = signal<NotificationSettings>({
-    newChapters: true,
-    comments: true,
-    system: true,
-    promotions: true,
-  });
+  readonly settings = signal<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
 
   readonly filteredNotifications = computed(() => {
     const view = this.viewState();

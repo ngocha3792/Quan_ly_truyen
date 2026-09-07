@@ -59,6 +59,36 @@ describe('NotificationsHttpRepository', () => {
 
     await resultPromise;
   });
+
+  it('persists weekly recap opt-ins through notification settings', async () => {
+    const resultPromise = firstValueFrom(
+      repository.updateSettings({
+        weeklyRecapInApp: true,
+        weeklyRecapEmail: true,
+      }),
+    );
+    const request = http.expectOne('/api/v1/notifications/settings');
+
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({
+      weeklyRecapInApp: true,
+      weeklyRecapEmail: true,
+    });
+    request.flush(
+      successEnvelope({
+        ...notificationView().settings,
+        weeklyRecapInApp: true,
+        weeklyRecapEmail: true,
+      }),
+    );
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({
+        weeklyRecapInApp: true,
+        weeklyRecapEmail: true,
+      }),
+    );
+  });
 });
 
 function successEnvelope<T>(data: T) {
@@ -84,6 +114,8 @@ function notificationView(): NotificationsView {
       comments: true,
       system: true,
       promotions: true,
+      weeklyRecapInApp: false,
+      weeklyRecapEmail: false,
     },
     recentActivities: [],
   };

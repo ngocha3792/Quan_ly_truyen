@@ -110,41 +110,74 @@ export class PrismaNotificationPersistence implements NotificationPersistencePor
   async upsertPreference(
     input: UpsertPreferenceInput,
   ): Promise<NotificationPreferenceRecord> {
-    const { userId, newChapters, comments, system, promotions } = input;
+    const {
+      userId,
+      newChapters,
+      comments,
+      system,
+      promotions,
+      weeklyRecapInApp,
+      weeklyRecapEmail,
+    } = input;
 
-    const existing = await this.prisma.notificationPreference.findUnique({
-      where: { userId },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`
+        SELECT pg_advisory_xact_lock(
+          hashtext(${`weekly-reading-recap-preference:${userId}`})
+        )
+      `);
 
-    const existingPreferences = this.toInputJsonObject(existing?.preferences);
+      const existing = await tx.notificationPreference.findUnique({
+        where: { userId },
+      });
+      const existingPreferences = this.toInputJsonObject(existing?.preferences);
+      const nextPreferences: Record<string, Prisma.InputJsonValue> = {
+        ...existingPreferences,
+        promotionsEnabled:
+          promotions ?? existingPreferences['promotionsEnabled'] ?? true,
+        weeklyRecapInApp:
+          weeklyRecapInApp ?? existingPreferences['weeklyRecapInApp'] === true,
+        weeklyRecapEmail:
+          weeklyRecapEmail ?? existingPreferences['weeklyRecapEmail'] === true,
+      };
+      const enabledAt = new Date().toISOString();
 
-    return this.prisma.notificationPreference.upsert({
-      where: { userId },
-      create: {
-        userId,
-        newChapterEnabled: newChapters ?? true,
-        commentReplyEnabled: comments ?? true,
-        moderationEnabled: system ?? true,
-        preferences: {
-          ...existingPreferences,
-          promotionsEnabled: promotions ?? true,
+      if (
+        weeklyRecapInApp === true &&
+        existingPreferences['weeklyRecapInApp'] !== true
+      ) {
+        nextPreferences['weeklyRecapInAppEnabledAt'] = enabledAt;
+      }
+      if (
+        weeklyRecapEmail === true &&
+        existingPreferences['weeklyRecapEmail'] !== true
+      ) {
+        nextPreferences['weeklyRecapEmailEnabledAt'] = enabledAt;
+      }
+
+      const updatesJsonPreference =
+        promotions !== undefined ||
+        weeklyRecapInApp !== undefined ||
+        weeklyRecapEmail !== undefined;
+
+      return tx.notificationPreference.upsert({
+        where: { userId },
+        create: {
+          userId,
+          newChapterEnabled: newChapters ?? true,
+          commentReplyEnabled: comments ?? true,
+          moderationEnabled: system ?? true,
+          preferences: nextPreferences,
         },
-      },
-      update: {
-        ...(newChapters === undefined
-          ? {}
-          : { newChapterEnabled: newChapters }),
-        ...(comments === undefined ? {} : { commentReplyEnabled: comments }),
-        ...(system === undefined ? {} : { moderationEnabled: system }),
-        ...(promotions === undefined
-          ? {}
-          : {
-              preferences: {
-                ...existingPreferences,
-                promotionsEnabled: promotions,
-              },
-            }),
-      },
+        update: {
+          ...(newChapters === undefined
+            ? {}
+            : { newChapterEnabled: newChapters }),
+          ...(comments === undefined ? {} : { commentReplyEnabled: comments }),
+          ...(system === undefined ? {} : { moderationEnabled: system }),
+          ...(updatesJsonPreference ? { preferences: nextPreferences } : {}),
+        },
+      });
     });
   }
 

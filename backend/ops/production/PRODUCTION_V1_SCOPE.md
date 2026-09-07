@@ -33,7 +33,7 @@ The second command additionally enforces the release gate: it fails whenever any
 - Comments, reactions, ratings and reporting.
 - Author follow and story follow.
 - Story contributor workflow: story owners can add, update and remove contributors by account email, role and edit permission.
-- Existing notification flows, including deduplicated new-chapter fanout for author and story followers.
+- Notification flows, including deduplicated new-chapter fanout and opt-in weekly reading recaps through in-app notification or encrypted email outbox delivery.
 - Author application plus admin approval/rejection.
 - Author story management, immediate/scheduled chapter publishing and chapter version restore.
 - Explainable story recommendations based on category, follow and rating signals without behavioral-ML claims.

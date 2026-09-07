@@ -25,6 +25,8 @@ export class UpdateNotificationSettingsCommandHandler {
       comments: command.comments,
       system: command.system,
       promotions: command.promotions,
+      weeklyRecapInApp: command.weeklyRecapInApp,
+      weeklyRecapEmail: command.weeklyRecapEmail,
     });
 
     return NotificationSettingsMapper.toDto(preference);

@@ -41,6 +41,14 @@ Time series use `recorded_days_only`. Dates without an aggregate row are reporte
 
 The API metrics registry exposes analytics enablement, unprocessed-event backlog, oldest unprocessed age, and reconciliation heartbeat health. The queue worker writes the reconciliation heartbeat to Redis only after a complete maintenance cycle succeeds; the API metrics observer reads it so Prometheus does not depend on an unreachable worker-local registry.
 
+## Weekly reading recap
+
+Weekly recap delivery is explicit opt-in per channel. `weeklyRecapInApp` and `weeklyRecapEmail` default to `false` in the notification settings contract, and the first opt-in timestamp is retained in the extensible notification preference JSON. A user never receives a recap for a week that ended before that channel was enabled.
+
+The queue worker reviews the last closed Monday-Sunday week in `ANALYTICS_TIME_ZONE`. It derives reading minutes, distinct completed chapters, and active days only from persisted `ReadingSession` rows. Zero activity is reported as zero; no activity or trend is synthesized.
+
+In-app delivery uses a unique notification dedupe key. Email delivery uses the encrypted mail outbox with an idempotency key scoped to `user + week + channel`. PostgreSQL advisory locks serialize preference updates and delivery checks so an unsubscribe completed before a worker check is respected. Email additionally requires the global email preference, a verified email address, and `MAIL_ENABLED=true`.
+
 ## Reconciliation and backfill
 
 `npm run maintenance:reader-analytics` is dry-run by default. `--apply` sets canonical event-derived daily metrics; it does not blindly increment them.

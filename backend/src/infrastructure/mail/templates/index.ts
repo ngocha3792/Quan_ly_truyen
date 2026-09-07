@@ -6,5 +6,6 @@ export * from './moderation-result.template';
 export * from './new-chapter.template';
 export * from './password-reset.template';
 export * from './template-renderer.service';
+export * from './weekly-reading-recap.template';
 export * from './recovery-email-code.template';
 export * from './template-renderer.service';

@@ -8,6 +8,7 @@ import { moderationResultTemplate } from './moderation-result.template';
 import { newChapterTemplate } from './new-chapter.template';
 import { passwordResetTemplate } from './password-reset.template';
 import { recoveryEmailCodeTemplate } from './recovery-email-code.template';
+import { weeklyReadingRecapTemplate } from './weekly-reading-recap.template';
 
 @Injectable()
 export class MailTemplateRegistry {
@@ -19,6 +20,7 @@ export class MailTemplateRegistry {
       recoveryEmailCodeTemplate,
       moderationResultTemplate,
       newChapterTemplate,
+      weeklyReadingRecapTemplate,
     ].map((template) => [template.id, template]),
   );
 

@@ -25,6 +25,8 @@ export interface UpsertPreferenceInput {
   readonly comments?: boolean;
   readonly system?: boolean;
   readonly promotions?: boolean;
+  readonly weeklyRecapInApp?: boolean;
+  readonly weeklyRecapEmail?: boolean;
 }
 
 export interface NotificationPersistencePort {

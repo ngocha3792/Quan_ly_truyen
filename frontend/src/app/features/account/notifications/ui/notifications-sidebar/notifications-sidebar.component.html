@@ -113,6 +113,36 @@
 
         <span class="toggle"></span>
       </label>
+
+      <label>
+        <span>
+          <strong>Tổng kết đọc tuần trong ứng dụng</strong>
+          <small>Tự nguyện nhận số liệu đọc thật vào mỗi tuần</small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.weeklyRecapInApp"
+          (change)="settingToggle.emit('weeklyRecapInApp')"
+        />
+
+        <span class="toggle"></span>
+      </label>
+
+      <label>
+        <span>
+          <strong>Tổng kết đọc tuần qua email</strong>
+          <small>Mặc định tắt; chỉ gửi khi bạn chủ động bật</small>
+        </span>
+
+        <input
+          type="checkbox"
+          [checked]="settings.weeklyRecapEmail"
+          (change)="settingToggle.emit('weeklyRecapEmail')"
+        />
+
+        <span class="toggle"></span>
+      </label>
     </div>
   </section>
 

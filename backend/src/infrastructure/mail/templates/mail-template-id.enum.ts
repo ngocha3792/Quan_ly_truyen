@@ -5,4 +5,5 @@ export enum MailTemplateId {
   RECOVERY_EMAIL_CODE = 'recovery-email-code.v1',
   MODERATION_RESULT = 'moderation-result.v1',
   NEW_CHAPTER = 'new-chapter.v1',
+  WEEKLY_READING_RECAP = 'weekly-reading-recap.v1',
 }

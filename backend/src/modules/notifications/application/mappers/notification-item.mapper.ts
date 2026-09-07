@@ -51,7 +51,11 @@ export class NotificationItemMapper {
       return 'security';
     }
     if (normalized.includes('follow')) return 'following';
-    if (normalized.includes('achievement')) return 'achievement';
+    if (
+      normalized.includes('achievement') ||
+      normalized.includes('reading_recap')
+    )
+      return 'achievement';
 
     return 'community';
   }

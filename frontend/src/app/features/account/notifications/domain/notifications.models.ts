@@ -10,7 +10,8 @@ export type NotificationType =
   | 'community'
   | 'achievement';
 
-export type NotificationSettingKey = 'newChapters' | 'comments' | 'system' | 'promotions';
+export type NotificationSettingKey =
+  'newChapters' | 'comments' | 'system' | 'promotions' | 'weeklyRecapInApp' | 'weeklyRecapEmail';
 
 export interface UserNotification {
   readonly id: string;
@@ -41,7 +42,18 @@ export interface NotificationSettings {
   readonly comments: boolean;
   readonly system: boolean;
   readonly promotions: boolean;
+  readonly weeklyRecapInApp: boolean;
+  readonly weeklyRecapEmail: boolean;
 }
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  newChapters: true,
+  comments: true,
+  system: true,
+  promotions: true,
+  weeklyRecapInApp: false,
+  weeklyRecapEmail: false,
+};
 
 export interface NotificationActivity {
   readonly id: string;

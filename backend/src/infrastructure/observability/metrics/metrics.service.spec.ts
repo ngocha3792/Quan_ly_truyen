@@ -42,6 +42,15 @@ describe('MetricsService', () => {
     expect(rendered).toContain('template="unknown"');
   });
 
+  it('keeps weekly recap mail as a bounded observable template', async () => {
+    const service = new MetricsService(config);
+    service.recordMail('weekly-reading-recap.v1', 'success', 0.2);
+
+    const rendered = await service.render();
+
+    expect(rendered).toContain('template="weekly-reading-recap.v1"');
+  });
+
   it('records audit reads with bounded operation/result labels only', async () => {
     const service = new MetricsService(config);
     service.recordAuditLogRead('list', 'success');
