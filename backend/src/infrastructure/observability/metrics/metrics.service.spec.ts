@@ -81,4 +81,41 @@ describe('MetricsService', () => {
       'qlt_auth_access_session_db_lookup_duration_seconds_count',
     );
   });
+
+  it('publishes bounded reader analytics health gauges', async () => {
+    const service = new MetricsService(config);
+
+    service.setReaderAnalyticsHealth({
+      enabled: true,
+      backlogEvents: 4,
+      oldestUnprocessedAgeSeconds: 125,
+      reconciliationHealthy: false,
+      reconciliationAgeSeconds: 901,
+    });
+
+    const rendered = await service.render();
+    expect(rendered).toContain(
+      'qlt_reader_analytics_enabled{service="test-service"} 1',
+    );
+    expect(rendered).toContain(
+      'qlt_reader_analytics_backlog_events{service="test-service"} 4',
+    );
+    expect(rendered).toContain(
+      'qlt_reader_analytics_oldest_unprocessed_age_seconds{service="test-service"} 125',
+    );
+    expect(rendered).toContain(
+      'qlt_reader_analytics_reconciliation_healthy{service="test-service"} 0',
+    );
+    expect(rendered).toContain(
+      'qlt_reader_analytics_reconciliation_age_seconds{service="test-service"} 901',
+    );
+    expect(rendered).toContain(
+      'qlt_reader_analytics_metrics_snapshot_healthy{service="test-service"} 1',
+    );
+
+    service.setReaderAnalyticsSnapshotHealthy(false);
+    expect(await service.render()).toContain(
+      'qlt_reader_analytics_metrics_snapshot_healthy{service="test-service"} 0',
+    );
+  });
 });

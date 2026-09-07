@@ -28,6 +28,19 @@ The daily analytics timezone is `ANALYTICS_TIME_ZONE` (default `Asia/Ho_Chi_Minh
 
 `completionRate = completions / readingStarts`. If `readingStarts = 0`, the API returns `null`, not a fake zero percent. Reading seconds are the sum of bounded active-heartbeat seconds.
 
+The advanced author dashboard also derives:
+
+- `readingStartRate = readingStarts / views`
+- `averageReadingSecondsPerReaderDay = readingSeconds / sum(daily unique readers)`
+
+Each denominator is explicit and returns `null` when unavailable. Ratios are not clamped to manufacture a cleaner funnel. Portfolio audience totals are labelled as story-reader-days because a reader can be counted once per story per day; they are not presented as distinct readers for the whole period.
+
+Time series use `recorded_days_only`. Dates without an aggregate row are reported through `dataAvailability` and are not synthesized as zero-value points. The UI also renders a real zero with zero bar height.
+
+## Operational trust signals
+
+The API metrics registry exposes analytics enablement, unprocessed-event backlog, oldest unprocessed age, and reconciliation heartbeat health. The queue worker writes the reconciliation heartbeat to Redis only after a complete maintenance cycle succeeds; the API metrics observer reads it so Prometheus does not depend on an unreachable worker-local registry.
+
 ## Reconciliation and backfill
 
 `npm run maintenance:reader-analytics` is dry-run by default. `--apply` sets canonical event-derived daily metrics; it does not blindly increment them.

@@ -99,12 +99,26 @@ groups:
         annotations:
           summary: Reader analytics processing lag has exceeded ten minutes
           runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
-      - alert: QuanLyTruyenAnalyticsProcessingFailures
-        expr: sum(rate(qlt_reader_analytics_events_processed_total{result="failed"}[10m])) > 0
-        for: 10m
+      - alert: QuanLyTruyenAnalyticsBacklogStuck
+        expr: qlt_reader_analytics_oldest_unprocessed_age_seconds > 600
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Reader analytics events have remained unprocessed for over ten minutes
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenAnalyticsReconciliationUnhealthy
+        expr: qlt_reader_analytics_enabled == 1 and qlt_reader_analytics_reconciliation_healthy == 0
+        for: 15m
         labels: { severity: warning }
         annotations:
-          summary: Reader analytics processing is failing persistently
+          summary: Reader analytics reconciliation heartbeat is missing or stale
+          runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
+      - alert: QuanLyTruyenAnalyticsMetricsSnapshotUnhealthy
+        expr: qlt_reader_analytics_enabled == 1 and qlt_reader_analytics_metrics_snapshot_healthy == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Reader analytics metrics snapshot cannot be refreshed
           runbook_url: http://localhost:3001/d/qlt-queue/queue-outbox
       - alert: QuanLyTruyenBackupStatusMissing
         expr: qlt_recovery_status_file_valid{kind="backup"} != 1

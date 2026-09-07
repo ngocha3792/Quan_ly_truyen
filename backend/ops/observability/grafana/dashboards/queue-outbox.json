@@ -37,6 +37,28 @@
       "targets": [
         { "expr": "sum by (result) (rate(qlt_mail_deliveries_total[5m]))" }
       ]
+    },
+    {
+      "type": "stat",
+      "title": "Analytics unprocessed backlog",
+      "targets": [{ "expr": "qlt_reader_analytics_backlog_events" }]
+    },
+    {
+      "type": "stat",
+      "title": "Oldest unprocessed analytics event",
+      "targets": [
+        { "expr": "qlt_reader_analytics_oldest_unprocessed_age_seconds" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Analytics reconciliation health",
+      "targets": [{ "expr": "qlt_reader_analytics_reconciliation_healthy" }]
+    },
+    {
+      "type": "stat",
+      "title": "Analytics metrics snapshot health",
+      "targets": [{ "expr": "qlt_reader_analytics_metrics_snapshot_healthy" }]
     }
   ]
 }

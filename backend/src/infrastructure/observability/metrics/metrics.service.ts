@@ -264,6 +264,36 @@ export class MetricsService implements OnModuleDestroy {
     labelNames: ['scope'] as const,
     registers: [this.registry],
   });
+  private readonly readerAnalyticsEnabled = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_ENABLED,
+    help: 'Reader analytics runtime enablement (1 enabled, 0 disabled)',
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsBacklog = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_BACKLOG,
+    help: 'Unprocessed reader analytics events in PostgreSQL',
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsOldestUnprocessed = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_OLDEST_UNPROCESSED,
+    help: 'Age of the oldest unprocessed reader analytics event in seconds',
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsReconciliationHealth = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_RECONCILIATION_HEALTH,
+    help: 'Reader analytics reconciliation heartbeat health (1 healthy, 0 unhealthy)',
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsReconciliationAge = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_RECONCILIATION_AGE,
+    help: 'Age of the latest successful reader analytics reconciliation heartbeat in seconds',
+    registers: [this.registry],
+  });
+  private readonly readerAnalyticsSnapshotHealth = new Gauge({
+    name: METRIC_NAMES.READER_ANALYTICS_SNAPSHOT_HEALTH,
+    help: 'Reader analytics metrics snapshot health (1 healthy, 0 failed)',
+    registers: [this.registry],
+  });
   private readonly dependencyHealth = new Gauge({
     name: METRIC_NAMES.DEPENDENCY_HEALTH,
     help: 'Dependency health (1 up/configured, 0 down, -1 disabled)',
@@ -525,6 +555,36 @@ export class MetricsService implements OnModuleDestroy {
   ): void {
     if (this.enabled)
       this.readerAnalyticsReconciliationMismatches.inc({ scope });
+  }
+
+  setReaderAnalyticsHealth(input: {
+    enabled: boolean;
+    backlogEvents: number;
+    oldestUnprocessedAgeSeconds: number;
+    reconciliationHealthy: boolean;
+    reconciliationAgeSeconds: number;
+  }): void {
+    if (!this.enabled) return;
+    this.readerAnalyticsEnabled.set(input.enabled ? 1 : 0);
+    this.readerAnalyticsBacklog.set(Math.max(0, input.backlogEvents));
+    this.readerAnalyticsOldestUnprocessed.set(
+      Math.max(0, input.oldestUnprocessedAgeSeconds),
+    );
+    this.readerAnalyticsReconciliationHealth.set(
+      input.reconciliationHealthy ? 1 : 0,
+    );
+    this.readerAnalyticsReconciliationAge.set(
+      Math.max(0, input.reconciliationAgeSeconds),
+    );
+    this.readerAnalyticsSnapshotHealth.set(1);
+  }
+
+  setReaderAnalyticsEnabled(enabled: boolean): void {
+    if (this.enabled) this.readerAnalyticsEnabled.set(enabled ? 1 : 0);
+  }
+
+  setReaderAnalyticsSnapshotHealthy(healthy: boolean): void {
+    if (this.enabled) this.readerAnalyticsSnapshotHealth.set(healthy ? 1 : 0);
   }
 
   setDependencyHealth(

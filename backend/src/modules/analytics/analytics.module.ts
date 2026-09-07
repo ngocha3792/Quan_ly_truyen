@@ -12,6 +12,7 @@ import {
 } from './application';
 import {
   HmacAnalyticsIdentityAdapter,
+  AnalyticsMetricsObserver,
   PrismaAuthorAnalyticsReader,
   PrismaReaderAnalyticsIngestionAdapter,
   RedisAnalyticsRateLimitAdapter,
@@ -29,6 +30,7 @@ import {
     RedisAnalyticsRateLimitAdapter,
     PrismaReaderAnalyticsIngestionAdapter,
     PrismaAuthorAnalyticsReader,
+    AnalyticsMetricsObserver,
     IngestReaderAnalyticsCommandHandler,
     GetAuthorAnalyticsOverviewQueryHandler,
     ListAuthorStoryAnalyticsQueryHandler,

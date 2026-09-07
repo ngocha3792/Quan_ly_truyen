@@ -27,6 +27,7 @@ The second command additionally enforces the release gate: it fails whenever any
 - Account authentication/security and account recovery flows.
 - Public catalog, story details and chapter reading.
 - Reading history and reading progress persistence.
+- Weekly active-reading statistics and reading streaks derived from persisted sessions.
 - Persisted chapter bookmarks with cross-session/device hydration.
 - Reader library.
 - Comments, reactions, ratings and reporting.
@@ -34,7 +35,9 @@ The second command additionally enforces the release gate: it fails whenever any
 - Story contributor workflow: story owners can add, update and remove contributors by account email, role and edit permission.
 - Existing notification flows, including deduplicated new-chapter fanout for author and story followers.
 - Author application plus admin approval/rejection.
-- Author story management, immediate chapter publishing and scheduled publishing.
+- Author story management, immediate/scheduled chapter publishing and chapter version restore.
+- Explainable story recommendations based on category, follow and rating signals without behavioral-ML claims.
+- Author analytics from recorded aggregates, including coverage/freshness metadata and observed-day-only series.
 - Production media: Cloudinary upload, confirmation, webhook and cleanup flows, running against verified production configuration (`CLOUDINARY_ENABLED=true` with valid credentials).
 - Admin user/story/report/moderation/taxonomy/audit operations.
 - Public content review: current public static content (terms/privacy/about and marketing/history claims) is accepted for the automated production release baseline.
@@ -49,9 +52,7 @@ If a capability regresses (e.g. Cloudinary credentials are pulled, or new public
 
 The following schema or UI concepts may remain in the repository for future work, but they are not Production V1 promises:
 
-- Weekly reading-time statistics (`ReadingSession`).
-- Chapter version-history workflow (`ChapterVersion`).
-- Personalized recommendation claims.
+- Behavioral-ML personalized recommendation claims.
 - Heuristic author monthly goals and chapter scheduling trends. Synthetic trends, gamified level/XP and fake comment unread state are not exposed in V1.
 
 Deferred items are protected by source guards where a misleading user-facing exposure previously existed. Persistence fields may remain when removing them would create unnecessary migration churn.
@@ -73,4 +74,4 @@ To close a required blocker, update only the `readiness`, `productionExposure`, 
 
 ## V1 non-goals
 
-Production V1 is not blocked on recommendation ML, collaborative authoring, chapter revision history or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.
+Production V1 is not blocked on recommendation ML, collaborative authoring or gamified author goals. Those capabilities can be delivered after the first stable production release without changing the core architecture.

@@ -41,4 +41,14 @@ export const METRIC_NAMES = {
     'qlt_reader_analytics_events_rejected_total',
   READER_ANALYTICS_RECONCILIATION_MISMATCHES:
     'qlt_reader_analytics_reconciliation_mismatches_total',
+  READER_ANALYTICS_ENABLED: 'qlt_reader_analytics_enabled',
+  READER_ANALYTICS_BACKLOG: 'qlt_reader_analytics_backlog_events',
+  READER_ANALYTICS_OLDEST_UNPROCESSED:
+    'qlt_reader_analytics_oldest_unprocessed_age_seconds',
+  READER_ANALYTICS_RECONCILIATION_HEALTH:
+    'qlt_reader_analytics_reconciliation_healthy',
+  READER_ANALYTICS_RECONCILIATION_AGE:
+    'qlt_reader_analytics_reconciliation_age_seconds',
+  READER_ANALYTICS_SNAPSHOT_HEALTH:
+    'qlt_reader_analytics_metrics_snapshot_healthy',
 } as const;

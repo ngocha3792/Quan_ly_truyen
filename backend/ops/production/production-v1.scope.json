@@ -128,12 +128,11 @@
     },
     {
       "id": "reader-weekly-reading-time",
-      "decision": "deferred",
-      "readiness": "deferred",
-      "productionExposure": "hidden",
-      "owner": "planned reading analytics",
-      "nextPhase": "post-v1",
-      "notes": "ReadingSession may remain in schema; placeholder weekly-reading-time statistics are not shown in V1."
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/reading-history + frontend/account",
+      "notes": "Readers receive weekly active-reading totals and streaks derived from persisted ReadingSession rows; missing activity is not replaced by synthetic progress."
     },
     {
       "id": "story-contributor-workflow",
@@ -145,12 +144,27 @@
     },
     {
       "id": "chapter-version-history",
-      "decision": "deferred",
-      "readiness": "deferred",
-      "productionExposure": "hidden",
-      "owner": "planned chapters",
-      "nextPhase": "post-v1",
-      "notes": "ChapterVersion may remain in schema; no version-history product claim belongs in V1."
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/chapters + frontend/author-portal",
+      "notes": "Authors can inspect immutable chapter revisions and restore a selected version through the versioned chapter workflow."
+    },
+    {
+      "id": "explainable-story-recommendations",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/stories + frontend/public",
+      "notes": "Story discovery uses deterministic category, follow and rating signals with user-visible reasons. It does not claim behavioral ML personalization."
+    },
+    {
+      "id": "truthful-author-analytics",
+      "decision": "required",
+      "readiness": "ready",
+      "productionExposure": "enabled",
+      "owner": "backend/analytics + worker + frontend/author-portal",
+      "notes": "Author dashboards expose recorded daily aggregates, source coverage and freshness. Missing dates are not zero-filled and synthetic trends remain prohibited."
     },
     {
       "id": "personalized-recommendations",
@@ -172,11 +186,6 @@
     }
   ],
   "sourceGuards": [
-    {
-      "featureId": "reader-weekly-reading-time",
-      "path": "frontend/src/app/features/account/reading-history",
-      "forbidden": ["weeklyReadingTime"]
-    },
     {
       "featureId": "personalized-recommendations",
       "path": "frontend/src/app/features/public/static/pages/about-page/about-page.component.html",

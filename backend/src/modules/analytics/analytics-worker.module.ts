@@ -7,9 +7,10 @@ import {
   PrismaAnalyticsReconciliationAdapter,
 } from './infrastructure';
 import { PrismaModule } from '@/infrastructure/database';
+import { RedisModule } from '@/infrastructure/cache/redis/redis.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, RedisModule],
   providers: [
     PrismaAnalyticsAggregationAdapter,
     PrismaAnalyticsReconciliationAdapter,
