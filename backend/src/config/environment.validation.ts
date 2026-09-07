@@ -58,6 +58,10 @@ export class EnvironmentVariables {
   @IsEnum(AppEnvironment)
   NODE_ENV: AppEnvironment = AppEnvironment.DEVELOPMENT;
 
+  @IsOptional()
+  @Matches(/^[0-9a-fA-F]{40}$/)
+  RELEASE_SHA?: string;
+
   @IsString()
   @IsNotEmpty()
   HOST = '0.0.0.0';

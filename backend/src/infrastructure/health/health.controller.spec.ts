@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { HealthCheckService } from '@nestjs/terminus';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { DatabaseHealthIndicator } from './database-health.indicator';
@@ -85,6 +86,14 @@ describe('HealthController', () => {
           provide: InfrastructureDiagnosticsService,
           useValue: mockDiagnosticsService,
         },
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn().mockReturnValue({
+              releaseSha: '0123456789abcdef0123456789abcdef01234567',
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -92,7 +101,10 @@ describe('HealthController', () => {
   });
 
   it('live returns status ok', () => {
-    expect(controller.live()).toEqual({ status: 'ok' });
+    expect(controller.live()).toEqual({
+      status: 'ok',
+      releaseSha: '0123456789abcdef0123456789abcdef01234567',
+    });
   });
 
   it('ready performs health check on database and redis', async () => {

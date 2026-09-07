@@ -2,6 +2,7 @@ import type { AppEnvironment } from '@/common/enums';
 
 export interface AppConfig {
   environment: AppEnvironment;
+  releaseSha: string;
   host: string;
   port: number;
   publicUrl: string;

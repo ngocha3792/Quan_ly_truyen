@@ -7,6 +7,8 @@ param(
 
   [string]$PublicUrl,
 
+  [string]$ExpectedSourceSha,
+
   [ValidateRange(1, 30)]
   [int]$Attempts = 10,
 
@@ -56,6 +58,21 @@ if ([string]::IsNullOrWhiteSpace($ResolvedPublicUrl)) {
 
 $ResolvedPublicUrl = $ResolvedPublicUrl.TrimEnd('/')
 
+$ResolvedExpectedSourceSha = if (
+  [string]::IsNullOrWhiteSpace($ExpectedSourceSha)
+) {
+  Get-DeploymentDotEnvValue -Path $EnvironmentFilePath -Name 'RELEASE_SHA'
+}
+else {
+  $ExpectedSourceSha
+}
+
+Assert-DeploymentSourceSha `
+  -Value $ResolvedExpectedSourceSha `
+  -Name 'ExpectedSourceSha'
+
+$ResolvedExpectedSourceSha = $ResolvedExpectedSourceSha.ToLowerInvariant()
+
 if ($EnvironmentName -eq 'production' -and $ResolvedPublicUrl -notmatch '^https://') {
   throw "Production smoke tests require HTTPS. Received: $ResolvedPublicUrl"
 }
@@ -82,6 +99,25 @@ foreach ($Check in $Checks) {
         -UseBasicParsing
 
       if ($Response.StatusCode -ge 200 -and $Response.StatusCode -lt 400) {
+        if ($Check.Name -eq 'API liveness') {
+          $ReleaseShaPattern =
+            '"releaseSha"\s*:\s*"([0-9a-fA-F]{40})"'
+
+          if ($Response.Content -notmatch $ReleaseShaPattern) {
+            throw 'API liveness response does not attest a release SHA.'
+          }
+
+          $ActualSourceSha = $Matches[1].ToLowerInvariant()
+
+          if ($ActualSourceSha -ne $ResolvedExpectedSourceSha) {
+            throw (
+              'Release SHA mismatch: expected {0}, received {1}.' -f `
+                $ResolvedExpectedSourceSha,
+                $ActualSourceSha
+            )
+          }
+        }
+
         Write-Host (
           '[smoke] {0}: HTTP {1} ({2})' -f `
             $Check.Name,

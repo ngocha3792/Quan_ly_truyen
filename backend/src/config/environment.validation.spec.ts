@@ -20,6 +20,8 @@ describe('validateEnvironment', () => {
 
     NODE_ENV: 'production',
 
+    RELEASE_SHA: '0123456789abcdef0123456789abcdef01234567',
+
     AUTH_ADMIN_MFA_ENABLED: 'true',
 
     AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 8).toString('base64'),
@@ -93,6 +95,13 @@ describe('validateEnvironment', () => {
 
   it('enforces production readiness configuration', () => {
     expect(() => validateEnvironment(productionBase)).not.toThrow();
+
+    expect(() =>
+      validateEnvironment({
+        ...productionBase,
+        RELEASE_SHA: 'main',
+      }),
+    ).toThrow('RELEASE_SHA');
 
     expect(() =>
       validateEnvironment({

@@ -160,7 +160,8 @@ try {
   if (-not $SkipSmoke) {
     & (Join-Path $PSScriptRoot 'Test-DeploymentSmoke.ps1') `
       -EnvironmentName $EnvironmentName `
-      -EnvironmentFile $EnvironmentFilePath
+      -EnvironmentFile $EnvironmentFilePath `
+      -ExpectedSourceSha $SourceSha
 
     if ($LASTEXITCODE -ne 0) {
       throw 'External deployment smoke tests failed.'

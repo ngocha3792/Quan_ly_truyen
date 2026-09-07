@@ -148,7 +148,8 @@ try {
   if (-not $SkipSmoke) {
     & (Join-Path $PSScriptRoot 'Test-DeploymentSmoke.ps1') `
       -EnvironmentName $EnvironmentName `
-      -EnvironmentFile $EnvironmentFilePath
+      -EnvironmentFile $EnvironmentFilePath `
+      -ExpectedSourceSha $ResolvedTargetSha
 
     if ($LASTEXITCODE -ne 0) {
       throw 'Rollback smoke tests failed.'

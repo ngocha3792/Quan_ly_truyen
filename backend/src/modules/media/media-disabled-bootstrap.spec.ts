@@ -165,6 +165,7 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       .expect(200)
       .expect({
         status: 'ok',
+        releaseSha: 'unknown',
       });
 
     await app.close();

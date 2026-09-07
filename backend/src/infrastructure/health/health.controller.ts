@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   HealthCheck,
   HealthCheckResult,
@@ -12,6 +13,7 @@ import {
   SkipResponseEnvelope,
 } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
+import type { AppConfig } from '@/config';
 
 import { DatabaseHealthIndicator } from './database-health.indicator';
 import { QueueWorkerHealthIndicator } from './queue-worker-health.indicator';
@@ -31,12 +33,15 @@ export class HealthController {
     private readonly redis: RedisHealthIndicator,
     private readonly queueWorker: QueueWorkerHealthIndicator,
     private readonly diagnosticsService: InfrastructureDiagnosticsService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('live')
   @Public()
-  live(): { status: 'ok' } {
-    return { status: 'ok' };
+  live(): { status: 'ok'; releaseSha: string } {
+    const app = this.configService.getOrThrow<AppConfig>('app');
+
+    return { status: 'ok', releaseSha: app.releaseSha };
   }
 
   @Get('ready')

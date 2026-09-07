@@ -11,6 +11,7 @@ export default registerAs(APP_CONFIG_KEY, (): AppConfig => ({
   environment:
     (process.env.NODE_ENV as AppEnvironment | undefined) ??
     AppEnvironment.DEVELOPMENT,
+  releaseSha: process.env.RELEASE_SHA?.trim().toLowerCase() ?? 'unknown',
   host: process.env.HOST ?? '0.0.0.0',
   port: Number(process.env.PORT ?? 3000),
   publicUrl: process.env.APP_PUBLIC_URL ?? 'http://localhost:3000',
