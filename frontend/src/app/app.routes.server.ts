@@ -11,6 +11,7 @@ const SSR_PUBLIC_ROUTES = [
   'gioi-thieu',
   'dieu-khoan',
   'quyen-rieng-tu',
+  'chinh-sach-credit',
   'cong-dong',
   'tac-gia',
   'tac-gia/:authorSlug',

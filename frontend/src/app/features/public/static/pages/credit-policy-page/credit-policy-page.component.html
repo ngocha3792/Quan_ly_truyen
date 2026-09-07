@@ -1,0 +1,82 @@
+<app-legal-page-shell>
+  <app-legal-page-header
+    header
+    badge="CREDIT & NỘI DUNG TRẢ PHÍ"
+    title="Chính sách Credit và mở khóa chương"
+    description="Chính sách này giải thích cách Credit, giao dịch nạp và quyền truy cập nội dung trả phí hoạt động trên {{
+      appName
+    }} khi tính năng được cung cấp."
+    updatedAt="2026-09-07"
+  >
+    <svg
+      icon
+      viewBox="0 0 24 24"
+      width="32"
+      height="32"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M15.5 8.5a4.5 4.5 0 1 0 0 7"></path>
+      <path d="M8 12h5"></path>
+    </svg>
+  </app-legal-page-header>
+
+  <ng-container sections>
+    <app-legal-section-item
+      [number]="1"
+      title="Credit là gì?"
+      description="Credit, có thể được hiển thị là Xu trên giao diện, là đơn vị sử dụng trong {{
+        appName
+      }} để mở khóa nội dung đủ điều kiện. Credit không phải tiền gửi, không chuyển được giữa người dùng, không quy đổi hoặc rút thành tiền mặt và không hết hạn trong phiên bản đầu tiên."
+    />
+    <app-legal-section-item
+      [number]="2"
+      title="Nạp Credit"
+      description="Bạn chỉ có thể nạp theo các gói và mức giá do {{
+        appName
+      }} hiển thị tại thời điểm tạo giao dịch. Credit được cộng sau khi hệ thống nhận và xác minh kết quả thanh toán từ đơn vị cung cấp dịch vụ thanh toán; trang chuyển hướng sau thanh toán không phải là xác nhận cuối cùng."
+    />
+    <app-legal-section-item
+      [number]="3"
+      title="Mở khóa chương trả phí"
+      description="Mỗi lần xác nhận mở khóa, hệ thống hiển thị giá Credit áp dụng. Sau khi giao dịch thành công, quyền đọc chương được gắn vĩnh viễn với tài khoản đã mua, trừ trường hợp hoàn tiền, giao dịch bị đảo ngược, gian lận hoặc biện pháp khắc phục hợp lệ."
+    />
+    <app-legal-section-item
+      [number]="4"
+      title="Giá và thay đổi giá"
+      description="Giá chương được chọn từ các mức do nền tảng cho phép và có thể thay đổi cho các giao dịch trong tương lai. Việc thay đổi giá không làm thay đổi số Credit đã trả hoặc quyền truy cập của một giao dịch đã hoàn tất."
+    />
+    <app-legal-section-item
+      [number]="5"
+      title="Lịch sử và số dư"
+      description="Số dư và lịch sử giao dịch trong tài khoản là căn cứ để theo dõi Credit đã nạp, đã sử dụng, được hoàn hoặc được điều chỉnh. Nếu phát hiện sai lệch, bạn nên ngừng thực hiện giao dịch mới và liên hệ hỗ trợ để được kiểm tra."
+    />
+    <app-legal-section-item
+      [number]="6"
+      title="Hoàn tiền và giao dịch lỗi"
+      description="Giao dịch trùng, lỗi thanh toán hoặc không cung cấp được quyền truy cập sẽ được xem xét theo từng trường hợp. Khoản hoàn được ghi nhận bằng giao dịch bù trừ; thời gian xử lý thực tế còn phụ thuộc đơn vị thanh toán. Credit đã sử dụng không tự động tạo số dư âm và có thể cần hỗ trợ xử lý."
+    />
+    <app-legal-section-item
+      [number]="7"
+      title="Bảo mật và hành vi bị cấm"
+      description="Không được giả mạo thanh toán, lợi dụng lỗi, can thiệp giao dịch, chia sẻ trái phép nội dung đã mở khóa hoặc truy cập quyền mua của tài khoản khác. {{
+        appName
+      }} có thể tạm giữ giao dịch bất thường để xác minh và bảo vệ người dùng."
+    />
+    <app-legal-section-item
+      [number]="8"
+      title="Phạm vi áp dụng và cập nhật"
+      description="Các điều khoản về nạp và sử dụng Credit chỉ áp dụng khi tính năng được bật và hiển thị trong tài khoản của bạn. Chính sách có thể được cập nhật khi phương thức thanh toán hoặc tính năng thay đổi; ngày cập nhật mới nhất luôn được công bố trên trang này."
+    />
+  </ng-container>
+
+  <app-legal-support-cta
+    support
+    title="Cần kiểm tra một giao dịch?"
+    description="Hãy liên hệ hỗ trợ và cung cấp mã giao dịch hiển thị trong tài khoản; không gửi mật khẩu, mã OTP hoặc thông tin bảo mật thanh toán."
+  />
+</app-legal-page-shell>

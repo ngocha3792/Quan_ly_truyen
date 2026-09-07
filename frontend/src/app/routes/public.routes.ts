@@ -129,6 +129,17 @@ export const PUBLIC_ROUTES: Routes = [
       ),
   },
   {
+    path: 'chinh-sach-credit',
+    title: appPageTitle('Chính sách Credit và nội dung trả phí'),
+    data: {
+      seoDescription: `Chính sách Credit, nạp tiền, mở khóa chương trả phí và hoàn giao dịch trên ${APP_NAME}.`,
+    },
+    loadComponent: () =>
+      import('../features/public/static/pages/credit-policy-page/credit-policy-page.component').then(
+        (module) => module.CreditPolicyPageComponent,
+      ),
+  },
+  {
     path: 'cong-dong',
     title: appPageTitle('Liên hệ hỗ trợ'),
     data: {
