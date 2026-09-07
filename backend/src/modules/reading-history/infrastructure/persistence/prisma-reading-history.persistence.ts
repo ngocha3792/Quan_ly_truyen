@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
+import type { AnalyticsConfig } from '@/config';
 import {
   ChapterStatus,
   LibraryStatus,
@@ -18,7 +20,12 @@ import type {
   ReadingHistoryStorySummaryDto,
   SaveReadingProgressInput,
   SaveReadingProgressResult,
+  WeeklyReadingStatsResultDto,
 } from '../../application';
+import {
+  buildWeeklyReadingStats,
+  dateKeyInTimeZone,
+} from '../../domain/policies';
 
 const PUBLIC_STORY_STATUSES = [
   StoryStatus.PUBLISHED,
@@ -83,9 +90,22 @@ type ReadingHistoryRow = Prisma.ReadingProgressGetPayload<{
   select: typeof READING_HISTORY_SELECT;
 }>;
 
+interface ReadingActivityDayRow {
+  readonly date: string;
+  readonly readingSeconds: bigint;
+  readonly chaptersCompleted: number;
+}
+
 @Injectable()
 export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistencePort {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly timeZone: string;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    this.timeZone = config.getOrThrow<AnalyticsConfig>('analytics').timeZone;
+  }
 
   async listMine(
     userId: string,
@@ -102,6 +122,43 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
       throw mapPrismaError(error, {
         operation: 'reading-history-list-own',
         resource: 'Lịch sử đọc',
+      });
+    }
+  }
+
+  async getWeeklyStats(userId: string): Promise<WeeklyReadingStatsResultDto> {
+    try {
+      const rows = await this.prisma.$queryRaw<ReadingActivityDayRow[]>(
+        Prisma.sql`
+          SELECT
+            TO_CHAR(
+              (COALESCE("ended_at", "started_at") AT TIME ZONE ${this.timeZone})::date,
+              'YYYY-MM-DD'
+            ) AS "date",
+            SUM(COALESCE("duration_seconds", 0))::bigint AS "readingSeconds",
+            COUNT(DISTINCT "chapter_id") FILTER (WHERE "completed")::integer
+              AS "chaptersCompleted"
+          FROM "reading_sessions"
+          WHERE "user_id" = ${userId}::uuid
+            AND (COALESCE("duration_seconds", 0) > 0 OR "completed")
+          GROUP BY 1
+          ORDER BY 1 ASC
+        `,
+      );
+
+      return buildWeeklyReadingStats(
+        rows.map((row) => ({
+          date: row.date,
+          readingSeconds: Number(row.readingSeconds),
+          chaptersCompleted: row.chaptersCompleted,
+        })),
+        dateKeyInTimeZone(new Date(), this.timeZone),
+        this.timeZone,
+      );
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'weekly-reading-stats-get-own',
+        resource: 'Thống kê đọc hàng tuần',
       });
     }
   }

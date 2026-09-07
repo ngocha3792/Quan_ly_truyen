@@ -20,8 +20,9 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
     return forkJoin({
       entries: this.api.listReadingHistory(),
       bookmarks: this.api.listReadingBookmarks(),
+      weeklyStats: this.api.getWeeklyReadingStats(),
     }).pipe(
-      map(({ entries, bookmarks }) => {
+      map(({ entries, bookmarks, weeklyStats }) => {
         const bookmarkedChapterIds = new Set(bookmarks.map((bookmark) => bookmark.chapterId));
         const history = entries
           .filter((entry) => entry.currentChapter !== null)
@@ -46,6 +47,7 @@ export class ReadingHistoryHttpRepository implements ReadingHistoryRepository {
             coverInitials: item.coverInitials,
             coverTone: item.coverTone,
           })),
+          weeklyStats,
         };
       }),
     );

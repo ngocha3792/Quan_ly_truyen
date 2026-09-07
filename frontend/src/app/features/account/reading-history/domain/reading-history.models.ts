@@ -32,6 +32,25 @@ export interface ReadingHistoryStatistics {
   readonly chaptersRead: string;
 }
 
+export interface WeeklyReadingDayStats {
+  readonly date: string;
+  readonly readingMinutes: number;
+  readonly chaptersCompleted: number;
+  readonly active: boolean;
+}
+
+export interface WeeklyReadingStats {
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly timeZone: string;
+  readonly currentStreakDays: number;
+  readonly longestStreakDays: number;
+  readonly readingMinutes: number;
+  readonly chaptersCompleted: number;
+  readonly activeDays: number;
+  readonly daily: readonly WeeklyReadingDayStats[];
+}
+
 export interface ContinueReadingItem {
   readonly id: string;
   readonly storySlug: string;
@@ -47,4 +66,5 @@ export interface ReadingHistoryView {
   readonly history: readonly ReadingHistoryItem[];
   readonly statistics: ReadingHistoryStatistics;
   readonly continueReading: readonly ContinueReadingItem[];
+  readonly weeklyStats: WeeklyReadingStats;
 }

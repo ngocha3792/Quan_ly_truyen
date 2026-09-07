@@ -10,6 +10,7 @@ import {
   ReadingBookmarkApiItem,
   ReadingGoalApiItem,
   ReadingHistoryApiItem,
+  WeeklyReadingStatsApiItem,
   StoryCommentApiItem,
   StoryCommentApiPage,
   CommentReactionApiType,
@@ -43,6 +44,10 @@ export class ReaderEngagementApiClient {
 
   listReadingHistory(): Observable<readonly ReadingHistoryApiItem[]> {
     return this.get<readonly ReadingHistoryApiItem[]>('/reading-history');
+  }
+
+  getWeeklyReadingStats(): Observable<WeeklyReadingStatsApiItem> {
+    return this.get<WeeklyReadingStatsApiItem>('/reading-stats/weekly');
   }
 
   saveReadingProgress(

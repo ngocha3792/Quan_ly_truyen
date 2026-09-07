@@ -38,6 +38,25 @@ export interface ReadingHistoryApiItem {
   readonly lastReadAt: string;
 }
 
+export interface WeeklyReadingDayStatsApiItem {
+  readonly date: string;
+  readonly readingMinutes: number;
+  readonly chaptersCompleted: number;
+  readonly active: boolean;
+}
+
+export interface WeeklyReadingStatsApiItem {
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly timeZone: string;
+  readonly currentStreakDays: number;
+  readonly longestStreakDays: number;
+  readonly readingMinutes: number;
+  readonly chaptersCompleted: number;
+  readonly activeDays: number;
+  readonly daily: readonly WeeklyReadingDayStatsApiItem[];
+}
+
 export interface ReadingBookmarkApiItem {
   readonly id: string;
   readonly storyId: string;

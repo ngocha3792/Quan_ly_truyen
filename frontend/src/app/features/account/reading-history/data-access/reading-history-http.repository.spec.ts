@@ -42,8 +42,10 @@ describe('ReadingHistoryHttpRepository', () => {
 
     const historyRequest = http.expectOne('/api/v1/reading-history');
     const bookmarksRequest = http.expectOne('/api/v1/reading-bookmarks');
+    const weeklyStatsRequest = http.expectOne('/api/v1/reading-stats/weekly');
     expect(historyRequest.request.method).toBe('GET');
     expect(bookmarksRequest.request.method).toBe('GET');
+    expect(weeklyStatsRequest.request.method).toBe('GET');
 
     historyRequest.flush(
       successEnvelope([
@@ -81,6 +83,19 @@ describe('ReadingHistoryHttpRepository', () => {
         },
       ]),
     );
+    weeklyStatsRequest.flush(
+      successEnvelope({
+        startDate: '2026-08-11',
+        endDate: '2026-08-17',
+        timeZone: 'Asia/Ho_Chi_Minh',
+        currentStreakDays: 3,
+        longestStreakDays: 8,
+        readingMinutes: 95,
+        chaptersCompleted: 4,
+        activeDays: 5,
+        daily: [],
+      }),
+    );
 
     const result = await resultPromise;
     expect(result.history).toHaveLength(1);
@@ -89,6 +104,10 @@ describe('ReadingHistoryHttpRepository', () => {
       chapterId: 'chapter-2',
       chapterNumber: 2,
       bookmarked: true,
+    });
+    expect(result.weeklyStats).toMatchObject({
+      currentStreakDays: 3,
+      readingMinutes: 95,
     });
   });
 });

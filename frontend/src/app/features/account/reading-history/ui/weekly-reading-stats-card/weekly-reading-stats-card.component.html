@@ -1,0 +1,42 @@
+<section class="weekly-card">
+  <header>
+    <div>
+      <span class="eyebrow">7 ngày gần nhất</span>
+      <h2>
+        <span class="flame" aria-hidden="true">🔥</span>
+        {{ stats.currentStreakDays }} ngày liên tiếp
+      </h2>
+      <p>{{ streakMessage() }}</p>
+    </div>
+
+    <span class="record" title="Chuỗi dài nhất">
+      Kỷ lục <strong>{{ stats.longestStreakDays }}</strong>
+    </span>
+  </header>
+
+  <div class="summary" aria-label="Tổng kết đọc 7 ngày gần nhất">
+    <article>
+      <strong>{{ stats.readingMinutes }}</strong>
+      <span>phút đọc</span>
+    </article>
+    <article>
+      <strong>{{ stats.chaptersCompleted }}</strong>
+      <span>chương xong</span>
+    </article>
+    <article>
+      <strong>{{ stats.activeDays }}/7</strong>
+      <span>ngày hoạt động</span>
+    </article>
+  </div>
+
+  <div class="activity-chart" aria-label="Biểu đồ thời gian đọc từng ngày">
+    @for (day of stats.daily; track day.date) {
+      <div class="day" [class.day--active]="day.active" [title]="day.readingMinutes + ' phút'">
+        <span class="bar-track">
+          <span class="bar" [style.height.%]="barHeight(day)"></span>
+        </span>
+        <small>{{ dayLabel(day.date) }}</small>
+      </div>
+    }
+  </div>
+</section>

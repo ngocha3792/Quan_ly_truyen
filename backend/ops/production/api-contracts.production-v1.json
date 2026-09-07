@@ -378,6 +378,20 @@
         },
         {
           "method": "GET",
+          "path": "/reading-stats/weekly",
+          "backend": {
+            "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-history.controller.ts",
+            "tokens": ["@Get('reading-stats/weekly')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/reading-history/data-access/reading-history-http.repository.ts",
+              "tokens": ["getWeeklyReadingStats"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
           "path": "/reading-bookmarks",
           "backend": {
             "file": "backend/src/modules/reading-history/presentation/http/controllers/reading-bookmarks.controller.ts",

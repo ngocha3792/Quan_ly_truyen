@@ -16,6 +16,8 @@ import { PermissionCode } from '@/common/enums';
 import {
   ClearReadingHistoryCommand,
   ClearReadingHistoryCommandHandler,
+  GetWeeklyReadingStatsQuery,
+  GetWeeklyReadingStatsQueryHandler,
   ListReadingHistoryQuery,
   ListReadingHistoryQueryHandler,
   RemoveReadingHistoryEntryCommand,
@@ -23,6 +25,7 @@ import {
   SaveReadingProgressCommand,
   SaveReadingProgressCommandHandler,
   type ReadingHistoryEntryResultDto,
+  type WeeklyReadingStatsResultDto,
 } from '../../../application';
 import { SaveReadingProgressRequest } from '../requests';
 
@@ -30,6 +33,7 @@ import { SaveReadingProgressRequest } from '../requests';
 export class ReadingHistoryController {
   constructor(
     private readonly listHistoryQuery: ListReadingHistoryQueryHandler,
+    private readonly weeklyStatsQuery: GetWeeklyReadingStatsQueryHandler,
     private readonly saveProgressCommand: SaveReadingProgressCommandHandler,
     private readonly removeHistoryCommand: RemoveReadingHistoryEntryCommandHandler,
     private readonly clearHistoryCommand: ClearReadingHistoryCommandHandler,
@@ -41,6 +45,16 @@ export class ReadingHistoryController {
     @CurrentUserId() userId: string | undefined,
   ): Promise<readonly ReadingHistoryEntryResultDto[]> {
     return this.listHistoryQuery.execute(new ListReadingHistoryQuery(userId));
+  }
+
+  @Get('reading-stats/weekly')
+  @RequirePermissions(PermissionCode.READING_HISTORY_MANAGE_OWN)
+  getWeeklyStats(
+    @CurrentUserId() userId: string | undefined,
+  ): Promise<WeeklyReadingStatsResultDto> {
+    return this.weeklyStatsQuery.execute(
+      new GetWeeklyReadingStatsQuery(userId),
+    );
   }
 
   @Put('reading-progress/:storyId')

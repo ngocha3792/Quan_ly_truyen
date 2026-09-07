@@ -40,6 +40,7 @@
         <app-reading-history-sidebar
           aside
           [statistics]="view.statistics"
+          [weeklyStats]="view.weeklyStats"
           [continueReading]="view.continueReading"
           [syncState]="store.syncState()"
           (clearHistory)="store.clearHistory()"

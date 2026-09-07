@@ -5,6 +5,7 @@ import { AuthAuthorizationModule } from '@/modules/auth';
 
 import {
   ClearReadingHistoryCommandHandler,
+  GetWeeklyReadingStatsQueryHandler,
   GetReadingBookmarkQueryHandler,
   ListReadingBookmarksQueryHandler,
   ListReadingHistoryQueryHandler,
@@ -29,6 +30,7 @@ import {
   controllers: [ReadingHistoryController, ReadingBookmarksController],
   providers: [
     ListReadingHistoryQueryHandler,
+    GetWeeklyReadingStatsQueryHandler,
     SaveReadingProgressCommandHandler,
     RemoveReadingHistoryEntryCommandHandler,
     ClearReadingHistoryCommandHandler,

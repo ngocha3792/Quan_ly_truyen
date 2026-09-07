@@ -1,4 +1,7 @@
-import type { ReadingHistoryEntryResultDto } from '../dto';
+import type {
+  ReadingHistoryEntryResultDto,
+  WeeklyReadingStatsResultDto,
+} from '../dto';
 
 export const READING_HISTORY_PERSISTENCE_PORT = Symbol(
   'READING_HISTORY_PERSISTENCE_PORT',
@@ -19,6 +22,8 @@ export type SaveReadingProgressResult =
 
 export interface ReadingHistoryPersistencePort {
   listMine(userId: string): Promise<readonly ReadingHistoryEntryResultDto[]>;
+
+  getWeeklyStats(userId: string): Promise<WeeklyReadingStatsResultDto>;
 
   saveProgress(
     input: SaveReadingProgressInput,
