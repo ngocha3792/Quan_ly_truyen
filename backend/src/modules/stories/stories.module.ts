@@ -13,11 +13,13 @@ import {
   GetPublicStoryDetailQueryHandler,
   ListAuthorStoriesQueryHandler,
   ListPublicStoriesQueryHandler,
+  ListStoryRecommendationsQueryHandler,
   ListStoryCategoriesQueryHandler,
   ListStoryTagsQueryHandler,
   RejectStorySubmissionCommandHandler,
   STORY_MODERATION_READER_PORT,
   STORY_PERSISTENCE_PORT,
+  STORY_RECOMMENDATION_READER_PORT,
   STORY_CONTRIBUTOR_PERSISTENCE_PORT,
   StoryContributorUseCases,
   SubmitAuthorStoryCommandHandler,
@@ -34,6 +36,7 @@ import {
   AuthorStoriesController,
   AuthorStoryContributorsController,
   PublicStoriesController,
+  StoryRecommendationsController,
   StoryMetadataController,
 } from './presentation/http';
 
@@ -41,6 +44,7 @@ import {
   imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule],
   controllers: [
     PublicStoriesController,
+    StoryRecommendationsController,
     AuthorStoriesController,
     AuthorStoryContributorsController,
     StoryMetadataController,
@@ -58,6 +62,7 @@ import {
     ApproveStorySubmissionCommandHandler,
     RejectStorySubmissionCommandHandler,
     ListPublicStoriesQueryHandler,
+    ListStoryRecommendationsQueryHandler,
     GetPublicStoryDetailQueryHandler,
     ListStoryCategoriesQueryHandler,
     ListStoryTagsQueryHandler,
@@ -67,6 +72,10 @@ import {
     PrismaStoryModerationReader,
     {
       provide: STORY_PERSISTENCE_PORT,
+      useExisting: PrismaStoryPersistence,
+    },
+    {
+      provide: STORY_RECOMMENDATION_READER_PORT,
       useExisting: PrismaStoryPersistence,
     },
     {

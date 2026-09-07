@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { forkJoin, map, Observable, of } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
 import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
@@ -15,12 +15,11 @@ export class HomeHttpRepository implements HomeRepository {
     return forkJoin({
       latest: this.api.list({ sort: 'latest', pageSize: 12 }),
       popular: this.api.list({ sort: 'popular', pageSize: 10 }),
-      rated: this.api.list({ sort: 'rating', pageSize: 10 }),
+      recommendations: this.loadRecommendations(),
     }).pipe(
-      map(({ latest, popular, rated }) => {
+      map(({ latest, popular, recommendations }) => {
         const latestStories = latest.items.map(toStory);
         const popularStories = popular.items.map(toStory);
-        const ratedStories = rated.items.map(toStory);
 
         return {
           heroSlides: popular.items
@@ -67,11 +66,38 @@ export class HomeHttpRepository implements HomeRepository {
             },
           ],
           latestStories: latestStories.slice(0, 8),
-          recommendedStories: ratedStories.slice(0, 8),
+          recommendedStories: recommendations.items.map((item) => ({
+            ...toStory(item.story),
+            recommendationReason: item.reason,
+          })),
+          recommendationsPersonalized: recommendations.personalized,
           topStories: popularStories.slice(0, 8),
           recentUpdates: latestStories.slice(0, 8),
         } satisfies HomePageData;
       }),
+    );
+  }
+
+  private loadRecommendations() {
+    return this.api.recommendations(8).pipe(
+      catchError(() =>
+        this.api.list({ sort: 'rating', pageSize: 8 }).pipe(
+          map((page) => ({
+            personalized: false,
+            items: page.items.map((story) => {
+              const highRated = story.stats.ratingCount > 0 && story.stats.ratingAverage >= 4;
+              return {
+                story,
+                reasonCode: highRated ? ('HIGH_RATING' as const) : ('POPULAR' as const),
+                reason: highRated
+                  ? `Được đánh giá ${story.stats.ratingAverage.toFixed(1)}/5`
+                  : 'Đang được độc giả quan tâm',
+                matchedCategories: [],
+              };
+            }),
+          })),
+        ),
+      ),
     );
   }
 

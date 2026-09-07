@@ -59,6 +59,19 @@ export interface PublicStoryApiPage {
   };
 }
 
+export type StoryRecommendationReasonApi =
+  'FOLLOWED_AUTHOR' | 'PREFERRED_CATEGORY' | 'HIGH_RATING' | 'POPULAR';
+
+export interface StoryRecommendationFeedApi {
+  readonly personalized: boolean;
+  readonly items: readonly {
+    readonly story: PublicStoryApiItem;
+    readonly reasonCode: StoryRecommendationReasonApi;
+    readonly reason: string;
+    readonly matchedCategories: readonly string[];
+  }[];
+}
+
 export interface PublicStoryListParams {
   readonly q?: string;
   readonly genre?: string;

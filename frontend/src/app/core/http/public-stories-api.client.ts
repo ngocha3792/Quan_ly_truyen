@@ -10,6 +10,7 @@ import {
   PublicStoryApiPage,
   PublicStoryChapterListApiResponse,
   PublicStoryListParams,
+  StoryRecommendationFeedApi,
 } from './public-stories-api.model';
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +38,16 @@ export class PublicStoriesApiClient {
     return this.http
       .get<ApiSuccessEnvelope<PublicStoryApiItem>>(
         `${this.config.apiBaseUrl}/stories/${encodeURIComponent(slug)}`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  recommendations(limit = 8): Observable<StoryRecommendationFeedApi> {
+    const params = new HttpParams().set('limit', String(limit));
+    return this.http
+      .get<ApiSuccessEnvelope<StoryRecommendationFeedApi>>(
+        `${this.config.apiBaseUrl}/recommendations/stories`,
+        { params },
       )
       .pipe(map((response) => response.data));
   }

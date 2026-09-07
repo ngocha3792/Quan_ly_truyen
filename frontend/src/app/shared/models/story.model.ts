@@ -20,6 +20,7 @@ export interface Story {
   readonly followers?: number;
   readonly status: 'ONGOING' | 'COMPLETED' | 'HIATUS';
   readonly badge?: 'NEW' | 'HOT' | 'FULL';
+  readonly recommendationReason?: string;
 }
 
 export interface HeroSlide {
@@ -46,6 +47,7 @@ export interface HomePageData {
   readonly quickActions: readonly QuickAction[];
   readonly latestStories: readonly Story[];
   readonly recommendedStories: readonly Story[];
+  readonly recommendationsPersonalized: boolean;
   readonly topStories: readonly Story[];
   readonly recentUpdates: readonly Story[];
 }

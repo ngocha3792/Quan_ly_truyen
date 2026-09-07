@@ -4,3 +4,4 @@ export * from './list-story-categories';
 export * from './list-story-tags';
 export * from './get-author-story';
 export * from './list-author-stories';
+export * from './list-story-recommendations';

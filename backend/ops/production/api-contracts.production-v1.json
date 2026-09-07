@@ -188,15 +188,29 @@
     },
     {
       "id": "public-catalog-story",
-      "title": "Public catalog / story detail",
-      "frontendRoute": "/danh-sach + /truyen/:slug",
+      "title": "Public home / catalog / story detail",
+      "frontendRoute": "/ + /danh-sach + /truyen/:slug",
       "frontendRouteBindings": [
         {
           "file": "frontend/src/app/routes/public.routes.ts",
-          "tokens": ["path: 'danh-sach'", "path: 'truyen/:slug'"]
+          "tokens": ["path: ''", "path: 'danh-sach'", "path: 'truyen/:slug'"]
         }
       ],
       "contracts": [
+        {
+          "method": "GET",
+          "path": "/recommendations/stories",
+          "backend": {
+            "file": "backend/src/modules/stories/presentation/http/controllers/story-recommendations.controller.ts",
+            "tokens": ["@Controller('recommendations')", "@Get('stories')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/public-stories-api.client.ts",
+              "tokens": ["/recommendations/stories"]
+            }
+          ]
+        },
         {
           "method": "GET",
           "path": "/stories",

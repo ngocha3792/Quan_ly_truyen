@@ -96,14 +96,19 @@
         </section>
 
         <section class="section-block recommendations">
-          <app-section-heading title="Truyện đề cử" link="/danh-sach" />
+          <app-section-heading
+            [title]="vm.recommendationsPersonalized ? 'Gợi ý dành cho bạn' : 'Truyện đề cử'"
+            link="/danh-sach"
+          />
           <div class="recommendation-grid">
             @for (story of vm.recommendedStories; track story.id) {
               <a class="recommendation-card" [routerLink]="['/truyen', story.slug]">
                 <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" />
                 <span class="recommendation-shade"></span>
                 <div class="recommendation-copy">
-                  <span>{{ story.categories[0] }}</span>
+                  <span class="recommendation-reason">{{
+                    story.recommendationReason || story.categories[0]
+                  }}</span>
                   <h3>{{ story.title }}</h3>
                   <p>{{ story.description }}</p>
                   <div>

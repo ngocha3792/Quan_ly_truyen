@@ -4,9 +4,11 @@ import { Injectable } from '@nestjs/common';
 
 import {
   ChapterStatus,
+  LibraryStatus,
   MediaPurpose,
   MediaResourceType,
   MediaStatus,
+  ModerationStatus,
   Prisma,
   ModerationActionType,
   SubmissionStatus,
@@ -33,12 +35,14 @@ import type {
   StoryRecord,
   StoryTaxonomyCategoryRecord,
   StoryTaxonomyTagRecord,
+  StoryRecommendationFeedDto,
+  StoryRecommendationReaderPort,
   SubmitAuthorStoryInput,
   SubmitAuthorStoryResult,
   UpdateAuthorStoryInput,
   UpdateAuthorStoryResult,
 } from '../../application';
-import { StoryDraftPolicy } from '../../domain';
+import { rankStoryRecommendations, StoryDraftPolicy } from '../../domain';
 
 const STORY_SELECT = {
   id: true,
@@ -173,6 +177,14 @@ type PublicStoryRow = Prisma.StoryGetPayload<{
   select: typeof PUBLIC_STORY_SELECT;
 }>;
 
+const RECOMMENDATION_CATEGORIES_SELECT = {
+  where: { category: { isActive: true } },
+  select: {
+    isPrimary: true,
+    category: { select: { id: true, name: true } },
+  },
+} as const;
+
 const PUBLIC_STORY_STATUSES = [
   StoryStatus.PUBLISHED,
   StoryStatus.HIATUS,
@@ -180,7 +192,9 @@ const PUBLIC_STORY_STATUSES = [
 ] as const;
 
 @Injectable()
-export class PrismaStoryPersistence implements StoryPersistencePort {
+export class PrismaStoryPersistence
+  implements StoryPersistencePort, StoryRecommendationReaderPort
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async listOwned(userId: string): Promise<readonly StoryRecord[]> {
@@ -1081,6 +1095,189 @@ export class PrismaStoryPersistence implements StoryPersistencePort {
     }
   }
 
+  async listForUser(
+    userId: string | undefined,
+    limit: number,
+  ): Promise<StoryRecommendationFeedDto> {
+    try {
+      const [follows, progress, library, ratings] = userId
+        ? await Promise.all([
+            this.prisma.userFollowAuthor.findMany({
+              where: { userId },
+              select: { authorId: true },
+            }),
+            this.prisma.readingProgress.findMany({
+              where: { userId },
+              select: {
+                storyId: true,
+                story: {
+                  select: { categories: RECOMMENDATION_CATEGORIES_SELECT },
+                },
+              },
+            }),
+            this.prisma.libraryEntry.findMany({
+              where: { userId },
+              select: {
+                storyId: true,
+                status: true,
+                isFavorite: true,
+                story: {
+                  select: { categories: RECOMMENDATION_CATEGORIES_SELECT },
+                },
+              },
+            }),
+            this.prisma.rating.findMany({
+              where: {
+                userId,
+                deletedAt: null,
+                moderationStatus: ModerationStatus.VISIBLE,
+              },
+              select: {
+                storyId: true,
+                score: true,
+                story: {
+                  select: { categories: RECOMMENDATION_CATEGORIES_SELECT },
+                },
+              },
+            }),
+          ])
+        : [[], [], [], []];
+
+      const followedAuthorIds = new Set(follows.map((row) => row.authorId));
+      const categoryWeights = new Map<string, number>();
+      for (const row of progress) {
+        addCategoryAffinity(categoryWeights, row.story.categories, 1);
+      }
+      for (const row of library) {
+        if (row.status !== LibraryStatus.DROPPED) {
+          addCategoryAffinity(
+            categoryWeights,
+            row.story.categories,
+            row.isFavorite ? 2 : 0.5,
+          );
+        }
+      }
+      for (const row of ratings) {
+        if (row.score >= 4) {
+          addCategoryAffinity(
+            categoryWeights,
+            row.story.categories,
+            row.score - 3,
+          );
+        }
+      }
+
+      const excludedStoryIds = new Set([
+        ...progress.map((row) => row.storyId),
+        ...library.map((row) => row.storyId),
+        ...ratings.map((row) => row.storyId),
+      ]);
+      const baseWhere: Prisma.StoryWhereInput = {
+        deletedAt: null,
+        visibility: StoryVisibility.PUBLIC,
+        publishedAt: { not: null },
+        status: { in: [...PUBLIC_STORY_STATUSES] },
+        chapters: {
+          some: {
+            status: ChapterStatus.PUBLISHED,
+            deletedAt: null,
+            publishedAt: { not: null },
+          },
+        },
+        ...(excludedStoryIds.size > 0
+          ? { id: { notIn: [...excludedStoryIds] } }
+          : {}),
+        ...(userId ? { authorId: { not: userId } } : {}),
+      };
+      const preferredCategoryIds = [...categoryWeights.keys()];
+      const hasPersonalSignals =
+        followedAuthorIds.size > 0 || preferredCategoryIds.length > 0;
+      const poolSize = Math.max(50, limit * 10);
+      const qualityOrder: Prisma.StoryOrderByWithRelationInput[] = [
+        { ratingAverage: 'desc' },
+        { ratingCount: 'desc' },
+        { followerCount: 'desc' },
+        { updatedAt: 'desc' },
+        { id: 'desc' },
+      ];
+
+      const [personalCandidates, qualityCandidates] = await Promise.all([
+        hasPersonalSignals
+          ? this.prisma.story.findMany({
+              where: {
+                ...baseWhere,
+                OR: [
+                  ...(followedAuthorIds.size > 0
+                    ? [{ authorId: { in: [...followedAuthorIds] } }]
+                    : []),
+                  ...(preferredCategoryIds.length > 0
+                    ? [
+                        {
+                          categories: {
+                            some: {
+                              categoryId: { in: preferredCategoryIds },
+                            },
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              },
+              orderBy: qualityOrder,
+              take: poolSize,
+              select: PUBLIC_STORY_SELECT,
+            })
+          : Promise.resolve([]),
+        this.prisma.story.findMany({
+          where: baseWhere,
+          orderBy: qualityOrder,
+          take: poolSize,
+          select: PUBLIC_STORY_SELECT,
+        }),
+      ]);
+      const candidates = [
+        ...new Map(
+          [...personalCandidates, ...qualityCandidates].map((story) => [
+            story.id,
+            story,
+          ]),
+        ).values(),
+      ];
+      const ranked = rankStoryRecommendations(
+        candidates.map((story) => ({
+          story,
+          id: story.id,
+          authorId: story.author.userId,
+          authorName: story.author.penName,
+          ratingAverage: Number(story.ratingAverage),
+          ratingCount: story.ratingCount,
+          followerCount: story.followerCount,
+          categories: story.categories.map(({ category }) => ({
+            id: category.id,
+            name: category.name,
+          })),
+        })),
+        { followedAuthorIds, categoryWeights },
+        limit,
+      );
+
+      return {
+        personalized: Boolean(userId && hasPersonalSignals),
+        items: ranked.map((item) => ({
+          story: toPublicStoryDto(item.candidate.story),
+          reasonCode: item.reasonCode,
+          reason: item.reason,
+          matchedCategories: item.matchedCategories,
+        })),
+      };
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'story-recommendation-list',
+        resource: 'Đề xuất truyện',
+      });
+    }
+  }
+
   async findPublicBySlug(slug: string): Promise<PublicStoryDto | null> {
     try {
       const story = await this.prisma.story.findFirst({
@@ -1688,6 +1885,20 @@ function bigintToSafeNumber(value: bigint): number {
     return -Number.MAX_SAFE_INTEGER;
   }
   return Number(value);
+}
+
+function addCategoryAffinity(
+  weights: Map<string, number>,
+  categories: readonly {
+    readonly isPrimary: boolean;
+    readonly category: { readonly id: string };
+  }[],
+  baseWeight: number,
+): void {
+  for (const { category, isPrimary } of categories) {
+    const weight = baseWeight * (isPrimary ? 2 : 1);
+    weights.set(category.id, (weights.get(category.id) ?? 0) + weight);
+  }
 }
 
 function getPublicStoryCoverUrl(story: PublicStoryRow): string | null {

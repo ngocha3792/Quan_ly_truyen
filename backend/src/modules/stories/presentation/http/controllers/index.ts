@@ -2,5 +2,6 @@ export * from './author-stories.controller';
 export * from './story-metadata.controller';
 export * from './admin-story-publication.controller';
 export * from './public-stories.controller';
+export * from './story-recommendations.controller';
 export * from './admin-story-moderation.controller';
 export * from './author-story-contributors.controller';
