@@ -189,7 +189,7 @@
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^9.1.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.23.0",
@@ -259,7 +259,9 @@
     "deepmerge-ts": "8.0.1",
     "fast-uri": "4.1.4",
     "js-yaml": "5.2.2",
-    "mysql2": "3.24.3"
+    "mysql2": "3.24.3",
+    "multer": "2.3.0",
+    "qs": "6.16.0"
   },
   "packageManager": "npm@11.12.1",
   "engines": {
