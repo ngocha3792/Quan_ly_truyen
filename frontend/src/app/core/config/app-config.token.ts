@@ -21,6 +21,9 @@ export interface AppRuntimeConfig {
   readonly features: {
     readonly monetizationEnabled: boolean;
     readonly paymentProviderEnabled: boolean;
+    readonly contentDocumentEnabled: boolean;
+    readonly portableCursorEnabled: boolean;
+    readonly realtimeProgressSyncEnabled: boolean;
   };
   readonly passwordPolicy: AuthPasswordPolicyConfig;
   readonly passwordReset: AuthPasswordResetConfig;

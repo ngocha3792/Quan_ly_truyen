@@ -12,6 +12,8 @@ export class ChapterResultMapper {
       title: chapter.title,
       slug: chapter.slug,
       content: chapter.content,
+      contentDocument: chapter.contentDocument,
+      documentSchemaVersion: chapter.documentSchemaVersion,
       contentFormat: chapter.contentFormat,
       status: chapter.status,
       wordCount: chapter.wordCount,

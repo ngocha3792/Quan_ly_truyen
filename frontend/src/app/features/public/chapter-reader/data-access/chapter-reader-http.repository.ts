@@ -171,6 +171,18 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
 function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterReaderView {
   const content =
     'previewContent' in result.chapter ? result.chapter.previewContent : result.chapter.content;
+  const blocks =
+    'contentDocument' in result.chapter && result.chapter.contentDocument
+      ? result.chapter.contentDocument.blocks.map((block) => ({
+          id: block.id,
+          type: block.type,
+          text: block.text,
+        }))
+      : toParagraphs(content).map((text) => ({
+          id: null,
+          type: 'paragraph' as const,
+          text,
+        }));
   return {
     story: result.story,
     chapter: {
@@ -178,6 +190,7 @@ function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterRea
       number: result.chapter.number,
       title: result.chapter.title,
       paragraphs: toParagraphs(content),
+      blocks,
       publishedAt: result.chapter.publishedAt,
       views: result.chapter.views,
       accessState: result.chapter.access.state,

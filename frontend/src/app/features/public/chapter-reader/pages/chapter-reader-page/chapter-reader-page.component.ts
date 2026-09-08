@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   effect,
+  HostListener,
   inject,
   OnInit,
 } from '@angular/core';
@@ -98,6 +99,7 @@ export class ChapterReaderPageComponent implements OnInit {
       this.seo.removeStructuredData('chapter');
       this.stopAnalyticsSession?.();
       this.stopAnalyticsSession = null;
+      this.store.flushProgress();
     });
 
     const subscription = this.route.paramMap.subscribe((params) => {
@@ -109,6 +111,16 @@ export class ChapterReaderPageComponent implements OnInit {
       if (storySlug && chapterNumber) this.store.load(storySlug, chapterNumber);
     });
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+
+  @HostListener('window:scroll')
+  protected onWindowScroll(): void {
+    this.store.captureProgress();
+  }
+
+  @HostListener('window:pagehide')
+  protected onPageHide(): void {
+    this.store.flushProgress();
   }
 
   protected addComment(body: string): void {

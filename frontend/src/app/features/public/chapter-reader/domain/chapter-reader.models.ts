@@ -17,10 +17,17 @@ export interface ChapterDetail {
   readonly number: number;
   readonly title: string;
   readonly paragraphs: readonly string[];
+  readonly blocks: readonly ChapterContentBlock[];
   readonly publishedAt: string;
   readonly views: number;
   readonly accessState: 'FREE' | 'ENTITLED' | 'BYPASS' | 'LOCKED';
   readonly priceCredits: string | null;
+}
+
+export interface ChapterContentBlock {
+  readonly id: string | null;
+  readonly type: 'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule';
+  readonly text: string;
 }
 
 export type ChapterCommentAuthor = PublicCommentAuthor;

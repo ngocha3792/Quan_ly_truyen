@@ -22,3 +22,7 @@ export {
 } from './monetization.config';
 export * from './monetization-rollout.policy';
 export { default as billingConfig, BILLING_CONFIG_KEY } from './billing.config';
+export {
+  default as readerFeaturesConfig,
+  READER_FEATURES_CONFIG_KEY,
+} from './reader-features.config';

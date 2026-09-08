@@ -1,4 +1,5 @@
 import type { PublicChapterReaderDto, PublicStoryChapterListDto } from '../dto';
+import type { ChapterContentDocument } from '../../domain';
 
 export const CHAPTER_PERSISTENCE_PORT = Symbol('CHAPTER_PERSISTENCE_PORT');
 
@@ -24,6 +25,10 @@ export interface ChapterRecord {
   readonly slug: string;
 
   readonly content: string;
+
+  readonly contentDocument: ChapterContentDocument;
+
+  readonly documentSchemaVersion: number;
 
   readonly contentFormat: string;
 
@@ -71,6 +76,8 @@ export interface ChapterVersionSummaryRecord {
 
 export interface ChapterVersionRecord extends ChapterVersionSummaryRecord {
   readonly content: string;
+  readonly contentDocument: ChapterContentDocument;
+  readonly documentSchemaVersion: number;
   readonly contentFormat: string;
 }
 

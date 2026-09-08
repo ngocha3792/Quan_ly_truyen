@@ -28,6 +28,9 @@ export function createRouteDiscoveryRuntimeConfig(): AppRuntimeConfig {
     features: {
       monetizationEnabled: false,
       paymentProviderEnabled: false,
+      contentDocumentEnabled: false,
+      portableCursorEnabled: false,
+      realtimeProgressSyncEnabled: false,
     },
     passwordPolicy: {
       minimumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,

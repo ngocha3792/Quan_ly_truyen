@@ -367,3 +367,13 @@ export interface ProductionGateConfig {
    */
   cleanupMaxAgeHours: number;
 }
+
+export interface ReaderFeaturesConfig {
+  contentDocumentEnabled: boolean;
+  portableCursorEnabled: boolean;
+  realtimeProgressSyncEnabled: boolean;
+  inlineCommentsEnabled: boolean;
+  comicDeliveryEnabled: boolean;
+  offlineReadingEnabled: boolean;
+  textToSpeechEnabled: boolean;
+}

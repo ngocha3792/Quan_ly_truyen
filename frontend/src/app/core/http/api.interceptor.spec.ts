@@ -32,6 +32,9 @@ describe('apiInterceptor', () => {
     features: {
       monetizationEnabled: false,
       paymentProviderEnabled: false,
+      contentDocumentEnabled: false,
+      portableCursorEnabled: false,
+      realtimeProgressSyncEnabled: false,
     },
 
     passwordPolicy: {

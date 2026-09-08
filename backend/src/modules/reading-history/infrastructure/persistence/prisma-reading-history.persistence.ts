@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import type { AnalyticsConfig } from '@/config';
+import type { AnalyticsConfig, ReaderFeaturesConfig } from '@/config';
 import {
   ChapterStatus,
   LibraryStatus,
@@ -9,6 +9,7 @@ import {
   MediaResourceType,
   MediaStatus,
   Prisma,
+  ReadingCursorType,
   StoryStatus,
   StoryVisibility,
 } from '@/generated/prisma/client';
@@ -25,7 +26,9 @@ import type {
 import {
   buildWeeklyReadingStats,
   dateKeyInTimeZone,
+  decideReadingProgressSync,
 } from '../../domain/policies';
+import { parseReadingCursor, type ReadingCursor } from '../../domain';
 
 const PUBLIC_STORY_STATUSES = [
   StoryStatus.PUBLISHED,
@@ -78,6 +81,12 @@ type ReadingHistoryStoryRow = Prisma.StoryGetPayload<{
 
 const READING_HISTORY_SELECT = {
   position: true,
+  cursor: true,
+  cursorSchemaVersion: true,
+  revision: true,
+  deviceId: true,
+  clientEventId: true,
+  lastServerSequence: true,
   progressPercent: true,
   lastReadAt: true,
   currentChapter: {
@@ -99,12 +108,16 @@ interface ReadingActivityDayRow {
 @Injectable()
 export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistencePort {
   private readonly timeZone: string;
+  private readonly portableCursorEnabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
     this.timeZone = config.getOrThrow<AnalyticsConfig>('analytics').timeZone;
+    this.portableCursorEnabled =
+      config.get<ReaderFeaturesConfig>('readerFeatures')
+        ?.portableCursorEnabled ?? false;
   }
 
   async listMine(
@@ -117,11 +130,32 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
         select: READING_HISTORY_SELECT,
       });
 
-      return rows.map(toReadingHistoryDto);
+      return rows.map((row) =>
+        toReadingHistoryDto(row, this.portableCursorEnabled),
+      );
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'reading-history-list-own',
         resource: 'Lịch sử đọc',
+      });
+    }
+  }
+
+  async getProgress(
+    userId: string,
+    storyId: string,
+  ): Promise<ReadingHistoryEntryResultDto | null> {
+    try {
+      const row = await this.prisma.readingProgress.findFirst({
+        where: { userId, storyId, story: PUBLIC_STORY_WHERE },
+        select: READING_HISTORY_SELECT,
+      });
+
+      return row ? toReadingHistoryDto(row, this.portableCursorEnabled) : null;
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'reading-progress-get-own',
+        resource: 'Tiến độ đọc',
       });
     }
   }
@@ -168,6 +202,13 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
   ): Promise<SaveReadingProgressResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        if (input.sync) {
+          await lockReadingProgressClientEvent(
+            tx,
+            input.userId,
+            input.sync.clientEventId,
+          );
+        }
         await lockLibraryEngagement(tx, input.userId, input.storyId);
 
         const story = await tx.story.findFirst({
@@ -187,6 +228,80 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
           select: { id: true, number: true },
         });
         if (!chapter) return { status: 'chapter_not_found' as const };
+
+        const existing = await tx.readingProgress.findUnique({
+          where: {
+            userId_storyId: { userId: input.userId, storyId: input.storyId },
+          },
+          select: {
+            currentChapterId: true,
+            position: true,
+            cursor: true,
+            cursorSchemaVersion: true,
+            cursorType: true,
+            blockId: true,
+            characterOffset: true,
+            mediaAssetId: true,
+            sliceId: true,
+            relativeY: true,
+            revision: true,
+            deviceId: true,
+            clientEventId: true,
+            lastServerSequence: true,
+            progressPercent: true,
+            lastReadAt: true,
+            currentChapter: { select: { number: true } },
+          },
+        });
+
+        if (input.sync) {
+          const duplicate = await tx.readingProgressSyncEvent.findUnique({
+            where: {
+              userId_clientEventId: {
+                userId: input.userId,
+                clientEventId: input.sync.clientEventId,
+              },
+            },
+            select: { storyId: true },
+          });
+          const actualRevision = existing?.revision ?? 0;
+          const decision = decideReadingProgressSync({
+            storyId: input.storyId,
+            baseRevision: input.sync.baseRevision,
+            actualRevision,
+            processedStoryId: duplicate?.storyId ?? null,
+          });
+          if (decision.kind === 'duplicate') {
+            const entry = await findProgressEntry(
+              tx,
+              input.userId,
+              input.storyId,
+              this.portableCursorEnabled,
+            );
+            if (entry) {
+              return { status: 'duplicate' as const, entry };
+            }
+            return {
+              status: 'revision_conflict' as const,
+              expectedRevision: input.sync.baseRevision,
+              actualRevision,
+              entry: null,
+            };
+          }
+          if (decision.kind !== 'accept') {
+            return {
+              status: 'revision_conflict' as const,
+              expectedRevision: decision.expectedRevision,
+              actualRevision: decision.actualRevision,
+              entry: await findProgressEntry(
+                tx,
+                input.userId,
+                input.storyId,
+                this.portableCursorEnabled,
+              ),
+            };
+          }
+        }
 
         const totalChapters = await tx.chapter.count({
           where: {
@@ -240,19 +355,6 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
           select: { startedAt: true, completedAt: true },
         });
 
-        const existing = await tx.readingProgress.findUnique({
-          where: {
-            userId_storyId: { userId: input.userId, storyId: input.storyId },
-          },
-          select: {
-            currentChapterId: true,
-            position: true,
-            progressPercent: true,
-            lastReadAt: true,
-            currentChapter: { select: { number: true } },
-          },
-        });
-
         const incomingChapterNumber = chapter.number.toNumber();
         const existingChapterNumber =
           existing?.currentChapter?.number.toNumber();
@@ -278,6 +380,23 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
           progressPercent >= 100
             ? (library?.completedAt ?? effectiveReadAt)
             : null;
+        const nextRevision = (existing?.revision ?? 0) + 1;
+        const syncEvent = input.sync
+          ? await tx.readingProgressSyncEvent.create({
+              data: {
+                userId: input.userId,
+                storyId: input.storyId,
+                clientEventId: input.sync.clientEventId,
+                deviceId: input.sync.deviceId,
+                baseRevision: input.sync.baseRevision,
+                appliedRevision: nextRevision,
+              },
+              select: { serverSequence: true },
+            })
+          : null;
+        const nextServerSequence =
+          syncEvent?.serverSequence ?? existing?.lastServerSequence ?? 0n;
+        const nextCursorColumns = toCursorColumns(input.cursor);
 
         await tx.readingProgress.upsert({
           where: {
@@ -288,6 +407,13 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
             storyId: input.storyId,
             currentChapterId,
             position: input.position,
+            cursor: input.cursor ? toPrismaJson(input.cursor) : undefined,
+            cursorSchemaVersion: input.cursor?.schemaVersion,
+            ...nextCursorColumns,
+            revision: nextRevision,
+            deviceId: input.sync?.deviceId,
+            clientEventId: input.sync?.clientEventId,
+            lastServerSequence: nextServerSequence,
             progressPercent,
             lastReadAt: effectiveReadAt,
           },
@@ -296,6 +422,42 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
             position: shouldUseIncomingPosition
               ? input.position
               : (existing?.position ?? input.position),
+            cursor:
+              shouldUseIncomingPosition && input.cursor
+                ? toPrismaJson(input.cursor)
+                : (existing?.cursor ?? Prisma.DbNull),
+            cursorSchemaVersion:
+              shouldUseIncomingPosition && input.cursor
+                ? input.cursor.schemaVersion
+                : (existing?.cursorSchemaVersion ?? null),
+            cursorType:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.cursorType
+                : existing?.cursorType,
+            blockId:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.blockId
+                : existing?.blockId,
+            characterOffset:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.characterOffset
+                : existing?.characterOffset,
+            mediaAssetId:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.mediaAssetId
+                : existing?.mediaAssetId,
+            sliceId:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.sliceId
+                : existing?.sliceId,
+            relativeY:
+              shouldUseIncomingPosition && input.cursor
+                ? nextCursorColumns.relativeY
+                : existing?.relativeY,
+            revision: nextRevision,
+            deviceId: input.sync?.deviceId ?? existing?.deviceId,
+            clientEventId: input.sync?.clientEventId ?? existing?.clientEventId,
+            lastServerSequence: nextServerSequence,
             progressPercent,
             lastReadAt: effectiveReadAt,
             updatedAt: effectiveReadAt,
@@ -327,7 +489,10 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
         });
 
         if (!saved) return { status: 'chapter_not_found' as const };
-        return { status: 'saved' as const, entry: toReadingHistoryDto(saved) };
+        return {
+          status: 'saved' as const,
+          entry: toReadingHistoryDto(saved, this.portableCursorEnabled),
+        };
       });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
@@ -341,6 +506,9 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
     try {
       await this.prisma.$transaction(async (tx) => {
         await lockLibraryEngagement(tx, userId, storyId);
+        await tx.readingProgressSyncEvent.deleteMany({
+          where: { userId, storyId },
+        });
         await tx.readingProgress.deleteMany({ where: { userId, storyId } });
         await tx.libraryEntry.updateMany({
           where: { userId, storyId },
@@ -363,6 +531,7 @@ export class PrismaReadingHistoryPersistence implements ReadingHistoryPersistenc
   async clearMine(userId: string): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
+        await tx.readingProgressSyncEvent.deleteMany({ where: { userId } });
         await tx.readingProgress.deleteMany({ where: { userId } });
         await tx.libraryEntry.updateMany({
           where: { userId },
@@ -412,6 +581,7 @@ function toReadingHistoryStorySummary(
 
 function toReadingHistoryDto(
   row: ReadingHistoryRow,
+  exposePortableCursor: boolean,
 ): ReadingHistoryEntryResultDto {
   return {
     story: toReadingHistoryStorySummary(row.story),
@@ -423,9 +593,63 @@ function toReadingHistoryDto(
         }
       : null,
     position: row.position,
+    ...(exposePortableCursor
+      ? {
+          cursor: row.cursor ? parseStoredCursor(row.cursor) : null,
+        }
+      : {}),
+    revision: row.revision,
+    deviceId: row.deviceId,
+    clientEventId: row.clientEventId,
+    lastServerSequence: row.lastServerSequence.toString(),
     progressPercent: Number(row.progressPercent),
     lastReadAt: row.lastReadAt.toISOString(),
   };
+}
+
+function parseStoredCursor(value: Prisma.JsonValue): ReadingCursor {
+  return parseReadingCursor(value);
+}
+
+function toPrismaJson(cursor: ReadingCursor): Prisma.InputJsonValue {
+  return cursor as unknown as Prisma.InputJsonValue;
+}
+
+function toCursorColumns(cursor: ReadingCursor | undefined): {
+  readonly cursorType?: ReadingCursorType;
+  readonly blockId?: string;
+  readonly characterOffset?: number;
+  readonly mediaAssetId?: string;
+  readonly sliceId?: string;
+  readonly relativeY?: number;
+} {
+  if (!cursor) return {};
+  if (cursor.kind === 'text') {
+    return {
+      cursorType: ReadingCursorType.TEXT,
+      blockId: cursor.blockId,
+      characterOffset: cursor.characterOffset,
+    };
+  }
+  return {
+    cursorType: ReadingCursorType.COMIC,
+    mediaAssetId: cursor.mediaAssetId,
+    sliceId: cursor.sliceId,
+    relativeY: cursor.relativeY,
+  };
+}
+
+async function findProgressEntry(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  storyId: string,
+  exposePortableCursor: boolean,
+): Promise<ReadingHistoryEntryResultDto | null> {
+  const row = await tx.readingProgress.findUnique({
+    where: { userId_storyId: { userId, storyId } },
+    select: READING_HISTORY_SELECT,
+  });
+  return row ? toReadingHistoryDto(row, exposePortableCursor) : null;
 }
 
 async function lockLibraryEngagement(
@@ -436,6 +660,18 @@ async function lockLibraryEngagement(
   await tx.$executeRaw(Prisma.sql`
     SELECT pg_advisory_xact_lock(
       hashtext('library_engagement:' || ${userId} || ':' || ${storyId})
+    )
+  `);
+}
+
+async function lockReadingProgressClientEvent(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  clientEventId: string,
+): Promise<void> {
+  await tx.$executeRaw(Prisma.sql`
+    SELECT pg_advisory_xact_lock(
+      hashtext('reading_progress_event:' || ${userId} || ':' || ${clientEventId})
     )
   `);
 }

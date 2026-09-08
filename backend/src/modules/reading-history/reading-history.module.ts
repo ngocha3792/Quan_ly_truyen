@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 
+import { RedisModule } from '@/infrastructure/cache/redis';
 import { PrismaModule } from '@/infrastructure/database';
-import { AuthAuthorizationModule } from '@/modules/auth';
+import { AuthModule } from '@/modules/auth';
 
 import {
   ClearReadingHistoryCommandHandler,
   GetWeeklyReadingStatsQueryHandler,
+  GetReadingProgressQueryHandler,
   GetReadingBookmarkQueryHandler,
   ListReadingBookmarksQueryHandler,
   ListReadingHistoryQueryHandler,
@@ -19,6 +21,9 @@ import {
 import {
   PrismaReadingBookmarkPersistence,
   PrismaReadingHistoryPersistence,
+  ReadingProgressGateway,
+  ReadingProgressRateLimiter,
+  ReadingProgressSocketAuthenticator,
 } from './infrastructure';
 import {
   ReadingBookmarksController,
@@ -26,11 +31,12 @@ import {
 } from './presentation';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule],
+  imports: [PrismaModule, RedisModule, AuthModule],
   controllers: [ReadingHistoryController, ReadingBookmarksController],
   providers: [
     ListReadingHistoryQueryHandler,
     GetWeeklyReadingStatsQueryHandler,
+    GetReadingProgressQueryHandler,
     SaveReadingProgressCommandHandler,
     RemoveReadingHistoryEntryCommandHandler,
     ClearReadingHistoryCommandHandler,
@@ -40,6 +46,9 @@ import {
     RemoveReadingBookmarkCommandHandler,
     PrismaReadingHistoryPersistence,
     PrismaReadingBookmarkPersistence,
+    ReadingProgressGateway,
+    ReadingProgressRateLimiter,
+    ReadingProgressSocketAuthenticator,
     {
       provide: READING_HISTORY_PERSISTENCE_PORT,
       useExisting: PrismaReadingHistoryPersistence,

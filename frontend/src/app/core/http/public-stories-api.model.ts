@@ -102,6 +102,8 @@ export interface PublicUnlockedChapterReaderApi extends PublicChapterReaderChapt
   };
   readonly content: string;
   readonly contentFormat: string;
+  readonly contentDocument?: ChapterContentDocumentApi;
+  readonly documentSchemaVersion?: number;
 }
 
 export interface PublicLockedChapterReaderApi extends PublicChapterReaderChapterBaseApi {
@@ -165,4 +167,20 @@ export interface PublicStoryChapterListApiResponse {
     readonly totalItems: number;
     readonly totalPages: number;
   };
+}
+export interface ChapterContentBlockApi {
+  readonly id: string;
+  readonly type: 'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule';
+  readonly text: string;
+  readonly marks: readonly {
+    readonly type: 'bold' | 'italic' | 'code' | 'link';
+    readonly from: number;
+    readonly to: number;
+    readonly href?: string;
+  }[];
+}
+
+export interface ChapterContentDocumentApi {
+  readonly schemaVersion: 1;
+  readonly blocks: readonly ChapterContentBlockApi[];
 }

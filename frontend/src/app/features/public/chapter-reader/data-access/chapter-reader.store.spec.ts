@@ -3,9 +3,11 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
+import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import type { ChapterReaderView } from '../domain/chapter-reader.models';
 import { ChapterReaderRepository } from './chapter-reader.repository';
 import { ChapterReaderStore } from './chapter-reader.store';
+import { ReadingProgressSyncService } from './reading-progress-sync.service';
 
 describe('ChapterReaderStore bookmark hydration', () => {
   const repository = {
@@ -32,6 +34,14 @@ describe('ChapterReaderStore bookmark hydration', () => {
             ensureInitialized: () => of('authenticated' as const),
             isAuthenticated: () => true,
           },
+        },
+        {
+          provide: APP_RUNTIME_CONFIG,
+          useValue: { features: { realtimeProgressSyncEnabled: false } },
+        },
+        {
+          provide: ReadingProgressSyncService,
+          useValue: { start: vi.fn(), capture: vi.fn(), flush: vi.fn() },
         },
       ],
     });
@@ -64,6 +74,7 @@ function chapterView(): ChapterReaderView {
       number: 1,
       title: 'Chapter One',
       paragraphs: ['Content'],
+      blocks: [{ id: null, type: 'paragraph', text: 'Content' }],
       accessState: 'FREE',
       priceCredits: null,
       publishedAt: '2026-08-17T00:00:00.000Z',

@@ -18,6 +18,8 @@ import {
   ClearReadingHistoryCommandHandler,
   GetWeeklyReadingStatsQuery,
   GetWeeklyReadingStatsQueryHandler,
+  GetReadingProgressQuery,
+  GetReadingProgressQueryHandler,
   ListReadingHistoryQuery,
   ListReadingHistoryQueryHandler,
   RemoveReadingHistoryEntryCommand,
@@ -34,6 +36,7 @@ export class ReadingHistoryController {
   constructor(
     private readonly listHistoryQuery: ListReadingHistoryQueryHandler,
     private readonly weeklyStatsQuery: GetWeeklyReadingStatsQueryHandler,
+    private readonly getProgressQuery: GetReadingProgressQueryHandler,
     private readonly saveProgressCommand: SaveReadingProgressCommandHandler,
     private readonly removeHistoryCommand: RemoveReadingHistoryEntryCommandHandler,
     private readonly clearHistoryCommand: ClearReadingHistoryCommandHandler,
@@ -70,7 +73,20 @@ export class ReadingHistoryController {
         storyId,
         request.chapterId,
         request.position,
+        request.cursor,
+        request.sync,
       ),
+    );
+  }
+
+  @Get('reading-progress/:storyId')
+  @RequirePermissions(PermissionCode.READING_HISTORY_MANAGE_OWN)
+  getProgress(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+  ): Promise<ReadingHistoryEntryResultDto | null> {
+    return this.getProgressQuery.execute(
+      new GetReadingProgressQuery(userId, storyId),
     );
   }
 

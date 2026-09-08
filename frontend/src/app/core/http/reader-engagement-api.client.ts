@@ -10,6 +10,8 @@ import {
   ReadingBookmarkApiItem,
   ReadingGoalApiItem,
   ReadingHistoryApiItem,
+  ReadingCursorApi,
+  ReadingProgressSyncApi,
   WeeklyReadingStatsApiItem,
   StoryCommentApiItem,
   StoryCommentApiPage,
@@ -50,14 +52,24 @@ export class ReaderEngagementApiClient {
     return this.get<WeeklyReadingStatsApiItem>('/reading-stats/weekly');
   }
 
+  getReadingProgress(storyId: string): Observable<ReadingHistoryApiItem | null> {
+    return this.get<ReadingHistoryApiItem | null>(
+      `/reading-progress/${encodeURIComponent(storyId)}`,
+    );
+  }
+
   saveReadingProgress(
     storyId: string,
     chapterId: string,
     position = 0,
+    cursor?: ReadingCursorApi,
+    sync?: ReadingProgressSyncApi,
   ): Observable<ReadingHistoryApiItem> {
     return this.put<ReadingHistoryApiItem>(`/reading-progress/${encodeURIComponent(storyId)}`, {
       chapterId,
       position,
+      ...(cursor ? { cursor } : {}),
+      ...(sync ? { sync } : {}),
     });
   }
 

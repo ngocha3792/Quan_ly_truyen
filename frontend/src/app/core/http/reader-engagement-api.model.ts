@@ -1,3 +1,19 @@
+export type ReadingCursorApi =
+  | {
+      readonly schemaVersion: 1;
+      readonly kind: 'text';
+      readonly blockId: string;
+      readonly characterOffset: number;
+      readonly viewportRatio: number;
+    }
+  | {
+      readonly schemaVersion: 1;
+      readonly kind: 'comic';
+      readonly mediaAssetId?: string;
+      readonly sliceId?: string;
+      readonly relativeY: number;
+    };
+
 export type LibraryApiStatus = 'PLAN_TO_READ' | 'READING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED';
 
 export interface ReaderStoryApiSummary {
@@ -34,8 +50,19 @@ export interface ReadingHistoryApiItem {
     readonly title: string;
   } | null;
   readonly position: number;
+  readonly cursor?: ReadingCursorApi | null;
+  readonly revision: number;
+  readonly deviceId: string | null;
+  readonly clientEventId: string | null;
+  readonly lastServerSequence: string;
   readonly progressPercent: number;
   readonly lastReadAt: string;
+}
+
+export interface ReadingProgressSyncApi {
+  readonly baseRevision: number;
+  readonly deviceId: string;
+  readonly clientEventId: string;
 }
 
 export interface WeeklyReadingDayStatsApiItem {

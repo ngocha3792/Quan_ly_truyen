@@ -1,3 +1,5 @@
+import type { ChapterContentDocument } from '../../domain';
+
 export interface ChapterResultDto {
   readonly id: string;
 
@@ -14,6 +16,10 @@ export interface ChapterResultDto {
   readonly slug: string;
 
   readonly content: string;
+
+  readonly contentDocument: ChapterContentDocument;
+
+  readonly documentSchemaVersion: number;
 
   readonly contentFormat: string;
 

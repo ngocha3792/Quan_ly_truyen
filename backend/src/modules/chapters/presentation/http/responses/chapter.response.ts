@@ -1,4 +1,5 @@
 import type { ChapterResultDto } from '../../../application';
+import type { ChapterContentDocument } from '../../../domain';
 
 export interface ChapterResponse {
   readonly id: string;
@@ -16,6 +17,10 @@ export interface ChapterResponse {
   readonly slug: string;
 
   readonly content: string;
+
+  readonly contentDocument: ChapterContentDocument;
+
+  readonly documentSchemaVersion: number;
 
   readonly contentFormat: string;
 
@@ -44,6 +49,8 @@ export function toChapterResponse(result: ChapterResultDto): ChapterResponse {
     title: result.title,
     slug: result.slug,
     content: result.content,
+    contentDocument: result.contentDocument,
+    documentSchemaVersion: result.documentSchemaVersion,
     contentFormat: result.contentFormat,
     status: result.status,
     wordCount: result.wordCount,

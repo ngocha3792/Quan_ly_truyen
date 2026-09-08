@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { catchError, EMPTY, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
+import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import type {
   CommentReactionApiType,
   CommentReportReasonApi,
@@ -14,11 +15,14 @@ import {
   updateCommentTree,
 } from './chapter-comment-state.util';
 import { ChapterReaderRepository } from './chapter-reader.repository';
+import { ReadingProgressSyncService } from './reading-progress-sync.service';
 
 @Injectable()
 export class ChapterReaderStore {
   private readonly repository = inject(ChapterReaderRepository);
   private readonly auth = inject(AuthStore);
+  private readonly config = inject(APP_RUNTIME_CONFIG);
+  private readonly progressSync = inject(ReadingProgressSyncService);
   private readonly viewState = signal<ChapterReaderView | null>(null);
 
   readonly view = this.viewState.asReadonly();
@@ -32,6 +36,7 @@ export class ChapterReaderStore {
   readonly commentMessage = signal<string | null>(null);
 
   load(storySlug: string, chapterNumber: string): void {
+    this.progressSync.flush();
     this.loading.set(true);
     this.error.set(null);
     this.bookmarked.set(false);
@@ -56,9 +61,11 @@ export class ChapterReaderStore {
                 }
 
                 return forkJoin({
-                  progress: this.repository
-                    .saveProgress(view.story.id, view.chapter.id)
-                    .pipe(catchError(() => of(undefined))),
+                  progress: this.config.features.realtimeProgressSyncEnabled
+                    ? of(this.progressSync.start(view))
+                    : this.repository
+                        .saveProgress(view.story.id, view.chapter.id)
+                        .pipe(catchError(() => of(undefined))),
                   bookmarked: this.repository
                     .getBookmark(view.chapter.id)
                     .pipe(catchError(() => of(false))),
@@ -79,6 +86,14 @@ export class ChapterReaderStore {
         finalize(() => this.loading.set(false)),
       )
       .subscribe();
+  }
+
+  captureProgress(): void {
+    this.progressSync.capture();
+  }
+
+  flushProgress(): void {
+    this.progressSync.flush();
   }
 
   addComment(body: string): void {

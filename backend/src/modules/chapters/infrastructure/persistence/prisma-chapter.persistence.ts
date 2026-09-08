@@ -13,7 +13,12 @@ import {
   StoryVisibility,
 } from '@/generated/prisma/client';
 import { slugify } from '@/common/utils';
-import { monetizationConfig, shouldEnforceChapterPaywall } from '@/config';
+import {
+  monetizationConfig,
+  readerFeaturesConfig,
+  shouldEnforceChapterPaywall,
+} from '@/config';
+import type { ReaderFeaturesConfig } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 
 import type {
@@ -43,7 +48,13 @@ import type {
   UpdateAuthorChapterInput,
   UpdateAuthorChapterResult,
 } from '../../application';
-import { ChapterDraftPolicy } from '../../domain';
+import {
+  ChapterDraftPolicy,
+  createBackfilledChapterContentDocument,
+  createChapterContentDocument,
+  isChapterContentDocument,
+  type ChapterContentDocument,
+} from '../../domain';
 
 const CHAPTER_SELECT = {
   id: true,
@@ -54,6 +65,8 @@ const CHAPTER_SELECT = {
   title: true,
   slug: true,
   content: true,
+  contentDocument: true,
+  documentSchemaVersion: true,
   contentFormat: true,
   status: true,
   wordCount: true,
@@ -106,6 +119,8 @@ const CHAPTER_VERSION_SUMMARY_SELECT = {
 const CHAPTER_VERSION_SELECT = {
   ...CHAPTER_VERSION_SUMMARY_SELECT,
   content: true,
+  contentDocument: true,
+  documentSchemaVersion: true,
   contentFormat: true,
 } satisfies Prisma.ChapterVersionSelect;
 
@@ -147,6 +162,8 @@ type PublicChapterReaderMetadataRow = Prisma.ChapterGetPayload<{
 
 const PUBLIC_CHAPTER_CONTENT_SELECT = {
   content: true,
+  contentDocument: true,
+  documentSchemaVersion: true,
   contentFormat: true,
 } satisfies Prisma.ChapterSelect;
 
@@ -174,6 +191,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     private readonly prisma: PrismaService,
     @Inject(monetizationConfig.KEY)
     private readonly monetization: ConfigType<typeof monetizationConfig>,
+    @Inject(readerFeaturesConfig.KEY)
+    private readonly readerFeatures: ReaderFeaturesConfig,
   ) {}
 
   async listOwnedByStory(
@@ -380,6 +399,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         const number = Math.floor(lastChapter?.number.toNumber() ?? 0) + 1;
         const chapterId = randomUUID();
         const slug = createChapterSlug(number, input.title);
+        const contentDocument = createChapterContentDocument(input.content);
 
         const chapter = await tx.chapter.create({
           data: {
@@ -391,6 +411,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             title: input.title,
             slug,
             content: input.content,
+            contentDocument: toPrismaJson(contentDocument),
+            documentSchemaVersion: contentDocument.schemaVersion,
             contentFormat: ContentFormat.MARKDOWN,
             status: ChapterStatus.DRAFT,
             wordCount: input.wordCount,
@@ -403,6 +425,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 version: 1,
                 title: input.title,
                 content: input.content,
+                contentDocument: toPrismaJson(contentDocument),
+                documentSchemaVersion: contentDocument.schemaVersion,
                 contentFormat: ContentFormat.MARKDOWN,
                 wordCount: input.wordCount,
                 changeSummary: 'Tạo bản nháp',
@@ -533,6 +557,14 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           ? createChapterSlug(current.number.toNumber(), nextTitle)
           : current.slug;
         const nextVersion = current.version + 1;
+        const currentDocument = toContentDocument(
+          current.contentDocument,
+          current.content,
+          current.id,
+        );
+        const nextDocument = contentChanged
+          ? createChapterContentDocument(nextContent, currentDocument)
+          : currentDocument;
 
         const updated = await tx.chapter.update({
           where: {
@@ -551,6 +583,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                   wordCount: nextWordCount,
                 }
               : {}),
+            contentDocument: toPrismaJson(nextDocument),
+            documentSchemaVersion: nextDocument.schemaVersion,
             updatedById: input.userId,
             updatedAt: input.updatedAt,
             version: nextVersion,
@@ -560,6 +594,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 version: nextVersion,
                 title: nextTitle,
                 content: nextContent,
+                contentDocument: toPrismaJson(nextDocument),
+                documentSchemaVersion: nextDocument.schemaVersion,
                 contentFormat: current.contentFormat,
                 wordCount: nextWordCount,
                 changeSummary: describeChapterChanges(
@@ -665,16 +701,29 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             version: true,
             title: true,
             content: true,
+            contentDocument: true,
+            documentSchemaVersion: true,
             contentFormat: true,
             wordCount: true,
           },
         });
         if (!source) return { status: 'version_not_found' };
+        const sourceDocument = toContentDocument(
+          source.contentDocument,
+          source.content,
+          current.id,
+        );
+        const currentDocument = toContentDocument(
+          current.contentDocument,
+          current.content,
+          current.id,
+        );
 
         if (
           source.title === current.title &&
           source.content === current.content &&
-          source.contentFormat === current.contentFormat
+          source.contentFormat === current.contentFormat &&
+          JSON.stringify(sourceDocument) === JSON.stringify(currentDocument)
         ) {
           return { status: 'restored', chapter: this.toRecord(current) };
         }
@@ -686,6 +735,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             title: source.title,
             slug: createChapterSlug(current.number.toNumber(), source.title),
             content: source.content,
+            contentDocument: toPrismaJson(sourceDocument),
+            documentSchemaVersion: sourceDocument.schemaVersion,
             contentFormat: source.contentFormat,
             wordCount: source.wordCount,
             updatedById: input.userId,
@@ -697,6 +748,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 version: nextVersion,
                 title: source.title,
                 content: source.content,
+                contentDocument: toPrismaJson(sourceDocument),
+                documentSchemaVersion: sourceDocument.schemaVersion,
                 contentFormat: source.contentFormat,
                 wordCount: source.wordCount,
                 changeSummary: `Khôi phục từ phiên bản ${source.version}`,
@@ -1345,6 +1398,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         next,
         chapter.publishedAt,
         access,
+        this.readerFeatures.contentDocumentEnabled,
       );
     } catch (error: unknown) {
       throw mapPrismaError(error, {
@@ -1517,6 +1571,12 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       title: chapter.title,
       slug: chapter.slug,
       content: chapter.content,
+      contentDocument: toContentDocument(
+        chapter.contentDocument,
+        chapter.content,
+        chapter.id,
+      ),
+      documentSchemaVersion: 1,
       contentFormat: chapter.contentFormat,
       status: chapter.status,
       wordCount: chapter.wordCount,
@@ -1686,6 +1746,7 @@ function toPublicChapterReaderDto(
     readonly state: 'FREE' | 'ENTITLED' | 'BYPASS';
     readonly priceCredits: string | null;
   },
+  exposeContentDocument: boolean,
 ): PublicChapterReaderDto {
   return {
     story: {
@@ -1700,6 +1761,16 @@ function toPublicChapterReaderDto(
       slug: chapter.slug,
       access,
       content: content.content,
+      ...(exposeContentDocument
+        ? {
+            contentDocument: toContentDocument(
+              content.contentDocument,
+              content.content,
+              chapter.id,
+            ),
+            documentSchemaVersion: 1,
+          }
+        : {}),
       contentFormat: content.contentFormat,
       wordCount: chapter.wordCount,
       views: bigintToSafeNumber(chapter.viewCount),
@@ -1820,11 +1891,35 @@ function toChapterVersionRecord(
     version: version.version,
     title: version.title,
     content: version.content,
+    contentDocument: toContentDocument(
+      version.contentDocument,
+      version.content,
+      version.chapterId,
+    ),
+    documentSchemaVersion: 1,
     contentFormat: version.contentFormat,
     wordCount: version.wordCount,
     changeSummary: version.changeSummary,
     createdAt: version.createdAt,
   };
+}
+
+function toContentDocument(
+  value: Prisma.JsonValue | null,
+  markdown: string,
+  chapterId: string,
+): ChapterContentDocument {
+  if (value === null) {
+    return createBackfilledChapterContentDocument(markdown, chapterId);
+  }
+  if (!isChapterContentDocument(value)) {
+    throw new Error('Stored chapter content document is invalid');
+  }
+  return value;
+}
+
+function toPrismaJson(document: ChapterContentDocument): Prisma.InputJsonValue {
+  return document as unknown as Prisma.InputJsonValue;
 }
 
 function describeChapterChanges(

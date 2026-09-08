@@ -9,6 +9,9 @@ describe('parseAuthClientConfigResponse', () => {
           features: {
             monetizationEnabled: true,
             paymentProviderEnabled: false,
+            contentDocumentEnabled: true,
+            portableCursorEnabled: true,
+            realtimeProgressSyncEnabled: true,
           },
           passwordPolicy: {
             minimumLength: 10,
@@ -33,6 +36,9 @@ describe('parseAuthClientConfigResponse', () => {
       features: {
         monetizationEnabled: true,
         paymentProviderEnabled: false,
+        contentDocumentEnabled: true,
+        portableCursorEnabled: true,
+        realtimeProgressSyncEnabled: true,
       },
       passwordPolicy: {
         minimumLength: 10,
@@ -62,6 +68,9 @@ describe('parseAuthClientConfigResponse', () => {
           features: {
             monetizationEnabled: false,
             paymentProviderEnabled: false,
+            contentDocumentEnabled: false,
+            portableCursorEnabled: false,
+            realtimeProgressSyncEnabled: false,
           },
           passwordPolicy: {
             minimumLength: 72,

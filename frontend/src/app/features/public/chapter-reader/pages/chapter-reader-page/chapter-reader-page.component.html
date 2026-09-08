@@ -52,10 +52,17 @@
             }
           </nav>
 
-          <article class="chapter-content" [style.font-size.px]="store.fontSize()">
-            @for (paragraph of view.chapter.paragraphs; track $index) {
-              <p [class.chapter-separator]="paragraph === '---'">
-                {{ paragraph }}
+          <article
+            class="chapter-content"
+            [attr.data-reader-chapter-id]="view.chapter.id"
+            [style.font-size.px]="store.fontSize()"
+          >
+            @for (block of view.chapter.blocks; track block.id ?? $index) {
+              <p
+                [attr.data-block-id]="block.id"
+                [class.chapter-separator]="block.type === 'horizontal_rule' || block.text === '---'"
+              >
+                {{ block.text }}
               </p>
             }
           </article>

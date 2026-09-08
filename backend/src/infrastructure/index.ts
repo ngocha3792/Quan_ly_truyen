@@ -8,3 +8,4 @@ export * from './mail';
 export * from './observability';
 export * from './queue';
 export * from './production-gate';
+export * from './websocket';

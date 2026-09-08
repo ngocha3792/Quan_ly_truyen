@@ -146,6 +146,14 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'payment_provider_connections_code_key',
   'payment_provider_connections_enabled_sort_idx',
   'payment_provider_connections_kind_idx',
+
+  'reading_progress_sync_events_user_id_client_event_id_key',
+
+  'reading_progress_sync_events_server_sequence_key',
+
+  'reading_progress_sync_events_user_id_story_id_server_sequence_idx',
+
+  'reading_progress_user_id_device_id_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -158,6 +166,12 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'library_entries_progress_between_0_and_100',
 
   'reading_progress_percent_between_0_and_100',
+
+  'chapters_content_document_v1_valid',
+
+  'chapter_versions_content_document_v1_valid',
+
+  'reading_progress_cursor_contract_valid',
 
   'reading_sessions_positions_non_negative',
 
@@ -284,6 +298,10 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'payment_provider_connections_name_check',
   'payment_provider_connections_currency_check',
   'payment_provider_connections_ttl_check',
+
+  'reading_progress_realtime_cursor_valid',
+
+  'reading_progress_sync_events_revision_valid',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

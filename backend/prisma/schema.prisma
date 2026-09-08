@@ -444,9 +444,9 @@ model User {
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  authorApplication            AuthorApplication?       @relation("AuthorApplicationOwner")
-  authorApplicationsReviewed   AuthorApplication[]      @relation("AuthorApplicationReviewer")
-  avatarMedia                  MediaAsset?              @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  authorApplication            AuthorApplication?         @relation("AuthorApplicationOwner")
+  authorApplicationsReviewed   AuthorApplication[]        @relation("AuthorApplicationReviewer")
+  avatarMedia                  MediaAsset?                @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
   authorProfile                AuthorProfile?
   oauthAccounts                OAuthAccount[]
   adminMfaCredential           AdminMfaCredential?
@@ -457,31 +457,32 @@ model User {
   accountDeletionRequests      AccountDeletionRequest[]
   sessions                     Session[]
   tokens                       UserToken[]
-  userRoles                    UserRole[]               @relation("UserRoles")
-  rolesAssigned                UserRole[]               @relation("AssignedUserRoles")
-  uploadedMedia                MediaAsset[]             @relation("MediaUploader")
+  userRoles                    UserRole[]                 @relation("UserRoles")
+  rolesAssigned                UserRole[]                 @relation("AssignedUserRoles")
+  uploadedMedia                MediaAsset[]               @relation("MediaUploader")
   storyContributions           StoryContributor[]
-  chaptersCreated              Chapter[]                @relation("ChapterCreatedBy")
-  chaptersUpdated              Chapter[]                @relation("ChapterUpdatedBy")
+  chaptersCreated              Chapter[]                  @relation("ChapterCreatedBy")
+  chaptersUpdated              Chapter[]                  @relation("ChapterUpdatedBy")
   chapterVersions              ChapterVersion[]
   comments                     Comment[]
   commentReactions             CommentReaction[]
   ratings                      Rating[]
   libraryEntries               LibraryEntry[]
   storyFollows                 StoryFollow[]
-  authorFollows                UserFollowAuthor[]       @relation("UserAuthorFollows")
+  authorFollows                UserFollowAuthor[]         @relation("UserAuthorFollows")
   readingProgresses            ReadingProgress[]
+  readingProgressSyncEvents    ReadingProgressSyncEvent[]
   readingSessions              ReadingSession[]
   readingBookmarks             ReadingBookmark[]
   readingGoal                  ReadingGoal?
   readerAnalyticsEvents        ReaderAnalyticsEvent[]
-  reportsFiled                 Report[]                 @relation("ReportsFiled")
-  reportsAssigned              Report[]                 @relation("ReportsAssigned")
-  reportedInReports            Report[]                 @relation("ReportedUserReports")
-  storySubmissions             StorySubmission[]        @relation("StorySubmittedBy")
-  storyReviews                 StorySubmission[]        @relation("StoryReviewedBy")
-  moderationActions            ModerationAction[]       @relation("ModerationActor")
-  moderationTarget             ModerationAction[]       @relation("ModerationTargetUser")
+  reportsFiled                 Report[]                   @relation("ReportsFiled")
+  reportsAssigned              Report[]                   @relation("ReportsAssigned")
+  reportedInReports            Report[]                   @relation("ReportedUserReports")
+  storySubmissions             StorySubmission[]          @relation("StorySubmittedBy")
+  storyReviews                 StorySubmission[]          @relation("StoryReviewedBy")
+  moderationActions            ModerationAction[]         @relation("ModerationActor")
+  moderationTarget             ModerationAction[]         @relation("ModerationTargetUser")
   notifications                Notification[]
   notificationPreference       NotificationPreference?
   auditLogs                    AuditLog[]
@@ -495,10 +496,10 @@ model User {
   chapterTranslationsRequested ChapterTranslation[]
   wallets                      Wallet[]
   chapterPurchases             ChapterPurchase[]
-  chapterPurchasesRefunded     ChapterPurchase[]        @relation("ChapterPurchaseRefundedBy")
+  chapterPurchasesRefunded     ChapterPurchase[]          @relation("ChapterPurchaseRefundedBy")
   chapterEntitlements          ChapterEntitlement[]
-  chapterMonetizationUpdates   ChapterMonetization[]    @relation("ChapterMonetizationUpdatedBy")
-  chapterPricingVersions       ChapterPricingVersion[]  @relation("ChapterPricingVersionChangedBy")
+  chapterMonetizationUpdates   ChapterMonetization[]      @relation("ChapterMonetizationUpdatedBy")
+  chapterPricingVersions       ChapterPricingVersion[]    @relation("ChapterPricingVersionChangedBy")
   paymentOrders                PaymentOrder[]
 
   @@index([status, createdAt])
@@ -1437,25 +1438,26 @@ model Story {
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?       @map("deleted_at") @db.Timestamptz(3)
 
-  author            AuthorProfile          @relation(fields: [authorId], references: [userId], onDelete: Restrict)
-  coverMedia        MediaAsset?            @relation("StoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  contributors      StoryContributor[]
-  categories        StoryCategory[]
-  tags              StoryTag[]
-  aiProfile         AiStoryProfile?
-  chapters          Chapter[]
-  comments          Comment[]
-  ratings           Rating[]
-  libraryEntries    LibraryEntry[]
-  follows           StoryFollow[]
-  readingProgress   ReadingProgress[]
-  readingSessions   ReadingSession[]
-  readingBookmarks  ReadingBookmark[]
-  submissions       StorySubmission[]
-  reports           Report[]               @relation("StoryReports")
-  moderationActions ModerationAction[]     @relation("ModerationStory")
-  dailyStats        StoryDailyStat[]
-  analyticsEvents   ReaderAnalyticsEvent[]
+  author                    AuthorProfile              @relation(fields: [authorId], references: [userId], onDelete: Restrict)
+  coverMedia                MediaAsset?                @relation("StoryCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  contributors              StoryContributor[]
+  categories                StoryCategory[]
+  tags                      StoryTag[]
+  aiProfile                 AiStoryProfile?
+  chapters                  Chapter[]
+  comments                  Comment[]
+  ratings                   Rating[]
+  libraryEntries            LibraryEntry[]
+  follows                   StoryFollow[]
+  readingProgress           ReadingProgress[]
+  readingProgressSyncEvents ReadingProgressSyncEvent[]
+  readingSessions           ReadingSession[]
+  readingBookmarks          ReadingBookmark[]
+  submissions               StorySubmission[]
+  reports                   Report[]                   @relation("StoryReports")
+  moderationActions         ModerationAction[]         @relation("ModerationStory")
+  dailyStats                StoryDailyStat[]
+  analyticsEvents           ReaderAnalyticsEvent[]
 
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])
@@ -1549,25 +1551,27 @@ model StoryTag {
 }
 
 model Chapter {
-  id            String        @id @default(uuid()) @db.Uuid
-  storyId       String        @map("story_id") @db.Uuid
-  createdById   String        @map("created_by_id") @db.Uuid
-  updatedById   String        @map("updated_by_id") @db.Uuid
-  number        Decimal       @db.Decimal(10, 2)
-  title         String        @db.VarChar(255)
-  slug          String        @db.VarChar(255)
-  content       String        @db.Text
-  contentFormat ContentFormat @default(MARKDOWN) @map("content_format")
-  status        ChapterStatus @default(DRAFT)
-  wordCount     Int           @default(0) @map("word_count")
-  viewCount     BigInt        @default(0) @map("view_count")
-  commentCount  Int           @default(0) @map("comment_count")
-  version       Int           @default(1)
-  scheduledAt   DateTime?     @map("scheduled_at") @db.Timestamptz(3)
-  publishedAt   DateTime?     @map("published_at") @db.Timestamptz(3)
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  id                    String        @id @default(uuid()) @db.Uuid
+  storyId               String        @map("story_id") @db.Uuid
+  createdById           String        @map("created_by_id") @db.Uuid
+  updatedById           String        @map("updated_by_id") @db.Uuid
+  number                Decimal       @db.Decimal(10, 2)
+  title                 String        @db.VarChar(255)
+  slug                  String        @db.VarChar(255)
+  content               String        @db.Text
+  contentDocument       Json?         @map("content_document") @db.JsonB
+  documentSchemaVersion Int?          @map("document_schema_version")
+  contentFormat         ContentFormat @default(MARKDOWN) @map("content_format")
+  status                ChapterStatus @default(DRAFT)
+  wordCount             Int           @default(0) @map("word_count")
+  viewCount             BigInt        @default(0) @map("view_count")
+  commentCount          Int           @default(0) @map("comment_count")
+  version               Int           @default(1)
+  scheduledAt           DateTime?     @map("scheduled_at") @db.Timestamptz(3)
+  publishedAt           DateTime?     @map("published_at") @db.Timestamptz(3)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
   story             Story                   @relation(fields: [storyId], references: [id], onDelete: Cascade)
   createdBy         User                    @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -1599,16 +1603,18 @@ model Chapter {
 }
 
 model ChapterVersion {
-  id            String        @id @default(uuid()) @db.Uuid
-  chapterId     String        @map("chapter_id") @db.Uuid
-  createdById   String        @map("created_by_id") @db.Uuid
-  version       Int
-  title         String        @db.VarChar(255)
-  content       String        @db.Text
-  contentFormat ContentFormat @map("content_format")
-  wordCount     Int           @map("word_count")
-  changeSummary String?       @map("change_summary") @db.VarChar(500)
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  id                    String        @id @default(uuid()) @db.Uuid
+  chapterId             String        @map("chapter_id") @db.Uuid
+  createdById           String        @map("created_by_id") @db.Uuid
+  version               Int
+  title                 String        @db.VarChar(255)
+  content               String        @db.Text
+  contentDocument       Json?         @map("content_document") @db.JsonB
+  documentSchemaVersion Int?          @map("document_schema_version")
+  contentFormat         ContentFormat @map("content_format")
+  wordCount             Int           @map("word_count")
+  changeSummary         String?       @map("change_summary") @db.VarChar(500)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   createdBy User    @relation(fields: [createdById], references: [id], onDelete: Restrict)
@@ -1747,14 +1753,26 @@ model ReadingBookmark {
 }
 
 model ReadingProgress {
-  userId           String   @map("user_id") @db.Uuid
-  storyId          String   @map("story_id") @db.Uuid
-  currentChapterId String?  @map("current_chapter_id") @db.Uuid
-  position         Int      @default(0)
-  progressPercent  Decimal  @default(0) @map("progress_percent") @db.Decimal(5, 2)
-  lastReadAt       DateTime @default(now()) @map("last_read_at") @db.Timestamptz(3)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  userId              String             @map("user_id") @db.Uuid
+  storyId             String             @map("story_id") @db.Uuid
+  currentChapterId    String?            @map("current_chapter_id") @db.Uuid
+  position            Int                @default(0)
+  cursor              Json?              @db.JsonB
+  cursorSchemaVersion Int?               @map("cursor_schema_version")
+  cursorType          ReadingCursorType? @map("cursor_type")
+  blockId             String?            @map("block_id") @db.Uuid
+  characterOffset     Int?               @map("character_offset")
+  mediaAssetId        String?            @map("media_asset_id") @db.Uuid
+  sliceId             String?            @map("slice_id") @db.Uuid
+  relativeY           Decimal?           @map("relative_y") @db.Decimal(6, 5)
+  revision            Int                @default(0)
+  deviceId            String?            @map("device_id") @db.Uuid
+  clientEventId       String?            @map("client_event_id") @db.Uuid
+  lastServerSequence  BigInt             @default(0) @map("last_server_sequence")
+  progressPercent     Decimal            @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  lastReadAt          DateTime           @default(now()) @map("last_read_at") @db.Timestamptz(3)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   story          Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
@@ -1764,7 +1782,35 @@ model ReadingProgress {
   @@index([userId, lastReadAt])
   @@index([storyId, lastReadAt])
   @@index([currentChapterId])
+  @@index([userId, deviceId])
   @@map("reading_progress")
+}
+
+enum ReadingCursorType {
+  TEXT  @map("text")
+  COMIC @map("comic")
+
+  @@map("reading_cursor_type")
+}
+
+model ReadingProgressSyncEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  storyId         String   @map("story_id") @db.Uuid
+  clientEventId   String   @map("client_event_id") @db.Uuid
+  deviceId        String   @map("device_id") @db.Uuid
+  baseRevision    Int      @map("base_revision")
+  appliedRevision Int      @map("applied_revision")
+  serverSequence  BigInt   @default(autoincrement()) @map("server_sequence")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientEventId])
+  @@unique([serverSequence])
+  @@index([userId, storyId, serverSequence])
+  @@map("reading_progress_sync_events")
 }
 
 model ReadingSession {

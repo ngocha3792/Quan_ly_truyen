@@ -1,3 +1,5 @@
+import type { ChapterContentDocument } from '../../domain';
+
 export interface PublicChapterReaderStoryDto {
   readonly id: string;
   readonly slug: string;
@@ -31,6 +33,8 @@ export interface PublicUnlockedChapterReaderDto extends PublicChapterReaderChapt
   };
   readonly content: string;
   readonly contentFormat: string;
+  readonly contentDocument?: ChapterContentDocument;
+  readonly documentSchemaVersion?: number;
 }
 
 export interface PublicLockedChapterReaderDto extends PublicChapterReaderChapterBaseDto {

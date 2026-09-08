@@ -9,16 +9,24 @@ import { AuthClientConfigController } from './auth-client-config.controller';
 describe('AuthClientConfigController', () => {
   it('trả về auth client config từ domain policy và AuthConfig', () => {
     const configService = {
-      getOrThrow: jest.fn((key: string) =>
-        key === 'auth'
-          ? {
-              csrf: {
-                enabled: true,
-                cookieName: 'runtime_csrf_cookie',
-              },
-            }
-          : { enabled: false, paymentProviderEnabled: false },
-      ),
+      getOrThrow: jest.fn((key: string) => {
+        if (key === 'auth') {
+          return {
+            csrf: {
+              enabled: true,
+              cookieName: 'runtime_csrf_cookie',
+            },
+          };
+        }
+        if (key === 'readerFeatures') {
+          return {
+            contentDocumentEnabled: false,
+            portableCursorEnabled: false,
+            realtimeProgressSyncEnabled: false,
+          };
+        }
+        return { enabled: false, paymentProviderEnabled: false };
+      }),
     } as unknown as ConfigService;
 
     const controller = new AuthClientConfigController(configService);
@@ -27,6 +35,9 @@ describe('AuthClientConfigController', () => {
       features: {
         monetizationEnabled: false,
         paymentProviderEnabled: false,
+        contentDocumentEnabled: false,
+        portableCursorEnabled: false,
+        realtimeProgressSyncEnabled: false,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,
@@ -51,5 +62,7 @@ describe('AuthClientConfigController', () => {
     expect(configService.getOrThrow).toHaveBeenCalledWith('auth');
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(configService.getOrThrow).toHaveBeenCalledWith('monetization');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(configService.getOrThrow).toHaveBeenCalledWith('readerFeatures');
   });
 });

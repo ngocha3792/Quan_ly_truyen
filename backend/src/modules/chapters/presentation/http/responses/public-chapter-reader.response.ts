@@ -2,6 +2,7 @@ import type {
   PublicChapterNavigationDto,
   PublicChapterReaderDto,
 } from '../../../application';
+import type { ChapterContentDocument } from '../../../domain';
 
 export interface PublicChapterNavigationResponse {
   readonly id: string;
@@ -43,6 +44,8 @@ export interface PublicUnlockedChapterReaderResponse extends PublicChapterReader
   };
   readonly content: string;
   readonly contentFormat: string;
+  readonly contentDocument?: ChapterContentDocument;
+  readonly documentSchemaVersion?: number;
 }
 
 export interface PublicLockedChapterReaderResponse extends PublicChapterReaderChapterBaseResponse {
@@ -99,6 +102,12 @@ function toChapterResponse(
     access: chapter.access,
     content: chapter.content,
     contentFormat: chapter.contentFormat,
+    ...('contentDocument' in chapter && chapter.contentDocument
+      ? {
+          contentDocument: chapter.contentDocument,
+          documentSchemaVersion: chapter.documentSchemaVersion,
+        }
+      : {}),
   };
 }
 

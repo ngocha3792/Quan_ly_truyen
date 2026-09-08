@@ -32,6 +32,9 @@ function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
   return {
     monetizationEnabled: readBoolean(value, 'monetizationEnabled'),
     paymentProviderEnabled: readBoolean(value, 'paymentProviderEnabled'),
+    contentDocumentEnabled: readBoolean(value, 'contentDocumentEnabled'),
+    portableCursorEnabled: readBoolean(value, 'portableCursorEnabled'),
+    realtimeProgressSyncEnabled: readBoolean(value, 'realtimeProgressSyncEnabled'),
   };
 }
 

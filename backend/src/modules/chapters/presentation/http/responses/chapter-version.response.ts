@@ -3,6 +3,7 @@ import type {
   ChapterVersionResultDto,
   ChapterVersionSummaryResultDto,
 } from '../../../application';
+import type { ChapterContentDocument } from '../../../domain';
 
 export interface ChapterVersionSummaryResponse {
   readonly id: string;
@@ -18,6 +19,8 @@ export interface ChapterVersionSummaryResponse {
 
 export interface ChapterVersionResponse extends ChapterVersionSummaryResponse {
   readonly content: string;
+  readonly contentDocument: ChapterContentDocument;
+  readonly documentSchemaVersion: number;
   readonly contentFormat: string;
 }
 
@@ -45,6 +48,8 @@ export function toChapterVersionResponse(
   return {
     ...toChapterVersionSummaryResponse(result),
     content: result.content,
+    contentDocument: result.contentDocument,
+    documentSchemaVersion: result.documentSchemaVersion,
     contentFormat: result.contentFormat,
   };
 }

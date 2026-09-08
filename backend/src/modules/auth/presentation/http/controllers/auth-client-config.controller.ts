@@ -3,7 +3,11 @@ import { ConfigService } from '@nestjs/config';
 
 import { CSRF_HEADER_NAME } from '@/common/constants';
 import { Public } from '@/common/decorators';
-import type { AuthConfig, MonetizationConfig } from '@/config';
+import type {
+  AuthConfig,
+  MonetizationConfig,
+  ReaderFeaturesConfig,
+} from '@/config';
 
 import { PasswordPolicy, PasswordResetPolicy } from '../../../domain';
 
@@ -11,6 +15,9 @@ export interface AuthClientConfigResponse {
   readonly features: {
     readonly monetizationEnabled: boolean;
     readonly paymentProviderEnabled: boolean;
+    readonly contentDocumentEnabled: boolean;
+    readonly portableCursorEnabled: boolean;
+    readonly realtimeProgressSyncEnabled: boolean;
   };
   readonly passwordPolicy: {
     readonly minimumLength: number;
@@ -35,11 +42,14 @@ export interface AuthClientConfigResponse {
 export class AuthClientConfigController {
   private readonly authConfig: AuthConfig;
   private readonly monetizationConfig: MonetizationConfig;
+  private readonly readerFeatures: ReaderFeaturesConfig;
 
   constructor(configService: ConfigService) {
     this.authConfig = configService.getOrThrow<AuthConfig>('auth');
     this.monetizationConfig =
       configService.getOrThrow<MonetizationConfig>('monetization');
+    this.readerFeatures =
+      configService.getOrThrow<ReaderFeaturesConfig>('readerFeatures');
   }
 
   @Get('client-config')
@@ -50,6 +60,10 @@ export class AuthClientConfigController {
       features: {
         monetizationEnabled: this.monetizationConfig.enabled,
         paymentProviderEnabled: this.monetizationConfig.paymentProviderEnabled,
+        contentDocumentEnabled: this.readerFeatures.contentDocumentEnabled,
+        portableCursorEnabled: this.readerFeatures.portableCursorEnabled,
+        realtimeProgressSyncEnabled:
+          this.readerFeatures.realtimeProgressSyncEnabled,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,

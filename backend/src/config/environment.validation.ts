@@ -597,6 +597,34 @@ export class EnvironmentVariables {
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  READER_CONTENT_DOCUMENT_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_PORTABLE_CURSOR_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_REALTIME_PROGRESS_SYNC_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_INLINE_COMMENTS_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_COMIC_DELIVERY_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_OFFLINE_READING_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
+  READER_TEXT_TO_SPEECH_ENABLED = false;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   MONETIZATION_ENABLED = false;
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
@@ -1027,6 +1055,21 @@ export function validateEnvironment(
 
 function validateCrossFieldRules(config: EnvironmentVariables): void {
   const origins = parseCsv(config.CORS_ALLOWED_ORIGINS);
+
+  if (
+    config.READER_REALTIME_PROGRESS_SYNC_ENABLED &&
+    (!config.READER_CONTENT_DOCUMENT_ENABLED ||
+      !config.READER_PORTABLE_CURSOR_ENABLED)
+  ) {
+    throw new Error(
+      'READER_CONTENT_DOCUMENT_ENABLED and READER_PORTABLE_CURSOR_ENABLED must be true when realtime reading progress sync is enabled',
+    );
+  }
+  if (config.READER_REALTIME_PROGRESS_SYNC_ENABLED && !config.REDIS_ENABLED) {
+    throw new Error(
+      'REDIS_ENABLED must be true when realtime reading progress sync is enabled',
+    );
+  }
 
   if (
     !config.MONETIZATION_ENABLED &&

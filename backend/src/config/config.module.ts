@@ -19,6 +19,7 @@ import { resolveEnvFilePaths } from './environment-files';
 import observabilityConfig from './observability.config';
 import monetizationConfig from './monetization.config';
 import billingConfig from './billing.config';
+import readerFeaturesConfig from './reader-features.config';
 
 @Global()
 @Module({
@@ -47,6 +48,7 @@ import billingConfig from './billing.config';
         aiConfig,
         monetizationConfig,
         billingConfig,
+        readerFeaturesConfig,
       ],
       validate: validateEnvironment,
     }),

@@ -11,6 +11,7 @@ import { configureCors } from './cors.bootstrap';
 import { configureSecurityHeaders } from './security.bootstrap';
 import { configureShutdown } from './shutdown.bootstrap';
 import { configureSwagger } from './swagger.bootstrap';
+import { configureWebSockets } from './websocket.bootstrap';
 
 const bootstrapLogger = new Logger('Bootstrap');
 
@@ -31,6 +32,7 @@ export async function bootstrapApplication(): Promise<void> {
   configureApplication(app, appConfig);
   configureSecurityHeaders(app, appConfig);
   configureCors(app, corsConfig);
+  await configureWebSockets(app);
   configureShutdown(app);
   configureSwagger(app, appConfig);
 

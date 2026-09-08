@@ -1,3 +1,5 @@
+import type { ReadingCursor } from '../../domain';
+
 export interface ReadingHistoryStorySummaryDto {
   readonly id: string;
   readonly slug: string;
@@ -17,6 +19,11 @@ export interface ReadingHistoryEntryResultDto {
     readonly title: string;
   } | null;
   readonly position: number;
+  readonly cursor?: ReadingCursor | null;
+  readonly revision: number;
+  readonly deviceId: string | null;
+  readonly clientEventId: string | null;
+  readonly lastServerSequence: string;
   readonly progressPercent: number;
   readonly lastReadAt: string;
 }

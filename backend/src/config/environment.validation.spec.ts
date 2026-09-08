@@ -170,6 +170,32 @@ describe('validateEnvironment', () => {
     });
   });
 
+  it('requires stable documents, portable cursors, and Redis for realtime progress sync', () => {
+    const realtime = {
+      ...validBase,
+      READER_REALTIME_PROGRESS_SYNC_ENABLED: 'true',
+    };
+
+    expect(() => validateEnvironment(realtime)).toThrow(
+      'READER_CONTENT_DOCUMENT_ENABLED and READER_PORTABLE_CURSOR_ENABLED',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...realtime,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_PORTABLE_CURSOR_ENABLED: 'true',
+      }),
+    ).toThrow('REDIS_ENABLED must be true');
+    expect(() =>
+      validateEnvironment({
+        ...realtime,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_PORTABLE_CURSOR_ENABLED: 'true',
+        REDIS_ENABLED: 'true',
+      }),
+    ).not.toThrow();
+  });
+
   it('requires the parent monetization flag before enabling a sub-feature', () => {
     expect(() =>
       validateEnvironment({
