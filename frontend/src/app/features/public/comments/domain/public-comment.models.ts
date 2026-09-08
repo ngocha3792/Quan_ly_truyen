@@ -31,6 +31,13 @@ export interface PublicComment {
     readonly endOffset: number;
     readonly chapterVersion: number;
   } | null;
+  readonly region: {
+    readonly mediaAssetId: string;
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  } | null;
 }
 
 export interface PublicCommentReplyCreate {

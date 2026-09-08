@@ -27,6 +27,7 @@ export default registerAs('cloudinary', () => ({
   cloudName: process.env.CLOUDINARY_CLOUD_NAME,
   apiKey: process.env.CLOUDINARY_API_KEY,
   apiSecret: process.env.CLOUDINARY_API_SECRET,
+  eagerNotificationUrl: process.env.CLOUDINARY_EAGER_NOTIFICATION_URL,
 
   rootFolder:
     process.env.CLOUDINARY_ROOT_FOLDER ?? CLOUDINARY_DEFAULTS.ROOT_FOLDER,

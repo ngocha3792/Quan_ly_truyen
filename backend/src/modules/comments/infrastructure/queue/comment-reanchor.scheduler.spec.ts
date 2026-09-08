@@ -36,8 +36,10 @@ describe('CommentReanchorScheduler', () => {
       } as never,
     );
     await expect(scheduler.processBatch()).resolves.toBe(1);
-    const firstCall: unknown = updateMany.mock.calls[0]?.[0];
-    expect(firstCall).toMatchObject({
+    const calls = updateMany.mock.calls as unknown as ReadonlyArray<
+      readonly [unknown]
+    >;
+    expect(calls[0]?.[0]).toMatchObject({
       where: { id, lastVerifiedVersion: 1 },
       data: {
         status: CommentAnchorStatus.REANCHORED,

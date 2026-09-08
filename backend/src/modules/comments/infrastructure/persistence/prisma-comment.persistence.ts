@@ -27,6 +27,8 @@ import type {
   UpdateStoryCommentResult,
   CreateAnchoredCommentInput,
   CreateAnchoredCommentResult,
+  CreateComicRegionCommentInput,
+  CreateComicRegionCommentResult,
 } from '../../application';
 import { createTextRangeAnchor, normalizeAnchorQuote } from '../../domain';
 
@@ -81,6 +83,9 @@ const COMMENT_SELECT = {
       endOffset: true,
       chapterVersion: true,
     },
+  },
+  region: {
+    select: { mediaAssetId: true, x: true, y: true, width: true, height: true },
   },
 } satisfies Prisma.CommentSelect;
 
@@ -398,6 +403,102 @@ export class PrismaCommentPersistence implements CommentPersistencePort {
     }
   }
 
+  async createComicRegionComment(
+    input: CreateComicRegionCommentInput,
+  ): Promise<CreateComicRegionCommentResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const chapter = await tx.chapter.findFirst({
+          where: {
+            id: input.chapterId,
+            storyId: input.storyId,
+            status: ChapterStatus.PUBLISHED,
+            deletedAt: null,
+            publishedAt: { not: null },
+            story: PUBLIC_STORY_WHERE,
+            media: { some: { mediaAssetId: input.mediaAssetId } },
+          },
+          select: {
+            id: true,
+            story: { select: { authorId: true } },
+            monetization: { select: { accessType: true } },
+          },
+        });
+        if (!chapter) return { status: 'chapter_not_found' as const };
+        if (!isNormalizedRegion(input.region))
+          return { status: 'invalid_region' as const };
+
+        if (chapter.monetization?.accessType === ChapterAccessType.PAID) {
+          const [contributor, adminRole, entitlement] = await Promise.all([
+            tx.storyContributor.findFirst({
+              where: { storyId: input.storyId, userId: input.userId },
+              select: { userId: true },
+            }),
+            tx.userRole.findFirst({
+              where: {
+                userId: input.userId,
+                role: { code: 'ADMIN' },
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+              },
+              select: { userId: true },
+            }),
+            tx.chapterEntitlement.findFirst({
+              where: {
+                userId: input.userId,
+                chapterId: input.chapterId,
+                status: ChapterEntitlementStatus.ACTIVE,
+              },
+              select: { id: true },
+            }),
+          ]);
+          if (
+            chapter.story.authorId !== input.userId &&
+            !contributor &&
+            !adminRole &&
+            !entitlement
+          )
+            return { status: 'access_denied' as const };
+        }
+
+        const comment = await tx.comment.create({
+          data: {
+            userId: input.userId,
+            storyId: input.storyId,
+            chapterId: input.chapterId,
+            body: input.body,
+            moderationStatus: ModerationStatus.VISIBLE,
+            createdAt: input.createdAt,
+            updatedAt: input.createdAt,
+            region: {
+              create: {
+                chapterId: input.chapterId,
+                mediaAssetId: input.mediaAssetId,
+                ...input.region,
+              },
+            },
+          },
+          select: COMMENT_SELECT,
+        });
+        await Promise.all([
+          tx.story.update({
+            where: { id: input.storyId },
+            data: { commentCount: { increment: 1 } },
+          }),
+          tx.chapter.update({
+            where: { id: input.chapterId },
+            data: { commentCount: { increment: 1 } },
+          }),
+        ]);
+        return { status: 'created' as const, comment: toCommentDto(comment) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'comic-region-comment-create',
+        resource: 'Bình luận vùng ảnh',
+      });
+    }
+  }
+
   async updateComment(
     input: UpdateStoryCommentInput,
   ): Promise<UpdateStoryCommentResult> {
@@ -532,7 +633,33 @@ function toCommentDto(
           chapterVersion: row.anchor.chapterVersion,
         }
       : null,
+    region: row.region
+      ? {
+          mediaAssetId: row.region.mediaAssetId,
+          x: row.region.x.toNumber(),
+          y: row.region.y.toNumber(),
+          width: row.region.width.toNumber(),
+          height: row.region.height.toNumber(),
+        }
+      : null,
   };
+}
+
+function isNormalizedRegion(region: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): boolean {
+  return (
+    [region.x, region.y, region.width, region.height].every(Number.isFinite) &&
+    region.x >= 0 &&
+    region.y >= 0 &&
+    region.width > 0 &&
+    region.height > 0 &&
+    region.x + region.width <= 1 &&
+    region.y + region.height <= 1
+  );
 }
 
 function parseAnchorBlocks(

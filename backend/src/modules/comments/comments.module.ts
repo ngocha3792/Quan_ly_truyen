@@ -17,6 +17,7 @@ import {
   CreateCommentReportCommandHandler,
   CreateStoryCommentCommandHandler,
   CreateAnchoredCommentCommandHandler,
+  CreateComicRegionCommentCommandHandler,
   DeleteStoryCommentCommandHandler,
   GetViewerCommentReactionsQueryHandler,
   ListChapterCommentsQueryHandler,
@@ -51,6 +52,7 @@ import {
   providers: [
     CreateStoryCommentCommandHandler,
     CreateAnchoredCommentCommandHandler,
+    CreateComicRegionCommentCommandHandler,
     CreateCommentReplyCommandHandler,
     SetCommentReactionCommandHandler,
     ClearCommentReactionCommandHandler,

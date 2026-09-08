@@ -23,6 +23,8 @@ import {
   CreateStoryCommentCommandHandler,
   CreateAnchoredCommentCommand,
   CreateAnchoredCommentCommandHandler,
+  CreateComicRegionCommentCommand,
+  CreateComicRegionCommentCommandHandler,
   DeleteStoryCommentCommand,
   DeleteStoryCommentCommandHandler,
   UpdateStoryCommentCommand,
@@ -32,6 +34,7 @@ import {
 import {
   CreateStoryCommentRequest,
   CreateAnchoredCommentRequest,
+  CreateComicRegionCommentRequest,
   UpdateStoryCommentRequest,
 } from '../requests';
 
@@ -40,9 +43,37 @@ export class CommentWriteController {
   constructor(
     private readonly createCommentCommand: CreateStoryCommentCommandHandler,
     private readonly createAnchoredCommentCommand: CreateAnchoredCommentCommandHandler,
+    private readonly createComicRegionCommentCommand: CreateComicRegionCommentCommandHandler,
     private readonly updateCommentCommand: UpdateStoryCommentCommandHandler,
     private readonly deleteCommentCommand: DeleteStoryCommentCommandHandler,
   ) {}
+
+  @Post(
+    'stories/:storyId/chapters/:chapterId/media/:mediaAssetId/region-comments',
+  )
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.COMMENT_CREATE)
+  createComicRegionComment(
+    @CurrentUserId() userId: string | undefined,
+    @ClientIp() ipAddress: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Param('mediaAssetId', new ParseUUIDPipe({ version: '4' }))
+    mediaAssetId: string,
+    @Body() request: CreateComicRegionCommentRequest,
+  ): Promise<StoryCommentResultDto> {
+    return this.createComicRegionCommentCommand.execute(
+      new CreateComicRegionCommentCommand(
+        userId,
+        storyId,
+        chapterId,
+        mediaAssetId,
+        request.body,
+        request.region,
+        ipAddress,
+      ),
+    );
+  }
 
   @Post('stories/:storyId/chapters/:chapterId/anchored-comments')
   @Idempotent({ required: true, ttlSeconds: 86_400 })

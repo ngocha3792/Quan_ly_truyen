@@ -35,6 +35,31 @@ export interface PublicUnlockedChapterReaderDto extends PublicChapterReaderChapt
   readonly contentFormat: string;
   readonly contentDocument?: ChapterContentDocument;
   readonly documentSchemaVersion?: number;
+  readonly media?: readonly PublicChapterMediaDto[];
+}
+
+export interface PublicChapterMediaSliceDto {
+  readonly id: string;
+  readonly sliceIndex: number;
+  readonly width: number;
+  readonly height: number;
+  readonly offsetY: number;
+  readonly aspectRatio: number;
+  readonly urls: {
+    readonly avif: string;
+    readonly webp: string;
+    readonly jpeg: string;
+  };
+}
+
+export interface PublicChapterMediaDto {
+  readonly mediaAssetId: string;
+  readonly sortOrder: number;
+  readonly altText: string | null;
+  readonly caption: string | null;
+  readonly width: number;
+  readonly height: number;
+  readonly slices: readonly PublicChapterMediaSliceDto[];
 }
 
 export interface PublicLockedChapterReaderDto extends PublicChapterReaderChapterBaseDto {

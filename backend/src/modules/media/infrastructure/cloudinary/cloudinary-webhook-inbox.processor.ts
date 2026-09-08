@@ -12,6 +12,7 @@ import {
   MetricsService,
   TracingService,
 } from '@/infrastructure/observability';
+import { ImageSlicingPolicy } from '../../domain';
 
 export interface WebhookProcessingSummary {
   scanned: number;
@@ -219,6 +220,8 @@ export class CloudinaryWebhookInboxProcessor {
     const resourceType = toPrismaResourceType(readString(record.resource_type));
     const providerAssetId = readString(record.asset_id);
     const version = readPositiveInteger(record.version);
+    const width = readPositiveInteger(record.width);
+    const height = readPositiveInteger(record.height);
     const normalizedType = eventType?.toLowerCase() ?? '';
 
     if (
@@ -235,8 +238,23 @@ export class CloudinaryWebhookInboxProcessor {
             { publicId, resourceType },
           ],
         },
-        data: { status: MediaStatus.UPLOADED, uploadedAt: new Date() },
+        data: {
+          status: MediaStatus.UPLOADED,
+          uploadedAt: new Date(),
+          ...(width ? { width } : {}),
+          ...(height ? { height } : {}),
+        },
       });
+      if (
+        this.configService.get<boolean>(
+          'readerFeatures.comicDeliveryEnabled',
+          false,
+        ) &&
+        width &&
+        height
+      ) {
+        await this.createComicSlices(publicId, resourceType, width, height);
+      }
       return 'processed';
     }
     if (['delete', 'resource_deleted'].includes(normalizedType)) {
@@ -271,6 +289,40 @@ export class CloudinaryWebhookInboxProcessor {
       return 'processed';
     }
     return 'ignored';
+  }
+
+  private async createComicSlices(
+    publicId: string,
+    resourceType: MediaResourceType,
+    width: number,
+    height: number,
+  ): Promise<void> {
+    if (resourceType !== MediaResourceType.IMAGE) return;
+    const specs = ImageSlicingPolicy.calculate(height);
+    if (specs.length === 0) return;
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { publicId, resourceType, purpose: 'CHAPTER_IMAGE' },
+      select: {
+        id: true,
+        chapterLinks: { select: { chapterId: true, mediaAssetId: true } },
+      },
+    });
+    if (!asset) return;
+    for (const link of asset.chapterLinks) {
+      await this.prisma.chapterMediaSlice.createMany({
+        data: specs.map((spec) => ({
+          chapterId: link.chapterId,
+          mediaAssetId: link.mediaAssetId,
+          sliceIndex: spec.index,
+          width,
+          height: spec.height,
+          offsetY: spec.offsetY,
+          aspectRatio: width / spec.height,
+          processingStatus: 'READY',
+        })),
+        skipDuplicates: true,
+      });
+    }
   }
 }
 

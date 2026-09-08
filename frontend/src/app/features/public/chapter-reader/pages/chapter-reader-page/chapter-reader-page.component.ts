@@ -16,6 +16,7 @@ import { AuthStore } from '../../../../../core/auth/auth.store';
 import { ReaderAnalyticsService } from '../../../../../core/analytics/reader-analytics.service';
 import { SeoService } from '../../../../../core/seo/seo.service';
 import { APP_NAME } from '../../../../../core/config/app-identity.constants';
+import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import type {
   CommentReactionApiType,
   CommentReportReasonApi,
@@ -27,8 +28,10 @@ import { ChapterUnlockService } from '../../data-access/chapter-unlock.service';
 import { TextSelectionService } from '../../data-access/text-selection.service';
 import { InlineCommentsController } from '../../data-access/inline-comments.controller';
 import type { TextSelectionAnchor } from '../../domain/chapter-reader.models';
+import type { ComicCommentRegion } from '../../domain/chapter-reader.models';
 import { AnchoredCommentsPanelComponent } from '../../ui/anchored-comments-panel/anchored-comments-panel.component';
 import { CommentToolbarComponent } from '../../ui/comment-toolbar/comment-toolbar.component';
+import { ChapterImageSlicesComponent } from '../../ui/chapter-image-slices/chapter-image-slices.component';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
 import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sidebar.component';
@@ -44,6 +47,7 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
     PaginationComponent,
     CommentToolbarComponent,
     AnchoredCommentsPanelComponent,
+    ChapterImageSlicesComponent,
   ],
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: [
@@ -66,6 +70,7 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
   protected readonly inline = inject(InlineCommentsController);
+  protected readonly comicDeliveryEnabled = inject(APP_RUNTIME_CONFIG).features.comicDeliveryEnabled;
   private trackedChapterId: string | null = null;
   private stopAnalyticsSession: (() => void) | null = null;
 
@@ -142,6 +147,10 @@ export class ChapterReaderPageComponent implements OnInit {
 
   protected createAnchoredComment(event: { readonly body: string; readonly anchor: TextSelectionAnchor }): void {
     this.runAuthenticated(() => this.store.addAnchoredComment(event.body, event.anchor));
+  }
+
+  protected createComicRegionComment(mediaAssetId: string, event: { readonly body: string; readonly region: ComicCommentRegion }): void {
+    this.runAuthenticated(() => this.store.addComicRegionComment(mediaAssetId, event.body, event.region));
   }
 
 

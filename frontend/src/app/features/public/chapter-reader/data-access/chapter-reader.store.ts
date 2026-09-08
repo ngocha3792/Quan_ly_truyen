@@ -87,15 +87,12 @@ export class ChapterReaderStore {
       )
       .subscribe();
   }
-
   captureProgress(): void {
     this.progressSync.capture();
   }
-
   flushProgress(): void {
     this.progressSync.flush();
   }
-
   addComment(body: string): void {
     const view = this.viewState();
     const normalized = body.trim();
@@ -105,17 +102,20 @@ export class ChapterReaderStore {
       'Không thể gửi bình luận.',
     );
   }
-
   addAnchoredComment(body: string, anchor: TextSelectionAnchor): void {
     const view = this.viewState();
     const normalized = body.trim();
     if (!view || !normalized || this.commentPending()) return;
-    this.prependComment(
-      this.repository.createAnchoredComment(view.story.id, view.chapter.id, normalized, anchor),
-      'Không thể gửi bình luận theo đoạn.',
-    );
+    const request = this.repository.createAnchoredComment(view.story.id, view.chapter.id, normalized, anchor);
+    this.prependComment(request, 'Không thể gửi bình luận theo đoạn.');
   }
-
+  addComicRegionComment(mediaAssetId: string, body: string, region: import('../domain/chapter-reader.models').ComicCommentRegion): void {
+    const view = this.viewState();
+    const normalized = body.trim();
+    if (!view || !normalized || this.commentPending()) return;
+    const request = this.repository.createComicRegionComment(view.story.id, view.chapter.id, mediaAssetId, normalized, region);
+    this.prependComment(request, 'Không thể gửi bình luận trên ảnh.');
+  }
   editComment(commentId: string, body: string): void {
     const normalized = body.trim();
     if (!normalized) return;

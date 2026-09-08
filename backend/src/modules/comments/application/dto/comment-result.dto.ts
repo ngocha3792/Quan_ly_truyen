@@ -26,6 +26,15 @@ export interface StoryCommentResultDto {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly anchor: CommentAnchorResultDto | null;
+  readonly region: CommentRegionResultDto | null;
+}
+
+export interface CommentRegionResultDto {
+  readonly mediaAssetId: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface CommentAnchorResultDto {

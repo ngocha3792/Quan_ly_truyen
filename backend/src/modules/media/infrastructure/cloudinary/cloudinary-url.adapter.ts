@@ -18,21 +18,34 @@ export class CloudinaryUrlAdapter implements MediaUrlPort {
       throw new MediaStorageDisabledException();
     }
     const transformation = this.resolveTransformation(input.preset);
+    if (input.slice) {
+      transformation.unshift({
+        crop: 'crop',
+        gravity: 'north',
+        y: input.slice.offsetY,
+        height: input.slice.height,
+      });
+    }
+    if (input.preferredFormat) {
+      transformation.push({ fetch_format: input.preferredFormat });
+    }
 
     if (input.resourceType === 'video') {
       return this.cloudinary.url(input.publicId, {
         secure: true,
         resource_type: 'video',
-        type: 'upload',
+        type: input.requiresSigning ? 'authenticated' : 'upload',
         transformation,
+        sign_url: input.requiresSigning ?? false,
       });
     }
 
     return this.cloudinary.url(input.publicId, {
       secure: true,
       resource_type: 'image',
-      type: 'upload',
+      type: input.requiresSigning ? 'authenticated' : 'upload',
       transformation,
+      sign_url: input.requiresSigning ?? false,
     });
   }
 

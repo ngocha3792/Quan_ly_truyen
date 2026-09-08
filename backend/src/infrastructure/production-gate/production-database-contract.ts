@@ -160,6 +160,10 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'comment_anchors_chapter_id_start_block_id_idx',
   'comment_anchors_status_last_verified_version_idx',
   'comment_anchors_quote_hash_idx',
+  'chapter_media_slices_media_index_key',
+  'chapter_media_slices_status_updated_idx',
+  'comment_regions_comment_id_key',
+  'comment_regions_chapter_media_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -310,6 +314,8 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'reading_progress_sync_events_revision_valid',
 
   'comment_anchors_range_valid',
+  'chapter_media_slices_dimensions_valid',
+  'comment_regions_bounds_valid',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

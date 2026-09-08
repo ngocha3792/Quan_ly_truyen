@@ -1,0 +1,39 @@
+<section class="comic" [attr.aria-label]="media().altText || 'Trang truyện tranh'" (click)="selectRegion($event)">
+  @for (slice of media().slices; track slice.id) {
+    <div
+      class="comic__slice"
+      [style.aspect-ratio]="slice.width + ' / ' + slice.height"
+      [attr.data-slice-id]="slice.id"
+      [attr.data-media-asset-id]="media().mediaAssetId"
+    >
+      @if (visible().has(slice.id)) {
+        <picture [class.is-loaded]="loaded().has(slice.id)">
+          <source [srcset]="slice.urls.avif" type="image/avif" />
+          <source [srcset]="slice.urls.webp" type="image/webp" />
+          <img
+            [src]="slice.urls.jpeg"
+            [alt]="media().altText || 'Trang truyện ' + (slice.sliceIndex + 1)"
+            [width]="slice.width"
+            [height]="slice.height"
+            loading="lazy"
+            decoding="async"
+            (load)="markLoaded(slice.id)"
+          />
+        </picture>
+      }
+    </div>
+  }
+  @for (comment of regionComments(); track comment.id) {
+    @if (comment.region; as region) {
+      <button class="comic__marker" type="button" [style.left.%]="region.x * 100" [style.top.%]="region.y * 100" [style.width.%]="region.width * 100" [style.height.%]="region.height * 100" [attr.aria-label]="'Bình luận của ' + comment.author.name"></button>
+    }
+  }
+  @if (pendingRegion(); as region) {
+    <form class="comic__composer" [style.left.%]="region.x * 100" [style.top.%]="region.y * 100" (submit)="submit($event)">
+      <textarea maxlength="4000" placeholder="Bình luận vùng ảnh" [value]="draft()" (input)="draft.set($any($event.target).value)"></textarea>
+      <button type="submit" [disabled]="!draft().trim()">Đăng</button>
+      <button type="button" (click)="pendingRegion.set(null)">Hủy</button>
+    </form>
+  }
+  @if (media().caption) { <p class="comic__caption">{{ media().caption }}</p> }
+</section>

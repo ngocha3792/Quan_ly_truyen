@@ -16,5 +16,9 @@ export interface SignedUploadParameters {
     asset_folder: string;
     overwrite: boolean;
     tags: string;
+    eager?: string;
+    eager_async?: boolean;
+    eager_notification_url?: string;
+    type?: 'authenticated';
   };
 }

@@ -173,6 +173,7 @@ export class StoryDetailHttpRepository implements StoryDetailRepository {
       threadReplyCount: comment.threadReplyCount,
       replies: [],
       anchor: comment.anchor,
+      region: comment.region,
     };
   }
 }

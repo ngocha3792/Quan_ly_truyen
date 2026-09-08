@@ -31,6 +31,24 @@ export type CreateAnchoredCommentResult =
   | { readonly status: 'invalid_anchor' }
   | { readonly status: 'access_denied' };
 
+export interface ComicRegionInput {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface CreateComicRegionCommentInput extends CreateStoryCommentInput {
+  readonly chapterId: string;
+  readonly mediaAssetId: string;
+  readonly region: ComicRegionInput;
+}
+
+export type CreateComicRegionCommentResult =
+  | CreateStoryCommentResult
+  | { readonly status: 'invalid_region' }
+  | { readonly status: 'access_denied' };
+
 export type CreateStoryCommentResult =
   | { readonly status: 'created'; readonly comment: StoryCommentResultDto }
   | { readonly status: 'story_not_found' }
@@ -76,6 +94,9 @@ export interface CommentPersistencePort {
   createAnchoredComment(
     input: CreateAnchoredCommentInput,
   ): Promise<CreateAnchoredCommentResult>;
+  createComicRegionComment(
+    input: CreateComicRegionCommentInput,
+  ): Promise<CreateComicRegionCommentResult>;
   updateComment(
     input: UpdateStoryCommentInput,
   ): Promise<UpdateStoryCommentResult>;

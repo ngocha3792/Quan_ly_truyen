@@ -23,12 +23,14 @@ export interface ConfirmUploadInput {
   version: number;
   responseSignature: string;
   resourceType: MediaStorageResourceType;
+  deliveryType?: 'upload' | 'authenticated';
 }
 
 export interface DeleteStoredMediaInput {
   publicId: string;
   resourceType: MediaStorageResourceType;
   invalidate?: boolean;
+  deliveryType?: 'upload' | 'authenticated';
 }
 
 export interface DeleteStoredMediaResult {
@@ -45,6 +47,9 @@ export interface BuildMediaUrlInput {
     | 'storyThumbnail'
     | 'chapterImage'
     | 'genreCover';
+  preferredFormat?: 'avif' | 'webp' | 'jpg';
+  slice?: { readonly offsetY: number; readonly height: number };
+  requiresSigning?: boolean;
 }
 
 export interface MediaStoragePort {

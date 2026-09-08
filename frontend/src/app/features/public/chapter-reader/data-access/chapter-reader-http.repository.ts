@@ -21,6 +21,7 @@ import {
   ChapterNavigationItem,
   ChapterReaderView,
   TextSelectionAnchor,
+  ComicCommentRegion,
 } from '../domain/chapter-reader.models';
 import { ChapterReaderRepository } from './chapter-reader.repository';
 
@@ -77,6 +78,18 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   ): Observable<ChapterComment> {
     return this.engagement
       .createAnchoredChapterComment(storyId, chapterId, body, anchor)
+      .pipe(map((comment) => this.toChapterComment(comment)));
+  }
+
+  createComicRegionComment(
+    storyId: string,
+    chapterId: string,
+    mediaAssetId: string,
+    body: string,
+    region: ComicCommentRegion,
+  ): Observable<ChapterComment> {
+    return this.engagement
+      .createComicRegionComment(storyId, chapterId, mediaAssetId, body, region)
       .pipe(map((comment) => this.toChapterComment(comment)));
   }
 
@@ -177,6 +190,7 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
       replies: [],
       isOwner: this.auth.user()?.id === comment.user.id,
       anchor: comment.anchor,
+      region: comment.region,
     };
   }
 }
@@ -208,6 +222,17 @@ function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterRea
       views: result.chapter.views,
       accessState: result.chapter.access.state,
       priceCredits: result.chapter.access.priceCredits,
+      media:
+        'media' in result.chapter && result.chapter.media
+          ? result.chapter.media.map((media) => ({
+              mediaAssetId: media.mediaAssetId,
+              altText: media.altText,
+              caption: media.caption,
+              width: media.width,
+              height: media.height,
+              slices: media.slices,
+            }))
+          : [],
     },
     navigation: {
       previous: toNavigation(result.story.slug, result.navigation.previous),

@@ -85,6 +85,7 @@ import {
   ],
   exports: [
     MEDIA_STORAGE,
+    MEDIA_URL_BUILDER,
     CloudinaryUrlAdapter,
     CloudinaryWebhookInboxProcessor,
     CleanupStaleMediaCommandHandler,

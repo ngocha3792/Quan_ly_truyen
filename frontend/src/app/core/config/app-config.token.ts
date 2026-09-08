@@ -25,6 +25,7 @@ export interface AppRuntimeConfig {
     readonly portableCursorEnabled: boolean;
     readonly realtimeProgressSyncEnabled: boolean;
     readonly inlineCommentsEnabled: boolean;
+    readonly comicDeliveryEnabled: boolean;
   };
   readonly passwordPolicy: AuthPasswordPolicyConfig;
   readonly passwordReset: AuthPasswordResetConfig;

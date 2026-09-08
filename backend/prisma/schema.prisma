@@ -308,6 +308,15 @@ enum MediaStatus {
   @@map("media_status")
 }
 
+enum MediaSliceStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  READY      @map("ready")
+  FAILED     @map("failed")
+
+  @@map("media_slice_status")
+}
+
 enum MediaResourceType {
   IMAGE @map("image")
   VIDEO @map("video")
@@ -1408,13 +1417,54 @@ model ChapterMedia {
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  chapter    Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  chapter        Chapter             @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  mediaAsset     MediaAsset          @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  slices         ChapterMediaSlice[]
+  commentRegions CommentRegion[]
 
   @@id([chapterId, mediaAssetId])
   @@unique([chapterId, sortOrder])
   @@index([mediaAssetId])
   @@map("chapter_media")
+}
+
+model CommentRegion {
+  id           String   @id @default(uuid()) @db.Uuid
+  commentId    String   @unique @map("comment_id") @db.Uuid
+  chapterId    String   @map("chapter_id") @db.Uuid
+  mediaAssetId String   @map("media_asset_id") @db.Uuid
+  x            Decimal  @db.Decimal(8, 6)
+  y            Decimal  @db.Decimal(8, 6)
+  width        Decimal  @db.Decimal(8, 6)
+  height       Decimal  @db.Decimal(8, 6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  comment      Comment      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  chapterMedia ChapterMedia @relation(fields: [chapterId, mediaAssetId], references: [chapterId, mediaAssetId], onDelete: Cascade)
+
+  @@index([chapterId, mediaAssetId], map: "comment_regions_chapter_media_idx")
+  @@map("comment_regions")
+}
+
+model ChapterMediaSlice {
+  id               String           @id @default(uuid()) @db.Uuid
+  chapterId        String           @map("chapter_id") @db.Uuid
+  mediaAssetId     String           @map("media_asset_id") @db.Uuid
+  sliceIndex       Int              @map("slice_index")
+  width            Int
+  height           Int
+  offsetY          Int              @map("offset_y")
+  aspectRatio      Decimal          @map("aspect_ratio") @db.Decimal(10, 6)
+  processingStatus MediaSliceStatus @default(PENDING) @map("processing_status")
+  processingError  String?          @map("processing_error") @db.VarChar(1000)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapterMedia ChapterMedia @relation(fields: [chapterId, mediaAssetId], references: [chapterId, mediaAssetId], onDelete: Cascade)
+
+  @@unique([chapterId, mediaAssetId, sliceIndex], map: "chapter_media_slices_media_index_key")
+  @@index([processingStatus, updatedAt], map: "chapter_media_slices_status_updated_idx")
+  @@map("chapter_media_slices")
 }
 
 model Story {
@@ -1718,6 +1768,7 @@ model Comment {
   reports           Report[]           @relation("CommentReports")
   moderationActions ModerationAction[] @relation("ModerationComment")
   anchor            CommentAnchor?
+  region            CommentRegion?
 
   @@index([storyId, moderationStatus, createdAt])
   @@index([chapterId, moderationStatus, createdAt])

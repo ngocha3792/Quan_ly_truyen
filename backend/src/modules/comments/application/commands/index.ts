@@ -6,3 +6,4 @@ export * from './set-comment-reaction';
 export * from './clear-comment-reaction';
 export * from './create-comment-report';
 export * from './create-anchored-comment';
+export * from './create-comic-region-comment';

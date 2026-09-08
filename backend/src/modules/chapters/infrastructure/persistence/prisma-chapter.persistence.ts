@@ -20,6 +20,7 @@ import {
 } from '@/config';
 import type { ReaderFeaturesConfig } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
+import { MEDIA_URL_BUILDER, type MediaUrlPort } from '@/modules/media';
 
 import type {
   ChapterPersistencePort,
@@ -165,6 +166,35 @@ const PUBLIC_CHAPTER_CONTENT_SELECT = {
   contentDocument: true,
   documentSchemaVersion: true,
   contentFormat: true,
+  media: {
+    orderBy: { sortOrder: 'asc' },
+    select: {
+      mediaAssetId: true,
+      sortOrder: true,
+      altText: true,
+      caption: true,
+      mediaAsset: {
+        select: {
+          publicId: true,
+          width: true,
+          height: true,
+          deliveryType: true,
+        },
+      },
+      slices: {
+        where: { processingStatus: 'READY' },
+        orderBy: { sliceIndex: 'asc' },
+        select: {
+          id: true,
+          sliceIndex: true,
+          width: true,
+          height: true,
+          offsetY: true,
+          aspectRatio: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.ChapterSelect;
 
 const PUBLIC_CHAPTER_NAVIGATION_SELECT = {
@@ -193,6 +223,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     private readonly monetization: ConfigType<typeof monetizationConfig>,
     @Inject(readerFeaturesConfig.KEY)
     private readonly readerFeatures: ReaderFeaturesConfig,
+    @Inject(MEDIA_URL_BUILDER)
+    private readonly mediaUrl: MediaUrlPort,
   ) {}
 
   async listOwnedByStory(
@@ -1399,6 +1431,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         chapter.publishedAt,
         access,
         this.readerFeatures.contentDocumentEnabled,
+        this.readerFeatures.comicDeliveryEnabled,
+        this.mediaUrl,
       );
     } catch (error: unknown) {
       throw mapPrismaError(error, {
@@ -1747,6 +1781,8 @@ function toPublicChapterReaderDto(
     readonly priceCredits: string | null;
   },
   exposeContentDocument: boolean,
+  exposeComicDelivery: boolean,
+  mediaUrl: MediaUrlPort,
 ): PublicChapterReaderDto {
   return {
     story: {
@@ -1772,6 +1808,85 @@ function toPublicChapterReaderDto(
           }
         : {}),
       contentFormat: content.contentFormat,
+      ...(exposeComicDelivery
+        ? {
+            media: content.media.flatMap((item) => {
+              const publicId = item.mediaAsset.publicId;
+              const width = item.mediaAsset.width;
+              const height = item.mediaAsset.height;
+              if (!publicId || !width || !height) return [];
+              const requiresSigning = access.state !== 'FREE';
+              if (
+                requiresSigning &&
+                item.mediaAsset.deliveryType !== 'authenticated'
+              )
+                return [];
+              const slices = item.slices.length
+                ? item.slices.map((slice) => ({
+                    id: slice.id,
+                    sliceIndex: slice.sliceIndex,
+                    width: slice.width,
+                    height: slice.height,
+                    offsetY: slice.offsetY,
+                    aspectRatio: slice.aspectRatio.toNumber(),
+                  }))
+                : [
+                    {
+                      id: `${item.mediaAssetId}:full`,
+                      sliceIndex: 0,
+                      width,
+                      height,
+                      offsetY: 0,
+                      aspectRatio: width / height,
+                    },
+                  ];
+              return [
+                {
+                  mediaAssetId: item.mediaAssetId,
+                  sortOrder: item.sortOrder,
+                  altText: item.altText,
+                  caption: item.caption,
+                  width,
+                  height,
+                  slices: slices.map((slice) => ({
+                    id: slice.id,
+                    sliceIndex: slice.sliceIndex,
+                    width: slice.width,
+                    height: slice.height,
+                    offsetY: slice.offsetY,
+                    aspectRatio: slice.aspectRatio,
+                    urls: {
+                      avif: mediaUrl.build({
+                        publicId,
+                        resourceType: 'image',
+                        preset: 'chapterImage',
+                        preferredFormat: 'avif',
+                        slice,
+                        requiresSigning,
+                      }),
+                      webp: mediaUrl.build({
+                        publicId,
+                        resourceType: 'image',
+                        preset: 'chapterImage',
+                        preferredFormat: 'webp',
+                        slice,
+                        requiresSigning,
+                      }),
+                      jpeg: mediaUrl.build({
+                        publicId,
+                        resourceType: 'image',
+                        preset: 'chapterImage',
+                        preferredFormat: 'jpg',
+                        slice,
+                        requiresSigning,
+                      }),
+                    },
+                  })),
+                },
+              ];
+            }),
+          }
+        : {}),
       wordCount: chapter.wordCount,
       views: bigintToSafeNumber(chapter.viewCount),
       comments: chapter.commentCount,

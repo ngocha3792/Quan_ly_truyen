@@ -36,6 +36,7 @@ function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
     portableCursorEnabled: readBoolean(value, 'portableCursorEnabled'),
     realtimeProgressSyncEnabled: readBoolean(value, 'realtimeProgressSyncEnabled'),
     inlineCommentsEnabled: readBoolean(value, 'inlineCommentsEnabled'),
+    comicDeliveryEnabled: readBoolean(value, 'comicDeliveryEnabled'),
   };
 }
 

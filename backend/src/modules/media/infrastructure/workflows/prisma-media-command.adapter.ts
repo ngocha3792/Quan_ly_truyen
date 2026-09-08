@@ -23,6 +23,7 @@ import {
   MEDIA_STORAGE_PROVIDERS,
 } from '@/common/constants';
 import { PrismaService } from '@/infrastructure/database/prisma';
+import { ImageSlicingPolicy } from '../../domain';
 import {
   MEDIA_STORAGE,
   MediaStoragePort,
@@ -135,7 +136,8 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
     const media = await this.requireMedia(input.mediaAssetId);
     this.ownership.assertUploader(input.principal, media.uploaderId);
     if (media.status === MediaStatus.READY) {
-      await this.linkChapterMediaIfNeeded(media);
+      const readyMedia = await this.requireMedia(media.id);
+      await this.linkChapterMediaIfNeeded(readyMedia);
       return media;
     }
     if (media.uploadExpiresAt && media.uploadExpiresAt.getTime() < Date.now()) {
@@ -198,6 +200,10 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
         version: input.dto.version,
         responseSignature: input.dto.signature,
         resourceType: input.dto.resourceType,
+        deliveryType:
+          media.purpose === MediaPurpose.CHAPTER_IMAGE
+            ? 'authenticated'
+            : 'upload',
       });
       this.validateAuthoritativeAsset(media, stored);
       const readyAt = new Date();
@@ -226,13 +232,14 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
           from: MediaStatus.PROCESSING,
           to: MediaStatus.READY,
         });
-      await this.linkChapterMediaIfNeeded(media);
+      const readyMedia = await this.requireMedia(media.id);
+      await this.linkChapterMediaIfNeeded(readyMedia);
       this.logger.log({
         message: 'media upload confirmed',
         mediaAssetId: media.id,
         purpose: media.purpose,
       });
-      return this.requireMedia(media.id);
+      return readyMedia;
     } catch (error: unknown) {
       await this.prisma.mediaAsset.updateMany({
         where: { id: media.id, status: MediaStatus.PROCESSING },
@@ -281,19 +288,37 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
         },
         select: { chapterId: true },
       });
-      if (existing) return;
-      const last = await tx.chapterMedia.findFirst({
-        where: { chapterId: ownerId },
-        orderBy: { sortOrder: 'desc' },
-        select: { sortOrder: true },
-      });
-      await tx.chapterMedia.create({
-        data: {
-          chapterId: ownerId,
-          mediaAssetId: media.id,
-          sortOrder: (last?.sortOrder ?? -1) + 1,
-        },
-      });
+      if (!existing) {
+        const last = await tx.chapterMedia.findFirst({
+          where: { chapterId: ownerId },
+          orderBy: { sortOrder: 'desc' },
+          select: { sortOrder: true },
+        });
+        await tx.chapterMedia.create({
+          data: {
+            chapterId: ownerId,
+            mediaAssetId: media.id,
+            sortOrder: (last?.sortOrder ?? -1) + 1,
+          },
+        });
+      }
+      if (media.width && media.height) {
+        const specs = ImageSlicingPolicy.calculate(media.height);
+        if (specs.length)
+          await tx.chapterMediaSlice.createMany({
+            data: specs.map((spec) => ({
+              chapterId: ownerId,
+              mediaAssetId: media.id,
+              sliceIndex: spec.index,
+              width: media.width!,
+              height: spec.height,
+              offsetY: spec.offsetY,
+              aspectRatio: media.width! / spec.height,
+              processingStatus: 'READY',
+            })),
+            skipDuplicates: true,
+          });
+      }
     });
   }
 

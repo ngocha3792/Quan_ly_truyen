@@ -540,6 +540,10 @@ export class PrismaMediaCleanupAdapter implements MediaCleanupPort {
 
           resourceType: expectedType,
 
+          ...(media.deliveryType === 'authenticated'
+            ? { deliveryType: 'authenticated' as const }
+            : {}),
+
           invalidate: true,
         });
 

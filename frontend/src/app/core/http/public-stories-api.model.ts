@@ -104,6 +104,27 @@ export interface PublicUnlockedChapterReaderApi extends PublicChapterReaderChapt
   readonly contentFormat: string;
   readonly contentDocument?: ChapterContentDocumentApi;
   readonly documentSchemaVersion?: number;
+  readonly media?: readonly PublicChapterMediaApi[];
+}
+
+export interface PublicChapterMediaSliceApi {
+  readonly id: string;
+  readonly sliceIndex: number;
+  readonly width: number;
+  readonly height: number;
+  readonly offsetY: number;
+  readonly aspectRatio: number;
+  readonly urls: { readonly avif: string; readonly webp: string; readonly jpeg: string };
+}
+
+export interface PublicChapterMediaApi {
+  readonly mediaAssetId: string;
+  readonly sortOrder: number;
+  readonly altText: string | null;
+  readonly caption: string | null;
+  readonly width: number;
+  readonly height: number;
+  readonly slices: readonly PublicChapterMediaSliceApi[];
 }
 
 export interface PublicLockedChapterReaderApi extends PublicChapterReaderChapterBaseApi {

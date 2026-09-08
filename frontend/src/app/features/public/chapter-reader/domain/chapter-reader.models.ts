@@ -22,6 +22,25 @@ export interface ChapterDetail {
   readonly views: number;
   readonly accessState: 'FREE' | 'ENTITLED' | 'BYPASS' | 'LOCKED';
   readonly priceCredits: string | null;
+  readonly media: readonly ChapterComicMedia[];
+}
+
+export interface ChapterComicSlice {
+  readonly id: string;
+  readonly sliceIndex: number;
+  readonly width: number;
+  readonly height: number;
+  readonly aspectRatio: number;
+  readonly urls: { readonly avif: string; readonly webp: string; readonly jpeg: string };
+}
+
+export interface ChapterComicMedia {
+  readonly mediaAssetId: string;
+  readonly altText: string | null;
+  readonly caption: string | null;
+  readonly width: number;
+  readonly height: number;
+  readonly slices: readonly ChapterComicSlice[];
 }
 
 export interface ChapterContentBlock {
@@ -40,6 +59,13 @@ export interface TextSelectionAnchor {
   readonly endBlockId: string;
   readonly endOffset: number;
   readonly quoteText: string;
+}
+
+export interface ComicCommentRegion {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface ChapterReaderView {

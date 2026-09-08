@@ -1,7 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, of, tap } from 'rxjs';
-
 import { APP_RUNTIME_CONFIG } from '../config/app-config.token';
 import { ApiSuccessEnvelope } from './api-envelope.model';
 import {
@@ -20,7 +19,6 @@ import {
   CommentReportReasonApi,
   StoryRatingApiItem,
 } from './reader-engagement-api.model';
-
 @Injectable({ providedIn: 'root' })
 export class ReaderEngagementApiClient {
   private readonly http = inject(HttpClient);
@@ -150,7 +148,6 @@ export class ReaderEngagementApiClient {
   createStoryComment(storyId: string, body: string): Observable<StoryCommentApiItem> {
     return this.postComment(`/stories/${encodeURIComponent(storyId)}/comments`, body);
   }
-
   createChapterComment(
     storyId: string,
     chapterId: string,
@@ -161,7 +158,6 @@ export class ReaderEngagementApiClient {
       body,
     );
   }
-
   createAnchoredChapterComment(
     storyId: string,
     chapterId: string,
@@ -170,6 +166,10 @@ export class ReaderEngagementApiClient {
   ): Observable<StoryCommentApiItem> {
     const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/anchored-comments`;
     return this.postCommentRequest(path, { body: body.trim(), anchor });
+  }
+  createComicRegionComment(storyId: string, chapterId: string, mediaAssetId: string, body: string, region: import('../../features/public/chapter-reader/domain/chapter-reader.models').ComicCommentRegion): Observable<StoryCommentApiItem> {
+    const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/media/${encodeURIComponent(mediaAssetId)}/region-comments`;
+    return this.postCommentRequest(path, { body: body.trim(), region });
   }
   updateComment(commentId: string, body: string): Observable<StoryCommentApiItem> {
     return this.http

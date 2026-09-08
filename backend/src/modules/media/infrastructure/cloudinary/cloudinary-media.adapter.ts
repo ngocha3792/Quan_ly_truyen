@@ -46,7 +46,7 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     try {
       const authoritative: unknown = await client.api.resource(input.publicId, {
         resource_type: input.resourceType,
-        type: 'upload',
+        type: input.deliveryType ?? 'upload',
       });
       return mapCloudinaryAsset(authoritative);
     } catch (error: unknown) {
@@ -132,7 +132,7 @@ export class CloudinaryMediaAdapter implements MediaStoragePort {
     try {
       const result: unknown = await client.uploader.destroy(input.publicId, {
         resource_type: input.resourceType,
-        type: 'upload',
+        type: input.deliveryType ?? 'upload',
         invalidate: input.invalidate ?? true,
       });
       const outcome = getDeleteOutcome(result);

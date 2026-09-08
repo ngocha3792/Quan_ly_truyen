@@ -71,6 +71,14 @@
             }
           </article>
 
+          @if (comicDeliveryEnabled && view.chapter.media.length) {
+            <div class="chapter-comic-media">
+              @for (media of view.chapter.media; track media.mediaAssetId) {
+                <app-chapter-image-slices [media]="media" [comments]="view.comments" (regionCommentCreate)="createComicRegionComment(media.mediaAssetId, $event)" />
+              }
+            </div>
+          }
+
           @if (inline.toolbarPosition(); as position) {
             <app-comment-toolbar [position]="position" (comment)="inline.openSelection()" />
           }

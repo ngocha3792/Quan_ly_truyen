@@ -42,6 +42,10 @@ export class CloudinarySignatureAdapter {
       throw new MediaStorageDisabledException();
     }
 
+    const comicEager =
+      input.purpose === 'CHAPTER_IMAGE'
+        ? { ...this.comicEagerParameters(), type: 'authenticated' as const }
+        : {};
     const parameters = {
       timestamp,
       upload_preset: uploadPreset,
@@ -49,6 +53,7 @@ export class CloudinarySignatureAdapter {
       asset_folder: input.assetFolder,
       overwrite: false,
       tags: `quan-ly-truyen,${input.purpose.toLowerCase()}`,
+      ...comicEager,
     } as const;
 
     const signature = this.cloudinary.utils.api_sign_request(
@@ -76,7 +81,24 @@ export class CloudinarySignatureAdapter {
         asset_folder: input.assetFolder,
         overwrite: false,
         tags: parameters.tags,
+        ...comicEager,
       },
+    };
+  }
+
+  private comicEagerParameters(): {
+    eager: string;
+    eager_async: true;
+    eager_notification_url?: string;
+  } {
+    const notificationUrl = this.configService.get<string>(
+      'cloudinary.eagerNotificationUrl',
+    );
+    return {
+      eager:
+        'c_limit,w_1600/f_avif,q_auto|c_limit,w_1600/f_webp,q_auto|c_limit,w_1600/f_jpg,q_auto:good',
+      eager_async: true,
+      ...(notificationUrl ? { eager_notification_url: notificationUrl } : {}),
     };
   }
 }

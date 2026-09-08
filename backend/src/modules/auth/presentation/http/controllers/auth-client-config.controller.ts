@@ -19,6 +19,7 @@ export interface AuthClientConfigResponse {
     readonly portableCursorEnabled: boolean;
     readonly realtimeProgressSyncEnabled: boolean;
     readonly inlineCommentsEnabled: boolean;
+    readonly comicDeliveryEnabled: boolean;
   };
   readonly passwordPolicy: {
     readonly minimumLength: number;
@@ -66,6 +67,7 @@ export class AuthClientConfigController {
         realtimeProgressSyncEnabled:
           this.readerFeatures.realtimeProgressSyncEnabled,
         inlineCommentsEnabled: this.readerFeatures.inlineCommentsEnabled,
+        comicDeliveryEnabled: this.readerFeatures.comicDeliveryEnabled,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,

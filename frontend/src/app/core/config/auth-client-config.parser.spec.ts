@@ -13,6 +13,7 @@ describe('parseAuthClientConfigResponse', () => {
             portableCursorEnabled: true,
             realtimeProgressSyncEnabled: true,
             inlineCommentsEnabled: true,
+            comicDeliveryEnabled: true,
           },
           passwordPolicy: {
             minimumLength: 10,
@@ -41,6 +42,7 @@ describe('parseAuthClientConfigResponse', () => {
         portableCursorEnabled: true,
         realtimeProgressSyncEnabled: true,
         inlineCommentsEnabled: true,
+        comicDeliveryEnabled: true,
       },
       passwordPolicy: {
         minimumLength: 10,
@@ -74,6 +76,7 @@ describe('parseAuthClientConfigResponse', () => {
             portableCursorEnabled: false,
             realtimeProgressSyncEnabled: false,
             inlineCommentsEnabled: false,
+            comicDeliveryEnabled: false,
           },
           passwordPolicy: {
             minimumLength: 72,
