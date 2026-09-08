@@ -181,6 +181,42 @@ function Invoke-DockerCompose {
   }
 }
 
+function Set-DotEnvValue {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+    [Parameter(Mandatory = $true)]
+    [string]$Value
+  )
+
+  $Lines = [Collections.Generic.List[string]]::new()
+  $Lines.AddRange([string[]](Get-Content -LiteralPath $Path))
+  $Pattern = "^\s*$([regex]::Escape($Name))\s*="
+  $Updated = $false
+  for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
+    if ($Lines[$Index] -match $Pattern) {
+      $Lines[$Index] = "$Name=$Value"
+      $Updated = $true
+    }
+  }
+  if (-not $Updated) {
+    $Lines.Add("$Name=$Value")
+  }
+  [IO.File]::WriteAllLines($Path, $Lines, [Text.UTF8Encoding]::new($false))
+}
+
+foreach ($ReaderFlag in @(
+  'READER_CONTENT_DOCUMENT_ENABLED',
+  'READER_PORTABLE_CURSOR_ENABLED',
+  'READER_REALTIME_PROGRESS_SYNC_ENABLED',
+  'READER_INLINE_COMMENTS_ENABLED',
+  'READER_COMIC_DELIVERY_ENABLED'
+)) {
+  Set-DotEnvValue -Path $EnvironmentFilePath -Name $ReaderFlag -Value 'true'
+}
+
 function Invoke-DockerComposePull {
   param(
     [string[]]$Services = @(),
