@@ -58,9 +58,8 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
         height: 100%;
         padding: 18px 20px 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        background: #0d1421;
       }
 
       header {
@@ -72,13 +71,13 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
 
       h2 {
         margin: 0;
-        color: #f5f2fa;
-        font-size: 1.1rem;
+        color: var(--text-strong);
+        font-size: 1rem;
         font-weight: 700;
       }
 
       header a {
-        color: #b967ff;
+        color: #67d8c0;
         font-size: 13px;
         font-weight: 650;
         text-decoration: none;
@@ -133,9 +132,9 @@ import { AuthorReaderComment } from '../../domain/author-studio.models';
       .comment-heading span {
         overflow: hidden;
         padding: 3px 8px;
-        border-radius: 999px;
-        background: rgba(126, 34, 206, 0.16);
-        color: #b474e9;
+        border-radius: 5px;
+        background: rgba(56, 189, 248, 0.1);
+        color: #a5ddf7;
         font-size: 11.5px;
         text-overflow: ellipsis;
         white-space: nowrap;

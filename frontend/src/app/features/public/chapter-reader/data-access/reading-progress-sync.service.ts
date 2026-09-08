@@ -20,6 +20,7 @@ import type {
 } from './reading-progress-sync.events';
 import { progressSendDelay, READING_PROGRESS_NAMESPACE } from './reading-progress-sync.events';
 import { ReadingProgressLocalState, readingProgressDeviceId } from './reading-progress-local-state';
+import { ReadingProgressOfflineQueueService } from './reading-progress-offline-queue.service';
 import { readVisibleTextCursor, restoreTextCursor } from './reading-progress-cursor.reader';
 
 @Injectable()
@@ -28,9 +29,9 @@ export class ReadingProgressSyncService implements OnDestroy {
   private readonly localState = inject(ReadingProgressLocalState);
   private readonly tokens = inject(TokenStore);
   private readonly config = inject(APP_RUNTIME_CONFIG);
+  private readonly offlineQueue = inject(ReadingProgressOfflineQueueService);
   private readonly document = inject(DOCUMENT);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
-
   private socket: Socket<ReadingProgressServerEvents, ReadingProgressClientEvents> | null = null;
   private activeView: ChapterReaderView | null = null;
   private revision = 0;
@@ -41,8 +42,8 @@ export class ReadingProgressSyncService implements OnDestroy {
   private inFlight = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
-  start(view: ChapterReaderView): void {
-    if (!this.browser || !this.config.features.realtimeProgressSyncEnabled) return;
+  start(view: ChapterReaderView, offline = false): void {
+    if (!this.browser || (!offline && !this.config.features.realtimeProgressSyncEnabled)) return;
     const changedStory = this.activeView?.story.id !== view.story.id;
     const changedChapter = this.activeView?.chapter.id !== view.chapter.id;
     this.activeView = view;
@@ -56,6 +57,10 @@ export class ReadingProgressSyncService implements OnDestroy {
     if (changedChapter) {
       this.lastObservedBlockId = null;
       this.latestCursor = null;
+    }
+    if (offline) {
+      this.capture();
+      return;
     }
     const requestedStoryId = view.story.id;
     this.api.getReadingProgress(requestedStoryId).subscribe({
@@ -93,6 +98,10 @@ export class ReadingProgressSyncService implements OnDestroy {
     const event = this.createEvent(this.latestCursor);
     this.latestCursor = null;
     this.localState.persist(event);
+    if (!this.offlineQueue.online()) {
+      this.offlineQueue.enqueue(event);
+      return;
+    }
     if (this.socket?.connected) {
       this.inFlight = true;
       this.socket.emit('progress:update', event);
@@ -100,7 +109,10 @@ export class ReadingProgressSyncService implements OnDestroy {
     }
 
     const token = this.tokens.accessToken();
-    if (!token) return;
+    if (!token) {
+      this.offlineQueue.enqueue(event);
+      return;
+    }
     void fetch(`${this.config.apiBaseUrl}/reading-progress/${encodeURIComponent(event.storyId)}`, {
       method: 'PUT',
       keepalive: true,
@@ -118,14 +130,19 @@ export class ReadingProgressSyncService implements OnDestroy {
           clientEventId: event.clientEventId,
         },
       }),
-    }).catch(() => undefined);
+    }).catch(() => this.offlineQueue.enqueue(event));
   }
-
-  ngOnDestroy(): void {
+  stop(): void {
     this.flush();
     this.clearTimer();
     this.socket?.disconnect();
     this.socket = null;
+    this.activeView = null;
+    this.latestCursor = null;
+    this.inFlight = false;
+  }
+  ngOnDestroy(): void {
+    this.stop();
   }
 
   private connect(): void {
@@ -140,6 +157,8 @@ export class ReadingProgressSyncService implements OnDestroy {
     this.socket.on('connect', () => this.replayPending());
     this.socket.on('disconnect', () => {
       this.inFlight = false;
+      const pending = this.localState.read(this.activeView?.story.id);
+      if (pending) this.offlineQueue.enqueue(pending);
     });
     this.socket.on('progress:ack', (event) => this.onAck(event));
     this.socket.on('progress:changed', (event) => this.onChanged(event));
@@ -185,6 +204,7 @@ export class ReadingProgressSyncService implements OnDestroy {
           }),
         error: () => {
           this.inFlight = false;
+          this.offlineQueue.enqueue(event);
           this.connect();
         },
       });

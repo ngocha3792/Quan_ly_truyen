@@ -366,6 +366,107 @@
       ]
     },
     {
+      "id": "offline-reading-packages",
+      "title": "Offline reading packages / PWA launcher",
+      "frontendRoute": "/doc-offline + /tai-khoan/doc-offline",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/account.routes.ts",
+          "tokens": ["path: 'doc-offline'"]
+        },
+        {
+          "file": "frontend/src/app/features/account/profile/account.routes.ts",
+          "tokens": ["path: 'doc-offline'"]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/offline-packages",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Controller('offline-packages')", "@Post()", "@Idempotent({ required: true"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/offline-packages/data-access/offline-packages-http.repository.ts",
+              "tokens": ["createPackage", "x-idempotency-key"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/offline-packages",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Get()", "list("]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/offline-packages/data-access/offline-packages-http.repository.ts",
+              "tokens": ["listPackages"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/offline-packages/quota",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Get('quota')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/offline-packages/data-access/offline-packages-http.repository.ts",
+              "tokens": ["getQuota"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/offline-packages/:packageId/manifest",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Get(':packageId/manifest')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/offline/offline-download.service.ts",
+              "tokens": ["/offline-packages/", "/manifest"]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/offline-packages/:packageId/touch",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Patch(':packageId/touch')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/offline-packages/data-access/offline-packages-http.repository.ts",
+              "tokens": ["touchPackage", "/touch"]
+            }
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/offline-packages/:packageId",
+          "backend": {
+            "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
+            "tokens": ["@Delete(':packageId')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/account/offline-packages/data-access/offline-packages-http.repository.ts",
+              "tokens": ["deletePackage"]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "reading-history",
       "title": "Reading history",
       "frontendRoute": "/lich-su",

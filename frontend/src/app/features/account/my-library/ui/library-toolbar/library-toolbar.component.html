@@ -8,8 +8,13 @@
     (valueChange)="queryChange.emit($event)"
   />
 
-  <div class="filter-list" aria-label="Lọc thư viện">
-    <button type="button" [class.active]="filter === 'all'" (click)="filterChange.emit('all')">
+  <div class="filter-list" role="group" aria-label="Lọc thư viện">
+    <button
+      type="button"
+      [class.active]="filter === 'all'"
+      [attr.aria-pressed]="filter === 'all'"
+      (click)="filterChange.emit('all')"
+    >
       <svg viewBox="0 0 24 24">
         <rect x="4" y="4" width="6" height="6" rx="1"></rect>
 
@@ -26,6 +31,7 @@
     <button
       type="button"
       [class.active]="filter === 'reading'"
+      [attr.aria-pressed]="filter === 'reading'"
       (click)="filterChange.emit('reading')"
     >
       <svg viewBox="0 0 24 24">
@@ -42,6 +48,7 @@
     <button
       type="button"
       [class.active]="filter === 'favorite'"
+      [attr.aria-pressed]="filter === 'favorite'"
       (click)="filterChange.emit('favorite')"
     >
       <svg viewBox="0 0 24 24">
@@ -54,6 +61,7 @@
     <button
       type="button"
       [class.active]="filter === 'completed'"
+      [attr.aria-pressed]="filter === 'completed'"
       (click)="filterChange.emit('completed')"
     >
       <svg viewBox="0 0 24 24">

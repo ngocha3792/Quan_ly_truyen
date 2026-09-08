@@ -18,52 +18,65 @@
   } @else if (loading() && !overview()) {
     <app-loading-state message="Đang tải thống kê..." />
   } @else if (overview(); as data) {
-    <div class="summary-grid">
-      <app-stat-card label="Lượt xem" [value]="formatNumber(data.totals.views)" icon="eye" />
+    <div class="summary-grid" aria-label="Tổng quan chỉ số độc giả">
       <app-stat-card
-        label="Độc giả-truyện-ngày"
-        [value]="formatNumber(data.totals.uniqueReaders)"
-        description="Tổng distinct theo từng truyện/ngày, không phải distinct toàn kỳ"
-        icon="users"
+        class="metric-card metric-card--cyan"
+        label="Lượt xem"
+        [value]="formatNumber(data.totals.views)"
+        icon="eye"
         tone="blue"
       />
       <app-stat-card
+        class="metric-card metric-card--teal"
+        label="Độc giả / truyện / ngày"
+        [value]="formatNumber(data.totals.uniqueReaders)"
+        description="Tổng distinct theo từng truyện/ngày, không phải distinct toàn kỳ"
+        icon="users"
+        tone="green"
+      />
+      <app-stat-card
+        class="metric-card metric-card--purple"
         label="Bắt đầu đọc"
         [value]="formatNumber(data.totals.readingStarts)"
         icon="play"
         tone="indigo"
       />
       <app-stat-card
+        class="metric-card metric-card--teal"
         label="Hoàn thành"
         [value]="formatNumber(data.totals.completions)"
         icon="check"
         tone="green"
       />
       <app-stat-card
+        class="metric-card metric-card--amber"
         label="Tỷ lệ hoàn thành"
         [value]="formatRate(data.totals.completionRate)"
         icon="trophy"
         tone="orange"
       />
       <app-stat-card
+        class="metric-card metric-card--rose"
         label="Thời gian đọc"
         [value]="formatDuration(data.totals.readingSeconds)"
         icon="clock"
         tone="pink"
       />
       <app-stat-card
-        label="Tỷ lệ bắt đầu đọc"
+        class="metric-card metric-card--cyan"
+        label="Tỷ lệ bắt đầu"
         [value]="formatRate(data.totals.readingStartRate)"
         description="Bắt đầu đọc / lượt xem trong cùng kỳ"
         icon="activity"
-        tone="indigo"
+        tone="blue"
       />
       <app-stat-card
-        label="TB đọc / độc giả-truyện-ngày"
+        class="metric-card metric-card--purple"
+        label="TB thời gian đọc"
         [value]="formatDuration(data.totals.averageReadingSecondsPerReaderDay)"
-        description="Thời gian active, không gồm thời gian mở tab nhưng không đọc"
+        description="Theo độc giả-truyện-ngày; chỉ tính thời gian đọc chủ động"
         icon="clock"
-        tone="blue"
+        tone="indigo"
       />
     </div>
 
@@ -76,7 +89,9 @@
           có bản ghi.
         </span>
       </div>
-      <span>Cập nhật gần nhất: {{ formatTimestamp(data.dataAvailability.lastAggregatedAt) }}</span>
+      <span class="data-note__updated">
+        Cập nhật gần nhất: {{ formatTimestamp(data.dataAvailability.lastAggregatedAt) }}
+      </span>
     </aside>
 
     <article class="panel">
@@ -85,6 +100,7 @@
           <h2>Hoạt động lượt xem đã ghi nhận</h2>
           <p>{{ data.range.from }} → {{ data.range.to }} · {{ data.range.timeZone }}</p>
         </div>
+        <span class="chart-legend"><i aria-hidden="true"></i>Lượt xem</span>
       </div>
       @if (data.series.length === 0) {
         <app-empty-state
@@ -93,13 +109,37 @@
           description="Không có aggregate analytics thật trong khoảng thời gian này."
         />
       } @else {
-        <div class="chart" role="img" aria-label="Biểu đồ lượt xem theo ngày có bản ghi">
-          @for (point of data.series; track point.date) {
-            <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'">
-              <div class="bar" [style.height.%]="barHeight(point.views)"></div>
-              <span>{{ point.date.slice(5) }}</span>
+        <div class="chart-shell" role="img" aria-label="Biểu đồ lượt xem theo ngày có bản ghi">
+          <div class="chart-axis" aria-hidden="true">
+            <span>{{ formatNumber(chartMaximum()) }}</span>
+            <span>{{ formatNumber(chartMidpoint()) }}</span>
+            <span>0</span>
+          </div>
+
+          <div class="chart-scroll">
+            <div class="chart">
+              <div class="chart-grid" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+
+              @for (point of data.series; track point.date) {
+                <div class="bar-column" [title]="point.date + ': ' + point.views + ' lượt xem'">
+                  <div class="bar-track">
+                    <div
+                      class="bar"
+                      [class.bar--empty]="point.views === 0"
+                      [style.height.%]="barHeight(point.views)"
+                    >
+                      <span class="bar-value">{{ formatNumber(point.views) }}</span>
+                    </div>
+                  </div>
+                  <span class="bar-date">{{ formatChartDate(point.date) }}</span>
+                </div>
+              }
             </div>
-          }
+          </div>
         </div>
       }
     </article>

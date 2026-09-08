@@ -64,8 +64,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
     `
       :host {
         display: grid;
-        grid-template-columns: 1.05fr 1fr;
-        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
         min-width: 0;
       }
 
@@ -74,9 +74,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         min-height: 185px;
         padding: 18px 20px 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        background: #0d1421;
       }
 
       header {
@@ -88,13 +87,13 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
       h2 {
         margin: 0;
-        color: #f5f2fa;
-        font-size: 1.1rem;
+        color: var(--text-strong);
+        font-size: 1rem;
         font-weight: 700;
       }
 
       header a {
-        color: #b967ff;
+        color: #67d8c0;
         font-size: 13px;
         font-weight: 650;
         text-decoration: none;
@@ -107,7 +106,7 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
       .action-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
         margin-top: 14px;
       }
@@ -121,8 +120,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         gap: 10px;
         padding: 12px 8px;
         border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(14, 22, 39, 0.7);
+        border-radius: 8px;
+        background: #09111c;
         color: var(--text-strong);
         text-align: center;
         text-decoration: none;
@@ -130,10 +129,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
       }
 
       .action-card:hover {
-        border-color: rgba(168, 85, 247, 0.4);
-        background: linear-gradient(145deg, rgba(30, 22, 55, 0.85), rgba(18, 25, 45, 0.85));
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+        border-color: rgba(79, 209, 181, 0.4);
+        background: rgba(79, 209, 181, 0.06);
       }
 
       .action-card app-icon {
@@ -142,18 +139,18 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         height: 42px;
         place-items: center;
         border-radius: 50%;
-        background: rgba(126, 34, 206, 0.16);
-        color: #c084fc;
+        background: rgba(79, 209, 181, 0.12);
+        color: #67d8c0;
       }
 
       .action-card--purple app-icon {
-        background: rgba(168, 85, 247, 0.18);
-        color: #c084fc;
+        background: rgba(79, 209, 181, 0.12);
+        color: #67d8c0;
       }
 
       .action-card--blue app-icon {
-        background: rgba(37, 99, 235, 0.18);
-        color: #5c88ff;
+        background: rgba(56, 189, 248, 0.12);
+        color: #7dd3fc;
       }
 
       .action-card--green app-icon {

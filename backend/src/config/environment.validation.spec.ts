@@ -215,6 +215,46 @@ describe('validateEnvironment', () => {
     ).not.toThrow();
   });
 
+  it('requires stable documents, portable cursors and sync metadata for offline reading', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_OFFLINE_READING_ENABLED: 'true',
+      }),
+    ).toThrow(
+      'READER_CONTENT_DOCUMENT_ENABLED must be true when offline reading is enabled',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_OFFLINE_READING_ENABLED: 'true',
+      }),
+    ).toThrow(
+      'READER_PORTABLE_CURSOR_ENABLED must be true when offline reading is enabled',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_PORTABLE_CURSOR_ENABLED: 'true',
+        READER_OFFLINE_READING_ENABLED: 'true',
+      }),
+    ).toThrow(
+      'READER_REALTIME_PROGRESS_SYNC_ENABLED must be true when offline reading is enabled',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_PORTABLE_CURSOR_ENABLED: 'true',
+        READER_REALTIME_PROGRESS_SYNC_ENABLED: 'true',
+        READER_OFFLINE_READING_ENABLED: 'true',
+        REDIS_ENABLED: 'true',
+      }),
+    ).not.toThrow();
+  });
+
   it('requires complete payment provider configuration when enabled', () => {
     expect(() =>
       validateEnvironment({

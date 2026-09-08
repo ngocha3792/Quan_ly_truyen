@@ -15,9 +15,13 @@
 }
 
 .library-layout {
+  width: 100%;
+  min-width: 0;
+
   --main-padding: 0;
   --main-gap: 0;
   --main-overflow: hidden;
+  --main-radius: 8px;
 }
 
 .result-heading {
@@ -35,6 +39,6 @@
 
 @media (max-width: 600px) {
   .my-library-page {
-    padding: 12px 10px 22px;
+    padding: 12px 0 22px;
   }
 }

@@ -103,13 +103,14 @@ describe('ReaderEngagementApiClient', () => {
     await expect(third).resolves.toMatchObject({ id: 'comment-2' });
   });
 
-  it('posts a text anchor with an idempotency key', async () => {
+  it('posts only the text-anchor wire contract with an idempotency key', async () => {
     const anchor = {
       startBlockId: '11111111-1111-4111-8111-111111111111',
       startOffset: 2,
       endBlockId: '11111111-1111-4111-8111-111111111111',
       endOffset: 20,
       quoteText: 'đoạn được lựa chọn',
+      rect: { left: 10, top: 20, width: 30 },
     };
     const promise = firstValueFrom(
       api.createAnchoredChapterComment('story-1', 'chapter-1', '  Ý kiến  ', anchor),
@@ -117,7 +118,16 @@ describe('ReaderEngagementApiClient', () => {
     const request = http.expectOne('/api/v1/stories/story-1/chapters/chapter-1/anchored-comments');
     expect(request.request.method).toBe('POST');
     expect(request.request.headers.get('x-idempotency-key')).toBeTruthy();
-    expect(request.request.body).toEqual({ body: 'Ý kiến', anchor });
+    expect(request.request.body).toEqual({
+      body: 'Ý kiến',
+      anchor: {
+        startBlockId: anchor.startBlockId,
+        startOffset: anchor.startOffset,
+        endBlockId: anchor.endBlockId,
+        endOffset: anchor.endOffset,
+        quoteText: anchor.quoteText,
+      },
+    });
     request.flush(successEnvelope(comment('comment-anchor-1')));
     await expect(promise).resolves.toMatchObject({ id: 'comment-anchor-1' });
   });

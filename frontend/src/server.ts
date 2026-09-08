@@ -26,6 +26,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
+  if (url.pathname === '/sw.js' || url.pathname === '/pwa-assets.json') {
+    await writePwaArtifact(url.pathname, request, response);
+    return;
+  }
+
   if (runningAsMain && url.pathname === '/index.html') {
     const html = await loadBrowserIndex();
     response.writeHead(200, {
@@ -45,6 +50,34 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
   response.end('Not found');
+}
+
+async function writePwaArtifact(
+  pathname: '/sw.js' | '/pwa-assets.json',
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.writeHead(405, { allow: 'GET, HEAD' });
+    response.end();
+    return;
+  }
+
+  try {
+    const body = await readFile(resolve(browserDistFolder, pathname.slice(1)));
+    response.writeHead(200, {
+      'cache-control': 'no-cache, max-age=0, must-revalidate',
+      'content-type':
+        pathname === '/sw.js'
+          ? 'text/javascript; charset=utf-8'
+          : 'application/json; charset=utf-8',
+      ...(pathname === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
+    });
+    response.end(request.method === 'HEAD' ? undefined : body);
+  } catch {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Not found');
+  }
 }
 
 async function writeHealthResponse(response: ServerResponse): Promise<void> {

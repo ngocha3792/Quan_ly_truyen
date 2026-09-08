@@ -71,9 +71,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         min-height: 340px;
         padding: 18px 20px 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        background: #0d1421;
       }
 
       header {
@@ -89,17 +88,17 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         align-items: center;
         gap: 8px;
         margin: 0;
-        color: #f6f3fb;
-        font-size: 1.1rem;
+        color: var(--text-strong);
+        font-size: 1rem;
         font-weight: 700;
       }
 
       h2 app-icon {
-        color: #c8cfe0;
+        color: #67d8c0;
       }
 
       header a {
-        color: #b967ff;
+        color: #67d8c0;
         font-size: 13px;
         font-weight: 650;
         text-decoration: none;

@@ -55,6 +55,16 @@ export class AccountSidebarComponent {
       icon: 'monitor',
       exact: false,
     },
+    ...(this.runtimeConfig.features.offlineReadingEnabled
+      ? [
+          {
+            label: 'Đọc offline',
+            route: '/tai-khoan/doc-offline',
+            icon: 'book-open' as const,
+            exact: false,
+          },
+        ]
+      : []),
     {
       label: 'Lịch sử hoạt động',
       route: '/tai-khoan/hoat-dong',

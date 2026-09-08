@@ -4,14 +4,15 @@
 
 .author-list {
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(8, 14, 28, 0.45);
+  border: 1px solid var(--author-border);
+  border-radius: 8px;
+  background: var(--author-surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.16);
 }
 
 .author-row {
   display: grid;
-  min-height: 90px;
+  min-height: 94px;
   grid-template-columns:
     minmax(280px, 1fr)
     100px
@@ -21,7 +22,8 @@
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--author-border);
+  transition: background-color 160ms ease;
 }
 
 .author-row:last-child {
@@ -29,7 +31,7 @@
 }
 
 .author-row:hover {
-  background: linear-gradient(90deg, rgba(140, 77, 232, 0.08), rgba(18, 25, 46, 0.52), transparent);
+  background: rgba(30, 41, 59, 0.34);
 }
 
 .author-main {
@@ -48,10 +50,10 @@
   width: 56px;
   height: 56px;
   place-items: center;
-  border: 1px solid rgba(168, 85, 247, 0.45);
+  border: 1px solid rgba(56, 189, 248, 0.42);
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(30, 27, 75, 0.85), rgba(15, 23, 42, 0.95));
-  box-shadow: 0 0 16px rgba(140, 77, 232, 0.15);
+  background: #172434;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
   color: #f8f6fb;
   font-size: 20px;
   font-weight: 800;
@@ -65,9 +67,9 @@
   width: 19px;
   height: 19px;
   place-items: center;
-  border: 2px solid #0c1325;
+  border: 2px solid var(--author-surface);
   border-radius: 50%;
-  background: var(--primary);
+  background: #8b5cf6;
   color: #ffffff;
 }
 
@@ -94,7 +96,7 @@
 .author-information strong {
   display: block;
   margin-bottom: 4px;
-  color: var(--primary-soft);
+  color: var(--author-accent-soft);
   font-size: 12px;
   font-weight: 600;
 }
@@ -126,7 +128,15 @@
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  color: var(--primary-soft);
+  color: var(--author-accent);
+}
+
+.metric:nth-of-type(2) svg {
+  color: var(--author-warm);
+}
+
+.metric:nth-of-type(3) svg {
+  color: var(--author-teal);
 }
 
 .metric strong {
@@ -147,24 +157,30 @@
   justify-content: center;
   gap: 7px;
   padding: 0 16px;
-  border: 1px solid rgba(197, 143, 255, 0.28);
+  border: 1px solid rgba(56, 189, 248, 0.34);
   border-radius: 8px;
-  background: rgba(76, 29, 149, 0.12);
-  color: var(--primary-soft);
+  background: rgba(14, 165, 233, 0.08);
+  color: var(--author-accent-soft);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
   transition:
     background-color 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.follow-button:hover,
+.follow-button:hover:not(:disabled) {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(14, 165, 233, 0.15);
+  color: #e0f2fe;
+}
+
 .follow-button--active {
-  background: linear-gradient(135deg, rgba(147, 51, 234, 0.85), rgba(109, 40, 217, 0.85));
-  color: #ffffff;
-  box-shadow: 0 6px 18px rgba(126, 34, 206, 0.22);
+  border-color: rgba(52, 211, 153, 0.42);
+  background: rgba(16, 185, 129, 0.14);
+  color: #a7f3d0;
 }
 
 .follow-button svg {
@@ -172,7 +188,7 @@
   height: 14px;
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1320px) {
   .author-row {
     grid-template-columns:
       minmax(260px, 1fr)
@@ -190,7 +206,9 @@
   .author-row {
     grid-template-columns:
       minmax(0, 1fr)
-      100px;
+      112px;
+    gap: 12px;
+    padding-inline: 14px;
   }
 
   .metric {
@@ -201,6 +219,8 @@
 @media (max-width: 480px) {
   .author-row {
     grid-template-columns: 1fr;
+    align-items: stretch;
+    padding-block: 14px;
   }
 
   .follow-button {
@@ -214,6 +234,7 @@
   border-radius: inherit;
   object-fit: cover;
 }
+
 .follow-button:disabled {
   cursor: wait;
   opacity: 0.65;

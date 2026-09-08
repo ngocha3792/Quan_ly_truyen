@@ -2,6 +2,11 @@ import { Routes } from '@angular/router';
 import { appPageTitle } from '../../../core/config/app-identity.constants';
 
 import { AccountLayoutComponent } from './layout/account-layout/account-layout.component';
+import {
+  loadOfflinePackagesPage,
+  offlineReadingEnabledGuard,
+  provideOfflinePackages,
+} from '../offline-packages';
 
 export const ACCOUNT_ROUTES: Routes = [
   {
@@ -86,6 +91,13 @@ export const ACCOUNT_ROUTES: Routes = [
           import('./sessions/pages/account-sessions-page/account-sessions-page.component').then(
             (module) => module.AccountSessionsPageComponent,
           ),
+      },
+      {
+        path: 'doc-offline',
+        title: appPageTitle('Gói đọc offline'),
+        canMatch: [offlineReadingEnabledGuard],
+        providers: provideOfflinePackages(),
+        loadComponent: loadOfflinePackagesPage,
       },
       {
         path: 'hoat-dong',

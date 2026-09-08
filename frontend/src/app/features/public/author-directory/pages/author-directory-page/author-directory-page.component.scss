@@ -4,27 +4,46 @@
 }
 
 .author-directory-page {
+  --author-surface: #0d141e;
+  --author-surface-raised: #111a25;
+  --author-surface-muted: #09111b;
+  --author-border: rgba(148, 163, 184, 0.15);
+  --author-border-strong: rgba(148, 163, 184, 0.25);
+  --author-accent: #38bdf8;
+  --author-accent-soft: #7dd3fc;
+  --author-teal: #2dd4bf;
+  --author-success: #34d399;
+  --author-warm: #fbbf24;
+  --author-brand: #c4b5fd;
+
   min-height: calc(100vh - 72px);
-
   padding: 1.25rem 0 4rem;
-
-  background:
-    radial-gradient(circle at 10% 5%, rgba(103, 44, 204, 0.08), transparent 480px), #060b16;
-
+  background: #070c14;
   color: var(--text-strong);
 }
 
+.directory-layout {
+  --layout-gap: 1rem;
+  --main-padding: 0;
+  --main-gap: 0.875rem;
+  --main-border: 0;
+  --main-radius: 0;
+  --main-background: transparent;
+  --main-shadow: none;
+}
+
+.directory-layout app-author-directory-sidebar {
+  grid-column: 1 / -1;
+}
+
 .result-count {
-  margin: -0.25rem 0 0;
-
-  color: #717b8f;
-
+  margin: 0;
+  color: #8b98aa;
   font-size: 0.85rem;
 
   strong {
-    color: #c281ff;
-
-    font-weight: 600;
+    color: var(--author-accent-soft);
+    font-weight: 700;
   }
 }
 

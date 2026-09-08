@@ -43,6 +43,7 @@ describe('application route composition', () => {
       'forgot-password',
       'reset-password',
       'change-email/confirm',
+      'doc-offline',
       'tai-khoan',
       'lich-su',
       'dang-theo-doi',
@@ -51,6 +52,15 @@ describe('application route composition', () => {
       'dang-ky-tac-gia',
       'tac-gia-studio',
     ]);
+  });
+
+  it('keeps the offline cold-start launcher outside the account auth guard but feature-gated', () => {
+    const offlineRoute = (shellRoute().children ?? []).find(
+      (route) => route.path === 'doc-offline',
+    );
+
+    expect(offlineRoute?.canActivate).toBeUndefined();
+    expect(offlineRoute?.canMatch?.length).toBeGreaterThan(0);
   });
 
   it('retains guards on every private shell route', () => {

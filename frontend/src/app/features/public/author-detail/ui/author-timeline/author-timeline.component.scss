@@ -5,10 +5,10 @@
 .timeline-panel {
   margin-top: 0;
   padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(16, 22, 39, 0.9), rgba(10, 15, 28, 0.92));
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--author-border);
+  border-radius: 8px;
+  background: var(--author-surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
 }
 
 header {
@@ -21,7 +21,7 @@ header svg {
   width: 20px;
   height: 20px;
   fill: none;
-  stroke: var(--primary-soft);
+  stroke: var(--author-warm);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -50,12 +50,7 @@ h2 {
   left: 5%;
   height: 2px;
   content: '';
-  background: linear-gradient(
-    90deg,
-    rgba(140, 77, 232, 0.7),
-    rgba(139, 92, 246, 0.35),
-    rgba(140, 77, 232, 0.7)
-  );
+  background: rgba(56, 189, 248, 0.42);
 }
 
 article {
@@ -69,15 +64,14 @@ article {
   left: 50%;
   width: 12px;
   height: 12px;
-  border: 2px solid var(--primary-soft);
+  border: 2px solid var(--author-accent-soft);
   border-radius: 50%;
-  background: #11172a;
-  box-shadow: 0 0 11px rgba(140, 77, 232, 0.55);
+  background: var(--author-surface);
   transform: translateX(-50%);
 }
 
 article strong {
-  color: var(--primary-soft);
+  color: var(--author-accent-soft);
   font-size: 0.88rem;
   font-weight: 700;
 }

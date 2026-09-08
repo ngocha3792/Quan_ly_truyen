@@ -4,8 +4,21 @@ import { appPageTitle } from '../core/config/app-identity.constants';
 import { authenticatedGuard } from '../core/auth/authenticated.guard';
 import { AUTH_PERMISSIONS } from '../core/auth/authorization.models';
 import { permissionGuard } from '../core/auth/permission.guard';
+import {
+  loadOfflinePackagesPage,
+  offlineReadingEnabledGuard,
+  provideOfflinePackages,
+} from '../features/account/offline-packages';
 
 export const ACCOUNT_FEATURE_ROUTES: Routes = [
+  {
+    path: 'doc-offline',
+    title: appPageTitle('Gói đọc offline'),
+    data: { offlineStandalone: true },
+    canMatch: [offlineReadingEnabledGuard],
+    providers: provideOfflinePackages(),
+    loadComponent: loadOfflinePackagesPage,
+  },
   {
     path: 'tai-khoan',
     canActivate: [authenticatedGuard],

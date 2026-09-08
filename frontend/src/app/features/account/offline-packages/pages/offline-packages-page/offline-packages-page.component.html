@@ -1,0 +1,189 @@
+<main class="offline-page" [class.offline-page--standalone]="standalone">
+  <div class="offline-page__inner">
+    <header class="page-header">
+      <div>
+        <h1>Gói đọc offline</h1>
+        <p>Quản lý nội dung đã cấp phép và lưu trên thiết bị này.</p>
+      </div>
+
+      <div class="header-actions">
+        @if (connectivity.online() && !auth.isAuthenticated()) {
+          <a
+            class="login-link"
+            routerLink="/dang-nhap"
+            [queryParams]="{ returnUrl: '/doc-offline' }"
+          >
+            Đăng nhập
+          </a>
+        }
+
+        <button
+          class="refresh-button"
+          type="button"
+          title="Làm mới"
+          aria-label="Làm mới danh sách gói"
+          [disabled]="store.loading() || !serverActionsAvailable()"
+          (click)="store.refresh()"
+        >
+          <app-icon name="rotate-ccw" [size]="18" />
+        </button>
+
+        <button
+          class="create-button"
+          type="button"
+          [disabled]="store.loading() || !serverActionsAvailable() || store.packageLimitReached()"
+          (click)="createStore.openDialog(store.maxChapters())"
+        >
+          <app-icon name="plus" [size]="17" />
+          Tạo gói mới
+        </button>
+      </div>
+    </header>
+
+    @if (!connectivity.online()) {
+      <div class="connection-alert" role="status">
+        <app-icon name="alert-triangle" [size]="17" />
+        <span
+          >Bạn đang offline. Các gói đã tải vẫn đọc được; thao tác với máy chủ sẽ tiếp tục khi có
+          mạng.</span
+        >
+      </div>
+    }
+
+    @if (store.error(); as error) {
+      <div class="page-alert page-alert--error" role="alert">
+        <span>{{ error }}</span>
+        <button type="button" (click)="store.clearMessages()">Đóng</button>
+      </div>
+    }
+
+    @if (store.message(); as message) {
+      <div class="page-alert page-alert--success" role="status">
+        <span>{{ message }}</span>
+        <button type="button" (click)="store.clearMessages()">Đóng</button>
+      </div>
+    }
+
+    @if (createStore.error(); as error) {
+      <div class="page-alert page-alert--error" role="alert">
+        <span>{{ error }}</span>
+        <button type="button" (click)="createStore.clearError()">Đóng</button>
+      </div>
+    }
+
+    <app-offline-quota-panel
+      [quota]="store.quota()"
+      [localStorage]="store.localStorage()"
+      [online]="connectivity.online()"
+      [installable]="connectivity.installable()"
+      [updateAvailable]="connectivity.updateAvailable()"
+      (installRequested)="installApp()"
+      (updateRequested)="applyUpdate()"
+    />
+
+    <section class="package-section">
+      <header class="section-heading">
+        <div>
+          <h2>Gói của bạn</h2>
+          <span>{{ store.packages().length }} gói</span>
+        </div>
+
+        @if (store.quota() && store.packageLimitReached()) {
+          <small>Đã dùng hết quota tạo gói</small>
+        }
+      </header>
+
+      @if (store.loading() && store.packages().length === 0) {
+        <app-loading-state message="Đang tải các gói offline..." />
+      } @else if (store.packages().length > 0) {
+        <app-offline-package-list
+          [packages]="store.packages()"
+          [localPackageIds]="store.localPackageIds()"
+          [downloadProgress]="store.downloadProgress()"
+          [busyPackageIds]="store.busyPackageIds()"
+          [online]="connectivity.online()"
+          [serverActionsAvailable]="serverActionsAvailable()"
+          (downloadRequested)="store.downloadPackage($event)"
+          (openRequested)="openPackage($event)"
+          (localDeleteRequested)="requestLocalDelete($event)"
+          (serverDeleteRequested)="requestServerDelete($event)"
+        />
+      } @else {
+        <app-empty-state
+          icon="book-open"
+          title="Chưa có gói đọc offline"
+          description="Tạo một gói từ các chương miễn phí hoặc đã mua để lưu trên thiết bị."
+        >
+          <button
+            emptyAction
+            class="empty-action"
+            type="button"
+            [disabled]="!serverActionsAvailable() || store.packageLimitReached()"
+            (click)="createStore.openDialog(store.maxChapters())"
+          >
+            <app-icon name="plus" [size]="16" />
+            Tạo gói đầu tiên
+          </button>
+        </app-empty-state>
+      }
+    </section>
+
+    <aside class="content-limitation">
+      <app-icon name="info" [size]="18" />
+      <div>
+        <strong>Nội dung được lưu trên thiết bị</strong>
+        <p>
+          Bản tải có thời hạn giấy phép và sẽ bị xóa khi phiên đăng nhập bị thu hồi hoặc tài khoản
+          thay đổi. Người có quyền truy cập thiết bị vẫn có thể sao chép nội dung đã tải.
+        </p>
+      </div>
+    </aside>
+
+    <app-create-offline-package-dialog
+      [open]="createStore.open()"
+      [busy]="createStore.creating()"
+      [stories]="createStore.filteredStories()"
+      [storyQuery]="createStore.storyQuery()"
+      [selectedStoryId]="createStore.selectedStoryId()"
+      [chapters]="createStore.chapters()"
+      [selectedChapterIds]="createStore.selectedChapterIds()"
+      [chapterLoading]="createStore.chapterLoading()"
+      [chapterError]="createStore.chapterError()"
+      [chapterPage]="createStore.chapterPage()"
+      [chapterTotalPages]="createStore.chapterTotalPages()"
+      [maxChapters]="createStore.maxChapters()"
+      [packageName]="createStore.packageName()"
+      [packageDescription]="createStore.packageDescription()"
+      [canSubmit]="createStore.canSubmit() && serverActionsAvailable()"
+      (closed)="createStore.closeDialog()"
+      (storyQueryChange)="createStore.setStoryQuery($event)"
+      (storySelected)="createStore.selectStory($event)"
+      (chapterToggled)="createStore.toggleChapter($event)"
+      (pageSelected)="createStore.selectCurrentPage()"
+      (selectionCleared)="createStore.clearChapterSelection()"
+      (previousPageRequested)="createStore.previousChapterPage()"
+      (nextPageRequested)="createStore.nextChapterPage()"
+      (packageNameChange)="createStore.setPackageName($event)"
+      (packageDescriptionChange)="createStore.setPackageDescription($event)"
+      (submitted)="createPackage()"
+    />
+
+    <app-dialog-shell
+      [open]="deleteConfirmation() !== null"
+      [busy]="false"
+      [title]="confirmationTitle()"
+      eyebrow="XÁC NHẬN"
+      dialogTitleId="delete-offline-package-title"
+      maxWidth="470px"
+      (closed)="deleteConfirmation.set(null)"
+    >
+      <div class="delete-dialog">
+        <p>{{ confirmationMessage() }}</p>
+        <div>
+          <button type="button" (click)="deleteConfirmation.set(null)">Hủy</button>
+          <button class="danger-button" type="button" (click)="confirmDelete()">Xóa</button>
+        </div>
+      </div>
+    </app-dialog-shell>
+  </div>
+</main>

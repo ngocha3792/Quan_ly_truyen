@@ -1,0 +1,85 @@
+<section class="quota-panel" aria-label="Dung lượng đọc offline">
+  <header>
+    <div>
+      <app-icon name="save" [size]="19" />
+      <h2>Dung lượng offline</h2>
+    </div>
+
+    <span class="connection-state" [class.connection-state--offline]="!online()">
+      <span aria-hidden="true"></span>
+      {{ online() ? 'Đang trực tuyến' : 'Đang offline' }}
+    </span>
+  </header>
+
+  @if (quota(); as currentQuota) {
+    <div class="quota-grid">
+      <div class="quota-metric">
+        <span>Gói trên tài khoản</span>
+        <strong>{{ currentQuota.currentPackages }} / {{ currentQuota.maxPackages }}</strong>
+        <small>Còn {{ currentQuota.remainingPackages }} gói</small>
+      </div>
+
+      <div class="quota-metric quota-metric--wide">
+        <div class="metric-heading">
+          <span>Dung lượng máy chủ</span>
+          <strong>
+            {{ formatBytes(currentQuota.currentSizeBytes) }} /
+            {{ formatBytes(currentQuota.maxTotalSizeBytes) }}
+          </strong>
+        </div>
+
+        <div
+          class="usage-track"
+          role="progressbar"
+          aria-label="Dung lượng gói offline đã dùng"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="
+            quotaPercent(currentQuota.currentSizeBytes, currentQuota.maxTotalSizeBytes)
+          "
+        >
+          <span
+            [style.width.%]="
+              quotaPercent(currentQuota.currentSizeBytes, currentQuota.maxTotalSizeBytes)
+            "
+          ></span>
+        </div>
+
+        <small>Còn {{ formatBytes(currentQuota.remainingSizeBytes) }}</small>
+      </div>
+
+      <div class="quota-metric">
+        <span>Giới hạn mỗi gói</span>
+        <strong>{{ currentQuota.maxChaptersPerPackage }} chương</strong>
+        <small>Máy chủ kiểm tra quyền đọc</small>
+      </div>
+    </div>
+  }
+
+  <footer>
+    @if (localStorage(); as storage) {
+      <span>
+        Trên thiết bị: {{ formatBytes(storage.usageBytes) }} /
+        {{ formatBytes(storage.quotaBytes) }}
+      </span>
+    } @else {
+      <span>Không đọc được dung lượng thiết bị</span>
+    }
+
+    <div class="pwa-actions">
+      @if (installable()) {
+        <button type="button" (click)="installRequested.emit()">
+          <app-icon name="smartphone" [size]="16" />
+          Cài ứng dụng
+        </button>
+      }
+
+      @if (updateAvailable()) {
+        <button type="button" (click)="updateRequested.emit()">
+          <app-icon name="rotate-ccw" [size]="16" />
+          Cập nhật
+        </button>
+      }
+    </div>
+  </footer>
+</section>

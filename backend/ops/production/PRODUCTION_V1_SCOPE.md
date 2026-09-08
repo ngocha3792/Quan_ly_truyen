@@ -54,6 +54,7 @@ The following schema or UI concepts may remain in the repository for future work
 
 - Behavioral-ML personalized recommendation claims.
 - Heuristic author monthly goals and chapter scheduling trends. Synthetic trends, gamified level/XP and fake comment unread state are not exposed in V1.
+- Offline reading/PWA exposure remains behind `READER_OFFLINE_READING_ENABLED=false` until its migration is applied and install, download, cold-start, reader fallback, revocation cleanup and reconnect sync are verified in a real staging browser.
 
 Deferred items are protected by source guards where a misleading user-facing exposure previously existed. Persistence fields may remain when removing them would create unnecessary migration churn.
 

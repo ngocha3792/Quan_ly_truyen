@@ -37,6 +37,7 @@ function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
     realtimeProgressSyncEnabled: readBoolean(value, 'realtimeProgressSyncEnabled'),
     inlineCommentsEnabled: readBoolean(value, 'inlineCommentsEnabled'),
     comicDeliveryEnabled: readBoolean(value, 'comicDeliveryEnabled'),
+    offlineReadingEnabled: readBoolean(value, 'offlineReadingEnabled'),
   };
 }
 

@@ -413,6 +413,22 @@ enum ChapterEntitlementStatus {
   @@map("chapter_entitlement_status")
 }
 
+enum OfflinePackageStatus {
+  PREPARING @map("preparing")
+  READY     @map("ready")
+  EXPIRED   @map("expired")
+  REVOKED   @map("revoked")
+
+  @@map("offline_package_status")
+}
+
+enum OfflineChapterAccessState {
+  FREE     @map("free")
+  ENTITLED @map("entitled")
+
+  @@map("offline_chapter_access_state")
+}
+
 enum CommentAnchorStatus {
   ACTIVE     @map("active")
   REANCHORED @map("reanchored")
@@ -518,6 +534,8 @@ model User {
   chapterMonetizationUpdates   ChapterMonetization[]      @relation("ChapterMonetizationUpdatedBy")
   chapterPricingVersions       ChapterPricingVersion[]    @relation("ChapterPricingVersionChangedBy")
   paymentOrders                PaymentOrder[]
+  offlinePackages              OfflinePackage[]
+  offlineQuota                 OfflineQuota?
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -1161,8 +1179,9 @@ model Session {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trustedDevice TrustedDevice? @relation(fields: [trustedDeviceId], references: [id], onDelete: SetNull)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trustedDevice   TrustedDevice?   @relation(fields: [trustedDeviceId], references: [id], onDelete: SetNull)
+  offlinePackages OfflinePackage[]
 
   @@index([userId, revokedAt])
   @@index([trustedDeviceId])
@@ -1391,12 +1410,13 @@ model MediaAsset {
   deletedAt                DateTime?           @map("deleted_at") @db.Timestamptz(3)
   authorApplicationSamples AuthorApplication[] @relation("AuthorApplicationSample")
 
-  uploader          User?           @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
-  avatarOfUsers     User[]          @relation("UserAvatar")
-  bannerOfAuthors   AuthorProfile[] @relation("AuthorBanner")
-  coverOfStories    Story[]         @relation("StoryCover")
-  coverOfCategories Category[]      @relation("CategoryCover")
-  chapterLinks      ChapterMedia[]
+  uploader           User?                    @relation("MediaUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  avatarOfUsers      User[]                   @relation("UserAvatar")
+  bannerOfAuthors    AuthorProfile[]          @relation("AuthorBanner")
+  coverOfStories     Story[]                  @relation("StoryCover")
+  coverOfCategories  Category[]               @relation("CategoryCover")
+  chapterLinks       ChapterMedia[]
+  offlinePackagePins OfflinePackageMediaPin[]
 
   @@index([uploaderId, createdAt])
   @@index([purpose, status])
@@ -1659,6 +1679,101 @@ model Chapter {
   @@index([scheduledAt, status])
   @@index([deletedAt])
   @@map("chapters")
+}
+
+// ============================================================
+// OFFLINE READING SNAPSHOTS AND QUOTA
+// ============================================================
+
+model OfflinePackage {
+  id               String               @id @default(uuid()) @db.Uuid
+  userId           String               @map("user_id") @db.Uuid
+  sessionId        String?              @map("session_id") @db.Uuid
+  deviceId         String?              @map("device_id") @db.VarChar(120)
+  name             String               @db.VarChar(120)
+  description      String?              @db.VarChar(500)
+  status           OfflinePackageStatus @default(PREPARING)
+  totalSizeBytes   BigInt               @default(0) @map("total_size_bytes")
+  chapterCount     Int                  @default(0) @map("chapter_count")
+  licenseExpiresAt DateTime             @map("license_expires_at") @db.Timestamptz(3)
+  lastAccessedAt   DateTime             @default(now()) @map("last_accessed_at") @db.Timestamptz(3)
+  autoDeleteAt     DateTime             @map("auto_delete_at") @db.Timestamptz(3)
+  revokedAt        DateTime?            @map("revoked_at") @db.Timestamptz(3)
+  revokedReason    String?              @map("revoked_reason") @db.VarChar(500)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   Session?                 @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  chapters  OfflinePackageChapter[]
+  mediaPins OfflinePackageMediaPin[]
+
+  @@index([userId, status, lastAccessedAt], map: "offline_packages_user_status_accessed_idx")
+  @@index([userId, deviceId, status], map: "offline_packages_user_device_status_idx")
+  @@index([sessionId, status], map: "offline_packages_session_status_idx")
+  @@index([status, autoDeleteAt], map: "offline_packages_status_auto_delete_idx")
+  @@index([licenseExpiresAt, status], map: "offline_packages_license_status_idx")
+  @@map("offline_packages")
+}
+
+model OfflinePackageChapter {
+  packageId             String                    @map("package_id") @db.Uuid
+  chapterId             String                    @map("chapter_id") @db.Uuid
+  storyId               String                    @map("story_id") @db.Uuid
+  storySlug             String                    @map("story_slug") @db.VarChar(255)
+  storyTitle            String                    @map("story_title") @db.VarChar(255)
+  chapterNumber         Decimal                   @map("chapter_number") @db.Decimal(10, 2)
+  chapterTitle          String                    @map("chapter_title") @db.VarChar(255)
+  chapterSlug           String                    @map("chapter_slug") @db.VarChar(255)
+  chapterVersion        Int                       @map("chapter_version")
+  content               String                    @db.Text
+  contentFormat         ContentFormat             @map("content_format")
+  contentDocument       Json                      @map("content_document") @db.JsonB
+  documentSchemaVersion Int                       @map("document_schema_version")
+  wordCount             Int                       @map("word_count")
+  publishedAt           DateTime                  @map("published_at") @db.Timestamptz(3)
+  accessType            ChapterAccessType         @map("access_type")
+  accessState           OfflineChapterAccessState @map("access_state")
+  priceCredits          BigInt?                   @map("price_credits")
+  entitlementId         String?                   @map("entitlement_id") @db.Uuid
+  contentSizeBytes      BigInt                    @map("content_size_bytes")
+  mediaCount            Int                       @default(0) @map("media_count")
+  mediaSnapshot         Json                      @map("media_snapshot") @db.JsonB
+  snapshotAt            DateTime                  @default(now()) @map("snapshot_at") @db.Timestamptz(3)
+
+  package OfflinePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, chapterId])
+  @@index([chapterId], map: "offline_package_chapters_chapter_idx")
+  @@index([entitlementId], map: "offline_package_chapters_entitlement_idx")
+  @@map("offline_package_chapters")
+}
+
+model OfflinePackageMediaPin {
+  packageId    String   @map("package_id") @db.Uuid
+  mediaAssetId String   @map("media_asset_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  package    OfflinePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset     @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+
+  @@id([packageId, mediaAssetId])
+  @@index([mediaAssetId], map: "offline_package_media_pins_media_asset_idx")
+  @@map("offline_package_media_pins")
+}
+
+model OfflineQuota {
+  userId                String   @id @map("user_id") @db.Uuid
+  maxPackages           Int      @default(5) @map("max_packages")
+  maxTotalSizeBytes     BigInt   @default(524288000) @map("max_total_size_bytes")
+  maxChaptersPerPackage Int      @default(50) @map("max_chapters_per_package")
+  currentPackages       Int      @default(0) @map("current_packages")
+  currentSizeBytes      BigInt   @default(0) @map("current_size_bytes")
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("offline_quotas")
 }
 
 model ChapterVersion {

@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "TruyenHub",
+  "short_name": "TruyenHub",
+  "description": "Đọc và quản lý truyện trên TruyenHub.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060a14",
+  "theme_color": "#070b16",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

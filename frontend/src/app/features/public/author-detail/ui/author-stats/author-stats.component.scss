@@ -11,15 +11,16 @@
 
 .stat-card {
   display: grid;
+  min-width: 0;
   min-height: 88px;
   grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 1rem 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(16, 22, 39, 0.9), rgba(10, 15, 28, 0.92));
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--author-border);
+  border-radius: 8px;
+  background: var(--author-surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
 }
 
 .stat-icon {
@@ -27,10 +28,24 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(140, 77, 232, 0.28), rgba(76, 29, 149, 0.08));
-  color: var(--primary-soft);
-  box-shadow: 0 0 16px rgba(140, 77, 232, 0.12);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--author-accent-soft);
+}
+
+.stat-card:nth-child(2) .stat-icon {
+  background: rgba(45, 212, 191, 0.1);
+  color: #5eead4;
+}
+
+.stat-card:nth-child(3) .stat-icon {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--author-brand);
+}
+
+.stat-card:nth-child(4) .stat-icon {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fcd34d;
 }
 
 .stat-icon svg {
@@ -61,6 +76,7 @@ strong {
   font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 p {
@@ -78,5 +94,11 @@ p {
 @media (max-width: 520px) {
   .statistics {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .stat-card {
+    padding-inline: 0.9rem;
   }
 }

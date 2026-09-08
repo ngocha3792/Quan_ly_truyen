@@ -1,0 +1,30 @@
+.delete-dialog p {
+  color: #a5b0c0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.delete-dialog > div {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.delete-dialog button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 7px;
+  background: transparent;
+  color: #a5b0c0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-dialog .danger-button {
+  border-color: rgba(251, 113, 133, 0.34);
+  background: rgba(190, 24, 93, 0.12);
+  color: #fda4af;
+}

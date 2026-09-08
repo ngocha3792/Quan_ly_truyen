@@ -19,6 +19,7 @@ import {
   CommentReportReasonApi,
   StoryRatingApiItem,
 } from './reader-engagement-api.model';
+import { toAnchoredCommentRequest } from './reader-engagement-api.request-mapper';
 @Injectable({ providedIn: 'root' })
 export class ReaderEngagementApiClient {
   private readonly http = inject(HttpClient);
@@ -163,7 +164,7 @@ export class ReaderEngagementApiClient {
     anchor: import('./reader-engagement-api.model').CreateTextRangeCommentAnchorApi,
   ): Observable<StoryCommentApiItem> {
     const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/anchored-comments`;
-    return this.postCommentRequest(path, { body: body.trim(), anchor });
+    return this.postCommentRequest(path, toAnchoredCommentRequest(body, anchor));
   }
   createComicRegionComment(
     storyId: string,

@@ -4,7 +4,11 @@ import { MediaResourceType, MediaStatus } from '@/generated/prisma/client';
 
 import { MEDIA_ERROR_CODES } from '../../domain/exceptions/media-error-codes';
 
-import { PrismaMediaCleanupAdapter } from './prisma-media-cleanup.adapter';
+import {
+  PrismaMediaCleanupAdapter,
+  REFERENCED_MEDIA_WHERE,
+  UNREFERENCED_MEDIA_WHERE,
+} from './prisma-media-cleanup.adapter';
 
 describe('PrismaMediaCleanupAdapter', () => {
   const prisma = {
@@ -67,6 +71,13 @@ describe('PrismaMediaCleanupAdapter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('treats active offline package pins as domain references', () => {
+    expect(UNREFERENCED_MEDIA_WHERE.offlinePackagePins).toEqual({ none: {} });
+    expect(REFERENCED_MEDIA_WHERE.OR).toContainEqual({
+      offlinePackagePins: { some: {} },
+    });
   });
 
   it('deletes an unconfirmed raw orphan after the expected image is absent', async () => {
@@ -247,6 +258,28 @@ describe('PrismaMediaCleanupAdapter', () => {
     prisma.mediaAsset.findFirst.mockResolvedValue({
       id: media.id,
     });
+
+    await expect(service.deleteById(media.id)).rejects.toMatchObject({
+      code: MEDIA_ERROR_CODES.ASSET_IN_USE,
+    });
+
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it('does not explicitly delete media pinned by a READY offline package', async () => {
+    const media = {
+      id: '00000000-0000-4000-8000-000000000022',
+      uploaderId: '00000000-0000-4000-8000-000000000023',
+      status: MediaStatus.READY,
+      publicId: 'offline-pinned',
+      resourceType: MediaResourceType.IMAGE,
+      deleteAttempts: 0,
+      metadata: null,
+    };
+
+    prisma.mediaAsset.findUnique.mockResolvedValue(media);
+    prisma.mediaAsset.updateMany.mockResolvedValue({ count: 0 });
+    prisma.mediaAsset.findFirst.mockResolvedValue({ id: media.id });
 
     await expect(service.deleteById(media.id)).rejects.toMatchObject({
       code: MEDIA_ERROR_CODES.ASSET_IN_USE,

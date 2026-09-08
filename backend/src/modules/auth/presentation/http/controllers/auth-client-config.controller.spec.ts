@@ -23,6 +23,9 @@ describe('AuthClientConfigController', () => {
             contentDocumentEnabled: false,
             portableCursorEnabled: false,
             realtimeProgressSyncEnabled: false,
+            inlineCommentsEnabled: false,
+            comicDeliveryEnabled: false,
+            offlineReadingEnabled: false,
           };
         }
         return { enabled: false, paymentProviderEnabled: false };
@@ -38,6 +41,9 @@ describe('AuthClientConfigController', () => {
         contentDocumentEnabled: false,
         portableCursorEnabled: false,
         realtimeProgressSyncEnabled: false,
+        inlineCommentsEnabled: false,
+        comicDeliveryEnabled: false,
+        offlineReadingEnabled: false,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,

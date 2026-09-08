@@ -95,5 +95,7 @@ The five dependent reader features also have independent, default-off flags:
 - `READER_OFFLINE_READING_ENABLED=false`
 - `READER_TEXT_TO_SPEECH_ENABLED=false`
 
-Enable each flag independently after its own implementation, migration checks,
-contract tests and client rollout are complete.
+Enable each feature only after its own implementation, migration checks,
+contract tests and client rollout are complete. Offline reading additionally
+requires content documents, portable cursors and realtime progress sync; startup
+validation rejects an offline configuration that omits any of those prerequisites.

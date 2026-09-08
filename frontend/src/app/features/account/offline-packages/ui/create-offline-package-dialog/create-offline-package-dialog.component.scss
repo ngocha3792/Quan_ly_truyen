@@ -1,0 +1,260 @@
+:host {
+  --search-background: #09111b;
+  --search-border: 1px solid rgba(148, 163, 184, 0.17);
+  --search-focus-border-color: rgba(34, 211, 238, 0.52);
+  --search-focus-shadow: 0 0 0 3px rgba(34, 211, 238, 0.08);
+  --search-radius: 7px;
+}
+
+.dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 16px;
+}
+
+.story-step,
+.chapter-step,
+.package-fields {
+  min-width: 0;
+}
+
+.step-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.step-heading > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.step-heading h3,
+.step-heading p {
+  margin: 0;
+}
+
+.step-heading h3 {
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.step-heading p {
+  margin-top: 2px;
+  color: #7f8da1;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.story-list,
+.chapter-list {
+  height: 286px;
+  margin-top: 10px;
+  overflow-y: auto;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: #09111b;
+}
+
+.story-list > button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.11);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.story-list > button:last-of-type {
+  border-bottom: 0;
+}
+
+.story-list > button:hover,
+.story-list > .story-option--selected {
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.story-list > .story-option--selected {
+  box-shadow: inset 3px 0 #22d3ee;
+}
+
+.story-cover {
+  display: grid;
+  width: 36px;
+  aspect-ratio: 2 / 3;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #17345e;
+  color: #dbeafe;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.story-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.story-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.story-copy strong,
+.story-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.story-copy strong {
+  color: #e8edf5;
+  font-size: 12.5px;
+}
+
+.story-copy small {
+  color: #718096;
+  font-size: 10.5px;
+}
+
+.library-badge {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.09);
+  color: #a7f3d0;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.selection-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  min-height: 43px;
+  align-items: center;
+}
+
+.selection-toolbar button {
+  min-height: 31px;
+  padding: 0 9px;
+  border: 1px solid rgba(148, 163, 184, 0.17);
+  border-radius: 6px;
+  background: transparent;
+  color: #a5b0c0;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.selection-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.chapter-list {
+  height: 253px;
+  margin-top: 0;
+}
+
+.chapter-list label {
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  grid-template-columns: 18px 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  color: #8b98aa;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.chapter-list label:last-of-type {
+  border-bottom: 0;
+}
+
+.chapter-list label:hover,
+.chapter-list .chapter-option--selected {
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.chapter-list input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #06b6d4;
+}
+
+.chapter-list strong {
+  overflow: hidden;
+  color: #dce3ec;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-copy,
+.error-copy {
+  margin: 0;
+  padding: 22px 14px;
+  color: #7f8da1;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.error-copy {
+  color: #fda4af;
+}
+
+.chapter-pagination {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 7px;
+  color: #7f8da1;
+  font-size: 10.5px;
+}
+
+.chapter-pagination button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.17);
+  border-radius: 6px;
+  background: transparent;
+  color: #a5b0c0;
+  cursor: pointer;
+}
+
+.chapter-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}

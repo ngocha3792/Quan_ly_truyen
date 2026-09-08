@@ -4,94 +4,72 @@
 }
 
 .author-dashboard {
-  display: flex;
-  flex-direction: column;
+  width: min(100%, 1600px);
   min-width: 0;
+  margin-inline: auto;
   padding: 1.25rem 1.5rem 3rem;
-}
-
-app-breadcrumb {
-  order: 0;
+  color: var(--text-strong);
 }
 
 app-page-heading {
-  order: 1;
   margin-bottom: 1.25rem;
 }
 
 .metric-grid {
-  order: 2;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.25rem;
+  gap: 12px;
 }
 
+.metric-grid app-stat-card {
+  --stat-min-height: 104px;
+  --stat-padding: 15px;
+  --stat-gap: 12px;
+  --stat-radius: 8px;
+  --stat-background: #0d1421;
+  --stat-icon-size: 44px;
+  --stat-icon-radius: 8px;
+  --stat-label-size: 0.76rem;
+  --stat-value-size: 1.35rem;
+  --stat-description-size: 0.72rem;
+}
+
+.dashboard-row,
 app-dashboard-bottom-panels {
-  order: 3;
+  min-width: 0;
   margin-top: 1.25rem;
 }
 
 .dashboard-row--analytics {
-  order: 4;
   display: grid;
-  min-width: 0;
-  gap: 1.25rem;
-  margin-top: 1.25rem;
   grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
 }
 
 .dashboard-row--management {
-  order: 5;
   display: grid;
-  min-width: 0;
-  gap: 1.25rem;
-  margin-top: 1.25rem;
-  grid-template-columns: 1.15fr 1fr 1.05fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  min-height: 270px;
+  gap: 12px;
 }
 
-@media (max-width: 1450px) {
+@media (max-width: 1280px) {
   .metric-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .dashboard-row--management {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    app-reader-comments {
-      grid-column: 1 / -1;
-    }
   }
 }
 
-@media (max-width: 1100px) {
-  .dashboard-row--analytics {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 750px) {
+@media (max-width: 820px) {
   .author-dashboard {
-    padding: 14px 11px 20px;
-  }
-
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 1rem 14px 2rem;
   }
 
   .dashboard-row--management {
-    grid-template-columns: 1fr;
-
-    app-reader-comments {
-      grid-column: auto;
-    }
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 450px) {
+@media (max-width: 520px) {
   .metric-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

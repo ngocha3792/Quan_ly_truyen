@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
@@ -10,6 +10,7 @@ import type { ReadingHistoryApiItem } from '../../../../core/http/reader-engagem
 import type { ChapterReaderView } from '../domain/chapter-reader.models';
 import { ReadingProgressSyncService } from './reading-progress-sync.service';
 import { ReadingProgressLocalState } from './reading-progress-local-state';
+import { ReadingProgressOfflineQueueService } from './reading-progress-offline-queue.service';
 
 const socketHarness = vi.hoisted(() => {
   const handlers = new Map<string, (...args: never[]) => void>();
@@ -36,6 +37,10 @@ describe('ReadingProgressSyncService', () => {
     getReadingProgress: vi.fn(),
     saveReadingProgress: vi.fn(),
   };
+  const offlineQueue = {
+    online: vi.fn(() => true),
+    enqueue: vi.fn(),
+  };
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -49,6 +54,8 @@ describe('ReadingProgressSyncService', () => {
     socketHarness.io.mockReturnValue(socketHarness.socket);
     api.getReadingProgress.mockReturnValue(of(null));
     api.saveReadingProgress.mockReturnValue(of(progress(1, '1')));
+    offlineQueue.online.mockReturnValue(true);
+    offlineQueue.enqueue.mockClear();
 
     document.body.innerHTML = `
       <article data-reader-chapter-id="chapter-1">
@@ -77,9 +84,10 @@ describe('ReadingProgressSyncService', () => {
           provide: APP_RUNTIME_CONFIG,
           useValue: {
             apiBaseUrl: 'http://localhost:3000/api/v1',
-            features: { realtimeProgressSyncEnabled: true },
+            features: { realtimeProgressSyncEnabled: true, offlineReadingEnabled: true },
           },
         },
+        { provide: ReadingProgressOfflineQueueService, useValue: offlineQueue },
       ],
     });
   });
@@ -138,6 +146,19 @@ describe('ReadingProgressSyncService', () => {
     expect(localStorage.getItem('qlt:reading-progress:pending:user-1:story-1')).toBeNull();
     vi.advanceTimersByTime(10_000);
     expect(socketHarness.socket.emit).not.toHaveBeenCalled();
+  });
+
+  it('queues the same progress event in IndexedDB when REST sync fails', () => {
+    api.saveReadingProgress.mockReturnValue(throwError(() => new Error('network')));
+    const service = TestBed.inject(ReadingProgressSyncService);
+    service.start(view());
+
+    vi.advanceTimersByTime(3_000);
+
+    expect(offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+    expect(offlineQueue.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ storyId: 'story-1', chapterId: 'chapter-1' }),
+    );
   });
 });
 

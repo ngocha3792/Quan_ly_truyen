@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,6 +22,7 @@ import type {
   CommentReactionApiType,
   CommentReportReasonApi,
 } from '../../../../../core/http/reader-engagement-api.model';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
 import { ChapterListStore } from '../../data-access/chapter-list.store';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
@@ -48,12 +50,15 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
     CommentToolbarComponent,
     AnchoredCommentsPanelComponent,
     ChapterImageSlicesComponent,
+    IconComponent,
+    DatePipe,
   ],
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: [
     './chapter-reader-page.component.scss',
     './chapter-reader-page.chapter-list.component.scss',
     './chapter-reader-page.paywall.component.scss',
+    './chapter-reader-page.offline.component.scss',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [TextSelectionService, InlineCommentsController],
@@ -99,7 +104,11 @@ export class ChapterReaderPageComponent implements OnInit {
       url: this.seo.absoluteUrl(canonicalPath),
     });
 
-    if (view.chapter.accessState !== 'LOCKED' && this.trackedChapterId !== view.chapter.id) {
+    if (
+      !this.store.offlineMode() &&
+      view.chapter.accessState !== 'LOCKED' &&
+      this.trackedChapterId !== view.chapter.id
+    ) {
       this.stopAnalyticsSession?.();
       this.trackedChapterId = view.chapter.id;
       const sessionId = this.analytics.newSessionId();
@@ -150,6 +159,7 @@ export class ChapterReaderPageComponent implements OnInit {
     readonly body: string;
     readonly anchor: TextSelectionAnchor;
   }): void {
+    if (this.store.offlineMode()) return;
     this.runAuthenticated(() => this.inline.createAnchoredComment(event.body, event.anchor));
   }
 
@@ -157,12 +167,14 @@ export class ChapterReaderPageComponent implements OnInit {
     mediaAssetId: string,
     event: { readonly body: string; readonly region: ComicCommentRegion },
   ): void {
+    if (this.store.offlineMode()) return;
     this.runAuthenticated(() =>
       this.inline.createComicRegionComment(mediaAssetId, event.body, event.region),
     );
   }
 
   protected addComment(body: string): void {
+    if (this.store.offlineMode()) return;
     this.runAuthenticated(() => this.store.addComment(body));
   }
 
@@ -204,6 +216,7 @@ export class ChapterReaderPageComponent implements OnInit {
   }
 
   protected toggleBookmark(): void {
+    if (this.store.offlineMode()) return;
     this.runAuthenticated(() => this.store.toggleBookmark());
   }
 

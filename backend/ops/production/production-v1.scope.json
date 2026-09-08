@@ -176,6 +176,15 @@
       "notes": "Sprint 1-3 wallet, chapter paywall and provider-neutral payment settlement foundations exist behind disabled flags. The HMAC reference adapter is forbidden in production; real-provider selection, sandbox certification and controlled rollout are still required."
     },
     {
+      "id": "reader-offline-pwa",
+      "decision": "deferred",
+      "readiness": "deferred",
+      "productionExposure": "hidden",
+      "owner": "backend/offline-reading + frontend/offline+pwa",
+      "nextPhase": "staging-pwa-validation",
+      "notes": "The server snapshot, quota, revocation, IndexedDB, service-worker and reader fallback implementation is present behind READER_OFFLINE_READING_ENABLED=false. Promote only after applying the migration and validating install/download/cold-start/read/reconnect behavior in a real staging browser."
+    },
+    {
       "id": "personalized-recommendations",
       "decision": "deferred",
       "readiness": "deferred",
@@ -199,6 +208,11 @@
       "featureId": "monetization-wallet-paywall",
       "path": "backend/src/config/monetization.config.ts",
       "forbidden": ["enabled: process.env.MONETIZATION_ENABLED !== 'false'"]
+    },
+    {
+      "featureId": "reader-offline-pwa",
+      "path": "backend/src/config/reader-features.config.ts",
+      "forbidden": ["READER_OFFLINE_READING_ENABLED !== 'false'"]
     },
     {
       "featureId": "personalized-recommendations",

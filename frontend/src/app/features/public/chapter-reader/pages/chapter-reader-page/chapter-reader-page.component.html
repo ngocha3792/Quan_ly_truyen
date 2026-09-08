@@ -8,6 +8,24 @@
   } @else if (store.view(); as view) {
     <div class="chapter-layout">
       <section class="reader-column">
+        @if (store.offlineInfo(); as offline) {
+          <section class="offline-reader-status" role="status">
+            <app-icon name="book-open" [size]="18" />
+            <div>
+              <strong>Đang đọc bản offline · {{ offline.packageName }}</strong>
+              <span>
+                Giấy phép đến
+                {{
+                  offline.licenseExpiresAt
+                    ? (offline.licenseExpiresAt | date: 'dd/MM/yyyy')
+                    : 'khi bị thu hồi'
+                }}
+              </span>
+            </div>
+            <a routerLink="/doc-offline">Quản lý gói</a>
+          </section>
+        }
+
         <section class="reader-card">
           <app-chapter-heading [data]="view"></app-chapter-heading>
 
@@ -69,7 +87,10 @@
                   {{ block.text }}
                 </p>
                 @if (
-                  inline.enabled && block.id && inline.count(view.comments, block.id);
+                  !store.offlineMode() &&
+                    inline.enabled &&
+                    block.id &&
+                    inline.count(view.comments, block.id);
                   as count
                 ) {
                   <button
@@ -97,11 +118,11 @@
             </div>
           }
 
-          @if (inline.toolbarPosition(); as position) {
+          @if (!store.offlineMode() && inline.toolbarPosition(); as position) {
             <app-comment-toolbar [position]="position" (comment)="inline.openSelection()" />
           }
 
-          @if (inline.focusedBlockId(); as blockId) {
+          @if (!store.offlineMode() && inline.focusedBlockId(); as blockId) {
             <app-anchored-comments-panel
               [blockId]="blockId"
               [selection]="inline.selection()"
@@ -177,19 +198,21 @@
           </nav>
         </section>
 
-        <app-chapter-comments
-          [comments]="view.comments"
-          [totalComments]="view.totalComments"
-          [submitting]="store.commentPending()"
-          [message]="store.commentMessage()"
-          (commentCreate)="addComment($event)"
-          (commentUpdate)="editComment($event)"
-          (commentDelete)="deleteComment($event)"
-          (repliesLoad)="loadReplies($event)"
-          (replyCreate)="reply($event)"
-          (reactionSet)="react($event)"
-          (reportCreate)="report($event)"
-        ></app-chapter-comments>
+        @if (!store.offlineMode()) {
+          <app-chapter-comments
+            [comments]="view.comments"
+            [totalComments]="view.totalComments"
+            [submitting]="store.commentPending()"
+            [message]="store.commentMessage()"
+            (commentCreate)="addComment($event)"
+            (commentUpdate)="editComment($event)"
+            (commentDelete)="deleteComment($event)"
+            (repliesLoad)="loadReplies($event)"
+            (replyCreate)="reply($event)"
+            (reactionSet)="react($event)"
+            (reportCreate)="report($event)"
+          ></app-chapter-comments>
+        }
       </section>
 
       <app-chapter-sidebar

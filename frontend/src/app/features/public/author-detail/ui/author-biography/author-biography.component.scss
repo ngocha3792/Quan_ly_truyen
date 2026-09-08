@@ -5,10 +5,10 @@
 .panel {
   margin-top: 0;
   padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(16, 22, 39, 0.9), rgba(10, 15, 28, 0.92));
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--author-border);
+  border-radius: 8px;
+  background: var(--author-surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
 }
 
 .section-heading {
@@ -21,7 +21,7 @@
 .section-heading svg {
   width: 20px;
   height: 20px;
-  color: var(--primary-soft);
+  color: var(--author-teal);
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;

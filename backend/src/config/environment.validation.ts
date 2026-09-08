@@ -1098,6 +1098,30 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'QUEUE_ENABLED and REDIS_ENABLED must be true when inline comments are enabled',
     );
   }
+  if (
+    config.READER_OFFLINE_READING_ENABLED &&
+    !config.READER_CONTENT_DOCUMENT_ENABLED
+  ) {
+    throw new Error(
+      'READER_CONTENT_DOCUMENT_ENABLED must be true when offline reading is enabled',
+    );
+  }
+  if (
+    config.READER_OFFLINE_READING_ENABLED &&
+    !config.READER_PORTABLE_CURSOR_ENABLED
+  ) {
+    throw new Error(
+      'READER_PORTABLE_CURSOR_ENABLED must be true when offline reading is enabled',
+    );
+  }
+  if (
+    config.READER_OFFLINE_READING_ENABLED &&
+    !config.READER_REALTIME_PROGRESS_SYNC_ENABLED
+  ) {
+    throw new Error(
+      'READER_REALTIME_PROGRESS_SYNC_ENABLED must be true when offline reading is enabled',
+    );
+  }
 
   if (
     !config.MONETIZATION_ENABLED &&

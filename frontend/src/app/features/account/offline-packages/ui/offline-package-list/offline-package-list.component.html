@@ -1,0 +1,106 @@
+<section class="packages" aria-label="Các gói đọc offline">
+  @for (item of packages(); track item.id) {
+    <article
+      class="package-row"
+      [class.package-row--expired]="isExpired(item)"
+      [class.package-row--local]="isLocal(item.id)"
+    >
+      <span class="package-icon" aria-hidden="true">
+        <app-icon name="book-open" [size]="21" />
+      </span>
+
+      <div class="package-copy">
+        <div class="package-title-row">
+          <h3>{{ item.name }}</h3>
+          <span class="status" [class]="'status status--' + item.status.toLowerCase()">
+            {{ statusLabel(item.status) }}
+          </span>
+          @if (isLocal(item.id)) {
+            <span class="local-badge">
+              <app-icon name="check" [size]="12" />
+              Có trên máy
+            </span>
+          }
+        </div>
+
+        @if (item.description) {
+          <p>{{ item.description }}</p>
+        }
+
+        <div class="package-meta">
+          <span>{{ item.chapterCount }} chương</span>
+          <span>{{ formatBytes(item.totalSizeBytes) }}</span>
+          <span>Hết hạn {{ formatDate(item.licenseExpiresAt) }}</span>
+        </div>
+
+        @if (item.revokedReason) {
+          <p class="package-reason">{{ item.revokedReason }}</p>
+        }
+
+        @if (downloadProgress()[item.id]; as progress) {
+          <div class="download-state">
+            <div
+              class="download-track"
+              role="progressbar"
+              aria-label="Tiến độ tải gói"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="progress.percent"
+            >
+              <span [style.width.%]="progress.percent"></span>
+            </div>
+            <small>{{ progress.phase }} · {{ progress.percent }}%</small>
+          </div>
+        }
+      </div>
+
+      <div class="package-actions">
+        @if (isLocal(item.id) && !isExpired(item)) {
+          <button
+            class="action-button action-button--primary"
+            type="button"
+            [disabled]="isBusy(item.id)"
+            (click)="openRequested.emit(item.id)"
+          >
+            <app-icon name="book-open" [size]="16" />
+            Đọc offline
+          </button>
+        } @else if (item.status === 'READY') {
+          <button
+            class="action-button action-button--primary"
+            type="button"
+            [disabled]="!canDownload(item) || isBusy(item.id)"
+            (click)="downloadRequested.emit(item.id)"
+          >
+            <app-icon name="arrow-down" [size]="16" />
+            {{ downloadLabel() }}
+          </button>
+        }
+
+        @if (isLocal(item.id)) {
+          <button
+            class="icon-button"
+            type="button"
+            title="Xóa bản tải trên thiết bị"
+            aria-label="Xóa bản tải trên thiết bị"
+            [disabled]="isBusy(item.id)"
+            (click)="localDeleteRequested.emit(item.id)"
+          >
+            <app-icon name="trash" [size]="17" />
+          </button>
+        }
+
+        <button
+          class="icon-button icon-button--danger"
+          type="button"
+          title="Xóa gói khỏi tài khoản"
+          aria-label="Xóa gói khỏi tài khoản"
+          [disabled]="!serverActionsAvailable() || isBusy(item.id)"
+          (click)="serverDeleteRequested.emit(item)"
+        >
+          <app-icon name="close" [size]="17" />
+        </button>
+      </div>
+    </article>
+  }
+</section>

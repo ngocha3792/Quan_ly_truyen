@@ -1,6 +1,11 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 import {
@@ -15,6 +20,7 @@ import { routes } from './app.routes';
 import { AppRuntimeConfig, APP_RUNTIME_CONFIG } from './core/config/app-config.token';
 
 import { apiInterceptor } from './core/http/api.interceptor';
+import { PwaBootstrapService } from './core/pwa/pwa-bootstrap.service';
 
 export function createAppConfig(runtimeConfig: AppRuntimeConfig): ApplicationConfig {
   return {
@@ -29,6 +35,8 @@ export function createAppConfig(runtimeConfig: AppRuntimeConfig): ApplicationCon
       provideHttpClient(withInterceptors([apiInterceptor])),
 
       provideClientHydration(withEventReplay()),
+
+      provideAppInitializer(() => inject(PwaBootstrapService).initialize()),
 
       provideRouter(
         routes,

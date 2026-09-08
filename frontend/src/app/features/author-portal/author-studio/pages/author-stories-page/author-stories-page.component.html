@@ -14,13 +14,17 @@
 
     <section class="list-card">
       <div class="list-card__toolbar">
-        <app-search-field
-          [value]="query()"
-          placeholder="Tìm theo tên truyện..."
-          ariaLabel="Tìm truyện"
-          (valueChange)="keywordChanged($event)"
-        />
-        <span>{{ filteredStories().length }} truyện</span>
+        <div class="story-search">
+          <app-search-field
+            [value]="query()"
+            placeholder="Tìm theo tên truyện..."
+            ariaLabel="Tìm truyện"
+            (valueChange)="keywordChanged($event)"
+          />
+        </div>
+        <span class="result-count" aria-live="polite">
+          <strong>{{ filteredStories().length }}</strong> truyện
+        </span>
       </div>
 
       @if (store.error()) {
@@ -54,50 +58,67 @@
           <table>
             <thead>
               <tr>
-                <th>Truyện</th>
-                <th>Trạng thái</th>
-                <th>Thể loại</th>
-                <th>Cập nhật</th>
-                <th>Version</th>
-                <th></th>
+                <th class="story-column">Truyện</th>
+                <th class="status-column">Trạng thái</th>
+                <th class="category-column">Thể loại</th>
+                <th class="updated-column">Cập nhật</th>
+                <th class="version-column">Phiên bản</th>
+                <th class="actions-column"><span class="visually-hidden">Thao tác</span></th>
               </tr>
             </thead>
             <tbody>
               @for (story of pagedStories(); track story.id) {
                 <tr>
-                  <td>
-                    <strong>{{ story.title }}</strong>
-                    <small>{{ story.synopsis || 'Chưa có mô tả.' }}</small>
+                  <td class="story-column">
+                    <div class="story-summary">
+                      <span class="story-mark" aria-hidden="true">
+                        <app-icon name="book-open" [size]="18" />
+                      </span>
+                      <div class="story-copy">
+                        <strong [attr.title]="story.title">{{ story.title }}</strong>
+                        <p>{{ story.synopsis || 'Chưa có mô tả.' }}</p>
+                      </div>
+                    </div>
                   </td>
-                  <td>
+                  <td class="status-column" data-label="Trạng thái">
                     <span class="status" [attr.data-status]="story.status">
                       {{ statusLabel(story.status) }}
                     </span>
                   </td>
-                  <td>{{ story.categories[0]?.name || 'Chưa chọn thể loại' }}</td>
-                  <td>{{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-                  <td>v{{ story.version }}</td>
-                  <td class="actions">
-                    <app-link-button
-                      variant="secondary"
-                      [routerLink]="['/author-studio/truyen', story.id]"
-                      >Chi tiết</app-link-button
-                    >
-                    <app-link-button
-                      variant="secondary"
-                      [routerLink]="['/author-studio/truyen', story.id, 'chuong']"
-                      >Chương</app-link-button
-                    >
-                    @if (canDelete(story)) {
-                      <app-button
-                        variant="danger"
-                        [loading]="store.actionStoryId() === story.id"
-                        [disabled]="store.actionStoryId() === story.id"
-                        (click)="deleteStory(story)"
+                  <td class="category-column" data-label="Thể loại">
+                    <span [attr.title]="story.categories[0]?.name || 'Chưa chọn thể loại'">
+                      {{ story.categories[0]?.name || 'Chưa chọn thể loại' }}
+                    </span>
+                  </td>
+                  <td class="updated-column" data-label="Cập nhật">
+                    <time [attr.datetime]="story.updatedAt">
+                      {{ story.updatedAt | date: 'dd/MM/yyyy HH:mm' }}
+                    </time>
+                  </td>
+                  <td class="version-column" data-label="Phiên bản">v{{ story.version }}</td>
+                  <td class="actions-column">
+                    <div class="actions">
+                      <app-link-button
+                        variant="secondary"
+                        [routerLink]="['/author-studio/truyen', story.id]"
+                        >Chi tiết</app-link-button
                       >
-                        Xóa
-                      </app-button>
-                    }
+                      <app-link-button
+                        variant="secondary"
+                        [routerLink]="['/author-studio/truyen', story.id, 'chuong']"
+                        >Chương</app-link-button
+                      >
+                      @if (canDelete(story)) {
+                        <app-button
+                          variant="danger"
+                          [loading]="store.actionStoryId() === story.id"
+                          [disabled]="store.actionStoryId() === story.id"
+                          (click)="deleteStory(story)"
+                        >
+                          Xóa
+                        </app-button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }

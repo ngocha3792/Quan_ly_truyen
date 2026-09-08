@@ -1,0 +1,253 @@
+.panel {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--analytics-border);
+  border-radius: 8px;
+  background: var(--analytics-surface);
+}
+
+.panel h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.panel p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chart-legend {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.45rem;
+  padding-top: 0.15rem;
+  color: #aab4bd;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chart-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--analytics-cyan);
+}
+
+.chart-shell {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 0.75rem;
+  min-width: 0;
+  margin-top: 1.25rem;
+}
+
+.chart-axis {
+  height: 252px;
+  padding: 20px 0 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  color: #7f8b96;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-color: #46515b transparent;
+  scrollbar-width: thin;
+}
+
+.chart {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  height: 252px;
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 20px 12px 0;
+}
+
+.chart-grid {
+  position: absolute;
+  inset: 20px 0 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.chart-grid span {
+  width: 100%;
+  border-top: 1px solid var(--analytics-grid-line);
+}
+
+.bar-column {
+  position: relative;
+  z-index: 1;
+  min-width: 52px;
+  height: 100%;
+  flex: 1 0 52px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 32px;
+}
+
+.bar-track {
+  min-height: 0;
+  padding: 28px 4px 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar {
+  position: relative;
+  width: min(34px, 78%);
+  min-height: 4px;
+  border: 1px solid rgba(165, 243, 252, 0.35);
+  border-radius: 5px 5px 2px 2px;
+  background: #22d3ee;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.bar-column:hover .bar {
+  border-color: rgba(204, 251, 241, 0.7);
+  background: var(--analytics-teal);
+}
+
+.bar--empty {
+  min-height: 0;
+  border-width: 0;
+  background: #46515b;
+}
+
+.bar-value {
+  position: absolute;
+  top: -23px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #dbe4ea;
+  font-size: 0.68rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar-date {
+  display: grid;
+  place-items: center;
+  color: #929da7;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-color: #46515b transparent;
+  scrollbar-width: thin;
+}
+
+table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.8rem 0.7rem;
+  border-bottom: 1px solid var(--analytics-border);
+  white-space: nowrap;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+th {
+  color: #9ca7b1;
+  font-size: 0.74rem;
+  font-weight: 650;
+  background: var(--analytics-surface);
+}
+
+tbody tr {
+  transition: background 140ms ease;
+}
+
+tbody tr:hover {
+  background: var(--analytics-surface-raised);
+}
+
+th:first-child,
+td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 30%;
+  min-width: 230px;
+  max-width: 330px;
+  white-space: normal;
+  background: var(--analytics-surface);
+}
+
+tbody tr:hover td:first-child {
+  background: var(--analytics-surface-raised);
+}
+
+td a {
+  font-weight: 650;
+  color: var(--analytics-cyan);
+  text-decoration: none;
+}
+
+td a:hover {
+  color: #a5f3fc;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  .panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .chart-shell {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+
+  .chart-axis,
+  .chart {
+    height: 230px;
+  }
+
+  .bar-column {
+    min-width: 46px;
+    flex-basis: 46px;
+  }
+}

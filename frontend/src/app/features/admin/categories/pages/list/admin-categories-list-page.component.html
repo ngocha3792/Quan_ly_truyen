@@ -10,26 +10,35 @@
     </app-page-heading>
 
     <section class="list-card">
-      <div class="list-card__toolbar">
-        <app-search-field
-          [value]="q"
-          placeholder="Tìm theo tên hoặc slug…"
-          ariaLabel="Tìm thể loại"
-          (valueChange)="keywordChanged($event)"
-        />
-        <app-tab-filter
-          ariaLabel="Trạng thái thể loại"
-          [options]="statusOptions"
-          [selected]="status"
-          (selectedChange)="statusChanged($event)"
-        />
-        <select [(ngModel)]="parentFilter" (ngModelChange)="applyFilters()">
-          <option value="">Tất cả danh mục cha</option>
-          <option value="root">Chỉ danh mục gốc</option>
-          @for (parent of parentOptions(); track parent.id) {
-            <option [value]="parent.id">{{ parent.name }}</option>
-          }
-        </select>
+      <div class="list-card__toolbar category-filters">
+        <div class="filter-field filter-field--search">
+          <span>Tìm kiếm</span>
+          <app-search-field
+            [value]="q"
+            placeholder="Tên hoặc slug thể loại"
+            ariaLabel="Tìm thể loại"
+            (valueChange)="keywordChanged($event)"
+          />
+        </div>
+        <div class="filter-field filter-field--status">
+          <span>Trạng thái</span>
+          <app-tab-filter
+            ariaLabel="Trạng thái thể loại"
+            [options]="statusOptions"
+            [selected]="status"
+            (selectedChange)="statusChanged($event)"
+          />
+        </div>
+        <label class="filter-field">
+          <span>Danh mục cha</span>
+          <select [(ngModel)]="parentFilter" (ngModelChange)="applyFilters()">
+            <option value="">Tất cả danh mục cha</option>
+            <option value="root">Chỉ danh mục gốc</option>
+            @for (parent of parentOptions(); track parent.id) {
+              <option [value]="parent.id">{{ parent.name }}</option>
+            }
+          </select>
+        </label>
       </div>
 
       @if (message()) {

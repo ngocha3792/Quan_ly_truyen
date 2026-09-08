@@ -37,6 +37,7 @@ describe('apiInterceptor', () => {
       realtimeProgressSyncEnabled: false,
       inlineCommentsEnabled: false,
       comicDeliveryEnabled: false,
+      offlineReadingEnabled: false,
     },
 
     passwordPolicy: {

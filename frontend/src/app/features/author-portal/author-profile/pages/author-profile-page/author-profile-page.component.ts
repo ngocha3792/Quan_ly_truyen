@@ -3,7 +3,6 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 
 import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
-import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
@@ -20,13 +19,16 @@ import { AuthorProfileStore } from '../../data-access/author-profile.store';
     BreadcrumbComponent,
     PageHeadingComponent,
     IconComponent,
-    ButtonComponent,
     LoadingStateComponent,
     NoticeComponent,
   ],
   providers: [...provideAuthorProfile(), AuthorProfileStore],
   templateUrl: './author-profile-page.component.html',
-  styleUrl: './author-profile-page.component.scss',
+  styleUrls: [
+    './author-profile-page.component.scss',
+    './author-profile-page.media.scss',
+    './author-profile-page.form.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorProfilePageComponent {

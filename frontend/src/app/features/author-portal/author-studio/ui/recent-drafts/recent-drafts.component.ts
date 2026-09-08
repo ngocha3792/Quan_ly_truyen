@@ -66,9 +66,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         height: 100%;
         padding: 18px 20px 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        background: #0d1421;
       }
 
       header {
@@ -80,13 +79,13 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
 
       h2 {
         margin: 0;
-        color: #f5f2fa;
-        font-size: 1.1rem;
+        color: var(--text-strong);
+        font-size: 1rem;
         font-weight: 700;
       }
 
       header a {
-        color: #b967ff;
+        color: #67d8c0;
         font-size: 13px;
         font-weight: 650;
         text-decoration: none;
@@ -121,8 +120,8 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         height: 34px;
         place-items: center;
         border-radius: 8px;
-        background: rgba(126, 34, 206, 0.24);
-        color: #ba69ff;
+        background: rgba(79, 209, 181, 0.12);
+        color: #67d8c0;
       }
 
       .draft-information {
@@ -173,7 +172,7 @@ import { IconComponent } from '../../../../../shared/components/icon/icon.compon
         display: block;
         height: 100%;
         border-radius: inherit;
-        background: linear-gradient(90deg, #7c3aed, #b75dff);
+        background: #3fc5aa;
       }
 
       .draft-progress strong {

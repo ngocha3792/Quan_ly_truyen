@@ -37,7 +37,7 @@ import { RecentDraftsComponent } from '../../ui/recent-drafts/recent-drafts.comp
 export class AuthorDashboardPageComponent {
   protected readonly store = inject(AuthorStudioStore);
 
-  protected readonly breadcrumbs = [{ label: 'Author Studio' }];
+  protected readonly breadcrumbs = [{ label: 'Author Studio' }, { label: 'Tổng quan' }];
 
   protected changePeriod(period: AuthorStudioPeriod): void {
     this.store.setPeriod(period);

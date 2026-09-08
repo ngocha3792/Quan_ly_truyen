@@ -1,70 +1,229 @@
-<header>
-  <div>
-    <p>PAYMENT PROVIDERS</p>
-    <h1>Phương thức thanh toán</h1>
-  </div>
-  <a href="/admin/payments/review">Đơn chờ xác nhận</a>
-</header>
-
-@if (store.error(); as error) {
-  <p class="error">{{ error }}</p>
-}
-
-<section>
-  <h2>{{ draft.id ? 'Chỉnh sửa kết nối' : 'Thêm kết nối' }}</h2>
-  <div class="form-grid">
-    <label>Mã ổn định<input [(ngModel)]="draft.code" [disabled]="draft.id !== null" /></label>
-    <label
-      >Loại<select [(ngModel)]="draft.kind" [disabled]="draft.id !== null" (change)="changeKind()">
-        @for (kind of store.kinds(); track kind.kind) {
-          <option [value]="kind.kind">{{ kind.kind }}</option>
-        }
-      </select></label
+<main class="workspace-page payment-providers-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs" />
+    <app-page-heading
+      title="Phương thức thanh toán"
+      description="Quản lý kết nối nhận thanh toán và thứ tự hiển thị cho người dùng."
+      icon="wallet"
     >
-    <label>Tên hiển thị<input [(ngModel)]="draft.displayName" /></label>
-    <label>Tiền tệ<input [(ngModel)]="draft.currency" maxlength="3" /></label>
-    <label>Mô tả<input [(ngModel)]="draft.description" /></label>
-    <label>TTL (phút)<input type="number" [(ngModel)]="draft.orderTtlMinutes" /></label>
-    <label>Thứ tự<input type="number" [(ngModel)]="draft.sortOrder" /></label>
-    <label class="check"><input type="checkbox" [(ngModel)]="draft.enabled" /> Đang bật</label>
-  </div>
-  @if (kindFields().length > 0) {
-    <div class="form-grid bank">
-      @for (field of kindFields(); track field.name) {
-        <label
-          >{{ field.label
-          }}<input
-            [(ngModel)]="draft.config[field.name]"
-            [required]="field.required"
-            [placeholder]="field.placeholder ?? ''"
-        /></label>
-      }
-    </div>
-  }
-  <div class="actions">
-    <button type="button" (click)="save()" [disabled]="saving">
-      {{ saving ? 'Đang lưu…' : 'Lưu' }}</button
-    ><button type="button" class="secondary" (click)="reset()">Mới</button>
-  </div>
-</section>
+      <a class="review-link" routerLink="/admin/payments/review">
+        Đơn chờ xác nhận
+        <app-icon name="arrow-right" [size]="16" />
+      </a>
+    </app-page-heading>
 
-<section>
-  <h2>Kết nối đã cấu hình</h2>
-  @for (provider of store.providers(); track provider.id) {
-    <article>
+    @if (store.error(); as error) {
+      <app-error-alert
+        title="Không thể xử lý phương thức thanh toán"
+        [message]="error"
+        (retry)="store.load()"
+      />
+    }
+
+    <section class="provider-summary" aria-label="Tổng quan phương thức thanh toán">
       <div>
-        <strong>{{ provider.displayName }}</strong
-        ><span
-          >{{ provider.code }} · {{ provider.kind }} ·
-          {{ provider.enabled ? 'Đang bật' : 'Đang tắt' }}</span
-        >
+        <span>Kết nối</span><strong>{{ store.providers().length }}</strong>
       </div>
-      <div class="actions">
-        <button type="button" (click)="edit(provider)">Sửa</button
-        ><button type="button" class="danger" (click)="remove(provider)">Xoá</button>
+      <div>
+        <span>Đang hoạt động</span><strong>{{ enabledProviderCount() }}</strong>
       </div>
-    </article>
-  } @empty {
-    <p>Chưa có kết nối.</p>
-  }
-</section>
+      <div>
+        <span>Loại được hỗ trợ</span><strong>{{ store.kinds().length }}</strong>
+      </div>
+    </section>
+
+    <div class="payment-workspace">
+      <section class="provider-editor" aria-labelledby="provider-editor-title">
+        <header class="section-heading">
+          <div class="section-heading__icon" aria-hidden="true">
+            <app-icon [name]="draft.id ? 'edit' : 'plus'" [size]="18" />
+          </div>
+          <div>
+            <h2 id="provider-editor-title">
+              {{ draft.id ? 'Chỉnh sửa kết nối' : 'Thêm kết nối' }}
+            </h2>
+            <p>{{ draft.id ? draft.code : 'Tạo một cấu hình thanh toán mới' }}</p>
+          </div>
+        </header>
+
+        <form (ngSubmit)="save()">
+          <div class="form-grid">
+            <label>
+              <span>Mã ổn định</span>
+              <input
+                name="code"
+                [(ngModel)]="draft.code"
+                [disabled]="draft.id !== null"
+                placeholder="bank-transfer"
+                autocomplete="off"
+              />
+            </label>
+            <label>
+              <span>Loại kết nối</span>
+              <select
+                name="kind"
+                [(ngModel)]="draft.kind"
+                [disabled]="draft.id !== null"
+                (change)="changeKind()"
+              >
+                @for (kind of store.kinds(); track kind.kind) {
+                  <option [value]="kind.kind">{{ kindLabel(kind.kind) }}</option>
+                }
+              </select>
+            </label>
+            <label class="field-wide">
+              <span>Tên hiển thị</span>
+              <input
+                name="displayName"
+                [(ngModel)]="draft.displayName"
+                placeholder="Chuyển khoản ngân hàng"
+                autocomplete="off"
+              />
+            </label>
+            <label>
+              <span>Tiền tệ</span>
+              <input
+                name="currency"
+                [(ngModel)]="draft.currency"
+                maxlength="3"
+                placeholder="VND"
+                autocomplete="off"
+              />
+            </label>
+            <label>
+              <span>Thời hạn đơn (phút)</span>
+              <input
+                name="orderTtlMinutes"
+                type="number"
+                min="1"
+                [(ngModel)]="draft.orderTtlMinutes"
+              />
+            </label>
+            <label class="field-wide">
+              <span>Mô tả</span>
+              <textarea
+                name="description"
+                rows="3"
+                [(ngModel)]="draft.description"
+                placeholder="Nội dung ngắn hiển thị cho người thanh toán"
+              ></textarea>
+            </label>
+            <label>
+              <span>Thứ tự hiển thị</span>
+              <input name="sortOrder" type="number" min="0" [(ngModel)]="draft.sortOrder" />
+            </label>
+            <label class="toggle-field">
+              <input name="enabled" type="checkbox" [(ngModel)]="draft.enabled" />
+              <span class="toggle-control" aria-hidden="true"></span>
+              <span
+                ><strong>Kích hoạt kết nối</strong
+                ><small>Cho phép người dùng chọn phương thức này</small></span
+              >
+            </label>
+          </div>
+
+          @if (kindFields().length > 0) {
+            <fieldset class="provider-fields">
+              <legend>Thông tin {{ kindLabel(draft.kind) }}</legend>
+              <div class="form-grid">
+                @for (field of kindFields(); track field.name) {
+                  <label [class.field-wide]="field.name === 'instructionNote'">
+                    <span>{{ field.label }}{{ field.required ? ' *' : '' }}</span>
+                    <input
+                      [name]="field.name"
+                      [(ngModel)]="draft.config[field.name]"
+                      [required]="field.required"
+                      [placeholder]="field.placeholder ?? ''"
+                      autocomplete="off"
+                    />
+                  </label>
+                }
+              </div>
+            </fieldset>
+          }
+
+          <footer class="editor-actions">
+            <app-button variant="secondary" type="button" (click)="reset()"
+              ><app-icon icon name="rotate-ccw" [size]="15" />Đặt lại</app-button
+            >
+            <app-button variant="primary" type="submit" [loading]="saving"
+              ><app-icon icon name="save" [size]="15" />{{
+                draft.id ? 'Lưu thay đổi' : 'Thêm kết nối'
+              }}</app-button
+            >
+          </footer>
+        </form>
+      </section>
+
+      <section class="provider-list" aria-labelledby="provider-list-title">
+        <header class="provider-list__header">
+          <div>
+            <h2 id="provider-list-title">Kết nối đã cấu hình</h2>
+            <p>Sắp xếp theo thứ tự hiển thị.</p>
+          </div>
+          <span>{{ store.providers().length }} kết nối</span>
+        </header>
+
+        @if (store.loading() && store.providers().length === 0) {
+          <app-loading-state message="Đang tải phương thức thanh toán..." />
+        } @else {
+          <div class="provider-list__items">
+            @for (provider of store.providers(); track provider.id) {
+              <article
+                class="provider-card"
+                [class.provider-card--manual]="provider.kind === 'MANUAL_BANK_TRANSFER'"
+                [class.provider-card--sandbox]="provider.kind === 'HMAC_SANDBOX'"
+              >
+                <div class="provider-card__main">
+                  <div class="provider-card__title">
+                    <span class="provider-mark" aria-hidden="true"
+                      ><app-icon
+                        [name]="provider.kind === 'MANUAL_BANK_TRANSFER' ? 'wallet' : 'shield'"
+                        [size]="18"
+                    /></span>
+                    <div>
+                      <strong>{{ provider.displayName }}</strong
+                      ><code>{{ provider.code }}</code>
+                    </div>
+                  </div>
+                  <span class="provider-status" [class.provider-status--off]="!provider.enabled">{{
+                    provider.enabled ? 'Đang hoạt động' : 'Đã tắt'
+                  }}</span>
+                </div>
+                @if (provider.description) {
+                  <p class="provider-card__description">{{ provider.description }}</p>
+                }
+                <div class="provider-meta">
+                  <span>{{ kindLabel(provider.kind) }}</span
+                  ><span>{{ provider.currency }}</span
+                  ><span>Thứ tự {{ provider.sortOrder }}</span>
+                  @if (provider.orderTtlMinutes) {
+                    <span>TTL {{ provider.orderTtlMinutes }} phút</span>
+                  }
+                  @if (kindSchema(provider.kind); as schema) {
+                    <span>{{ schema.requiresManualReview ? 'Duyệt thủ công' : 'Tự động' }}</span
+                    ><span>{{ schema.supportsWebhook ? 'Có webhook' : 'Không webhook' }}</span>
+                  }
+                </div>
+                <footer class="provider-card__actions">
+                  <app-button variant="secondary" (click)="edit(provider)"
+                    ><app-icon icon name="edit" [size]="15" />Sửa</app-button
+                  >
+                  <app-button variant="danger" (click)="remove(provider)"
+                    ><app-icon icon name="trash" [size]="15" />Xóa</app-button
+                  >
+                </footer>
+              </article>
+            } @empty {
+              <app-empty-state
+                icon="wallet"
+                title="Chưa có phương thức thanh toán"
+                description="Tạo kết nối đầu tiên bằng biểu mẫu bên cạnh."
+              />
+            }
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+</main>

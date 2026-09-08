@@ -46,7 +46,7 @@ import { PrismaMediaOwnershipAdapter } from '../persistence/prisma-media-ownersh
  * Khi thêm domain relation mới với MediaAsset,
  * bắt buộc thêm reverse relation vào đây.
  */
-const UNREFERENCED_MEDIA_WHERE = {
+export const UNREFERENCED_MEDIA_WHERE = {
   avatarOfUsers: {
     none: {},
   },
@@ -70,9 +70,13 @@ const UNREFERENCED_MEDIA_WHERE = {
   chapterLinks: {
     none: {},
   },
+
+  offlinePackagePins: {
+    none: {},
+  },
 } satisfies Prisma.MediaAssetWhereInput;
 
-const REFERENCED_MEDIA_WHERE = {
+export const REFERENCED_MEDIA_WHERE = {
   OR: [
     {
       avatarOfUsers: {
@@ -106,6 +110,12 @@ const REFERENCED_MEDIA_WHERE = {
 
     {
       chapterLinks: {
+        some: {},
+      },
+    },
+
+    {
+      offlinePackagePins: {
         some: {},
       },
     },

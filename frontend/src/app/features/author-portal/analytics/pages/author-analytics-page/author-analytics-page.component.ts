@@ -98,6 +98,19 @@ export class AuthorAnalyticsPageComponent {
     return value === null ? '—' : `${(value * 100).toFixed(1)}%`;
   }
 
+  protected formatChartDate(value: string): string {
+    const [, month, day] = value.split('-');
+    return month && day ? `${day}/${month}` : value;
+  }
+
+  protected chartMaximum(): number {
+    return Math.max(0, ...(this.overview()?.series ?? []).map((point) => point.views));
+  }
+
+  protected chartMidpoint(): number {
+    return Math.round(this.chartMaximum() / 2);
+  }
+
   protected barHeight(views: number): number {
     if (views <= 0) return 0;
     const series = this.overview()?.series ?? [];

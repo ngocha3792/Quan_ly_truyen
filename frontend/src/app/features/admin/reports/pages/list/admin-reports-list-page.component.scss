@@ -1,30 +1,96 @@
 :host {
   display: block;
 }
+
+.list-card {
+  border-radius: 8px;
+  background: rgba(12, 18, 32, 0.9);
+}
+
 .status-tabs {
-  padding: 14px 18px;
+  --tab-min-height: 44px;
+  --tab-padding: 0 15px;
+  --tab-background: rgba(7, 12, 24, 0.58);
+  --tab-active-background: rgba(139, 92, 246, 0.18);
+  --tab-active-border-color: rgba(181, 132, 255, 0.42);
+  --tab-active-shadow: none;
+
+  padding: 14px 18px 13px;
   border-bottom: 1px solid var(--border);
 }
-.list-card__filters {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+
+.report-filters {
+  grid-template-columns:
+    minmax(160px, 0.85fr)
+    repeat(2, minmax(210px, 1.35fr))
+    repeat(2, minmax(158px, 0.8fr));
+  align-items: end;
+  gap: 12px;
+  padding-block: 16px 18px;
 }
-.list-card__filters input,
-.list-card__filters select {
-  padding: 10px;
+
+.list-card__filters > .filter-field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.filter-field > span {
+  line-height: 1.25;
+}
+
+.list-card__filters > .filter-field input,
+.list-card__filters > .filter-field select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(6, 11, 22, 0.55);
+  background: rgba(5, 10, 21, 0.58);
   color: var(--text-strong);
+  color-scheme: dark;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
-.list-card__filters label {
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+
+.list-card__filters > .filter-field input:focus,
+.list-card__filters > .filter-field select:focus {
+  border-color: rgba(181, 132, 255, 0.42);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.08);
 }
-@media (max-width: 800px) {
-  .list-card__filters {
+
+.filter-field--search app-search-field {
+  --search-min-height: 44px;
+  --search-input-height: 42px;
+  --search-background: rgba(5, 10, 21, 0.58);
+}
+
+@media (max-width: 1000px) {
+  .report-filters {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .report-filters > .filter-field:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .status-tabs {
+    --tab-min-height: 40px;
+    --tab-padding: 0 11px;
+
+    padding-inline: 14px;
+  }
+
+  .report-filters {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 14px;
   }
 }

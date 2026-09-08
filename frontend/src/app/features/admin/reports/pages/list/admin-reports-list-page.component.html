@@ -14,27 +14,42 @@
         [selected]="status"
         (selectedChange)="statusChanged($event)"
       />
-      <div class="list-card__filters">
-        <select [(ngModel)]="reason" (change)="go(1)">
-          <option value="">Tất cả lý do</option>
-          @for (item of reasons; track item) {
-            <option [value]="item">{{ reasonLabel(item) }}</option>
-          }
-        </select>
-        <app-search-field
-          [value]="reporter"
-          placeholder="Người báo cáo"
-          ariaLabel="Tìm theo người báo cáo"
-          (valueChange)="reporterChanged($event)"
-        />
-        <app-search-field
-          [value]="reportedUser"
-          placeholder="Người bị báo cáo"
-          ariaLabel="Tìm theo người bị báo cáo"
-          (valueChange)="reportedUserChanged($event)"
-        />
-        <label>Từ ngày<input type="date" [(ngModel)]="createdFrom" (change)="go(1)" /></label>
-        <label>Đến ngày<input type="date" [(ngModel)]="createdTo" (change)="go(1)" /></label>
+      <div class="list-card__filters report-filters">
+        <label class="filter-field">
+          <span>Lý do</span>
+          <select [(ngModel)]="reason" (change)="go(1)">
+            <option value="">Tất cả lý do</option>
+            @for (item of reasons; track item) {
+              <option [value]="item">{{ reasonLabel(item) }}</option>
+            }
+          </select>
+        </label>
+        <div class="filter-field filter-field--search">
+          <span>Người báo cáo</span>
+          <app-search-field
+            [value]="reporter"
+            placeholder="Tên hoặc ID người báo cáo"
+            ariaLabel="Tìm theo người báo cáo"
+            (valueChange)="reporterChanged($event)"
+          />
+        </div>
+        <div class="filter-field filter-field--search">
+          <span>Người bị báo cáo</span>
+          <app-search-field
+            [value]="reportedUser"
+            placeholder="Tên hoặc ID người bị báo cáo"
+            ariaLabel="Tìm theo người bị báo cáo"
+            (valueChange)="reportedUserChanged($event)"
+          />
+        </div>
+        <label class="filter-field">
+          <span>Từ ngày</span>
+          <input type="date" [(ngModel)]="createdFrom" (change)="go(1)" />
+        </label>
+        <label class="filter-field">
+          <span>Đến ngày</span>
+          <input type="date" [(ngModel)]="createdTo" (change)="go(1)" />
+        </label>
       </div>
       @if (error()) {
         <div class="list-card__state">

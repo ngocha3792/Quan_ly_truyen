@@ -33,6 +33,7 @@ export function createRouteDiscoveryRuntimeConfig(): AppRuntimeConfig {
       realtimeProgressSyncEnabled: false,
       inlineCommentsEnabled: false,
       comicDeliveryEnabled: false,
+      offlineReadingEnabled: false,
     },
     passwordPolicy: {
       minimumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,

@@ -1,0 +1,192 @@
+<app-dialog-shell
+  [open]="open()"
+  [busy]="busy()"
+  title="Tạo gói đọc offline"
+  eyebrow="THƯ VIỆN TRÊN THIẾT BỊ"
+  dialogTitleId="create-offline-package-title"
+  maxWidth="900px"
+  (closed)="closed.emit()"
+>
+  <div class="dialog-layout">
+    <section class="story-step" aria-labelledby="offline-story-step-title">
+      <header class="step-heading">
+        <span>1</span>
+        <div>
+          <h3 id="offline-story-step-title">Chọn truyện</h3>
+          <p>Truyện trong thư viện được ưu tiên ở đầu danh sách.</p>
+        </div>
+      </header>
+
+      <app-search-field
+        [value]="storyQuery()"
+        placeholder="Tìm theo tên truyện hoặc tác giả..."
+        ariaLabel="Tìm truyện cho gói offline"
+        [iconSize]="17"
+        (valueChange)="storyQueryChange.emit($event)"
+      />
+
+      <div class="story-list" role="listbox" aria-label="Danh sách truyện">
+        @for (story of stories(); track story.id) {
+          <button
+            type="button"
+            role="option"
+            [attr.aria-selected]="story.id === selectedStoryId()"
+            [class.story-option--selected]="story.id === selectedStoryId()"
+            (click)="storySelected.emit(story.id)"
+          >
+            <span class="story-cover">
+              @if (story.coverUrl) {
+                <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" decoding="async" />
+              } @else {
+                {{ story.title.slice(0, 1) }}
+              }
+            </span>
+
+            <span class="story-copy">
+              <strong>{{ story.title }}</strong>
+              <small>{{ story.author }} · {{ story.chapterCount }} chương</small>
+            </span>
+
+            @if (story.inLibrary) {
+              <span class="library-badge">Thư viện</span>
+            }
+          </button>
+        } @empty {
+          <p class="empty-copy">Không tìm thấy truyện phù hợp.</p>
+        }
+      </div>
+    </section>
+
+    <section class="chapter-step" aria-labelledby="offline-chapter-step-title">
+      <header class="step-heading">
+        <span>2</span>
+        <div>
+          <h3 id="offline-chapter-step-title">Chọn chương</h3>
+          <p>{{ selectedChapterIds().length }} / {{ maxChapters() }} chương đã chọn</p>
+        </div>
+      </header>
+
+      <div class="selection-toolbar">
+        <button
+          type="button"
+          [disabled]="chapters().length === 0 || chapterLoading()"
+          (click)="pageSelected.emit()"
+        >
+          Chọn trang này
+        </button>
+        <button
+          type="button"
+          [disabled]="selectedChapterIds().length === 0 || chapterLoading()"
+          (click)="selectionCleared.emit()"
+        >
+          Bỏ chọn
+        </button>
+      </div>
+
+      <div class="chapter-list">
+        @if (!selectedStoryId()) {
+          <p class="empty-copy">Chọn một truyện để xem danh sách chương.</p>
+        } @else if (chapterLoading()) {
+          <p class="empty-copy">Đang tải danh sách chương...</p>
+        } @else if (chapterError(); as error) {
+          <p class="error-copy">{{ error }}</p>
+        } @else {
+          @for (chapter of chapters(); track chapter.id) {
+            <label [class.chapter-option--selected]="isSelected(chapter.id)">
+              <input
+                type="checkbox"
+                [checked]="isSelected(chapter.id)"
+                [disabled]="chapterToggleDisabled(chapter.id)"
+                (change)="chapterToggled.emit(chapter.id)"
+              />
+              <span>Chương {{ chapter.number }}</span>
+              <strong>{{ chapter.title }}</strong>
+            </label>
+          } @empty {
+            <p class="empty-copy">Truyện chưa có chương đã xuất bản.</p>
+          }
+        }
+      </div>
+
+      @if (selectedStoryId() && chapterTotalPages() > 1) {
+        <nav class="chapter-pagination" aria-label="Phân trang chương">
+          <button
+            type="button"
+            title="Trang trước"
+            aria-label="Trang trước"
+            [disabled]="chapterPage() <= 1 || chapterLoading()"
+            (click)="previousPageRequested.emit()"
+          >
+            <app-icon name="chevron-left" [size]="17" />
+          </button>
+          <span>Trang {{ chapterPage() }} / {{ chapterTotalPages() }}</span>
+          <button
+            type="button"
+            title="Trang sau"
+            aria-label="Trang sau"
+            [disabled]="chapterPage() >= chapterTotalPages() || chapterLoading()"
+            (click)="nextPageRequested.emit()"
+          >
+            <app-icon name="chevron-right" [size]="17" />
+          </button>
+        </nav>
+      }
+    </section>
+  </div>
+
+  <section class="package-fields" aria-labelledby="offline-package-details-title">
+    <header class="step-heading">
+      <span>3</span>
+      <div>
+        <h3 id="offline-package-details-title">Đặt tên gói</h3>
+        <p>Tên này chỉ dùng để nhận biết gói trong danh sách của bạn.</p>
+      </div>
+    </header>
+
+    <div class="field-grid">
+      <label>
+        <span>Tên gói</span>
+        <input
+          type="text"
+          maxlength="255"
+          [value]="packageName()"
+          placeholder="Ví dụ: Đọc cuối tuần"
+          (input)="updateName($event)"
+        />
+      </label>
+
+      <label>
+        <span>Mô tả <small>(không bắt buộc)</small></span>
+        <textarea
+          rows="2"
+          maxlength="500"
+          [value]="packageDescription()"
+          placeholder="Ghi chú ngắn cho gói này"
+          (input)="updateDescription($event)"
+        ></textarea>
+      </label>
+    </div>
+  </section>
+
+  <footer class="dialog-actions">
+    <p>Chỉ chương miễn phí hoặc đã mua mới được máy chủ chấp nhận.</p>
+    <div>
+      <button class="secondary-button" type="button" [disabled]="busy()" (click)="closed.emit()">
+        Hủy
+      </button>
+      <button
+        class="primary-button"
+        type="button"
+        [disabled]="!canSubmit() || busy()"
+        (click)="submitted.emit()"
+      >
+        @if (busy()) {
+          Đang tạo...
+        } @else {
+          <app-icon name="plus" [size]="16" />
+          Tạo gói
+        }
+      </button>
+    </div>
+  </footer>
+</app-dialog-shell>

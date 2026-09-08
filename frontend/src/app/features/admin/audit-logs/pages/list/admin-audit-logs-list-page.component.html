@@ -9,17 +9,34 @@
 
     <section class="list-card">
       <form class="list-card__filters" (ngSubmit)="applyFilters()">
-        <label>Actor ID<input name="actorId" [(ngModel)]="actorId" placeholder="UUID" /></label>
-        <label
-          >Action<input name="action" [(ngModel)]="action" placeholder="user.status.changed"
-        /></label>
-        <label
-          >Entity type<input name="entityType" [(ngModel)]="entityType" placeholder="user"
-        /></label>
-        <label>Entity ID<input name="entityId" [(ngModel)]="entityId" /></label>
-        <label>Request ID<input name="requestId" [(ngModel)]="requestId" /></label>
-        <label>From<input name="from" type="datetime-local" [(ngModel)]="from" /></label>
-        <label>To<input name="to" type="datetime-local" [(ngModel)]="to" /></label>
+        <label class="filter-field">
+          <span>ID người thực hiện</span>
+          <input name="actorId" [(ngModel)]="actorId" placeholder="UUID" />
+        </label>
+        <label class="filter-field">
+          <span>Hành động</span>
+          <input name="action" [(ngModel)]="action" placeholder="user.status.changed" />
+        </label>
+        <label class="filter-field">
+          <span>Loại đối tượng</span>
+          <input name="entityType" [(ngModel)]="entityType" placeholder="user" />
+        </label>
+        <label class="filter-field">
+          <span>ID đối tượng</span>
+          <input name="entityId" [(ngModel)]="entityId" placeholder="UUID" />
+        </label>
+        <label class="filter-field">
+          <span>Request ID</span>
+          <input name="requestId" [(ngModel)]="requestId" placeholder="Request ID" />
+        </label>
+        <label class="filter-field">
+          <span>Từ thời điểm</span>
+          <input name="from" type="datetime-local" [(ngModel)]="from" />
+        </label>
+        <label class="filter-field">
+          <span>Đến thời điểm</span>
+          <input name="to" type="datetime-local" [(ngModel)]="to" />
+        </label>
         <div class="filter-actions">
           <app-button variant="primary" type="submit">Lọc</app-button>
           <app-button variant="secondary" type="button" (click)="clearFilters()"

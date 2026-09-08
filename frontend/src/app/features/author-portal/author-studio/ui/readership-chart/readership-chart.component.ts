@@ -63,20 +63,10 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
         >
           <defs>
             <linearGradient id="chart-area-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#a855f7" stop-opacity=".48"></stop>
+              <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".3"></stop>
 
-              <stop offset="100%" stop-color="#a855f7" stop-opacity="0"></stop>
+              <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"></stop>
             </linearGradient>
-
-            <filter id="chart-glow">
-              <feGaussianBlur stdDeviation="3" result="blur"></feGaussianBlur>
-
-              <feMerge>
-                <feMergeNode in="blur"></feMergeNode>
-
-                <feMergeNode in="SourceGraphic"></feMergeNode>
-              </feMerge>
-            </filter>
           </defs>
 
           @for (grid of gridLines; track grid.value) {
@@ -92,15 +82,14 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
           <polyline
             [attr.points]="linePoints()"
             fill="none"
-            stroke="#b45dff"
+            stroke="#4fd1b5"
             stroke-width="3"
             stroke-linejoin="round"
             stroke-linecap="round"
-            filter="url(#chart-glow)"
           ></polyline>
 
           @for (point of positionedPoints(); track point.id) {
-            <circle [attr.cx]="point.x" [attr.cy]="point.y" r="2.6" fill="#c379ff"></circle>
+            <circle [attr.cx]="point.x" [attr.cy]="point.y" r="2.6" fill="#86ead6"></circle>
           }
         </svg>
 
@@ -139,9 +128,8 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
 
       .dashboard-card {
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(145deg, rgba(16, 22, 39, 0.95), rgba(10, 15, 28, 0.95));
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        background: #0d1421;
       }
 
       .chart-card {
@@ -162,7 +150,7 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
         gap: 8px;
         margin: 0;
         color: var(--text-strong);
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
       }
 
@@ -236,7 +224,7 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
         width: 1px;
         height: 22px;
         content: '';
-        background: rgba(172, 95, 255, 0.48);
+        background: rgba(79, 209, 181, 0.48);
       }
 
       .chart-tooltip small {
@@ -257,8 +245,7 @@ const PERIOD_OPTIONS: readonly TabFilterOption<AuthorStudioPeriod>[] = [
         margin-right: 5px;
         border-radius: 50%;
         content: '';
-        background: #b45dff;
-        box-shadow: 0 0 7px rgba(180, 93, 255, 0.6);
+        background: #4fd1b5;
       }
     `,
   ],

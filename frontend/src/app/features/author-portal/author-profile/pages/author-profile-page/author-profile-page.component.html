@@ -1,5 +1,6 @@
-<section class="author-profile-page">
+<main class="author-profile-page">
   <app-breadcrumb [items]="breadcrumbs" />
+
   <app-page-heading
     title="Hồ sơ tác giả"
     description="Thông tin này xuất hiện trên trang tác giả công khai."
@@ -7,9 +8,21 @@
   >
     @if (store.profile(); as profile) {
       @if (store.saving()) {
-        <span aria-disabled="true">Đang lưu hồ sơ…</span>
+        <span class="save-status" role="status">
+          <span class="action-spinner" aria-hidden="true"></span>
+          <span>Đang lưu hồ sơ...</span>
+        </span>
       } @else {
-        <a [routerLink]="['/tac-gia', profile.slug]">Xem hồ sơ công khai</a>
+        <a
+          class="public-profile-link"
+          [routerLink]="['/tac-gia', profile.slug]"
+          aria-label="Xem hồ sơ công khai"
+          title="Xem hồ sơ công khai"
+        >
+          <app-icon name="eye" [size]="17" />
+          <span>Xem hồ sơ công khai</span>
+          <app-icon class="link-arrow" name="arrow-right" [size]="15" />
+        </a>
       }
     }
   </app-page-heading>
@@ -17,139 +30,233 @@
   @if (store.error(); as error) {
     <app-notice kind="error" [message]="error" />
   }
+
   @if (store.profile(); as profile) {
-    <div class="media-grid">
-      <article>
-        <h2>Avatar</h2>
-        @if (profile.avatar) {
-          <img class="avatar" [src]="profile.avatar.url" [alt]="profile.displayName" />
-        } @else {
-          <div class="avatar placeholder">{{ profile.displayName.slice(0, 2) }}</div>
-        }
-        <label class="file-button">
-          <app-icon name="camera" [size]="15" />
-          {{ store.uploading() === 'avatar' ? 'Đang tải…' : 'Đổi avatar' }}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            [disabled]="store.uploading() !== null"
-            (change)="avatarSelected($event)"
-          />
-        </label>
-        @if (profile.avatar) {
-          <app-button variant="secondary" (click)="store.clearAvatar()">Gỡ avatar</app-button>
-        }
-      </article>
-      <article>
-        <h2>Banner</h2>
-        @if (profile.banner) {
-          <img class="banner" [src]="profile.banner.url" alt="Banner tác giả" />
-        } @else {
-          <div class="banner placeholder">Chưa có banner</div>
-        }
-        <label class="file-button">
-          <app-icon name="camera" [size]="15" />
-          {{ store.uploading() === 'banner' ? 'Đang tải…' : 'Đổi banner' }}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            [disabled]="store.uploading() !== null"
-            (change)="bannerSelected($event)"
-          />
-        </label>
-        @if (profile.banner) {
-          <app-button variant="secondary" (click)="store.clearBanner()">Gỡ banner</app-button>
-        }
-      </article>
-    </div>
+    <section class="media-section" aria-labelledby="profile-media-title">
+      <header class="section-heading">
+        <span class="section-icon" aria-hidden="true">
+          <app-icon name="image" [size]="19" />
+        </span>
+        <div>
+          <h2 id="profile-media-title">Hình ảnh hồ sơ</h2>
+          <p>Ảnh đại diện và banner trên trang tác giả.</p>
+        </div>
+      </header>
+
+      <div class="media-grid">
+        <article class="media-card media-card--avatar">
+          <header class="media-card-heading">
+            <div>
+              <h3>Ảnh đại diện</h3>
+              <p>Hiển thị cạnh tên tác giả</p>
+            </div>
+            <span>Avatar</span>
+          </header>
+
+          <div class="media-preview avatar-preview">
+            @if (profile.avatar) {
+              <img class="avatar" [src]="profile.avatar.url" [alt]="profile.displayName" />
+            } @else {
+              <div class="avatar avatar-placeholder" aria-label="Chưa có ảnh đại diện">
+                {{ profile.displayName.slice(0, 2) }}
+              </div>
+            }
+          </div>
+
+          <div class="media-actions">
+            <label
+              class="file-button"
+              [class.is-disabled]="store.uploading() !== null"
+              [attr.aria-disabled]="store.uploading() !== null"
+            >
+              @if (store.uploading() === 'avatar') {
+                <span class="action-spinner" aria-hidden="true"></span>
+              } @else {
+                <app-icon name="camera" [size]="16" />
+              }
+              <span>{{ store.uploading() === 'avatar' ? 'Đang tải...' : 'Đổi avatar' }}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                [disabled]="store.uploading() !== null"
+                (change)="avatarSelected($event)"
+              />
+            </label>
+
+            @if (profile.avatar) {
+              <button class="remove-media" type="button" (click)="store.clearAvatar()">
+                <app-icon name="trash" [size]="15" />
+                Gỡ ảnh
+              </button>
+            }
+          </div>
+        </article>
+
+        <article class="media-card media-card--banner">
+          <header class="media-card-heading">
+            <div>
+              <h3>Ảnh bìa</h3>
+              <p>Banner đầu trang hồ sơ</p>
+            </div>
+            <span>Banner</span>
+          </header>
+
+          <div class="media-preview banner-preview">
+            @if (profile.banner) {
+              <img class="banner" [src]="profile.banner.url" alt="Banner tác giả" />
+            } @else {
+              <div class="banner-placeholder">
+                <app-icon name="image" [size]="28" />
+                <span>Chưa có banner</span>
+              </div>
+            }
+          </div>
+
+          <div class="media-actions">
+            <label
+              class="file-button"
+              [class.is-disabled]="store.uploading() !== null"
+              [attr.aria-disabled]="store.uploading() !== null"
+            >
+              @if (store.uploading() === 'banner') {
+                <span class="action-spinner" aria-hidden="true"></span>
+              } @else {
+                <app-icon name="camera" [size]="16" />
+              }
+              <span>{{ store.uploading() === 'banner' ? 'Đang tải...' : 'Đổi banner' }}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                [disabled]="store.uploading() !== null"
+                (change)="bannerSelected($event)"
+              />
+            </label>
+
+            @if (profile.banner) {
+              <button class="remove-media" type="button" (click)="store.clearBanner()">
+                <app-icon name="trash" [size]="15" />
+                Gỡ ảnh
+              </button>
+            }
+          </div>
+        </article>
+      </div>
+    </section>
 
     <form class="profile-form" [formGroup]="form" (ngSubmit)="save()">
-      <label class="field">
-        <span>Tên tác giả</span>
-        <div class="input-wrapper">
-          <app-icon name="user" [size]="17" />
-          <input formControlName="displayName" maxlength="120" />
+      <header class="section-heading form-heading">
+        <span class="section-icon" aria-hidden="true">
+          <app-icon name="edit" [size]="19" />
+        </span>
+        <div>
+          <h2>Thông tin công khai</h2>
+          <p>Tên hiển thị, tiểu sử và các kênh chính thức.</p>
         </div>
-      </label>
+      </header>
 
-      <label class="field">
-        <span>URL hồ sơ</span>
-        <div class="input-wrapper readonly">
-          <app-icon name="copy" [size]="17" />
-          <input [value]="'/tac-gia/' + profile.slug" readonly />
+      <section class="form-section" aria-labelledby="basic-information-title">
+        <h3 id="basic-information-title">Thông tin cơ bản</h3>
+
+        <div class="basic-grid">
+          <label class="field">
+            <span>Tên tác giả</span>
+            <div class="input-wrapper">
+              <app-icon name="user" [size]="17" />
+              <input formControlName="displayName" maxlength="120" />
+            </div>
+          </label>
+
+          <label class="field">
+            <span>URL hồ sơ</span>
+            <div class="input-wrapper readonly">
+              <app-icon name="compass" [size]="17" />
+              <input [value]="'/tac-gia/' + profile.slug" readonly />
+            </div>
+            <small class="field-help">URL hồ sơ không đổi khi cập nhật tên tác giả.</small>
+          </label>
+
+          <label class="field field--wide">
+            <span>Tiểu sử</span>
+            <div class="textarea-wrapper">
+              <textarea formControlName="bio" rows="7" maxlength="5000"></textarea>
+              <span id="bio-character-count" class="character-count">
+                {{ form.controls.bio.value.length }}/5000
+              </span>
+            </div>
+          </label>
         </div>
-        <small class="field-help">URL hồ sơ không thay đổi khi bạn đổi tên tác giả.</small>
-      </label>
+      </section>
 
-      <label class="field wide">
-        <span>Tiểu sử</span>
-        <div class="textarea-wrapper">
-          <textarea formControlName="bio" rows="7" maxlength="5000"></textarea>
-          <span class="character-count">{{ form.controls.bio.value.length }}/5000</span>
-        </div>
-      </label>
+      <section class="form-section" aria-labelledby="social-links-title">
+        <h3 id="social-links-title">Liên kết</h3>
 
-      <fieldset class="wide">
-        <legend>Liên kết</legend>
         <div class="links-grid">
           <label class="field">
             <span>Website</span>
             <div class="input-wrapper">
               <app-icon name="compass" [size]="16" />
-              <input formControlName="website" type="url" placeholder="https://…" />
+              <input formControlName="website" type="url" placeholder="https://..." />
             </div>
           </label>
+
           <label class="field">
             <span>Facebook</span>
             <div class="input-wrapper">
               <app-icon name="users" [size]="16" />
-              <input formControlName="facebook" type="url" placeholder="https://facebook.com/…" />
+              <input formControlName="facebook" type="url" placeholder="https://facebook.com/..." />
             </div>
           </label>
+
           <label class="field">
             <span>Instagram</span>
             <div class="input-wrapper">
               <app-icon name="camera" [size]="16" />
-              <input formControlName="instagram" type="url" placeholder="https://instagram.com/…" />
+              <input
+                formControlName="instagram"
+                type="url"
+                placeholder="https://instagram.com/..."
+              />
             </div>
           </label>
+
           <label class="field">
             <span>X</span>
             <div class="input-wrapper">
               <app-icon name="message-circle" [size]="16" />
-              <input formControlName="x" type="url" placeholder="https://x.com/…" />
+              <input formControlName="x" type="url" placeholder="https://x.com/..." />
             </div>
           </label>
+
           <label class="field">
             <span>YouTube</span>
             <div class="input-wrapper">
               <app-icon name="play" [size]="16" />
-              <input formControlName="youtube" type="url" placeholder="https://youtube.com/…" />
+              <input formControlName="youtube" type="url" placeholder="https://youtube.com/..." />
             </div>
           </label>
+
           <label class="field">
             <span>TikTok</span>
             <div class="input-wrapper">
               <app-icon name="sparkles" [size]="16" />
-              <input formControlName="tiktok" type="url" placeholder="https://tiktok.com/…" />
+              <input formControlName="tiktok" type="url" placeholder="https://tiktok.com/..." />
             </div>
           </label>
         </div>
-      </fieldset>
+      </section>
 
-      <div class="form-actions wide">
-        <app-button
-          variant="primary"
-          type="submit"
-          [disabled]="form.invalid"
-          [loading]="store.saving()"
-        >
-          <app-icon icon name="save" [size]="16" />
-          {{ store.saving() ? 'Đang lưu…' : 'Lưu hồ sơ' }}
-        </app-button>
-      </div>
+      <footer class="form-actions">
+        <button class="save-button" type="submit" [disabled]="form.invalid || store.saving()">
+          @if (store.saving()) {
+            <span class="action-spinner" aria-hidden="true"></span>
+          } @else {
+            <app-icon name="save" [size]="16" />
+          }
+          {{ store.saving() ? 'Đang lưu...' : 'Lưu hồ sơ' }}
+        </button>
+      </footer>
     </form>
   } @else if (store.loading()) {
-    <app-loading-state message="Đang tải hồ sơ…" />
+    <app-loading-state message="Đang tải hồ sơ..." />
   }
-</section>
+</main>
