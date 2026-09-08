@@ -282,8 +282,47 @@ jobs:
       - name: Verify migration status and database constraints
         run: npm run db:migrate:status && npm run db:verify:constraints
 
-      - name: Run all integration and API E2E suites
-        run: npm run ci:integration
+      - name: Users integration
+        run: npm run test:users:integration
+
+      - name: Author applications integration
+        run: npm run test:author-applications:integration
+
+      - name: Auth integration
+        run: npm run test:auth:integration
+
+      - name: Auth API E2E
+        run: npm run test:auth:e2e
+
+      - name: Stories integration
+        run: npm run test:stories:integration
+
+      - name: Author follow integration
+        run: npm run test:authors-phase5:integration
+
+      - name: Taxonomy integration
+        run: npm run test:taxonomy:integration
+
+      - name: Comments integration
+        run: npm run test:comments:integration
+
+      - name: General API E2E
+        run: npm run test:e2e
+
+      - name: Audit integration
+        run: npm run test:audit:integration
+
+      - name: Analytics integration
+        run: npm run test:analytics:integration
+
+      - name: Wallets integration
+        run: npm run test:wallets:integration
+
+      - name: Monetization integration
+        run: npm run test:monetization:integration
+
+      - name: Billing integration
+        run: npm run test:billing:integration
 
   dependency-audit:
     name: Dependencies / production audit (${{ matrix.project }})
