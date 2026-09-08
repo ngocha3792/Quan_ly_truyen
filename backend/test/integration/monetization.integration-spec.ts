@@ -11,6 +11,7 @@ import {
 } from '@/generated/prisma/client';
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
+import { MEDIA_URL_BUILDER } from '@/modules/media';
 import {
   SetChapterMonetizationCommand,
   SetChapterMonetizationCommandHandler,
@@ -43,6 +44,12 @@ describe('chapter monetization integration', () => {
         PrismaMonetizationPersistence,
         PrismaWalletPersistence,
         PrismaChapterPersistence,
+        {
+          provide: MEDIA_URL_BUILDER,
+          useValue: {
+            build: jest.fn(() => 'https://media.test/chapter-image'),
+          },
+        },
         {
           provide: monetizationConfig.KEY,
           useValue: {

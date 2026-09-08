@@ -34,6 +34,7 @@ import {
 } from '@/modules/follows/application';
 import { PrismaFollowRepository } from '@/modules/follows/infrastructure';
 import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
+import { MEDIA_URL_BUILDER } from '@/modules/media';
 import { NotificationsFanoutProcessor } from '@/modules/notifications/infrastructure/queue/notifications-fanout.processor';
 import { PrismaAccountDeletionPersistence } from '@/modules/auth/infrastructure/persistence/prisma/repositories/prisma-account-deletion.persistence';
 
@@ -66,6 +67,12 @@ describe('Phase 5 author profile, follows and notifications', () => {
         FollowAuthorCommandHandler,
         UnfollowAuthorCommandHandler,
         PrismaChapterPersistence,
+        {
+          provide: MEDIA_URL_BUILDER,
+          useValue: {
+            build: jest.fn(() => 'https://media.test/chapter-image'),
+          },
+        },
         NotificationsFanoutProcessor,
         {
           provide: TracePropagationService,
