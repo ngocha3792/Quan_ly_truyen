@@ -35,6 +35,7 @@ function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
     contentDocumentEnabled: readBoolean(value, 'contentDocumentEnabled'),
     portableCursorEnabled: readBoolean(value, 'portableCursorEnabled'),
     realtimeProgressSyncEnabled: readBoolean(value, 'realtimeProgressSyncEnabled'),
+    inlineCommentsEnabled: readBoolean(value, 'inlineCommentsEnabled'),
   };
 }
 

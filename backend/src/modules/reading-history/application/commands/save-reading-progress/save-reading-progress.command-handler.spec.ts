@@ -99,6 +99,8 @@ function readerFeatures(portableCursorEnabled: boolean) {
     portableCursorEnabled,
     realtimeProgressSyncEnabled: false,
     inlineCommentsEnabled: false,
+    inlineCommentsReanchorBatchSize: 50,
+    inlineCommentsReanchorIntervalMs: 30_000,
     comicDeliveryEnabled: false,
     offlineReadingEnabled: false,
     textToSpeechEnabled: false,

@@ -20,6 +20,7 @@ import {
   ChapterListPage,
   ChapterNavigationItem,
   ChapterReaderView,
+  TextSelectionAnchor,
 } from '../domain/chapter-reader.models';
 import { ChapterReaderRepository } from './chapter-reader.repository';
 
@@ -65,6 +66,17 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
   createComment(storyId: string, chapterId: string, body: string): Observable<ChapterComment> {
     return this.engagement
       .createChapterComment(storyId, chapterId, body)
+      .pipe(map((comment) => this.toChapterComment(comment)));
+  }
+
+  createAnchoredComment(
+    storyId: string,
+    chapterId: string,
+    body: string,
+    anchor: TextSelectionAnchor,
+  ): Observable<ChapterComment> {
+    return this.engagement
+      .createAnchoredChapterComment(storyId, chapterId, body, anchor)
       .pipe(map((comment) => this.toChapterComment(comment)));
   }
 
@@ -164,6 +176,7 @@ export class ChapterReaderHttpRepository implements ChapterReaderRepository {
       threadReplyCount: comment.threadReplyCount,
       replies: [],
       isOwner: this.auth.user()?.id === comment.user.id,
+      anchor: comment.anchor,
     };
   }
 }

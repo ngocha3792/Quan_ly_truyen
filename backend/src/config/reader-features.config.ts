@@ -15,6 +15,12 @@ export default registerAs(
       process.env.READER_REALTIME_PROGRESS_SYNC_ENABLED === 'true',
     inlineCommentsEnabled:
       process.env.READER_INLINE_COMMENTS_ENABLED === 'true',
+    inlineCommentsReanchorBatchSize: Number(
+      process.env.COMMENT_REANCHOR_BATCH_SIZE ?? 50,
+    ),
+    inlineCommentsReanchorIntervalMs: Number(
+      process.env.COMMENT_REANCHOR_INTERVAL_MS ?? 30_000,
+    ),
     comicDeliveryEnabled: process.env.READER_COMIC_DELIVERY_ENABLED === 'true',
     offlineReadingEnabled:
       process.env.READER_OFFLINE_READING_ENABLED === 'true',

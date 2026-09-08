@@ -26,6 +26,12 @@ export abstract class ChapterReaderRepository {
     chapterId: string,
     body: string,
   ): Observable<ChapterComment>;
+  abstract createAnchoredComment(
+    storyId: string,
+    chapterId: string,
+    body: string,
+    anchor: import('../domain/chapter-reader.models').TextSelectionAnchor,
+  ): Observable<ChapterComment>;
   abstract updateComment(commentId: string, body: string): Observable<ChapterComment>;
   abstract deleteComment(commentId: string): Observable<void>;
   abstract getReplies(rootCommentId: string): Observable<readonly ChapterComment[]>;

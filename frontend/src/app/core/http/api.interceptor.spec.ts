@@ -35,6 +35,7 @@ describe('apiInterceptor', () => {
       contentDocumentEnabled: false,
       portableCursorEnabled: false,
       realtimeProgressSyncEnabled: false,
+      inlineCommentsEnabled: false,
     },
 
     passwordPolicy: {

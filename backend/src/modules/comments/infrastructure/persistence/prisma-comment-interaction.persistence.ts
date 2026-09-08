@@ -618,6 +618,7 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
       editedAt: row.editedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+      anchor: null,
     };
   }
 

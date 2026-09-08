@@ -268,3 +268,20 @@
     align-items: flex-start;
   }
 }
+.chapter-content-block {
+  position: relative;
+}
+
+.anchor-comment-bubble {
+  position: absolute;
+  inset-inline-start: -2.5rem;
+  inset-block-start: 0.25rem;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: #ea580c;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}

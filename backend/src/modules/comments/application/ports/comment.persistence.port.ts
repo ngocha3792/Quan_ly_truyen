@@ -13,6 +13,24 @@ export interface CreateStoryCommentInput {
   readonly createdAt: Date;
 }
 
+export interface TextRangeAnchorInput {
+  readonly startBlockId: string;
+  readonly startOffset: number;
+  readonly endBlockId: string;
+  readonly endOffset: number;
+  readonly quoteText: string;
+}
+
+export interface CreateAnchoredCommentInput extends CreateStoryCommentInput {
+  readonly chapterId: string;
+  readonly anchor: TextRangeAnchorInput;
+}
+
+export type CreateAnchoredCommentResult =
+  | CreateStoryCommentResult
+  | { readonly status: 'invalid_anchor' }
+  | { readonly status: 'access_denied' };
+
 export type CreateStoryCommentResult =
   | { readonly status: 'created'; readonly comment: StoryCommentResultDto }
   | { readonly status: 'story_not_found' }
@@ -55,6 +73,9 @@ export interface CommentPersistencePort {
   createComment(
     input: CreateStoryCommentInput,
   ): Promise<CreateStoryCommentResult>;
+  createAnchoredComment(
+    input: CreateAnchoredCommentInput,
+  ): Promise<CreateAnchoredCommentResult>;
   updateComment(
     input: UpdateStoryCommentInput,
   ): Promise<UpdateStoryCommentResult>;

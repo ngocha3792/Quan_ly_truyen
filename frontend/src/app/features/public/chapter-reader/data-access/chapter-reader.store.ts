@@ -8,7 +8,7 @@ import type {
   CommentReportReasonApi,
 } from '../../../../core/http/reader-engagement-api.model';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
-import { ChapterReaderView } from '../domain/chapter-reader.models';
+import { ChapterComment, ChapterReaderView, TextSelectionAnchor } from '../domain/chapter-reader.models';
 import {
   applyOptimisticReaction,
   findCommentInTree,
@@ -100,28 +100,20 @@ export class ChapterReaderStore {
     const view = this.viewState();
     const normalized = body.trim();
     if (!view || !normalized || this.commentPending()) return;
-    this.commentPending.set(true);
-    this.repository
-      .createComment(view.story.id, view.chapter.id, normalized)
-      .pipe(
-        tap((comment) =>
-          this.viewState.update((current) =>
-            current
-              ? {
-                  ...current,
-                  comments: [comment, ...current.comments],
-                  totalComments: current.totalComments + 1,
-                }
-              : current,
-          ),
-        ),
-        catchError(() => {
-          this.error.set('Không thể gửi bình luận.');
-          return EMPTY;
-        }),
-        finalize(() => this.commentPending.set(false)),
-      )
-      .subscribe();
+    this.prependComment(
+      this.repository.createComment(view.story.id, view.chapter.id, normalized),
+      'Không thể gửi bình luận.',
+    );
+  }
+
+  addAnchoredComment(body: string, anchor: TextSelectionAnchor): void {
+    const view = this.viewState();
+    const normalized = body.trim();
+    if (!view || !normalized || this.commentPending()) return;
+    this.prependComment(
+      this.repository.createAnchoredComment(view.story.id, view.chapter.id, normalized, anchor),
+      'Không thể gửi bình luận theo đoạn.',
+    );
   }
 
   editComment(commentId: string, body: string): void {
@@ -347,6 +339,24 @@ export class ChapterReaderStore {
           ),
         ),
         catchError(() => of([])),
+      )
+      .subscribe();
+  }
+
+  private prependComment(request$: Observable<ChapterComment>, fallbackMessage: string): void {
+    this.commentPending.set(true);
+    request$
+      .pipe(
+        tap((comment) => this.viewState.update((current) => current ? {
+          ...current,
+          comments: [comment, ...current.comments],
+          totalComments: current.totalComments + 1,
+        } : current)),
+        catchError((error) => {
+          this.commentMessage.set(getApiErrorMessage(error, fallbackMessage));
+          return EMPTY;
+        }),
+        finalize(() => this.commentPending.set(false)),
       )
       .subscribe();
   }

@@ -6,6 +6,8 @@ import {
   HostListener,
   inject,
   OnInit,
+  ElementRef,
+  ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -22,6 +24,11 @@ import { PaginationComponent } from '../../../../../shared/components/pagination
 import { ChapterListStore } from '../../data-access/chapter-list.store';
 import { ChapterReaderStore } from '../../data-access/chapter-reader.store';
 import { ChapterUnlockService } from '../../data-access/chapter-unlock.service';
+import { TextSelectionService } from '../../data-access/text-selection.service';
+import { InlineCommentsController } from '../../data-access/inline-comments.controller';
+import type { TextSelectionAnchor } from '../../domain/chapter-reader.models';
+import { AnchoredCommentsPanelComponent } from '../../ui/anchored-comments-panel/anchored-comments-panel.component';
+import { CommentToolbarComponent } from '../../ui/comment-toolbar/comment-toolbar.component';
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
 import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sidebar.component';
@@ -35,6 +42,8 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
     ChapterSidebarComponent,
     ChapterCommentsComponent,
     PaginationComponent,
+    CommentToolbarComponent,
+    AnchoredCommentsPanelComponent,
   ],
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: [
@@ -43,8 +52,10 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
     './chapter-reader-page.paywall.component.scss',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [TextSelectionService, InlineCommentsController],
 })
 export class ChapterReaderPageComponent implements OnInit {
+  @ViewChild('chapterContent') private chapterContent?: ElementRef<HTMLElement>;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
@@ -54,6 +65,7 @@ export class ChapterReaderPageComponent implements OnInit {
   protected readonly unlock = inject(ChapterUnlockService);
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
+  protected readonly inline = inject(InlineCommentsController);
   private trackedChapterId: string | null = null;
   private stopAnalyticsSession: (() => void) | null = null;
 
@@ -122,6 +134,16 @@ export class ChapterReaderPageComponent implements OnInit {
   protected onPageHide(): void {
     this.store.flushProgress();
   }
+
+  @HostListener('document:mouseup', ['$event'])
+  protected onDocumentMouseUp(event: MouseEvent): void {
+    if (this.chapterContent) this.inline.capture(this.chapterContent.nativeElement, event.target);
+  }
+
+  protected createAnchoredComment(event: { readonly body: string; readonly anchor: TextSelectionAnchor }): void {
+    this.runAuthenticated(() => this.store.addAnchoredComment(event.body, event.anchor));
+  }
+
 
   protected addComment(body: string): void {
     this.runAuthenticated(() => this.store.addComment(body));

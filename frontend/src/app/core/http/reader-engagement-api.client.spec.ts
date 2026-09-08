@@ -102,6 +102,23 @@ describe('ReaderEngagementApiClient', () => {
     thirdRequest.flush(successEnvelope(comment('comment-2')));
     await expect(third).resolves.toMatchObject({ id: 'comment-2' });
   });
+
+  it('posts a text anchor with an idempotency key', async () => {
+    const anchor = {
+      startBlockId: '11111111-1111-4111-8111-111111111111',
+      startOffset: 2,
+      endBlockId: '11111111-1111-4111-8111-111111111111',
+      endOffset: 20,
+      quoteText: 'đoạn được lựa chọn',
+    };
+    const promise = firstValueFrom(api.createAnchoredChapterComment('story-1', 'chapter-1', '  Ý kiến  ', anchor));
+    const request = http.expectOne('/api/v1/stories/story-1/chapters/chapter-1/anchored-comments');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('x-idempotency-key')).toBeTruthy();
+    expect(request.request.body).toEqual({ body: 'Ý kiến', anchor });
+    request.flush(successEnvelope(comment('comment-anchor-1')));
+    await expect(promise).resolves.toMatchObject({ id: 'comment-anchor-1' });
+  });
 });
 
 function successEnvelope<T>(data: T) {
@@ -134,5 +151,6 @@ function comment(id: string): StoryCommentApiItem {
     editedAt: null,
     createdAt: '2026-08-15T12:00:00.000Z',
     updatedAt: '2026-08-15T12:00:00.000Z',
+    anchor: null,
   };
 }

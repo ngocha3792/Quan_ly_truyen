@@ -4,3 +4,4 @@ export * from './list-story-comments.request';
 export * from './create-reply.request';
 export * from './set-reaction.request';
 export * from './create-comment-report.request';
+export * from './create-anchored-comment.request';

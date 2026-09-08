@@ -143,6 +143,24 @@ export interface StoryCommentApiItem {
   readonly editedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly anchor: TextRangeCommentAnchorApi | null;
+}
+
+export interface TextRangeCommentAnchorApi {
+  readonly status: 'ACTIVE' | 'REANCHORED' | 'ORPHANED';
+  readonly startBlockId: string;
+  readonly startOffset: number;
+  readonly endBlockId: string;
+  readonly endOffset: number;
+  readonly chapterVersion: number;
+}
+
+export interface CreateTextRangeCommentAnchorApi {
+  readonly startBlockId: string;
+  readonly startOffset: number;
+  readonly endBlockId: string;
+  readonly endOffset: number;
+  readonly quoteText: string;
 }
 
 export interface StoryCommentApiPage {

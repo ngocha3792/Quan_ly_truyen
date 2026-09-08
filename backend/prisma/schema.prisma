@@ -404,6 +404,14 @@ enum ChapterEntitlementStatus {
   @@map("chapter_entitlement_status")
 }
 
+enum CommentAnchorStatus {
+  ACTIVE     @map("active")
+  REANCHORED @map("reanchored")
+  ORPHANED   @map("orphaned")
+
+  @@map("comment_anchor_status")
+}
+
 enum PaymentOrderStatus {
   CREATED         @map("created")
   PENDING         @map("pending")
@@ -1592,6 +1600,7 @@ model Chapter {
   pricingVersions   ChapterPricingVersion[]
   purchases         ChapterPurchase[]
   entitlements      ChapterEntitlement[]
+  commentAnchors    CommentAnchor[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])
@@ -1708,6 +1717,7 @@ model Comment {
   reactions         CommentReaction[]
   reports           Report[]           @relation("CommentReports")
   moderationActions ModerationAction[] @relation("ModerationComment")
+  anchor            CommentAnchor?
 
   @@index([storyId, moderationStatus, createdAt])
   @@index([chapterId, moderationStatus, createdAt])
@@ -1715,6 +1725,38 @@ model Comment {
   @@index([userId, createdAt])
   @@index([deletedAt])
   @@map("comments")
+}
+
+model CommentAnchor {
+  id                    String              @id @default(uuid()) @db.Uuid
+  commentId             String              @unique @map("comment_id") @db.Uuid
+  chapterId             String              @map("chapter_id") @db.Uuid
+  chapterVersion        Int                 @map("chapter_version")
+  lastVerifiedVersion   Int                 @map("last_verified_version")
+  status                CommentAnchorStatus @default(ACTIVE)
+  startBlockId          String              @map("start_block_id") @db.Uuid
+  startOffset           Int                 @map("start_offset")
+  endBlockId            String              @map("end_block_id") @db.Uuid
+  endOffset             Int                 @map("end_offset")
+  quoteText             String              @map("quote_text") @db.Text
+  quoteHash             String              @map("quote_hash") @db.VarChar(64)
+  excerptBefore         String?             @map("excerpt_before") @db.VarChar(200)
+  excerptAfter          String?             @map("excerpt_after") @db.VarChar(200)
+  reanchoredAt          DateTime?           @map("reanchored_at") @db.Timestamptz(3)
+  reanchoredFromVersion Int?                @map("reanchored_from_version")
+  orphanedAt            DateTime?           @map("orphaned_at") @db.Timestamptz(3)
+  orphanedReason        String?             @map("orphaned_reason") @db.VarChar(500)
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, status])
+  @@index([chapterId, startBlockId])
+  @@index([status, lastVerifiedVersion])
+  @@index([quoteHash])
+  @@map("comment_anchors")
 }
 
 model CommentReaction {

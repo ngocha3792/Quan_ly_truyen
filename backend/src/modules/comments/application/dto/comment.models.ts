@@ -24,6 +24,14 @@ export interface CommentView {
   readonly editedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly anchor: {
+    readonly status: 'ACTIVE' | 'REANCHORED' | 'ORPHANED';
+    readonly startBlockId: string;
+    readonly startOffset: number;
+    readonly endBlockId: string;
+    readonly endOffset: number;
+    readonly chapterVersion: number;
+  } | null;
 }
 
 export interface CommentPageView {

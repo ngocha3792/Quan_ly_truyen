@@ -154,6 +154,12 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'reading_progress_sync_user_story_sequence_idx',
 
   'reading_progress_user_id_device_id_idx',
+
+  'comment_anchors_comment_id_key',
+  'comment_anchors_chapter_id_status_idx',
+  'comment_anchors_chapter_id_start_block_id_idx',
+  'comment_anchors_status_last_verified_version_idx',
+  'comment_anchors_quote_hash_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -302,6 +308,8 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'reading_progress_realtime_cursor_valid',
 
   'reading_progress_sync_events_revision_valid',
+
+  'comment_anchors_range_valid',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [

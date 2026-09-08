@@ -21,6 +21,8 @@ import { PermissionCode } from '@/common/enums';
 import {
   CreateStoryCommentCommand,
   CreateStoryCommentCommandHandler,
+  CreateAnchoredCommentCommand,
+  CreateAnchoredCommentCommandHandler,
   DeleteStoryCommentCommand,
   DeleteStoryCommentCommandHandler,
   UpdateStoryCommentCommand,
@@ -29,6 +31,7 @@ import {
 } from '../../../application';
 import {
   CreateStoryCommentRequest,
+  CreateAnchoredCommentRequest,
   UpdateStoryCommentRequest,
 } from '../requests';
 
@@ -36,9 +39,32 @@ import {
 export class CommentWriteController {
   constructor(
     private readonly createCommentCommand: CreateStoryCommentCommandHandler,
+    private readonly createAnchoredCommentCommand: CreateAnchoredCommentCommandHandler,
     private readonly updateCommentCommand: UpdateStoryCommentCommandHandler,
     private readonly deleteCommentCommand: DeleteStoryCommentCommandHandler,
   ) {}
+
+  @Post('stories/:storyId/chapters/:chapterId/anchored-comments')
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.COMMENT_CREATE)
+  createAnchoredComment(
+    @CurrentUserId() userId: string | undefined,
+    @ClientIp() ipAddress: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Body() request: CreateAnchoredCommentRequest,
+  ): Promise<StoryCommentResultDto> {
+    return this.createAnchoredCommentCommand.execute(
+      new CreateAnchoredCommentCommand(
+        userId,
+        storyId,
+        chapterId,
+        request.body,
+        request.anchor,
+        ipAddress,
+      ),
+    );
+  }
 
   @Post('stories/:storyId/comments')
   @Idempotent({ required: true, ttlSeconds: 86_400 })

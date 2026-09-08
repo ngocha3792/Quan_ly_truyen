@@ -1,0 +1,19 @@
+.comment-toolbar {
+  position: fixed;
+  z-index: 1100;
+  transform: translate(-50%, calc(-100% - 10px));
+  padding: 6px;
+  border-radius: 10px;
+  background: #1f2937;
+  box-shadow: 0 8px 28px #0004;
+}
+
+button {
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 12px;
+  color: white;
+  background: #ea580c;
+  cursor: pointer;
+  font-weight: 700;
+}

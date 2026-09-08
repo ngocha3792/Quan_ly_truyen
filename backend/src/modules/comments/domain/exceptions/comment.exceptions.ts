@@ -137,3 +137,25 @@ export class AbuseProtectionUnavailableException extends ServiceUnavailableExcep
     });
   }
 }
+
+export class InvalidCommentAnchorException extends InvalidInputException {
+  constructor(
+    message = 'Vị trí đoạn văn được chọn không hợp lệ hoặc đã thay đổi',
+  ) {
+    super({
+      code: 'COMMENT_ANCHOR_INVALID',
+      message,
+      details: { field: 'anchor' },
+    });
+  }
+}
+
+export class CommentAnchorAccessDeniedException extends ResourceNotFoundException {
+  constructor() {
+    super({
+      code: 'CHAPTER_NOT_FOUND',
+      resource: 'chương',
+      message: 'Không tìm thấy chương',
+    });
+  }
+}

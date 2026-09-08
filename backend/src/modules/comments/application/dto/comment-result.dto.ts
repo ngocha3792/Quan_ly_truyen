@@ -25,6 +25,16 @@ export interface StoryCommentResultDto {
   readonly editedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly anchor: CommentAnchorResultDto | null;
+}
+
+export interface CommentAnchorResultDto {
+  readonly status: 'ACTIVE' | 'REANCHORED' | 'ORPHANED';
+  readonly startBlockId: string;
+  readonly startOffset: number;
+  readonly endBlockId: string;
+  readonly endOffset: number;
+  readonly chapterVersion: number;
 }
 
 export interface StoryCommentPageResultDto {

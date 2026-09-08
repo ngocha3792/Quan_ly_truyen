@@ -34,6 +34,14 @@ export type ChapterCommentAuthor = PublicCommentAuthor;
 
 export type ChapterComment = PublicComment;
 
+export interface TextSelectionAnchor {
+  readonly startBlockId: string;
+  readonly startOffset: number;
+  readonly endBlockId: string;
+  readonly endOffset: number;
+  readonly quoteText: string;
+}
+
 export interface ChapterReaderView {
   readonly story: ChapterStory;
   readonly chapter: ChapterDetail;

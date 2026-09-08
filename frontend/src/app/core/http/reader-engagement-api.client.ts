@@ -162,6 +162,15 @@ export class ReaderEngagementApiClient {
     );
   }
 
+  createAnchoredChapterComment(
+    storyId: string,
+    chapterId: string,
+    body: string,
+    anchor: import('./reader-engagement-api.model').CreateTextRangeCommentAnchorApi,
+  ): Observable<StoryCommentApiItem> {
+    const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/anchored-comments`;
+    return this.postCommentRequest(path, { body: body.trim(), anchor });
+  }
   updateComment(commentId: string, body: string): Observable<StoryCommentApiItem> {
     return this.http
       .patch<ApiSuccessEnvelope<StoryCommentApiItem>>(
@@ -263,23 +272,26 @@ export class ReaderEngagementApiClient {
   }
 
   private postComment(path: string, body: string): Observable<StoryCommentApiItem> {
-    const normalizedBody = body.trim();
-    const identity = JSON.stringify({ path, body: normalizedBody });
+    return this.postCommentRequest(path, { body: body.trim() });
+  }
+
+  private postCommentRequest(
+    path: string,
+    payload: Readonly<Record<string, unknown>>,
+  ): Observable<StoryCommentApiItem> {
+    const identity = JSON.stringify({ path, payload });
     const key = this.commentRetryKeys.get(identity) ?? crypto.randomUUID();
     this.commentRetryKeys.set(identity, key);
-
     return this.http
       .post<ApiSuccessEnvelope<StoryCommentApiItem>>(
         `${this.config.apiBaseUrl}${path}`,
-        { body: normalizedBody },
+        payload,
         { headers: new HttpHeaders({ 'x-idempotency-key': key }) },
       )
       .pipe(
         map((response) => response.data),
         tap(() => {
-          if (this.commentRetryKeys.get(identity) === key) {
-            this.commentRetryKeys.delete(identity);
-          }
+          if (this.commentRetryKeys.get(identity) === key) this.commentRetryKeys.delete(identity);
         }),
       );
   }

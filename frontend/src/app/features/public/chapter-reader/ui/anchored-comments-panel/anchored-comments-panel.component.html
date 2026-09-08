@@ -1,0 +1,27 @@
+<aside class="panel" role="dialog" aria-modal="true" aria-labelledby="anchor-comments-title">
+  <header>
+    <h2 id="anchor-comments-title">Bình luận theo đoạn</h2>
+    <button type="button" (click)="panelClose.emit()" aria-label="Đóng">×</button>
+  </header>
+  @if (selection(); as selected) {
+    <blockquote>{{ selected.quoteText }}</blockquote>
+    <form (submit)="submitComment($event)">
+      <textarea
+        [value]="draft()"
+        (input)="draft.set($any($event.target).value)"
+        maxlength="4000"
+        placeholder="Viết bình luận..."
+      ></textarea>
+      <button type="submit" [disabled]="pending() || !draft().trim()">
+        {{ pending() ? 'Đang gửi...' : 'Đăng bình luận' }}
+      </button>
+    </form>
+  }
+  <section class="threads">
+    @for (comment of filteredComments(); track comment.id) {
+      <article><strong>{{ comment.author.name }}</strong><p>{{ comment.content }}</p></article>
+    } @empty {
+      <p class="empty">Chưa có bình luận nào ở đoạn này.</p>
+    }
+  </section>
+</aside>

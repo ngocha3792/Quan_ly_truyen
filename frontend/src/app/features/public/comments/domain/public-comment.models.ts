@@ -23,6 +23,14 @@ export interface PublicComment {
   readonly threadReplyCount: number;
   readonly replies: readonly PublicComment[];
   readonly isOwner: boolean;
+  readonly anchor: {
+    readonly status: 'ACTIVE' | 'REANCHORED' | 'ORPHANED';
+    readonly startBlockId: string;
+    readonly startOffset: number;
+    readonly endBlockId: string;
+    readonly endOffset: number;
+    readonly chapterVersion: number;
+  } | null;
 }
 
 export interface PublicCommentReplyCreate {

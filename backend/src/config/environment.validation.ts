@@ -611,6 +611,18 @@ export class EnvironmentVariables {
   @IsBoolean()
   READER_INLINE_COMMENTS_ENABLED = false;
 
+  @Transform(({ value }) => Number(value ?? 50))
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  COMMENT_REANCHOR_BATCH_SIZE = 50;
+
+  @Transform(({ value }) => Number(value ?? 30_000))
+  @IsInt()
+  @Min(5_000)
+  @Max(3_600_000)
+  COMMENT_REANCHOR_INTERVAL_MS = 30_000;
+
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
   READER_COMIC_DELIVERY_ENABLED = false;
@@ -1068,6 +1080,22 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   if (config.READER_REALTIME_PROGRESS_SYNC_ENABLED && !config.REDIS_ENABLED) {
     throw new Error(
       'REDIS_ENABLED must be true when realtime reading progress sync is enabled',
+    );
+  }
+  if (
+    config.READER_INLINE_COMMENTS_ENABLED &&
+    !config.READER_CONTENT_DOCUMENT_ENABLED
+  ) {
+    throw new Error(
+      'READER_CONTENT_DOCUMENT_ENABLED must be true when inline comments are enabled',
+    );
+  }
+  if (
+    config.READER_INLINE_COMMENTS_ENABLED &&
+    (!config.QUEUE_ENABLED || !config.REDIS_ENABLED)
+  ) {
+    throw new Error(
+      'QUEUE_ENABLED and REDIS_ENABLED must be true when inline comments are enabled',
     );
   }
 

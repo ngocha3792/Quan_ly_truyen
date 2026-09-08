@@ -373,6 +373,8 @@ export interface ReaderFeaturesConfig {
   portableCursorEnabled: boolean;
   realtimeProgressSyncEnabled: boolean;
   inlineCommentsEnabled: boolean;
+  inlineCommentsReanchorBatchSize: number;
+  inlineCommentsReanchorIntervalMs: number;
   comicDeliveryEnabled: boolean;
   offlineReadingEnabled: boolean;
   textToSpeechEnabled: boolean;

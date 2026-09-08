@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import {
   ChapterStatus,
+  ChapterAccessType,
+  ChapterEntitlementStatus,
   MediaPurpose,
   MediaResourceType,
   MediaStatus,
@@ -23,7 +25,10 @@ import type {
   StoryCommentResultDto,
   UpdateStoryCommentInput,
   UpdateStoryCommentResult,
+  CreateAnchoredCommentInput,
+  CreateAnchoredCommentResult,
 } from '../../application';
+import { createTextRangeAnchor, normalizeAnchorQuote } from '../../domain';
 
 const PUBLIC_STORY_STATUSES = [
   StoryStatus.PUBLISHED,
@@ -65,6 +70,16 @@ const COMMENT_SELECT = {
           deletedAt: true,
         },
       },
+    },
+  },
+  anchor: {
+    select: {
+      status: true,
+      startBlockId: true,
+      startOffset: true,
+      endBlockId: true,
+      endOffset: true,
+      chapterVersion: true,
     },
   },
 } satisfies Prisma.CommentSelect;
@@ -265,6 +280,124 @@ export class PrismaCommentPersistence implements CommentPersistencePort {
     }
   }
 
+  async createAnchoredComment(
+    input: CreateAnchoredCommentInput,
+  ): Promise<CreateAnchoredCommentResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const chapter = await tx.chapter.findFirst({
+          where: {
+            id: input.chapterId,
+            storyId: input.storyId,
+            status: ChapterStatus.PUBLISHED,
+            deletedAt: null,
+            publishedAt: { not: null },
+            story: PUBLIC_STORY_WHERE,
+          },
+          select: {
+            id: true,
+            version: true,
+            contentDocument: true,
+            story: { select: { authorId: true } },
+            monetization: { select: { accessType: true } },
+          },
+        });
+        if (!chapter) return { status: 'chapter_not_found' as const };
+
+        if (chapter.monetization?.accessType === ChapterAccessType.PAID) {
+          const [contributor, adminRole, entitlement] = await Promise.all([
+            tx.storyContributor.findFirst({
+              where: { storyId: input.storyId, userId: input.userId },
+              select: { userId: true },
+            }),
+            tx.userRole.findFirst({
+              where: {
+                userId: input.userId,
+                role: { code: 'ADMIN' },
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+              },
+              select: { userId: true },
+            }),
+            tx.chapterEntitlement.findFirst({
+              where: {
+                userId: input.userId,
+                chapterId: input.chapterId,
+                status: ChapterEntitlementStatus.ACTIVE,
+              },
+              select: { id: true },
+            }),
+          ]);
+          if (
+            chapter.story.authorId !== input.userId &&
+            !contributor &&
+            !adminRole &&
+            !entitlement
+          ) {
+            return { status: 'access_denied' as const };
+          }
+        }
+
+        const blocks = parseAnchorBlocks(chapter.contentDocument);
+        const anchor = createTextRangeAnchor(
+          blocks,
+          input.anchor.startBlockId,
+          input.anchor.startOffset,
+          input.anchor.endBlockId,
+          input.anchor.endOffset,
+        );
+        if (
+          !anchor ||
+          normalizeAnchorQuote(anchor.quoteText) !==
+            normalizeAnchorQuote(input.anchor.quoteText)
+        ) {
+          return { status: 'invalid_anchor' as const };
+        }
+
+        const comment = await tx.comment.create({
+          data: {
+            userId: input.userId,
+            storyId: input.storyId,
+            chapterId: input.chapterId,
+            body: input.body,
+            moderationStatus: ModerationStatus.VISIBLE,
+            createdAt: input.createdAt,
+            updatedAt: input.createdAt,
+            anchor: {
+              create: {
+                chapterId: input.chapterId,
+                chapterVersion: chapter.version,
+                lastVerifiedVersion: chapter.version,
+                startBlockId: anchor.startBlockId,
+                startOffset: anchor.startOffset,
+                endBlockId: anchor.endBlockId,
+                endOffset: anchor.endOffset,
+                quoteText: anchor.quoteText,
+                quoteHash: anchor.quoteHash,
+                excerptBefore: anchor.excerptBefore,
+                excerptAfter: anchor.excerptAfter,
+              },
+            },
+          },
+          select: COMMENT_SELECT,
+        });
+        await tx.story.update({
+          where: { id: input.storyId },
+          data: { commentCount: { increment: 1 } },
+        });
+        await tx.chapter.update({
+          where: { id: input.chapterId },
+          data: { commentCount: { increment: 1 } },
+        });
+        return { status: 'created' as const, comment: toCommentDto(comment) };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'anchored-comment-create',
+        resource: 'Bình luận theo đoạn',
+      });
+    }
+  }
+
   async updateComment(
     input: UpdateStoryCommentInput,
   ): Promise<UpdateStoryCommentResult> {
@@ -389,7 +522,33 @@ function toCommentDto(
     editedAt: row.editedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    anchor: row.anchor
+      ? {
+          status: row.anchor.status,
+          startBlockId: row.anchor.startBlockId,
+          startOffset: row.anchor.startOffset,
+          endBlockId: row.anchor.endBlockId,
+          endOffset: row.anchor.endOffset,
+          chapterVersion: row.anchor.chapterVersion,
+        }
+      : null,
   };
+}
+
+function parseAnchorBlocks(
+  value: Prisma.JsonValue | null,
+): readonly { id: string; text: string }[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  const blocks = (value as { blocks?: unknown }).blocks;
+  if (!Array.isArray(blocks)) return [];
+  return blocks.flatMap((block) => {
+    if (!block || typeof block !== 'object' || Array.isArray(block)) return [];
+    const candidate = block as { id?: unknown; text?: unknown };
+    return typeof candidate.id === 'string' &&
+      typeof candidate.text === 'string'
+      ? [{ id: candidate.id, text: candidate.text }]
+      : [];
+  });
 }
 
 async function lockOwnedComment(
