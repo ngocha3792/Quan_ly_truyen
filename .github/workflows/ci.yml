@@ -659,6 +659,15 @@ jobs:
           redis_url='redis://127.0.0.1:6379/0'
           api_container_id=''
           worker_container_id=''
+          smoke_phase='initialization'
+
+          report_smoke_failure() {
+            exit_code="$?"
+            echo "::error title=Backend container smoke failed::${smoke_phase} failed with exit code ${exit_code} at line ${BASH_LINENO[0]}"
+            exit "${exit_code}"
+          }
+
+          trap report_smoke_failure ERR
 
           cleanup() {
             for container_id in "${worker_container_id}" "${api_container_id}"; do
@@ -682,6 +691,7 @@ jobs:
             exit 1
           fi
 
+          smoke_phase='database migration'
           docker run \
             --rm \
             --network host \
@@ -710,6 +720,7 @@ jobs:
             --env ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK=false
           )
 
+          smoke_phase='API container start'
           api_container_id="$(
             docker run \
               --detach \
@@ -723,6 +734,7 @@ jobs:
               quan-ly-truyen-backend:ci
           )"
 
+          smoke_phase='API liveness and readiness'
           api_ready=false
 
           for attempt in $(seq 1 60); do
@@ -754,6 +766,7 @@ jobs:
             exit 1
           fi
 
+          smoke_phase='worker container start'
           worker_container_id="$(
             docker run \
               --detach \
@@ -770,6 +783,7 @@ jobs:
               node dist/worker.js
           )"
 
+          smoke_phase='worker heartbeat readiness'
           worker_ready=false
 
           for attempt in $(seq 1 45); do
