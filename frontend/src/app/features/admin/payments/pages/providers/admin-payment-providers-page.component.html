@@ -1,0 +1,70 @@
+<header>
+  <div>
+    <p>PAYMENT PROVIDERS</p>
+    <h1>Phương thức thanh toán</h1>
+  </div>
+  <a href="/admin/payments/review">Đơn chờ xác nhận</a>
+</header>
+
+@if (store.error(); as error) {
+  <p class="error">{{ error }}</p>
+}
+
+<section>
+  <h2>{{ draft.id ? 'Chỉnh sửa kết nối' : 'Thêm kết nối' }}</h2>
+  <div class="form-grid">
+    <label>Mã ổn định<input [(ngModel)]="draft.code" [disabled]="draft.id !== null" /></label>
+    <label
+      >Loại<select [(ngModel)]="draft.kind" [disabled]="draft.id !== null" (change)="changeKind()">
+        @for (kind of store.kinds(); track kind.kind) {
+          <option [value]="kind.kind">{{ kind.kind }}</option>
+        }
+      </select></label
+    >
+    <label>Tên hiển thị<input [(ngModel)]="draft.displayName" /></label>
+    <label>Tiền tệ<input [(ngModel)]="draft.currency" maxlength="3" /></label>
+    <label>Mô tả<input [(ngModel)]="draft.description" /></label>
+    <label>TTL (phút)<input type="number" [(ngModel)]="draft.orderTtlMinutes" /></label>
+    <label>Thứ tự<input type="number" [(ngModel)]="draft.sortOrder" /></label>
+    <label class="check"><input type="checkbox" [(ngModel)]="draft.enabled" /> Đang bật</label>
+  </div>
+  @if (kindFields().length > 0) {
+    <div class="form-grid bank">
+      @for (field of kindFields(); track field.name) {
+        <label
+          >{{ field.label
+          }}<input
+            [(ngModel)]="draft.config[field.name]"
+            [required]="field.required"
+            [placeholder]="field.placeholder ?? ''"
+        /></label>
+      }
+    </div>
+  }
+  <div class="actions">
+    <button type="button" (click)="save()" [disabled]="saving">
+      {{ saving ? 'Đang lưu…' : 'Lưu' }}</button
+    ><button type="button" class="secondary" (click)="reset()">Mới</button>
+  </div>
+</section>
+
+<section>
+  <h2>Kết nối đã cấu hình</h2>
+  @for (provider of store.providers(); track provider.id) {
+    <article>
+      <div>
+        <strong>{{ provider.displayName }}</strong
+        ><span
+          >{{ provider.code }} · {{ provider.kind }} ·
+          {{ provider.enabled ? 'Đang bật' : 'Đang tắt' }}</span
+        >
+      </div>
+      <div class="actions">
+        <button type="button" (click)="edit(provider)">Sửa</button
+        ><button type="button" class="danger" (click)="remove(provider)">Xoá</button>
+      </div>
+    </article>
+  } @empty {
+    <p>Chưa có kết nối.</p>
+  }
+</section>

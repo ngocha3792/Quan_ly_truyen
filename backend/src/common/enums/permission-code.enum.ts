@@ -45,6 +45,8 @@ export enum PermissionCode {
   PAYMENT_PACKAGE_MANAGE_ADMIN = 'payment.package.manage.admin',
   PAYMENT_RECONCILE_ADMIN = 'payment.reconcile.admin',
   PAYMENT_REFUND_ADMIN = 'payment.refund.admin',
+  PAYMENT_ORDER_SETTLE_ADMIN = 'payment.order.settle.admin',
+  PAYMENT_PROVIDER_MANAGE_ADMIN = 'payment.provider.manage.admin',
   WALLET_ADJUST_ADMIN = 'wallet.adjust.admin',
 
   REPORT_CREATE = 'report.create',

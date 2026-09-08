@@ -31,9 +31,17 @@ export function assertCreatePaymentOrderInput(input: {
 export function buildPaymentOrderRequestHash(
   userId: string,
   packageId: string,
+  providerConnectionId: string,
 ): string {
   return createHash('sha256')
-    .update(JSON.stringify([userId, packageId, 'CREDIT_TOP_UP']))
+    .update(
+      JSON.stringify([
+        userId,
+        packageId,
+        providerConnectionId,
+        'CREDIT_TOP_UP',
+      ]),
+    )
     .digest('hex');
 }
 

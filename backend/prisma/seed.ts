@@ -166,6 +166,18 @@ const permissions = [
     'reconcile.admin',
   ],
   ['payment.refund.admin', 'Refund payments', 'payment', 'refund.admin'],
+  [
+    'payment.order.settle.admin',
+    'Settle manual payment orders',
+    'payment.order',
+    'settle.admin',
+  ],
+  [
+    'payment.provider.manage.admin',
+    'Manage payment provider connections',
+    'payment.provider',
+    'manage.admin',
+  ],
   ['wallet.adjust.admin', 'Adjust wallets', 'wallet', 'adjust.admin'],
 
   ['report.create', 'Create reports', 'report', 'create'],

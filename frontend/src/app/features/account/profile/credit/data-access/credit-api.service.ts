@@ -9,6 +9,8 @@ import {
   CreditPackage,
   CreditWallet,
   PaymentOrderPage,
+  PaymentMethod,
+  PaymentOrder,
 } from '../domain/credit.models';
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +31,12 @@ export class CreditApiService {
       .pipe(map((response) => response.data));
   }
 
+  paymentMethods(): Observable<readonly PaymentMethod[]> {
+    return this.http
+      .get<ApiSuccessEnvelope<readonly PaymentMethod[]>>(`${this.billingUrl}/payment-methods`)
+      .pipe(map((response) => response.data));
+  }
+
   orders(page = 1, pageSize = 10): Observable<PaymentOrderPage> {
     const params = new HttpParams().set('page', page).set('pageSize', pageSize);
     return this.http
@@ -38,12 +46,29 @@ export class CreditApiService {
       .pipe(map((response) => response.data));
   }
 
-  createOrder(packageId: string, idempotencyKey: string): Observable<CreatePaymentOrderResult> {
+  createOrder(
+    packageId: string,
+    idempotencyKey: string,
+    providerConnectionId?: string,
+  ): Observable<CreatePaymentOrderResult> {
     return this.http
       .post<ApiSuccessEnvelope<CreatePaymentOrderResult>>(
         `${this.billingUrl}/top-up-orders`,
-        { packageId },
+        { packageId, ...(providerConnectionId ? { providerConnectionId } : {}) },
         { headers: new HttpHeaders({ 'x-idempotency-key': idempotencyKey }) },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  markTransferred(
+    orderId: string,
+    input: { referenceCode?: string; note?: string },
+  ): Observable<PaymentOrder> {
+    return this.http
+      .post<ApiSuccessEnvelope<PaymentOrder>>(
+        `${this.billingUrl}/top-up-orders/${orderId}/transfer-claim`,
+        input,
+        { headers: new HttpHeaders({ 'x-idempotency-key': globalThis.crypto.randomUUID() }) },
       )
       .pipe(map((response) => response.data));
   }

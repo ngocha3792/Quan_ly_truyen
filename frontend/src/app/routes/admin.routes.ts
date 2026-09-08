@@ -34,6 +34,16 @@ const monetizationOperationsGuards = [
   permissionGuard(AUTH_PERMISSIONS.PAYMENT_READ_ADMIN),
 ];
 
+const paymentProviderGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.PAYMENT_PROVIDER_MANAGE_ADMIN),
+];
+
+const paymentReviewGuards = [
+  authenticatedGuard,
+  permissionGuard(AUTH_PERMISSIONS.PAYMENT_ORDER_SETTLE_ADMIN),
+];
+
 export const ADMIN_ROUTES: Routes = [
   {
     path: 'admin',
@@ -114,6 +124,24 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('../features/admin/ai-settings/pages/list/admin-ai-settings-page.component').then(
             (module) => module.AdminAiSettingsPageComponent,
+          ),
+      },
+      {
+        path: 'settings/payments',
+        title: appPageTitle('Phương thức thanh toán'),
+        canActivate: paymentProviderGuards,
+        loadComponent: () =>
+          import('../features/admin/payments/pages/providers/admin-payment-providers-page.component').then(
+            (module) => module.AdminPaymentProvidersPageComponent,
+          ),
+      },
+      {
+        path: 'payments/review',
+        title: appPageTitle('Đối soát chuyển khoản'),
+        canActivate: paymentReviewGuards,
+        loadComponent: () =>
+          import('../features/admin/payments/pages/review/admin-payment-review-page.component').then(
+            (module) => module.AdminPaymentReviewPageComponent,
           ),
       },
       {

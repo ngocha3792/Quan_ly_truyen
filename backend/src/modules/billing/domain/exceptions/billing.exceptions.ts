@@ -32,6 +32,12 @@ export class PaymentProviderUnavailableException extends ServiceUnavailableExcep
   }
 }
 
+export class PaymentProviderKindUnsupportedException extends InvalidBillingInputException {
+  constructor(kind: string) {
+    super(`Loại nhà cung cấp thanh toán không được hỗ trợ: ${kind}`, 'kind');
+  }
+}
+
 export class PaymentOrderTransitionException extends InvalidStateTransitionException {
   constructor(from: string, to: string) {
     super({

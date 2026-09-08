@@ -21,10 +21,28 @@ export interface PaymentOrderResultDto {
   readonly currency: string;
   readonly status: PaymentOrderStatusName;
   readonly checkoutUrl: string | null;
+  readonly fulfilment:
+    | { readonly kind: 'redirect'; readonly checkoutUrl: string }
+    | {
+        readonly kind: 'instructions';
+        readonly instructions: Readonly<Record<string, unknown>>;
+      }
+    | { readonly kind: 'none' };
+  readonly transferClaim: Readonly<Record<string, unknown>> | null;
   readonly expiresAt: string;
   readonly settledAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface PaymentMethodResultDto {
+  readonly id: string;
+  readonly code: string;
+  readonly kind: import('../../domain').PaymentProviderKindName;
+  readonly displayName: string;
+  readonly description: string | null;
+  readonly currency: string;
+  readonly sortOrder: number;
 }
 
 export interface PaymentOrderPageResultDto {

@@ -2,14 +2,23 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 
-import { CurrentUserId, RequirePermissions } from '@/common/decorators';
+import {
+  ClientIp,
+  CurrentUserId,
+  RequestId,
+  RequirePermissions,
+  UserAgent,
+} from '@/common/decorators';
+import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 
 import {
@@ -20,6 +29,10 @@ import {
   ReconcilePaymentsQueryHandler,
   UpdateCreditPackageCommand,
   UpdateCreditPackageCommandHandler,
+  ConfirmManualPaymentOrderCommand,
+  ConfirmManualPaymentOrderCommandHandler,
+  RejectManualPaymentOrderCommand,
+  RejectManualPaymentOrderCommandHandler,
 } from '../../../application';
 import {
   BillingOperationsFeatureGuard,
@@ -28,6 +41,7 @@ import {
 import {
   AdminPaymentOrderExplorerRequest,
   UpdateCreditPackageRequest,
+  ManualPaymentReviewRequest,
 } from '../requests';
 
 @Controller('admin/billing')
@@ -38,6 +52,8 @@ export class AdminBillingController {
     private readonly updatePackage: UpdateCreditPackageCommandHandler,
     private readonly reconcilePayments: ReconcilePaymentsQueryHandler,
     private readonly listPaymentOrders: ListAdminPaymentOrdersQueryHandler,
+    private readonly confirmManualOrder: ConfirmManualPaymentOrderCommandHandler,
+    private readonly rejectManualOrder: RejectManualPaymentOrderCommandHandler,
   ) {}
 
   @Get('credit-packages')
@@ -88,6 +104,56 @@ export class AdminBillingController {
         request.search,
         request.from,
         request.to,
+      ),
+    );
+  }
+
+  @Post('payment-orders/:orderId/confirm')
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.PAYMENT_ORDER_SETTLE_ADMIN)
+  confirm(
+    @CurrentUserId() actorId: string | undefined,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Headers('x-idempotency-key') idempotencyKey: string | undefined,
+    @Body() request: ManualPaymentReviewRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ) {
+    return this.confirmManualOrder.execute(
+      new ConfirmManualPaymentOrderCommand(
+        actorId,
+        orderId,
+        request.reason,
+        idempotencyKey,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+  }
+
+  @Post('payment-orders/:orderId/reject')
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.PAYMENT_ORDER_SETTLE_ADMIN)
+  reject(
+    @CurrentUserId() actorId: string | undefined,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Headers('x-idempotency-key') idempotencyKey: string | undefined,
+    @Body() request: ManualPaymentReviewRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ) {
+    return this.rejectManualOrder.execute(
+      new RejectManualPaymentOrderCommand(
+        actorId,
+        orderId,
+        request.reason,
+        idempotencyKey,
+        ipAddress,
+        userAgent,
+        requestId,
       ),
     );
   }

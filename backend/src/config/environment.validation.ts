@@ -1080,10 +1080,10 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
 
   if (config.PAYMENT_PROVIDER_ENABLED) {
     if (
-      config.PAYMENT_PROVIDER_MODE === 'disabled' ||
-      !config.PAYMENT_CHECKOUT_BASE_URL ||
-      !config.PAYMENT_RETURN_URL ||
-      !config.PAYMENT_WEBHOOK_SECRET
+      config.PAYMENT_PROVIDER_MODE === 'hmac-sandbox' &&
+      (!config.PAYMENT_CHECKOUT_BASE_URL ||
+        !config.PAYMENT_RETURN_URL ||
+        !config.PAYMENT_WEBHOOK_SECRET)
     ) {
       throw new Error(
         'Enabled payment provider requires a provider mode, checkout URL, return URL, and webhook secret',

@@ -46,6 +46,9 @@ export function toAdminPaymentOrderPageResult(
 export function toPaymentOrderResult(
   record: PaymentOrderRecord,
 ): PaymentOrderResultDto {
+  const metadata = asObject(record.metadata);
+  const instructions = asObject(metadata.instructions);
+  const transferClaim = asObject(metadata.userClaim);
   return {
     id: record.id,
     packageId: record.packageId,
@@ -56,11 +59,23 @@ export function toPaymentOrderResult(
     currency: record.currency,
     status: record.status,
     checkoutUrl: record.checkoutUrl,
+    fulfilment: record.checkoutUrl
+      ? { kind: 'redirect', checkoutUrl: record.checkoutUrl }
+      : Object.keys(instructions).length > 0
+        ? { kind: 'instructions', instructions }
+        : { kind: 'none' },
+    transferClaim: Object.keys(transferClaim).length > 0 ? transferClaim : null,
     expiresAt: record.expiresAt.toISOString(),
     settledAt: record.settledAt?.toISOString() ?? null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
+}
+
+function asObject(value: unknown): Readonly<Record<string, unknown>> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : {};
 }
 
 export function toPaymentOrderPageResult(

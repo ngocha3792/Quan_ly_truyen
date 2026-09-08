@@ -28,11 +28,15 @@ import {
   ListCreditPackagesQueryHandler,
   ListOwnPaymentOrdersQuery,
   ListOwnPaymentOrdersQueryHandler,
+  ManagePaymentProvidersCommandHandler,
+  MarkPaymentOrderTransferredCommand,
+  MarkPaymentOrderTransferredCommandHandler,
 } from '../../../application';
 import { PaymentProviderFeatureGuard } from '../guards';
 import {
   CreatePaymentOrderRequest,
   ListPaymentOrdersRequest,
+  TransferClaimRequest,
 } from '../requests';
 
 @Controller('billing')
@@ -43,6 +47,8 @@ export class BillingController {
     private readonly createOrder: CreatePaymentOrderCommandHandler,
     private readonly getOrder: GetOwnPaymentOrderQueryHandler,
     private readonly listOrders: ListOwnPaymentOrdersQueryHandler,
+    private readonly paymentProviders: ManagePaymentProvidersCommandHandler,
+    private readonly markTransferred: MarkPaymentOrderTransferredCommandHandler,
     @Inject(MONETIZATION_RATE_LIMITER_PORT)
     private readonly rateLimiter: MonetizationRateLimiterPort,
   ) {}
@@ -51,6 +57,23 @@ export class BillingController {
   @Public()
   packages() {
     return this.listPackages.execute(new ListCreditPackagesQuery(true));
+  }
+
+  @Get('payment-methods')
+  @Public()
+  async paymentMethods() {
+    const connections = await this.paymentProviders.list(true);
+    return connections.map(
+      ({ id, code, kind, displayName, description, currency, sortOrder }) => ({
+        id,
+        code,
+        kind,
+        displayName,
+        description,
+        currency,
+        sortOrder,
+      }),
+    );
   }
 
   @Post('top-up-orders')
@@ -66,7 +89,12 @@ export class BillingController {
       subject: `user:${userId ?? 'missing'}`,
     });
     return this.createOrder.execute(
-      new CreatePaymentOrderCommand(userId, request.packageId, idempotencyKey),
+      new CreatePaymentOrderCommand(
+        userId,
+        request.packageId,
+        idempotencyKey,
+        request.providerConnectionId,
+      ),
     );
   }
 
@@ -96,5 +124,27 @@ export class BillingController {
       subject: `user:${userId ?? 'missing'}`,
     });
     return this.getOrder.execute(new GetOwnPaymentOrderQuery(userId, orderId));
+  }
+
+  @Post('top-up-orders/:orderId/transfer-claim')
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.PAYMENT_ORDER_CREATE_SELF)
+  async transferClaim(
+    @CurrentUserId() userId: string | undefined,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Body() request: TransferClaimRequest,
+  ) {
+    await this.rateLimiter.consume({
+      operation: 'order_transfer_claim',
+      subject: `user:${userId ?? 'missing'}`,
+    });
+    return this.markTransferred.execute(
+      new MarkPaymentOrderTransferredCommand(
+        userId,
+        orderId,
+        request.referenceCode,
+        request.note,
+      ),
+    );
   }
 }

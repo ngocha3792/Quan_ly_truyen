@@ -405,15 +405,23 @@ enum ChapterEntitlementStatus {
 }
 
 enum PaymentOrderStatus {
-  CREATED  @map("created")
-  PENDING  @map("pending")
-  PAID     @map("paid")
-  FAILED   @map("failed")
-  EXPIRED  @map("expired")
-  REFUNDED @map("refunded")
-  REVERSED @map("reversed")
+  CREATED         @map("created")
+  PENDING         @map("pending")
+  AWAITING_REVIEW @map("awaiting_review")
+  PAID            @map("paid")
+  FAILED          @map("failed")
+  EXPIRED         @map("expired")
+  REFUNDED        @map("refunded")
+  REVERSED        @map("reversed")
 
   @@map("payment_order_status")
+}
+
+enum PaymentProviderKind {
+  MANUAL_BANK_TRANSFER @map("manual_bank_transfer")
+  HMAC_SANDBOX         @map("hmac_sandbox")
+
+  @@map("payment_provider_kind")
 }
 
 // ============================================================
@@ -487,7 +495,7 @@ model User {
   chapterTranslationsRequested ChapterTranslation[]
   wallets                      Wallet[]
   chapterPurchases             ChapterPurchase[]
-  chapterPurchasesRefunded     ChapterPurchase[]         @relation("ChapterPurchaseRefundedBy")
+  chapterPurchasesRefunded     ChapterPurchase[]        @relation("ChapterPurchaseRefundedBy")
   chapterEntitlements          ChapterEntitlement[]
   chapterMonetizationUpdates   ChapterMonetization[]    @relation("ChapterMonetizationUpdatedBy")
   chapterPricingVersions       ChapterPricingVersion[]  @relation("ChapterPricingVersionChangedBy")
@@ -534,11 +542,11 @@ model WalletLedgerTransaction {
   metadata           Json?
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  wallet          Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
-  entries         WalletLedgerEntry[]
-  chapterPurchase       ChapterPurchase? @relation("ChapterPurchaseDebit")
-  chapterPurchaseRefund ChapterPurchase? @relation("ChapterPurchaseRefund")
-  paymentOrder    PaymentOrder?
+  wallet                Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  entries               WalletLedgerEntry[]
+  chapterPurchase       ChapterPurchase?    @relation("ChapterPurchaseDebit")
+  chapterPurchaseRefund ChapterPurchase?    @relation("ChapterPurchaseRefund")
+  paymentOrder          PaymentOrder?
 
   @@unique([walletId, type, referenceType, referenceId], map: "wallet_ledger_transactions_business_reference_unique")
   @@index([walletId, createdAt, id], map: "wallet_ledger_transactions_wallet_history_idx")
@@ -626,28 +634,28 @@ model ChapterPricingVersion {
 }
 
 model ChapterPurchase {
-  id                  String                @id @default(uuid()) @db.Uuid
-  userId              String                @map("user_id") @db.Uuid
-  chapterId           String                @map("chapter_id") @db.Uuid
-  priceBandId         String?               @map("price_band_id") @db.Uuid
-  creditPrice         BigInt                @map("credit_price")
-  status              ChapterPurchaseStatus @default(COMPLETED)
-  walletTransactionId String                @unique(map: "chapter_purchases_wallet_transaction_key") @map("wallet_transaction_id") @db.Uuid
-  refundWalletTransactionId String?          @unique(map: "chapter_purchases_refund_wallet_transaction_key") @map("refund_wallet_transaction_id") @db.Uuid
-  idempotencyKey      String                @unique @map("idempotency_key") @db.VarChar(200)
-  requestHash         String                @map("request_hash") @db.VarChar(64)
-  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  refundedAt          DateTime?             @map("refunded_at") @db.Timestamptz(3)
-  refundReason        String?               @map("refund_reason") @db.VarChar(500)
-  refundedById        String?               @map("refunded_by_id") @db.Uuid
+  id                        String                @id @default(uuid()) @db.Uuid
+  userId                    String                @map("user_id") @db.Uuid
+  chapterId                 String                @map("chapter_id") @db.Uuid
+  priceBandId               String?               @map("price_band_id") @db.Uuid
+  creditPrice               BigInt                @map("credit_price")
+  status                    ChapterPurchaseStatus @default(COMPLETED)
+  walletTransactionId       String                @unique(map: "chapter_purchases_wallet_transaction_key") @map("wallet_transaction_id") @db.Uuid
+  refundWalletTransactionId String?               @unique(map: "chapter_purchases_refund_wallet_transaction_key") @map("refund_wallet_transaction_id") @db.Uuid
+  idempotencyKey            String                @unique @map("idempotency_key") @db.VarChar(200)
+  requestHash               String                @map("request_hash") @db.VarChar(64)
+  createdAt                 DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  refundedAt                DateTime?             @map("refunded_at") @db.Timestamptz(3)
+  refundReason              String?               @map("refund_reason") @db.VarChar(500)
+  refundedById              String?               @map("refunded_by_id") @db.Uuid
 
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  chapter           Chapter                 @relation(fields: [chapterId], references: [id], onDelete: Restrict)
-  priceBand         MonetizationPriceBand?  @relation(fields: [priceBandId], references: [id], onDelete: SetNull)
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  chapter                 Chapter                  @relation(fields: [chapterId], references: [id], onDelete: Restrict)
+  priceBand               MonetizationPriceBand?   @relation(fields: [priceBandId], references: [id], onDelete: SetNull)
   walletTransaction       WalletLedgerTransaction  @relation("ChapterPurchaseDebit", fields: [walletTransactionId], references: [id], onDelete: Restrict)
   refundWalletTransaction WalletLedgerTransaction? @relation("ChapterPurchaseRefund", fields: [refundWalletTransactionId], references: [id], onDelete: Restrict)
   refundedBy              User?                    @relation("ChapterPurchaseRefundedBy", fields: [refundedById], references: [id], onDelete: Restrict)
-  entitlement       ChapterEntitlement?
+  entitlement             ChapterEntitlement?
 
   @@index([userId, createdAt, id])
   @@index([chapterId, createdAt])
@@ -696,34 +704,67 @@ model CreditPackage {
   @@map("credit_packages")
 }
 
-model PaymentOrder {
-  id                  String             @id @default(uuid()) @db.Uuid
-  userId              String             @map("user_id") @db.Uuid
-  packageId           String             @map("package_id") @db.Uuid
-  provider            String             @db.VarChar(50)
-  providerReference   String?            @map("provider_reference") @db.VarChar(160)
-  creditAmount        BigInt             @map("credit_amount")
-  fiatAmountMinor     BigInt             @map("fiat_amount_minor")
-  currency            String             @db.VarChar(3)
-  status              PaymentOrderStatus @default(CREATED)
-  checkoutUrl         String?            @map("checkout_url") @db.Text
-  idempotencyKey      String             @unique @map("idempotency_key") @db.VarChar(200)
-  requestHash         String             @map("request_hash") @db.VarChar(64)
-  walletTransactionId String?            @unique @map("wallet_transaction_id") @db.Uuid
-  failureCode         String?            @map("failure_code") @db.VarChar(120)
-  expiresAt           DateTime           @map("expires_at") @db.Timestamptz(3)
-  settledAt           DateTime?          @map("settled_at") @db.Timestamptz(3)
-  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+model PaymentProviderConnection {
+  id                  String              @id @default(uuid()) @db.Uuid
+  code                String              @unique @db.VarChar(50)
+  kind                PaymentProviderKind
+  displayName         String              @map("display_name") @db.VarChar(120)
+  description         String?             @db.VarChar(500)
+  config              Json
+  encryptedCredential String?             @map("encrypted_credential") @db.Text
+  currency            String              @db.VarChar(3)
+  enabled             Boolean             @default(false)
+  sortOrder           Int                 @default(0) @map("sort_order")
+  orderTtlMinutes     Int?                @map("order_ttl_minutes")
+  createdById         String?             @map("created_by_id") @db.Uuid
+  updatedById         String?             @map("updated_by_id") @db.Uuid
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user              User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  creditPackage     CreditPackage            @relation(fields: [packageId], references: [id], onDelete: Restrict)
-  walletTransaction WalletLedgerTransaction? @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  orders PaymentOrder[]
+
+  @@index([enabled, sortOrder], map: "payment_provider_connections_enabled_sort_idx")
+  @@index([kind])
+  @@map("payment_provider_connections")
+}
+
+model PaymentOrder {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  packageId            String             @map("package_id") @db.Uuid
+  provider             String             @db.VarChar(50)
+  providerConnectionId String?            @map("provider_connection_id") @db.Uuid
+  providerReference    String?            @map("provider_reference") @db.VarChar(160)
+  creditAmount         BigInt             @map("credit_amount")
+  fiatAmountMinor      BigInt             @map("fiat_amount_minor")
+  currency             String             @db.VarChar(3)
+  status               PaymentOrderStatus @default(CREATED)
+  checkoutUrl          String?            @map("checkout_url") @db.Text
+  idempotencyKey       String             @unique @map("idempotency_key") @db.VarChar(200)
+  requestHash          String             @map("request_hash") @db.VarChar(64)
+  walletTransactionId  String?            @unique @map("wallet_transaction_id") @db.Uuid
+  failureCode          String?            @map("failure_code") @db.VarChar(120)
+  metadata             Json?
+  reviewRequestedAt    DateTime?          @map("review_requested_at") @db.Timestamptz(3)
+  reviewedAt           DateTime?          @map("reviewed_at") @db.Timestamptz(3)
+  reviewedById         String?            @map("reviewed_by_id") @db.Uuid
+  reviewReason         String?            @map("review_reason") @db.VarChar(500)
+  expiresAt            DateTime           @map("expires_at") @db.Timestamptz(3)
+  settledAt            DateTime?          @map("settled_at") @db.Timestamptz(3)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creditPackage      CreditPackage              @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  walletTransaction  WalletLedgerTransaction?   @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  providerConnection PaymentProviderConnection? @relation(fields: [providerConnectionId], references: [id], onDelete: Restrict)
 
   @@unique([provider, providerReference], map: "payment_orders_provider_reference_unique")
   @@index([userId, createdAt, id])
   @@index([status, expiresAt])
   @@index([provider, status, updatedAt])
+  @@index([providerConnectionId])
+  @@index([status, reviewRequestedAt], map: "payment_orders_status_review_requested_idx")
   @@map("payment_orders")
 }
 

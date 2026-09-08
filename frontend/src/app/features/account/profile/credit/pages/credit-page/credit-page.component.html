@@ -2,7 +2,7 @@
   <div>
     <p class="eyebrow">VÍ CREDIT</p>
     <h1>Số dư và nạp Credit</h1>
-    <p>Chỉ webhook đã xác thực mới có thể cộng Credit vào ví của bạn.</p>
+    <p>Credit chỉ được cộng sau khi thanh toán được nhà cung cấp hoặc quản trị viên xác nhận.</p>
   </div>
   <a routerLink="/chinh-sach-credit">Chính sách Credit</a>
 </header>
@@ -30,6 +30,16 @@
         <p>Giá và lượng Credit được chốt trên máy chủ khi tạo đơn.</p>
       </div>
     </div>
+    @if (paymentMethods().length > 1) {
+      <label class="payment-method-picker">
+        Phương thức thanh toán
+        <select [value]="selectedPaymentMethodId() ?? ''" (change)="selectPaymentMethod($event)">
+          @for (method of paymentMethods(); track method.id) {
+            <option [value]="method.id">{{ method.displayName }}</option>
+          }
+        </select>
+      </label>
+    }
     @if (packages().length > 0) {
       <div class="package-grid">
         @for (creditPackage of packages(); track creditPackage.id) {
@@ -51,6 +61,69 @@
       <p class="empty">Hiện chưa có gói Credit nào được mở bán.</p>
     }
   </section>
+
+  @if (instructionOrder(); as order) {
+    @if (order.fulfilment.kind === 'instructions') {
+      <section class="section invoice" aria-labelledby="transfer-invoice-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="transfer-invoice-title">Thông tin chuyển khoản</h2>
+            <p>Chuyển đúng số tiền và nội dung để admin đối soát nhanh.</p>
+          </div>
+          <b>{{ formatFiat(order.fiatAmountMinor, order.currency) }}</b>
+        </div>
+        <dl class="invoice-grid">
+          <div>
+            <dt>Ngân hàng</dt>
+            <dd>{{ instruction('bankName') }}</dd>
+          </div>
+          <div>
+            <dt>Chủ tài khoản</dt>
+            <dd>{{ instruction('accountHolder') }}</dd>
+          </div>
+          <div>
+            <dt>Số tài khoản</dt>
+            <dd>
+              {{ instruction('accountNumber') }}
+              <button type="button" (click)="copy(instruction('accountNumber'))">Sao chép</button>
+            </dd>
+          </div>
+          <div>
+            <dt>Nội dung</dt>
+            <dd>
+              {{ instruction('transferNote') }}
+              <button type="button" (click)="copy(instruction('transferNote'))">Sao chép</button>
+            </dd>
+          </div>
+        </dl>
+        @if (instruction('instructionNote')) {
+          <p>{{ instruction('instructionNote') }}</p>
+        }
+        @if (order.status === 'PENDING') {
+          <div class="transfer-claim">
+            <label
+              >Mã giao dịch (không bắt buộc)<input
+                maxlength="120"
+                [value]="transferReference()"
+                (input)="updateTransferReference($event)"
+            /></label>
+            <label
+              >Ghi chú (không bắt buộc)<textarea
+                maxlength="500"
+                [value]="transferNote()"
+                (input)="updateTransferNote($event)"
+              ></textarea>
+            </label>
+            <button type="button" [disabled]="claiming()" (click)="markTransferred()">
+              {{ claiming() ? 'Đang gửi…' : 'Tôi đã chuyển khoản' }}
+            </button>
+          </div>
+        } @else if (order.status === 'AWAITING_REVIEW') {
+          <p class="notice">Đã gửi xác nhận. Admin sẽ kiểm tra và cộng Credit sau khi đối soát.</p>
+        }
+      </section>
+    }
+  }
 
   <section class="section" aria-labelledby="payment-history-title">
     <div class="section-heading">

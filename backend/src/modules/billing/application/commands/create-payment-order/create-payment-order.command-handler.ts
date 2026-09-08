@@ -18,8 +18,8 @@ import { toPaymentOrderResult } from '../../mappers';
 import {
   BILLING_PERSISTENCE_PORT,
   type BillingPersistencePort,
-  PAYMENT_PROVIDER_PORT,
-  type PaymentProviderPort,
+  PAYMENT_PROVIDER_REGISTRY_PORT,
+  type PaymentProviderRegistryPort,
 } from '../../ports';
 import { CreatePaymentOrderCommand } from './create-payment-order.command';
 
@@ -28,8 +28,8 @@ export class CreatePaymentOrderCommandHandler {
   constructor(
     @Inject(BILLING_PERSISTENCE_PORT)
     private readonly persistence: BillingPersistencePort,
-    @Inject(PAYMENT_PROVIDER_PORT)
-    private readonly provider: PaymentProviderPort,
+    @Inject(PAYMENT_PROVIDER_REGISTRY_PORT)
+    private readonly providers: PaymentProviderRegistryPort,
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
     @Inject(monetizationConfig.KEY)
@@ -49,13 +49,23 @@ export class CreatePaymentOrderCommandHandler {
     if (!canCreateTopUpOrder(this.monetization, userId)) {
       throw new PaymentRolloutRestrictedException();
     }
+    const connection = await this.persistence.resolveConnection(
+      command.providerConnectionId,
+    );
+    const provider = this.providers.getAdapter(connection.kind);
+    provider.validateConfig(connection.config);
     const prepared = await this.persistence.prepareOrder({
       userId,
       packageId: command.packageId,
-      provider: this.provider.code,
+      provider: connection.code,
+      providerConnectionId: connection.id,
       idempotencyKey,
-      requestHash: buildPaymentOrderRequestHash(userId, command.packageId),
-      ttlMinutes: this.config.orderTtlMinutes,
+      requestHash: buildPaymentOrderRequestHash(
+        userId,
+        command.packageId,
+        connection.id,
+      ),
+      ttlMinutes: connection.orderTtlMinutes ?? this.config.orderTtlMinutes,
       pendingOrderLimit: this.config.pendingOrderLimit,
     });
     if (prepared.order.status !== 'CREATED') {
@@ -63,16 +73,26 @@ export class CreatePaymentOrderCommandHandler {
     }
 
     try {
-      const checkout = await this.provider.createCheckout({
+      const checkout = await provider.createCheckout({
         orderId: prepared.order.id,
+        userId,
+        connection,
         amountMinor: prepared.order.fiatAmountMinor,
         currency: prepared.order.currency,
         expiresAt: prepared.order.expiresAt,
       });
-      const order = await this.persistence.attachCheckout({
-        orderId: prepared.order.id,
-        ...checkout,
-      });
+      const order =
+        checkout.kind === 'redirect'
+          ? await this.persistence.attachCheckout({
+              orderId: prepared.order.id,
+              providerReference: checkout.providerReference,
+              checkoutUrl: checkout.checkoutUrl,
+            })
+          : await this.persistence.attachInstructions({
+              orderId: prepared.order.id,
+              providerReference: checkout.providerReference,
+              instructions: checkout.instructions,
+            });
       return {
         order: toPaymentOrderResult(order),
         replayed: prepared.replayed,

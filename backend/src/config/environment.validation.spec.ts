@@ -198,6 +198,17 @@ describe('validateEnvironment', () => {
         MONETIZATION_ROLLOUT_STAGE: 'internal',
         MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
       }),
+    ).not.toThrow();
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        MONETIZATION_ENABLED: 'true',
+        PAYMENT_PROVIDER_ENABLED: 'true',
+        PAYMENT_PROVIDER_MODE: 'hmac-sandbox',
+        MONETIZATION_ROLLOUT_STAGE: 'internal',
+        MONETIZATION_INTERNAL_USER_IDS: '11111111-1111-4111-8111-111111111111',
+      }),
     ).toThrow('Enabled payment provider requires');
 
     expect(() =>

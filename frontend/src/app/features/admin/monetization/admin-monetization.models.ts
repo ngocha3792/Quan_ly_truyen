@@ -1,5 +1,5 @@
 export type PaymentOrderStatus =
-  'CREATED' | 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'REFUNDED' | 'REVERSED';
+  | 'CREATED' | 'PENDING' | 'AWAITING_REVIEW' | 'PAID' | 'FAILED' | 'EXPIRED' | 'REFUNDED' | 'REVERSED';
 
 export type ChapterPurchaseStatus = 'COMPLETED' | 'REFUNDED' | 'REVERSED';
 

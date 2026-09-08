@@ -11,6 +11,8 @@ import {
 import { PrismaModule, PrismaService } from '@/infrastructure/database';
 import { PrismaBillingPersistence } from '@/modules/billing/infrastructure/persistence';
 import { PaymentWebhookInboxProcessor } from '@/modules/billing/infrastructure/webhook';
+import { PaymentOrderSettlementService } from '@/modules/billing/infrastructure/settlement';
+import { TransactionalReceiptService } from '@/modules/notifications';
 import { PostWalletTransactionCommandHandler } from '@/modules/wallets';
 import { PrismaWalletPersistence } from '@/modules/wallets/infrastructure';
 
@@ -23,7 +25,15 @@ describe('billing top-up integration', () => {
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppConfigModule, PrismaModule],
-      providers: [PrismaBillingPersistence, PrismaWalletPersistence],
+      providers: [
+        PrismaBillingPersistence,
+        PrismaWalletPersistence,
+        PaymentOrderSettlementService,
+        {
+          provide: TransactionalReceiptService,
+          useValue: { enqueue: jest.fn() },
+        },
+      ],
     }).compile();
     await moduleRef.init();
     prisma = moduleRef.get(PrismaService);
@@ -33,6 +43,7 @@ describe('billing top-up integration', () => {
       new PostWalletTransactionCommandHandler(
         moduleRef.get(PrismaWalletPersistence),
       ),
+      moduleRef.get(PaymentOrderSettlementService),
       { enqueue: jest.fn() } as never,
       {
         providerMode: 'hmac-sandbox',
@@ -73,10 +84,23 @@ describe('billing top-up integration', () => {
         isActive: true,
       },
     });
+    const connection = await prisma.paymentProviderConnection.upsert({
+      where: { code: 'hmac-sandbox' },
+      create: {
+        code: 'hmac-sandbox',
+        kind: 'HMAC_SANDBOX',
+        displayName: 'HMAC Sandbox',
+        config: {},
+        currency: 'VND',
+        enabled: true,
+      },
+      update: { enabled: true },
+    });
     const prepared = await billing.prepareOrder({
       userId: user.id,
       packageId: creditPackage.id,
       provider: 'hmac-sandbox',
+      providerConnectionId: connection.id,
       idempotencyKey: `billing-${suffix}`,
       requestHash: 'a'.repeat(64),
       ttlMinutes: 30,
@@ -144,5 +168,109 @@ describe('billing top-up integration', () => {
       orphanTopUpTransactions: 0,
       pendingExpiredOrders: 0,
     });
+  });
+
+  it('keeps manual claims uncredited until an admin settlement and credits exactly once', async () => {
+    const suffix = randomUUID();
+    const user = await prisma.user.create({
+      data: {
+        email: `manual-${suffix}@example.test`,
+        username: `manual-${suffix}`.slice(0, 50),
+        displayName: 'Manual payer',
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const creditPackage = await prisma.creditPackage.create({
+      data: {
+        code: `MANUAL_${suffix.replaceAll('-', '').slice(0, 20)}`,
+        label: 'Manual package',
+        creditAmount: 100n,
+        fiatAmountMinor: 10_000n,
+        currency: 'VND',
+        isActive: true,
+      },
+    });
+    const connection = await prisma.paymentProviderConnection.create({
+      data: {
+        code: `manual-${suffix}`.slice(0, 50),
+        kind: 'MANUAL_BANK_TRANSFER',
+        displayName: 'Test bank',
+        config: {
+          bankName: 'VCB',
+          accountNumber: '123',
+          accountHolder: 'TEST',
+          transferNoteTemplate: 'NAP {{reference}}',
+        },
+        currency: 'VND',
+        enabled: true,
+        orderTtlMinutes: 2880,
+      },
+    });
+    const prepared = await billing.prepareOrder({
+      userId: user.id,
+      packageId: creditPackage.id,
+      provider: connection.code,
+      providerConnectionId: connection.id,
+      idempotencyKey: `manual-${suffix}`,
+      requestHash: 'c'.repeat(64),
+      ttlMinutes: 2880,
+      pendingOrderLimit: 3,
+    });
+    const reference = `TT${prepared.order.id.replaceAll('-', '').slice(0, 12).toUpperCase()}`;
+    await billing.attachInstructions({
+      orderId: prepared.order.id,
+      providerReference: reference,
+      instructions: {
+        bankName: 'VCB',
+        accountNumber: '123',
+        accountHolder: 'TEST',
+        transferNote: `NAP ${reference}`,
+      },
+    });
+    const claimed = await billing.markOrderTransferred({
+      userId: user.id,
+      orderId: prepared.order.id,
+      referenceCode: 'FT123',
+    });
+    expect(claimed.status).toBe(PaymentOrderStatus.AWAITING_REVIEW);
+    expect(await prisma.wallet.count({ where: { userId: user.id } })).toBe(0);
+    const settlement = moduleRef.get(PaymentOrderSettlementService);
+    const input = {
+      orderId: prepared.order.id,
+      providerReference: reference,
+      occurredAt: new Date(),
+      source: 'admin_manual' as const,
+      actorId: user.id,
+      reason: 'Đã đối soát chuyển khoản hợp lệ',
+    };
+    await settlement.settleSucceeded(input);
+    await settlement.settleSucceeded(input);
+    expect(
+      (
+        await prisma.paymentOrder.findUniqueOrThrow({
+          where: { id: prepared.order.id },
+        })
+      ).status,
+    ).toBe(PaymentOrderStatus.PAID);
+    expect(
+      (
+        await prisma.wallet.findUniqueOrThrow({
+          where: {
+            userId_currency: {
+              userId: user.id,
+              currency: WalletCurrency.CREDIT,
+            },
+          },
+        })
+      ).balance,
+    ).toBe(100n);
+    expect(
+      await prisma.walletLedgerTransaction.count({
+        where: {
+          referenceType: 'payment_order',
+          referenceId: prepared.order.id,
+        },
+      }),
+    ).toBe(1);
   });
 });

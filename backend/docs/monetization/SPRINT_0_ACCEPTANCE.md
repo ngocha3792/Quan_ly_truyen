@@ -33,6 +33,8 @@ without weakening their boundaries.
 - `payment.reconcile.admin`
 - `wallet.adjust.admin`
 - `payment.refund.admin`
+- `payment.order.settle.admin`
+- `payment.provider.manage.admin`
 
 Refund and wallet-adjustment permissions are intentionally separate from ordinary
 content administration. Every privileged command requires a reason and audit record.
@@ -62,6 +64,11 @@ select a provider that satisfies all of these:
 - Publishes operational limits, retry behavior, and credential-rotation procedure.
 
 The adapter contract is mandatory even when only one provider is initially selected.
+
+`MANUAL_BANK_TRANSFER` is accepted as a human-attested provider outside this
+six-criterion automated-provider gate. It does not claim cryptographic proof: the
+user can only request review, while a separately authorized administrator records a
+reason and audit event before the shared settlement transaction credits the wallet.
 
 ## Sprint 0 Definition of Done
 

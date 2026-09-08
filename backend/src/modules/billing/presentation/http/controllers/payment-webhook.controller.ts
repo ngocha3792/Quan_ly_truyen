@@ -36,11 +36,10 @@ export class PaymentWebhookController {
   async handle(
     @Req() request: RawBodyRequest<Request>,
     @Param('providerCode') providerCode: string,
-    @Headers('x-payment-timestamp') timestamp: string | undefined,
-    @Headers('x-payment-signature') signature: string | undefined,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @ClientIp() ipAddress: string | undefined,
   ) {
-    if (!request.rawBody || !timestamp || !signature) {
+    if (!request.rawBody) {
       throw new InvalidInputException({
         message: 'Thiếu raw body hoặc chữ ký webhook thanh toán',
       });
@@ -59,8 +58,12 @@ export class PaymentWebhookController {
       new ProcessPaymentWebhookCommand(
         providerCode,
         request.rawBody,
-        timestamp,
-        signature,
+        Object.fromEntries(
+          Object.entries(headers).map(([key, value]) => [
+            key.toLowerCase(),
+            Array.isArray(value) ? value[0] : value,
+          ]),
+        ),
       ),
     );
   }

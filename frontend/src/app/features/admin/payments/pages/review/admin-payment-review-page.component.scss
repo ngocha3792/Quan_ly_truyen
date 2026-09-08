@@ -1,0 +1,88 @@
+:host {
+  display: block;
+  color: #e5e7eb;
+}
+header,
+article,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+header {
+  margin-bottom: 18px;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+header p {
+  color: #a78bfa;
+  font-size: 12px;
+}
+a {
+  color: #c4b5fd;
+}
+.orders,
+.review-box {
+  padding: 18px;
+  border: 1px solid #293548;
+  border-radius: 12px;
+  background: #0f172a;
+}
+article {
+  padding: 14px 0;
+  border-bottom: 1px solid #293548;
+}
+article > div {
+  display: grid;
+  gap: 4px;
+}
+span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  color: white;
+  background: #059669;
+}
+.danger {
+  background: #be123c;
+}
+.secondary {
+  background: #334155;
+}
+.review-box {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+label {
+  display: grid;
+  gap: 6px;
+}
+textarea {
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #475569;
+  border-radius: 7px;
+  color: white;
+  background: #111827;
+}
+.error {
+  margin-bottom: 12px;
+  color: #fda4af;
+}
+@media (max-width: 850px) {
+  article,
+  header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

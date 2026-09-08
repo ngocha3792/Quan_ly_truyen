@@ -11,7 +11,11 @@ export interface TransactionalReceiptInput {
   readonly userId: string;
   readonly dedupeKey: string;
   readonly type:
-    'credit_top_up' | 'chapter_purchase' | 'chapter_refund' | 'payment_refund';
+    | 'credit_top_up'
+    | 'chapter_purchase'
+    | 'chapter_refund'
+    | 'payment_refund'
+    | 'payment_rejected';
   readonly title: string;
   readonly body: string;
   readonly tag: string;

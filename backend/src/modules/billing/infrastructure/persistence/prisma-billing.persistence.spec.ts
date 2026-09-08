@@ -16,7 +16,10 @@ describe('PrismaBillingPersistence webhook inbox', () => {
   const prisma = {
     inboundWebhookEvent: { create: jest.fn(), findUnique: jest.fn() },
   };
-  const persistence = new PrismaBillingPersistence(prisma as never);
+  const persistence = new PrismaBillingPersistence(
+    prisma as never,
+    {} as never,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();

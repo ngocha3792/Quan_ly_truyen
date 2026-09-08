@@ -139,6 +139,63 @@ button {
   gap: 14px;
 }
 
+.payment-method-picker,
+.transfer-claim label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: #cbd5e1;
+}
+
+select,
+input,
+textarea {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  color: #f8fafc;
+  background: #111827;
+  font: inherit;
+}
+
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.invoice {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.invoice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  div {
+    padding: 12px;
+    border-radius: 9px;
+    background: rgba(30, 41, 59, 0.52);
+  }
+
+  dt {
+    color: #94a3b8;
+    font-size: 12px;
+  }
+  dd {
+    margin: 5px 0 0;
+    color: #f8fafc;
+    font-weight: 700;
+  }
+  button {
+    min-height: 30px;
+    margin-left: 8px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
 .package-card {
   padding: 18px;
   display: grid;
@@ -218,6 +275,10 @@ button {
   }
 
   .package-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-grid {
     grid-template-columns: 1fr;
   }
 }

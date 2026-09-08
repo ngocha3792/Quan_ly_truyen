@@ -205,6 +205,11 @@ td small {
   background: #14532d;
   color: #bbf7d0;
 }
+
+.status.awaiting_review {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.16);
+}
 .status.refunded,
 .status.reversed {
   background: #78350f;

@@ -80,6 +80,20 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     icon: 'sparkles',
     permission: AUTH_PERMISSIONS.AI_SETTINGS_MANAGE,
   },
+  {
+    label: 'Phương thức thanh toán',
+    route: '/admin/settings/payments',
+    icon: 'wallet',
+    permission: AUTH_PERMISSIONS.PAYMENT_PROVIDER_MANAGE_ADMIN,
+    requiresMonetization: true,
+  },
+  {
+    label: 'Duyệt chuyển khoản',
+    route: '/admin/payments/review',
+    icon: 'history',
+    permission: AUTH_PERMISSIONS.PAYMENT_ORDER_SETTLE_ADMIN,
+    requiresMonetization: true,
+  },
 ];
 
 @Component({

@@ -1,0 +1,102 @@
+:host {
+  display: block;
+  color: #e5e7eb;
+}
+header,
+article,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+header {
+  margin-bottom: 18px;
+}
+header p {
+  color: #a78bfa;
+  font-size: 12px;
+}
+a {
+  color: #c4b5fd;
+}
+section {
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid #293548;
+  border-radius: 12px;
+  background: #0f172a;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.bank {
+  padding-top: 16px;
+  border-top: 1px solid #293548;
+}
+label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+}
+.check {
+  display: flex;
+  align-items: center;
+}
+input,
+select {
+  min-height: 40px;
+  padding: 8px;
+  border: 1px solid #475569;
+  border-radius: 7px;
+  color: #fff;
+  background: #111827;
+}
+button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  background: #7c3aed;
+}
+.secondary {
+  background: #334155;
+}
+.danger {
+  background: #be123c;
+}
+article {
+  padding: 13px 0;
+  border-bottom: 1px solid #293548;
+}
+article div:first-child {
+  display: grid;
+  gap: 4px;
+}
+article span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.error {
+  margin-bottom: 14px;
+  color: #fda4af;
+}
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  header,
+  article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

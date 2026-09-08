@@ -90,6 +90,8 @@ describe('application route composition', () => {
       'tags',
       'monetization',
       'settings/ai',
+      'settings/payments',
+      'payments/review',
       'stories',
       'story-submissions/:submissionId',
       'users',

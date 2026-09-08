@@ -4,12 +4,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 
 import { billingConfig } from '@/config';
-
 import type {
   NormalizedPaymentEvent,
   PaymentCheckoutInput,
   PaymentCheckoutResult,
-  PaymentProviderPort,
+  PaymentProviderAdapter,
   PaymentWebhookInput,
 } from '../../application';
 import {
@@ -19,18 +18,29 @@ import {
 } from '../../domain';
 
 @Injectable()
-export class ConfiguredPaymentProviderAdapter implements PaymentProviderPort {
+export class HmacSandboxPaymentProviderAdapter implements PaymentProviderAdapter {
+  readonly kind = 'HMAC_SANDBOX' as const;
+  readonly supportsWebhook = true;
+  readonly requiresManualReview = false;
+
   constructor(
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
   ) {}
 
-  get code(): string {
-    return this.config.providerMode;
+  validateConfig(config: unknown): Readonly<Record<string, unknown>> {
+    if (config == null) return {};
+    if (typeof config !== 'object' || Array.isArray(config)) {
+      throw new InvalidBillingInputException(
+        'Cấu hình sandbox không hợp lệ',
+        'config',
+      );
+    }
+    return config as Readonly<Record<string, unknown>>;
   }
 
   createCheckout(input: PaymentCheckoutInput): Promise<PaymentCheckoutResult> {
-    this.assertSandboxConfigured();
+    this.assertConfigured();
     const providerReference = `sandbox-${input.orderId}`;
     const url = new URL(this.config.checkoutBaseUrl!);
     url.searchParams.set('orderId', input.orderId);
@@ -51,18 +61,21 @@ export class ConfiguredPaymentProviderAdapter implements PaymentProviderPort {
         ].join('.'),
       ),
     );
-    return Promise.resolve({ providerReference, checkoutUrl: url.toString() });
+    return Promise.resolve({
+      kind: 'redirect',
+      providerReference,
+      checkoutUrl: url.toString(),
+    });
   }
 
-  verifyWebhook(input: PaymentWebhookInput): NormalizedPaymentEvent {
-    this.assertSandboxConfigured();
-    if (input.providerCode !== this.code) {
-      throw new InvalidBillingInputException(
-        'Payment provider không khớp',
-        'providerCode',
-      );
+  verifyWebhook(input: PaymentWebhookInput): Promise<NormalizedPaymentEvent> {
+    this.assertConfigured();
+    const timestampValue = input.headers['x-payment-timestamp'];
+    const signature = input.headers['x-payment-signature'];
+    if (!timestampValue || !signature) {
+      throw new InvalidBillingInputException('Thiếu chữ ký webhook thanh toán');
     }
-    const timestamp = Number(input.timestamp);
+    const timestamp = Number(timestampValue);
     const nowSeconds = Math.floor(Date.now() / 1000);
     if (
       !Number.isSafeInteger(timestamp) ||
@@ -74,30 +87,26 @@ export class ConfiguredPaymentProviderAdapter implements PaymentProviderPort {
       );
     }
     const expected = this.sign(
-      `${input.timestamp}.${input.rawBody.toString('utf8')}`,
+      `${timestampValue}.${input.rawBody.toString('utf8')}`,
     );
-    if (!safeEqual(expected, input.signature)) {
+    if (!safeEqual(expected, signature)) {
       throw new InvalidBillingInputException(
         'Chữ ký webhook thanh toán không hợp lệ',
       );
     }
-
     let payload: unknown;
     try {
       payload = JSON.parse(input.rawBody.toString('utf8'));
-    } catch (error: unknown) {
+    } catch {
       throw new InvalidBillingInputException(
-        error instanceof Error
-          ? 'Payload webhook không phải JSON hợp lệ'
-          : 'Payload webhook lỗi',
+        'Payload webhook không phải JSON hợp lệ',
       );
     }
-    return normalizeEvent(payload);
+    return Promise.resolve(normalizeEvent(payload));
   }
 
-  private assertSandboxConfigured(): void {
+  private assertConfigured(): void {
     if (
-      this.config.providerMode !== 'hmac-sandbox' ||
       !this.config.checkoutBaseUrl ||
       !this.config.returnUrl ||
       !this.config.webhookSecret
@@ -120,33 +129,27 @@ function normalizeEvent(value: unknown): NormalizedPaymentEvent {
     );
   }
   const record = value as Record<string, unknown>;
-  const eventId = requiredString(record.eventId, 'eventId', 255);
   const type = requiredString(record.type, 'type', 120);
-  if (
-    !PAYMENT_EVENT_TYPES.includes(type as (typeof PAYMENT_EVENT_TYPES)[number])
-  ) {
+  if (!PAYMENT_EVENT_TYPES.includes(type as NormalizedPaymentEvent['type'])) {
     throw new InvalidBillingInputException(
       'Loại webhook thanh toán không được hỗ trợ',
       'type',
     );
   }
-  const amountMinor = requiredIntegerString(record.amountMinor, 'amountMinor');
   const currency = requiredString(record.currency, 'currency', 3).toUpperCase();
-  if (!/^[A-Z]{3}$/u.test(currency)) {
+  if (!/^[A-Z]{3}$/u.test(currency))
     throw new InvalidBillingInputException(
       'Mã tiền tệ không hợp lệ',
       'currency',
     );
-  }
   const occurredAt = requiredString(record.occurredAt, 'occurredAt', 50);
-  if (Number.isNaN(Date.parse(occurredAt))) {
+  if (Number.isNaN(Date.parse(occurredAt)))
     throw new InvalidBillingInputException(
       'Thời gian sự kiện không hợp lệ',
       'occurredAt',
     );
-  }
   return {
-    eventId,
+    eventId: requiredString(record.eventId, 'eventId', 255),
     type: type as NormalizedPaymentEvent['type'],
     orderId: requiredString(record.orderId, 'orderId', 36),
     providerReference: requiredString(
@@ -154,20 +157,15 @@ function normalizeEvent(value: unknown): NormalizedPaymentEvent {
       'providerReference',
       160,
     ),
-    amountMinor,
+    amountMinor: requiredIntegerString(record.amountMinor, 'amountMinor'),
     currency,
     occurredAt: new Date(occurredAt).toISOString(),
   };
 }
 
-function requiredString(
-  value: unknown,
-  field: string,
-  maxLength: number,
-): string {
-  if (typeof value !== 'string' || !value.trim() || value.length > maxLength) {
+function requiredString(value: unknown, field: string, max: number): string {
+  if (typeof value !== 'string' || !value.trim() || value.length > max)
     throw new InvalidBillingInputException(`${field} không hợp lệ`, field);
-  }
   return value.trim();
 }
 
@@ -176,12 +174,11 @@ function requiredIntegerString(value: unknown, field: string): string {
     typeof value === 'number'
       ? String(value)
       : requiredString(value, field, 30);
-  if (!/^[1-9]\d*$/u.test(normalized)) {
+  if (!/^[1-9]\d*$/u.test(normalized))
     throw new InvalidBillingInputException(
       `${field} phải là số nguyên dương`,
       field,
     );
-  }
   return normalized;
 }
 

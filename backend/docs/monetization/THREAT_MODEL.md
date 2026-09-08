@@ -35,6 +35,7 @@ Scope: credit top-up, wallet, chapter purchase, entitlement, paid-content delive
 | Shared cache leaks content               | `private, no-store` for personalized content; cache key review            | Proxy/cache integration test                   |
 | Ledger tampering                         | Append-only application API, restricted DB role, audit and reconciliation | Permission and reconciliation checks           |
 | Privileged fraud                         | Dedicated permissions, mandatory reason, audit event, alerting            | Admin authorization tests                      |
+| Manual settlement without cryptographic proof | Dedicated settlement permission, mandatory reason, compare-and-swap status, unique ledger reference, and same-transaction audit | Claim/confirm/reject authorization and replay tests |
 | Secret exposure                          | Secrets only in deployment secret store; redact payload/log fields        | Log and configuration scan                     |
 | Worker retry credits twice               | Atomic state transition plus unique ledger reference                      | Crash-after-commit replay test                 |
 | Refund creates negative balance silently | Review state when granted credits were spent                              | Refund scenario tests                          |
@@ -95,3 +96,11 @@ Residual risks that require live evidence before widening rollout:
   deployed stack.
 - A reviewed production payment-provider adapter is still absent. The `hmac-sandbox`
   adapter is intentionally rejected in production.
+
+## Manual bank transfer exception
+
+`MANUAL_BANK_TRANSFER` is explicitly human-attested and is not represented as a
+provider-signed webhook. A user claim can only move `PENDING` to `AWAITING_REVIEW`;
+only an administrator with `payment.order.settle.admin` may settle it, with a
+10–500 character reason. Manual confirmation and webhook success share the same
+atomic settlement transaction and `payment-order:<id>` ledger idempotency key.

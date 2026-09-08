@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -11,12 +12,20 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
-import { PAYMENT_ORDER_STATUSES } from '../../../domain';
+import {
+  PAYMENT_ORDER_STATUSES,
+  PAYMENT_PROVIDER_KINDS,
+} from '../../../domain';
 
 export class CreatePaymentOrderRequest {
   @IsUUID('4')
   packageId!: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  providerConnectionId?: string;
 }
 
 export class ListPaymentOrdersRequest {
@@ -82,4 +91,95 @@ export class AdminPaymentOrderExplorerRequest extends ListPaymentOrdersRequest {
   @IsOptional()
   @IsDateString()
   to?: string;
+}
+
+export class TransferClaimRequest {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  referenceCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+}
+
+export class ManualPaymentReviewRequest {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class CreatePaymentProviderRequest {
+  @IsString()
+  @Matches(/^[a-z0-9][a-z0-9-]{1,49}$/u)
+  code!: string;
+
+  @IsIn(PAYMENT_PROVIDER_KINDS)
+  kind!: (typeof PAYMENT_PROVIDER_KINDS)[number];
+
+  @IsString()
+  @MaxLength(120)
+  displayName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsObject()
+  config!: Record<string, unknown>;
+
+  @Matches(/^[A-Za-z]{3}$/u)
+  currency!: string;
+
+  @IsBoolean()
+  enabled!: boolean;
+
+  @IsInt()
+  @Min(0)
+  sortOrder!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(10080)
+  orderTtlMinutes?: number;
+}
+
+export class UpdatePaymentProviderRequest {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
+  @IsObject()
+  config?: Record<string, unknown>;
+
+  @IsOptional()
+  @Matches(/^[A-Za-z]{3}$/u)
+  currency?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(10080)
+  orderTtlMinutes?: number;
 }

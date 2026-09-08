@@ -29,10 +29,7 @@ export class PaymentWebhookInboxWorker
   ) {}
 
   onApplicationBootstrap(): void {
-    if (
-      !this.monetization.paymentProviderEnabled ||
-      this.billing.providerMode === 'disabled'
-    ) {
+    if (!this.monetization.paymentProviderEnabled) {
       this.logger.log('Payment webhook polling disabled');
       return;
     }

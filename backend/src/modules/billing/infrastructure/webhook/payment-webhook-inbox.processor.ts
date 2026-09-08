@@ -17,6 +17,10 @@ import { TransactionalReceiptService } from '@/modules/notifications';
 
 import type { NormalizedPaymentEvent } from '../../application';
 import {
+  PAYMENT_SETTLEMENT_PORT,
+  type PaymentSettlementPort,
+} from '../../application';
+import {
   BillingResourceNotFoundException,
   PaymentOrderTransitionException,
 } from '../../domain';
@@ -35,6 +39,8 @@ export class PaymentWebhookInboxProcessor {
   constructor(
     private readonly prisma: PrismaService,
     private readonly postWalletTransaction: PostWalletTransactionCommandHandler,
+    @Inject(PAYMENT_SETTLEMENT_PORT)
+    private readonly settlement: PaymentSettlementPort,
     private readonly receipts: TransactionalReceiptService,
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
@@ -48,7 +54,7 @@ export class PaymentWebhookInboxProcessor {
     await this.recoverStaleClaims(now);
     const events = await this.prisma.inboundWebhookEvent.findMany({
       where: {
-        provider: `payment:${this.config.providerMode}`,
+        provider: { startsWith: 'payment:' },
         status: {
           in: [InboundWebhookStatus.PENDING, InboundWebhookStatus.FAILED],
         },
@@ -79,7 +85,10 @@ export class PaymentWebhookInboxProcessor {
         continue;
       }
       try {
-        await this.processEvent(toPaymentEvent(event.payload));
+        await this.processEvent(
+          event.provider.replace(/^payment:/u, ''),
+          toPaymentEvent(event.payload),
+        );
         const finalized = await this.prisma.inboundWebhookEvent.updateMany({
           where: {
             id: event.id,
@@ -103,7 +112,10 @@ export class PaymentWebhookInboxProcessor {
     return summary;
   }
 
-  private async processEvent(event: NormalizedPaymentEvent): Promise<void> {
+  private async processEvent(
+    providerCode: string,
+    event: NormalizedPaymentEvent,
+  ): Promise<void> {
     const order = await this.prisma.paymentOrder.findUnique({
       where: { id: event.orderId },
     });
@@ -113,7 +125,7 @@ export class PaymentWebhookInboxProcessor {
         event.orderId,
       );
     if (
-      order.provider !== this.config.providerMode ||
+      order.provider !== providerCode ||
       order.providerReference !== event.providerReference ||
       order.fiatAmountMinor.toString() !== event.amountMinor ||
       order.currency !== event.currency
@@ -159,45 +171,11 @@ export class PaymentWebhookInboxProcessor {
           PaymentOrderStatus.PAID,
         );
       }
-      const result = await this.postWalletTransaction.execute(
-        new PostWalletTransactionCommand(
-          order.userId,
-          'CREDIT',
-          'TOP_UP',
-          'CREDIT',
-          order.creditAmount,
-          'PAYMENT_CLEARING',
-          `payment-order:${order.id}`,
-          'payment_order',
-          order.id,
-          {
-            provider: order.provider,
-            providerReference: event.providerReference,
-          },
-        ),
-      );
-      await this.prisma.$transaction(async (tx) => {
-        const updated = await tx.paymentOrder.updateMany({
-          where: { id: order.id, status: PaymentOrderStatus.PENDING },
-          data: {
-            status: PaymentOrderStatus.PAID,
-            walletTransactionId: result.transaction.id,
-            settledAt: new Date(event.occurredAt),
-            failureCode: null,
-          },
-        });
-        if (updated.count !== 1) return;
-        await this.receipts.enqueue(tx, {
-          userId: order.userId,
-          dedupeKey: `payment-order-paid:${order.id}`,
-          type: 'credit_top_up',
-          title: 'Nạp Credit thành công',
-          body: `${order.creditAmount.toString()} Credit đã được cộng vào ví của bạn.`,
-          tag: 'Nạp Credit',
-          transactionId: result.transaction.id,
-          amountCredits: order.creditAmount,
-          data: { paymentOrderId: order.id, provider: order.provider },
-        });
+      await this.settlement.settleSucceeded({
+        orderId: order.id,
+        providerReference: event.providerReference,
+        occurredAt: new Date(event.occurredAt),
+        source: 'webhook',
       });
       return;
     }
@@ -281,7 +259,7 @@ export class PaymentWebhookInboxProcessor {
     const staleBefore = new Date(now.getTime() - 5 * 60_000);
     await this.prisma.inboundWebhookEvent.updateMany({
       where: {
-        provider: `payment:${this.config.providerMode}`,
+        provider: { startsWith: 'payment:' },
         status: InboundWebhookStatus.PROCESSING,
         processingStartedAt: { lt: staleBefore },
         attempts: { lt: this.config.webhookMaxAttempts },

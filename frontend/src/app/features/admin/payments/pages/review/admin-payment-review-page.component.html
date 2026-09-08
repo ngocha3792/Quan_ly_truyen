@@ -1,0 +1,59 @@
+<header>
+  <div>
+    <p>MANUAL REVIEW</p>
+    <h1>Đơn chuyển khoản chờ xác nhận</h1>
+  </div>
+  <a href="/admin/settings/payments">Cấu hình ngân hàng</a>
+</header>
+@if (store.error(); as error) {
+  <p class="error">{{ error }}</p>
+}
+@if (store.loading()) {
+  <p>Đang tải…</p>
+}
+
+<section class="orders">
+  @for (order of store.orders(); track order.id) {
+    <article>
+      <div>
+        <strong>{{ order.userDisplayName }}</strong
+        ><span>{{ order.userEmail }}</span
+        ><span>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div>
+        <strong>{{ order.creditAmount | number }} Credit</strong
+        ><span>{{ order.fiatAmountMinor | number }} {{ order.currency }}</span
+        ><span>{{ order.providerReference }}</span>
+      </div>
+      <div>
+        <span>Mã giao dịch: {{ claim(order, 'referenceCode') }}</span
+        ><span>Ghi chú: {{ claim(order, 'note') }}</span>
+      </div>
+      <div class="actions">
+        <button type="button" (click)="open(order, 'confirm')">Xác nhận</button
+        ><button type="button" class="danger" (click)="open(order, 'reject')">Từ chối</button>
+      </div>
+    </article>
+  } @empty {
+    <p>Không có đơn nào đang chờ.</p>
+  }
+</section>
+
+@if (selected(); as order) {
+  <section class="review-box">
+    <h2>{{ action() === 'confirm' ? 'Xác nhận cộng Credit' : 'Từ chối đơn' }}</h2>
+    <p>{{ order.userEmail }} · {{ order.creditAmount }} Credit</p>
+    <label
+      >Lý do (10–500 ký tự)<textarea
+        maxlength="500"
+        [value]="reason()"
+        (input)="updateReason($event)"
+      ></textarea>
+    </label>
+    <div class="actions">
+      <button type="button" [disabled]="reason().trim().length < 10" (click)="submit()">
+        Xác nhận thao tác</button
+      ><button type="button" class="secondary" (click)="selected.set(null)">Huỷ</button>
+    </div>
+  </section>
+}

@@ -141,6 +141,11 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'payment_orders_status_expiry_idx',
 
   'payment_orders_provider_status_updated_idx',
+  'payment_orders_provider_connection_id_idx',
+  'payment_orders_status_review_requested_idx',
+  'payment_provider_connections_code_key',
+  'payment_provider_connections_enabled_sort_idx',
+  'payment_provider_connections_kind_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [
@@ -275,6 +280,10 @@ export const EXPECTED_PRODUCTION_CONSTRAINTS = [
   'payment_orders_expiry_check',
 
   'payment_orders_status_shape_check',
+  'payment_provider_connections_code_check',
+  'payment_provider_connections_name_check',
+  'payment_provider_connections_currency_check',
+  'payment_provider_connections_ttl_check',
 ] as const;
 
 export const EXPECTED_PRODUCTION_ROLE_CODES = [
