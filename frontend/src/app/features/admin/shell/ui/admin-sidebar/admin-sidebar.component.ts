@@ -85,7 +85,6 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     route: '/admin/settings/payments',
     icon: 'wallet',
     permission: AUTH_PERMISSIONS.PAYMENT_PROVIDER_MANAGE_ADMIN,
-    requiresMonetization: true,
   },
   {
     label: 'Duyệt chuyển khoản',

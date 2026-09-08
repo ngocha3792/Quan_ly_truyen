@@ -7,21 +7,18 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { PermissionCode } from '@/common/enums';
 
 import { ManagePaymentProvidersCommandHandler } from '../../../application';
-import { BillingOperationsFeatureGuard } from '../guards';
 import {
   CreatePaymentProviderRequest,
   UpdatePaymentProviderRequest,
 } from '../requests';
 
 @Controller('admin/billing/payment-providers')
-@UseGuards(BillingOperationsFeatureGuard)
 @RequirePermissions(PermissionCode.PAYMENT_PROVIDER_MANAGE_ADMIN)
 export class AdminPaymentProvidersController {
   constructor(
