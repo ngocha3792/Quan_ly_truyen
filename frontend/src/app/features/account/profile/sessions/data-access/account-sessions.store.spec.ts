@@ -170,6 +170,6 @@ function session(
 
     createdAt: '2026-08-08T11:00:00.000Z',
 
-    expiresAt: '2026-09-08T11:00:00.000Z',
+    expiresAt: '2099-09-08T11:00:00.000Z',
   };
 }
