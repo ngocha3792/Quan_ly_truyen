@@ -20,7 +20,15 @@ export class TextSelectionService {
     const startBlockId = startBlock?.dataset['blockId'];
     const endBlockId = endBlock?.dataset['blockId'];
     const quoteText = selection.toString();
-    if (!startBlock || !endBlock || !startBlockId || !endBlockId || quoteText.trim().length < 10 || quoteText.trim().length > 2000) return this.clear();
+    if (
+      !startBlock ||
+      !endBlock ||
+      !startBlockId ||
+      !endBlockId ||
+      quoteText.trim().length < 10 ||
+      quoteText.trim().length > 2000
+    )
+      return this.clear();
     const captured: CapturedTextSelection = {
       startBlockId,
       startOffset: offsetWithin(startBlock, range.startContainer, range.startOffset),
@@ -40,7 +48,7 @@ export class TextSelectionService {
 }
 
 function closestBlock(node: Node, container: HTMLElement): HTMLElement | null {
-  const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+  const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
   const block = element?.closest<HTMLElement>('[data-block-id]') ?? null;
   return block && container.contains(block) ? block : null;
 }

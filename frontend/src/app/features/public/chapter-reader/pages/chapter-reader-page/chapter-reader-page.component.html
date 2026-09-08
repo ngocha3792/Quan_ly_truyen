@@ -62,10 +62,24 @@
               <div class="chapter-content-block">
                 <p
                   [attr.data-block-id]="block.id"
-                  [class.chapter-separator]="block.type === 'horizontal_rule' || block.text === '---'"
-                >{{ block.text }}</p>
-                @if (inline.enabled && block.id && inline.count(view.comments, block.id); as count) {
-                  <button class="anchor-comment-bubble" type="button" [attr.aria-label]="count + ' bình luận ở đoạn này'" (click)="inline.openBlock(block.id)">{{ count }}</button>
+                  [class.chapter-separator]="
+                    block.type === 'horizontal_rule' || block.text === '---'
+                  "
+                >
+                  {{ block.text }}
+                </p>
+                @if (
+                  inline.enabled && block.id && inline.count(view.comments, block.id);
+                  as count
+                ) {
+                  <button
+                    class="anchor-comment-bubble"
+                    type="button"
+                    [attr.aria-label]="count + ' bình luận ở đoạn này'"
+                    (click)="inline.openBlock(block.id)"
+                  >
+                    {{ count }}
+                  </button>
                 }
               </div>
             }
@@ -74,7 +88,11 @@
           @if (comicDeliveryEnabled && view.chapter.media.length) {
             <div class="chapter-comic-media">
               @for (media of view.chapter.media; track media.mediaAssetId) {
-                <app-chapter-image-slices [media]="media" [comments]="view.comments" (regionCommentCreate)="createComicRegionComment(media.mediaAssetId, $event)" />
+                <app-chapter-image-slices
+                  [media]="media"
+                  [comments]="view.comments"
+                  (regionCommentCreate)="createComicRegionComment(media.mediaAssetId, $event)"
+                />
               }
             </div>
           }

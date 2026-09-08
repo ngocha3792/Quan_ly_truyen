@@ -9,7 +9,11 @@ import {
   output,
   signal,
 } from '@angular/core';
-import type { ChapterComment, ChapterComicMedia, ComicCommentRegion } from '../../domain/chapter-reader.models';
+import type {
+  ChapterComment,
+  ChapterComicMedia,
+  ComicCommentRegion,
+} from '../../domain/chapter-reader.models';
 
 @Component({
   selector: 'app-chapter-image-slices',
@@ -66,7 +70,9 @@ export class ChapterImageSlicesComponent implements OnDestroy {
   }
 
   protected regionComments(): readonly ChapterComment[] {
-    return this.comments().filter((comment) => comment.region?.mediaAssetId === this.media().mediaAssetId);
+    return this.comments().filter(
+      (comment) => comment.region?.mediaAssetId === this.media().mediaAssetId,
+    );
   }
 
   private observeSlices(): void {

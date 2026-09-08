@@ -111,7 +111,9 @@ describe('ReaderEngagementApiClient', () => {
       endOffset: 20,
       quoteText: 'đoạn được lựa chọn',
     };
-    const promise = firstValueFrom(api.createAnchoredChapterComment('story-1', 'chapter-1', '  Ý kiến  ', anchor));
+    const promise = firstValueFrom(
+      api.createAnchoredChapterComment('story-1', 'chapter-1', '  Ý kiến  ', anchor),
+    );
     const request = http.expectOne('/api/v1/stories/story-1/chapters/chapter-1/anchored-comments');
     expect(request.request.method).toBe('POST');
     expect(request.request.headers.get('x-idempotency-key')).toBeTruthy();
@@ -151,7 +153,7 @@ function comment(id: string): StoryCommentApiItem {
     editedAt: null,
     createdAt: '2026-08-15T12:00:00.000Z',
     updatedAt: '2026-08-15T12:00:00.000Z',
-  anchor: null,
-  region: null,
+    anchor: null,
+    region: null,
   };
 }

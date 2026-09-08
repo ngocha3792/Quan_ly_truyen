@@ -8,7 +8,7 @@ import type {
   CommentReportReasonApi,
 } from '../../../../core/http/reader-engagement-api.model';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
-import { ChapterComment, ChapterReaderView, TextSelectionAnchor } from '../domain/chapter-reader.models';
+import { ChapterComment, ChapterReaderView } from '../domain/chapter-reader.models';
 import {
   applyOptimisticReaction,
   findCommentInTree,
@@ -102,19 +102,9 @@ export class ChapterReaderStore {
       'Không thể gửi bình luận.',
     );
   }
-  addAnchoredComment(body: string, anchor: TextSelectionAnchor): void {
-    const view = this.viewState();
-    const normalized = body.trim();
-    if (!view || !normalized || this.commentPending()) return;
-    const request = this.repository.createAnchoredComment(view.story.id, view.chapter.id, normalized, anchor);
-    this.prependComment(request, 'Không thể gửi bình luận theo đoạn.');
-  }
-  addComicRegionComment(mediaAssetId: string, body: string, region: import('../domain/chapter-reader.models').ComicCommentRegion): void {
-    const view = this.viewState();
-    const normalized = body.trim();
-    if (!view || !normalized || this.commentPending()) return;
-    const request = this.repository.createComicRegionComment(view.story.id, view.chapter.id, mediaAssetId, normalized, region);
-    this.prependComment(request, 'Không thể gửi bình luận trên ảnh.');
+  prependCreatedComment(request$: Observable<ChapterComment>, fallbackMessage: string): void {
+    if (this.commentPending()) return;
+    this.prependComment(request$, fallbackMessage);
   }
   editComment(commentId: string, body: string): void {
     const normalized = body.trim();
@@ -347,11 +337,17 @@ export class ChapterReaderStore {
     this.commentPending.set(true);
     request$
       .pipe(
-        tap((comment) => this.viewState.update((current) => current ? {
-          ...current,
-          comments: [comment, ...current.comments],
-          totalComments: current.totalComments + 1,
-        } : current)),
+        tap((comment) =>
+          this.viewState.update((current) =>
+            current
+              ? {
+                  ...current,
+                  comments: [comment, ...current.comments],
+                  totalComments: current.totalComments + 1,
+                }
+              : current,
+          ),
+        ),
         catchError((error) => {
           this.commentMessage.set(getApiErrorMessage(error, fallbackMessage));
           return EMPTY;

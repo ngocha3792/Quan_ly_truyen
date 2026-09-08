@@ -70,7 +70,8 @@ export class ChapterReaderPageComponent implements OnInit {
   private readonly seo = inject(SeoService);
   private readonly analytics = inject(ReaderAnalyticsService);
   protected readonly inline = inject(InlineCommentsController);
-  protected readonly comicDeliveryEnabled = inject(APP_RUNTIME_CONFIG).features.comicDeliveryEnabled;
+  protected readonly comicDeliveryEnabled =
+    inject(APP_RUNTIME_CONFIG).features.comicDeliveryEnabled;
   private trackedChapterId: string | null = null;
   private stopAnalyticsSession: (() => void) | null = null;
 
@@ -145,14 +146,21 @@ export class ChapterReaderPageComponent implements OnInit {
     if (this.chapterContent) this.inline.capture(this.chapterContent.nativeElement, event.target);
   }
 
-  protected createAnchoredComment(event: { readonly body: string; readonly anchor: TextSelectionAnchor }): void {
-    this.runAuthenticated(() => this.store.addAnchoredComment(event.body, event.anchor));
+  protected createAnchoredComment(event: {
+    readonly body: string;
+    readonly anchor: TextSelectionAnchor;
+  }): void {
+    this.runAuthenticated(() => this.inline.createAnchoredComment(event.body, event.anchor));
   }
 
-  protected createComicRegionComment(mediaAssetId: string, event: { readonly body: string; readonly region: ComicCommentRegion }): void {
-    this.runAuthenticated(() => this.store.addComicRegionComment(mediaAssetId, event.body, event.region));
+  protected createComicRegionComment(
+    mediaAssetId: string,
+    event: { readonly body: string; readonly region: ComicCommentRegion },
+  ): void {
+    this.runAuthenticated(() =>
+      this.inline.createComicRegionComment(mediaAssetId, event.body, event.region),
+    );
   }
-
 
   protected addComment(body: string): void {
     this.runAuthenticated(() => this.store.addComment(body));

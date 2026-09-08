@@ -25,9 +25,7 @@ export class ReaderEngagementApiClient {
   private readonly config = inject(APP_RUNTIME_CONFIG);
   private readonly commentRetryKeys = new Map<string, string>();
 
-  listLibrary(): Observable<readonly LibraryEntryApiItem[]> {
-    return this.get<readonly LibraryEntryApiItem[]>('/library');
-  }
+  readonly listLibrary = () => this.get<readonly LibraryEntryApiItem[]>('/library');
 
   upsertLibrary(
     storyId: string,
@@ -167,7 +165,13 @@ export class ReaderEngagementApiClient {
     const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/anchored-comments`;
     return this.postCommentRequest(path, { body: body.trim(), anchor });
   }
-  createComicRegionComment(storyId: string, chapterId: string, mediaAssetId: string, body: string, region: import('../../features/public/chapter-reader/domain/chapter-reader.models').ComicCommentRegion): Observable<StoryCommentApiItem> {
+  createComicRegionComment(
+    storyId: string,
+    chapterId: string,
+    mediaAssetId: string,
+    body: string,
+    region: import('../../features/public/chapter-reader/domain/chapter-reader.models').ComicCommentRegion,
+  ): Observable<StoryCommentApiItem> {
     const path = `/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/media/${encodeURIComponent(mediaAssetId)}/region-comments`;
     return this.postCommentRequest(path, { body: body.trim(), region });
   }
@@ -271,23 +275,18 @@ export class ReaderEngagementApiClient {
       .pipe(map((response) => response.data));
   }
 
-  private postComment(path: string, body: string): Observable<StoryCommentApiItem> {
+  private postComment(path: string, body: string) {
     return this.postCommentRequest(path, { body: body.trim() });
   }
 
-  private postCommentRequest(
-    path: string,
-    payload: Readonly<Record<string, unknown>>,
-  ): Observable<StoryCommentApiItem> {
+  private postCommentRequest(path: string, payload: Readonly<Record<string, unknown>>) {
     const identity = JSON.stringify({ path, payload });
     const key = this.commentRetryKeys.get(identity) ?? crypto.randomUUID();
     this.commentRetryKeys.set(identity, key);
     return this.http
-      .post<ApiSuccessEnvelope<StoryCommentApiItem>>(
-        `${this.config.apiBaseUrl}${path}`,
-        payload,
-        { headers: new HttpHeaders({ 'x-idempotency-key': key }) },
-      )
+      .post<ApiSuccessEnvelope<StoryCommentApiItem>>(`${this.config.apiBaseUrl}${path}`, payload, {
+        headers: new HttpHeaders({ 'x-idempotency-key': key }),
+      })
       .pipe(
         map((response) => response.data),
         tap(() => {

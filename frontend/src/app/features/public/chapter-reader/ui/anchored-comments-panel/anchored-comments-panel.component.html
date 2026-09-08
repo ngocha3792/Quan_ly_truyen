@@ -19,7 +19,10 @@
   }
   <section class="threads">
     @for (comment of filteredComments(); track comment.id) {
-      <article><strong>{{ comment.author.name }}</strong><p>{{ comment.content }}</p></article>
+      <article>
+        <strong>{{ comment.author.name }}</strong>
+        <p>{{ comment.content }}</p>
+      </article>
     } @empty {
       <p class="empty">Chưa có bình luận nào ở đoạn này.</p>
     }

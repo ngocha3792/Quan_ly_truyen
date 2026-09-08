@@ -14,9 +14,14 @@ export class AnchoredCommentsPanelComponent {
   readonly comments = input.required<readonly ChapterComment[]>();
   readonly pending = input(false);
   readonly panelClose = output<void>();
-  readonly commentCreate = output<{ readonly body: string; readonly anchor: TextSelectionAnchor }>();
+  readonly commentCreate = output<{
+    readonly body: string;
+    readonly anchor: TextSelectionAnchor;
+  }>();
   readonly draft = signal('');
-  readonly filteredComments = computed(() => this.comments().filter((comment) => comment.anchor?.startBlockId === this.blockId()));
+  readonly filteredComments = computed(() =>
+    this.comments().filter((comment) => comment.anchor?.startBlockId === this.blockId()),
+  );
 
   submitComment(event: Event): void {
     event.preventDefault();

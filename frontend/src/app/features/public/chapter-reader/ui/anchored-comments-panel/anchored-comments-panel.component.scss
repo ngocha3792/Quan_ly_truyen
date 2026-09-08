@@ -10,12 +10,44 @@
   box-shadow: -8px 0 30px #0002;
 }
 
-header { display: flex; align-items: center; justify-content: space-between; }
-header button { border: 0; background: none; font-size: 30px; cursor: pointer; }
-blockquote { margin: 12px 0; padding: 12px 14px; border-left: 4px solid #ea580c; background: #fff7ed; white-space: pre-wrap; }
-form { display: grid; gap: 8px; }
-textarea { min-height: 100px; resize: vertical; padding: 10px; }
-form button { justify-self: end; padding: 8px 16px; }
-article { padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
-article p { white-space: pre-wrap; }
-.empty { color: #6b7280; }
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header button {
+  border: 0;
+  background: none;
+  font-size: 30px;
+  cursor: pointer;
+}
+blockquote {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-left: 4px solid #ea580c;
+  background: #fff7ed;
+  white-space: pre-wrap;
+}
+form {
+  display: grid;
+  gap: 8px;
+}
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  padding: 10px;
+}
+form button {
+  justify-self: end;
+  padding: 8px 16px;
+}
+article {
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+article p {
+  white-space: pre-wrap;
+}
+.empty {
+  color: #6b7280;
+}
