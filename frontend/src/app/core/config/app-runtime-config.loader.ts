@@ -51,7 +51,10 @@ export async function loadAppRuntimeConfig(
 
 function browserDependencies(): RuntimeConfigLoaderDependencies {
   return {
-    fetch,
+    // Window.fetch is receiver-sensitive in Chromium. Passing the bare function
+    // as an object method makes `this` point at the dependency object and throws
+    // "Illegal invocation" before the request leaves the browser.
+    fetch: (input, init) => globalThis.fetch(input, init),
     storage: typeof localStorage === 'undefined' ? null : localStorage,
     now: Date.now,
   };

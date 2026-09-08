@@ -3,6 +3,22 @@ import { loadAppRuntimeConfig, RuntimeConfigLoaderDependencies } from './app-run
 const NOW = Date.parse('2026-09-09T00:00:00.000Z');
 
 describe('loadAppRuntimeConfig offline fallback', () => {
+  it('calls the browser fetch API with its required global receiver', async () => {
+    const receiverAwareFetch = function (this: typeof globalThis): Promise<Response> {
+      expect(this).toBe(globalThis);
+      return successfulFetch()('');
+    } as typeof fetch;
+    vi.stubGlobal('fetch', receiverAwareFetch);
+
+    try {
+      await expect(loadAppRuntimeConfig()).resolves.toMatchObject({
+        features: { offlineReadingEnabled: true },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('stores only versioned public runtime config after an online response', async () => {
     const storage = new MemoryStorage();
     const config = await loadAppRuntimeConfig(dependencies(storage, successfulFetch()));
