@@ -151,7 +151,7 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'reading_progress_sync_events_server_sequence_key',
 
-  'reading_progress_sync_events_user_id_story_id_server_sequence_idx',
+  'reading_progress_sync_user_story_sequence_idx',
 
   'reading_progress_user_id_device_id_idx',
 ] as const;

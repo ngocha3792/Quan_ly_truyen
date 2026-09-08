@@ -1809,7 +1809,7 @@ model ReadingProgressSyncEvent {
 
   @@unique([userId, clientEventId])
   @@unique([serverSequence])
-  @@index([userId, storyId, serverSequence])
+  @@index([userId, storyId, serverSequence], map: "reading_progress_sync_user_story_sequence_idx")
   @@map("reading_progress_sync_events")
 }
 
