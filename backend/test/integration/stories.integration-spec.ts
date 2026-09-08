@@ -20,6 +20,7 @@ import { PrismaRatingPersistence } from '@/modules/ratings/infrastructure';
 import { PrismaReadingHistoryPersistence } from '@/modules/reading-history/infrastructure';
 import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
 import { PrismaCommentPersistence } from '@/modules/comments/infrastructure';
+import { MEDIA_URL_BUILDER } from '@/modules/media';
 import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
 
 describe('Stories PostgreSQL race and ownership invariants', () => {
@@ -46,6 +47,12 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         PrismaLibraryPersistence,
         PrismaRatingPersistence,
         PrismaReadingHistoryPersistence,
+        {
+          provide: MEDIA_URL_BUILDER,
+          useValue: {
+            build: jest.fn(() => 'https://media.test/chapter-image'),
+          },
+        },
       ],
     }).compile();
 
