@@ -16,5 +16,6 @@ export class UpdateAuthorChapterCommand {
 
     readonly requestId: string | undefined,
     readonly expectedVersion: number | undefined = undefined,
+    readonly saveType: 'AUTOSAVE' | 'MANUAL_SAVE' = 'MANUAL_SAVE',
   ) {}
 }

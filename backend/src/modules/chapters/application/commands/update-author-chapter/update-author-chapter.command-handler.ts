@@ -46,6 +46,8 @@ export class UpdateAuthorChapterCommandHandler {
       chapterId: command.chapterId,
       title,
       content,
+      expectedVersion: command.expectedVersion,
+      saveType: command.saveType,
       wordCount: content === undefined ? undefined : countChapterWords(content),
       updatedAt: new Date(),
       audit: {

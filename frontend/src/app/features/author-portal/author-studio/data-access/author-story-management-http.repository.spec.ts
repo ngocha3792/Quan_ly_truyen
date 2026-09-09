@@ -119,11 +119,64 @@ describe('AuthorStoryManagementHttpRepository chapter scheduling', () => {
     await expect(resultPromise).resolves.toEqual(version);
   });
 
+  it('autosaves through its endpoint with the expected version', async () => {
+    const chapter = scheduledChapter();
+    const input = {
+      title: chapter.title,
+      content: chapter.content,
+      expectedVersion: chapter.version,
+    };
+    const result = firstValueFrom(repository.autosaveChapter(chapter.storyId, chapter.id, input));
+    const request = http.expectOne(
+      `/api/v1/author/stories/${chapter.storyId}/chapters/${chapter.id}/autosave`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(input);
+    request.flush(successEnvelope(chapter));
+    await expect(result).resolves.toEqual(chapter);
+  });
+
+  it('opts into autosave history without changing the default filter', async () => {
+    const chapter = scheduledChapter();
+    const result = firstValueFrom(
+      repository.listChapterVersions(chapter.storyId, chapter.id, 2, 10, true),
+    );
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url.endsWith('/versions') && candidate.params.get('includeAutosaves') === 'true',
+    );
+    request.flush(successEnvelope({ items: [], total: 0, page: 2, pageSize: 10 }));
+    await result;
+  });
+
+  it('requests a server diff between two versions', async () => {
+    const chapter = scheduledChapter();
+    const result = firstValueFrom(
+      repository.getChapterVersionDiff(chapter.storyId, chapter.id, 1, 4),
+    );
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url.endsWith('/versions/diff') &&
+        candidate.params.get('from') === '1' &&
+        candidate.params.get('to') === '4',
+    );
+    request.flush(
+      successEnvelope({
+        fromVersion: 1,
+        toVersion: 4,
+        changes: [],
+        titleChanges: [],
+        stats: { added: 0, removed: 0, unchanged: 0 },
+      }),
+    );
+    await expect(result).resolves.toMatchObject({ fromVersion: 1, toVersion: 4 });
+  });
+
   it('restores a version through an idempotent POST', async () => {
     const chapter = scheduledChapter();
     const restored = { ...chapter, status: 'DRAFT' as const, version: 2, scheduledAt: null };
     const resultPromise = firstValueFrom(
-      repository.restoreChapterVersion(chapter.storyId, chapter.id, 1),
+      repository.restoreChapterVersion(chapter.storyId, chapter.id, 1, chapter.version),
     );
     const request = http.expectOne(
       `/api/v1/author/stories/${chapter.storyId}/chapters/${chapter.id}/versions/1/restore`,
@@ -131,6 +184,7 @@ describe('AuthorStoryManagementHttpRepository chapter scheduling', () => {
 
     expect(request.request.method).toBe('POST');
     expect(request.request.headers.get('x-idempotency-key')).toBeTruthy();
+    expect(request.request.body).toEqual({ expectedVersion: chapter.version });
     request.flush(successEnvelope(restored));
     await expect(resultPromise).resolves.toEqual(restored);
   });

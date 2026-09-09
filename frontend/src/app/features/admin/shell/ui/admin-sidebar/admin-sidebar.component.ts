@@ -25,6 +25,12 @@ interface AdminNavigationItem extends ShellNavigationItem {
 
 const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
   {
+    label: 'Duyệt chương',
+    route: '/admin/chapter-reviews',
+    icon: 'chapter',
+    permission: AUTH_PERMISSIONS.CHAPTER_MANAGE_ANY,
+  },
+  {
     label: 'Người dùng',
     route: '/admin/users',
     icon: 'users',

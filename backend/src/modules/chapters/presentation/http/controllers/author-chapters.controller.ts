@@ -25,6 +25,9 @@ import {
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
 import { ActiveAuthorGuard } from '@/modules/authors';
+import { ChapterExpectedVersionRequest } from '../requests/chapter-expected-version.request';
+import { ChapterVersionDiffRequest } from '../requests/chapter-version-diff.request';
+import { GetVersionDiffQueryHandler } from '../../../application/queries/get-version-diff/get-version-diff.query-handler';
 
 import {
   CreateAuthorChapterCommand,
@@ -68,9 +71,9 @@ import {
 } from '../responses';
 
 @Controller('author/stories/:storyId/chapters')
-@UseGuards(ActiveAuthorGuard)
 export class AuthorChaptersController {
   constructor(
+    private readonly versionDiff: GetVersionDiffQueryHandler,
     private readonly createChapter: CreateAuthorChapterCommandHandler,
     private readonly updateChapter: UpdateAuthorChapterCommandHandler,
     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
@@ -85,7 +88,7 @@ export class AuthorChaptersController {
   ) {}
 
   @Get(':chapterId/versions')
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async listVersions(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -99,14 +102,32 @@ export class AuthorChaptersController {
         chapterId,
         request.page,
         request.pageSize,
+        request.includeAutosaves,
       ),
     );
 
     return toChapterVersionPageResponse(result);
   }
 
+  @Get(':chapterId/versions/diff')
+  @RequirePermissions(PermissionCode.STORY_READ)
+  diffVersions(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Query() request: ChapterVersionDiffRequest,
+  ) {
+    return this.versionDiff.execute(
+      userId,
+      storyId,
+      chapterId,
+      request.from,
+      request.to,
+    );
+  }
+
   @Get(':chapterId/versions/:version')
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async findVersion(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -123,12 +144,13 @@ export class AuthorChaptersController {
   @Post(':chapterId/versions/:version/restore')
   @HttpCode(HttpStatus.OK)
   @Idempotent({ required: true, ttlSeconds: 86_400 })
-  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async restoreVersion(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
     @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
     @Param('version', ParseIntPipe) version: number,
+    @Body() request: ChapterExpectedVersionRequest,
     @ClientIp() ipAddress: string | undefined,
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,
@@ -142,6 +164,7 @@ export class AuthorChaptersController {
         ipAddress,
         userAgent,
         requestId,
+        request.expectedVersion,
       ),
     );
 
@@ -149,7 +172,7 @@ export class AuthorChaptersController {
   }
 
   @Get()
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async list(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -162,7 +185,7 @@ export class AuthorChaptersController {
   }
 
   @Get(':chapterId')
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async findOne(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -176,6 +199,7 @@ export class AuthorChaptersController {
   }
 
   @Post()
+  @UseGuards(ActiveAuthorGuard)
   @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.CHAPTER_CREATE)
   async create(
@@ -202,6 +226,7 @@ export class AuthorChaptersController {
   }
 
   @Post(':chapterId/publish')
+  @UseGuards(ActiveAuthorGuard)
   @HttpCode(HttpStatus.OK)
   @Idempotent({ required: true, ttlSeconds: 86_400 })
   @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
@@ -228,6 +253,7 @@ export class AuthorChaptersController {
   }
 
   @Put(':chapterId/schedule')
+  @UseGuards(ActiveAuthorGuard)
   @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
   async schedule(
     @CurrentUserId() userId: string | undefined,
@@ -254,6 +280,7 @@ export class AuthorChaptersController {
   }
 
   @Delete(':chapterId/schedule')
+  @UseGuards(ActiveAuthorGuard)
   @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
   async cancelSchedule(
     @CurrentUserId() userId: string | undefined,
@@ -278,7 +305,7 @@ export class AuthorChaptersController {
   }
 
   @Patch(':chapterId')
-  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async update(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -306,6 +333,7 @@ export class AuthorChaptersController {
   }
 
   @Delete(':chapterId')
+  @UseGuards(ActiveAuthorGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PermissionCode.CHAPTER_DELETE_OWN)
   async remove(

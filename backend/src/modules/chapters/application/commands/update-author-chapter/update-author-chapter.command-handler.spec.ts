@@ -3,6 +3,7 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import {
   ChapterDraftOnlyMutationException,
   ChapterNotFoundException,
+  ChapterVersionConflictException,
 } from '../../../domain';
 import { UpdateAuthorChapterCommand } from './update-author-chapter.command';
 import { UpdateAuthorChapterCommandHandler } from './update-author-chapter.command-handler';
@@ -65,6 +66,8 @@ describe('UpdateAuthorChapterCommandHandler', () => {
       title: 'Tiêu đề mới',
       content: 'Một hai ba',
       wordCount: 3,
+      expectedVersion: undefined,
+      saveType: 'MANUAL_SAVE',
       updatedAt: expect.any(Date) as unknown,
       audit: {
         ipAddress: '127.0.0.1',
@@ -110,6 +113,32 @@ describe('UpdateAuthorChapterCommandHandler', () => {
     await expect(
       handler.execute(createCommand(USER_ID)),
     ).rejects.toBeInstanceOf(ChapterDraftOnlyMutationException);
+  });
+
+  it('passes the expected version and autosave type through to the atomic writer', async () => {
+    persistence.updateDraft.mockResolvedValue({
+      status: 'version_conflict',
+      currentVersion: 4,
+    });
+    await expect(
+      handler.execute(
+        new UpdateAuthorChapterCommand(
+          USER_ID,
+          STORY_ID,
+          CHAPTER_ID,
+          'Mới',
+          'Nội dung',
+          undefined,
+          undefined,
+          undefined,
+          3,
+          'AUTOSAVE',
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ChapterVersionConflictException);
+    expect(persistence.updateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedVersion: 3, saveType: 'AUTOSAVE' }),
+    );
   });
 
   it('ẩn chapter không tồn tại, story sai hoặc không thuộc author bằng not found', async () => {

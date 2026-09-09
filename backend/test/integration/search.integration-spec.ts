@@ -19,6 +19,9 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
   let storyId: string;
   let chapterId: string;
   const suffix = randomUUID();
+  // Do not reuse the author's UUID: trigram search can legitimately match
+  // that public penName even after the private body has been removed.
+  const privateContent = `privatechaptercontent${randomUUID().replace(/-/gu, '')}`;
   const indexName = `test_search_${suffix.replace(/-/gu, '')}`;
   const input: SearchInput = {
     q: 'dau pha',
@@ -71,7 +74,7 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
         number: 1,
         title: 'Khởi đầu',
         slug: 'khoi-dau',
-        content: `secretonly${suffix.replace(/-/gu, '')}`,
+        content: privateContent,
         status: 'PUBLISHED',
         publishedAt: new Date(),
       },
@@ -144,6 +147,16 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
 
   it('never indexes or searches a paid body, including a free-to-paid transition', async () => {
     const before = (await source.documents([`chapter_${chapterId}`]))[0];
+    expect(
+      (
+        await source.fallback({
+          ...input,
+          kind: 'chapter',
+          storyId,
+          q: privateContent,
+        })
+      ).total,
+    ).toBe(1);
     const price = await prisma.monetizationPriceBand.findFirstOrThrow({
       where: { isActive: true },
     });
@@ -172,6 +185,16 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
       ).total,
     ).toBe(0);
     const hits = await source.toHits([after], 'xem truoc');
+    expect(
+      (
+        await source.fallback({
+          ...input,
+          kind: 'chapter',
+          storyId,
+          q: 'xem truoc',
+        })
+      ).total,
+    ).toBe(1);
     expect(hits[0]?.accessState).toBe('LOCKED');
     expect(JSON.stringify(hits)).not.toContain(before.content);
   });
@@ -271,7 +294,7 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
         const paid = await adapter.search(realIndex, {
           ...input,
           kind: 'chapter',
-          q: `secretonly${suffix.replace(/-/gu, '')}`,
+          q: privateContent,
         });
         expect(paid.total).toBe(0);
         await adapter.remove(realIndex, [`story_${storyId}`]);

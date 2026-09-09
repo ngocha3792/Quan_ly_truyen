@@ -1,10 +1,9 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY, finalize, forkJoin, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
-  AuthorChapterDraftInput,
   AuthorChapterMonetization,
   AuthorChapterVersion,
   AuthorChapterVersionSummary,
@@ -14,6 +13,7 @@ import {
   MonetizationPriceBand,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
+import { ChapterVersionDiff } from '../domain/chapter-editing.models';
 
 @Injectable()
 export class AuthorChapterEditorStore {
@@ -23,20 +23,19 @@ export class AuthorChapterEditorStore {
   readonly story = signal<AuthorManagedStory | null>(null);
   readonly chapter = signal<AuthorManagedChapter | null>(null);
   readonly loading = signal(false);
-  readonly saving = signal(false);
   readonly uploadingImage = signal(false);
   readonly history = signal<readonly AuthorChapterVersionSummary[]>([]);
   readonly historyTotal = signal(0);
   readonly selectedVersion = signal<AuthorChapterVersion | null>(null);
   readonly loadingHistory = signal(false);
   readonly loadingVersion = signal(false);
-  readonly restoringVersion = signal<number | null>(null);
   readonly success = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly monetization = signal<AuthorChapterMonetization | null>(null);
   readonly priceBands = signal<readonly MonetizationPriceBand[]>([]);
   readonly monetizationSaving = signal(false);
-  readonly autosaveStatus = signal<'idle' | 'saving' | 'saved' | 'conflict' | 'error'>('idle');
+  readonly includeAutosaves = signal(false);
+  readonly diff = signal<ChapterVersionDiff | null>(null);
   private readonly historyPageSize = 10;
   private readonly historyPage = signal(0);
 
@@ -116,7 +115,7 @@ export class AuthorChapterEditorStore {
     this.error.set(null);
 
     this.repository
-      .listChapterVersions(storyId, chapterId, page, this.historyPageSize)
+      .listChapterVersions(storyId, chapterId, page, this.historyPageSize, this.includeAutosaves())
       .pipe(
         finalize(() => this.loadingHistory.set(false)),
         takeUntilDestroyed(this.destroyRef),
@@ -153,66 +152,23 @@ export class AuthorChapterEditorStore {
       });
   }
 
-  restoreVersion(
-    storyId: string,
-    chapterId: string,
-    version: number,
-  ): Observable<AuthorManagedChapter> {
-    this.restoringVersion.set(version);
-    this.error.set(null);
-    this.success.set(null);
-
-    return this.repository.restoreChapterVersion(storyId, chapterId, version).pipe(
-      tap((chapter) => {
-        this.chapter.set(chapter);
-        this.selectedVersion.set(null);
-        this.success.set(`Đã khôi phục phiên bản ${version} thành phiên bản ${chapter.version}.`);
-        this.loadHistory(storyId, chapterId);
-      }),
-      finalize(() => this.restoringVersion.set(null)),
-    );
-  }
-
   clearSelectedVersion(): void {
     this.selectedVersion.set(null);
   }
 
-  save(
-    storyId: string,
-    chapterId: string | null,
-    input: AuthorChapterDraftInput,
-  ): Observable<AuthorManagedChapter> {
-    this.saving.set(true);
-    this.error.set(null);
-
-    const request$ = chapterId
-      ? this.repository.updateChapter(storyId, chapterId, input)
-      : this.repository.createChapter(storyId, input);
-
-    return request$.pipe(
-      tap((chapter: AuthorManagedChapter) => this.chapter.set(chapter)),
-      finalize(() => this.saving.set(false)),
-    );
-  }
-
-  autosave(
-    storyId: string,
-    chapterId: string,
-    input: AuthorChapterDraftInput,
-  ): Observable<AuthorManagedChapter> {
-    this.autosaveStatus.set('saving');
-    return this.repository.updateChapter(storyId, chapterId, input).pipe(
-      tap((chapter) => {
-        this.chapter.set(chapter);
-        this.autosaveStatus.set('saved');
-      }),
-      catchError((error: unknown) => {
-        this.autosaveStatus.set(
-          getApiErrorMessage(error).includes('xung đột') ? 'conflict' : 'error',
-        );
-        return EMPTY;
-      }),
-    );
+  compare(storyId: string, chapterId: string, from: number, to: number): void {
+    this.loadingVersion.set(true);
+    this.diff.set(null);
+    this.repository
+      .getChapterVersionDiff(storyId, chapterId, from, to)
+      .pipe(
+        finalize(() => this.loadingVersion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result) => this.diff.set(result),
+        error: (error: unknown) => this.setError(error),
+      });
   }
 
   setError(error: unknown): void {

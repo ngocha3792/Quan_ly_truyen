@@ -8,6 +8,7 @@ import {
   ChapterNotFoundException,
   ChapterStoryPendingReviewException,
   ChapterVersionNotFoundException,
+  ChapterVersionConflictException,
 } from '../../../domain';
 import type { ChapterResultDto } from '../../dto';
 import { ChapterResultMapper } from '../../mappers';
@@ -33,6 +34,7 @@ export class RestoreAuthorChapterVersionCommandHandler {
       storyId: command.storyId,
       chapterId: command.chapterId,
       version: command.version,
+      expectedVersion: command.expectedVersion,
       restoredAt: new Date(),
       audit: {
         ipAddress: command.ipAddress,
@@ -42,6 +44,8 @@ export class RestoreAuthorChapterVersionCommandHandler {
     });
 
     switch (result.status) {
+      case 'version_conflict':
+        throw new ChapterVersionConflictException(result.currentVersion);
       case 'restored':
         return ChapterResultMapper.toDto(result.chapter);
       case 'story_pending_review':

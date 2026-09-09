@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { workflowSnapshot } from './chapter-workflow.mapper';
+import { ChapterWorkflowPolicy } from '../../domain/policies/chapter-workflow.policy';
 
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
@@ -21,6 +23,10 @@ import {
 import type { ReaderFeaturesConfig } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { MEDIA_URL_BUILDER, type MediaUrlPort } from '@/modules/media';
+import {
+  editableStoryWhere,
+  lockAndFindEditableStory,
+} from './chapter-edit-access';
 
 import type {
   ChapterPersistencePort,
@@ -102,6 +108,9 @@ type ChapterSummaryRow = Prisma.ChapterGetPayload<{
 }>;
 
 const CHAPTER_VERSION_SUMMARY_SELECT = {
+  versionType: true,
+  isRetained: true,
+  expiresAt: true,
   id: true,
   chapterId: true,
   createdById: true,
@@ -238,8 +247,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       const story = await this.prisma.story.findFirst({
         where: {
           id: storyId,
-          authorId: userId,
-          deletedAt: null,
+          ...editableStoryWhere(userId),
         },
         select: { id: true },
       });
@@ -277,10 +285,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           id: chapterId,
           storyId,
           deletedAt: null,
-          story: {
-            authorId: userId,
-            deletedAt: null,
-          },
+          story: editableStoryWhere(userId),
         },
         select: CHAPTER_SELECT,
       });
@@ -303,22 +308,23 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           id: input.chapterId,
           storyId: input.storyId,
           deletedAt: null,
-          story: {
-            authorId: input.userId,
-            deletedAt: null,
-          },
+          story: editableStoryWhere(input.userId),
         },
         select: { id: true },
       });
 
       if (!chapter) return null;
 
+      const where: Prisma.ChapterVersionWhereInput = {
+        chapterId: chapter.id,
+        ...(input.includeAutosaves ? {} : { versionType: { not: 'AUTOSAVE' } }),
+      };
       const [total, versions] = await this.prisma.$transaction([
         this.prisma.chapterVersion.count({
-          where: { chapterId: chapter.id },
+          where,
         }),
         this.prisma.chapterVersion.findMany({
-          where: { chapterId: chapter.id },
+          where,
           orderBy: [{ version: 'desc' }, { id: 'desc' }],
           skip: (input.page - 1) * input.pageSize,
           take: input.pageSize,
@@ -328,6 +334,9 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
 
       return {
         items: versions.map((version) => ({
+          versionType: version.versionType,
+          isRetained: version.isRetained,
+          expiresAt: version.expiresAt,
           id: version.id,
           chapterId: version.chapterId,
           createdById: version.createdById,
@@ -361,10 +370,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           chapter: {
             storyId: input.storyId,
             deletedAt: null,
-            story: {
-              authorId: input.userId,
-              deletedAt: null,
-            },
+            story: editableStoryWhere(input.userId),
           },
         },
         select: CHAPTER_VERSION_SELECT,
@@ -514,7 +520,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
   ): Promise<UpdateAuthorChapterResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const story = await lockAndFindOwnedStory(
+        const story = await lockAndFindEditableStory(
           tx,
           input.storyId,
           input.userId,
@@ -581,6 +587,22 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           input.content !== undefined && input.content !== current.content;
 
         if (!titleChanged && !contentChanged) {
+          // A manual save makes the current autosave a durable checkpoint,
+          // without manufacturing another identical content version.
+          if (input.saveType !== 'AUTOSAVE') {
+            await tx.chapterVersion.updateMany({
+              where: {
+                chapterId: current.id,
+                version: current.version,
+                versionType: 'AUTOSAVE',
+              },
+              data: {
+                versionType: 'MANUAL_SAVE',
+                isRetained: true,
+                expiresAt: null,
+              },
+            });
+          }
           return {
             status: 'updated',
             chapter: this.toRecord(current),
@@ -648,6 +670,14 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                   contentChanged,
                 ),
                 createdAt: input.updatedAt,
+                versionType: input.saveType ?? 'MANUAL_SAVE',
+                isRetained: input.saveType !== 'AUTOSAVE',
+                expiresAt:
+                  input.saveType === 'AUTOSAVE'
+                    ? new Date(
+                        input.updatedAt.getTime() + 7 * 24 * 60 * 60 * 1000,
+                      )
+                    : null,
               },
             },
           },
@@ -657,7 +687,10 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         await tx.auditLog.create({
           data: {
             actorId: input.userId,
-            action: 'chapter.draft.updated',
+            action:
+              input.saveType === 'AUTOSAVE'
+                ? 'chapter.draft.autosaved'
+                : 'chapter.draft.updated',
             entityType: 'chapter',
             entityId: current.id,
             oldValues: {
@@ -704,7 +737,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
   ): Promise<RestoreAuthorChapterVersionResult> {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const story = await lockAndFindOwnedStory(
+        const story = await lockAndFindEditableStory(
           tx,
           input.storyId,
           input.userId,
@@ -731,6 +764,15 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           select: CHAPTER_SELECT,
         });
         if (!current) return { status: 'not_found' };
+        if (
+          input.expectedVersion !== undefined &&
+          input.expectedVersion !== current.version
+        ) {
+          return {
+            status: 'version_conflict',
+            currentVersion: current.version,
+          };
+        }
         if (current.status !== ChapterStatus.DRAFT) {
           return { status: 'not_draft' };
         }
@@ -758,21 +800,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           source.content,
           current.id,
         );
-        const currentDocument = toContentDocument(
-          current.contentDocument,
-          current.content,
-          current.id,
-        );
-
-        if (
-          source.title === current.title &&
-          source.content === current.content &&
-          source.contentFormat === current.contentFormat &&
-          JSON.stringify(sourceDocument) === JSON.stringify(currentDocument)
-        ) {
-          return { status: 'restored', chapter: this.toRecord(current) };
-        }
-
         const nextVersion = current.version + 1;
         const updated = await tx.chapter.update({
           where: { id: current.id },
@@ -798,6 +825,9 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
                 contentFormat: source.contentFormat,
                 wordCount: source.wordCount,
                 changeSummary: `Khôi phục từ phiên bản ${source.version}`,
+                versionType: 'MANUAL_SAVE',
+                isRetained: true,
+                expiresAt: null,
                 createdAt: input.restoredAt,
               },
             },
@@ -984,10 +1014,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         if (!current) {
           return { status: 'not_found' };
         }
-        if (
-          current.status !== ChapterStatus.DRAFT &&
-          current.status !== ChapterStatus.SCHEDULED
-        ) {
+        if (!ChapterWorkflowPolicy.canPublish(current.status)) {
           return { status: 'not_draft' };
         }
         if (!current.content.trim()) {
@@ -1000,6 +1027,18 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             status: ChapterStatus.PUBLISHED,
             publishedAt: input.publishedAt,
             scheduledAt: null,
+            version: { increment: 1 },
+            versions: {
+              create: {
+                ...workflowSnapshot(
+                  current,
+                  input.userId,
+                  current.version + 1,
+                  'Xuất bản chương',
+                ),
+                versionType: 'PUBLISHED',
+              },
+            },
             updatedById: input.userId,
             updatedAt: input.publishedAt,
           },
@@ -1082,10 +1121,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           select: CHAPTER_SELECT,
         });
         if (!current) return { status: 'not_found' };
-        if (
-          current.status !== ChapterStatus.DRAFT &&
-          current.status !== ChapterStatus.SCHEDULED
-        ) {
+        if (!ChapterWorkflowPolicy.canPublish(current.status)) {
           return { status: 'not_schedulable' };
         }
         if (!current.content.trim()) return { status: 'empty_content' };
@@ -1095,6 +1131,15 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           data: {
             status: ChapterStatus.SCHEDULED,
             scheduledAt: input.scheduledAt,
+            version: { increment: 1 },
+            versions: {
+              create: workflowSnapshot(
+                current,
+                input.userId,
+                current.version + 1,
+                'Lên lịch xuất bản',
+              ),
+            },
             publishedAt: null,
             updatedById: input.userId,
             updatedAt: input.updatedAt,
@@ -1171,8 +1216,17 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         const updated = await tx.chapter.update({
           where: { id: current.id },
           data: {
-            status: ChapterStatus.DRAFT,
+            status: ChapterStatus.APPROVED,
             scheduledAt: null,
+            version: { increment: 1 },
+            versions: {
+              create: workflowSnapshot(
+                current,
+                input.userId,
+                current.version + 1,
+                'Hủy lịch xuất bản',
+              ),
+            },
             updatedById: input.userId,
             updatedAt: input.canceledAt,
           },
@@ -1277,6 +1331,18 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             status: ChapterStatus.PUBLISHED,
             publishedAt: input.dueAt,
             scheduledAt: null,
+            version: { increment: 1 },
+            versions: {
+              create: {
+                ...workflowSnapshot(
+                  current,
+                  current.updatedById,
+                  current.version + 1,
+                  'Xuất bản theo lịch',
+                ),
+                versionType: 'PUBLISHED',
+              },
+            },
             updatedById: current.updatedById,
             updatedAt: input.dueAt,
           },
@@ -2024,6 +2090,9 @@ function toChapterVersionRecord(
   version: ChapterVersionRow,
 ): ChapterVersionRecord {
   return {
+    versionType: version.versionType,
+    isRetained: version.isRetained,
+    expiresAt: version.expiresAt,
     id: version.id,
     chapterId: version.chapterId,
     createdById: version.createdById,

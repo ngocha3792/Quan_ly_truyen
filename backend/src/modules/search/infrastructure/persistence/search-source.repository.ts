@@ -71,19 +71,7 @@ export class SearchSourceRepository {
       setweight(to_tsvector('simple', search_normalize(title)), 'A') ||
       setweight(to_tsvector('simple', search_normalize(author_name)), 'B') ||
       setweight(to_tsvector('simple', search_normalize(array_to_string(categories || tags, ' '))), 'B') ||
-      setweight(
-        to_tsvector(
-          'simple',
-          search_normalize(
-            CASE
-              WHEN kind <> 'chapter' OR access_type = 'free'
-                THEN content || ' ' || story_title
-              ELSE story_title
-            END,
-          ),
-        ),
-        'C',
-      )
+      setweight(to_tsvector('simple', search_normalize(content || ' ' || story_title)), 'C')
     )`;
     const needle = Prisma.sql`plainto_tsquery('simple', ${q})`;
     // Parameterized expressions: filter values and queries never become SQL text.

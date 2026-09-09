@@ -1,54 +1,114 @@
-import { Injectable } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
+import { ChapterRecoveryEntry, ChapterRecoveryScope } from '../domain/chapter-editing.models';
 
-interface RecoveryEntry {
-  chapterId: string;
-  title: string;
-  content: string;
-  savedAt: number;
+export function chapterRecoveryKey(scope: ChapterRecoveryScope): string {
+  return JSON.stringify([scope.accountId, scope.storyId, scope.chapterId ?? 'new', scope.tabId]);
 }
 
 @Injectable()
 export class ChapterLocalRecoveryService {
   private readonly database = 'truyenhub-author-recovery';
-  private readonly store = 'drafts';
-  async save(entry: Omit<RecoveryEntry, 'savedAt'>): Promise<void> {
-    if (typeof indexedDB === 'undefined') return;
+  private readonly store = 'scoped-drafts';
+  readonly tabId = crypto.randomUUID();
+  private readonly channel =
+    typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+      ? new BroadcastChannel('truyenhub-author-recovery-tabs')
+      : null;
+  private readonly alive = new Set<string>();
+
+  constructor() {
+    if (this.channel)
+      this.channel.onmessage = (event: MessageEvent<{ type: string; tabId: string }>) => {
+        if (event.data?.type === 'probe')
+          this.channel?.postMessage({ type: 'alive', tabId: this.tabId });
+        if (event.data?.type === 'alive') this.alive.add(event.data.tabId);
+      };
+    inject(DestroyRef).onDestroy(() => this.channel?.close());
+  }
+
+  async save(entry: ChapterRecoveryEntry): Promise<void> {
     const db = await this.open();
-    await this.transaction(db, 'readwrite', (store) =>
-      store.put({ ...entry, savedAt: Date.now() }),
+    if (db) await this.transaction(db, (store) => store.put(entry));
+  }
+
+  async list(scope: ChapterRecoveryScope): Promise<readonly ChapterRecoveryEntry[]> {
+    const db = await this.open();
+    if (!db) return [];
+    const entries = await this.transaction<ChapterRecoveryEntry[]>(
+      db,
+      (store) => store.getAll(),
+      'readonly',
     );
+    if (this.channel) {
+      this.alive.clear();
+      this.channel.postMessage({ type: 'probe', tabId: this.tabId });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return (entries ?? [])
+      .filter(
+        (entry) =>
+          entry.accountId === scope.accountId &&
+          entry.storyId === scope.storyId &&
+          entry.chapterId === scope.chapterId &&
+          !this.alive.has(entry.tabId),
+      )
+      .sort((a, b) => b.savedAt - a.savedAt);
   }
-  async get(chapterId: string): Promise<RecoveryEntry | null> {
-    if (typeof indexedDB === 'undefined') return null;
+
+  /** Delete only the acknowledged revision, never edits typed during a server request. */
+  async clearIfRevision(key: string, revision: number): Promise<void> {
     const db = await this.open();
-    return this.transaction<RecoveryEntry | undefined>(db, 'readonly', (store) =>
-      store.get(chapterId),
-    ).then((entry) => entry ?? null);
-  }
-  async clear(chapterId: string): Promise<void> {
-    if (typeof indexedDB === 'undefined') return;
-    const db = await this.open();
-    await this.transaction(db, 'readwrite', (store) => store.delete(chapterId));
-  }
-  private open(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.database, 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore(this.store, { keyPath: 'chapterId' });
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+    if (!db) return;
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(this.store, 'readwrite');
+      const store = tx.objectStore(this.store);
+      const get = store.get(key);
+      get.onsuccess = () => {
+        const entry = get.result as ChapterRecoveryEntry | undefined;
+        if (entry?.revision === revision) store.delete(key);
+      };
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = tx.onabort = () => {
+        db.close();
+        reject(tx.error);
+      };
     });
   }
+
+  private open(): Promise<IDBDatabase | null> {
+    if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.database, 2);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(this.store))
+          request.result.createObjectStore(this.store, { keyPath: 'key' });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      request.onblocked = () =>
+        reject(new Error('Hãy đóng tab soạn thảo cũ để bật khôi phục bản nháp.'));
+    });
+  }
+
   private transaction<T = unknown>(
     db: IDBDatabase,
-    mode: IDBTransactionMode,
-    action: (store: IDBObjectStore) => IDBRequest<T> | void,
+    action: (store: IDBObjectStore) => IDBRequest<T>,
+    mode: IDBTransactionMode = 'readwrite',
   ): Promise<T | undefined> {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.store, mode);
-      const result = action(tx.objectStore(this.store));
-      tx.oncomplete = () => resolve(result && 'result' in result ? result.result : undefined);
-      tx.onerror = () => reject(tx.error);
+      const request = action(tx.objectStore(this.store));
+      tx.oncomplete = () => {
+        db.close();
+        resolve(request.result);
+      };
+      tx.onerror = tx.onabort = () => {
+        db.close();
+        reject(tx.error);
+      };
     });
   }
 }

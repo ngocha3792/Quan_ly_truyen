@@ -191,12 +191,30 @@ enum ContributorRole {
 
 enum ChapterStatus {
   DRAFT     @map("draft")
+  IN_REVIEW @map("in_review")
+  APPROVED  @map("approved")
   SCHEDULED @map("scheduled")
   PUBLISHED @map("published")
   HIDDEN    @map("hidden")
   ARCHIVED  @map("archived")
 
   @@map("chapter_status")
+}
+
+enum ChapterVersionType {
+  AUTOSAVE    @map("autosave")
+  MANUAL_SAVE @map("manual_save")
+  PUBLISHED   @map("published")
+
+  @@map("chapter_version_type")
+}
+
+enum ChapterReviewDecision {
+  APPROVED        @map("approved")
+  REJECTED        @map("rejected")
+  REQUEST_CHANGES @map("request_changes")
+
+  @@map("chapter_review_decision")
 }
 
 enum ContentFormat {
@@ -568,6 +586,8 @@ model User {
   chaptersCreated              Chapter[]                  @relation("ChapterCreatedBy")
   chaptersUpdated              Chapter[]                  @relation("ChapterUpdatedBy")
   chapterVersions              ChapterVersion[]
+  chapterReviews               ChapterReview[]
+  chapterEditSessions          ChapterEditSession[]
   comments                     Comment[]
   commentReactions             CommentReaction[]
   ratings                      Rating[]
@@ -1875,6 +1895,8 @@ model Chapter {
   createdBy         User                    @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy         User                    @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   versions          ChapterVersion[]
+  reviews           ChapterReview[]
+  editSessions      ChapterEditSession[]
   media             ChapterMedia[]
   comments          Comment[]
   lastReadEntries   LibraryEntry[]          @relation("LibraryLastReadChapter")
@@ -2130,25 +2152,66 @@ model TtsQuota {
 }
 
 model ChapterVersion {
-  id                    String        @id @default(uuid()) @db.Uuid
-  chapterId             String        @map("chapter_id") @db.Uuid
-  createdById           String        @map("created_by_id") @db.Uuid
+  id                    String             @id @default(uuid()) @db.Uuid
+  chapterId             String             @map("chapter_id") @db.Uuid
+  createdById           String             @map("created_by_id") @db.Uuid
   version               Int
-  title                 String        @db.VarChar(255)
-  content               String        @db.Text
-  contentDocument       Json?         @map("content_document") @db.JsonB
-  documentSchemaVersion Int?          @map("document_schema_version")
-  contentFormat         ContentFormat @map("content_format")
-  wordCount             Int           @map("word_count")
-  changeSummary         String?       @map("change_summary") @db.VarChar(500)
-  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  title                 String             @db.VarChar(255)
+  content               String             @db.Text
+  contentDocument       Json?              @map("content_document") @db.JsonB
+  documentSchemaVersion Int?               @map("document_schema_version")
+  contentFormat         ContentFormat      @map("content_format")
+  wordCount             Int                @map("word_count")
+  changeSummary         String?            @map("change_summary") @db.VarChar(500)
+  versionType           ChapterVersionType @default(MANUAL_SAVE) @map("version_type")
+  isRetained            Boolean            @default(true) @map("is_retained")
+  expiresAt             DateTime?          @map("expires_at") @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
 
   chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   createdBy User    @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([chapterId, version])
   @@index([createdById])
+  @@index([chapterId, createdAt])
+  @@index([versionType, expiresAt])
   @@map("chapter_versions")
+}
+
+model ChapterReview {
+  id              String                @id @default(uuid()) @db.Uuid
+  chapterId       String                @map("chapter_id") @db.Uuid
+  reviewerId      String                @map("reviewer_id") @db.Uuid
+  decision        ChapterReviewDecision
+  comment         String?               @db.Text
+  reviewedVersion Int                   @map("reviewed_version")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter  Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  reviewer User    @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([chapterId, createdAt])
+  @@index([reviewerId, createdAt])
+  @@map("chapter_reviews")
+}
+
+model ChapterEditSession {
+  id              String   @id @default(uuid()) @db.Uuid
+  chapterId       String   @map("chapter_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  sessionToken    String   @unique @map("session_token") @db.VarChar(64)
+  activeTabId     String   @map("active_tab_id") @db.VarChar(64)
+  lastHeartbeatAt DateTime @default(now()) @map("last_heartbeat_at") @db.Timestamptz(3)
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, userId, activeTabId])
+  @@index([chapterId, lastHeartbeatAt])
+  @@index([expiresAt])
+  @@map("chapter_edit_sessions")
 }
 
 // ============================================================

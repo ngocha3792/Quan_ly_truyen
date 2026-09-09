@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AccountStatus, ContributorRole } from '@/generated/prisma/client';
+import {
+  AccountStatus,
+  ContributorRole,
+  Prisma,
+} from '@/generated/prisma/client';
 import {
   ResourceConflictException,
   ResourceNotFoundException,
@@ -37,6 +41,9 @@ export class PrismaStoryContributorPersistence implements StoryContributorPersis
     canEdit: boolean;
   }): Promise<StoryContributorView> {
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM stories WHERE id = ${input.storyId}::uuid FOR UPDATE`,
+      );
       const story = await tx.story.findFirst({
         where: { id: input.storyId, authorId: input.ownerId, deletedAt: null },
         select: { id: true },
@@ -94,13 +101,22 @@ export class PrismaStoryContributorPersistence implements StoryContributorPersis
     contributorUserId: string;
     role: StoryContributorRoleName;
   }): Promise<void> {
-    await this.requireOwnedStory(input.ownerId, input.storyId);
-    await this.prisma.storyContributor.deleteMany({
-      where: {
-        storyId: input.storyId,
-        userId: input.contributorUserId,
-        role: input.role,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM stories WHERE id = ${input.storyId}::uuid FOR UPDATE`,
+      );
+      const story = await tx.story.findFirst({
+        where: { id: input.storyId, authorId: input.ownerId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!story) throw storyNotFound(input.storyId);
+      await tx.storyContributor.deleteMany({
+        where: {
+          storyId: input.storyId,
+          userId: input.contributorUserId,
+          role: input.role,
+        },
+      });
     });
   }
 

@@ -20,8 +20,7 @@ export class UpdateAuthorChapterRequest {
   @IsString()
   content?: string | null;
 
-  @IsOptional()
   @IsInt()
   @Min(1)
-  expectedVersion?: number;
+  expectedVersion!: number;
 }

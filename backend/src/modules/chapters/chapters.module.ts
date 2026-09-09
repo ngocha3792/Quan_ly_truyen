@@ -19,15 +19,23 @@ import {
   RestoreAuthorChapterVersionCommandHandler,
 } from './application';
 import { PrismaChapterPersistence } from './infrastructure';
+import { GetVersionDiffQueryHandler } from './application/queries/get-version-diff/get-version-diff.query-handler';
+import { AuthorChapterAutosaveController } from './presentation/http/controllers/author-chapter-autosave.controller';
+import { ChapterWorkflowModule } from './chapter-workflow.module';
 import {
   AuthorChaptersController,
   PublicChaptersController,
 } from './presentation';
 
 @Module({
-  imports: [PrismaModule, AuthorsModule, MediaModule],
-  controllers: [AuthorChaptersController, PublicChaptersController],
+  imports: [PrismaModule, AuthorsModule, MediaModule, ChapterWorkflowModule],
+  controllers: [
+    AuthorChaptersController,
+    PublicChaptersController,
+    AuthorChapterAutosaveController,
+  ],
   providers: [
+    GetVersionDiffQueryHandler,
     CreateAuthorChapterCommandHandler,
     UpdateAuthorChapterCommandHandler,
     DeleteAuthorChapterCommandHandler,

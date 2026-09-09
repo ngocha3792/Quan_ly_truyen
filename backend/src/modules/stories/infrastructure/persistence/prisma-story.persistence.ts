@@ -201,7 +201,10 @@ export class PrismaStoryPersistence
     try {
       const stories = await this.prisma.story.findMany({
         where: {
-          authorId: userId,
+          OR: [
+            { authorId: userId },
+            { contributors: { some: { userId, canEdit: true } } },
+          ],
           deletedAt: null,
         },
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
@@ -225,7 +228,10 @@ export class PrismaStoryPersistence
       const story = await this.prisma.story.findFirst({
         where: {
           id: storyId,
-          authorId: userId,
+          OR: [
+            { authorId: userId },
+            { contributors: { some: { userId, canEdit: true } } },
+          ],
           deletedAt: null,
         },
         select: STORY_SELECT,

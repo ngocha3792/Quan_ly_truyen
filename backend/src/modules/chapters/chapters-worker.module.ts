@@ -5,6 +5,7 @@ import { ObservabilityModule } from '@/infrastructure/observability';
 import { MediaModule } from '@/modules/media';
 
 import { CHAPTER_PERSISTENCE_PORT } from './application';
+import { ChapterEditorMaintenanceScheduler } from './infrastructure/queue/chapter-editor-maintenance.scheduler';
 import {
   ChapterSchedulingProcessor,
   ChapterSchedulingScheduler,
@@ -14,6 +15,7 @@ import {
 @Module({
   imports: [PrismaModule, ObservabilityModule, MediaModule],
   providers: [
+    ChapterEditorMaintenanceScheduler,
     PrismaChapterPersistence,
     ChapterSchedulingProcessor,
     ChapterSchedulingScheduler,

@@ -55,6 +55,15 @@ export const ADMIN_ROUTES: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'users' },
       {
+        path: 'chapter-reviews',
+        title: appPageTitle('Duyệt chương'),
+        canActivate: [authenticatedGuard, permissionGuard(AUTH_PERMISSIONS.CHAPTER_MANAGE_ANY)],
+        loadComponent: () =>
+          import('../features/admin/chapter-reviews/pages/chapter-reviews-page.component').then(
+            (m) => m.ChapterReviewsPageComponent,
+          ),
+      },
+      {
         path: 'audit-logs',
         title: appPageTitle('Nhật ký audit'),
         canActivate: auditLogReadGuards,

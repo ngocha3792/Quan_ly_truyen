@@ -7,7 +7,7 @@ const STORY_ID = '22222222-2222-4222-8222-222222222222';
 const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
 
 describe('CancelAuthorChapterScheduleCommandHandler', () => {
-  it('returns the chapter to draft', async () => {
+  it('returns the chapter to approved without discarding review', async () => {
     const now = new Date();
     const persistence = {
       cancelSchedule: jest.fn().mockResolvedValue({
@@ -22,7 +22,7 @@ describe('CancelAuthorChapterScheduleCommandHandler', () => {
           slug: 'chuong-1',
           content: 'Nội dung',
           contentFormat: 'MARKDOWN',
-          status: 'DRAFT',
+          status: 'APPROVED',
           wordCount: 2,
           version: 1,
           scheduledAt: null,
@@ -38,7 +38,7 @@ describe('CancelAuthorChapterScheduleCommandHandler', () => {
 
     const result = await handler.execute(command());
 
-    expect(result.status).toBe('DRAFT');
+    expect(result.status).toBe('APPROVED');
     expect(persistence.cancelSchedule).toHaveBeenCalledWith(
       expect.objectContaining({ chapterId: CHAPTER_ID, userId: USER_ID }),
     );

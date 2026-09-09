@@ -1,0 +1,94 @@
+<section class="history" aria-label="Lịch sử phiên bản">
+  <header>
+    <div>
+      <h2>Lịch sử phiên bản</h2>
+      <p>So sánh nội dung và khôi phục thành phiên bản mới.</p>
+    </div>
+    <span>{{ total() }} phiên bản</span>
+  </header>
+  <label class="toggle"
+    ><input
+      #autosaves
+      type="checkbox"
+      [checked]="includeAutosaves()"
+      [disabled]="loading()"
+      (change)="autosavesChanged.emit(autosaves.checked)"
+    />Hiển thị các lần lưu tự động</label
+  >
+  @if (loading() && !versions().length) {
+    <p role="status">Đang tải lịch sử...</p>
+  }
+  @for (version of versions(); track version.id) {
+    <article class="version-row">
+      <div>
+        <strong>v{{ version.version }} · {{ version.title }}</strong
+        ><small
+          >{{
+            version.versionType === 'AUTOSAVE'
+              ? 'Tự động lưu'
+              : version.versionType === 'PUBLISHED'
+                ? 'Xuất bản'
+                : 'Lưu thủ công'
+          }}
+          · {{ version.createdByDisplayName }} · {{ version.createdAt | date: 'dd/MM HH:mm' }} ·
+          {{ version.wordCount }} từ</small
+        >
+      </div>
+      <app-button variant="secondary" [disabled]="busy()" (click)="viewed.emit(version.version)"
+        >Xem bản này</app-button
+      >
+    </article>
+  } @empty {
+    @if (!loading()) {
+      <p>Chưa có phiên bản trong bộ lọc này.</p>
+    }
+  }
+  @if (versions().length < total()) {
+    <app-button variant="secondary" [disabled]="loading()" (click)="loadMore.emit()"
+      >Tải thêm phiên bản</app-button
+    >
+  }
+  @if (selected(); as version) {
+    <article class="preview">
+      <header>
+        <h3>v{{ version.version }} · {{ version.title }}</h3>
+        <button type="button" aria-label="Đóng bản xem trước" (click)="closed.emit()">×</button>
+      </header>
+      <pre>{{ version.content }}</pre>
+      <div class="actions">
+        <app-button variant="secondary" [disabled]="busy()" (click)="compared.emit(version.version)"
+          >So sánh với v{{ currentVersion() }}</app-button
+        >
+        @if (version.version !== currentVersion()) {
+          <app-button
+            variant="secondary"
+            [disabled]="busy() || !canRestore()"
+            (click)="restored.emit(version.version)"
+            >Khôi phục bản này</app-button
+          >
+        }
+      </div>
+    </article>
+  }
+  @if (diff(); as comparison) {
+    <article class="diff" aria-label="So sánh phiên bản">
+      <h3>v{{ comparison.fromVersion }} → v{{ comparison.toVersion }}</h3>
+      <p>
+        +{{ comparison.stats.added }} dòng thêm · −{{ comparison.stats.removed }} dòng xóa ·
+        {{ comparison.stats.unchanged }} dòng giữ nguyên
+      </p>
+      <h4>Tiêu đề</h4>
+      @for (change of comparison.titleChanges; track $index) {
+        <pre
+          [class]="change.type"
+        ><span class="marker">{{ change.type === 'added' ? '+' : change.type === 'removed' ? '−' : ' ' }}</span>{{ change.value }}</pre>
+      }
+      <h4>Nội dung</h4>
+      @for (change of comparison.changes; track $index) {
+        <pre
+          [class]="change.type"
+        ><span class="marker">{{ change.type === 'added' ? '+' : change.type === 'removed' ? '−' : ' ' }}</span>{{ change.value }}</pre>
+      }
+    </article>
+  }
+</section>

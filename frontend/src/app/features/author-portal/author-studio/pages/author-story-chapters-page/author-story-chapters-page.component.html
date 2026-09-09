@@ -76,12 +76,14 @@
                     <td>{{ chapter.wordCount }}</td>
                     <td>{{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
                     <td class="actions">
+                      <app-link-button
+                        variant="secondary"
+                        [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
+                        >{{
+                          canEdit(story, chapter) ? 'Sửa / Gửi duyệt' : 'Chi tiết / Duyệt'
+                        }}</app-link-button
+                      >
                       @if (canEdit(story, chapter)) {
-                        <app-link-button
-                          variant="secondary"
-                          [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
-                          >Sửa</app-link-button
-                        >
                         <app-button
                           variant="danger"
                           [disabled]="store.actionChapterId() === chapter.id"

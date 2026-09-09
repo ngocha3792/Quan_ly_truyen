@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+.list-card__toolbar,
+.queue-item,
+.review-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.queue-item {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+p,
+small {
+  color: var(--text-secondary);
+}
+p {
+  margin: 0.4rem 0;
+}
+h2 {
+  margin: 0;
+}
+.review-panel {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+}
+.chapter-content {
+  max-height: 65vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.8;
+  padding: 1rem;
+  background: var(--surface-1);
+  border-radius: var(--radius-card);
+}
+.review-record {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+form,
+label {
+  display: grid;
+  gap: 0.75rem;
+}
+form {
+  margin-top: 1rem;
+}
+form app-button {
+  justify-self: end;
+}
+@media (max-width: 640px) {
+  .queue-item,
+  .review-panel header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

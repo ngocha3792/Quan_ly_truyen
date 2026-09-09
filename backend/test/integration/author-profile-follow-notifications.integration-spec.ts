@@ -320,7 +320,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
     expect(anonymized.penName).toMatch(/^deleted_/);
   });
 
-  it('emits exactly one follower outbox event only when a draft chapter publishes successfully', async () => {
+  it('emits exactly one follower outbox event only when an approved chapter publishes successfully', async () => {
     const authorId = await createAuthor('publish-author');
     const marker = unique('published-story').toLowerCase();
     const story = await prisma.story.create({
@@ -343,6 +343,7 @@ describe('Phase 5 author profile, follows and notifications', () => {
         title: 'Chương 1',
         slug: 'chuong-1',
         content: 'Nội dung chương',
+        status: 'APPROVED',
       },
     });
     const publishedAt = new Date();

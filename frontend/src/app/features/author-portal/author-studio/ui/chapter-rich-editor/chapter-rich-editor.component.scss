@@ -1,0 +1,206 @@
+app-chapter-rich-editor {
+  display: block;
+  min-width: 0;
+  .chapter-rich-editor {
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface-1);
+    &:focus-within {
+      border-color: var(--border-focus);
+    }
+    button,
+    select,
+    input {
+      min-height: var(--control-height-sm);
+      padding: 0.4rem 0.65rem;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 0.85rem;
+    }
+    button {
+      cursor: pointer;
+    }
+    button:hover:not(:disabled),
+    .is-active {
+      background: var(--surface-3);
+      color: var(--primary-soft);
+      border-color: var(--primary-border);
+    }
+    button:disabled,
+    select:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    &__toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.65rem;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    &__action--bold {
+      font-weight: 800;
+    }
+    &__action--italic {
+      font-style: italic;
+    }
+    &__action--strike {
+      text-decoration: line-through;
+    }
+    &__link {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.7rem;
+      border-bottom: 1px solid var(--border);
+      input {
+        flex: 1;
+        min-width: 160px;
+        border-color: var(--border-strong);
+      }
+      span {
+        color: var(--danger);
+      }
+    }
+    &__document {
+      min-height: 420px;
+      padding: clamp(1rem, 3vw, 2rem);
+      color: var(--text-strong);
+      font-size: 1.05rem;
+      line-height: 1.85;
+      outline: none;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      > :first-child {
+        margin-top: 0;
+      }
+      > :last-child {
+        margin-bottom: 0;
+      }
+      p {
+        margin: 0 0 1em;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 1.4em 0 0.65em;
+        line-height: 1.4;
+      }
+      h1 {
+        font-size: 1.7em;
+      }
+      h2 {
+        font-size: 1.45em;
+      }
+      h3 {
+        font-size: 1.2em;
+      }
+      blockquote {
+        margin: 1rem 0;
+        border-left: 3px solid var(--primary);
+        padding-left: 1rem;
+        color: var(--text-secondary);
+      }
+      ul,
+      ol {
+        padding-left: 1.75rem;
+      }
+      li > p {
+        margin: 0.35rem 0;
+      }
+      ul[data-type='taskList'] {
+        padding-left: 0;
+        list-style: none;
+        li {
+          display: flex;
+          align-items: baseline;
+          gap: 0.65rem;
+        }
+        li > div {
+          flex: 1;
+        }
+        input {
+          min-height: auto;
+          accent-color: var(--primary);
+        }
+      }
+      table {
+        border-collapse: collapse;
+        table-layout: fixed;
+        width: 100%;
+        margin: 1rem 0;
+      }
+      th,
+      td {
+        border: 1px solid var(--border-strong);
+        padding: 0.6rem;
+        vertical-align: top;
+        p {
+          margin: 0;
+        }
+      }
+      th {
+        background: var(--surface-2);
+        font-weight: 700;
+      }
+      pre {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--page-bg);
+        overflow-x: auto;
+        white-space: pre;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.9em;
+      }
+      a {
+        color: var(--primary-soft);
+        text-decoration: underline;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-sm);
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid var(--border-strong);
+        margin: 1.5rem 0;
+      }
+      .ProseMirror-selectednode {
+        outline: 2px solid var(--primary);
+      }
+      p.is-editor-empty:first-child::before {
+        content: attr(data-placeholder);
+        float: left;
+        color: var(--text-muted);
+        pointer-events: none;
+        height: 0;
+      }
+    }
+    &__footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.7rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+    &--disabled .chapter-rich-editor__document {
+      color: var(--text-secondary);
+    }
+  }
+}

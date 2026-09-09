@@ -5,5 +5,6 @@ export class ListAuthorChapterVersionsQuery {
     readonly chapterId: string,
     readonly page: number,
     readonly pageSize: number,
+    readonly includeAutosaves = false,
   ) {}
 }

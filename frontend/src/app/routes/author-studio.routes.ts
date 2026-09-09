@@ -6,8 +6,24 @@ import { AUTH_PERMISSIONS, AUTH_ROLES } from '../core/auth/authorization.models'
 import { permissionGuard } from '../core/auth/permission.guard';
 import { roleGuard } from '../core/auth/role.guard';
 import { provideAuthorStoryManagement } from '../features/author-portal/author-studio/data-access/author-story-management.providers';
+import {
+  chapterEditorAccessGuard,
+  chapterEditorLeaveGuard,
+} from '../features/author-portal/author-studio/data-access/chapter-editor-access.guard';
 
 export const AUTHOR_STUDIO_ROUTES: Routes = [
+  {
+    path: 'author-studio/truyen/:storyId/chuong/:chapterId',
+    canMatch: [(_route, segments) => segments[segments.length - 1]?.path !== 'tao-moi'],
+    canActivate: [authenticatedGuard, chapterEditorAccessGuard],
+    canDeactivate: [chapterEditorLeaveGuard],
+    providers: provideAuthorStoryManagement(),
+    title: appPageTitle('Chỉnh sửa chương'),
+    loadComponent: () =>
+      import('../features/author-portal/author-studio/pages/author-chapter-editor-page/author-chapter-editor-page.component').then(
+        (module) => module.AuthorChapterEditorPageComponent,
+      ),
+  },
   {
     path: 'author-studio',
     canActivate: [
@@ -66,6 +82,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       },
       {
         path: 'truyen/:storyId/chuong/tao-moi',
+        canDeactivate: [chapterEditorLeaveGuard],
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
         title: appPageTitle('Viết chương mới'),
         loadComponent: () =>
@@ -75,6 +92,7 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
       },
       {
         path: 'truyen/:storyId/chuong/:chapterId',
+        canDeactivate: [chapterEditorLeaveGuard],
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_UPDATE_OWN)],
         title: appPageTitle('Chỉnh sửa chương'),
         loadComponent: () =>

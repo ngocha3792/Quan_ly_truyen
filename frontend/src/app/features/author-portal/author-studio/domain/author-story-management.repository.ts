@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs';
+import { ChapterVersionDiff } from './chapter-editing.models';
 
 import {
   AuthorChapterDraftInput,
@@ -44,6 +45,11 @@ export abstract class AuthorStoryManagementRepository {
     chapterId: string,
     input: AuthorChapterDraftInput,
   ): Observable<AuthorManagedChapter>;
+  abstract autosaveChapter(
+    storyId: string,
+    chapterId: string,
+    input: AuthorChapterDraftInput,
+  ): Observable<AuthorManagedChapter>;
   abstract listMonetizationPriceBands(): Observable<readonly MonetizationPriceBand[]>;
   abstract getChapterMonetization(
     storyId: string,
@@ -59,6 +65,7 @@ export abstract class AuthorStoryManagementRepository {
     chapterId: string,
     page: number,
     pageSize: number,
+    includeAutosaves?: boolean,
   ): Observable<AuthorChapterVersionPage>;
   abstract getChapterVersion(
     storyId: string,
@@ -69,7 +76,14 @@ export abstract class AuthorStoryManagementRepository {
     storyId: string,
     chapterId: string,
     version: number,
+    expectedVersion: number,
   ): Observable<AuthorManagedChapter>;
+  abstract getChapterVersionDiff(
+    storyId: string,
+    chapterId: string,
+    from: number,
+    to: number,
+  ): Observable<ChapterVersionDiff>;
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
   abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
   abstract scheduleChapter(

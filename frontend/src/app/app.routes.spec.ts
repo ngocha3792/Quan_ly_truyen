@@ -8,6 +8,7 @@ import { AppShellComponent } from './layout/app-shell/app-shell.component';
 describe('application route composition', () => {
   it('keeps standalone routes outside AppShell and the wildcard last', () => {
     expect(routes.map((route) => route.path)).toEqual([
+      'author-studio/truyen/:storyId/chuong/:chapterId',
       'author-studio',
       'admin',
       'tam-thoi-khong-the-xac-thuc',
@@ -93,6 +94,7 @@ describe('application route composition', () => {
 
     expect(adminChildren.map((route) => route.path)).toEqual([
       '',
+      'chapter-reviews',
       'audit-logs',
       'audit-logs/:id',
       'reports',

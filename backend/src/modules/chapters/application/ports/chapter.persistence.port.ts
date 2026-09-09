@@ -63,6 +63,9 @@ export interface ChapterSummaryRecord {
 }
 
 export interface ChapterVersionSummaryRecord {
+  readonly versionType?: 'AUTOSAVE' | 'MANUAL_SAVE' | 'PUBLISHED';
+  readonly isRetained?: boolean;
+  readonly expiresAt?: Date | null;
   readonly id: string;
   readonly chapterId: string;
   readonly createdById: string;
@@ -128,6 +131,7 @@ export interface UpdateAuthorChapterInput {
 
   readonly content?: string;
   readonly expectedVersion?: number;
+  readonly saveType?: 'AUTOSAVE' | 'MANUAL_SAVE';
 
   readonly wordCount?: number;
 
@@ -157,6 +161,7 @@ export type UpdateAuthorChapterResult =
     };
 
 export interface ListAuthorChapterVersionsInput {
+  readonly includeAutosaves?: boolean;
   readonly userId: string;
   readonly storyId: string;
   readonly chapterId: string;
@@ -172,6 +177,7 @@ export interface FindAuthorChapterVersionInput {
 }
 
 export interface RestoreAuthorChapterVersionInput {
+  readonly expectedVersion?: number;
   readonly userId: string;
   readonly storyId: string;
   readonly chapterId: string;
@@ -181,6 +187,7 @@ export interface RestoreAuthorChapterVersionInput {
 }
 
 export type RestoreAuthorChapterVersionResult =
+  | { readonly status: 'version_conflict'; readonly currentVersion: number }
   | {
       readonly status: 'restored';
       readonly chapter: ChapterRecord;

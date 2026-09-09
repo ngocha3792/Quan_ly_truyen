@@ -2,7 +2,7 @@
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs()" />
     <app-page-heading
-      [title]="isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương'"
+      [title]="isCreate() ? 'Viết chương mới' : 'Chỉnh sửa chương'"
       [description]="store.story() ? store.story()!.title + ' · ' + store.story()!.status : null"
       icon="chapter"
     >
@@ -14,6 +14,12 @@
     @if (store.error()) {
       <app-notice kind="error" [message]="store.error()" />
     }
+    @if (session.error() || session.recoveryError() || workflow.warning()) {
+      <app-notice
+        kind="error"
+        [message]="session.error() || session.recoveryError() || workflow.warning()"
+      />
+    }
     @if (store.success()) {
       <app-notice kind="success" [message]="store.success()" />
     }
@@ -24,6 +30,20 @@
         <app-notice kind="info" message="Chương này không thể chỉnh sửa ở trạng thái hiện tại." />
       }
 
+      <app-chapter-editor-safety
+        [recoveries]="session.recoveries()"
+        [local]="session.draft()"
+        [server]="session.conflictServer()"
+        [conflict]="session.status() === 'conflict'"
+        [busy]="session.busy() || workflow.busy()"
+        [workflow]="workflow.workflow()"
+        [editors]="workflow.editors()"
+        (recovered)="session.recover($event)"
+        (discarded)="session.discardRecoveries()"
+        (conflictResolved)="session.resolveConflict($event)"
+        (conflictReloaded)="session.refreshConflict()"
+        (transitioned)="transition($event)"
+      />
       <form class="editor" [formGroup]="form" (ngSubmit)="save()">
         <label class="field">
           <span>Tiêu đề chương</span>
@@ -35,21 +55,17 @@
 
         <div class="content-field">
           <span class="content-toolbar">
-            <span>Nội dung Markdown</span>
-            @if (!isCreate) {
-              <span class="autosave-status autosave-status--{{ store.autosaveStatus() }}">
-                {{
-                  store.autosaveStatus() === 'saving'
-                    ? 'Đang lưu tự động...'
-                    : store.autosaveStatus() === 'saved'
-                      ? 'Đã lưu tự động'
-                      : store.autosaveStatus() === 'conflict'
-                        ? 'Có xung đột phiên bản'
-                        : ''
-                }}
-              </span>
-            }
-            @if (!isCreate && isEditable()) {
+            <span>Nội dung chương · {{ wordCount() }} từ</span>
+            <span
+              class="autosave-status autosave-status--{{ session.status() }}"
+              role="status"
+              aria-live="polite"
+              >{{ statusText() }}
+              @if (session.lastSaved()) {
+                · {{ session.lastSaved() | date: 'HH:mm:ss' }}
+              }
+            </span>
+            @if (!isCreate() && isEditable()) {
               <label class="image-upload-action">
                 <app-icon name="camera" [size]="15" />
                 {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
@@ -62,21 +78,18 @@
               </label>
             }
           </span>
-          <div class="textarea-wrapper">
-            <textarea
-              #contentArea
-              rows="28"
-              formControlName="content"
-              placeholder="Bắt đầu viết nội dung chương..."
-            ></textarea>
-          </div>
-          @if (isCreate) {
+          <app-chapter-rich-editor
+            [content]="session.draft().content"
+            [disabled]="!isEditable() || session.restoring() || workflow.busy()"
+            (contentChange)="contentChanged($event)"
+          />
+          @if (isCreate()) {
             <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
           }
         </div>
 
         <footer>
-          @if (store.chapter(); as chapter) {
+          @if (session.chapter(); as chapter) {
             <span>{{ chapter.wordCount }} từ · phiên bản {{ chapter.version }}</span>
           } @else {
             <span>Bản nháp có thể lưu khi nội dung còn trống.</span>
@@ -85,15 +98,15 @@
             variant="primary"
             type="submit"
             [disabled]="!isEditable()"
-            [loading]="store.saving()"
+            [loading]="session.busy()"
           >
             <app-icon icon name="save" [size]="16" />
-            {{ store.saving() ? 'Đang lưu...' : 'Lưu chương' }}
+            {{ session.busy() ? 'Đang lưu...' : 'Lưu chương' }}
           </app-button>
         </footer>
       </form>
 
-      @if (!isCreate && store.monetization(); as monetization) {
+      @if (!isCreate() && store.monetization(); as monetization) {
         <section class="chapter-monetization" aria-labelledby="chapter-monetization-title">
           <header>
             <div>
@@ -137,107 +150,27 @@
         </section>
       }
 
-      @if (!isCreate) {
-        <section class="version-history" aria-labelledby="version-history-title">
-          <header class="version-history__header">
-            <div>
-              <span class="eyebrow">An toàn chỉnh sửa</span>
-              <h2 id="version-history-title">Lịch sử phiên bản</h2>
-              <p>Mỗi lần lưu tạo một snapshot. Khôi phục luôn tạo phiên bản mới.</p>
-            </div>
-            <span class="version-count">{{ store.historyTotal() }} phiên bản</span>
-          </header>
-
-          @if (store.loadingHistory() && store.history().length === 0) {
-            <app-loading-state message="Đang tải lịch sử phiên bản..." />
-          } @else if (store.history().length === 0) {
-            <p class="version-empty">Chưa có snapshot nào cho chương này.</p>
-          } @else {
-            <div class="version-list">
-              @for (version of store.history(); track version.id) {
-                <article
-                  class="version-row"
-                  [class.version-row--current]="version.version === store.chapter()?.version"
-                >
-                  <div class="version-row__main">
-                    <div class="version-row__title">
-                      <strong>v{{ version.version }} · {{ version.title }}</strong>
-                      @if (version.version === store.chapter()?.version) {
-                        <span class="current-badge">Hiện tại</span>
-                      }
-                    </div>
-                    <span>{{ version.changeSummary || 'Bản lưu chương' }}</span>
-                    <small>
-                      {{ version.createdByDisplayName }} ·
-                      {{ version.createdAt | date: 'dd/MM/yyyy HH:mm' }} ·
-                      {{ version.wordCount }} từ
-                    </small>
-                  </div>
-                  <button
-                    type="button"
-                    class="version-view"
-                    [disabled]="store.loadingVersion()"
-                    (click)="viewVersion(version.version)"
-                  >
-                    Xem bản này
-                  </button>
-                </article>
-              }
-            </div>
-
-            @if (store.history().length < store.historyTotal()) {
-              <button
-                type="button"
-                class="load-more"
-                [disabled]="store.loadingHistory()"
-                (click)="loadMoreVersions()"
-              >
-                {{ store.loadingHistory() ? 'Đang tải...' : 'Tải thêm phiên bản' }}
-              </button>
-            }
-          }
-
-          @if (store.selectedVersion(); as selected) {
-            <article class="version-preview">
-              <header>
-                <div>
-                  <span class="eyebrow">Bản xem trước</span>
-                  <h3>Phiên bản {{ selected.version }} · {{ selected.title }}</h3>
-                </div>
-                <button
-                  type="button"
-                  class="preview-close"
-                  aria-label="Đóng bản xem trước"
-                  (click)="store.clearSelectedVersion()"
-                >
-                  ×
-                </button>
-              </header>
-              <p class="preview-meta">
-                {{ selected.createdByDisplayName }} ·
-                {{ selected.createdAt | date: 'dd/MM/yyyy HH:mm' }} · {{ selected.wordCount }} từ
-              </p>
-              <pre>{{ selected.content }}</pre>
-              @if (selected.version !== store.chapter()?.version) {
-                <footer>
-                  <span>Bản hiện tại vẫn được giữ trong lịch sử sau khi khôi phục.</span>
-                  <app-button
-                    variant="secondary"
-                    [disabled]="!isEditable()"
-                    [loading]="store.restoringVersion() === selected.version"
-                    (click)="restoreVersion(selected.version)"
-                  >
-                    <app-icon icon name="history" [size]="16" />
-                    Khôi phục phiên bản này
-                  </app-button>
-                </footer>
-              }
-            </article>
-          }
-        </section>
+      @if (!isCreate()) {
+        <app-chapter-version-history
+          [versions]="store.history()"
+          [total]="store.historyTotal()"
+          [currentVersion]="session.chapter()?.version ?? 0"
+          [selected]="store.selectedVersion()"
+          [diff]="store.diff()"
+          [loading]="store.loadingHistory()"
+          [busy]="store.loadingVersion() || session.busy()"
+          [canRestore]="isEditable() && session.status() !== 'conflict'"
+          [includeAutosaves]="store.includeAutosaves()"
+          (viewed)="viewVersion($event)"
+          (restored)="restoreVersion($event)"
+          (compared)="compareVersion($event)"
+          (loadMore)="loadMoreVersions()"
+          (autosavesChanged)="toggleAutosaves($event)"
+          (closed)="store.clearSelectedVersion(); store.diff.set(null)"
+        />
       }
 
-      @if (!isCreate) {
+      @if (!isCreate()) {
         <app-chapter-translation-panel
           [languages]="targetLanguageOptions"
           [requesting]="translationStore.requesting()"
@@ -245,10 +178,10 @@
           [error]="translationStore.error() || storyProfileStore.error()"
           [profile]="storyProfileStore.profile()"
           [profileSaving]="storyProfileStore.saving()"
-          (translateRequested)="translateChapter($event)"
-          (refreshRequested)="refreshTranslation($event)"
+          (translateRequested)="translationStore.request(storyId, chapterId()!, $event)"
+          (refreshRequested)="translationStore.refresh(storyId, chapterId()!, $event)"
           (errorDismissed)="translationStore.clearError(); storyProfileStore.clearError()"
-          (profileUpdated)="updateStoryAiProfile($event)"
+          (profileUpdated)="storyProfileStore.update(storyId, $event)"
         />
       }
     }

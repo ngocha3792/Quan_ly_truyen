@@ -4,6 +4,7 @@ import { map, Observable, tap } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+import { ChapterVersionDiff } from '../domain/chapter-editing.models';
 import {
   AuthorChapterDraftInput,
   AuthorChapterVersion,
@@ -24,7 +25,9 @@ import {
   AuthorStoryUpdateInput,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
+import { AuthorChapterDraftHttpService } from './author-chapter-draft-http.service';
 import { AuthorChapterVersionHttpService } from './author-chapter-version-http.service';
+import { AuthorChapterPublicationHttpService } from './author-chapter-publication-http.service';
 import { AuthorChapterMonetizationHttpService } from './author-chapter-monetization-http.service';
 import { AuthorMediaUploadService } from './author-media-upload.service';
 import { type CreateRetryState, idempotencyHeaders, reuseCreateKey } from './idempotency-http.util';
@@ -35,11 +38,12 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   private readonly config = inject(APP_RUNTIME_CONFIG);
   private readonly mediaUpload = inject(AuthorMediaUploadService);
   private readonly chapterVersions = inject(AuthorChapterVersionHttpService);
+  private readonly chapterPublication = inject(AuthorChapterPublicationHttpService);
   private readonly chapterMonetization = inject(AuthorChapterMonetizationHttpService);
   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
   private storyCreateRetry: CreateRetryState | null = null;
-  private chapterCreateRetry: CreateRetryState | null = null;
+  private readonly drafts = inject(AuthorChapterDraftHttpService);
 
   listStories(): Observable<readonly AuthorManagedStory[]> {
     return this.http
@@ -134,31 +138,11 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   }
 
   getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
-    return this.http
-      .get<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}`,
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+    return this.drafts.get(storyId, chapterId);
   }
 
   createChapter(storyId: string, input: AuthorChapterDraftInput): Observable<AuthorManagedChapter> {
-    const retry = reuseCreateKey(this.chapterCreateRetry, { storyId, input });
-    this.chapterCreateRetry = retry;
-
-    return this.http
-      .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters`,
-        input,
-        { headers: idempotencyHeaders(retry.key) },
-      )
-      .pipe(
-        map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data),
-        tap(() => {
-          if (this.chapterCreateRetry?.key === retry.key) {
-            this.chapterCreateRetry = null;
-          }
-        }),
-      );
+    return this.drafts.create(storyId, input);
   }
 
   updateChapter(
@@ -166,16 +150,19 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     chapterId: string,
     input: AuthorChapterDraftInput,
   ): Observable<AuthorManagedChapter> {
-    return this.http
-      .patch<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}`,
-        input,
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+    return this.drafts.update(storyId, chapterId, input);
   }
 
   listMonetizationPriceBands(): Observable<readonly MonetizationPriceBand[]> {
     return this.chapterMonetization.listPriceBands();
+  }
+
+  autosaveChapter(
+    storyId: string,
+    chapterId: string,
+    input: AuthorChapterDraftInput,
+  ): Observable<AuthorManagedChapter> {
+    return this.drafts.autosave(storyId, chapterId, input);
   }
 
   getChapterMonetization(
@@ -198,8 +185,9 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     chapterId: string,
     page: number,
     pageSize: number,
+    includeAutosaves = false,
   ): Observable<AuthorChapterVersionPage> {
-    return this.chapterVersions.list(storyId, chapterId, page, pageSize);
+    return this.chapterVersions.list(storyId, chapterId, page, pageSize, includeAutosaves);
   }
 
   getChapterVersion(
@@ -214,8 +202,18 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     storyId: string,
     chapterId: string,
     version: number,
+    expectedVersion: number,
   ): Observable<AuthorManagedChapter> {
-    return this.chapterVersions.restore(storyId, chapterId, version);
+    return this.chapterVersions.restore(storyId, chapterId, version, expectedVersion);
+  }
+
+  getChapterVersionDiff(
+    storyId: string,
+    chapterId: string,
+    from: number,
+    to: number,
+  ): Observable<ChapterVersionDiff> {
+    return this.chapterVersions.diff(storyId, chapterId, from, to);
   }
 
   deleteChapter(storyId: string, chapterId: string): Observable<void> {
@@ -223,13 +221,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   }
 
   publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
-    return this.http
-      .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/publish`,
-        {},
-        { headers: idempotencyHeaders() },
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+    return this.chapterPublication.publish(storyId, chapterId);
   }
 
   scheduleChapter(
@@ -237,20 +229,11 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     chapterId: string,
     scheduledAt: string,
   ): Observable<AuthorManagedChapter> {
-    return this.http
-      .put<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/schedule`,
-        { scheduledAt },
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+    return this.chapterPublication.schedule(storyId, chapterId, scheduledAt);
   }
 
   cancelChapterSchedule(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
-    return this.http
-      .delete<ApiSuccessEnvelope<AuthorManagedChapter>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/schedule`,
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorManagedChapter>) => response.data));
+    return this.chapterPublication.cancel(storyId, chapterId);
   }
 
   uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia> {

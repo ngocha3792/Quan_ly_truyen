@@ -5,6 +5,7 @@ import {
   ChapterNotFoundException,
   ChapterStoryPendingReviewException,
   ChapterVersionNotFoundException,
+  ChapterVersionConflictException,
 } from '../../../domain';
 import { RestoreAuthorChapterVersionCommand } from './restore-author-chapter-version.command';
 import { RestoreAuthorChapterVersionCommandHandler } from './restore-author-chapter-version.command-handler';
@@ -37,6 +38,7 @@ describe('RestoreAuthorChapterVersionCommandHandler', () => {
       storyId: STORY_ID,
       chapterId: CHAPTER_ID,
       version: 2,
+      expectedVersion: undefined,
       restoredAt: expect.any(Date) as unknown,
       audit: {
         ipAddress: '127.0.0.1',
@@ -51,6 +53,30 @@ describe('RestoreAuthorChapterVersionCommandHandler', () => {
       AuthenticationRequiredException,
     );
     expect(persistence.restoreDraftVersion).not.toHaveBeenCalled();
+  });
+
+  it('returns a conflict instead of restoring over a concurrent edit', async () => {
+    persistence.restoreDraftVersion.mockResolvedValue({
+      status: 'version_conflict',
+      currentVersion: 6,
+    });
+    await expect(
+      handler.execute(
+        new RestoreAuthorChapterVersionCommand(
+          USER_ID,
+          STORY_ID,
+          CHAPTER_ID,
+          2,
+          undefined,
+          undefined,
+          undefined,
+          5,
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ChapterVersionConflictException);
+    expect(persistence.restoreDraftVersion).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedVersion: 5 }),
+    );
   });
 
   it.each([

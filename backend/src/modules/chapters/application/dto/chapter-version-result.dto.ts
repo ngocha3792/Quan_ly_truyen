@@ -1,6 +1,9 @@
 import type { ChapterContentDocument } from '../../domain';
 
 export interface ChapterVersionSummaryResultDto {
+  readonly versionType?: 'AUTOSAVE' | 'MANUAL_SAVE' | 'PUBLISHED';
+  readonly isRetained?: boolean;
+  readonly expiresAt?: Date | null;
   readonly id: string;
   readonly chapterId: string;
   readonly createdById: string;

@@ -8,7 +8,7 @@
   "maxWorkers": 1,
   "detectOpenHandles": true,
   "setupFiles": ["<rootDir>/setup/setup-e2e-env.ts"],
-  "testRegex": "stories\\.integration-spec\\.ts$",
+  "testRegex": "(stories|author-studio-v2)\\.integration-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },

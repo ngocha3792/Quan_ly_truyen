@@ -7,5 +7,6 @@ export class RestoreAuthorChapterVersionCommand {
     readonly ipAddress: string | undefined,
     readonly userAgent: string | undefined,
     readonly requestId: string | undefined,
+    readonly expectedVersion: number | undefined = undefined,
   ) {}
 }

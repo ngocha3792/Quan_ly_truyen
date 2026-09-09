@@ -9,7 +9,8 @@ export type AuthorStoryStatus =
   | 'ARCHIVED';
 
 export type AuthorStoryVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
-export type AuthorChapterStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
+export type AuthorChapterStatus =
+  'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
 export const AUTHOR_STORY_CONTRIBUTOR_ROLES = [
   'CO_AUTHOR',
   'EDITOR',
@@ -73,6 +74,9 @@ export interface AuthorManagedChapter extends AuthorManagedChapterSummary {
 }
 
 export interface AuthorChapterVersionSummary {
+  readonly versionType?: 'AUTOSAVE' | 'MANUAL_SAVE' | 'PUBLISHED';
+  readonly isRetained?: boolean;
+  readonly expiresAt?: string | null;
   readonly id: string;
   readonly chapterId: string;
   readonly createdById: string;

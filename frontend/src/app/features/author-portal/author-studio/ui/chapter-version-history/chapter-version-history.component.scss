@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  margin: 1.5rem 0;
+}
+.history {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  background: var(--surface-panel);
+}
+header,
+.version-row,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+h2,
+h3 {
+  margin: 0;
+}
+h2 {
+  font-size: 1.2rem;
+}
+p,
+small {
+  color: var(--text-secondary);
+}
+small {
+  display: block;
+  margin-top: 0.5rem;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.version-row {
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+.preview,
+.diff {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 30rem;
+  overflow: auto;
+  font: inherit;
+  line-height: 1.7;
+  padding: 0.6rem;
+}
+.diff pre {
+  margin: 0;
+  border-left: 3px solid transparent;
+}
+.diff .added {
+  color: var(--success, #57d19c);
+  background: #2d926218;
+  border-color: currentColor;
+}
+.diff .removed {
+  color: var(--danger, #ef9696);
+  background: #e7575718;
+  border-color: currentColor;
+}
+.marker {
+  display: inline-block;
+  width: 1.5rem;
+  user-select: none;
+}
+button {
+  color: inherit;
+  background: none;
+  border: 0;
+  font-size: 1.5rem;
+  cursor: pointer;
+}

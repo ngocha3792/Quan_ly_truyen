@@ -88,7 +88,7 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   protected canPublish(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
     return (
       story.status === 'PUBLISHED' &&
-      (chapter.status === 'DRAFT' || chapter.status === 'SCHEDULED') &&
+      (chapter.status === 'APPROVED' || chapter.status === 'SCHEDULED') &&
       chapter.wordCount > 0
     );
   }

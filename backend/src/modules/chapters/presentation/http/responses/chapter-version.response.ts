@@ -6,6 +6,9 @@ import type {
 import type { ChapterContentDocument } from '../../../domain';
 
 export interface ChapterVersionSummaryResponse {
+  readonly versionType: 'AUTOSAVE' | 'MANUAL_SAVE' | 'PUBLISHED';
+  readonly isRetained: boolean;
+  readonly expiresAt: string | null;
   readonly id: string;
   readonly chapterId: string;
   readonly createdById: string;
@@ -58,6 +61,9 @@ function toChapterVersionSummaryResponse(
   result: ChapterVersionSummaryResultDto,
 ): ChapterVersionSummaryResponse {
   return {
+    versionType: result.versionType ?? 'MANUAL_SAVE',
+    isRetained: result.isRetained ?? true,
+    expiresAt: result.expiresAt?.toISOString() ?? null,
     id: result.id,
     chapterId: result.chapterId,
     createdById: result.createdById,

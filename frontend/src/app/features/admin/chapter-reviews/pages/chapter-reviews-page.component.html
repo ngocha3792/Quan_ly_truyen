@@ -1,0 +1,112 @@
+<main class="workspace-page">
+  <div class="page-container">
+    <app-page-heading
+      title="Duyệt chương"
+      description="Đọc bản được gửi duyệt và ghi lại quyết định theo đúng phiên bản."
+      icon="chapter"
+    />
+    @if (error()) {
+      <app-notice kind="error" [message]="error()" />
+    }
+    @if (success()) {
+      <app-notice kind="success" [message]="success()" />
+    }
+    @if (busy()) {
+      <app-loading-state message="Đang xử lý..." />
+    }
+    <section class="list-card">
+      <div class="list-card__toolbar">
+        <span>{{ result()?.total ?? 0 }} chương chờ duyệt</span
+        ><app-button [disabled]="busy()" (click)="load(1)">Làm mới</app-button>
+      </div>
+      @for (item of result()?.items ?? []; track item.chapter.id) {
+        <article class="queue-item">
+          <div>
+            <strong>{{ item.chapter.title }}</strong>
+            <p>
+              {{ item.storyTitle }} · v{{ item.chapter.version }} · {{ item.chapter.wordCount }} từ
+            </p>
+            <small>{{ item.chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+          <app-button [disabled]="busy()" (click)="open(item)">Đọc và duyệt</app-button>
+        </article>
+      } @empty {
+        @if (!busy()) {
+          <app-empty-state
+            icon="chapter"
+            title="Không có chương chờ duyệt"
+            description="Các chương mới gửi sẽ xuất hiện tại đây."
+          />
+        }
+      }
+      @if (result(); as page) {
+        <div class="list-card__pagination">
+          <app-pagination
+            [page]="page.page"
+            [totalPages]="Math.max(1, Math.ceil(page.total / page.pageSize))"
+            (pageChange)="load($event)"
+          />
+        </div>
+      }
+    </section>
+    @if (selected(); as detail) {
+      <section class="review-panel" aria-labelledby="review-title">
+        <header>
+          <div>
+            <h2 id="review-title">{{ detail.chapter.title }}</h2>
+            <p>{{ detail.storyTitle }} · Phiên bản {{ detail.chapter.version }}</p>
+          </div>
+          <app-button [disabled]="busy()" (click)="selected.set(null)">Đóng</app-button>
+        </header>
+        <pre class="chapter-content">{{ detail.chapter.content }}</pre>
+        @for (review of detail.reviews; track review.id) {
+          <article class="review-record">
+            <strong
+              >{{ review.reviewerName }} · {{ review.decision }} · v{{
+                review.reviewedVersion
+              }}</strong
+            >
+            <p>{{ review.comment }}</p>
+          </article>
+        }
+        @if (detail.chapter.status === 'IN_REVIEW') {
+          <form (ngSubmit)="submit()">
+            <label
+              >Quyết định<select
+                class="ui-field"
+                name="decision"
+                [(ngModel)]="decision"
+                [disabled]="busy()"
+              >
+                <option value="APPROVED">Phê duyệt</option>
+                <option value="REQUEST_CHANGES">Yêu cầu chỉnh sửa</option>
+                <option value="REJECTED">Từ chối</option>
+              </select></label
+            ><label
+              >Nhận xét<textarea
+                class="ui-field"
+                name="comment"
+                [(ngModel)]="comment"
+                maxlength="2000"
+                [required]="decision !== 'APPROVED'"
+                [disabled]="busy()"
+                placeholder="Nêu rõ những điểm tác giả cần chỉnh sửa"
+              ></textarea></label
+            ><app-button
+              type="submit"
+              variant="primary"
+              [loading]="busy()"
+              [disabled]="decision !== 'APPROVED' && !comment.trim()"
+              >Lưu quyết định</app-button
+            >
+          </form>
+        } @else {
+          <app-notice
+            kind="info"
+            message="Chương đã được xử lý. Hãy tải lại danh sách để xem các chương còn chờ."
+          />
+        }
+      </section>
+    }
+  </div>
+</main>

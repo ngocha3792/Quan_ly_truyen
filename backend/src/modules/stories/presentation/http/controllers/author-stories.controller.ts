@@ -65,7 +65,7 @@ export class AuthorStoriesController {
   ) {}
 
   @Get()
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async list(
     @CurrentUserId() userId: string | undefined,
   ): Promise<readonly StoryResponse[]> {
@@ -77,7 +77,7 @@ export class AuthorStoriesController {
   }
 
   @Get(':storyId')
-  @RequirePermissions(PermissionCode.STORY_CREATE)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async findOne(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,

@@ -28,6 +28,7 @@ export class ListAuthorChapterVersionsQueryHandler {
       chapterId: query.chapterId,
       page: query.page,
       pageSize: query.pageSize,
+      includeAutosaves: query.includeAutosaves,
     });
 
     if (!result) {

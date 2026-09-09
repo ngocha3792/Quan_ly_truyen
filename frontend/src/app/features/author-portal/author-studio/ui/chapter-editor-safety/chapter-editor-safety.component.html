@@ -1,0 +1,97 @@
+@if (recoveries().length) {
+  <section class="safety-panel" aria-label="Khôi phục bản nháp">
+    <h2>Tìm thấy bản nháp chưa lưu trên thiết bị</h2>
+    <p>Chọn bản muốn tiếp tục. Chương trên máy chủ chỉ thay đổi sau khi bạn xác nhận và lưu.</p>
+    @for (entry of recoveries(); track entry.key) {
+      <details>
+        <summary>
+          {{ entry.title || 'Chương chưa đặt tên' }} · {{ entry.savedAt | date: 'dd/MM HH:mm:ss' }}
+        </summary>
+        <pre>{{ entry.content }}</pre>
+      </details>
+      <app-button [disabled]="busy()" (click)="recovered.emit(entry)"
+        >Tiếp tục bản nháp này</app-button
+      >
+    }
+    <app-button variant="secondary" [disabled]="busy()" (click)="discarded.emit()"
+      >Bỏ các bản khôi phục</app-button
+    >
+  </section>
+}
+@if (conflict()) {
+  <section class="safety-panel safety-panel--conflict" aria-label="So sánh xung đột">
+    <h2>Chương đã được thay đổi ở nơi khác</h2>
+    <p>Bản đang viết được giữ nguyên. So sánh hai bản trước khi chọn cách tiếp tục.</p>
+    @if (server(); as current) {
+      <div class="comparison">
+        <article>
+          <h3>Bản đang viết · {{ local().title }}</h3>
+          <pre>{{ local().content }}</pre>
+        </article>
+        <article>
+          <h3>Máy chủ v{{ current.version }} · {{ current.title }}</h3>
+          <pre>{{ current.content }}</pre>
+        </article>
+      </div>
+      <div class="actions">
+        <app-button variant="secondary" [disabled]="busy()" (click)="conflictResolved.emit(true)"
+          >Dùng bản máy chủ</app-button
+        ><app-button [disabled]="busy()" (click)="conflictResolved.emit(false)"
+          >Lưu bản đang viết thành phiên bản mới</app-button
+        >
+      </div>
+    } @else {
+      <app-button variant="secondary" (click)="conflictReloaded.emit()"
+        >Tải bản máy chủ để so sánh</app-button
+      >
+    }
+  </section>
+}
+@if (editors().length) {
+  <aside class="presence" role="status">
+    Cũng đang mở chương này:
+    @for (editor of editors(); track editor.id) {
+      <strong>{{ editor.displayName }}{{ $last ? '' : ', ' }}</strong>
+    }
+    . Các lần lưu đều kiểm tra phiên bản.
+  </aside>
+}
+@if (workflow(); as state) {
+  <section class="safety-panel workflow" aria-label="Quy trình duyệt chương">
+    <div>
+      <h2>Quy trình chương</h2>
+      <p>
+        {{
+          state.status === 'IN_REVIEW'
+            ? 'Đang chờ duyệt, nội dung được khóa.'
+            : state.status === 'APPROVED'
+              ? 'Đã duyệt. Bạn có thể xuất bản hoặc lên lịch ở danh sách chương.'
+              : state.status === 'DRAFT'
+                ? 'Hoàn thành bản nháp rồi gửi để duyệt.'
+                : 'Trạng thái: ' + state.status
+        }}
+      </p>
+    </div>
+    @if (state.canSubmit) {
+      <app-button
+        [disabled]="busy() || conflict() || recoveries().length > 0"
+        (click)="transitioned.emit('submit-review')"
+        >Lưu và gửi duyệt</app-button
+      >
+    }
+    @if (state.canReopen) {
+      <app-button variant="secondary" [disabled]="busy()" (click)="transitioned.emit('reopen')"
+        >Mở lại bản nháp để chỉnh sửa</app-button
+      >
+    }
+    @for (review of state.reviews; track review.id) {
+      <div class="review">
+        <strong
+          >{{ review.reviewerName }} · {{ review.decision }} · v{{ review.reviewedVersion }}</strong
+        >
+        <p>{{ review.comment || 'Không có ghi chú.' }}</p>
+        <small>{{ review.createdAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+      </div>
+    }
+  </section>
+}

@@ -3,8 +3,8 @@ import {
   Component,
   computed,
   DestroyRef,
-  ElementRef,
   effect,
+  HostListener,
   inject,
   OnInit,
   ViewChild,
@@ -12,9 +12,8 @@ import {
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-
+import { AuthStore } from '../../../../../core/auth/auth.store';
 import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
@@ -22,15 +21,19 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
+import { ChapterRecoveryQueueService } from '../../data-access/chapter-recovery-queue.service';
 import { ChapterLocalRecoveryService } from '../../data-access/chapter-local-recovery.service';
+import { ChapterEditingSessionStore } from '../../data-access/chapter-editing-session.store';
+import { ChapterWorkflowStore } from '../../data-access/chapter-workflow.store';
+import { validateChapterImage } from '../../domain/chapter-image-validation';
 import { AiStoryProfileStore } from '../../chapter-translation/data-access/ai-story-profile.store';
 import { ChapterTranslationStore } from '../../chapter-translation/data-access/chapter-translation.store';
 import { provideChapterTranslation } from '../../chapter-translation/data-access/chapter-translation.providers';
-import {
-  TARGET_LANGUAGE_OPTIONS,
-  UpdateAiStoryProfilePayload,
-} from '../../chapter-translation/domain/chapter-translation.models';
+import { TARGET_LANGUAGE_OPTIONS } from '../../chapter-translation/domain/chapter-translation.models';
 import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/chapter-translation-panel/chapter-translation-panel.component';
+import { ChapterRichEditorComponent } from '../../ui/chapter-rich-editor/chapter-rich-editor.component';
+import { ChapterEditorSafetyComponent } from '../../ui/chapter-editor-safety/chapter-editor-safety.component';
+import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history/chapter-version-history.component';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
@@ -46,6 +49,9 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
     LoadingStateComponent,
     NoticeComponent,
     ChapterTranslationPanelComponent,
+    ChapterRichEditorComponent,
+    ChapterEditorSafetyComponent,
+    ChapterVersionHistoryComponent,
   ],
   providers: [
     AuthorChapterEditorStore,
@@ -53,6 +59,9 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
     ChapterTranslationStore,
     AiStoryProfileStore,
     ChapterLocalRecoveryService,
+    ChapterRecoveryQueueService,
+    ChapterEditingSessionStore,
+    ChapterWorkflowStore,
   ],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrls: [
@@ -62,20 +71,25 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorChapterEditorPageComponent implements OnInit {
-  @ViewChild('contentArea') private contentArea?: ElementRef<HTMLTextAreaElement>;
+  canLeave(): Promise<boolean> {
+    return this.session.canLeave();
+  }
+  @ViewChild(ChapterRichEditorComponent) private richEditor?: ChapterRichEditorComponent;
   protected readonly store = inject(AuthorChapterEditorStore);
+  protected readonly session = inject(ChapterEditingSessionStore);
+  protected readonly workflow = inject(ChapterWorkflowStore);
   protected readonly translationStore = inject(ChapterTranslationStore);
   protected readonly storyProfileStore = inject(AiStoryProfileStore);
   protected readonly targetLanguageOptions = TARGET_LANGUAGE_OPTIONS;
+  private readonly auth = inject(AuthStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly recovery = inject(ChapterLocalRecoveryService);
-
   protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
-  private readonly chapterId = this.route.snapshot.paramMap.get('chapterId');
-  protected readonly isCreate = this.chapterId === null;
+  private readonly routeChapterId = this.route.snapshot.paramMap.get('chapterId');
+  protected readonly chapterId = computed(() => this.session.chapter()?.id ?? this.routeChapterId);
+  protected readonly isCreate = computed(() => !this.chapterId());
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
     content: [''],
@@ -91,135 +105,151 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       label: this.store.story()?.title ?? 'Quản lý chương',
       route: `/author-studio/truyen/${this.storyId}/chuong`,
     },
-    { label: this.isCreate ? 'Viết chương mới' : 'Chỉnh sửa chương' },
+    { label: this.isCreate() ? 'Viết chương mới' : 'Chỉnh sửa chương' },
   ]);
   protected readonly isEditable = computed(() => {
     const story = this.store.story();
-    const chapter = this.store.chapter();
     if (!story || story.status === 'PENDING_REVIEW') return false;
-    return !chapter || chapter.status === 'DRAFT';
+    if (this.isCreate()) return true;
+    return this.workflow.workflow()?.canEdit === true && this.session.chapter()?.status === 'DRAFT';
+  });
+  protected readonly wordCount = computed(
+    () => this.session.draft().content.trim().split(/\s+/).filter(Boolean).length,
+  );
+  protected readonly statusText = computed(() => {
+    const status = this.session.status();
+    return status === 'saving'
+      ? 'Đang lưu...'
+      : status === 'saved'
+        ? 'Đã lưu'
+        : status === 'conflict'
+          ? 'Có xung đột'
+          : status === 'error'
+            ? 'Chưa lưu được — thử lưu lại'
+            : this.session.dirty()
+              ? 'Có thay đổi chưa lưu'
+              : 'Sẵn sàng';
   });
 
   constructor() {
     effect(() => {
-      const chapter = this.store.chapter();
-      if (chapter) {
-        this.form.patchValue(
-          { title: chapter.title, content: chapter.content },
-          { emitEvent: false },
-        );
-      }
-      if (this.store.story() && !this.isEditable()) this.form.disable({ emitEvent: false });
-      else this.form.enable({ emitEvent: false });
-      this.form.markAsPristine();
-
-      const pricing = this.store.monetization();
-      if (pricing) {
-        this.pricingForm.setValue(
-          {
-            accessType: pricing.accessType,
-            priceBandId: pricing.priceBandId ?? '',
-          },
-          { emitEvent: false },
-        );
-        this.pricingForm.markAsPristine();
+      if (this.store.story() && !this.store.loading() && this.auth.user()?.id) {
+        void this.session.initialize(this.auth.user()!.id, this.storyId, this.store.chapter());
       }
     });
-    this.form.valueChanges
-      .pipe(
-        debounceTime(2500),
-        map((value) => ({ title: value.title?.trim() ?? '', content: value.content ?? '' })),
-        distinctUntilChanged(
-          (left, right) => left.title === right.title && left.content === right.content,
-        ),
-        takeUntilDestroyed(this.destroyRef),
+    effect(() => {
+      this.form.patchValue(this.session.draft(), { emitEvent: false });
+      if (this.isEditable() && !this.session.restoring() && !this.workflow.busy())
+        this.form.enable({ emitEvent: false });
+      else this.form.disable({ emitEvent: false });
+    });
+    effect(() => {
+      const id = this.chapterId();
+      if (id && this.store.story()) void this.workflow.start(this.storyId, id);
+    });
+    effect(() => {
+      if (
+        (this.workflow.workflow()?.version ?? 0) > (this.session.chapter()?.version ?? 0) &&
+        !this.session.busy()
       )
-      .subscribe((draft) => {
-        if (!this.chapterId || !this.isEditable() || !this.form.dirty || this.store.saving())
-          return;
-        void this.recovery.save({ chapterId: this.chapterId, ...draft });
-        const version = this.store.chapter()?.version;
-        if (version)
-          this.store
-            .autosave(this.storyId, this.chapterId, { ...draft, expectedVersion: version })
-            .subscribe();
-      });
+        void this.session.synchronizeServer();
+    });
+    effect(() => {
+      const pricing = this.store.monetization();
+      if (pricing)
+        this.pricingForm.setValue(
+          { accessType: pricing.accessType, priceBandId: pricing.priceBandId ?? '' },
+          { emitEvent: false },
+        );
+    });
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.session.change(this.form.getRawValue()));
   }
 
   ngOnInit(): void {
-    this.store.load(this.storyId, this.chapterId);
-    if (this.chapterId) this.store.loadHistory(this.storyId, this.chapterId);
+    this.store.load(this.storyId, this.routeChapterId);
+    if (this.routeChapterId) this.store.loadHistory(this.storyId, this.routeChapterId);
     this.storyProfileStore.load(this.storyId);
   }
 
+  @HostListener('window:beforeunload', ['$event'])
+  protected beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.session.dirty() || this.session.busy()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
+
+  protected contentChanged(content: string): void {
+    this.form.controls.content.setValue(content);
+    this.form.controls.content.markAsDirty();
+  }
+
   protected viewVersion(version: number): void {
-    if (!this.chapterId) return;
-    this.store.selectVersion(this.storyId, this.chapterId, version);
+    const id = this.chapterId();
+    if (id) this.store.selectVersion(this.storyId, id, version);
   }
 
   protected loadMoreVersions(): void {
-    if (!this.chapterId) return;
-    this.store.loadMoreHistory(this.storyId, this.chapterId);
+    const id = this.chapterId();
+    if (id) this.store.loadMoreHistory(this.storyId, id);
   }
 
-  protected restoreVersion(version: number): void {
-    if (!this.chapterId || !this.isEditable() || this.store.restoringVersion() !== null) return;
+  protected toggleAutosaves(value: boolean): void {
+    this.store.includeAutosaves.set(value);
+    const id = this.chapterId();
+    if (id) this.store.loadHistory(this.storyId, id);
+  }
 
-    const unsavedWarning = this.form.dirty
-      ? ' Các thay đổi chưa lưu trong trình soạn thảo sẽ bị thay thế.'
-      : '';
+  protected compareVersion(version: number): void {
+    const chapter = this.session.chapter();
+    if (chapter) this.store.compare(this.storyId, chapter.id, version, chapter.version);
+  }
+
+  protected async restoreVersion(version: number): Promise<void> {
+    if (!this.isEditable() || this.session.busy()) return;
     if (
       !window.confirm(
-        `Khôi phục phiên bản ${version}? Hệ thống sẽ tạo một phiên bản mới; lịch sử cũ vẫn được giữ.${unsavedWarning}`,
+        `Khôi phục phiên bản ${version} thành phiên bản mới? Các thay đổi chưa lưu trong trình soạn thảo sẽ bị thay thế.`,
       )
-    ) {
+    )
       return;
-    }
-
-    this.store
-      .restoreVersion(this.storyId, this.chapterId, version)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ error: (error: unknown) => this.store.setError(error) });
+    const chapter = await this.session.restore(version);
+    if (chapter) this.store.loadHistory(this.storyId, chapter.id);
   }
 
-  protected translateChapter(targetLanguageCode: string): void {
-    if (!this.chapterId) return;
-    this.translationStore.request(this.storyId, this.chapterId, targetLanguageCode);
-  }
-
-  protected refreshTranslation(targetLanguageCode: string): void {
-    if (!this.chapterId) return;
-    this.translationStore.refresh(this.storyId, this.chapterId, targetLanguageCode);
-  }
-
-  protected updateStoryAiProfile(payload: UpdateAiStoryProfilePayload): void {
-    this.storyProfileStore.update(this.storyId, payload);
-  }
-
-  protected save(): void {
-    if (!this.isEditable() || this.form.invalid || this.store.saving()) {
+  protected async save(): Promise<void> {
+    if (!this.isEditable() || this.form.invalid || this.session.busy()) {
       this.form.markAllAsTouched();
       return;
     }
+    const wasNew = this.isCreate();
+    const chapter = await this.session.save();
+    if (!chapter) return;
+    this.store.loadHistory(this.storyId, chapter.id);
+    if (wasNew && !this.session.dirty())
+      void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong', chapter.id]);
+  }
 
-    const value = this.form.getRawValue();
-    this.store
-      .save(this.storyId, this.chapterId, {
-        title: value.title.trim(),
-        content: value.content,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          if (this.chapterId) void this.recovery.clear(this.chapterId);
-          void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong']);
-        },
-        error: (error: unknown) => this.store.setError(error),
-      });
+  protected async transition(action: 'submit-review' | 'reopen'): Promise<void> {
+    if (this.workflow.busy() || this.session.busy()) return;
+    if (action === 'submit-review') {
+      if (this.form.invalid || !(await this.session.save())) return;
+      if (this.session.dirty()) return;
+    }
+    const chapter = this.session.chapter();
+    if (!chapter) return;
+    try {
+      this.session.adoptChapter(await this.workflow.transition(action, chapter.version));
+    } catch (error) {
+      await this.session.handleError(error);
+    }
   }
 
   protected saveMonetization(): void {
-    if (!this.chapterId || this.store.monetizationSaving()) return;
+    const id = this.chapterId();
+    if (!id || this.store.monetizationSaving()) return;
     const value = this.pricingForm.getRawValue();
     if (value.accessType === 'PAID' && !value.priceBandId) {
       this.store.setError('Hãy chọn một mức giá Credit.');
@@ -228,7 +258,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     this.store
       .updateMonetization(
         this.storyId,
-        this.chapterId,
+        id,
         value.accessType,
         value.accessType === 'PAID' ? value.priceBandId : undefined,
       )
@@ -240,18 +270,15 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     input.value = '';
-    if (!file || !this.chapterId) return;
-
+    const id = this.chapterId();
+    if (!file || !id) return;
     const validationError = validateChapterImage(file);
     if (validationError) {
       this.store.setError(validationError);
       return;
     }
-
-    const textarea = this.contentArea?.nativeElement;
-    const insertionPoint = textarea?.selectionStart ?? this.form.controls.content.value.length;
     this.store
-      .uploadImage(this.chapterId, file)
+      .uploadImage(id, file)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (media) => {
@@ -259,24 +286,12 @@ export class AuthorChapterEditorPageComponent implements OnInit {
             this.store.setError('Ảnh đã tải lên nhưng chưa có URL phân phối.');
             return;
           }
-          const current = this.form.controls.content.value;
-          const alt = file.name.replace(/\.[^.]+$/, '').trim() || 'Ảnh minh họa';
-          const markdown = `\n![${alt}](${media.deliveryUrl})\n`;
-          this.form.controls.content.setValue(
-            current.slice(0, insertionPoint) + markdown + current.slice(insertionPoint),
+          this.richEditor?.insertImage(
+            media.deliveryUrl,
+            file.name.replace(/\.[^.]+$/, '').trim() || 'Ảnh minh họa',
           );
-          this.form.controls.content.markAsDirty();
         },
         error: (error: unknown) => this.store.setError(error),
       });
   }
-}
-
-function validateChapterImage(file: File): string | null {
-  if (file.size > 10 * 1024 * 1024) return 'Ảnh minh họa không được vượt quá 10 MB.';
-  const mime = file.type.toLowerCase();
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const mimeValid = !mime || ['image/jpeg', 'image/png', 'image/webp'].includes(mime);
-  const extensionValid = ['jpg', 'jpeg', 'png', 'webp'].includes(extension ?? '');
-  return mimeValid && extensionValid ? null : 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
 }

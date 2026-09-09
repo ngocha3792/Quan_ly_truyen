@@ -22,6 +22,7 @@ import { PrismaService } from '@/infrastructure/database';
 const ACCESS_SECRET = 'e2e-access-secret-at-least-32-characters';
 
 const AUTHOR_PERMISSIONS = [
+  PermissionCode.STORY_READ,
   PermissionCode.STORY_CREATE,
   PermissionCode.STORY_UPDATE_OWN,
   PermissionCode.STORY_DELETE_OWN,
@@ -41,6 +42,7 @@ const AUTHOR_PERMISSIONS = [
 ] as const;
 
 const ADMIN_PERMISSIONS = [
+  PermissionCode.CHAPTER_MANAGE_ANY,
   PermissionCode.STORY_REVIEW,
   PermissionCode.STORY_PUBLISH,
   PermissionCode.AUTHOR_READ,
@@ -164,6 +166,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .send({
         title: 'Workflow chapter edited by mistake',
         content: 'Nội dung bị chỉnh sửa nhầm.',
+        expectedVersion: 1,
       })
       .expect(200);
     expect(
@@ -212,6 +215,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       )
       .set('Authorization', `Bearer ${authorToken}`)
       .set('x-idempotency-key', restoreKey)
+      .send({ expectedVersion: 2 })
       .expect(200);
     expect(
       unwrap<{ title: string; content: string; version: number }>(
@@ -225,6 +229,7 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       )
       .set('Authorization', `Bearer ${authorToken}`)
       .set('x-idempotency-key', restoreKey)
+      .send({ expectedVersion: 2 })
       .expect(200);
     expect(replayRestoreResponse.headers['x-idempotent-replayed']).toBe('true');
     await expect(
@@ -290,6 +295,34 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       .post(`/api/v1/admin/story-submissions/${submissionId}/approve`)
       .set('Authorization', `Bearer ${adminToken}`)
       .set('x-idempotency-key', `story-approve-${runId}`)
+      .expect(200);
+
+    await request(httpServer())
+      .post(`/api/v1/author/stories/${storyId}/chapters/${chapter.id}/publish`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', `chapter-unreviewed-publish-${runId}`)
+      .expect(409);
+    const draftForReview = await prisma.chapter.findUniqueOrThrow({
+      where: { id: chapter.id },
+      select: { version: true },
+    });
+    const chapterReviewResponse = await request(httpServer())
+      .post(
+        `/api/v1/author/stories/${storyId}/chapters/${chapter.id}/submit-review`,
+      )
+      .set('Authorization', `Bearer ${authorToken}`)
+      .set('x-idempotency-key', `chapter-submit-review-${runId}`)
+      .send({ expectedVersion: draftForReview.version })
+      .expect(200);
+    const inReview = unwrap<{ version: number; status: string }>(
+      chapterReviewResponse.body as unknown,
+    );
+    expect(inReview.status).toBe('IN_REVIEW');
+    await request(httpServer())
+      .post(`/api/v1/admin/chapter-reviews/${chapter.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('x-idempotency-key', `chapter-approve-${runId}`)
+      .send({ expectedVersion: inReview.version, decision: 'APPROVED' })
       .expect(200);
 
     await request(httpServer())

@@ -22,6 +22,8 @@ import { PrismaChapterPersistence } from '@/modules/chapters/infrastructure';
 import { PrismaCommentPersistence } from '@/modules/comments/infrastructure';
 import { MEDIA_URL_BUILDER } from '@/modules/media';
 import { PrismaStoryPersistence } from '@/modules/stories/infrastructure';
+import { PrismaChapterWorkflowPersistence } from '@/modules/chapters/infrastructure/persistence/prisma-chapter-workflow.persistence';
+import { PrismaChapterEditSessionPersistence } from '@/modules/chapters/infrastructure/persistence/prisma-chapter-edit-session.persistence';
 
 describe('Stories PostgreSQL race and ownership invariants', () => {
   let moduleRef: TestingModule;
@@ -42,6 +44,8 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       imports: [AppConfigModule, PrismaModule],
       providers: [
         PrismaStoryPersistence,
+        PrismaChapterWorkflowPersistence,
+        PrismaChapterEditSessionPersistence,
         PrismaChapterPersistence,
         PrismaCommentPersistence,
         PrismaLibraryPersistence,
@@ -122,7 +126,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       visibility: StoryVisibility.PUBLIC,
       publishedAt: new Date(),
     });
-    const chapter = await createChapter(author.id, story.id, 1);
+    const chapter = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.APPROVED,
+    });
     const publishedAt = new Date();
 
     const results = await Promise.all([
@@ -174,7 +180,9 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       visibility: StoryVisibility.PUBLIC,
       publishedAt: new Date(),
     });
-    const chapter = await createChapter(author.id, story.id, 1);
+    const chapter = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.APPROVED,
+    });
     const firstSchedule = new Date(Date.now() + 120_000);
     const secondSchedule = new Date(Date.now() + 240_000);
 
@@ -206,6 +214,8 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       audit: audit('schedule-cancel'),
     });
     expect(canceled.status).toBe('canceled');
+    if (canceled.status === 'canceled')
+      expect(canceled.chapter.status).toBe('APPROVED');
 
     const dueAt = new Date(Date.now() - 1000);
     await chapters.schedule({
@@ -687,6 +697,293 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     expect(counters[0].commentCount).toBe(0);
     expect(counters[1].commentCount).toBe(0);
   });
+
+  it('allows an editable contributor to read and save but never submit, publish or manage the owner story', async () => {
+    const owner = await createAuthor('contributor-owner');
+    const editor = await createUser('contributor-editor');
+    const story = await createStory(owner.id, StoryStatus.PUBLISHED, {
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(owner.id, story.id, 1);
+    const workflow = moduleRef.get(PrismaChapterWorkflowPersistence);
+    await prisma.storyContributor.create({
+      data: {
+        storyId: story.id,
+        userId: editor.id,
+        role: 'EDITOR',
+        canEdit: false,
+      },
+    });
+    await expect(
+      chapters.findOwnedById(editor.id, story.id, chapter.id),
+    ).resolves.toBeNull();
+    await prisma.storyContributor.updateMany({
+      where: { storyId: story.id, userId: editor.id },
+      data: { canEdit: true },
+    });
+    expect(await stories.findOwnedById(editor.id, story.id)).not.toBeNull();
+    expect(
+      await chapters.findOwnedById(editor.id, story.id, chapter.id),
+    ).not.toBeNull();
+    const saved = await chapters.updateDraft({
+      userId: editor.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      expectedVersion: 1,
+      title: 'Edited by contributor',
+      updatedAt: new Date(),
+      audit: audit('contributor-save'),
+    });
+    expect(saved.status).toBe('updated');
+    await expect(
+      workflow.transition({
+        userId: editor.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        expectedVersion: 2,
+        action: 'submit',
+        audit: {},
+      }),
+    ).rejects.toMatchObject({ category: 'FORBIDDEN' });
+    expect(
+      await chapters.publish({
+        userId: editor.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        publishedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_found' });
+    expect(
+      await stories.updateDraft({
+        userId: editor.id,
+        storyId: story.id,
+        title: 'Unauthorized',
+        updatedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_found' });
+    await prisma.storyContributor.deleteMany({
+      where: { storyId: story.id, userId: editor.id },
+    });
+    expect(
+      await chapters.updateDraft({
+        userId: editor.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        expectedVersion: 2,
+        title: 'Revoked',
+        updatedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_found' });
+  });
+
+  it('requires review before publication and records exactly one version-checked reviewer decision', async () => {
+    const owner = await createAuthor('workflow-owner');
+    const reviewer = await createReviewer('workflow-reviewer');
+    const story = await createStory(owner.id, StoryStatus.PUBLISHED, {
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(owner.id, story.id, 1);
+    const workflow = moduleRef.get(PrismaChapterWorkflowPersistence);
+    expect(
+      await chapters.publish({
+        userId: owner.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        publishedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_draft' });
+    expect(
+      await chapters.schedule({
+        userId: owner.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        scheduledAt: new Date(Date.now() + 60_000),
+        updatedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_schedulable' });
+    const review = await workflow.transition({
+      userId: owner.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      expectedVersion: 1,
+      action: 'submit',
+      audit: audit('chapter-submit'),
+    });
+    expect(review).toMatchObject({ status: 'IN_REVIEW', version: 2 });
+    expect(
+      await chapters.updateDraft({
+        userId: owner.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        expectedVersion: 2,
+        title: 'Bypass review',
+        updatedAt: new Date(),
+        audit: {},
+      }),
+    ).toMatchObject({ status: 'not_draft' });
+    const decisions = await Promise.allSettled([
+      workflow.transition({
+        userId: reviewer.id,
+        chapterId: chapter.id,
+        expectedVersion: 2,
+        action: 'APPROVED',
+        audit: audit('approve-chapter'),
+      }),
+      workflow.transition({
+        userId: reviewer.id,
+        chapterId: chapter.id,
+        expectedVersion: 2,
+        action: 'REQUEST_CHANGES',
+        comment: 'More detail',
+        audit: audit('reject-chapter'),
+      }),
+    ]);
+    expect(
+      decisions.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      decisions.find((result) => result.status === 'rejected'),
+    ).toMatchObject({ reason: { code: 'CHAPTER_VERSION_CONFLICT' } });
+    expect(
+      await prisma.chapterReview.count({ where: { chapterId: chapter.id } }),
+    ).toBe(1);
+    expect(
+      await prisma.chapterVersion.count({
+        where: { chapterId: chapter.id, version: 3, isRetained: true },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.auditLog.count({
+        where: {
+          entityId: chapter.id,
+          action: {
+            in: [
+              'chapter.workflow.approved',
+              'chapter.workflow.request_changes',
+            ],
+          },
+        },
+      }),
+    ).toBe(1);
+    const current = await prisma.chapter.findUniqueOrThrow({
+      where: { id: chapter.id },
+    });
+    if (current.status === 'APPROVED') {
+      await expect(
+        workflow.transition({
+          userId: owner.id,
+          storyId: story.id,
+          chapterId: chapter.id,
+          expectedVersion: 2,
+          action: 'reopen',
+          audit: {},
+        }),
+      ).rejects.toMatchObject({ code: 'CHAPTER_VERSION_CONFLICT' });
+      expect(
+        await workflow.transition({
+          userId: owner.id,
+          storyId: story.id,
+          chapterId: chapter.id,
+          expectedVersion: 3,
+          action: 'reopen',
+          audit: {},
+        }),
+      ).toMatchObject({ status: 'DRAFT', version: 4 });
+    }
+  });
+
+  it('edit session heartbeat cannot revive an expired session or mutate another editor session', async () => {
+    const owner = await createAuthor('session-owner');
+    const editor = await createUser('session-editor');
+    const story = await createStory(owner.id, StoryStatus.DRAFT);
+    const chapter = await createChapter(owner.id, story.id, 1);
+    const sessions = moduleRef.get(PrismaChapterEditSessionPersistence);
+    await prisma.storyContributor.create({
+      data: {
+        storyId: story.id,
+        userId: editor.id,
+        role: 'EDITOR',
+        canEdit: true,
+      },
+    });
+    const first = await sessions.save(
+      owner.id,
+      story.id,
+      chapter.id,
+      'owner-tab',
+    );
+    const second = await sessions.save(
+      editor.id,
+      story.id,
+      chapter.id,
+      'editor-tab',
+    );
+    expect(await sessions.list(owner.id, story.id, chapter.id)).toHaveLength(2);
+    await expect(
+      sessions.save(
+        editor.id,
+        story.id,
+        chapter.id,
+        'owner-tab',
+        first.sessionToken,
+      ),
+    ).rejects.toMatchObject({ code: 'CHAPTER_EDIT_SESSION_EXPIRED' });
+    await prisma.chapterEditSession.update({
+      where: { id: second.id },
+      data: { expiresAt: new Date(0) },
+    });
+    await expect(
+      sessions.save(
+        editor.id,
+        story.id,
+        chapter.id,
+        'editor-tab',
+        second.sessionToken,
+      ),
+    ).rejects.toMatchObject({ code: 'CHAPTER_EDIT_SESSION_EXPIRED' });
+    expect(await sessions.list(owner.id, story.id, chapter.id)).toHaveLength(1);
+    await prisma.storyContributor.deleteMany({
+      where: { storyId: story.id, userId: editor.id },
+    });
+    await expect(
+      sessions.save(editor.id, story.id, chapter.id, 'editor-tab'),
+    ).rejects.toMatchObject({ code: 'CHAPTER_NOT_FOUND' });
+  });
+
+  async function createReviewer(label: string): Promise<{ id: string }> {
+    const user = await createUser(label);
+    const permission = await prisma.permission.upsert({
+      where: { code: 'chapter.manage.any' },
+      update: {},
+      create: {
+        code: 'chapter.manage.any',
+        name: 'Review chapters',
+        resource: 'chapter',
+        action: 'manage.any',
+      },
+    });
+    const role = await prisma.role.upsert({
+      where: { code: 'MODERATOR' },
+      update: {},
+      create: { code: 'MODERATOR', name: 'Moderator' },
+    });
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: role.id, permissionId: permission.id },
+      },
+      create: { roleId: role.id, permissionId: permission.id },
+      update: {},
+    });
+    await prisma.userRole.create({
+      data: { userId: user.id, roleId: role.id },
+    });
+    return user;
+  }
 
   async function createReviewReadyDraft(
     userId: string,

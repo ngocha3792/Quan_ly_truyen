@@ -4,6 +4,7 @@ import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
+import { ChapterVersionDiff } from '../domain/chapter-editing.models';
 import {
   AuthorChapterVersion,
   AuthorChapterVersionPage,
@@ -21,10 +22,11 @@ export class AuthorChapterVersionHttpService {
     chapterId: string,
     page: number,
     pageSize: number,
+    includeAutosaves = false,
   ): Observable<AuthorChapterVersionPage> {
     return this.http
       .get<ApiSuccessEnvelope<AuthorChapterVersionPage>>(`${this.versionUrl(storyId, chapterId)}`, {
-        params: { page, pageSize },
+        params: { page, pageSize, includeAutosaves },
       })
       .pipe(map((response) => response.data));
   }
@@ -37,11 +39,29 @@ export class AuthorChapterVersionHttpService {
       .pipe(map((response) => response.data));
   }
 
-  restore(storyId: string, chapterId: string, version: number): Observable<AuthorManagedChapter> {
+  diff(
+    storyId: string,
+    chapterId: string,
+    from: number,
+    to: number,
+  ): Observable<ChapterVersionDiff> {
+    return this.http
+      .get<ApiSuccessEnvelope<ChapterVersionDiff>>(`${this.versionUrl(storyId, chapterId)}/diff`, {
+        params: { from, to },
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  restore(
+    storyId: string,
+    chapterId: string,
+    version: number,
+    expectedVersion: number,
+  ): Observable<AuthorManagedChapter> {
     return this.http
       .post<ApiSuccessEnvelope<AuthorManagedChapter>>(
         `${this.versionUrl(storyId, chapterId)}/${version}/restore`,
-        {},
+        { expectedVersion },
         { headers: new HttpHeaders({ 'x-idempotency-key': crypto.randomUUID() }) },
       )
       .pipe(map((response) => response.data));

@@ -1,0 +1,68 @@
+<section class="chapter-rich-editor" [class.chapter-rich-editor--disabled]="disabled()">
+  <div class="chapter-rich-editor__toolbar" role="group" aria-label="Định dạng nội dung">
+    <select
+      aria-label="Kiểu đoạn văn"
+      [value]="heading()"
+      [disabled]="disabled() || !ready()"
+      (change)="changeHeading($any($event.target).value)"
+    >
+      <option value="0">Đoạn văn</option>
+      <option value="1">Tiêu đề 1</option>
+      <option value="2">Tiêu đề 2</option>
+      <option value="3">Tiêu đề 3</option>
+      <option value="4">Tiêu đề 4</option>
+      <option value="5">Tiêu đề 5</option>
+      <option value="6">Tiêu đề 6</option>
+    </select>
+    @for (item of actions; track item.action) {
+      <button
+        type="button"
+        [class]="'chapter-rich-editor__action chapter-rich-editor__action--' + item.action"
+        [class.is-active]="isActive(item.action)"
+        [attr.aria-label]="item.label"
+        [attr.aria-pressed]="isActive(item.action)"
+        [title]="item.label"
+        [disabled]="disabled() || !ready()"
+        (click)="run(item.action)"
+      >
+        {{ item.text }}
+      </button>
+    }
+    <button
+      type="button"
+      [class.is-active]="isActive('link')"
+      [attr.aria-expanded]="linkOpen()"
+      [disabled]="disabled() || !ready()"
+      (click)="toggleLink()"
+    >
+      Liên kết
+    </button>
+  </div>
+  @if (linkOpen()) {
+    <div class="chapter-rich-editor__link">
+      <input
+        #linkInput
+        type="url"
+        aria-label="Địa chỉ liên kết"
+        placeholder="https://…"
+        [disabled]="disabled()"
+        (keydown.enter)="$event.preventDefault(); setLink(linkInput.value)"
+      />
+      <button type="button" [disabled]="disabled()" (click)="setLink(linkInput.value)">
+        Áp dụng
+      </button>
+      <button type="button" [disabled]="disabled()" (click)="removeLink()">Gỡ liên kết</button>
+      @if (linkError()) {
+        <span role="alert">{{ linkError() }}</span>
+      }
+    </div>
+  }
+  <div #editorElement class="chapter-rich-editor__canvas"></div>
+  <footer class="chapter-rich-editor__footer">
+    <span
+      >{{ editorService.statistics().words }} từ · {{ editorService.statistics().characters }} ký
+      tự</span
+    >
+    <span>{{ disabled() ? 'Chỉ xem' : 'Ctrl+B in đậm · Ctrl+I in nghiêng' }}</span>
+  </footer>
+</section>

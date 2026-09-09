@@ -78,7 +78,7 @@ export class ChapterNotPublishableException extends ResourceConflictException {
     super({
       code: 'CHAPTER_NOT_PUBLISHABLE',
       resource: 'chương',
-      message: 'Chỉ chương bản nháp hoặc đã lên lịch mới có thể được xuất bản',
+      message: 'Chương phải được duyệt hoặc đã lên lịch trước khi xuất bản',
     });
   }
 }
@@ -88,7 +88,7 @@ export class ChapterNotSchedulableException extends ResourceConflictException {
     super({
       code: 'CHAPTER_NOT_SCHEDULABLE',
       resource: 'chương',
-      message: 'Chỉ chương bản nháp hoặc đã lên lịch mới có thể được lên lịch',
+      message: 'Chương phải được duyệt trước khi lên lịch xuất bản',
     });
   }
 }
