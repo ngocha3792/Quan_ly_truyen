@@ -1122,6 +1122,14 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
       'READER_REALTIME_PROGRESS_SYNC_ENABLED must be true when offline reading is enabled',
     );
   }
+  if (
+    config.READER_TEXT_TO_SPEECH_ENABLED &&
+    !config.READER_CONTENT_DOCUMENT_ENABLED
+  ) {
+    throw new Error(
+      'READER_CONTENT_DOCUMENT_ENABLED must be true when text to speech is enabled',
+    );
+  }
 
   if (
     !config.MONETIZATION_ENABLED &&

@@ -34,6 +34,7 @@ export function createRouteDiscoveryRuntimeConfig(): AppRuntimeConfig {
       inlineCommentsEnabled: false,
       comicDeliveryEnabled: false,
       offlineReadingEnabled: false,
+      textToSpeechEnabled: false,
     },
     passwordPolicy: {
       minimumLength: ROUTE_DISCOVERY_POSITIVE_INTEGER,

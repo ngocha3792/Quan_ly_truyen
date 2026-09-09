@@ -131,6 +131,16 @@
 
   p {
     margin: 0 0 14px;
+    border-inline-start: 2px solid transparent;
+    padding-inline-start: 10px;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  p.tts-active {
+    border-inline-start-color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
   }
 
   .chapter-separator {

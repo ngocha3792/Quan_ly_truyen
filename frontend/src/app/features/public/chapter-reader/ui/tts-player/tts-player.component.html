@@ -1,0 +1,85 @@
+<section class="tts-player" aria-label="Trình phát giọng đọc">
+  <div class="tts-player__modes" role="group" aria-label="Nguồn giọng đọc">
+    <button type="button" [class.active]="mode === 'browser'" (click)="mode = 'browser'">
+      Trình duyệt
+    </button>
+    <button
+      type="button"
+      [class.active]="mode === 'provider'"
+      [disabled]="offline"
+      (click)="mode = 'provider'"
+    >
+      Giọng chất lượng cao
+    </button>
+  </div>
+
+  @if (mode === 'browser') {
+    <label
+      ><span>Giọng</span
+      ><select [(ngModel)]="voiceUri">
+        @for (voice of tts.voices(); track voice.voiceURI) {
+          <option [value]="voice.voiceURI">{{ voice.name }} · {{ voice.lang }}</option>
+        }
+      </select></label
+    >
+  } @else {
+    <label
+      ><span>Giọng</span
+      ><select [(ngModel)]="connectionId">
+        <option value="">Chọn kết nối</option>
+        @for (connection of tts.connections(); track connection.id) {
+          <option [value]="connection.id">
+            {{ connection.voiceName }} · {{ connection.name }}
+          </option>
+        }
+      </select></label
+    >
+    @if (connectionId && !selectedConnectionIsSystem()) {
+      <label class="tts-player__fallback">
+        <input type="checkbox" [(ngModel)]="allowSystemFallback" />
+        <span>Cho phép dùng khóa hệ thống khi provider cá nhân lỗi</span>
+      </label>
+    }
+  }
+
+  <label class="tts-player__rate"
+    ><span>Tốc độ {{ rate.toFixed(1) }}x</span
+    ><input type="range" min="0.6" max="2" step="0.1" [(ngModel)]="rate"
+  /></label>
+  <div class="tts-player__actions">
+    <button
+      class="primary"
+      type="button"
+      [disabled]="tts.state() === 'loading' || (mode === 'provider' && !connectionId)"
+      (click)="play()"
+      aria-label="Phát giọng đọc"
+    >
+      ▶
+    </button>
+    <button
+      type="button"
+      [disabled]="tts.state() === 'idle'"
+      (click)="tts.togglePause()"
+      aria-label="Tạm dừng hoặc tiếp tục"
+    >
+      Ⅱ
+    </button>
+    <button
+      type="button"
+      [disabled]="tts.state() === 'idle'"
+      (click)="tts.stop()"
+      aria-label="Dừng"
+    >
+      ■
+    </button>
+  </div>
+  @if (mode === 'provider' && tts.quota(); as quota) {
+    <small
+      >Còn {{ quota.remainingCharacters | number }} / {{ quota.monthlyCharacterLimit | number }} ký
+      tự</small
+    >
+  }
+  @if (tts.message(); as message) {
+    <small class="tts-player__message">{{ message }}</small>
+  }
+</section>

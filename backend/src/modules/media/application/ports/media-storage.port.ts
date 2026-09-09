@@ -46,7 +46,8 @@ export interface BuildMediaUrlInput {
     | 'storyCover'
     | 'storyThumbnail'
     | 'chapterImage'
-    | 'genreCover';
+    | 'genreCover'
+    | 'ttsAudio';
   preferredFormat?: 'avif' | 'webp' | 'jpg';
   slice?: { readonly offsetY: number; readonly height: number };
   requiresSigning?: boolean;

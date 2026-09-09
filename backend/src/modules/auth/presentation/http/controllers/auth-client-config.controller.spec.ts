@@ -26,6 +26,7 @@ describe('AuthClientConfigController', () => {
             inlineCommentsEnabled: false,
             comicDeliveryEnabled: false,
             offlineReadingEnabled: false,
+            textToSpeechEnabled: false,
           };
         }
         return { enabled: false, paymentProviderEnabled: false };
@@ -44,6 +45,7 @@ describe('AuthClientConfigController', () => {
         inlineCommentsEnabled: false,
         comicDeliveryEnabled: false,
         offlineReadingEnabled: false,
+        textToSpeechEnabled: false,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,

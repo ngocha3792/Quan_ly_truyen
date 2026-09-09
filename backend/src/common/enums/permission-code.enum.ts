@@ -66,6 +66,9 @@ export enum PermissionCode {
 
   AI_CHAT_USE = 'ai-chat.use',
   AI_SETTINGS_MANAGE = 'ai-settings.manage',
+  TTS_GENERATE_SELF = 'tts.generate.self',
+  TTS_CONNECTION_MANAGE_SELF = 'tts.connection.manage.self',
+  TTS_SETTINGS_MANAGE = 'tts.settings.manage',
 
   AUTHOR_APPLICATION_CREATE = 'author-application.create',
 

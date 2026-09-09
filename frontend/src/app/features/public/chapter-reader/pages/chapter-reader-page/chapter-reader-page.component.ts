@@ -37,6 +37,7 @@ import { ChapterImageSlicesComponent } from '../../ui/chapter-image-slices/chapt
 import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comments.component';
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
 import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sidebar.component';
+import { TtsPlayerComponent } from '../../ui/tts-player/tts-player.component';
 
 @Component({
   selector: 'app-chapter-reader-page',
@@ -52,6 +53,7 @@ import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sideba
     ChapterImageSlicesComponent,
     IconComponent,
     DatePipe,
+    TtsPlayerComponent,
   ],
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: [
@@ -77,6 +79,7 @@ export class ChapterReaderPageComponent implements OnInit {
   protected readonly inline = inject(InlineCommentsController);
   protected readonly comicDeliveryEnabled =
     inject(APP_RUNTIME_CONFIG).features.comicDeliveryEnabled;
+  protected readonly textToSpeechEnabled = inject(APP_RUNTIME_CONFIG).features.textToSpeechEnabled;
   private trackedChapterId: string | null = null;
   private stopAnalyticsSession: (() => void) | null = null;
 

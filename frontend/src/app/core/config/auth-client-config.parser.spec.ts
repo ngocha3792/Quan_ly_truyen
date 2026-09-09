@@ -15,6 +15,7 @@ describe('parseAuthClientConfigResponse', () => {
             inlineCommentsEnabled: true,
             comicDeliveryEnabled: true,
             offlineReadingEnabled: true,
+            textToSpeechEnabled: true,
           },
           passwordPolicy: {
             minimumLength: 10,
@@ -45,6 +46,7 @@ describe('parseAuthClientConfigResponse', () => {
         inlineCommentsEnabled: true,
         comicDeliveryEnabled: true,
         offlineReadingEnabled: true,
+        textToSpeechEnabled: true,
       },
       passwordPolicy: {
         minimumLength: 10,
@@ -80,6 +82,7 @@ describe('parseAuthClientConfigResponse', () => {
             inlineCommentsEnabled: false,
             comicDeliveryEnabled: false,
             offlineReadingEnabled: false,
+            textToSpeechEnabled: false,
           },
           passwordPolicy: {
             minimumLength: 72,

@@ -38,6 +38,7 @@ describe('apiInterceptor', () => {
       inlineCommentsEnabled: false,
       comicDeliveryEnabled: false,
       offlineReadingEnabled: false,
+      textToSpeechEnabled: false,
     },
 
     passwordPolicy: {

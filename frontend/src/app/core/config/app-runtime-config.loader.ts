@@ -3,8 +3,8 @@ import { environment } from '../../../environments/environment';
 import type { AppRuntimeConfig } from './app-config.token';
 import { parseAuthClientConfigResponse } from './auth-client-config.parser';
 
-const CACHE_KEY = 'truyenhub.runtime-config.v1';
-const CACHE_SCHEMA_VERSION = 1;
+const CACHE_KEY = 'truyenhub.runtime-config.v2';
+const CACHE_SCHEMA_VERSION = 2;
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface RuntimeConfigLoaderDependencies {

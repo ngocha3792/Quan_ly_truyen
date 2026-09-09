@@ -21,6 +21,7 @@ export interface AuthClientConfigResponse {
     readonly inlineCommentsEnabled: boolean;
     readonly comicDeliveryEnabled: boolean;
     readonly offlineReadingEnabled: boolean;
+    readonly textToSpeechEnabled: boolean;
   };
   readonly passwordPolicy: {
     readonly minimumLength: number;
@@ -70,6 +71,7 @@ export class AuthClientConfigController {
         inlineCommentsEnabled: this.readerFeatures.inlineCommentsEnabled,
         comicDeliveryEnabled: this.readerFeatures.comicDeliveryEnabled,
         offlineReadingEnabled: this.readerFeatures.offlineReadingEnabled,
+        textToSpeechEnabled: this.readerFeatures.textToSpeechEnabled,
       },
       passwordPolicy: {
         minimumLength: PasswordPolicy.MIN_LENGTH,

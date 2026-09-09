@@ -27,6 +27,7 @@ export interface AppRuntimeConfig {
     readonly inlineCommentsEnabled: boolean;
     readonly comicDeliveryEnabled: boolean;
     readonly offlineReadingEnabled: boolean;
+    readonly textToSpeechEnabled: boolean;
   };
   readonly passwordPolicy: AuthPasswordPolicyConfig;
   readonly passwordReset: AuthPasswordResetConfig;

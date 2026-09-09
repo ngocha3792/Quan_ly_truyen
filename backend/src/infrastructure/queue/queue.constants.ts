@@ -6,6 +6,7 @@ export const QUEUE_NAMES = {
   ANALYTICS: 'analytics',
   OUTBOX: 'outbox',
   AI: 'ai',
+  TTS: 'tts',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

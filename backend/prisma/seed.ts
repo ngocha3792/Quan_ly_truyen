@@ -204,6 +204,14 @@ const permissions = [
     'ai-settings',
     'manage',
   ],
+  ['tts.generate.self', 'Generate text to speech audio', 'tts', 'generate.self'],
+  [
+    'tts.connection.manage.self',
+    'Manage own text to speech provider connections',
+    'tts.connection',
+    'manage.self',
+  ],
+  ['tts.settings.manage', 'Manage system text to speech settings', 'tts.settings', 'manage'],
 ] as const;
 
 type PermissionCode = (typeof permissions)[number][0];
@@ -236,6 +244,8 @@ const userPermissionCodes: PermissionCode[] = [
   'media.upload',
   'notification.manage.own',
   'ai-chat.use',
+  'tts.generate.self',
+  'tts.connection.manage.self',
 ];
 
 const securityQuestions = [

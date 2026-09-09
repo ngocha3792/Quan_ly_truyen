@@ -255,6 +255,25 @@ describe('validateEnvironment', () => {
     ).not.toThrow();
   });
 
+  it('requires stable content documents for text to speech', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_TEXT_TO_SPEECH_ENABLED: 'true',
+      }),
+    ).toThrow(
+      'READER_CONTENT_DOCUMENT_ENABLED must be true when text to speech is enabled',
+    );
+
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        READER_CONTENT_DOCUMENT_ENABLED: 'true',
+        READER_TEXT_TO_SPEECH_ENABLED: 'true',
+      }),
+    ).not.toThrow();
+  });
+
   it('requires complete payment provider configuration when enabled', () => {
     expect(() =>
       validateEnvironment({

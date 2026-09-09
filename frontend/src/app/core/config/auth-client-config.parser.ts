@@ -38,6 +38,7 @@ function parseFeatureConfig(value: unknown): AppRuntimeConfig['features'] {
     inlineCommentsEnabled: readBoolean(value, 'inlineCommentsEnabled'),
     comicDeliveryEnabled: readBoolean(value, 'comicDeliveryEnabled'),
     offlineReadingEnabled: readBoolean(value, 'offlineReadingEnabled'),
+    textToSpeechEnabled: readBoolean(value, 'textToSpeechEnabled'),
   };
 }
 

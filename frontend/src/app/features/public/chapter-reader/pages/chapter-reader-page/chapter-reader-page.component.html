@@ -31,6 +31,14 @@
 
           <div class="chapter-divider"></div>
 
+          @if (textToSpeechEnabled && view.chapter.accessState !== 'LOCKED') {
+            <app-tts-player
+              [chapterId]="view.chapter.id"
+              [blocks]="view.chapter.blocks"
+              [offline]="store.offlineMode()"
+            />
+          }
+
           <nav class="chapter-navigation chapter-navigation--top" aria-label="Điều hướng chương">
             @if (view.navigation.previous; as previous) {
               <a class="navigation-side" [routerLink]="previous.url">

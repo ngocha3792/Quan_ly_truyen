@@ -15,6 +15,7 @@ import { AiWorkerModule } from './modules/ai';
 import { ChaptersWorkerModule } from './modules/chapters';
 import { BillingWorkerModule } from './modules/billing';
 import { CommentsWorkerModule } from './modules/comments';
+import { TtsWorkerModule } from './modules/tts';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -39,6 +40,7 @@ const queueWorkersEnabled =
           ChaptersWorkerModule,
           BillingWorkerModule,
           CommentsWorkerModule,
+          TtsWorkerModule,
         ]
       : []),
   ],

@@ -429,6 +429,36 @@ enum OfflineChapterAccessState {
   @@map("offline_chapter_access_state")
 }
 
+enum TtsProvider {
+  ELEVEN_LABS @map("eleven_labs")
+
+  @@map("tts_provider")
+}
+
+enum TtsFallbackPolicy {
+  NONE   @map("none")
+  SYSTEM @map("system")
+
+  @@map("tts_fallback_policy")
+}
+
+enum TtsManifestStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+
+  @@map("tts_manifest_status")
+}
+
+enum TtsSegmentStatus {
+  PENDING   @map("pending")
+  GENERATED @map("generated")
+  FAILED    @map("failed")
+
+  @@map("tts_segment_status")
+}
+
 enum CommentAnchorStatus {
   ACTIVE     @map("active")
   REANCHORED @map("reanchored")
@@ -536,6 +566,10 @@ model User {
   paymentOrders                PaymentOrder[]
   offlinePackages              OfflinePackage[]
   offlineQuota                 OfflineQuota?
+  ttsConnections               TtsVoiceConnection[]
+  ttsManifests                 TtsManifest[]
+  ttsUsage                     TtsUsage[]
+  ttsQuota                     TtsQuota?
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -1671,6 +1705,7 @@ model Chapter {
   purchases         ChapterPurchase[]
   entitlements      ChapterEntitlement[]
   commentAnchors    CommentAnchor[]
+  ttsManifests      TtsManifest[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])
@@ -1774,6 +1809,138 @@ model OfflineQuota {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("offline_quotas")
+}
+
+// ============================================================
+// TEXT TO SPEECH
+// ============================================================
+
+model TtsVoiceConnection {
+  id              String      @id @default(uuid()) @db.Uuid
+  userId          String?     @map("user_id") @db.Uuid
+  provider        TtsProvider
+  name            String      @db.VarChar(120)
+  voiceId         String      @map("voice_id") @db.VarChar(255)
+  voiceName       String      @map("voice_name") @db.VarChar(120)
+  language        String      @db.VarChar(16)
+  encryptedApiKey String      @map("encrypted_api_key") @db.Text
+  stability       Decimal?    @db.Decimal(4, 3)
+  similarity      Decimal?    @db.Decimal(4, 3)
+  style           Decimal?    @db.Decimal(4, 3)
+  isActive        Boolean     @default(true) @map("is_active")
+  isSystem        Boolean     @default(false) @map("is_system")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manifests TtsManifest[]
+  usage     TtsUsage[]
+
+  @@index([userId, isActive], map: "tts_voice_connections_user_active_idx")
+  @@index([provider, isSystem, isActive], map: "tts_voice_connections_system_idx")
+  @@map("tts_voice_connections")
+}
+
+model TtsManifest {
+  id                  String            @id @default(uuid()) @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  chapterId           String            @map("chapter_id") @db.Uuid
+  connectionId        String            @map("connection_id") @db.Uuid
+  chapterVersion      Int               @map("chapter_version")
+  language            String            @db.VarChar(16)
+  voiceId             String            @map("voice_id") @db.VarChar(255)
+  styleHash           String            @map("style_hash") @db.VarChar(64)
+  fallbackPolicy      TtsFallbackPolicy @default(NONE) @map("fallback_policy")
+  status              TtsManifestStatus @default(PENDING)
+  totalSegments       Int               @map("total_segments")
+  completedSegments   Int               @default(0) @map("completed_segments")
+  characterCount      Int               @map("character_count")
+  totalDurationMs     Int?              @map("total_duration_ms")
+  estimatedCostMicros BigInt?           @map("estimated_cost_micros")
+  jobId               String?           @map("job_id") @db.VarChar(255)
+  startedAt           DateTime?         @map("started_at") @db.Timestamptz(3)
+  completedAt         DateTime?         @map("completed_at") @db.Timestamptz(3)
+  failureReason       String?           @map("failure_reason") @db.VarChar(1000)
+  lastAccessedAt      DateTime          @default(now()) @map("last_accessed_at") @db.Timestamptz(3)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter    Chapter            @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  connection TtsVoiceConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  segments   TtsSegment[]
+  usage      TtsUsage?
+
+  @@unique([userId, chapterId, chapterVersion, language, voiceId, styleHash], map: "tts_manifests_user_cache_key")
+  @@index([userId, status, createdAt], map: "tts_manifests_user_status_created_idx")
+  @@index([chapterId, status], map: "tts_manifests_chapter_status_idx")
+  @@map("tts_manifests")
+}
+
+model TtsSegment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  manifestId         String           @map("manifest_id") @db.Uuid
+  blockId            String           @map("block_id") @db.Uuid
+  blockIndex         Int              @map("block_index")
+  blockText          String           @map("block_text") @db.Text
+  status             TtsSegmentStatus @default(PENDING)
+  audioPublicId      String?          @map("audio_public_id") @db.VarChar(512)
+  durationMs         Int?             @map("duration_ms")
+  sizeBytes          BigInt?          @map("size_bytes")
+  format             String?          @db.VarChar(20)
+  startTimeMs        Int?             @map("start_time_ms")
+  endTimeMs          Int?             @map("end_time_ms")
+  wordTimings        Json?            @map("word_timings") @db.JsonB
+  characterCount     Int              @map("character_count")
+  retryCount         Int              @default(0) @map("retry_count")
+  generatedAt        DateTime?        @map("generated_at") @db.Timestamptz(3)
+  failureReason      String?          @map("failure_reason") @db.VarChar(1000)
+  usedSystemFallback Boolean          @default(false) @map("used_system_fallback")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  manifest TtsManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+
+  @@unique([manifestId, blockId], map: "tts_segments_manifest_block_key")
+  @@unique([manifestId, blockIndex], map: "tts_segments_manifest_index_key")
+  @@index([status, updatedAt], map: "tts_segments_status_updated_idx")
+  @@map("tts_segments")
+}
+
+model TtsUsage {
+  id                  String      @id @default(uuid()) @db.Uuid
+  userId              String      @map("user_id") @db.Uuid
+  connectionId        String?     @map("connection_id") @db.Uuid
+  manifestId          String      @unique @map("manifest_id") @db.Uuid
+  provider            TtsProvider
+  characterCount      Int         @map("character_count")
+  segmentCount        Int         @map("segment_count")
+  totalDurationMs     Int         @map("total_duration_ms")
+  estimatedCostMicros BigInt?     @map("estimated_cost_micros")
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection TtsVoiceConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  manifest   TtsManifest         @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "tts_usage_user_created_idx")
+  @@index([provider, createdAt], map: "tts_usage_provider_created_idx")
+  @@map("tts_usage")
+}
+
+model TtsQuota {
+  userId                String   @id @map("user_id") @db.Uuid
+  monthlyCharacterLimit Int      @default(50000) @map("monthly_character_limit")
+  currentMonthUsage     Int      @default(0) @map("current_month_usage")
+  reservedCharacters    Int      @default(0) @map("reserved_characters")
+  currentMonthStart     DateTime @map("current_month_start") @db.Date
+  totalCharacters       BigInt   @default(0) @map("total_characters")
+  totalSegments         Int      @default(0) @map("total_segments")
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tts_quotas")
 }
 
 model ChapterVersion {

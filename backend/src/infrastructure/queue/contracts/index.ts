@@ -4,3 +4,4 @@ export * from './notification.contracts';
 export * from './outbox.contracts';
 export * from './story-scheduling.contracts';
 export * from './ai-translation.contracts';
+export * from './tts.contracts';

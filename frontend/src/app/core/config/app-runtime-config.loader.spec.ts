@@ -25,7 +25,7 @@ describe('loadAppRuntimeConfig offline fallback', () => {
 
     expect(config.features.offlineReadingEnabled).toBe(true);
     const cached = storage.value();
-    expect(cached).toContain('"schemaVersion":1');
+    expect(cached).toContain('"schemaVersion":2');
     expect(cached).not.toContain('accessToken');
     expect(cached).not.toContain('sessionId');
   });
@@ -44,7 +44,7 @@ describe('loadAppRuntimeConfig offline fallback', () => {
 
   it.each([
     ['malformed', '{'],
-    ['wrong schema', JSON.stringify(cachedRecord({ schemaVersion: 2 }))],
+    ['wrong schema', JSON.stringify(cachedRecord({ schemaVersion: 1 }))],
     ['stale', JSON.stringify(cachedRecord({ savedAt: NOW - 31 * 24 * 60 * 60 * 1000 }))],
     [
       'wrong environment',
@@ -103,7 +103,7 @@ function successfulFetch(): typeof fetch {
 
 function cachedRecord(overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     savedAt: NOW,
     environment: environmentRecord(),
     config: publicConfig(),
@@ -126,6 +126,7 @@ function publicConfig() {
       inlineCommentsEnabled: true,
       comicDeliveryEnabled: true,
       offlineReadingEnabled: true,
+      textToSpeechEnabled: true,
     },
     passwordPolicy: {
       minimumLength: 10,
@@ -145,7 +146,7 @@ class MemoryStorage implements Storage {
   private readonly cache = new Map<string, string>();
 
   constructor(initial?: string) {
-    if (initial !== undefined) this.cache.set('truyenhub.runtime-config.v1', initial);
+    if (initial !== undefined) this.cache.set('truyenhub.runtime-config.v2', initial);
   }
   get length(): number {
     return this.cache.size;

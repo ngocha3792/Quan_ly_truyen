@@ -121,6 +121,9 @@ export class CloudinaryUrlAdapter implements MediaUrlPort {
           },
         ];
 
+      case 'ttsAudio':
+        return [{ quality: 'auto' }];
+
       case 'genreCover':
       default:
         return [
