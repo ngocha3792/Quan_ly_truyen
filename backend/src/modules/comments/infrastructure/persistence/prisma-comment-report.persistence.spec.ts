@@ -89,12 +89,13 @@ describe('PrismaCommentInteractionPersistence report evidence', () => {
     });
     const data = storedData();
     expect(data).toMatchObject({
-      reportedUserId: 'author',
-      storyId: 'story',
-      chapterId: 'chapter',
+      targetType: 'COMMENT',
+      commentId: 'reply',
       evidence: {
-        comment: { body: 'Reported reply' },
+        comment: { body: 'Reported reply', authorId: 'author' },
         context: {
+          storyId: 'story',
+          chapterId: 'chapter',
           source: 'SERVER',
           chapterVersion: 4,
           anchor: {
@@ -108,6 +109,9 @@ describe('PrismaCommentInteractionPersistence report evidence', () => {
       },
     });
     expect(JSON.stringify(data)).not.toContain('forged');
+    expect(data).not.toHaveProperty('reportedUserId');
+    expect(data).not.toHaveProperty('storyId');
+    expect(data).not.toHaveProperty('chapterId');
     expect(response).toEqual({
       id: 'report',
       status: 'OPEN',

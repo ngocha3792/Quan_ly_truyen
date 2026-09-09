@@ -515,9 +515,8 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
             reporterId: input.userId,
             targetType: ReportTargetType.COMMENT,
             commentId: current.id,
-            reportedUserId: current.userId,
-            storyId: current.storyId,
-            chapterId: current.chapterId,
+            // These columns identify mutually exclusive report targets.
+            // Related author/story/chapter context belongs in evidence below.
             reason,
             description,
             evidence: {

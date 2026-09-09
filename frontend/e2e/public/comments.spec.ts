@@ -20,7 +20,14 @@ test('reader thread, reaction, report and deleted tombstone journey stays consis
   await page.goto(STORY_URL);
   const comments = page.locator('app-public-comments');
   await comments.getByPlaceholder('Viết bình luận của bạn...').fill(ROOT_BODY);
+  const createdResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /\/stories\/[^/]+\/comments$/u.test(new URL(response.url()).pathname),
+  );
   await comments.getByRole('button', { name: 'Gửi', exact: true }).click();
+  const created = await createdResponse;
+  expect(created.ok(), await created.text()).toBe(true);
   await expect(comments.getByText(ROOT_BODY)).toBeVisible();
 
   await switchUser(page, USERS.b, `${testInfo.title}-b`);
@@ -69,7 +76,14 @@ test('reader thread, reaction, report and deleted tombstone journey stays consis
   await dialog
     .getByRole('textbox')
     .fill('Phản hồi này có nội dung quấy rối cần moderator xem xét.');
+  const reportResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /\/comments\/[^/]+\/report$/u.test(new URL(response.url()).pathname),
+  );
   await dialog.getByRole('button', { name: 'Gửi báo cáo', exact: true }).click();
+  const reported = await reportResponse;
+  expect(reported.ok(), await reported.text()).toBe(true);
   await expect(
     comments.getByText('Cảm ơn bạn đã báo cáo. Nhóm kiểm duyệt sẽ xem xét.'),
   ).toBeVisible();

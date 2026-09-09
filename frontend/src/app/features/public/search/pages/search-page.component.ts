@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, combineLatest, map, of, startWith, Subject, switchMap, tap } from 'rxjs';
 import {
@@ -26,6 +26,7 @@ export class SearchPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly refresh = new Subject<void>();
+  private readonly navigations = new Set<ReturnType<SearchPageComponent['values']>>();
   protected readonly result = signal<SearchPage | null>(null);
   protected readonly filters = signal<SearchFilters>({ categories: [], tags: [] });
   protected readonly loading = signal(false);
@@ -49,28 +50,18 @@ export class SearchPageComponent {
         takeUntilDestroyed(),
       )
       .subscribe((value) => this.filters.set(value));
-    combineLatest([this.route.queryParamMap, this.refresh.pipe(startWith(undefined))])
+    const queryParams = this.route.queryParamMap.pipe(tap((params) => this.applyRoute(params)));
+    combineLatest([queryParams, this.refresh.pipe(startWith(undefined))])
       .pipe(
         map(([params]) => params),
-        tap((params) => {
-          this.q = params.get('q') ?? '';
-          this.kind = params.get('kind') === 'chapter' ? 'chapter' : 'story';
-          this.category = params.get('category') ?? '';
-          this.tag = params.get('tag') ?? '';
-          this.status = params.get('status') ?? '';
-          this.sort = params.get('sort') ?? 'relevance';
-          this.yearFrom = params.get('yearFrom') ?? '';
-          this.yearTo = params.get('yearTo') ?? '';
-          this.contentRating = params.get('contentRating') ?? '';
-          this.featured = params.get('featured') === 'true';
-          this.storyId = params.get('storyId') ?? '';
+        tap(() => {
           this.loading.set(true);
           this.error.set(false);
         }),
         switchMap((params) =>
           this.api
             .search({
-              ...this.values(),
+              ...this.routeValues(params),
               page: Math.max(1, Math.min(1000, Number(params.get('page')) || 1)),
             })
             .pipe(
@@ -88,7 +79,11 @@ export class SearchPageComponent {
       });
   }
   protected submit(page = 1): void {
-    void this.router.navigate(['/tim-kiem'], { queryParams: { ...this.values(), page } });
+    const values = this.values();
+    this.navigations.add(values);
+    void this.router
+      .navigate(['/tim-kiem'], { queryParams: { ...values, page } })
+      .finally(() => this.navigations.delete(values));
   }
   protected retry(): void {
     this.refresh.next();
@@ -128,5 +123,38 @@ export class SearchPageComponent {
       featured: this.featured || undefined,
       storyId: this.kind === 'chapter' ? this.storyId : '',
     };
+  }
+
+  private routeValues(params: ParamMap) {
+    return {
+      q: params.get('q') ?? '',
+      kind: params.get('kind') === 'chapter' ? 'chapter' : 'story',
+      category: params.get('category') ?? '',
+      tag: params.get('tag') ?? '',
+      status: params.get('status') ?? '',
+      sort: params.get('sort') ?? 'relevance',
+      yearFrom: params.get('yearFrom') ?? '',
+      yearTo: params.get('yearTo') ?? '',
+      contentRating: params.get('contentRating') ?? '',
+      featured: params.get('featured') === 'true' || undefined,
+      storyId: params.get('kind') === 'chapter' ? (params.get('storyId') ?? '') : '',
+    };
+  }
+
+  private applyRoute(params: ParamMap): void {
+    const incoming = this.routeValues(params);
+    const keys = Object.keys(incoming) as (keyof typeof incoming)[];
+    const submitted = [...this.navigations].find((value) =>
+      keys.every((key) => value[key] === incoming[key]),
+    );
+    const current = this.values();
+    for (const key of keys) {
+      // Preserve edits made after our navigation started. External navigation
+      // (including Back/Forward) still restores every control from the URL.
+      if (!submitted || current[key] === submitted[key]) {
+        if (key === 'featured') this.featured = incoming.featured ?? false;
+        else this[key] = incoming[key];
+      }
+    }
   }
 }

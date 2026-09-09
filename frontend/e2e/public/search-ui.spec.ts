@@ -77,6 +77,24 @@ test.describe('Search UI with controlled API responses', () => {
       });
     });
   });
+  test('keeps typing done while a result-kind navigation is pending', async ({ page }) => {
+    await page.goto('/tim-kiem?q=old');
+    await expect(page.getByRole('region', { name: 'Kết quả tìm kiếm' })).toHaveAttribute(
+      'aria-busy',
+      'false',
+    );
+    await page.getByRole('button', { name: 'Nội dung chương', exact: true }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+      const input = document.querySelector<HTMLInputElement>('input[name="q"]')!;
+      input.value = 'navigation';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect(page).toHaveURL(/kind=chapter/u);
+    await expect(page.getByLabel('Từ khóa', { exact: true })).toHaveValue('navigation');
+    await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
+    await expect(page).toHaveURL(/q=navigation/u);
+  });
+
   for (const width of [1440, 390]) {
     test(`renders search and protected chapter previews at ${width}px`, async ({
       page,

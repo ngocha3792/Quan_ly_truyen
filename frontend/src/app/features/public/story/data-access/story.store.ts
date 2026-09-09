@@ -50,9 +50,14 @@ export class StoryDetailStore {
           this.auth
             .ensureInitialized()
             .pipe(
-              switchMap((authState) =>
-                this.repository.getComments(story.slug).pipe(
-                  tap((comments) => this.comments.set(comments)),
+              switchMap((authState) => {
+                const initialComments = this.comments();
+                return this.repository.getComments(story.slug).pipe(
+                  tap((comments) => {
+                    // A late initial read must not replace a newer local write.
+                    if (this.story()?.id === story.id && this.comments() === initialComments)
+                      this.comments.set(comments);
+                  }),
                   switchMap(() =>
                     authState === 'authenticated'
                       ? this.repository.getMyRating(story.id).pipe(
@@ -67,8 +72,8 @@ export class StoryDetailStore {
                       : of(null),
                   ),
                   catchError(() => of(null)),
-                ),
-              ),
+                );
+              }),
               catchError(() => of(null)),
             )
             .subscribe();

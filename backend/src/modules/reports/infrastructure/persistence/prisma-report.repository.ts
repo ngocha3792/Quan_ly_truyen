@@ -50,16 +50,18 @@ export class PrismaReportRepository implements ReportRepositoryPort {
         : {}),
       ...(searchReported
         ? {
-            reportedUser: {
-              OR: [
-                {
-                  displayName: {
-                    contains: searchReported,
-                    mode: 'insensitive',
+            comment: {
+              user: {
+                OR: [
+                  {
+                    displayName: {
+                      contains: searchReported,
+                      mode: 'insensitive',
+                    },
                   },
-                },
-                { email: { contains: searchReported, mode: 'insensitive' } },
-              ],
+                  { email: { contains: searchReported, mode: 'insensitive' } },
+                ],
+              },
             },
           }
         : {}),
@@ -86,7 +88,15 @@ export class PrismaReportRepository implements ReportRepositoryPort {
           createdAt: true,
           reporter: { select: { id: true, displayName: true } },
           reportedUser: { select: { id: true, displayName: true } },
-          comment: { select: { id: true, body: true } },
+          comment: {
+            select: {
+              id: true,
+              body: true,
+              user: { select: { id: true, displayName: true } },
+              story: { select: { id: true, title: true } },
+              chapter: { select: { id: true, title: true } },
+            },
+          },
           story: { select: { id: true, title: true } },
           chapter: { select: { id: true, title: true } },
         },
@@ -99,12 +109,12 @@ export class PrismaReportRepository implements ReportRepositoryPort {
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         reporter: row.reporter,
-        reportedUser: row.reportedUser,
+        reportedUser: row.comment?.user ?? row.reportedUser,
         comment: row.comment
           ? { id: row.comment.id, excerpt: excerpt(row.comment.body) }
           : null,
-        story: row.story,
-        chapter: row.chapter,
+        story: row.comment?.story ?? row.story,
+        chapter: row.comment?.chapter ?? row.chapter,
         anchorContext: reportAnchorContext(row.evidence),
       })),
       pagination: {
@@ -143,7 +153,16 @@ export class PrismaReportRepository implements ReportRepositoryPort {
             deletedAt: true,
             storyId: true,
             chapterId: true,
-            user: { select: { id: true, displayName: true, status: true } },
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                email: true,
+                status: true,
+              },
+            },
+            story: { select: { id: true, slug: true, title: true } },
+            chapter: { select: { id: true, number: true, title: true } },
           },
         },
         story: { select: { id: true, slug: true, title: true } },
@@ -168,16 +187,20 @@ export class PrismaReportRepository implements ReportRepositoryPort {
           where: { commentId: report.comment.id },
         })
       : 0;
-    const recentUserModerationCount = report.reportedUser
+    const reportedUser = report.comment?.user ?? report.reportedUser;
+    const recentUserModerationCount = reportedUser
       ? await this.prisma.moderationAction.count({
           where: {
-            targetUserId: report.reportedUser.id,
+            targetUserId: reportedUser.id,
             createdAt: { gte: new Date(Date.now() - 90 * 86_400_000) },
           },
         })
       : 0;
     return {
       ...report,
+      reportedUser,
+      story: report.comment?.story ?? report.story,
+      chapter: report.comment?.chapter ?? report.chapter,
       anchorContext: reportAnchorContext(report.evidence),
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),

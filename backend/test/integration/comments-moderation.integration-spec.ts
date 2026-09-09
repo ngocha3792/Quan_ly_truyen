@@ -201,6 +201,13 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     const original = await prisma.report.findUniqueOrThrow({
       where: { id: report.id },
     });
+    expect(original).toMatchObject({
+      targetType: 'COMMENT',
+      commentId: reply.id,
+      storyId: null,
+      chapterId: null,
+      reportedUserId: null,
+    });
     expect(original.evidence).toMatchObject({
       context: {
         source: 'SERVER',
@@ -232,6 +239,9 @@ describe('Comment + moderation PostgreSQL invariants', () => {
       data: { body: 'Edited reply' },
     });
     const detail = await moduleRef.get(PrismaReportRepository).get(report.id);
+    expect(detail.reportedUser?.id).toBe(readerB);
+    expect(detail.story?.id).toBe(root.storyId);
+    expect(detail.chapter?.id).toBe(chapter.id);
     expect(detail.evidence).toEqual(original.evidence);
     expect(detail.anchorContext).toMatchObject({
       quote: 'Server-owned quote',
@@ -240,6 +250,27 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     });
     expect(report).not.toHaveProperty('evidence');
     expect(report).not.toHaveProperty('anchorContext');
+    const otherComment = await prisma.comment.create({
+      data: {
+        storyId: root.storyId,
+        chapterId: chapter.id,
+        userId: readerB,
+        body: 'Another report target in the same story',
+      },
+    });
+    const second = await comments.createReport({
+      userId: readerA,
+      commentId: otherComment.id,
+      reason: 'SPAM',
+    });
+    expect(second.id).not.toBe(report.id);
+    const reportedUser = await prisma.user.findUniqueOrThrow({
+      where: { id: readerB },
+    });
+    const inbox = await moduleRef
+      .get(PrismaReportRepository)
+      .list({ page: 1, pageSize: 20, reportedUser: reportedUser.email });
+    expect(inbox.items.map((item) => item.id)).toContain(second.id);
   });
 
   it('does not allow the generic reply endpoint to bypass paid inline-thread access', async () => {
