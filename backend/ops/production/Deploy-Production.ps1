@@ -491,18 +491,39 @@ foreach (
 }
 
 Write-Host `
-  '[8/9] Starting API, worker, recovery metrics and frontend (HTTPS edge is a host-level Nginx reverse proxy, not managed by this script)...' `
+  '[8/9] Starting API, worker and recovery metrics before frontend (HTTPS edge is managed separately)...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose -Arguments @(
-  'up',
-  '-d',
-  '--wait',
-  'api',
-  'worker',
-  'recovery-metrics',
-  'frontend'
-)
+try {
+  # API readiness includes the worker heartbeat. Wait for the runtime group
+  # before asking Compose to start services that depend on API health.
+  Invoke-DockerCompose -Arguments @(
+    'up', '-d', '--wait', 'api', 'worker', 'recovery-metrics'
+  )
+
+  # Dependencies have just passed readiness. Do not recreate or restart the
+  # runtime group (or migration job) while starting the frontend.
+  Invoke-DockerCompose -Arguments @(
+    'up', '-d', '--no-deps', '--wait', 'frontend'
+  )
+}
+catch {
+  $RuntimeStartupFailure = $_
+  Write-Warning 'Runtime startup failed. Capturing container status before environment restoration.'
+  try {
+    & docker @Compose ps -a
+    $RuntimeContainerIds = @(& docker @Compose ps -a -q api worker recovery-metrics frontend)
+    foreach ($RuntimeContainerId in $RuntimeContainerIds) {
+      if ([string]::IsNullOrWhiteSpace($RuntimeContainerId)) { continue }
+      # State only: never print Config.Env, which contains production secrets.
+      & docker inspect --format '{{.Name}} {{json .State}}' $RuntimeContainerId
+    }
+  }
+  catch {
+    Write-Warning 'Could not collect all runtime diagnostics.'
+  }
+  throw $RuntimeStartupFailure
+}
 
 $FrontendStaticDirectory = Get-DotEnvValue `
   -Path $EnvironmentFilePath `
