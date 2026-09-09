@@ -20,6 +20,7 @@ import observabilityConfig from './observability.config';
 import monetizationConfig from './monetization.config';
 import billingConfig from './billing.config';
 import readerFeaturesConfig from './reader-features.config';
+import searchConfig from './search.config';
 
 @Global()
 @Module({
@@ -49,6 +50,7 @@ import readerFeaturesConfig from './reader-features.config';
         monetizationConfig,
         billingConfig,
         readerFeaturesConfig,
+        searchConfig,
       ],
       validate: validateEnvironment,
     }),

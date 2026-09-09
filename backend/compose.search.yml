@@ -1,0 +1,28 @@
+# Optional overlay; bind no Meilisearch port publicly in production.
+# docker compose --env-file .env.production -f compose.production.yml -f compose.search.yml --profile search up -d
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    profiles: [search]
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-}
+      MEILI_NO_ANALYTICS: 'true'
+      MEILI_MAX_INDEXING_MEMORY: 256Mb
+      MEILI_MAX_INDEXING_THREADS: '1'
+    volumes:
+      - meilisearch-data:/meili_data
+    networks: [backend]
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:7700/health]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  meilisearch-data:

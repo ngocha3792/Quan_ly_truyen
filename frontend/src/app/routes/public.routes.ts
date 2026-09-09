@@ -15,6 +15,14 @@ import { provideStoryDetail } from '../features/public/story/data-access/story.p
 
 export const PUBLIC_ROUTES: Routes = [
   {
+    path: 'tim-kiem',
+    title: appPageTitle('Tìm kiếm'),
+    loadComponent: () =>
+      import('../features/public/search/pages/search-page.component').then(
+        (module) => module.SearchPageComponent,
+      ),
+  },
+  {
     path: '',
     pathMatch: 'full',
     title: APP_DEFAULT_PAGE_TITLE,

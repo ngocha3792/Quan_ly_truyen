@@ -2374,6 +2374,34 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model SearchIndexCheckpoint {
+  indexName            String    @id @map("index_name") @db.VarChar(100)
+  activeIndex          String?   @map("active_index") @db.VarChar(150)
+  shadowIndex          String?   @map("shadow_index") @db.VarChar(150)
+  retiredIndex         String?   @map("retired_index") @db.VarChar(150)
+  phase                String    @default("REQUESTED") @db.VarChar(20)
+  cursor               String?   @db.VarChar(60)
+  totalDocuments       Int       @default(0) @map("total_documents")
+  lastProcessedEventId String?   @map("last_processed_event_id") @db.Uuid
+  lastProcessedAt      DateTime? @map("last_processed_at") @db.Timestamptz(3)
+  lastFullRebuildAt    DateTime? @map("last_full_rebuild_at") @db.Timestamptz(3)
+  lastError            String?   @map("last_error") @db.VarChar(500)
+  failedDocuments      Int       @default(0) @map("failed_documents")
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("search_index_checkpoints")
+}
+
+// Tombstones survive deletion; revision guards against erasing concurrent changes.
+model SearchDirtyDocument {
+  id        String   @id @db.VarChar(60)
+  revision  BigInt   @default(1)
+  changedAt DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  @@index([changedAt, id])
+  @@map("search_dirty_documents")
+}
+
 model OutboxEvent {
   id                  String       @id @default(uuid()) @db.Uuid
   idempotencyKey      String?      @unique @map("idempotency_key") @db.VarChar(200)

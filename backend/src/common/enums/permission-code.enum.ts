@@ -1,4 +1,5 @@
 export enum PermissionCode {
+  SEARCH_MANAGE = 'search.manage',
   USER_PROFILE_READ = 'user.profile.read',
   USER_PROFILE_UPDATE = 'user.profile.update',
   USER_MANAGE = 'user.manage',

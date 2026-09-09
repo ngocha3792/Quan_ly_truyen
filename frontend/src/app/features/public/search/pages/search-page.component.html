@@ -1,0 +1,168 @@
+<main class="search-page">
+  <app-page-heading
+    title="Tìm kiếm"
+    description="Khám phá truyện, tác giả và những đoạn văn bạn đang tìm."
+    icon="search"
+  />
+  <form class="search-form" (ngSubmit)="submit()">
+    <label class="query"
+      ><span>Từ khóa</span
+      ><input
+        name="q"
+        [(ngModel)]="q"
+        maxlength="200"
+        placeholder="Tên truyện, tác giả hoặc nội dung chương..."
+    /></label>
+    <button class="primary" type="submit"><app-icon name="search" [size]="18" />Tìm kiếm</button>
+  </form>
+  <div class="search-layout">
+    <aside class="filters" aria-label="Bộ lọc tìm kiếm">
+      <div class="filter-heading">
+        <h2>Bộ lọc</h2>
+        <button type="button" (click)="clearFilters()">Xóa lọc</button>
+      </div>
+      <label
+        ><span>Thể loại</span
+        ><select [(ngModel)]="category" (ngModelChange)="submit()">
+          <option value="">Tất cả thể loại</option>
+          @for (item of filters().categories; track item.slug) {
+            <option [value]="item.slug">{{ item.name }}</option>
+          }
+        </select></label
+      >
+      <label
+        ><span>Thẻ</span
+        ><select [(ngModel)]="tag" (ngModelChange)="submit()">
+          <option value="">Tất cả thẻ</option>
+          @for (item of filters().tags; track item.slug) {
+            <option [value]="item.slug">{{ item.name }}</option>
+          }
+        </select></label
+      >
+      <label
+        ><span>Trạng thái truyện</span
+        ><select [(ngModel)]="status" (ngModelChange)="submit()">
+          <option value="">Tất cả</option>
+          <option value="published">Đang ra</option>
+          <option value="completed">Hoàn thành</option>
+          <option value="hiatus">Tạm ngừng</option>
+        </select></label
+      >
+      <label
+        ><span>Độ tuổi</span
+        ><select [(ngModel)]="contentRating" (ngModelChange)="submit()">
+          <option value="">Tất cả</option>
+          <option value="everyone">Mọi lứa tuổi</option>
+          <option value="teen">Thiếu niên</option>
+          <option value="mature">Trưởng thành</option>
+        </select></label
+      >
+      <div class="years">
+        <label
+          ><span>Từ năm</span
+          ><input
+            type="number"
+            min="1"
+            max="9999"
+            [(ngModel)]="yearFrom"
+            (change)="submit()" /></label
+        ><label
+          ><span>Đến năm</span
+          ><input type="number" min="1" max="9999" [(ngModel)]="yearTo" (change)="submit()"
+        /></label>
+      </div>
+      <label class="checkbox"
+        ><input type="checkbox" [(ngModel)]="featured" (change)="submit()" /><span
+          >Chỉ truyện nổi bật</span
+        ></label
+      >
+    </aside>
+    <section class="results" aria-label="Kết quả tìm kiếm" [attr.aria-busy]="loading()">
+      <div class="results-toolbar">
+        <div class="tabs" role="group" aria-label="Loại kết quả">
+          <button
+            type="button"
+            [class.active]="kind === 'story'"
+            [attr.aria-pressed]="kind === 'story'"
+            (click)="selectKind('story')"
+          >
+            Truyện</button
+          ><button
+            type="button"
+            [class.active]="kind === 'chapter'"
+            [attr.aria-pressed]="kind === 'chapter'"
+            (click)="selectKind('chapter')"
+          >
+            Nội dung chương
+          </button>
+        </div>
+        <label
+          ><span>Sắp xếp</span
+          ><select [(ngModel)]="sort" (ngModelChange)="submit()">
+            <option value="relevance">Phù hợp nhất</option>
+            <option value="newest">Mới nhất</option>
+            <option value="views">Lượt đọc</option>
+            <option value="followers">Theo dõi</option>
+            <option value="rating">Đánh giá</option>
+          </select></label
+        >
+      </div>
+      @if (loading()) {
+        <p class="empty" role="status">Đang tìm kiếm...</p>
+      } @else if (error()) {
+        <div class="empty" role="alert">
+          <p>Không thể tải kết quả. Vui lòng kiểm tra bộ lọc và thử lại.</p>
+          <button type="button" (click)="retry()">Thử lại</button>
+        </div>
+      } @else if (result(); as page) {
+        <p class="result-count" role="status">
+          {{ page.totalHits }} kết quả{{ page.query ? ' cho “' + page.query + '”' : '' }}
+        </p>
+        @for (hit of page.hits; track hit.id) {
+          <article class="result-card">
+            <div class="result-icon">
+              <app-icon [name]="hit.kind === 'story' ? 'book-open' : 'chapter'" [size]="24" />
+            </div>
+            <div class="result-body">
+              @if (hit.kind === 'chapter') {
+                <a class="story-name" [routerLink]="['/truyen', hit.storySlug]"
+                  >{{ hit.storyTitle }} · Chương {{ hit.number }}</a
+                >
+              }
+              <h2>
+                <a [routerLink]="link(hit)">{{ hit.title }}</a>
+              </h2>
+              <p class="author">{{ hit.authorName }}</p>
+              @if (hit.snippet) {
+                <p class="snippet">{{ hit.snippet }}</p>
+              }
+              <div class="badges">
+                @for (category of hit.categories; track category) {
+                  <span>{{ category }}</span>
+                }
+                @if (hit.accessState === 'LOCKED') {
+                  <span class="paid">Nội dung trả phí · Bản xem trước</span>
+                } @else if (hit.accessState === 'ENTITLED') {
+                  <span>Đã mở khóa</span>
+                }
+              </div>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty">
+            <app-icon name="search" [size]="32" />
+            <h2>Chưa tìm thấy kết quả</h2>
+            <p>Thử từ khóa ngắn hơn hoặc giảm bớt bộ lọc.</p>
+          </div>
+        }
+        @if (page.totalPages > 1) {
+          <app-pagination
+            [page]="page.page"
+            [totalPages]="page.totalPages"
+            (pageChange)="submit($event)"
+          />
+        }
+      }
+    </section>
+  </div>
+</main>

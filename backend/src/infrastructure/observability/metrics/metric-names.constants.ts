@@ -60,4 +60,8 @@ export const METRIC_NAMES = {
   PAYMENT_WEBHOOK_BACKLOG: 'qlt_payment_webhook_backlog_events',
   PAYMENT_WEBHOOK_OLDEST_PENDING:
     'qlt_payment_webhook_oldest_pending_age_seconds',
+  SEARCH_QUERIES: 'search_queries_total',
+  SEARCH_DURATION: 'search_duration_seconds',
+  SEARCH_FAILED_DOCUMENTS: 'search_index_failed_documents_total',
+  SEARCH_INDEX_LAG: 'search_indexing_lag_seconds',
 } as const;

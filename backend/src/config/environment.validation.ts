@@ -637,6 +637,25 @@ export class EnvironmentVariables {
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  SEARCH_MEILISEARCH_ENABLED = false;
+
+  @IsUrl({
+    require_tld: false,
+    protocols: ['http', 'https'],
+    require_protocol: true,
+  })
+  MEILISEARCH_HOST = 'http://127.0.0.1:7700';
+
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  MEILISEARCH_API_KEY?: string;
+
+  @Matches(/^[a-zA-Z0-9_-]{1,100}$/u)
+  MEILISEARCH_INDEX = 'reader_search';
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   MONETIZATION_ENABLED = false;
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
@@ -1047,6 +1066,17 @@ export function validateEnvironment(
     whitelist: false,
     forbidUnknownValues: true,
   });
+
+  if (
+    config.SEARCH_MEILISEARCH_ENABLED &&
+    (!config.MEILISEARCH_API_KEY ||
+      !config.QUEUE_ENABLED ||
+      !config.REDIS_ENABLED)
+  ) {
+    throw new Error(
+      'MEILISEARCH_API_KEY, QUEUE_ENABLED and REDIS_ENABLED are required when search indexing is enabled',
+    );
+  }
 
   if (errors.length > 0) {
     const messages = errors.flatMap((error) =>

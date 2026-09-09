@@ -6,6 +6,7 @@
 
 | Screen | Frontend route/surface | FE ↔ BE contracts | Frontend consumer files |
 | --- | --- | --- | --- |
+| Full-text and fuzzy search | /tim-kiem + header suggestions | `GET /search`<br>`GET /search/filters` | `frontend/src/app/core/http/search-api.client.ts` |
 | Auth bootstrap / login / register | global bootstrap + auth dialog | `GET /auth/client-config`<br>`POST /auth/login`<br>`POST /auth/register`<br>`GET /auth/me` | `frontend/src/app/core/config/app-runtime-config.loader.ts`<br>`frontend/src/app/core/config/app-runtime-config.server.ts`<br>`frontend/src/app/core/auth/auth-api.service.ts` |
 | Forgot / reset password | /forgot-password + /reset-password | `POST /auth/forgot-password`<br>`POST /auth/reset-password/validate`<br>`POST /auth/reset-password` | `frontend/src/app/core/auth/auth-api.service.ts` |
 | Account profile / preferences / security | /tai-khoan/thong-tin-ca-nhan + /tai-khoan/bao-mat/doi-mat-khau | `GET /users/me`<br>`PATCH /users/me`<br>`POST /auth/change-password` | `frontend/src/app/features/account/profile/profile/data-access/account-profile-api.service.ts`<br>`frontend/src/app/features/account/profile/security/data/account-security-api.service.ts` |

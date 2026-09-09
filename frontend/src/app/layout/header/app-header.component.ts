@@ -9,15 +9,14 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { AUTH_PERMISSIONS, type AuthPermission } from '../../core/auth/authorization.models';
 import { AuthDialogComponent } from '../../features/account/auth/ui/auth-dialog/auth-dialog.component';
 import { NotificationsRepository } from '../../features/account/notifications/domain/notifications.repository';
 import { provideNotifications } from '../../features/account/notifications/data-access/notifications.providers';
-import { HomeRepository } from '../../features/public/home/data-access/home.repository';
-import { Story } from '../../features/public/home/domain/home.models';
+import { SearchApiClient, type SearchHit } from '../../core/http/search-api.client';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -47,7 +46,7 @@ interface NavItem {
   styleUrl: './app-header.component.scss',
 })
 export class AppHeaderComponent {
-  private readonly repository = inject(HomeRepository);
+  private readonly searchApi = inject(SearchApiClient);
 
   private readonly router = inject(Router);
 
@@ -182,18 +181,23 @@ export class AppHeaderComponent {
 
   protected readonly suggestions = toSignal(
     toObservable(this.query).pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
       switchMap((query) => {
         const normalizedQuery = query.trim();
 
         if (!normalizedQuery) {
-          return of<readonly Story[]>([]);
+          return of<readonly SearchHit[]>([]);
         }
 
-        return this.repository.searchStories(normalizedQuery);
+        return this.searchApi.search({ q: normalizedQuery, kind: 'story', pageSize: 6 }).pipe(
+          map((page) => page.hits),
+          catchError(() => of<readonly SearchHit[]>([])),
+        );
       }),
     ),
     {
-      initialValue: [] as readonly Story[],
+      initialValue: [] as readonly SearchHit[],
     },
   );
 
@@ -244,20 +248,7 @@ export class AppHeaderComponent {
       return;
     }
 
-    const firstStory = this.suggestions()[0];
-
-    if (firstStory) {
-      void this.router.navigate(['/truyen', firstStory.slug]);
-
-      this.hideSearch();
-      return;
-    }
-
-    /**
-     * Không có gợi ý thì chuyển sang trang danh sách
-     * và truyền từ khóa tìm kiếm bằng query param.
-     */
-    void this.router.navigate(['/danh-sach'], {
+    void this.router.navigate(['/tim-kiem'], {
       queryParams: {
         q: normalizedQuery,
       },

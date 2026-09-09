@@ -235,6 +235,18 @@ jobs:
       CORS_ALLOWED_ORIGINS: http://localhost:4200
 
     services:
+      meilisearch:
+        image: getmeili/meilisearch:v1.10
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: ci-search-key-at-least-sixteen-characters
+          MEILI_NO_ANALYTICS: 'true'
+        ports: ['7700:7700']
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
       postgres:
         image: postgres:17-alpine
         env:
@@ -323,6 +335,14 @@ jobs:
 
       - name: Billing integration
         run: npm run test:billing:integration
+
+      - name: Search indexing and PostgreSQL fallback integration
+        env:
+          SEARCH_TEST_MEILI_HOST: http://127.0.0.1:7700
+          SEARCH_TEST_MEILI_KEY: ci-search-key-at-least-sixteen-characters
+        run: |
+          curl --fail --retry 20 --retry-all-errors --retry-delay 1 "$SEARCH_TEST_MEILI_HOST/health"
+          npm run test:search:integration
 
   dependency-audit:
     name: Dependencies / production audit (${{ matrix.project }})

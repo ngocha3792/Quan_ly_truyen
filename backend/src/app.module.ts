@@ -49,6 +49,7 @@ import { MonetizationModule } from './modules/monetization';
 import { BillingModule } from './modules/billing';
 import { OfflineReadingModule } from './modules/offline-reading';
 import { TtsModule } from './modules/tts';
+import { SearchModule } from './modules/search';
 @Module({
   imports: [
     AppConfigModule,
@@ -78,6 +79,7 @@ import { TtsModule } from './modules/tts';
     BillingModule,
     OfflineReadingModule,
     TtsModule,
+    SearchModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

@@ -133,6 +133,30 @@ describe('OutboxDispatcherService', () => {
     );
   });
 
+  it('routes search lifecycle events to the dedicated search queue', async () => {
+    const searchQueue = {
+      add: jest.fn().mockResolvedValue({ id: 'search-job' }),
+    };
+    const routed = createService(prisma, queue, queue, queue, searchQueue);
+    prisma.$queryRaw.mockResolvedValue([claimed('search-event', TOKEN_A)]);
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      event({
+        id: 'search-event',
+        aggregateType: 'search',
+        eventType: 'search.document.changed.v1',
+        aggregateId: 'story_example',
+        payload: { version: 1, documentId: 'story_example' },
+      }),
+    ]);
+    await expect(routed.dispatchBatch()).resolves.toBe(1);
+    expect(searchQueue.add).toHaveBeenCalledWith(
+      'search.document.changed.v1',
+      expect.objectContaining({ outboxEventId: 'search-event' }),
+      { jobId: 'outbox-search-event' },
+    );
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
   it('routes auto-translation outbox events to the AI queue', async () => {
     const aiQueue = { add: jest.fn().mockResolvedValue({ id: 'ai-job' }) };
     const routedService = createService(prisma, queue, queue, aiQueue);
@@ -440,6 +464,7 @@ function createService(
   queue: object,
   notificationQueue: object = queue,
   aiQueue: object = queue,
+  searchQueue: object = queue,
 ): OutboxDispatcherService {
   const config = new ConfigService({
     queue: {
@@ -489,6 +514,7 @@ function createService(
     metrics as never,
     tracing as never,
     propagation as never,
+    searchQueue as never,
   );
 }
 

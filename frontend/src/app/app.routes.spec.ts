@@ -22,6 +22,7 @@ describe('application route composition', () => {
     const children = shellRoute().children ?? [];
 
     expect(children.map((route) => route.path)).toEqual([
+      'tim-kiem',
       '',
       'truyen/:slug',
       'truyen/:storySlug/chuong/:chapterNumber',

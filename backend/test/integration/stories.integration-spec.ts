@@ -473,7 +473,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       stories.findPublicBySlug(inconsistent.slug),
     ).resolves.toBeNull();
     await expect(
-      chapters.findPublicReader(inconsistent.slug, '1'),
+      chapters.findPublicReader(inconsistent.slug, '1', undefined, true),
     ).resolves.toBeNull();
   });
 

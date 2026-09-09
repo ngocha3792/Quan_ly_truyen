@@ -296,7 +296,7 @@
 
           @for (story of suggestions(); track story.id) {
             <a [routerLink]="['/truyen', story.slug]" (click)="selectSuggestion()">
-              <img [src]="story.coverUrl" [alt]="story.title" loading="lazy" decoding="async" />
+              <app-icon name="book-open" [size]="24" />
 
               <div>
                 <strong>
@@ -304,19 +304,20 @@
                 </strong>
 
                 <small>
-                  {{ story.author }}
+                  {{ story.authorName }}
                   ·
                   {{ story.categories.join(', ') }}
                 </small>
               </div>
 
-              <span>{{
-                story.latestChapter ? 'Ch.' + story.latestChapter.number : 'Chưa có chương'
-              }}</span>
+              <span>Xem truyện</span>
             </a>
           } @empty {
             <div class="no-result">Không tìm thấy truyện phù hợp.</div>
           }
+          <button type="button" (click)="submitSearch()">
+            Xem tất cả kết quả và nội dung chương
+          </button>
         </div>
       } @else {
         <div class="search-hints">

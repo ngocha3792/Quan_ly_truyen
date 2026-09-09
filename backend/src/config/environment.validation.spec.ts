@@ -93,6 +93,24 @@ describe('validateEnvironment', () => {
     ).toString('base64'),
   };
 
+  it('requires search engine credentials and queue dependencies only when enabled', () => {
+    expect(() =>
+      validateEnvironment({ ...validBase, SEARCH_MEILISEARCH_ENABLED: 'true' }),
+    ).toThrow('MEILISEARCH_API_KEY');
+    expect(() =>
+      validateEnvironment({
+        ...validBase,
+        SEARCH_MEILISEARCH_ENABLED: 'true',
+        MEILISEARCH_API_KEY: 'server-only-search-key',
+        REDIS_ENABLED: 'true',
+        QUEUE_ENABLED: 'true',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateEnvironment({ ...validBase, MEILISEARCH_INDEX: '../invalid' }),
+    ).toThrow('MEILISEARCH_INDEX');
+  });
+
   it('enforces production readiness configuration', () => {
     expect(() => validateEnvironment(productionBase)).not.toThrow();
 

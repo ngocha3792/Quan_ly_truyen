@@ -12,6 +12,7 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 const permissions = [
+  ['search.manage', 'Manage search indexing', 'search', 'manage'],
   [
     'author-application.create',
     'Create own author application',

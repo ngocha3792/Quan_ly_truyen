@@ -137,3 +137,5 @@ frontend/playwright-report/
 *.tsbuildinfo
 .turbo/
 .hardening-backup/
+
+.tmp/

@@ -21,6 +21,25 @@ x-backend-common: &backend-common
   init: true
 
 services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    profiles: [search]
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-development_search_key_change_me}
+      MEILI_NO_ANALYTICS: 'true'
+      MEILI_MAX_INDEXING_MEMORY: 256Mb
+      MEILI_MAX_INDEXING_THREADS: '1'
+    ports: ['127.0.0.1:7700:7700']
+    volumes: [meilisearch-data:/meili_data]
+    networks: [backend]
+    mem_limit: 512m
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:7700/health]
+      interval: 10s
+      timeout: 5s
+      retries: 10
   postgres:
     image: postgres:17-alpine
 
@@ -275,6 +294,7 @@ networks:
     driver: bridge
 
 volumes:
+  meilisearch-data:
   postgres-data:
   redis-data:
   mailpit-data:

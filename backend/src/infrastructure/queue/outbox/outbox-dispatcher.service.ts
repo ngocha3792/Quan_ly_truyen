@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type JobsOptions, Queue } from 'bullmq';
 import { isAppException, QueueException } from '@/common/exceptions';
@@ -66,6 +66,9 @@ export class OutboxDispatcherService {
     private readonly metrics: MetricsService,
     private readonly tracing: TracingService,
     private readonly propagation: TracePropagationService,
+    @Optional()
+    @InjectQueue(QUEUE_NAMES.SEARCH)
+    private readonly searchQueue?: Queue,
   ) {
     const queueConfig = this.configService.get<QueueConfig>('queue');
     this.maxAttempts = queueConfig?.defaultAttempts ?? 3;
@@ -319,6 +322,7 @@ export class OutboxDispatcherService {
       mail: this.mailQueue,
       notifications: this.notificationQueue,
       ai: this.aiQueue,
+      ...(this.searchQueue ? { search: this.searchQueue } : {}),
     };
 
     return queueMap[aggregateType.toLowerCase()] ?? null;

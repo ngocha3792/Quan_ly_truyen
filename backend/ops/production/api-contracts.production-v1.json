@@ -3,6 +3,47 @@
   "scope": "Production V1 important user-facing screens",
   "screens": [
     {
+      "id": "public-search",
+      "title": "Full-text and fuzzy search",
+      "frontendRoute": "/tim-kiem + header suggestions",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/public.routes.ts",
+          "tokens": ["path: 'tim-kiem'", "SearchPageComponent"]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/search",
+          "backend": {
+            "file": "backend/src/modules/search/presentation/http/controllers/search.controller.ts",
+            "tokens": ["@Controller('search')", "@Get()"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/search-api.client.ts",
+              "tokens": ["/search", "SearchPage"]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/search/filters",
+          "backend": {
+            "file": "backend/src/modules/search/presentation/http/controllers/search.controller.ts",
+            "tokens": ["@Get('filters')"]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/core/http/search-api.client.ts",
+              "tokens": ["/search/filters"]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "runtime-auth-entry",
       "title": "Auth bootstrap / login / register",
       "frontendRoute": "global bootstrap + auth dialog",
@@ -385,7 +426,11 @@
           "path": "/offline-packages",
           "backend": {
             "file": "backend/src/modules/offline-reading/presentation/http/controllers/offline-packages.controller.ts",
-            "tokens": ["@Controller('offline-packages')", "@Post()", "@Idempotent({ required: true"]
+            "tokens": [
+              "@Controller('offline-packages')",
+              "@Post()",
+              "@Idempotent({ required: true"
+            ]
           },
           "frontend": [
             {
@@ -837,7 +882,10 @@
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-version-http.service.ts",
-              "tokens": ["get(", "${this.versionUrl(storyId, chapterId)}/${version}`"]
+              "tokens": [
+                "get(",
+                "${this.versionUrl(storyId, chapterId)}/${version}`"
+              ]
             }
           ]
         },
@@ -851,7 +899,10 @@
           "frontend": [
             {
               "file": "frontend/src/app/features/author-portal/author-studio/data-access/author-chapter-version-http.service.ts",
-              "tokens": ["restore(", "${this.versionUrl(storyId, chapterId)}/${version}/restore`"]
+              "tokens": [
+                "restore(",
+                "${this.versionUrl(storyId, chapterId)}/${version}/restore`"
+              ]
             }
           ]
         },
@@ -1306,7 +1357,10 @@
           "path": "/admin/wallets/:userId/adjustments",
           "backend": {
             "file": "backend/src/modules/wallets/presentation/http/controllers/admin-wallets.controller.ts",
-            "tokens": ["@Controller('admin/wallets')", "@Post(':userId/adjustments')"]
+            "tokens": [
+              "@Controller('admin/wallets')",
+              "@Post(':userId/adjustments')"
+            ]
           },
           "frontend": [
             {

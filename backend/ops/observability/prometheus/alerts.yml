@@ -1,6 +1,13 @@
 groups:
   - name: quan-ly-truyen
     rules:
+      - alert: SearchIndexingLag
+        expr: max(search_indexing_lag_seconds) > 300
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Search indexing has not caught up for more than five minutes
+          runbook_url: http://localhost:3001/d/qlt-search/search
       - alert: QuanLyTruyenApiUnavailable
         expr: up{job="quan-ly-truyen-api"} == 0
         for: 2m

@@ -1,0 +1,66 @@
+{
+  "uid": "qlt-search",
+  "title": "Search",
+  "schemaVersion": 41,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Search P95 (seconds)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, engine) (rate(search_duration_seconds_bucket[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Indexing lag (seconds)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "max(search_indexing_lag_seconds)" }]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Failed document attempts",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(increase(search_index_failed_documents_total[5m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Queries by engine",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (engine) (rate(search_queries_total[5m]))" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Empty queries (%)",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(search_queries_total{empty_query=\"true\"}[5m])) / clamp_min(sum(rate(search_queries_total[5m])), 0.00001)"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Queries without results (%)",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(search_queries_total{empty_results=\"true\"}[5m])) / clamp_min(sum(rate(search_queries_total[5m])), 0.00001)"
+        }
+      ]
+    }
+  ]
+}
