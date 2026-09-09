@@ -20,6 +20,9 @@ import {
 } from '../../../domain';
 
 export class CreatePaymentOrderRequest {
+  @IsOptional()
+  @IsUUID('4')
+  storyId?: string;
   @IsUUID('4')
   packageId!: string;
 
@@ -113,6 +116,9 @@ export class ManualPaymentReviewRequest {
 }
 
 export class CreatePaymentProviderRequest {
+  @IsOptional()
+  @IsObject()
+  credentials?: Record<string, string>;
   @IsString()
   @Matches(/^[a-z0-9][a-z0-9-]{1,49}$/u)
   code!: string;
@@ -150,6 +156,9 @@ export class CreatePaymentProviderRequest {
 }
 
 export class UpdatePaymentProviderRequest {
+  @IsOptional()
+  @IsObject()
+  credentials?: Record<string, string>;
   @IsOptional()
   @IsString()
   @MaxLength(120)

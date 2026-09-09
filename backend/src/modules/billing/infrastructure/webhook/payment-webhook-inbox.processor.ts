@@ -17,6 +17,10 @@ import { TransactionalReceiptService } from '@/modules/notifications';
 
 import type { NormalizedPaymentEvent } from '../../application';
 import {
+  BILLING_GATEWAY_PERSISTENCE_PORT,
+  type BillingGatewayPersistencePort,
+} from '../../application/ports/billing-gateway.persistence.port';
+import {
   PAYMENT_SETTLEMENT_PORT,
   type PaymentSettlementPort,
 } from '../../application';
@@ -44,6 +48,8 @@ export class PaymentWebhookInboxProcessor {
     private readonly receipts: TransactionalReceiptService,
     @Inject(billingConfig.KEY)
     private readonly config: ConfigType<typeof billingConfig>,
+    @Inject(BILLING_GATEWAY_PERSISTENCE_PORT)
+    private readonly gateway: BillingGatewayPersistencePort,
   ) {}
 
   async processBatch(
@@ -136,6 +142,19 @@ export class PaymentWebhookInboxProcessor {
       );
     }
 
+    const isVnpay = event.providerTransactionId !== undefined;
+    if (isVnpay && event.type === 'payment.refunded') {
+      await this.gateway.applyVerifiedRefund(
+        order.id,
+        event.providerTransactionId,
+      );
+      return;
+    }
+    if (isVnpay && event.type === 'payment.reversed')
+      throw new PaymentOrderTransitionException(
+        order.status,
+        'RECONCILIATION_REQUIRED',
+      );
     if (event.type === 'payment.failed') {
       if (order.status === PaymentOrderStatus.FAILED) return;
       if (
@@ -147,8 +166,13 @@ export class PaymentWebhookInboxProcessor {
           PaymentOrderStatus.FAILED,
         );
       }
-      await this.prisma.paymentOrder.update({
-        where: { id: order.id },
+      await this.prisma.paymentOrder.updateMany({
+        where: {
+          id: order.id,
+          status: {
+            in: [PaymentOrderStatus.CREATED, PaymentOrderStatus.PENDING],
+          },
+        },
         data: {
           status: PaymentOrderStatus.FAILED,
           failureCode: 'PROVIDER_REPORTED_FAILURE',
@@ -165,7 +189,10 @@ export class PaymentWebhookInboxProcessor {
       ) {
         return;
       }
-      if (order.status !== PaymentOrderStatus.PENDING) {
+      if (
+        order.status !== PaymentOrderStatus.PENDING &&
+        !(isVnpay && ['EXPIRED', 'FAILED'].includes(order.status))
+      ) {
         throw new PaymentOrderTransitionException(
           order.status,
           PaymentOrderStatus.PAID,
@@ -175,7 +202,9 @@ export class PaymentWebhookInboxProcessor {
         orderId: order.id,
         providerReference: event.providerReference,
         occurredAt: new Date(event.occurredAt),
-        source: 'webhook',
+        source: isVnpay ? 'reconciliation' : 'webhook',
+        providerTransactionId: event.providerTransactionId,
+        providerTransactionDate: event.providerTransactionDate,
       });
       return;
     }

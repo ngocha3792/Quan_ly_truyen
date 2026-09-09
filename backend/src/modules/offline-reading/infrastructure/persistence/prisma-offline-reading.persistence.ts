@@ -25,6 +25,7 @@ import {
   type ChapterContentDocument,
 } from '@/modules/chapters';
 import { MEDIA_URL_BUILDER, type MediaUrlPort } from '@/modules/media';
+import { isChapterEffectivelyFree } from '@/modules/monetization';
 
 import type {
   CreateOfflinePackageInput,
@@ -143,8 +144,13 @@ export class PrismaOfflineReadingPersistence implements OfflineReadingPersistenc
             );
           }
 
-          const accessType =
-            chapter.monetization?.accessType ?? ChapterAccessType.FREE;
+          const accessType = isChapterEffectivelyFree(
+            chapter.monetization,
+            chapter.publishedAt,
+            input.now,
+          )
+            ? ChapterAccessType.FREE
+            : ChapterAccessType.PAID;
           const entitlement = chapter.entitlements[0] ?? null;
           const decision = OfflineEntitlementPolicy.verify({
             accessType,
@@ -172,7 +178,7 @@ export class PrismaOfflineReadingPersistence implements OfflineReadingPersistenc
           );
           const media = createOfflineMediaSnapshot(
             chapter.media,
-            accessType === ChapterAccessType.PAID,
+            chapter.monetization?.accessType === ChapterAccessType.PAID,
           );
           const contentSizeBytes = BigInt(
             Buffer.byteLength(chapter.content, 'utf8') +
@@ -464,7 +470,13 @@ async function loadChapterSources(
       publishedAt: true,
       story: { select: { id: true, slug: true, title: true } },
       monetization: {
-        select: { accessType: true, creditPrice: true },
+        select: {
+          accessType: true,
+          creditPrice: true,
+          unlockPolicy: true,
+          freeAt: true,
+          paidWindowDays: true,
+        },
       },
       entitlements: {
         where: { userId },

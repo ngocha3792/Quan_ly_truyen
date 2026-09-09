@@ -141,6 +141,9 @@ export interface MonetizationPriceBand {
 }
 
 export interface AuthorChapterMonetization {
+  readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt?: string | null;
+  readonly paidWindowDays?: number | null;
   readonly chapterId: string;
   readonly accessType: 'FREE' | 'PAID';
   readonly priceBandId: string | null;
@@ -148,6 +151,14 @@ export interface AuthorChapterMonetization {
   readonly previewContent: string | null;
   readonly version: number;
   readonly updatedAt: string;
+}
+
+export interface AuthorChapterPricingInput {
+  readonly accessType: 'FREE' | 'PAID';
+  readonly priceBandId?: string;
+  readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt?: string;
+  readonly paidWindowDays?: number;
 }
 
 export interface AuthorStorySubmission {

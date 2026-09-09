@@ -5,6 +5,9 @@ import type { BillingConfig } from './config.types';
 export const BILLING_CONFIG_KEY = 'billing';
 
 export default registerAs(BILLING_CONFIG_KEY, (): BillingConfig => ({
+  ...(process.env.PAYMENT_PROVIDER_CREDENTIAL_KEY
+    ? { credentialKeyBase64: process.env.PAYMENT_PROVIDER_CREDENTIAL_KEY }
+    : {}),
   providerMode:
     (process.env.PAYMENT_PROVIDER_MODE as
       BillingConfig['providerMode'] | undefined) ?? 'disabled',

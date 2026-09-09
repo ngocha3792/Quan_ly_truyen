@@ -196,6 +196,17 @@ describe('search PostgreSQL projection, outbox and rebuild', () => {
       ).total,
     ).toBe(1);
     expect(hits[0]?.accessState).toBe('LOCKED');
+    await prisma.chapterMonetization.update({
+      where: { chapterId },
+      data: { unlockPolicy: 'EARLY_ACCESS', freeAt: new Date(Date.now() - 1) },
+    });
+    expect((await source.toHits([after], 'xem truoc'))[0]?.accessState).toBe(
+      'FREE',
+    );
+    // The public index remains preview-only even when timed access opens.
+    expect((await source.documents([`chapter_${chapterId}`]))[0]?.content).toBe(
+      'Xem trước công khai',
+    );
     expect(JSON.stringify(hits)).not.toContain(before.content);
   });
 

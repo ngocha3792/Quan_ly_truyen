@@ -29,7 +29,7 @@ export type PaymentOrderStatus =
 export interface PaymentMethod {
   readonly id: string;
   readonly code: string;
-  readonly kind: 'MANUAL_BANK_TRANSFER' | 'HMAC_SANDBOX';
+  readonly kind: 'MANUAL_BANK_TRANSFER' | 'HMAC_SANDBOX' | 'VNPAY';
   readonly displayName: string;
   readonly description: string | null;
   readonly currency: string;

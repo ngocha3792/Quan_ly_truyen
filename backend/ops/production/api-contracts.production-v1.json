@@ -923,6 +923,128 @@
       ]
     },
     {
+      "id": "admin-payment-gateway-operations",
+      "title": "Admin gateway reconciliation and refunds",
+      "frontendRoute": "/admin/payments/gateway",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": [
+            "path: 'payments/gateway'"
+          ]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/admin/billing/payment-orders/:orderId/reconcile",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-payment-gateway.controller.ts",
+            "tokens": [
+              "@Post(':orderId/reconcile')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/payments/data-access/admin-payment-gateway-api.service.ts",
+              "tokens": [
+                "/reconcile`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/admin/billing/payment-orders/:orderId/refunds",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-payment-gateway.controller.ts",
+            "tokens": [
+              "@Get(':orderId/refunds')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/payments/data-access/admin-payment-gateway-api.service.ts",
+              "tokens": [
+                "refunds("
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/admin/billing/payment-orders/:orderId/refunds",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-payment-gateway.controller.ts",
+            "tokens": [
+              "@Post(':orderId/refunds')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/payments/data-access/admin-payment-gateway-api.service.ts",
+              "tokens": [
+                "x-idempotency-key"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin-payment-story-rollout",
+      "title": "Admin story payment rollout",
+      "frontendRoute": "/admin/settings/payments",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/admin.routes.ts",
+          "tokens": [
+            "path: 'settings/payments'"
+          ]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "GET",
+          "path": "/admin/billing/story-allowlists/:storyId",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-payment-rollout.controller.ts",
+            "tokens": [
+              "@Get(':storyId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/payments/data-access/admin-payment-gateway-api.service.ts",
+              "tokens": [
+                "allowlist(",
+                "/story-allowlists/${storyId}"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/billing/story-allowlists/:storyId",
+          "backend": {
+            "file": "backend/src/modules/billing/presentation/http/controllers/admin-payment-rollout.controller.ts",
+            "tokens": [
+              "@Put(':storyId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/admin/payments/data-access/admin-payment-gateway-api.service.ts",
+              "tokens": [
+                "saveAllowlist(",
+                "/story-allowlists/${storyId}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "author-ai-tools",
       "title": "Author AI jobs, characters and consistency",
       "frontendRoute": "/author-studio/truyen/:storyId + /author-studio/truyen/:storyId/chuong/:chapterId",

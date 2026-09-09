@@ -33,6 +33,8 @@ export function toAdminPaymentOrderPageResult(
       packageLabel: item.packageLabel,
       walletTransactionId: item.walletTransactionId,
       failureCode: item.failureCode,
+      providerKind: item.providerKind,
+      providerConfigurationReady: item.providerConfigurationReady,
     })),
     pagination: {
       page: record.page,

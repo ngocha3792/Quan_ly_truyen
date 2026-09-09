@@ -163,6 +163,41 @@ describe('offline reading persistence integration', () => {
     ).resolves.toMatchObject({ id: fixture.mediaAssetId });
   });
 
+  it('permits offline snapshots exactly at early-access expiry without an entitlement', async () => {
+    const fixture = await createFixture();
+    await prisma.chapterMonetization.update({
+      where: { chapterId: fixture.chapterId },
+      data: { unlockPolicy: 'EARLY_ACCESS', freeAt: fixture.now },
+    });
+    await expect(
+      persistence.createPackage({
+        ...packageRequest(fixture, 'before-free'),
+        now: new Date(fixture.now.getTime() - 1),
+      }),
+    ).rejects.toMatchObject({ code: 'OFFLINE_CHAPTER_UNAVAILABLE' });
+    const created = await persistence.createPackage(
+      packageRequest(fixture, 'free'),
+    );
+    const snapshot = await prisma.offlinePackageChapter.findFirstOrThrow({
+      where: { packageId: created.id },
+    });
+    expect(snapshot).toMatchObject({
+      accessState: 'FREE',
+      accessType: 'FREE',
+      entitlementId: null,
+    });
+    expect(snapshot.mediaSnapshot).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ requiresSigning: true }),
+      ]),
+    );
+    expect(
+      await prisma.chapterEntitlement.count({
+        where: { userId: fixture.buyerId, chapterId: fixture.chapterId },
+      }),
+    ).toBe(0);
+  });
+
   async function createFixture(): Promise<OfflineFixture> {
     const suffix = randomUUID();
     const now = new Date('2026-09-09T00:00:00.000Z');

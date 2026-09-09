@@ -1,4 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  PAYMENT_CREDENTIAL_VAULT_PORT,
+  type PaymentCredentialVaultPort,
+} from '../../ports/payment-credential-vault.port';
+import {
+  publicProviderConfiguration,
+  suppliedCredentials,
+  VNPAY_ADMIN_FIELDS,
+} from './provider-configuration';
 
 import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
@@ -13,6 +23,7 @@ import {
 } from '../../ports';
 
 export interface PaymentProviderMutationInput {
+  readonly credentials?: Readonly<Record<string, string>>;
   readonly displayName?: string;
   readonly description?: string | null;
   readonly config?: Readonly<Record<string, unknown>>;
@@ -29,10 +40,15 @@ export class ManagePaymentProvidersCommandHandler {
     private readonly persistence: BillingPersistencePort,
     @Inject(PAYMENT_PROVIDER_REGISTRY_PORT)
     private readonly registry: PaymentProviderRegistryPort,
+    @Inject(PAYMENT_CREDENTIAL_VAULT_PORT)
+    private readonly vault: PaymentCredentialVaultPort,
+    private readonly configService: ConfigService,
   ) {}
 
-  list(enabledOnly = false) {
-    return this.persistence.listConnections(enabledOnly);
+  async list(enabledOnly = false) {
+    return (await this.persistence.listConnections(enabledOnly)).map((item) =>
+      this.view(item),
+    );
   }
 
   listKinds() {
@@ -59,11 +75,13 @@ export class ManagePaymentProvidersCommandHandler {
                 required: false,
               },
             ]
-          : [],
+          : kind === 'VNPAY'
+            ? VNPAY_ADMIN_FIELDS
+            : [],
     }));
   }
 
-  create(
+  async create(
     actorIdValue: string | undefined,
     input: PaymentProviderMutationInput & {
       code: string;
@@ -78,13 +96,37 @@ export class ManagePaymentProvidersCommandHandler {
     const config = this.registry
       .getAdapter(input.kind)
       .validateConfig(input.config ?? {});
-    return this.persistence.createConnection({
-      actorId,
-      code,
-      kind: input.kind,
-      ...validated,
-      config,
-    });
+    const secrets = suppliedCredentials(input.credentials);
+    if (secrets && input.kind !== 'VNPAY')
+      throw new InvalidBillingInputException(
+        'Loại kết nối này không nhận khóa ký',
+        'credentials',
+      );
+    this.validateReturnUrl(input.kind, config);
+    if (validated.enabled) this.validateActivation(input.kind, config);
+    if (validated.enabled)
+      this.registry.getAdapter(input.kind).assertReady?.({
+        id: '',
+        code,
+        kind: input.kind,
+        config,
+        displayName: validated.displayName,
+        currency: validated.currency,
+        orderTtlMinutes: validated.orderTtlMinutes ?? null,
+        secrets,
+      });
+    return this.view(
+      await this.persistence.createConnection({
+        actorId,
+        code,
+        kind: input.kind,
+        ...validated,
+        config,
+        ...(secrets
+          ? { encryptedCredential: this.vault.seal(code, secrets) }
+          : {}),
+      }),
+    );
   }
 
   async update(
@@ -118,16 +160,87 @@ export class ManagePaymentProvidersCommandHandler {
       input.config === undefined
         ? undefined
         : this.registry.getAdapter(current.kind).validateConfig(input.config);
-    return this.persistence.updateConnection({
-      actorId,
-      id,
-      ...common,
-      ...(config ? { config } : {}),
-    });
+    const supplied = suppliedCredentials(input.credentials);
+    if (supplied && current.kind !== 'VNPAY')
+      throw new InvalidBillingInputException(
+        'Loại kết nối này không nhận khóa ký',
+        'credentials',
+      );
+    const secrets =
+      supplied ??
+      (common.enabled
+        ? this.vault.open(current.code, current.encryptedCredential)
+        : undefined);
+    this.validateReturnUrl(current.kind, config ?? current.config);
+    if (common.enabled)
+      this.validateActivation(current.kind, config ?? current.config);
+    if (common.enabled)
+      this.registry.getAdapter(current.kind).assertReady?.({
+        ...current,
+        ...common,
+        config: config ?? current.config,
+        orderTtlMinutes: common.orderTtlMinutes ?? null,
+        secrets,
+      });
+    return this.view(
+      await this.persistence.updateConnection({
+        actorId,
+        id,
+        ...common,
+        ...(config ? { config } : {}),
+        ...(supplied
+          ? { encryptedCredential: this.vault.seal(current.code, supplied) }
+          : {}),
+      }),
+    );
   }
 
   delete(actorIdValue: string | undefined, id: string) {
     return this.persistence.deleteConnection(actor(actorIdValue), id);
+  }
+
+  private view(
+    record: Awaited<ReturnType<BillingPersistencePort['resolveConnection']>>,
+  ) {
+    return publicProviderConfiguration(
+      record,
+      this.vault.available(),
+      this.configService.get<string>('app.publicUrl') ??
+        'http://localhost:4200',
+    );
+  }
+  private validateReturnUrl(
+    kind: PaymentProviderKindName,
+    config: Readonly<Record<string, unknown>>,
+  ) {
+    if (kind !== 'VNPAY' || !config.returnUrl) return;
+    const origin = new URL(
+      this.configService.get<string>('app.publicUrl') ??
+        'http://localhost:4200',
+    ).origin;
+    if (
+      typeof config.returnUrl !== 'string' ||
+      new URL(config.returnUrl).origin !== origin
+    )
+      throw new InvalidBillingInputException(
+        'URL quay lại phải thuộc website này',
+        'returnUrl',
+      );
+  }
+
+  private validateActivation(
+    kind: PaymentProviderKindName,
+    config: Readonly<Record<string, unknown>>,
+  ) {
+    if (
+      kind === 'VNPAY' &&
+      this.configService.get<string>('app.environment') === 'production' &&
+      config.environment !== 'PRODUCTION'
+    )
+      throw new InvalidBillingInputException(
+        'Production chỉ kích hoạt cấu hình VNPAY Production. Bạn vẫn có thể lưu Sandbox ở trạng thái tắt.',
+        'environment',
+      );
   }
 }
 

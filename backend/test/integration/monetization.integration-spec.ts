@@ -226,6 +226,161 @@ describe('chapter monetization integration', () => {
     });
   });
 
+  it('opens early access without charging new readers and retains purchase and pricing snapshots', async () => {
+    const { authorId, buyerId, chapterId } = await createPublishedChapter();
+    const chapter = await prisma.chapter.findUniqueOrThrow({
+      where: { id: chapterId },
+      include: { story: true },
+    });
+    const band = await prisma.monetizationPriceBand.findFirstOrThrow({
+      where: { isActive: true },
+      orderBy: { creditPrice: 'asc' },
+    });
+    const deadline = new Date(Date.now() + 86_400_000);
+    await setPricing.execute(
+      new SetChapterMonetizationCommand(
+        authorId,
+        chapter.storyId,
+        chapterId,
+        'PAID',
+        band.id,
+        'EARLY_ACCESS',
+        deadline,
+      ),
+    );
+    const before = await chapterReader.findPublicReader(
+      chapter.story.slug,
+      '1',
+      undefined,
+      true,
+    );
+    expect(before?.chapter.access).toMatchObject({
+      state: 'LOCKED',
+      freeAt: deadline.toISOString(),
+      unlockPolicy: 'EARLY_ACCESS',
+    });
+    await postWallet.execute(
+      new PostWalletTransactionCommand(
+        buyerId,
+        'CREDIT',
+        'TOP_UP',
+        'CREDIT',
+        100n,
+        'PAYMENT_CLEARING',
+        `early-credit-${randomUUID()}`,
+        'test-credit',
+        randomUUID(),
+      ),
+    );
+    const purchase = await unlock.execute(
+      new UnlockChapterCommand(
+        buyerId,
+        chapterId,
+        `early-unlock-${randomUUID()}`,
+      ),
+    );
+    const snapshot = await prisma.chapterPricingVersion.findFirstOrThrow({
+      where: { chapterId },
+      orderBy: { version: 'desc' },
+    });
+    await setPricing.execute(
+      new SetChapterMonetizationCommand(
+        authorId,
+        chapter.storyId,
+        chapterId,
+        'PAID',
+        band.id,
+        'EARLY_ACCESS',
+        new Date(Date.now() - 1000),
+      ),
+    );
+    const after = await chapterReader.findPublicReader(
+      chapter.story.slug,
+      '1',
+      undefined,
+      true,
+    );
+    expect(after?.chapter.access.state).toBe('FREE');
+    expect(after?.chapter).toHaveProperty('content', chapter.content);
+    const newBuyer = await createUser(`early-new-${randomUUID()}`);
+    await expect(
+      unlock.execute(
+        new UnlockChapterCommand(
+          newBuyer.id,
+          chapterId,
+          `early-free-${randomUUID()}`,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'CHAPTER_NOT_PURCHASABLE' });
+    expect(
+      await prisma.chapterPurchase.count({ where: { userId: newBuyer.id } }),
+    ).toBe(0);
+    expect(
+      await prisma.chapterPurchase.findUniqueOrThrow({
+        where: { id: purchase.purchase.id },
+      }),
+    ).toMatchObject({ creditPrice: band.creditPrice, status: 'COMPLETED' });
+    expect(
+      await prisma.chapterEntitlement.findUniqueOrThrow({
+        where: { userId_chapterId: { userId: buyerId, chapterId } },
+      }),
+    ).toMatchObject({ status: 'ACTIVE' });
+    expect(
+      await prisma.chapterPricingVersion.findUniqueOrThrow({
+        where: { id: snapshot.id },
+      }),
+    ).toEqual(snapshot);
+  });
+
+  it('anchors a draft paid window to publication rather than pricing configuration time', async () => {
+    const { authorId, chapterId } = await createPublishedChapter();
+    const chapter = await prisma.chapter.update({
+      where: { id: chapterId },
+      data: { status: 'DRAFT', publishedAt: null },
+      include: { story: true },
+    });
+    const band = await prisma.monetizationPriceBand.findFirstOrThrow({
+      where: { isActive: true },
+    });
+    const config = await setPricing.execute(
+      new SetChapterMonetizationCommand(
+        authorId,
+        chapter.storyId,
+        chapterId,
+        'PAID',
+        band.id,
+        'EARLY_ACCESS',
+        undefined,
+        1,
+      ),
+    );
+    expect(config.freeAt).toBeNull();
+    const publishedAt = new Date(Date.now() - 2 * 86_400_000);
+    await prisma.chapter.update({
+      where: { id: chapterId },
+      data: { status: 'PUBLISHED', publishedAt },
+    });
+    const reader = await chapterReader.findPublicReader(
+      chapter.story.slug,
+      '1',
+      undefined,
+      true,
+    );
+    expect(reader?.chapter.access).toMatchObject({
+      state: 'FREE',
+      freeAt: new Date(publishedAt.getTime() + 86_400_000).toISOString(),
+    });
+    const stored = await prisma.chapterMonetization.findUniqueOrThrow({
+      where: { chapterId },
+    });
+    expect(stored).toMatchObject({
+      accessType: 'PAID',
+      freeAt: null,
+      paidWindowDays: 1,
+      creditPrice: band.creditPrice,
+    });
+  });
+
   async function createPublishedChapter(): Promise<{
     authorId: string;
     buyerId: string;

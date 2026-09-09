@@ -38,6 +38,7 @@ import { ChapterCommentsComponent } from '../../ui/chapter-comments/chapter-comm
 import { ChapterHeadingComponent } from '../../ui/chapter-heading/chapter-heading.component';
 import { ChapterSidebarComponent } from '../../ui/chapter-sidebar/chapter-sidebar.component';
 import { TtsPlayerComponent } from '../../ui/tts-player/tts-player.component';
+import { ChapterPaywallComponent } from '../../ui/chapter-paywall/chapter-paywall.component';
 
 @Component({
   selector: 'app-chapter-reader-page',
@@ -54,12 +55,12 @@ import { TtsPlayerComponent } from '../../ui/tts-player/tts-player.component';
     IconComponent,
     DatePipe,
     TtsPlayerComponent,
+    ChapterPaywallComponent,
   ],
   templateUrl: './chapter-reader-page.component.html',
   styleUrls: [
     './chapter-reader-page.component.scss',
     './chapter-reader-page.chapter-list.component.scss',
-    './chapter-reader-page.paywall.component.scss',
     './chapter-reader-page.offline.component.scss',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

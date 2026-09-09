@@ -1,0 +1,73 @@
+<fieldset>
+  <legend>Thiết lập nhà cung cấp</legend>
+  <p class="hint">
+    Có thể lưu bản nháp khi chưa có khóa. Bổ sung thông tin, lưu để kiểm tra rồi kích hoạt kết nối.
+  </p>
+  <div class="fields">
+    @for (field of fields(); track field.name) {
+      <label>
+        <span>{{ field.label }}{{ field.required ? ' *' : '' }}</span>
+        @if (field.options?.length) {
+          <select
+            [name]="field.name"
+            [ngModel]="config()[field.name]"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="update(field, $event)"
+          >
+            @for (option of field.options; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        } @else {
+          <input
+            [name]="field.name"
+            [type]="field.secret ? 'password' : (field.type ?? 'text')"
+            [ngModel]="field.secret ? credentials()[field.name] : config()[field.name]"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="update(field, $event)"
+            [placeholder]="
+              field.secret && saved()?.secretConfiguredFields?.includes(field.name)
+                ? 'Để trống để giữ nguyên khóa đã lưu'
+                : (field.placeholder ?? '')
+            "
+            [attr.autocomplete]="field.secret ? 'new-password' : 'off'"
+            [attr.aria-invalid]="missing(field) ? 'true' : null"
+          />
+        }
+        @if (field.secret) {
+          <small>{{
+            saved()?.secretConfiguredFields?.includes(field.name)
+              ? 'Đã lưu khóa bảo mật. Nhập khóa mới để thay thế.'
+              : 'Chưa có khóa. Bạn có thể bổ sung sau.'
+          }}</small>
+        }
+        @if (missing(field)) {
+          <small class="missing">Cần bổ sung trước khi kích hoạt.</small>
+        }
+      </label>
+    }
+  </div>
+  @if (saved(); as provider) {
+    @if (!provider.credentialsStorageAvailable) {
+      <p class="missing" role="alert">
+        Máy chủ chưa sẵn sàng lưu khóa bảo mật. Bản nháp đã được giữ lại; cần quản trị hệ thống bật
+        kho khóa trước khi nhập khóa.
+      </p>
+    }
+    <div class="readiness" role="status">
+      <strong>{{
+        provider.configurationReady
+          ? 'Đã đủ cấu hình để kích hoạt'
+          : 'Bản nháp — chưa sẵn sàng nhận thanh toán'
+      }}</strong>
+      @if (provider.webhookUrl) {
+        <label
+          >URL nhận kết quả từ cổng thanh toán (IPN)<input readonly [value]="provider.webhookUrl"
+        /></label>
+      }
+      @if (provider.returnUrl) {
+        <label>URL quay lại website<input readonly [value]="provider.returnUrl" /></label>
+      }
+    </div>
+  }
+</fieldset>

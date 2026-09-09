@@ -569,6 +569,7 @@ enum PaymentOrderStatus {
 }
 
 enum PaymentProviderKind {
+  VNPAY                @map("vnpay")
   MANUAL_BANK_TRANSFER @map("manual_bank_transfer")
   HMAC_SANDBOX         @map("hmac_sandbox")
 
@@ -1034,35 +1035,42 @@ model PaymentProviderConnection {
 }
 
 model PaymentOrder {
-  id                   String             @id @default(uuid()) @db.Uuid
-  userId               String             @map("user_id") @db.Uuid
-  packageId            String             @map("package_id") @db.Uuid
-  provider             String             @db.VarChar(50)
-  providerConnectionId String?            @map("provider_connection_id") @db.Uuid
-  providerReference    String?            @map("provider_reference") @db.VarChar(160)
-  creditAmount         BigInt             @map("credit_amount")
-  fiatAmountMinor      BigInt             @map("fiat_amount_minor")
-  currency             String             @db.VarChar(3)
-  status               PaymentOrderStatus @default(CREATED)
-  checkoutUrl          String?            @map("checkout_url") @db.Text
-  idempotencyKey       String             @unique @map("idempotency_key") @db.VarChar(200)
-  requestHash          String             @map("request_hash") @db.VarChar(64)
-  walletTransactionId  String?            @unique @map("wallet_transaction_id") @db.Uuid
-  failureCode          String?            @map("failure_code") @db.VarChar(120)
-  metadata             Json?
-  reviewRequestedAt    DateTime?          @map("review_requested_at") @db.Timestamptz(3)
-  reviewedAt           DateTime?          @map("reviewed_at") @db.Timestamptz(3)
-  reviewedById         String?            @map("reviewed_by_id") @db.Uuid
-  reviewReason         String?            @map("review_reason") @db.VarChar(500)
-  expiresAt            DateTime           @map("expires_at") @db.Timestamptz(3)
-  settledAt            DateTime?          @map("settled_at") @db.Timestamptz(3)
-  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  providerConfigSnapshot     Json?              @map("provider_config_snapshot")
+  providerCredentialSnapshot String?            @map("provider_credential_snapshot") @db.Text
+  storyId                    String?            @map("story_id") @db.Uuid
+  providerTransactionId      String?            @map("provider_transaction_id") @db.VarChar(160)
+  providerTransactionDate    String?            @map("provider_transaction_date") @db.VarChar(14)
+  reconciledAt               DateTime?          @map("reconciled_at") @db.Timestamptz(3)
+  id                         String             @id @default(uuid()) @db.Uuid
+  userId                     String             @map("user_id") @db.Uuid
+  packageId                  String             @map("package_id") @db.Uuid
+  provider                   String             @db.VarChar(50)
+  providerConnectionId       String?            @map("provider_connection_id") @db.Uuid
+  providerReference          String?            @map("provider_reference") @db.VarChar(160)
+  creditAmount               BigInt             @map("credit_amount")
+  fiatAmountMinor            BigInt             @map("fiat_amount_minor")
+  currency                   String             @db.VarChar(3)
+  status                     PaymentOrderStatus @default(CREATED)
+  checkoutUrl                String?            @map("checkout_url") @db.Text
+  idempotencyKey             String             @unique @map("idempotency_key") @db.VarChar(200)
+  requestHash                String             @map("request_hash") @db.VarChar(64)
+  walletTransactionId        String?            @unique @map("wallet_transaction_id") @db.Uuid
+  failureCode                String?            @map("failure_code") @db.VarChar(120)
+  metadata                   Json?
+  reviewRequestedAt          DateTime?          @map("review_requested_at") @db.Timestamptz(3)
+  reviewedAt                 DateTime?          @map("reviewed_at") @db.Timestamptz(3)
+  reviewedById               String?            @map("reviewed_by_id") @db.Uuid
+  reviewReason               String?            @map("review_reason") @db.VarChar(500)
+  expiresAt                  DateTime           @map("expires_at") @db.Timestamptz(3)
+  settledAt                  DateTime?          @map("settled_at") @db.Timestamptz(3)
+  createdAt                  DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user               User                       @relation(fields: [userId], references: [id], onDelete: Restrict)
   creditPackage      CreditPackage              @relation(fields: [packageId], references: [id], onDelete: Restrict)
   walletTransaction  WalletLedgerTransaction?   @relation(fields: [walletTransactionId], references: [id], onDelete: Restrict)
   providerConnection PaymentProviderConnection? @relation(fields: [providerConnectionId], references: [id], onDelete: Restrict)
+  refunds            BillingRefund[]
 
   @@unique([provider, providerReference], map: "payment_orders_provider_reference_unique")
   @@index([userId, createdAt, id])
@@ -1071,6 +1079,39 @@ model PaymentOrder {
   @@index([providerConnectionId])
   @@index([status, reviewRequestedAt], map: "payment_orders_status_review_requested_idx")
   @@map("payment_orders")
+}
+
+model BillingRefund {
+  id               String       @id @default(uuid()) @db.Uuid
+  orderId          String       @map("order_id") @db.Uuid
+  actorId          String       @map("actor_id") @db.Uuid
+  idempotencyKey   String       @unique @map("idempotency_key") @db.VarChar(200)
+  status           String       @default("PENDING") @db.VarChar(20)
+  amountMinor      BigInt       @map("amount_minor")
+  creditAmount     BigInt       @map("credit_amount")
+  currency         String       @db.VarChar(3)
+  reason           String       @db.VarChar(500)
+  providerRefundId String?      @map("provider_refund_id") @db.VarChar(160)
+  responseCode     String?      @map("response_code") @db.VarChar(50)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt      DateTime?    @map("completed_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  order            PaymentOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([status, createdAt])
+  @@map("billing_refunds")
+}
+
+model StoryPaymentAllowlist {
+  storyId          String   @id @map("story_id") @db.Uuid
+  enabledProviders String[] @default([]) @map("enabled_providers")
+  isEnabled        Boolean  @default(false) @map("is_enabled")
+  enabledBy        String?  @map("enabled_by") @db.Uuid
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  story            Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("story_payment_allowlists")
 }
 
 model OAuthAccount {
@@ -1890,6 +1931,7 @@ model Story {
   revenueAgreements         RevenueShareAgreement[]
   aiAuthorJobs              AiAuthorJob[]
   characters                StoryCharacter[]
+  paymentAllowlist          StoryPaymentAllowlist?
 
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])

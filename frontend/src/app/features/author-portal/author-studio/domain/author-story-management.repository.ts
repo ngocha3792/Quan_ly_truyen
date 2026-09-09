@@ -6,6 +6,7 @@ import {
   AuthorChapterVersion,
   AuthorChapterVersionPage,
   AuthorChapterMonetization,
+  AuthorChapterPricingInput,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
@@ -58,7 +59,7 @@ export abstract class AuthorStoryManagementRepository {
   abstract updateChapterMonetization(
     storyId: string,
     chapterId: string,
-    input: { readonly accessType: 'FREE' | 'PAID'; readonly priceBandId?: string },
+    input: AuthorChapterPricingInput,
   ): Observable<AuthorChapterMonetization>;
   abstract listChapterVersions(
     storyId: string,

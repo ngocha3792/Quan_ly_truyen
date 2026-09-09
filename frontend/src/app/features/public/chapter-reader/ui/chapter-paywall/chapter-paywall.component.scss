@@ -1,0 +1,49 @@
+.chapter-paywall {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 0 4px 24px;
+  padding: 28px 22px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-2);
+  text-align: center;
+}
+h2,
+p {
+  margin: 0;
+}
+p {
+  max-width: 620px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+strong {
+  color: var(--primary-soft);
+  font-size: 25px;
+}
+.actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+a {
+  color: var(--primary-soft);
+}
+small {
+  max-width: 620px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.eyebrow {
+  color: var(--primary-soft);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.message {
+  color: var(--warning);
+}

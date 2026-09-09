@@ -74,6 +74,28 @@ describe('inline thread context and access', () => {
     expect(query.select).not.toHaveProperty('contentDocument');
   });
 
+  it('allows inline replies after early access expires without a purchase', async () => {
+    const tx = accessTransaction();
+    tx.chapter.findFirst.mockResolvedValue({
+      storyId: 'story',
+      story: { authorId: 'author' },
+      publishedAt: new Date('2026-01-01T00:00:00Z'),
+      monetization: {
+        accessType: 'PAID',
+        unlockPolicy: 'EARLY_ACCESS',
+        paidWindowDays: 7,
+      },
+    });
+    await expect(
+      assertInlineThreadAccess(
+        tx as unknown as Prisma.TransactionClient,
+        'reader',
+        'chapter',
+      ),
+    ).resolves.toBeUndefined();
+    expect(tx.chapterEntitlement.findFirst).not.toHaveBeenCalled();
+  });
+
   function accessTransaction() {
     const findChapter = jest.fn<Promise<unknown>, [unknown]>();
     findChapter.mockResolvedValue({

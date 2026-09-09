@@ -3,18 +3,25 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 
 import { InvalidMonetizationInputException } from '../exceptions';
 import {
+  assertEarlyAccessPricingInput,
+  type ChapterPricingAccess,
+} from './chapter-pricing-access.policy';
+import {
   LOCKED_CHAPTER_PREVIEW_MAX_CHARS,
   MAX_CHAPTER_PRICE_CREDITS,
   type ChapterAccessTypeName,
 } from '../enums';
 
-export function assertSetChapterPricingInput(input: {
-  actorId: string;
-  storyId: string;
-  chapterId: string;
-  accessType: ChapterAccessTypeName;
-  priceBandId?: string;
-}): void {
+export function assertSetChapterPricingInput(
+  input: ChapterPricingAccess & {
+    actorId: string;
+    storyId: string;
+    chapterId: string;
+    accessType: ChapterAccessTypeName;
+    priceBandId?: string;
+  },
+): void {
+  assertEarlyAccessPricingInput(input);
   for (const [field, value] of [
     ['actorId', input.actorId],
     ['storyId', input.storyId],

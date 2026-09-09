@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { isChapterEffectivelyFree } from '@/modules/monetization';
 
 import { AppException } from '@/common/exceptions';
 import {
-  ChapterAccessType,
   ChapterEntitlementStatus,
   ChapterPurchaseStatus,
   ChapterStatus,
@@ -159,6 +159,7 @@ export class PrismaTtsPersistence implements TtsPersistencePort {
           tx,
           input.userId,
           input.chapterId,
+          input.now,
         );
         if (!chapter) throw new TtsChapterAccessDeniedException();
         if (!isChapterContentDocument(chapter.contentDocument)) {
@@ -330,7 +331,12 @@ export class PrismaTtsPersistence implements TtsPersistencePort {
     });
     if (!manifest) throw new TtsManifestNotFoundException(manifestId);
     if (
-      !(await loadAccessibleChapter(this.prisma, userId, manifest.chapterId))
+      !(await loadAccessibleChapter(
+        this.prisma,
+        userId,
+        manifest.chapterId,
+        now,
+      ))
     ) {
       throw new TtsChapterAccessDeniedException();
     }
@@ -550,6 +556,7 @@ async function loadAccessibleChapter(
   tx: Prisma.TransactionClient | PrismaService,
   userId: string,
   chapterId: string,
+  now: Date,
 ) {
   const chapter = await tx.chapter.findFirst({
     where: {
@@ -574,7 +581,15 @@ async function loadAccessibleChapter(
       id: true,
       version: true,
       contentDocument: true,
-      monetization: { select: { accessType: true } },
+      publishedAt: true,
+      monetization: {
+        select: {
+          accessType: true,
+          unlockPolicy: true,
+          freeAt: true,
+          paidWindowDays: true,
+        },
+      },
       entitlements: {
         where: { userId, status: ChapterEntitlementStatus.ACTIVE },
         select: { purchase: { select: { status: true } } },
@@ -583,7 +598,11 @@ async function loadAccessibleChapter(
     },
   });
   if (!chapter) return null;
-  const paid = chapter.monetization?.accessType === ChapterAccessType.PAID;
+  const paid = !isChapterEffectivelyFree(
+    chapter.monetization,
+    chapter.publishedAt,
+    now,
+  );
   return !paid ||
     chapter.entitlements[0]?.purchase.status === ChapterPurchaseStatus.COMPLETED
     ? chapter

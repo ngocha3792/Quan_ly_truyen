@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
+import {
+  PAYMENT_CREDENTIAL_VAULT_PORT,
+  type PaymentCredentialVaultPort,
+} from '../../ports/payment-credential-vault.port';
 
 import {
   billingConfig,
@@ -34,6 +38,8 @@ export class CreatePaymentOrderCommandHandler {
     private readonly config: ConfigType<typeof billingConfig>,
     @Inject(monetizationConfig.KEY)
     private readonly monetization: ConfigType<typeof monetizationConfig>,
+    @Inject(PAYMENT_CREDENTIAL_VAULT_PORT)
+    private readonly vault: PaymentCredentialVaultPort,
   ) {}
 
   async execute(
@@ -54,16 +60,26 @@ export class CreatePaymentOrderCommandHandler {
     );
     const provider = this.providers.getAdapter(connection.kind);
     provider.validateConfig(connection.config);
+    const secrets =
+      connection.kind === 'VNPAY'
+        ? this.vault.open(connection.code, connection.encryptedCredential)
+        : undefined;
+    provider.assertReady?.({ ...connection, secrets });
     const prepared = await this.persistence.prepareOrder({
       userId,
       packageId: command.packageId,
       provider: connection.code,
       providerConnectionId: connection.id,
+      storyId: command.storyId,
+      providerKind: connection.kind,
+      providerConfigSnapshot: connection.config,
+      providerCredentialSnapshot: connection.encryptedCredential,
       idempotencyKey,
       requestHash: buildPaymentOrderRequestHash(
         userId,
         command.packageId,
         connection.id,
+        command.storyId,
       ),
       ttlMinutes: connection.orderTtlMinutes ?? this.config.orderTtlMinutes,
       pendingOrderLimit: this.config.pendingOrderLimit,
@@ -76,7 +92,19 @@ export class CreatePaymentOrderCommandHandler {
       const checkout = await provider.createCheckout({
         orderId: prepared.order.id,
         userId,
-        connection,
+        connection: {
+          ...connection,
+          currency: prepared.order.currency,
+          config: prepared.order.providerConfigSnapshot ?? connection.config,
+          secrets: prepared.order.providerCredentialSnapshot
+            ? this.vault.open(
+                connection.code,
+                prepared.order.providerCredentialSnapshot,
+              )
+            : secrets,
+        },
+        createdAt: prepared.order.createdAt,
+        ipAddress: command.ipAddress,
         amountMinor: prepared.order.fiatAmountMinor,
         currency: prepared.order.currency,
         expiresAt: prepared.order.expiresAt,

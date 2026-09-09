@@ -6,7 +6,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 
 import {
-  ChapterAccessType,
   ChapterEntitlementStatus,
   ChapterStatus,
   ContentFormat,
@@ -23,6 +22,10 @@ import {
 import type { ReaderFeaturesConfig } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { MEDIA_URL_BUILDER, type MediaUrlPort } from '@/modules/media';
+import {
+  isChapterEffectivelyFree,
+  resolveChapterFreeAt,
+} from '@/modules/monetization';
 import {
   editableStoryWhere,
   lockAndFindEditableStory,
@@ -1533,24 +1536,12 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       }
   > {
     const pricing = chapter.monetization;
-    if (!pricing || pricing.accessType !== ChapterAccessType.PAID) {
+    if (isChapterEffectivelyFree(pricing, chapter.publishedAt)) {
       return { state: 'FREE', priceCredits: null };
     }
     // A corrupt paid configuration must never fail open and expose full content.
-    const priceCredits = pricing.creditPrice?.toString() ?? '0';
-    const earlyAccessEnded =
-      pricing.unlockPolicy === 'EARLY_ACCESS' &&
-      ((pricing.freeAt && new Date() >= pricing.freeAt) ||
-        (!pricing.freeAt &&
-          pricing.paidWindowDays &&
-          chapter.publishedAt &&
-          new Date() >=
-            new Date(
-              chapter.publishedAt.getTime() +
-                pricing.paidWindowDays * 86_400_000,
-            )));
-    if (earlyAccessEnded) return { state: 'FREE', priceCredits };
-    if (!pricing.creditPrice || !pricing.previewContent) {
+    const priceCredits = pricing?.creditPrice?.toString() ?? '0';
+    if (!pricing?.creditPrice || !pricing.previewContent) {
       return { state: 'LOCKED', priceCredits };
     }
     const effectivePaywall =
@@ -1886,7 +1877,7 @@ function toPublicChapterReaderDto(
       number: chapter.number.toNumber(),
       title: chapter.title,
       slug: chapter.slug,
-      access,
+      access: { ...access, ...toPublicPricingSchedule(chapter) },
       content: content.content,
       ...(exposeContentDocument
         ? {
@@ -1906,7 +1897,9 @@ function toPublicChapterReaderDto(
               const width = item.mediaAsset.width;
               const height = item.mediaAsset.height;
               if (!publicId || !width || !height) return [];
-              const requiresSigning = access.state !== 'FREE';
+              const requiresSigning =
+                access.state !== 'FREE' ||
+                item.mediaAsset.deliveryType === 'authenticated';
               if (
                 requiresSigning &&
                 item.mediaAsset.deliveryType !== 'authenticated'
@@ -2009,7 +2002,11 @@ function toLockedPublicChapterReaderDto(
       number: chapter.number.toNumber(),
       title: chapter.title,
       slug: chapter.slug,
-      access: { state: 'LOCKED', priceCredits },
+      access: {
+        state: 'LOCKED',
+        priceCredits,
+        ...toPublicPricingSchedule(chapter),
+      },
       previewContent: chapter.monetization?.previewContent ?? '',
       previewFormat: ContentFormat.MARKDOWN,
       wordCount: chapter.wordCount,
@@ -2022,6 +2019,17 @@ function toLockedPublicChapterReaderDto(
       previous: toPublicChapterNavigation(previous),
       next: toPublicChapterNavigation(next),
     },
+  };
+}
+
+function toPublicPricingSchedule(chapter: PublicChapterReaderMetadataRow) {
+  return {
+    unlockPolicy: chapter.monetization?.unlockPolicy ?? 'PERMANENT_PAID',
+    freeAt:
+      resolveChapterFreeAt(
+        chapter.monetization,
+        chapter.publishedAt,
+      )?.toISOString() ?? null,
   };
 }
 

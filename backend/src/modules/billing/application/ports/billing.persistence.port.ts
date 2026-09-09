@@ -19,6 +19,8 @@ export interface CreditPackageRecord {
 }
 
 export interface PaymentOrderRecord {
+  readonly providerConfigSnapshot?: Readonly<Record<string, unknown>> | null;
+  readonly providerCredentialSnapshot?: string | null;
   readonly id: string;
   readonly userId: string;
   readonly packageId: string;
@@ -44,6 +46,7 @@ export interface PaymentOrderRecord {
 }
 
 export interface PaymentProviderConnectionRecord {
+  readonly encryptedCredential?: string | null;
   readonly id: string;
   readonly code: string;
   readonly kind: PaymentProviderKindName;
@@ -66,6 +69,8 @@ export interface PaymentOrderPageRecord {
 }
 
 export interface AdminPaymentOrderRecord extends PaymentOrderRecord {
+  readonly providerKind?: PaymentProviderKindName;
+  readonly providerConfigurationReady?: boolean;
   readonly userEmail: string;
   readonly userDisplayName: string;
   readonly packageLabel: string;
@@ -79,6 +84,10 @@ export interface AdminPaymentOrderPageRecord {
 }
 
 export interface PreparePaymentOrderInput {
+  readonly storyId?: string;
+  readonly providerKind?: PaymentProviderKindName;
+  readonly providerConfigSnapshot?: Readonly<Record<string, unknown>>;
+  readonly providerCredentialSnapshot?: string | null;
   readonly userId: string;
   readonly packageId: string;
   readonly provider: string;
@@ -110,6 +119,7 @@ export interface BillingPersistencePort {
     enabledOnly: boolean,
   ): Promise<readonly PaymentProviderConnectionRecord[]>;
   createConnection(input: {
+    encryptedCredential?: string;
     actorId: string;
     code: string;
     kind: PaymentProviderKindName;
@@ -122,6 +132,7 @@ export interface BillingPersistencePort {
     orderTtlMinutes?: number;
   }): Promise<PaymentProviderConnectionRecord>;
   updateConnection(input: {
+    encryptedCredential?: string;
     actorId: string;
     id: string;
     displayName?: string;

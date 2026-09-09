@@ -31,9 +31,11 @@ export class CreditApiService {
       .pipe(map((response) => response.data));
   }
 
-  paymentMethods(): Observable<readonly PaymentMethod[]> {
+  paymentMethods(storyId?: string): Observable<readonly PaymentMethod[]> {
     return this.http
-      .get<ApiSuccessEnvelope<readonly PaymentMethod[]>>(`${this.billingUrl}/payment-methods`)
+      .get<ApiSuccessEnvelope<readonly PaymentMethod[]>>(`${this.billingUrl}/payment-methods`, {
+        params: storyId ? { storyId } : {},
+      })
       .pipe(map((response) => response.data));
   }
 
@@ -50,13 +52,24 @@ export class CreditApiService {
     packageId: string,
     idempotencyKey: string,
     providerConnectionId?: string,
+    storyId?: string,
   ): Observable<CreatePaymentOrderResult> {
     return this.http
       .post<ApiSuccessEnvelope<CreatePaymentOrderResult>>(
         `${this.billingUrl}/top-up-orders`,
-        { packageId, ...(providerConnectionId ? { providerConnectionId } : {}) },
+        {
+          packageId,
+          ...(providerConnectionId ? { providerConnectionId } : {}),
+          ...(storyId ? { storyId } : {}),
+        },
         { headers: new HttpHeaders({ 'x-idempotency-key': idempotencyKey }) },
       )
+      .pipe(map((response) => response.data));
+  }
+
+  order(orderId: string): Observable<PaymentOrder> {
+    return this.http
+      .get<ApiSuccessEnvelope<PaymentOrder>>(`${this.billingUrl}/top-up-orders/${orderId}`)
       .pipe(map((response) => response.data));
   }
 

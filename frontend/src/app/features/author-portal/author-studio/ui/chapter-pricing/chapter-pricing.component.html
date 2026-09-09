@@ -1,0 +1,75 @@
+<section class="chapter-pricing" aria-labelledby="chapter-pricing-title">
+  <header>
+    <div>
+      <span class="eyebrow">Credit & Paywall</span>
+      <h2 id="chapter-pricing-title">Quyền truy cập chương</h2>
+      <p>Chọn trả phí lâu dài hoặc cho độc giả mua quyền đọc sớm trước khi chương mở miễn phí.</p>
+    </div>
+    <span class="version">Phiên bản giá {{ pricing().version }}</span>
+  </header>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="pricing-fields">
+      <label
+        ><span>Chế độ</span
+        ><select formControlName="accessType">
+          <option value="FREE">Miễn phí</option>
+          <option value="PAID">Trả phí bằng Credit</option>
+        </select></label
+      >
+      @if (form.controls.accessType.value === 'PAID') {
+        <label
+          ><span>Mức giá</span
+          ><select formControlName="priceBandId" required>
+            <option value="">Chọn mức giá</option>
+            @for (band of bands(); track band.id) {
+              <option [value]="band.id">{{ band.label }} · {{ band.creditPrice }} Credit</option>
+            }
+          </select></label
+        >
+        <label
+          ><span>Chính sách mở khóa</span
+          ><select formControlName="unlockPolicy">
+            <option value="PERMANENT_PAID">Trả phí lâu dài</option>
+            <option value="EARLY_ACCESS">Đọc sớm, miễn phí sau</option>
+          </select></label
+        >
+        @if (form.controls.unlockPolicy.value === 'EARLY_ACCESS') {
+          <label
+            ><span>Lịch mở miễn phí</span
+            ><select formControlName="schedule">
+              <option value="days">Theo ngày sau xuất bản</option>
+              <option value="date">Chọn thời điểm cụ thể</option>
+            </select></label
+          >
+          @if (form.controls.schedule.value === 'days') {
+            <label
+              ><span>Số ngày đọc sớm</span
+              ><input type="number" min="1" max="3650" step="1" formControlName="paidWindowDays"
+            /></label>
+          } @else {
+            <label
+              ><span>Thời điểm mở miễn phí (giờ địa phương)</span
+              ><input type="datetime-local" formControlName="freeAt"
+            /></label>
+          }
+        }
+      }
+    </div>
+    @if (
+      form.controls.accessType.value === 'PAID' &&
+      form.controls.unlockPolicy.value === 'EARLY_ACCESS'
+    ) {
+      <p class="help">
+        Số ngày được tính từ lúc xuất bản, mỗi ngày là 24 giờ. Khi đến hạn, mọi độc giả được đọc
+        miễn phí. Người đã mua giữ quyền đọc vĩnh viễn và giá giao dịch không đổi.
+      </p>
+      @if (pricing().freeAt; as freeAt) {
+        <p>Lịch đã lưu: mở miễn phí {{ freeAt | date: 'dd/MM/yyyy HH:mm' }}.</p>
+      }
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+    <app-button type="submit" variant="secondary" [loading]="busy()">Lưu quyền truy cập</app-button>
+  </form>
+</section>

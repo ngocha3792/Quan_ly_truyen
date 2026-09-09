@@ -154,6 +154,15 @@ export const ADMIN_ROUTES: Routes = [
           ),
       },
       {
+        path: 'payments/gateway',
+        title: appPageTitle('Đối soát và hoàn tiền'),
+        canActivate: monetizationOperationsGuards,
+        loadComponent: () =>
+          import('../features/admin/payments/pages/gateway/admin-payment-gateway-page.component').then(
+            (m) => m.AdminPaymentGatewayPageComponent,
+          ),
+      },
+      {
         path: 'stories',
         title: appPageTitle('Duyệt truyện'),
         canActivate: storyModerationGuards,

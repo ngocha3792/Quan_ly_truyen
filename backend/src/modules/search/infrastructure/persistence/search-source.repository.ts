@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/infrastructure/database';
+import { isChapterEffectivelyFree } from '@/modules/monetization';
 import type {
   SearchDocument,
   SearchHit,
@@ -129,6 +130,31 @@ export class SearchSourceRepository {
           })
         : [];
     const owned = new Set(entitlements.map((row) => row.chapterId));
+    // Re-resolve time-based access from PostgreSQL; an index may outlive freeAt.
+    const pricing = paidIds.length
+      ? await this.prisma.chapter.findMany({
+          where: { id: { in: paidIds } },
+          select: {
+            id: true,
+            publishedAt: true,
+            monetization: {
+              select: {
+                accessType: true,
+                unlockPolicy: true,
+                freeAt: true,
+                paidWindowDays: true,
+              },
+            },
+          },
+        })
+      : [];
+    const free = new Set(
+      pricing
+        .filter((chapter) =>
+          isChapterEffectivelyFree(chapter.monetization, chapter.publishedAt),
+        )
+        .map((chapter) => chapter.id),
+    );
     return documents.map((doc) => ({
       id: doc.entityId,
       kind: doc.kind,
@@ -143,7 +169,7 @@ export class SearchSourceRepository {
       storySlug: doc.storySlug,
       number: doc.number,
       accessState:
-        doc.accessType === 'free'
+        doc.accessType === 'free' || free.has(doc.entityId)
           ? 'FREE'
           : owned.has(doc.entityId)
             ? 'ENTITLED'

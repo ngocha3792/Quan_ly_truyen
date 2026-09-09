@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsUUID,
   Min,
+  Max,
 } from 'class-validator';
 
 import {
@@ -23,5 +24,5 @@ export class SetChapterMonetizationRequest {
   @IsOptional() @IsIn(['PERMANENT_PAID', 'EARLY_ACCESS']) unlockPolicy?:
     'PERMANENT_PAID' | 'EARLY_ACCESS';
   @IsOptional() @IsDateString() freeAt?: string;
-  @IsOptional() @IsInt() @Min(1) paidWindowDays?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(3650) paidWindowDays?: number;
 }

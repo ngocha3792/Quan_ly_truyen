@@ -53,6 +53,7 @@ export const AUTH_PERMISSIONS = {
   AUDIT_LOG_READ: 'audit-log.read',
   ANALYTICS_READ: 'analytics.read',
   PAYMENT_READ_ADMIN: 'payment.read.admin',
+  PAYMENT_RECONCILE_ADMIN: 'payment.reconcile.admin',
   PAYMENT_REFUND_ADMIN: 'payment.refund.admin',
   PAYMENT_ORDER_SETTLE_ADMIN: 'payment.order.settle.admin',
   PAYMENT_PROVIDER_MANAGE_ADMIN: 'payment.provider.manage.admin',

@@ -11,6 +11,8 @@ export interface PaymentProviderConnectionDescriptor {
   readonly kind: PaymentProviderKindName;
   readonly displayName: string;
   readonly config: Readonly<Record<string, unknown>>;
+  /** Decrypted only for server-side provider operations; never return in DTOs. */
+  readonly secrets?: Readonly<Record<string, string>>;
   readonly currency: string;
   readonly orderTtlMinutes: number | null;
 }
@@ -33,6 +35,8 @@ export interface PaymentCheckoutInput {
   readonly amountMinor: bigint;
   readonly currency: string;
   readonly expiresAt: Date;
+  readonly createdAt?: Date;
+  readonly ipAddress?: string;
 }
 
 export type PaymentCheckoutResult =
@@ -48,6 +52,7 @@ export type PaymentCheckoutResult =
     };
 
 export interface PaymentWebhookInput {
+  readonly connection?: PaymentProviderConnectionDescriptor;
   readonly providerCode: string;
   readonly rawBody: Buffer;
   readonly headers: Readonly<Record<string, string | undefined>>;
@@ -61,6 +66,40 @@ export interface NormalizedPaymentEvent {
   readonly amountMinor: string;
   readonly currency: string;
   readonly occurredAt: string;
+  readonly providerTransactionId?: string;
+  readonly providerTransactionDate?: string;
+}
+
+export interface PaymentGatewayOrderInput {
+  readonly connection: PaymentProviderConnectionDescriptor;
+  readonly orderId: string;
+  readonly providerReference: string;
+  readonly amountMinor: bigint;
+  readonly currency: string;
+  readonly createdAt: Date;
+  readonly providerTransactionId?: string;
+}
+
+export interface PaymentQueryInput extends PaymentGatewayOrderInput {
+  readonly requestId: string;
+}
+
+export interface PaymentRefundInput extends PaymentQueryInput {
+  readonly initiatedBy: string;
+  readonly reason: string;
+}
+
+export interface PaymentQueryResult {
+  readonly status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'UNKNOWN';
+  readonly responseCode: string;
+  readonly providerTransactionId?: string;
+  readonly event?: NormalizedPaymentEvent;
+}
+
+export interface PaymentRefundResult {
+  readonly status: 'SUCCEEDED' | 'PENDING' | 'FAILED' | 'UNKNOWN';
+  readonly responseCode: string;
+  readonly providerRefundId?: string;
 }
 
 export interface PaymentProviderAdapter {
@@ -68,8 +107,11 @@ export interface PaymentProviderAdapter {
   readonly supportsWebhook: boolean;
   readonly requiresManualReview: boolean;
   validateConfig(config: unknown): Readonly<Record<string, unknown>>;
+  assertReady?(connection: PaymentProviderConnectionDescriptor): void;
   createCheckout(input: PaymentCheckoutInput): Promise<PaymentCheckoutResult>;
   verifyWebhook(input: PaymentWebhookInput): Promise<NormalizedPaymentEvent>;
+  queryPayment?(input: PaymentQueryInput): Promise<PaymentQueryResult>;
+  refundPayment?(input: PaymentRefundInput): Promise<PaymentRefundResult>;
 }
 
 export interface PaymentProviderRegistryPort {
@@ -82,7 +124,9 @@ export interface PaymentSettlementPort {
     readonly orderId: string;
     readonly providerReference: string;
     readonly occurredAt: Date;
-    readonly source: 'webhook' | 'admin_manual';
+    readonly source: 'webhook' | 'admin_manual' | 'reconciliation';
+    readonly providerTransactionId?: string;
+    readonly providerTransactionDate?: string;
     readonly actorId?: string;
     readonly reason?: string;
     readonly ipAddress?: string;

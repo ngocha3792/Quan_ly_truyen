@@ -11,6 +11,10 @@
   gap: 1.25rem;
 }
 
+.page-heading > div {
+  min-width: 0;
+}
+
 h1 {
   margin: 0;
   display: flex;
@@ -32,4 +36,11 @@ p {
   color: var(--text-muted);
   font-size: 0.85rem;
   line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

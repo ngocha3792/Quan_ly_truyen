@@ -1,4 +1,4 @@
-export type PaymentProviderKind = 'MANUAL_BANK_TRANSFER' | 'HMAC_SANDBOX';
+export type PaymentProviderKind = 'MANUAL_BANK_TRANSFER' | 'HMAC_SANDBOX' | 'VNPAY';
 
 export interface PaymentProviderConnection {
   readonly id: string;
@@ -11,18 +11,41 @@ export interface PaymentProviderConnection {
   readonly enabled: boolean;
   readonly sortOrder: number;
   readonly orderTtlMinutes: number | null;
+  readonly configurationReady: boolean;
+  readonly missingConfigurationFields: readonly string[];
+  readonly secretConfiguredFields: readonly string[];
+  readonly webhookUrl: string | null;
+  readonly returnUrl: string | null;
+  readonly credentialsStorageAvailable: boolean;
+}
+
+export type PaymentProviderWrite = Omit<
+  PaymentProviderConnection,
+  | 'id'
+  | 'configurationReady'
+  | 'missingConfigurationFields'
+  | 'secretConfiguredFields'
+  | 'webhookUrl'
+  | 'returnUrl'
+  | 'credentialsStorageAvailable'
+> & { readonly credentials?: Readonly<Record<string, string>> };
+
+export interface PaymentProviderField {
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly placeholder?: string;
+  readonly type?: 'text' | 'password' | 'url' | 'select';
+  readonly secret?: boolean;
+  readonly options?: readonly { readonly value: string; readonly label: string }[];
+  readonly defaultValue?: string;
 }
 
 export interface PaymentProviderKindSchema {
   readonly kind: PaymentProviderKind;
   readonly supportsWebhook: boolean;
   readonly requiresManualReview: boolean;
-  readonly fields: readonly {
-    readonly name: string;
-    readonly label: string;
-    readonly required: boolean;
-    readonly placeholder?: string;
-  }[];
+  readonly fields: readonly PaymentProviderField[];
 }
 
 export interface ManualReviewOrder {

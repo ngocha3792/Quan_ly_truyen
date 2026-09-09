@@ -9,6 +9,7 @@ import {
   AuthorChapterDraftInput,
   AuthorChapterVersion,
   AuthorChapterMonetization,
+  AuthorChapterPricingInput,
   AuthorChapterVersionPage,
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
@@ -175,7 +176,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   updateChapterMonetization(
     storyId: string,
     chapterId: string,
-    input: { readonly accessType: 'FREE' | 'PAID'; readonly priceBandId?: string },
+    input: AuthorChapterPricingInput,
   ): Observable<AuthorChapterMonetization> {
     return this.chapterMonetization.update(storyId, chapterId, input);
   }

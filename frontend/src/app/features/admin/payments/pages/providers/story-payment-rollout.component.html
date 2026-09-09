@@ -1,0 +1,32 @@
+<section aria-labelledby="rollout-title">
+  <h2 id="rollout-title">Mở thanh toán theo truyện</h2>
+  <p>
+    Cho phép độc giả truyện được chọn nạp Credit qua VNPAY. Kết nối vẫn cần được cấu hình đầy đủ và
+    kích hoạt.
+  </p>
+  <div class="story-picker">
+    <label>Mã truyện<input [(ngModel)]="storyId" placeholder="UUID của truyện" /></label>
+    <app-button [disabled]="!validId()" [loading]="busy()" (click)="load()"
+      >Tải thiết lập</app-button
+    >
+  </div>
+  @if (loadedStoryId && loadedStoryId === storyId.trim()) {
+    <div class="options">
+      <label><input type="checkbox" [(ngModel)]="enabled" /> Mở thanh toán cho truyện này</label>
+      <label><input type="checkbox" [(ngModel)]="vnpay" /> VNPAY</label>
+      <app-button
+        variant="primary"
+        [loading]="busy()"
+        [disabled]="enabled && !vnpay"
+        (click)="save()"
+        >Lưu phạm vi</app-button
+      >
+    </div>
+  }
+  @if (message(); as text) {
+    <p role="status">{{ text }}</p>
+  }
+  @if (error(); as text) {
+    <p class="error" role="alert">{{ text }}</p>
+  }
+</section>

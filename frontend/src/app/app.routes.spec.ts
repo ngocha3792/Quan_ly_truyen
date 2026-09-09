@@ -105,6 +105,7 @@ describe('application route composition', () => {
       'settings/ai',
       'settings/payments',
       'payments/review',
+      'payments/gateway',
       'stories',
       'story-submissions/:submissionId',
       'users',

@@ -50,7 +50,13 @@ export class PaymentOrderSettlementService implements PaymentSettlementPort {
       const accepted: PaymentOrderStatus[] =
         input.source === 'admin_manual'
           ? [PaymentOrderStatus.AWAITING_REVIEW]
-          : [PaymentOrderStatus.PENDING, PaymentOrderStatus.AWAITING_REVIEW];
+          : input.source === 'reconciliation'
+            ? [
+                PaymentOrderStatus.PENDING,
+                PaymentOrderStatus.EXPIRED,
+                PaymentOrderStatus.FAILED,
+              ]
+            : [PaymentOrderStatus.PENDING, PaymentOrderStatus.AWAITING_REVIEW];
       if (!accepted.includes(order.status)) {
         throw new PaymentOrderTransitionException(
           order.status,
@@ -136,6 +142,8 @@ export class PaymentOrderSettlementService implements PaymentSettlementPort {
           walletTransactionId: transactionId,
           settledAt: input.occurredAt,
           failureCode: null,
+          providerTransactionId: input.providerTransactionId,
+          providerTransactionDate: input.providerTransactionDate,
           ...(input.source === 'admin_manual'
             ? {
                 reviewedById: input.actorId,

@@ -61,6 +61,8 @@ export interface CreatePaymentOrderResultDto {
 }
 
 export interface AdminPaymentOrderResultDto extends PaymentOrderResultDto {
+  readonly providerKind?: import('../../domain').PaymentProviderKindName;
+  readonly providerConfigurationReady?: boolean;
   readonly userId: string;
   readonly userEmail: string;
   readonly userDisplayName: string;

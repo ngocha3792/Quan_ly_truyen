@@ -11,9 +11,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { CurrentUserId, Public, RequirePermissions } from '@/common/decorators';
+import {
+  ClientIp,
+  CurrentUserId,
+  Public,
+  RequirePermissions,
+} from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
+import {
+  PAYMENT_ROLLOUT_PORT,
+  type PaymentRolloutPort,
+} from '../../../application/ports/payment-rollout.port';
 import {
   MONETIZATION_RATE_LIMITER_PORT,
   type MonetizationRateLimiterPort,
@@ -51,6 +60,7 @@ export class BillingController {
     private readonly markTransferred: MarkPaymentOrderTransferredCommandHandler,
     @Inject(MONETIZATION_RATE_LIMITER_PORT)
     private readonly rateLimiter: MonetizationRateLimiterPort,
+    @Inject(PAYMENT_ROLLOUT_PORT) private readonly rollout: PaymentRolloutPort,
   ) {}
 
   @Get('credit-packages')
@@ -61,19 +71,33 @@ export class BillingController {
 
   @Get('payment-methods')
   @Public()
-  async paymentMethods() {
+  async paymentMethods(
+    @Query('storyId', new ParseUUIDPipe({ version: '4', optional: true }))
+    storyId?: string,
+  ) {
     const connections = await this.paymentProviders.list(true);
-    return connections.map(
-      ({ id, code, kind, displayName, description, currency, sortOrder }) => ({
-        id,
-        code,
-        kind,
-        displayName,
-        description,
-        currency,
-        sortOrder,
-      }),
-    );
+    const allowed = await this.rollout.allowed(storyId);
+    return connections
+      .filter((c) => c.kind !== 'VNPAY' || (allowed && c.configurationReady))
+      .map(
+        ({
+          id,
+          code,
+          kind,
+          displayName,
+          description,
+          currency,
+          sortOrder,
+        }) => ({
+          id,
+          code,
+          kind,
+          displayName,
+          description,
+          currency,
+          sortOrder,
+        }),
+      );
   }
 
   @Post('top-up-orders')
@@ -83,6 +107,7 @@ export class BillingController {
     @CurrentUserId() userId: string | undefined,
     @Headers('x-idempotency-key') idempotencyKey: string | undefined,
     @Body() request: CreatePaymentOrderRequest,
+    @ClientIp() ipAddress?: string,
   ) {
     await this.rateLimiter.consume({
       operation: 'order_create',
@@ -94,6 +119,8 @@ export class BillingController {
         request.packageId,
         idempotencyKey,
         request.providerConnectionId,
+        request.storyId,
+        ipAddress,
       ),
     );
   }

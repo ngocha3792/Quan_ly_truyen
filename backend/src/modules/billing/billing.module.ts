@@ -1,4 +1,18 @@
 import { Module } from '@nestjs/common';
+import {
+  VnpayPaymentProviderAdapter,
+  VnpayOperationsClient,
+} from './infrastructure/provider';
+import { PaymentCredentialVault } from './infrastructure/provider/payment-credential-vault';
+import { PAYMENT_CREDENTIAL_VAULT_PORT } from './application/ports/payment-credential-vault.port';
+import { PAYMENT_ROLLOUT_PORT } from './application/ports/payment-rollout.port';
+import { PrismaPaymentRolloutPersistence } from './infrastructure/persistence/prisma-payment-rollout.persistence';
+import { AdminPaymentRolloutController } from './presentation/http/controllers/admin-payment-rollout.controller';
+import { VnpayIpnController } from './presentation/http/controllers/vnpay-ipn.controller';
+import { VnpayIpnService } from './infrastructure/webhook/vnpay-ipn.service';
+import { PAYMENT_IPN_PORT } from './application/ports/payment-ipn.port';
+import { BILLING_GATEWAY_PROVIDERS } from './infrastructure/gateway';
+import { AdminPaymentGatewayController } from './presentation/http/controllers/admin-payment-gateway.controller';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
@@ -49,12 +63,30 @@ import {
     MonetizationSecurityModule,
   ],
   controllers: [
+    AdminPaymentGatewayController,
+    VnpayIpnController,
+    AdminPaymentRolloutController,
     BillingController,
     AdminBillingController,
     AdminPaymentProvidersController,
     PaymentWebhookController,
   ],
   providers: [
+    ...BILLING_GATEWAY_PROVIDERS,
+    VnpayIpnService,
+    { provide: PAYMENT_IPN_PORT, useExisting: VnpayIpnService },
+    VnpayPaymentProviderAdapter,
+    VnpayOperationsClient,
+    PaymentCredentialVault,
+    PrismaPaymentRolloutPersistence,
+    {
+      provide: PAYMENT_CREDENTIAL_VAULT_PORT,
+      useExisting: PaymentCredentialVault,
+    },
+    {
+      provide: PAYMENT_ROLLOUT_PORT,
+      useExisting: PrismaPaymentRolloutPersistence,
+    },
     CreatePaymentOrderCommandHandler,
     ProcessPaymentWebhookCommandHandler,
     UpdateCreditPackageCommandHandler,

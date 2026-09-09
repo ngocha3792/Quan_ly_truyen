@@ -13,6 +13,7 @@ export type PaymentOrderStatusName = (typeof PAYMENT_ORDER_STATUSES)[number];
 export const PAYMENT_PROVIDER_KINDS = [
   'MANUAL_BANK_TRANSFER',
   'HMAC_SANDBOX',
+  'VNPAY',
 ] as const;
 export type PaymentProviderKindName = (typeof PAYMENT_PROVIDER_KINDS)[number];
 

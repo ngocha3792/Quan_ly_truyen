@@ -31,7 +31,7 @@ export class SetChapterMonetizationCommandHandler {
       ...(command.priceBandId ? { priceBandId: command.priceBandId } : {}),
       ...(command.unlockPolicy ? { unlockPolicy: command.unlockPolicy } : {}),
       ...(command.freeAt ? { freeAt: command.freeAt } : {}),
-      ...(command.paidWindowDays
+      ...(command.paidWindowDays !== undefined
         ? { paidWindowDays: command.paidWindowDays }
         : {}),
       ...(command.ipAddress ? { ipAddress: command.ipAddress } : {}),

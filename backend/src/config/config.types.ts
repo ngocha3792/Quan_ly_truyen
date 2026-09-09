@@ -327,6 +327,7 @@ export interface MonetizationConfig {
 }
 
 export interface BillingConfig {
+  credentialKeyBase64?: string;
   providerMode: 'disabled' | 'hmac-sandbox';
   checkoutBaseUrl?: string;
   returnUrl?: string;

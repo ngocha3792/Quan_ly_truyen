@@ -24,6 +24,7 @@ import {
   ComicCommentRegion,
 } from '../domain/chapter-reader.models';
 import { ChapterReaderRepository } from './chapter-reader.repository';
+import { initials, relativeTime } from './chapter-comment-display';
 
 @Injectable()
 export class ChapterReaderHttpRepository implements ChapterReaderRepository {
@@ -222,6 +223,8 @@ function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterRea
       views: result.chapter.views,
       accessState: result.chapter.access.state,
       priceCredits: result.chapter.access.priceCredits,
+      unlockPolicy: result.chapter.access.unlockPolicy ?? 'PERMANENT_PAID',
+      freeAt: result.chapter.access.freeAt ?? null,
       media:
         'media' in result.chapter && result.chapter.media
           ? result.chapter.media.map((media) => ({
@@ -275,23 +278,4 @@ function toParagraphs(content: string): readonly string[] {
     .split(/\n\s*\n/g)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
-}
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(-2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-function relativeTime(value: string): string {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return '';
-  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
-  if (minutes < 1) return 'Vừa xong';
-  if (minutes < 60) return `${minutes} phút trước`;
-  if (minutes < 1440) return `${Math.floor(minutes / 60)} giờ trước`;
-  return `${Math.floor(minutes / 1440)} ngày trước`;
 }

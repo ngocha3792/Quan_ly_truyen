@@ -1,0 +1,150 @@
+<main class="workspace-page">
+  <div class="page-container">
+    <app-page-heading
+      title="Đối soát và hoàn tiền"
+      description="Kiểm tra giao dịch với cổng thanh toán và theo dõi yêu cầu hoàn tiền."
+      icon="wallet"
+    >
+      <a routerLink="/admin/settings/payments">Thiết lập nhà cung cấp</a>
+    </app-page-heading>
+    @if (error(); as text) {
+      <p role="alert" class="error">{{ text }}</p>
+    }
+    @if (message(); as text) {
+      <p role="status" class="notice">{{ text }}</p>
+    }
+    <section class="panel" aria-label="Đơn thanh toán">
+      <form class="filters" (ngSubmit)="load()">
+        <label
+          >Tìm đơn<input
+            name="search"
+            [(ngModel)]="search"
+            placeholder="Email, mã đơn hoặc mã giao dịch"
+        /></label>
+        <app-button type="submit" [loading]="loading()">Tìm kiếm</app-button>
+        <span>{{ totalItems() }} đơn</span>
+      </form>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Người thanh toán</th>
+              <th>Nhà cung cấp</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of orders(); track order.id) {
+              <tr>
+                <td>
+                  {{ order.userEmail }}<small>{{ order.id }}</small
+                  ><small>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+                </td>
+                <td>
+                  {{ order.provider }}<small>{{ order.providerReference }}</small>
+                </td>
+                <td>
+                  {{ order.fiatAmountMinor | number }} {{ order.currency
+                  }}<small>{{ order.creditAmount | number }} Credit</small>
+                </td>
+                <td>
+                  <app-status-badge [tone]="order.status === 'PAID' ? 'success' : 'neutral'">{{
+                    statusLabels[order.status] || order.status
+                  }}</app-status-badge>
+                </td>
+                <td>
+                  <div class="actions">
+                    @if (order.providerKind === 'VNPAY') {
+                      <app-button
+                        [disabled]="busy() || !order.providerConfigurationReady || !canReconcile()"
+                        (click)="reconcile(order)"
+                        >Đối soát</app-button
+                      >
+                      <app-button [disabled]="busy() || !canRefund()" (click)="select(order)"
+                        >Lịch sử / Hoàn tiền</app-button
+                      >
+                      @if (!order.providerConfigurationReady) {
+                        <small>Nhà cung cấp chưa đủ cấu hình.</small>
+                      }
+                    } @else {
+                      <a routerLink="/admin/payments/review">Duyệt chuyển khoản</a>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5">{{ loading() ? 'Đang tải…' : 'Chưa có đơn phù hợp.' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <nav class="pagination" aria-label="Phân trang đơn thanh toán">
+        <app-button [disabled]="page() <= 1 || loading()" (click)="load(page() - 1)"
+          >Trang trước</app-button
+        >
+        <span>Trang {{ page() }} / {{ totalPages() || 1 }}</span>
+        <app-button [disabled]="page() >= totalPages() || loading()" (click)="load(page() + 1)"
+          >Trang sau</app-button
+        >
+      </nav>
+    </section>
+    @if (selected(); as order) {
+      <section class="panel refund-panel" aria-labelledby="refund-title">
+        <h2 id="refund-title">Hoàn tiền qua cổng thanh toán</h2>
+        <p>{{ order.userEmail }} · {{ order.fiatAmountMinor | number }} {{ order.currency }}</p>
+        <p class="hint">
+          Hoàn toàn bộ đơn và thu hồi Credit tương ứng. Hệ thống kiểm tra số dư và kết quả nhà cung
+          cấp trước khi xác nhận.
+        </p>
+        @for (refund of refunds(); track refund.id) {
+          <article>
+            <app-status-badge [tone]="refund.status === 'COMPLETED' ? 'success' : 'warning'">{{
+              statusLabels[refund.status] || refund.status
+            }}</app-status-badge>
+            · {{ refund.amountMinor | number }}
+            {{ refund.currency }}
+            <p>{{ refund.reason }}</p>
+            <small
+              >{{ refund.createdAt | date: 'dd/MM/yyyy HH:mm' }} ·
+              {{ refund.providerRefundId ?? 'Chưa có mã hoàn tiền' }}</small
+            >
+          </article>
+        } @empty {
+          <p>Chưa có yêu cầu hoàn tiền.</p>
+        }
+        <app-button [disabled]="busy()" (click)="loadRefunds(order.id)"
+          >Cập nhật lịch sử</app-button
+        >
+        @if (canRefund() && refundable()) {
+          <form (ngSubmit)="refund()">
+            <label
+              >Lý do hoàn tiền<textarea
+                name="reason"
+                [(ngModel)]="reason"
+                minlength="10"
+                maxlength="500"
+                required
+                rows="3"
+              ></textarea>
+            </label>
+            <label class="confirmation"
+              ><input name="confirmRefund" type="checkbox" [(ngModel)]="confirmRefund" /> Tôi xác
+              nhận hoàn toàn bộ đơn và thu hồi Credit.</label
+            >
+            <app-button
+              type="submit"
+              variant="danger"
+              [loading]="busy()"
+              [disabled]="!confirmRefund || reason.trim().length < 10"
+              >Gửi yêu cầu hoàn tiền</app-button
+            >
+          </form>
+        }
+      </section>
+    }
+  </div>
+</main>

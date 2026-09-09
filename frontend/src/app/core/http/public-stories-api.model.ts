@@ -99,6 +99,8 @@ export interface PublicUnlockedChapterReaderApi extends PublicChapterReaderChapt
   readonly access: {
     readonly state: 'FREE' | 'ENTITLED' | 'BYPASS';
     readonly priceCredits: string | null;
+    readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+    readonly freeAt?: string | null;
   };
   readonly content: string;
   readonly contentFormat: string;
@@ -131,6 +133,8 @@ export interface PublicLockedChapterReaderApi extends PublicChapterReaderChapter
   readonly access: {
     readonly state: 'LOCKED';
     readonly priceCredits: string;
+    readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+    readonly freeAt?: string | null;
   };
   readonly previewContent: string;
   readonly previewFormat: string;

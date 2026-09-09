@@ -1,6 +1,6 @@
 import { DOCUMENT, DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../../../core/http/api-error.util';
@@ -25,6 +25,8 @@ export class CreditPageComponent implements OnInit {
   private readonly api = inject(CreditApiService);
   private readonly document = inject(DOCUMENT);
   private readonly retryKeys = new Map<string, string>();
+  protected readonly storyId =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('storyId') ?? undefined;
 
   protected readonly wallet = signal<CreditWallet | null>(null);
   protected readonly packages = signal<readonly CreditPackage[]>([]);
@@ -50,7 +52,7 @@ export class CreditPageComponent implements OnInit {
       wallet: this.api.wallet(),
       packages: this.api.packages(),
       orders: this.api.orders(),
-      paymentMethods: this.api.paymentMethods(),
+      paymentMethods: this.api.paymentMethods(this.storyId),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -72,17 +74,23 @@ export class CreditPageComponent implements OnInit {
   }
 
   protected buy(creditPackage: CreditPackage): void {
-    if (this.purchasingPackageId()) return;
-    const idempotencyKey = this.retryKeys.get(creditPackage.id) ?? globalThis.crypto.randomUUID();
-    this.retryKeys.set(creditPackage.id, idempotencyKey);
+    if (this.purchasingPackageId() || !this.selectedPaymentMethodId()) return;
+    const selection = `${creditPackage.id}:${this.selectedPaymentMethodId()}:${this.storyId ?? ''}`;
+    const idempotencyKey = this.retryKeys.get(selection) ?? globalThis.crypto.randomUUID();
+    this.retryKeys.set(selection, idempotencyKey);
     this.purchasingPackageId.set(creditPackage.id);
     this.error.set(null);
     this.api
-      .createOrder(creditPackage.id, idempotencyKey, this.selectedPaymentMethodId() ?? undefined)
+      .createOrder(
+        creditPackage.id,
+        idempotencyKey,
+        this.selectedPaymentMethodId() ?? undefined,
+        this.storyId,
+      )
       .pipe(finalize(() => this.purchasingPackageId.set(null)))
       .subscribe({
         next: ({ order }) => {
-          this.retryKeys.delete(creditPackage.id);
+          this.retryKeys.delete(selection);
           if (order.fulfilment.kind === 'redirect') {
             this.document.location.assign(order.fulfilment.checkoutUrl);
           } else if (order.fulfilment.kind === 'instructions') {

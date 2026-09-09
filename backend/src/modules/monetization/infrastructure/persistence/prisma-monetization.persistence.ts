@@ -47,6 +47,9 @@ import type {
 } from '../../application';
 import {
   buildServerControlledPreview,
+  assertSetChapterPricingInput,
+  isChapterEffectivelyFree,
+  resolveChapterFreeAt,
   ChapterNotPurchasableException,
   ChapterPurchaseNotRefundableException,
   MonetizationRolloutRestrictedException,
@@ -172,6 +175,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
         select: {
           id: true,
           updatedAt: true,
+          publishedAt: true,
           monetization: {
             select: {
               chapterId: true,
@@ -194,20 +198,26 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           input.chapterId,
         );
       }
-      return (
-        chapter.monetization ?? {
-          chapterId: chapter.id,
-          accessType: ChapterAccessType.FREE,
-          priceBandId: null,
-          creditPrice: null,
-          previewContent: null,
-          unlockPolicy: 'PERMANENT_PAID',
-          freeAt: null,
-          paidWindowDays: null,
-          version: 0,
-          updatedAt: chapter.updatedAt,
-        }
-      );
+      return chapter.monetization
+        ? {
+            ...chapter.monetization,
+            freeAt: resolveChapterFreeAt(
+              chapter.monetization,
+              chapter.publishedAt,
+            ),
+          }
+        : {
+            chapterId: chapter.id,
+            accessType: ChapterAccessType.FREE,
+            priceBandId: null,
+            creditPrice: null,
+            previewContent: null,
+            unlockPolicy: 'PERMANENT_PAID',
+            freeAt: null,
+            paidWindowDays: null,
+            version: 0,
+            updatedAt: chapter.updatedAt,
+          };
     } catch (error: unknown) {
       if (error instanceof AppException) throw error;
       throw mapPrismaError(error, {
@@ -220,6 +230,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
   async setChapterMonetization(
     input: SetChapterMonetizationInput,
   ): Promise<ChapterMonetizationRecord> {
+    assertSetChapterPricingInput(input);
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw(Prisma.sql`
@@ -232,7 +243,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             story: { authorId: input.actorId, deletedAt: null },
             deletedAt: null,
           },
-          select: { id: true, content: true },
+          select: { id: true, content: true, publishedAt: true },
         });
         if (!chapter) {
           throw new MonetizationResourceNotFoundException(
@@ -344,6 +355,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
               priceBandId: row.priceBandId,
               creditPrice: row.creditPrice?.toString() ?? null,
               version,
+              unlockPolicy: row.unlockPolicy,
+              freeAt: row.freeAt?.toISOString() ?? null,
+              paidWindowDays: row.paidWindowDays,
             },
             ...(input.ipAddress ? { ipAddress: input.ipAddress } : {}),
             ...(input.userAgent ? { userAgent: input.userAgent } : {}),
@@ -352,6 +366,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
         });
         return {
           ...row,
+          freeAt: resolveChapterFreeAt(row, chapter.publishedAt),
           accessType: row.accessType,
         };
       });
@@ -476,6 +491,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           };
         }
 
+        await tx.$executeRaw(Prisma.sql`
+          SELECT pg_advisory_xact_lock(hashtext('chapter-pricing:' || ${input.chapterId}))
+        `);
         const chapter = await tx.chapter.findFirst({
           where: {
             id: input.chapterId,
@@ -497,6 +515,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           },
           select: {
             id: true,
+            publishedAt: true,
             story: {
               select: {
                 id: true,
@@ -513,6 +532,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
                 accessType: true,
                 priceBandId: true,
                 creditPrice: true,
+                unlockPolicy: true,
+                freeAt: true,
+                paidWindowDays: true,
               },
             },
           },
@@ -542,8 +564,8 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
         }
         const pricing = chapter.monetization;
         if (
-          pricing?.accessType !== ChapterAccessType.PAID ||
-          !pricing.creditPrice ||
+          isChapterEffectivelyFree(pricing, chapter.publishedAt) ||
+          !pricing?.creditPrice ||
           pricing.creditPrice <= 0n
         ) {
           throw new ChapterNotPurchasableException();

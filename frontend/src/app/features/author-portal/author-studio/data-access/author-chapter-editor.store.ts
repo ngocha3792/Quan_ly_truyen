@@ -5,6 +5,7 @@ import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
   AuthorChapterMonetization,
+  AuthorChapterPricingInput,
   AuthorChapterVersion,
   AuthorChapterVersionSummary,
   AuthorManagedChapter,
@@ -86,27 +87,21 @@ export class AuthorChapterEditorStore {
   updateMonetization(
     storyId: string,
     chapterId: string,
-    accessType: 'FREE' | 'PAID',
-    priceBandId?: string,
+    input: AuthorChapterPricingInput,
   ): Observable<AuthorChapterMonetization> {
     this.monetizationSaving.set(true);
     this.error.set(null);
-    return this.repository
-      .updateChapterMonetization(storyId, chapterId, {
-        accessType,
-        ...(priceBandId ? { priceBandId } : {}),
-      })
-      .pipe(
-        tap((result) => {
-          this.monetization.set(result);
-          this.success.set(
-            result.accessType === 'PAID'
-              ? `Đã đặt giá ${result.creditPrice} Credit cho chương.`
-              : 'Đã chuyển chương về miễn phí.',
-          );
-        }),
-        finalize(() => this.monetizationSaving.set(false)),
-      );
+    return this.repository.updateChapterMonetization(storyId, chapterId, input).pipe(
+      tap((result) => {
+        this.monetization.set(result);
+        this.success.set(
+          result.accessType === 'PAID'
+            ? `Đã đặt giá ${result.creditPrice} Credit cho chương.`
+            : 'Đã chuyển chương về miễn phí.',
+        );
+      }),
+      finalize(() => this.monetizationSaving.set(false)),
+    );
   }
 
   loadHistory(storyId: string, chapterId: string, page: number = 1): void {

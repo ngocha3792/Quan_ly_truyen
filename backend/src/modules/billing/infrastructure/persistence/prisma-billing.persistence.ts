@@ -44,6 +44,8 @@ const PACKAGE_SELECT = {
 } satisfies Prisma.CreditPackageSelect;
 
 const ORDER_SELECT = {
+  providerConfigSnapshot: true,
+  providerCredentialSnapshot: true,
   id: true,
   userId: true,
   packageId: true,
@@ -69,6 +71,7 @@ const ORDER_SELECT = {
 } satisfies Prisma.PaymentOrderSelect;
 
 const CONNECTION_SELECT = {
+  encryptedCredential: true,
   id: true,
   code: true,
   kind: true,
@@ -93,6 +96,9 @@ type ConnectionRow = Prisma.PaymentProviderConnectionGetPayload<{
 
 const ADMIN_ORDER_SELECT = {
   ...ORDER_SELECT,
+  providerConnection: {
+    select: { kind: true, encryptedCredential: true, config: true },
+  },
   user: { select: { email: true, displayName: true } },
   creditPackage: { select: { label: true } },
 } satisfies Prisma.PaymentOrderSelect;
@@ -167,6 +173,7 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
           displayName: input.displayName,
           description: input.description,
           config: input.config as Prisma.InputJsonObject,
+          encryptedCredential: input.encryptedCredential,
           currency: input.currency,
           enabled: input.enabled,
           sortOrder: input.sortOrder,
@@ -208,6 +215,7 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
           displayName: input.displayName,
           description: input.description,
           config: input.config as Prisma.InputJsonObject | undefined,
+          encryptedCredential: input.encryptedCredential,
           currency: input.currency,
           enabled: input.enabled,
           sortOrder: input.sortOrder,
@@ -415,6 +423,59 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
             input.packageId,
           );
         }
+        if (input.providerKind === 'VNPAY') {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM payment_provider_connections WHERE id = ${input.providerConnectionId}::uuid FOR SHARE`,
+          );
+          const currentConnection =
+            await tx.paymentProviderConnection.findUnique({
+              where: { id: input.providerConnectionId },
+              select: {
+                enabled: true,
+                currency: true,
+                encryptedCredential: true,
+                config: true,
+              },
+            });
+          if (
+            !currentConnection?.enabled ||
+            currentConnection.currency !== creditPackage.currency ||
+            currentConnection.encryptedCredential !==
+              input.providerCredentialSnapshot ||
+            JSON.stringify(currentConnection.config) !==
+              JSON.stringify(input.providerConfigSnapshot)
+          )
+            throw new InvalidBillingInputException(
+              'Phương thức thanh toán đã thay đổi. Hãy chọn lại phương thức.',
+              'providerConnectionId',
+            );
+          if (!input.storyId)
+            throw new InvalidBillingInputException(
+              'Thanh toán VNPAY đang mở theo từng truyện. Hãy chọn truyện.',
+              'storyId',
+            );
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM stories WHERE id = ${input.storyId}::uuid FOR SHARE`,
+          );
+          const rollout = await tx.storyPaymentAllowlist.findFirst({
+            where: {
+              storyId: input.storyId,
+              isEnabled: true,
+              enabledProviders: { has: 'VNPAY' },
+              story: {
+                deletedAt: null,
+                visibility: 'PUBLIC',
+                publishedAt: { not: null },
+                status: { in: ['PUBLISHED', 'HIATUS', 'COMPLETED'] },
+              },
+            },
+          });
+          if (!rollout)
+            throw new InvalidBillingInputException(
+              'Truyện chưa được mở thanh toán VNPAY',
+              'storyId',
+            );
+        }
         const pendingOrders = await tx.paymentOrder.count({
           where: {
             userId: input.userId,
@@ -439,6 +500,10 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
             packageId: creditPackage.id,
             provider: input.provider,
             providerConnectionId: input.providerConnectionId,
+            storyId: input.storyId,
+            providerConfigSnapshot: input.providerConfigSnapshot as
+              Prisma.InputJsonObject | undefined,
+            providerCredentialSnapshot: input.providerCredentialSnapshot,
             creditAmount: creditPackage.creditAmount,
             fiatAmountMinor: creditPackage.fiatAmountMinor,
             currency: creditPackage.currency,
@@ -464,14 +529,17 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
     providerReference: string;
     checkoutUrl: string;
   }): Promise<PaymentOrderRecord> {
-    const updated = await this.prisma.paymentOrder.update({
-      where: { id: input.orderId },
+    await this.prisma.paymentOrder.updateMany({
+      where: { id: input.orderId, status: PaymentOrderStatus.CREATED },
       data: {
         providerReference: input.providerReference,
         checkoutUrl: input.checkoutUrl,
         status: PaymentOrderStatus.PENDING,
         failureCode: null,
       },
+    });
+    const updated = await this.prisma.paymentOrder.findUniqueOrThrow({
+      where: { id: input.orderId },
       select: ORDER_SELECT,
     });
     return toOrderRecord(updated);
@@ -780,15 +848,32 @@ function toPackageRecord(row: PackageRow): CreditPackageRecord {
 }
 
 function toOrderRecord(row: OrderRow): PaymentOrderRecord {
-  return row;
+  return {
+    ...row,
+    providerConfigSnapshot: row.providerConfigSnapshot
+      ? jsonObject(row.providerConfigSnapshot)
+      : null,
+  };
 }
 
 function toAdminOrderRecord(row: AdminOrderRow) {
+  const connection = row.providerConnection;
+  const config = jsonObject(
+    row.providerConfigSnapshot ?? connection?.config ?? null,
+  );
   return {
     ...toOrderRecord(row),
     userEmail: row.user.email,
     userDisplayName: row.user.displayName,
     packageLabel: row.creditPackage.label,
+    providerKind: connection?.kind,
+    providerConfigurationReady:
+      connection?.kind === 'VNPAY'
+        ? !!(
+            row.providerCredentialSnapshot ?? connection.encryptedCredential
+          ) &&
+          ['tmnCode', 'serverIp', 'returnUrl'].every((key) => !!config[key])
+        : true,
   };
 }
 

@@ -6,10 +6,13 @@
       description="Quản lý kết nối nhận thanh toán và thứ tự hiển thị cho người dùng."
       icon="wallet"
     >
-      <a class="review-link" routerLink="/admin/payments/review">
-        Đơn chờ xác nhận
-        <app-icon name="arrow-right" [size]="16" />
-      </a>
+      <div class="heading-actions">
+        <a class="review-link" routerLink="/admin/payments/review">
+          Đơn chờ xác nhận
+          <app-icon name="arrow-right" [size]="16" />
+        </a>
+        <a class="review-link" routerLink="/admin/payments/gateway">Đối soát và hoàn tiền</a>
+      </div>
     </app-page-heading>
 
     @if (store.error(); as error) {
@@ -47,6 +50,9 @@
         </header>
 
         <form (ngSubmit)="save()">
+          @if (success(); as message) {
+            <p role="status">{{ message }}</p>
+          }
           <div class="form-grid">
             <label>
               <span>Mã ổn định</span>
@@ -56,6 +62,7 @@
                 [disabled]="draft.id !== null"
                 placeholder="bank-transfer"
                 autocomplete="off"
+                required
               />
             </label>
             <label>
@@ -78,6 +85,7 @@
                 [(ngModel)]="draft.displayName"
                 placeholder="Chuyển khoản ngân hàng"
                 autocomplete="off"
+                required
               />
             </label>
             <label>
@@ -113,33 +121,33 @@
               <input name="sortOrder" type="number" min="0" [(ngModel)]="draft.sortOrder" />
             </label>
             <label class="toggle-field">
-              <input name="enabled" type="checkbox" [(ngModel)]="draft.enabled" />
+              <input
+                name="enabled"
+                type="checkbox"
+                [(ngModel)]="draft.enabled"
+                [disabled]="!saved()?.configurationReady"
+              />
               <span class="toggle-control" aria-hidden="true"></span>
               <span
                 ><strong>Kích hoạt kết nối</strong
-                ><small>Cho phép người dùng chọn phương thức này</small></span
+                ><small>{{
+                  saved()?.configurationReady
+                    ? 'Cho phép người dùng chọn phương thức này'
+                    : 'Lưu cấu hình đầy đủ trước khi kích hoạt'
+                }}</small></span
               >
             </label>
           </div>
 
           @if (kindFields().length > 0) {
-            <fieldset class="provider-fields">
-              <legend>Thông tin {{ kindLabel(draft.kind) }}</legend>
-              <div class="form-grid">
-                @for (field of kindFields(); track field.name) {
-                  <label [class.field-wide]="field.name === 'instructionNote'">
-                    <span>{{ field.label }}{{ field.required ? ' *' : '' }}</span>
-                    <input
-                      [name]="field.name"
-                      [(ngModel)]="draft.config[field.name]"
-                      [required]="field.required"
-                      [placeholder]="field.placeholder ?? ''"
-                      autocomplete="off"
-                    />
-                  </label>
-                }
-              </div>
-            </fieldset>
+            <app-provider-setup-fields
+              [fields]="kindFields()"
+              [config]="draft.config"
+              [credentials]="draft.credentials"
+              [saved]="saved()"
+              (configChange)="draft.config = $event"
+              (credentialsChange)="draft.credentials = $event"
+            />
           }
 
           <footer class="editor-actions">
@@ -148,7 +156,7 @@
             >
             <app-button variant="primary" type="submit" [loading]="saving"
               ><app-icon icon name="save" [size]="15" />{{
-                draft.id ? 'Lưu thay đổi' : 'Thêm kết nối'
+                draft.id ? 'Lưu thay đổi' : 'Lưu bản nháp'
               }}</app-button
             >
           </footer>
@@ -187,7 +195,11 @@
                     </div>
                   </div>
                   <span class="provider-status" [class.provider-status--off]="!provider.enabled">{{
-                    provider.enabled ? 'Đang hoạt động' : 'Đã tắt'
+                    provider.enabled
+                      ? 'Đang hoạt động'
+                      : provider.configurationReady
+                        ? 'Sẵn sàng · Đã tắt'
+                        : 'Bản nháp · Chưa đủ cấu hình'
                   }}</span>
                 </div>
                 @if (provider.description) {
@@ -225,5 +237,6 @@
         }
       </section>
     </div>
+    <app-story-payment-rollout />
   </div>
 </main>

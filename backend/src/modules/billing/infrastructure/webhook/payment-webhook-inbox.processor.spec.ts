@@ -24,6 +24,7 @@ describe('PaymentWebhookInboxProcessor expiration safety', () => {
         webhookMaxAttempts: 5,
         webhookRetryBaseMs: 100,
       } as never,
+      {} as never,
     );
     await processor.processBatch();
     const firstCall: unknown = paymentOrderUpdateMany.mock.calls[0]?.[0];

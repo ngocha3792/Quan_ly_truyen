@@ -1,0 +1,47 @@
+<section aria-labelledby="payment-result-title" aria-live="polite">
+  <p class="eyebrow">THANH TOÁN</p>
+  @if (order(); as current) {
+    @switch (current.status) {
+      @case ('PAID') {
+        <h1 id="payment-result-title">Đã nạp Credit thành công</h1>
+        <p>{{ current.creditAmount | number }} Credit đã được cộng vào ví của bạn.</p>
+      }
+      @case ('FAILED') {
+        <h1 id="payment-result-title">Thanh toán chưa thành công</h1>
+        <p>Đơn chưa được cộng Credit. Bạn có thể quay về ví để tạo đơn mới.</p>
+      }
+      @case ('EXPIRED') {
+        <h1 id="payment-result-title">Đơn thanh toán đã hết hạn</h1>
+        <p>Nếu tài khoản ngân hàng đã bị trừ tiền, hãy liên hệ hỗ trợ kèm mã đơn bên dưới.</p>
+      }
+      @case ('REFUNDED') {
+        <h1 id="payment-result-title">Đơn đã được hoàn tiền</h1>
+      }
+      @case ('REVERSED') {
+        <h1 id="payment-result-title">Giao dịch đã được điều chỉnh</h1>
+      }
+      @default {
+        <h1 id="payment-result-title">Đang chờ xác nhận thanh toán</h1>
+        <p>
+          Credit được cộng sau khi hệ thống nhận xác nhận từ cổng thanh toán. Không cần thanh toán
+          lại đơn này.
+        </p>
+      }
+    }
+    <dl>
+      <dt>Mã đơn</dt>
+      <dd>{{ current.id }}</dd>
+      <dt>Số tiền</dt>
+      <dd>{{ current.fiatAmountMinor | number }} {{ current.currency }}</dd>
+    </dl>
+  } @else {
+    <h1 id="payment-result-title">Kiểm tra kết quả thanh toán</h1>
+  }
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+  <div class="actions">
+    <app-button [loading]="checking()" (click)="refresh()">Kiểm tra lại</app-button>
+    <a routerLink="/tai-khoan/credit">Về ví Credit</a>
+  </div>
+</section>

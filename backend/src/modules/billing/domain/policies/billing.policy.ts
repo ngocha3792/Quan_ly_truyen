@@ -32,6 +32,7 @@ export function buildPaymentOrderRequestHash(
   userId: string,
   packageId: string,
   providerConnectionId: string,
+  storyId?: string,
 ): string {
   return createHash('sha256')
     .update(
@@ -40,6 +41,7 @@ export function buildPaymentOrderRequestHash(
         packageId,
         providerConnectionId,
         'CREDIT_TOP_UP',
+        ...(storyId ? [storyId] : []),
       ]),
     )
     .digest('hex');

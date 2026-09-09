@@ -37,6 +37,13 @@
   background: rgba(79, 209, 181, 0.07);
 }
 
+.heading-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .provider-summary {
   margin-bottom: 1.25rem;
   display: grid;

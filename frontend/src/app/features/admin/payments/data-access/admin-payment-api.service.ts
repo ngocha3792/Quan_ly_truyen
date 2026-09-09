@@ -9,6 +9,7 @@ import {
   PageResult,
   PaymentProviderConnection,
   PaymentProviderKindSchema,
+  PaymentProviderWrite,
 } from '../domain/admin-payment.models';
 
 @Injectable({ providedIn: 'root' })
@@ -30,15 +31,12 @@ export class AdminPaymentApiService {
       )
       .pipe(map((r) => r.data));
   }
-  createProvider(input: Omit<PaymentProviderConnection, 'id'>) {
+  createProvider(input: PaymentProviderWrite) {
     return this.http
       .post<ApiSuccessEnvelope<PaymentProviderConnection>>(`${this.base}/payment-providers`, input)
       .pipe(map((r) => r.data));
   }
-  updateProvider(
-    id: string,
-    input: Partial<Omit<PaymentProviderConnection, 'id' | 'code' | 'kind'>>,
-  ) {
+  updateProvider(id: string, input: Partial<Omit<PaymentProviderWrite, 'code' | 'kind'>>) {
     return this.http
       .patch<ApiSuccessEnvelope<PaymentProviderConnection>>(
         `${this.base}/payment-providers/${id}`,

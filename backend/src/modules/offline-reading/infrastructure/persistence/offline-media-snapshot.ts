@@ -36,6 +36,7 @@ interface StoredOfflineMediaSlice {
 }
 
 interface StoredOfflineMedia {
+  readonly requiresSigning?: boolean;
   readonly mediaAssetId: string;
   readonly publicId: string;
   readonly sortOrder: number;
@@ -93,6 +94,7 @@ export function createOfflineMediaSnapshot(
     return [
       {
         mediaAssetId: item.mediaAssetId,
+        requiresSigning: paid || mediaAsset.deliveryType === 'authenticated',
         publicId: mediaAsset.publicId,
         sortOrder: item.sortOrder,
         altText: item.altText,
@@ -131,9 +133,30 @@ export function mapOfflineMediaSnapshot(
     slices: media.slices.map((slice) => ({
       ...slice,
       urls: {
-        avif: buildUrl(mediaUrl, media.publicId, slice, 'avif', accessState),
-        webp: buildUrl(mediaUrl, media.publicId, slice, 'webp', accessState),
-        jpeg: buildUrl(mediaUrl, media.publicId, slice, 'jpg', accessState),
+        avif: buildUrl(
+          mediaUrl,
+          media.publicId,
+          slice,
+          'avif',
+          accessState,
+          media.requiresSigning,
+        ),
+        webp: buildUrl(
+          mediaUrl,
+          media.publicId,
+          slice,
+          'webp',
+          accessState,
+          media.requiresSigning,
+        ),
+        jpeg: buildUrl(
+          mediaUrl,
+          media.publicId,
+          slice,
+          'jpg',
+          accessState,
+          media.requiresSigning,
+        ),
       },
     })),
   }));
@@ -145,6 +168,7 @@ function buildUrl(
   slice: StoredOfflineMediaSlice,
   preferredFormat: 'avif' | 'webp' | 'jpg',
   accessState: 'FREE' | 'ENTITLED',
+  requiresSigning = false,
 ): string {
   return mediaUrl.build({
     publicId,
@@ -152,7 +176,7 @@ function buildUrl(
     preset: 'chapterImage',
     preferredFormat,
     slice,
-    requiresSigning: accessState === 'ENTITLED',
+    requiresSigning: requiresSigning || accessState === 'ENTITLED',
   });
 }
 
@@ -191,6 +215,7 @@ function parseStoredMedia(value: unknown): readonly StoredOfflineMedia[] {
       {
         mediaAssetId: item.mediaAssetId,
         publicId: item.publicId,
+        requiresSigning: item.requiresSigning === true,
         sortOrder: item.sortOrder,
         altText: typeof item.altText === 'string' ? item.altText : null,
         caption: typeof item.caption === 'string' ? item.caption : null,

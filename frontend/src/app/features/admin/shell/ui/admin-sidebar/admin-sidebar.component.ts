@@ -99,6 +99,13 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     permission: AUTH_PERMISSIONS.PAYMENT_ORDER_SETTLE_ADMIN,
     requiresMonetization: true,
   },
+  {
+    label: 'Đối soát cổng thanh toán',
+    route: '/admin/payments/gateway',
+    icon: 'wallet',
+    permission: AUTH_PERMISSIONS.PAYMENT_READ_ADMIN,
+    requiresMonetization: true,
+  },
 ];
 
 @Component({

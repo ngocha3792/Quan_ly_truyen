@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -21,24 +21,19 @@ import {
   PaymentProviderKind,
   PaymentProviderKindSchema,
 } from '../../domain/admin-payment.models';
+import {
+  emptyProviderDraft,
+  editProviderDraft,
+  providerWrite,
+} from '../../domain/payment-provider-draft';
+import { ProviderSetupFieldsComponent } from '../../ui/provider-setup-fields/provider-setup-fields.component';
+import { StoryPaymentRolloutComponent } from './story-payment-rollout.component';
 
 const PAYMENT_KIND_LABELS: Record<PaymentProviderKind, string> = {
   MANUAL_BANK_TRANSFER: 'Chuyển khoản ngân hàng',
   HMAC_SANDBOX: 'HMAC Sandbox',
+  VNPAY: 'VNPAY',
 };
-
-interface ProviderDraft {
-  id: string | null;
-  code: string;
-  kind: PaymentProviderKind;
-  displayName: string;
-  description: string;
-  currency: string;
-  enabled: boolean;
-  sortOrder: number;
-  orderTtlMinutes: number;
-  config: Record<string, string>;
-}
 
 @Component({
   selector: 'app-admin-payment-providers-page',
@@ -53,6 +48,8 @@ interface ProviderDraft {
     IconComponent,
     LoadingStateComponent,
     PageHeadingComponent,
+    ProviderSetupFieldsComponent,
+    StoryPaymentRolloutComponent,
   ],
   providers: [AdminPaymentProvidersStore],
   templateUrl: './admin-payment-providers-page.component.html',
@@ -68,50 +65,35 @@ export class AdminPaymentProvidersPageComponent implements OnInit {
     { label: 'Phương thức thanh toán' },
   ];
   protected saving = false;
-  protected draft = emptyDraft();
+  protected draft = emptyProviderDraft();
+  protected readonly saved = signal<PaymentProviderConnection | null>(null);
+  protected readonly success = signal<string | null>(null);
 
   ngOnInit(): void {
     this.store.load();
   }
 
   protected edit(provider: PaymentProviderConnection): void {
-    const config = provider.config;
-    this.draft = {
-      id: provider.id,
-      code: provider.code,
-      kind: provider.kind,
-      displayName: provider.displayName,
-      description: provider.description ?? '',
-      currency: provider.currency,
-      enabled: provider.enabled,
-      sortOrder: provider.sortOrder,
-      orderTtlMinutes: provider.orderTtlMinutes ?? 30,
-      config: Object.fromEntries(
-        Object.entries(config).map(([key, value]) => [key, stringValue(value)]),
-      ),
-    };
+    this.draft = editProviderDraft(provider, this.kindSchema(provider.kind));
+    this.saved.set(provider);
+    this.success.set(null);
   }
 
   protected reset(): void {
-    this.draft = emptyDraft();
+    this.draft = emptyProviderDraft();
+    this.saved.set(null);
+    this.success.set(null);
   }
 
   protected save(): void {
-    if (this.saving) return;
+    if (this.saving || !this.draft.code.trim() || !this.draft.displayName.trim()) return;
     this.saving = true;
-    const config = this.draft.config;
-    const common = {
-      displayName: this.draft.displayName,
-      description: this.draft.description,
-      config,
-      currency: this.draft.currency,
-      enabled: this.draft.enabled,
-      sortOrder: this.draft.sortOrder,
-      orderTtlMinutes: this.draft.orderTtlMinutes,
-    };
+    this.store.error.set(null);
+    this.success.set(null);
+    const { code, kind, ...common } = providerWrite(this.draft, this.kindSchema(this.draft.kind));
     const request = this.draft.id
       ? this.api.updateProvider(this.draft.id, common)
-      : this.api.createProvider({ ...common, code: this.draft.code, kind: this.draft.kind });
+      : this.api.createProvider({ ...common, code, kind, enabled: false });
     request
       .pipe(
         finalize(() => {
@@ -119,8 +101,13 @@ export class AdminPaymentProvidersPageComponent implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
-          this.reset();
+        next: (provider) => {
+          this.edit(provider);
+          this.success.set(
+            provider.configurationReady
+              ? 'Đã lưu cấu hình. Bạn có thể kích hoạt kết nối.'
+              : 'Đã lưu bản nháp. Bổ sung các mục còn thiếu khi có khóa.',
+          );
           this.store.load();
         },
         error: (error: unknown) =>
@@ -154,27 +141,13 @@ export class AdminPaymentProvidersPageComponent implements OnInit {
   }
 
   protected changeKind(): void {
+    this.draft.enabled = false;
+    this.draft.orderTtlMinutes = this.draft.kind === 'MANUAL_BANK_TRANSFER' ? 2880 : 15;
+    this.draft.credentials = {};
     this.draft.config = Object.fromEntries(
-      this.kindFields().map((field) => [field.name, field.placeholder ?? '']),
+      this.kindFields()
+        .filter((field) => !field.secret)
+        .map((field) => [field.name, field.defaultValue ?? '']),
     );
   }
-}
-
-function emptyDraft(): ProviderDraft {
-  return {
-    id: null,
-    code: '',
-    kind: 'MANUAL_BANK_TRANSFER',
-    displayName: '',
-    description: '',
-    currency: 'VND',
-    enabled: false,
-    sortOrder: 10,
-    orderTtlMinutes: 2880,
-    config: { transferNoteTemplate: 'NAP {{reference}}' },
-  };
-}
-
-function stringValue(value: unknown): string {
-  return typeof value === 'string' ? value : '';
 }

@@ -1,5 +1,4 @@
 import {
-  ChapterAccessType,
   ChapterEntitlementStatus,
   ChapterStatus,
   Prisma,
@@ -7,6 +6,7 @@ import {
   StoryVisibility,
 } from '@/generated/prisma/client';
 import { CommentAnchorAccessDeniedException } from '../../domain';
+import { isChapterEffectivelyFree } from '@/modules/monetization';
 
 const THREAD_CONTEXT_SELECT = {
   id: true,
@@ -73,13 +73,21 @@ export async function assertInlineThreadAccess(
     },
     select: {
       storyId: true,
+      publishedAt: true,
       story: { select: { authorId: true } },
-      monetization: { select: { accessType: true } },
+      monetization: {
+        select: {
+          accessType: true,
+          unlockPolicy: true,
+          freeAt: true,
+          paidWindowDays: true,
+        },
+      },
     },
   });
   if (!chapter) throw new CommentAnchorAccessDeniedException();
   if (
-    chapter.monetization?.accessType !== ChapterAccessType.PAID ||
+    isChapterEffectivelyFree(chapter.monetization, chapter.publishedAt) ||
     chapter.story.authorId === userId
   )
     return;

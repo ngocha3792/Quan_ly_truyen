@@ -293,6 +293,11 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @Matches(/^[A-Za-z0-9+/]{43}=$/)
+  PAYMENT_PROVIDER_CREDENTIAL_KEY?: string;
+
+  @IsOptional()
+  @IsString()
   AI_GEMINI_MODEL?: string;
 
   @IsOptional()

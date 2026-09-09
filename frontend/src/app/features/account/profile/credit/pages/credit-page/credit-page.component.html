@@ -30,7 +30,7 @@
         <p>Giá và lượng Credit được chốt trên máy chủ khi tạo đơn.</p>
       </div>
     </div>
-    @if (paymentMethods().length > 1) {
+    @if (paymentMethods().length > 0) {
       <label class="payment-method-picker">
         Phương thức thanh toán
         <select [value]="selectedPaymentMethodId() ?? ''" (change)="selectPaymentMethod($event)">
@@ -39,6 +39,11 @@
           }
         </select>
       </label>
+    } @else {
+      <p class="notice" role="status">
+        Chưa có phương thức thanh toán khả dụng. Cổng thanh toán đang mở theo từng truyện; hãy vào
+        chương cần mở khóa và chọn Nạp Credit.
+      </p>
     }
     @if (packages().length > 0) {
       <div class="package-grid">
@@ -49,7 +54,7 @@
             <b>{{ formatFiat(creditPackage.fiatAmountMinor, creditPackage.currency) }}</b>
             <button
               type="button"
-              [disabled]="purchasingPackageId() !== null"
+              [disabled]="purchasingPackageId() !== null || !selectedPaymentMethodId()"
               (click)="buy(creditPackage)"
             >
               {{ purchasingPackageId() === creditPackage.id ? 'Đang tạo đơn…' : 'Nạp Credit' }}

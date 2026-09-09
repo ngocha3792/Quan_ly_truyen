@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { isChapterEffectivelyFree } from '@/modules/monetization';
 
 import {
   ChapterStatus,
-  ChapterAccessType,
   ChapterEntitlementStatus,
   MediaPurpose,
   MediaResourceType,
@@ -303,13 +303,23 @@ export class PrismaCommentPersistence implements CommentPersistencePort {
             id: true,
             version: true,
             contentDocument: true,
+            publishedAt: true,
             story: { select: { authorId: true } },
-            monetization: { select: { accessType: true } },
+            monetization: {
+              select: {
+                accessType: true,
+                unlockPolicy: true,
+                freeAt: true,
+                paidWindowDays: true,
+              },
+            },
           },
         });
         if (!chapter) return { status: 'chapter_not_found' as const };
 
-        if (chapter.monetization?.accessType === ChapterAccessType.PAID) {
+        if (
+          !isChapterEffectivelyFree(chapter.monetization, chapter.publishedAt)
+        ) {
           const [contributor, adminRole, entitlement] = await Promise.all([
             tx.storyContributor.findFirst({
               where: { storyId: input.storyId, userId: input.userId },
@@ -421,14 +431,24 @@ export class PrismaCommentPersistence implements CommentPersistencePort {
           select: {
             id: true,
             story: { select: { authorId: true } },
-            monetization: { select: { accessType: true } },
+            publishedAt: true,
+            monetization: {
+              select: {
+                accessType: true,
+                unlockPolicy: true,
+                freeAt: true,
+                paidWindowDays: true,
+              },
+            },
           },
         });
         if (!chapter) return { status: 'chapter_not_found' as const };
         if (!isNormalizedRegion(input.region))
           return { status: 'invalid_region' as const };
 
-        if (chapter.monetization?.accessType === ChapterAccessType.PAID) {
+        if (
+          !isChapterEffectivelyFree(chapter.monetization, chapter.publishedAt)
+        ) {
           const [contributor, adminRole, entitlement] = await Promise.all([
             tx.storyContributor.findFirst({
               where: { storyId: input.storyId, userId: input.userId },

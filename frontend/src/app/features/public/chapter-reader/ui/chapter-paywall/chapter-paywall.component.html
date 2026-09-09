@@ -1,0 +1,25 @@
+<section class="chapter-paywall" aria-labelledby="chapter-paywall-title">
+  <span class="eyebrow">Nội dung dành cho người đã mở khóa</span>
+  <h2 id="chapter-paywall-title">Đọc trọn chương với Credit</h2>
+  <p>Bạn đang xem bản đọc thử. Mở khóa để đọc toàn bộ nội dung chương.</p>
+  <strong>{{ priceCredits() }} Credit</strong>
+  @if (unlockPolicy() === 'EARLY_ACCESS' && freeAt()) {
+    <p>
+      Đọc sớm ngay hôm nay hoặc đọc miễn phí từ {{ freeAt() | date: 'dd/MM/yyyy HH:mm' }}. Quyền đọc
+      đã mua được giữ vĩnh viễn.
+    </p>
+  }
+  <div class="actions">
+    <app-button variant="primary" [loading]="pending()" (click)="unlockChapter.emit()">{{
+      pending() ? 'Đang mở khóa...' : 'Mở khóa vĩnh viễn'
+    }}</app-button>
+    <a routerLink="/tai-khoan/credit" [queryParams]="{ storyId: storyId() }">Nạp Credit</a>
+  </div>
+  @if (message(); as text) {
+    <p class="message" role="status">{{ text }}</p>
+  }
+  <small
+    >Credit đã dùng sẽ được ghi vào lịch sử giao dịch. Một tài khoản chỉ bị tính phí một lần cho mỗi
+    chương.</small
+  >
+</section>

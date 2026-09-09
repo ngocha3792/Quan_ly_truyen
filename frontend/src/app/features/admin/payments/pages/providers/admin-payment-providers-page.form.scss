@@ -107,10 +107,16 @@ select:disabled {
 
 .toggle-field > input {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  left: 10px;
+  top: 50%;
+  width: 38px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+  z-index: 1;
+  transform: translateY(-50%);
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .toggle-control {

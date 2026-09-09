@@ -8,6 +8,7 @@ import type { PaymentProviderKindName } from '../../domain';
 import { PaymentProviderKindUnsupportedException } from '../../domain';
 import { HmacSandboxPaymentProviderAdapter } from './hmac-sandbox-provider.adapter';
 import { ManualBankTransferProviderAdapter } from './manual-bank-transfer-provider.adapter';
+import { VnpayPaymentProviderAdapter } from './vnpay-provider.adapter';
 
 @Injectable()
 export class PaymentProviderRegistry implements PaymentProviderRegistryPort {
@@ -19,10 +20,12 @@ export class PaymentProviderRegistry implements PaymentProviderRegistryPort {
   constructor(
     manual: ManualBankTransferProviderAdapter,
     sandbox: HmacSandboxPaymentProviderAdapter,
+    vnpay: VnpayPaymentProviderAdapter,
   ) {
     this.adapters = new Map<PaymentProviderKindName, PaymentProviderAdapter>([
       [manual.kind, manual],
       [sandbox.kind, sandbox],
+      [vnpay.kind, vnpay],
     ]);
   }
 

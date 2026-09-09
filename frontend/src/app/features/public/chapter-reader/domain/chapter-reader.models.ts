@@ -22,6 +22,8 @@ export interface ChapterDetail {
   readonly views: number;
   readonly accessState: 'FREE' | 'ENTITLED' | 'BYPASS' | 'LOCKED';
   readonly priceCredits: string | null;
+  readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt?: string | null;
   readonly media: readonly ChapterComicMedia[];
 }
 

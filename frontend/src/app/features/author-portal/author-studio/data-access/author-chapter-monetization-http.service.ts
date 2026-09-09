@@ -6,6 +6,7 @@ import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AuthorChapterMonetization,
+  AuthorChapterPricingInput,
   MonetizationPriceBand,
 } from '../domain/author-story-management.models';
 import { idempotencyHeaders } from './idempotency-http.util';
@@ -35,7 +36,7 @@ export class AuthorChapterMonetizationHttpService {
   update(
     storyId: string,
     chapterId: string,
-    input: { readonly accessType: 'FREE' | 'PAID'; readonly priceBandId?: string },
+    input: AuthorChapterPricingInput,
   ): Observable<AuthorChapterMonetization> {
     return this.http
       .put<ApiSuccessEnvelope<AuthorChapterMonetization>>(

@@ -50,11 +50,7 @@ describe('offline media snapshot', () => {
       ),
     } as MediaUrlPort;
 
-    const result = mapOfflineMediaSnapshot(
-      stored.snapshot,
-      'ENTITLED',
-      mediaUrl,
-    );
+    const result = mapOfflineMediaSnapshot(stored.snapshot, 'FREE', mediaUrl);
 
     expect(result[0]?.slices[0]?.urls).toEqual({
       avif: 'https://media.test/avif',

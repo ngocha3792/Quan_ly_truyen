@@ -58,6 +58,7 @@ describe('billing top-up integration', () => {
         orderTtlMinutes: 30,
         pendingOrderLimit: 3,
       },
+      {} as never,
     );
   });
 

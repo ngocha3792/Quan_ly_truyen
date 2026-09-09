@@ -31,6 +31,8 @@ import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-
 import { ChapterRichEditorComponent } from '../../ui/chapter-rich-editor/chapter-rich-editor.component';
 import { ChapterEditorSafetyComponent } from '../../ui/chapter-editor-safety/chapter-editor-safety.component';
 import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history/chapter-version-history.component';
+import { ChapterPricingComponent } from '../../ui/chapter-pricing/chapter-pricing.component';
+import { AuthorChapterPricingInput } from '../../domain/author-story-management.models';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
@@ -50,6 +52,7 @@ import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history
     ChapterRichEditorComponent,
     ChapterEditorSafetyComponent,
     ChapterVersionHistoryComponent,
+    ChapterPricingComponent,
   ],
   providers: [
     AuthorChapterEditorStore,
@@ -59,10 +62,7 @@ import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history
     ChapterWorkflowStore,
   ],
   templateUrl: './author-chapter-editor-page.component.html',
-  styleUrls: [
-    './author-chapter-editor-page.component.scss',
-    './author-chapter-editor-page.monetization.component.scss',
-  ],
+  styleUrls: ['./author-chapter-editor-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthorChapterEditorPageComponent implements OnInit {
@@ -85,10 +85,6 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
     content: [''],
-  });
-  protected readonly pricingForm = this.fb.nonNullable.group({
-    accessType: this.fb.nonNullable.control<'FREE' | 'PAID'>('FREE'),
-    priceBandId: [''],
   });
   protected readonly breadcrumbs = computed(() => [
     { label: 'Author Studio', route: '/author-studio/tong-quan' },
@@ -145,14 +141,6 @@ export class AuthorChapterEditorPageComponent implements OnInit {
         !this.session.busy()
       )
         void this.session.synchronizeServer();
-    });
-    effect(() => {
-      const pricing = this.store.monetization();
-      if (pricing)
-        this.pricingForm.setValue(
-          { accessType: pricing.accessType, priceBandId: pricing.priceBandId ?? '' },
-          { emitEvent: false },
-        );
     });
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -238,21 +226,11 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     }
   }
 
-  protected saveMonetization(): void {
+  protected saveMonetization(input: AuthorChapterPricingInput): void {
     const id = this.chapterId();
     if (!id || this.store.monetizationSaving()) return;
-    const value = this.pricingForm.getRawValue();
-    if (value.accessType === 'PAID' && !value.priceBandId) {
-      this.store.setError('Hãy chọn một mức giá Credit.');
-      return;
-    }
     this.store
-      .updateMonetization(
-        this.storyId,
-        id,
-        value.accessType,
-        value.accessType === 'PAID' ? value.priceBandId : undefined,
-      )
+      .updateMonetization(this.storyId, id, input)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ error: (error: unknown) => this.store.setError(error) });
   }
