@@ -1,0 +1,133 @@
+<section class="ai-panel" aria-label="Công cụ AI tác giả">
+  <header>
+    <div>
+      <span class="eyebrow">Trợ lý sáng tác</span>
+      <h2>Công cụ AI tác giả</h2>
+      <p>
+        Phân tích bản đã lưu. Bạn quyết định cách sử dụng kết quả; nội dung chương luôn được giữ
+        nguyên.
+      </p>
+    </div>
+    <app-button variant="secondary" [disabled]="store.loading()" (click)="store.refresh()"
+      >Làm mới kết quả</app-button
+    >
+  </header>
+  @if (store.error()) {
+    <app-notice kind="error" [message]="store.error()" />
+  }
+  @if (unsaved()) {
+    <app-notice
+      message="Hãy lưu bản nháp và giải quyết xung đột trước khi phân tích nội dung mới."
+    />
+  }
+  <div class="controls">
+    <label
+      >Kết nối AI<select
+        aria-label="Kết nối AI"
+        [(ngModel)]="connectionId"
+        [disabled]="store.busy()"
+      >
+        <option value="">Chọn kết nối của bạn</option>
+        @for (connection of store.connections(); track connection.id) {
+          <option [value]="connection.id">
+            {{ connection.name }} · {{ connection.defaultModel || 'Model mặc định' }}
+          </option>
+        }
+      </select></label
+    >
+    <label
+      >Công cụ<select aria-label="Công cụ" [(ngModel)]="tool" [disabled]="store.busy()">
+        @for (option of tools(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select></label
+    >
+    <app-button
+      [loading]="store.busy()"
+      [disabled]="!connectionId || !store.policy() || unsaved()"
+      (click)="create()"
+      >Chạy phân tích</app-button
+    >
+  </div>
+  <p class="policy">
+    @if (store.policy(); as policy) {
+      Chính sách AI:
+      {{
+        policy.fallbackPolicy === 'SYSTEM'
+          ? 'Cho phép dùng khóa hệ thống khi kết nối gặp lỗi (đã bật trong tài khoản).'
+          : 'Không tự động chuyển sang khóa hệ thống.'
+      }}
+    }
+    <a routerLink="/tai-khoan/tro-ly-ai">Quản lý kết nối và chính sách AI</a>
+  </p>
+  <div class="jobs" aria-live="polite">
+    @for (job of store.jobs(); track job.id) {
+      <article class="job">
+        <header>
+          <strong>{{ label(job.jobType) }}</strong
+          ><span class="status" [attr.data-status]="job.status">{{
+            statusLabels[job.status]
+          }}</span>
+        </header>
+        @if (stale(job)) {
+          <p class="stale">
+            Nguồn đã thay đổi. Kết quả này thuộc bản cũ; hãy chạy lại để đối chiếu bản mới.
+          </p>
+        }
+        @if (job.status === 'COMPLETED' && job.result?.summary) {
+          <p class="summary">{{ job.result.summary }}</p>
+        }
+        @if (job.failureReason) {
+          <p class="stale">
+            Không hoàn tất: {{ job.failureReason }}. Kiểm tra kết nối hoặc nguồn rồi thử lại.
+          </p>
+        }
+        <small
+          >{{ job.model || 'Đang xác định model' }} · {{ job.inputTokens ?? 0 }} token vào /
+          {{ job.outputTokens ?? 0 }} token ra ·
+          {{
+            job.costStatus === 'REPORTED' && job.totalCost !== null
+              ? job.totalCost + ' USD'
+              : 'Chưa có dữ liệu chi phí'
+          }}</small
+        >
+        <div class="actions">
+          @if (job.status === 'PENDING' || job.status === 'PROCESSING') {
+            <app-button
+              variant="secondary"
+              [disabled]="store.busy()"
+              (click)="store.action(job.id, 'cancel')"
+              >Hủy tác vụ</app-button
+            >
+          }
+          @if (job.status === 'FAILED' || job.status === 'CANCELLED') {
+            <app-button
+              variant="secondary"
+              [disabled]="store.busy() || unsaved()"
+              (click)="store.action(job.id, 'retry')"
+              >Thử lại</app-button
+            >
+          }
+        </div>
+      </article>
+    } @empty {
+      <p class="empty">
+        {{
+          store.loading()
+            ? 'Đang tải tác vụ...'
+            : 'Chưa có phân tích. Chọn kết nối và công cụ để bắt đầu.'
+        }}
+      </p>
+    }
+  </div>
+  <app-author-knowledge
+    [storyId]="storyId()"
+    [chapterId]="chapterId()"
+    [sourceVersion]="sourceVersion()"
+    [characters]="store.characters()"
+    [issues]="store.issues()"
+    [busy]="store.busy()"
+    (verified)="store.verify($event)"
+    (issueUpdated)="store.updateIssue($event.id, $event.input)"
+  />
+</section>

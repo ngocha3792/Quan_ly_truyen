@@ -30,6 +30,21 @@ export class PrismaAiProfilePersistence implements AiProfilePersistencePort {
     return this.prisma.aiUserProfile.findUnique({ where: { userId } });
   }
 
+  async storyExistsForEditor(
+    userId: string,
+    storyId: string,
+  ): Promise<boolean> {
+    return (
+      (await this.prisma.story.count({
+        where: {
+          id: storyId,
+          deletedAt: null,
+          contributors: { some: { userId, canEdit: true } },
+        },
+      })) > 0
+    );
+  }
+
   async findStory(storyId: string): Promise<AiStoryProfileRecord | null> {
     return this.prisma.aiStoryProfile.findUnique({ where: { storyId } });
   }

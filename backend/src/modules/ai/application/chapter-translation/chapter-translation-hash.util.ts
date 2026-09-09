@@ -25,5 +25,11 @@ function stableSerialize(value: unknown): string {
 export function computeChapterTranslationHash(
   input: ChapterTranslationHashInput,
 ): string {
-  return sha256(stableSerialize(input));
+  return sha256(
+    stableSerialize({
+      title: input.title,
+      content: input.content,
+      targetLanguageCode: input.targetLanguageCode,
+    }),
+  );
 }

@@ -57,7 +57,10 @@ export class RequestChapterTranslationCommandHandler {
       connectionId: command.connectionId,
     });
 
-    if (!connection) {
+    if (
+      !connection ||
+      (command.connectionId && connection.id !== command.connectionId)
+    ) {
       throw new BusinessRuleViolationException({
         message:
           'Chưa có kết nối AI để dịch. Vui lòng thêm kết nối trong phần cài đặt.',
@@ -70,6 +73,12 @@ export class RequestChapterTranslationCommandHandler {
       content: chapter.content,
       targetLanguageCode: command.targetLanguageCode,
     });
+    if (chapter.content.length > 32_000)
+      throw new BusinessRuleViolationException({
+        message:
+          'Chương quá dài cho một yêu cầu dịch (tối đa 32.000 ký tự). Hãy chia nhỏ chương trước.',
+        rule: 'translation.source-limit',
+      });
 
     const existing = await this.translations.findByChapterAndLanguage(
       command.chapterId,
@@ -78,7 +87,13 @@ export class RequestChapterTranslationCommandHandler {
 
     if (
       existing &&
+      existing.requestedById === command.userId &&
+      existing.connectionId === connection.id &&
+      existing.sourceVersion === chapter.version &&
       existing.status === ChapterTranslationStatus.COMPLETED &&
+      !['REJECTED', 'REVISION_REQUESTED'].includes(
+        existing.reviewStatus ?? 'PENDING',
+      ) &&
       existing.sourceContentHash === sourceContentHash
     ) {
       return {
@@ -94,12 +109,14 @@ export class RequestChapterTranslationCommandHandler {
       requestedById: command.userId,
       connectionId: connection.id,
       sourceContentHash,
+      sourceVersion: chapter.version,
     });
 
     await this.queue.enqueue({
       translationId: translation.id,
       chapterId: command.chapterId,
       targetLanguageCode: command.targetLanguageCode,
+      generation: translation.generation,
     });
 
     return {

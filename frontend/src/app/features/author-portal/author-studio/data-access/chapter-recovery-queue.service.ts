@@ -38,6 +38,15 @@ export class ChapterRecoveryQueueService {
   flush(): Promise<void> {
     return this.pending;
   }
+  async discard(entries: readonly ChapterRecoveryEntry[]): Promise<void> {
+    await Promise.all(
+      entries.map((entry) => this.recovery.clearIfRevision(entry.key, entry.revision)),
+    ).catch(() =>
+      this.error.set(
+        'Không thể xóa bản nháp cục bộ. Bạn có thể tiếp tục viết; bản cũ vẫn được giữ.',
+      ),
+    );
+  }
   async confirmLeave(dirty: boolean, busy: boolean): Promise<boolean> {
     if (!dirty && !busy) return true;
     await this.flush();

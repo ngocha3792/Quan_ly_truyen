@@ -182,6 +182,11 @@
       </form>
 
       @if (store.story(); as story) {
+        <app-ai-author-tools
+          [storyId]="story.id"
+          [sourceVersion]="story.version"
+          [unsaved]="hasUnsavedChanges()"
+        />
         <section class="panel contributors-panel">
           <div class="section-heading">
             <div>

@@ -1,0 +1,43 @@
+.review {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+}
+h4,
+p {
+  margin: 0;
+}
+p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+input,
+textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--page-bg);
+  color: var(--text-strong);
+  font: inherit;
+  box-sizing: border-box;
+}
+textarea {
+  resize: vertical;
+  line-height: 1.65;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

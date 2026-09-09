@@ -2,6 +2,12 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { ChaptersModule } from '@/modules/chapters';
+import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
+import { AI_AUTHOR_PERSISTENCE_PORT } from './application/author-tools/ai-author.persistence.port';
+import { AiAuthorConnectionResolver } from './application/author-tools/ai-author-connection.resolver';
+import { AiAuthorJobRunner } from './application/author-tools/ai-author-job.runner';
+import { PrismaAiAuthorPersistence } from './infrastructure/persistence/prisma-ai-author.persistence';
+import { AiAuthorKnowledgePersistence } from './infrastructure/persistence/ai-author-knowledge.persistence';
 
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
@@ -41,8 +47,16 @@ import {
 } from './infrastructure';
 
 @Module({
-  imports: [PrismaModule, ChaptersModule],
+  imports: [PrismaModule, ChaptersModule, OutboxCoreModule],
   providers: [
+    AiAuthorConnectionResolver,
+    AiAuthorJobRunner,
+    PrismaAiAuthorPersistence,
+    AiAuthorKnowledgePersistence,
+    {
+      provide: AI_AUTHOR_PERSISTENCE_PORT,
+      useExisting: PrismaAiAuthorPersistence,
+    },
     AiTranslationProcessor,
     PrismaAiConnectionPersistence,
     PrismaAiUsagePersistence,

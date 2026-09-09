@@ -20,6 +20,7 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorStoryEditorStore } from '../../data-access/author-story-editor.store';
+import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-author-tools.component';
 import {
   AUTHOR_STORY_CONTRIBUTOR_ROLES,
   AuthorManagedStory,
@@ -42,6 +43,7 @@ import {
     ButtonComponent,
     LoadingStateComponent,
     NoticeComponent,
+    AiAuthorToolsComponent,
   ],
   providers: [AuthorStoryEditorStore],
   templateUrl: './author-story-editor-page.component.html',

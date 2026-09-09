@@ -85,6 +85,12 @@ header h3 {
 
 .translation-controls select {
   min-width: 160px;
+  min-height: var(--control-height);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  color: var(--text-strong);
 }
 
 .translation-result {

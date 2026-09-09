@@ -35,7 +35,7 @@ describe('ChapterTranslationQueueAdapter', () => {
         chapterId: CHAPTER_ID,
         targetLanguageCode: 'en',
       }),
-      expect.objectContaining({ jobId: TRANSLATION_ID }),
+      expect.objectContaining({ jobId: `${TRANSLATION_ID}-1` }),
     );
   });
 });

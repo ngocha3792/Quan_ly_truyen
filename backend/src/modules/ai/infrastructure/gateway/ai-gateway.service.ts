@@ -77,7 +77,16 @@ export class AiGatewayService implements AiGatewayPort {
         usageContext,
         capability,
       );
-      return result;
+      return request.includeExecutionMetadata
+        ? {
+            ...result,
+            execution: {
+              connectionId: usageContext.connectionId,
+              protocol: connection.protocol,
+              model: result.model,
+            },
+          }
+        : result;
     } catch (error) {
       if (!systemFallback) throw error;
 
@@ -101,7 +110,16 @@ export class AiGatewayService implements AiGatewayPort {
         },
         capability,
       );
-      return result;
+      return request.includeExecutionMetadata
+        ? {
+            ...result,
+            execution: {
+              connectionId: systemFallback.connectionId,
+              protocol: systemFallback.connection.protocol,
+              model: result.model,
+            },
+          }
+        : result;
     } finally {
       await this.rateLimits.reconcile(
         reservation,

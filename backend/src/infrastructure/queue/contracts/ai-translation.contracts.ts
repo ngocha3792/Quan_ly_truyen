@@ -23,6 +23,7 @@ export function isAutoTranslateChapterPublishedV1(
 }
 
 export interface TranslateChapterJobV1 {
+  generation?: number;
   version: 1;
   translationId: string;
   chapterId: string;
@@ -40,6 +41,8 @@ export function isTranslateChapterJobV1(
 
   return (
     payload.version === 1 &&
+    (payload.generation === undefined ||
+      (Number.isSafeInteger(payload.generation) && payload.generation > 0)) &&
     typeof payload.translationId === 'string' &&
     typeof payload.chapterId === 'string' &&
     typeof payload.targetLanguageCode === 'string'

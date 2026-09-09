@@ -1,6 +1,11 @@
 :host {
   display: block;
 }
+.inline-context {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 6px 0 0;
+}
 
 .status-tabs {
   --tab-min-height: 44px;

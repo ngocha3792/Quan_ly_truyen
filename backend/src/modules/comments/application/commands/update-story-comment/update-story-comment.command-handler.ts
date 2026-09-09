@@ -1,15 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  CommentNotFoundException,
-  InvalidCommentBodyException,
-  CommentPolicy,
-} from '../../../domain';
+import { CommentNotFoundException } from '../../../domain';
 import type { StoryCommentResultDto } from '../../dto';
 import {
   COMMENT_METRICS_PORT,
   COMMENT_PERSISTENCE_PORT,
+  COMMENT_WRITE_GUARD_PORT,
   type CommentMetricsPort,
   type CommentPersistencePort,
+  type CommentWriteGuardPort,
 } from '../../ports';
 import { requireReaderUserId } from '../../../domain/policies/comment-auth.policy';
 import { UpdateStoryCommentCommand } from './update-story-comment.command';
@@ -21,15 +19,14 @@ export class UpdateStoryCommentCommandHandler {
     private readonly persistence: CommentPersistencePort,
     @Inject(COMMENT_METRICS_PORT)
     private readonly metrics: CommentMetricsPort,
+    @Inject(COMMENT_WRITE_GUARD_PORT)
+    private readonly writeGuard: CommentWriteGuardPort,
   ) {}
 
   async execute(
     command: UpdateStoryCommentCommand,
   ): Promise<StoryCommentResultDto> {
-    const body = command.body.trim();
-    if (body.length < 1 || body.length > CommentPolicy.MAX_LENGTH) {
-      throw new InvalidCommentBodyException();
-    }
+    const body = this.writeGuard.validateBody(command.body);
 
     const result = await this.persistence.updateComment({
       userId: requireReaderUserId(command.userId),

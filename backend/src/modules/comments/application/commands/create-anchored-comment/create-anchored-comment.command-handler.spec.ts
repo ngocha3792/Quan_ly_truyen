@@ -17,7 +17,10 @@ const command = new CreateAnchoredCommentCommand(
 );
 
 describe('CreateAnchoredCommentCommandHandler', () => {
-  const abuse = { prepare: jest.fn().mockResolvedValue('Bình luận') };
+  const abuse = {
+    prepare: jest.fn().mockResolvedValue('Bình luận'),
+    validateBody: jest.fn((body: string) => body),
+  };
   const metrics = { recordOperation: jest.fn() };
 
   it('fails closed while the feature flag is disabled', async () => {

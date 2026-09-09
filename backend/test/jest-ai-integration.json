@@ -8,7 +8,7 @@
   "maxWorkers": 1,
   "detectOpenHandles": true,
   "setupFiles": ["<rootDir>/setup/setup-ai-env.ts"],
-  "testRegex": "ai-policy-profile\\.integration-spec\\.ts$",
+  "testRegex": "(ai-policy-profile|translation-review|ai-author-tools)\\.integration-spec\\.ts$",
   "transform": { "^.+\\.(t|j)s$": "ts-jest" },
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/../src/$1",

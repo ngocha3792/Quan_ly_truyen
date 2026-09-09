@@ -35,10 +35,11 @@ export class ChapterTranslationQueueAdapter implements ChapterTranslationQueuePo
       translationId: input.translationId,
       chapterId: input.chapterId,
       targetLanguageCode: input.targetLanguageCode,
+      generation: input.generation,
     };
 
     await this.queue.add(TRANSLATE_CHAPTER_JOB, payload, {
-      jobId: input.translationId,
+      jobId: `${input.translationId}-${input.generation ?? 1}`,
     });
   }
 }

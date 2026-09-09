@@ -60,6 +60,7 @@ export class AiStoryProfileController {
   constructor(private readonly profiles: AiProfileManager) {}
 
   @Get()
+  @RequirePermissions(PermissionCode.STORY_READ)
   async get(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,

@@ -4,10 +4,12 @@ import { map, Observable } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../../core/http/api-envelope.model';
+import { AuthorManagedChapter } from '../../domain/author-story-management.models';
 import {
   AiStoryProfile,
   ChapterTranslation,
   UpdateAiStoryProfilePayload,
+  TranslationReviewRequest,
 } from '../domain/chapter-translation.models';
 import { ChapterTranslationRepository } from '../domain/chapter-translation.repository';
 
@@ -64,5 +66,18 @@ export class ChapterTranslationHttpRepository extends ChapterTranslationReposito
 
   private translationUrl(storyId: string, chapterId: string): string {
     return `${this.config.apiBaseUrl}/author/stories/${storyId}/chapters/${chapterId}/translations`;
+  }
+
+  review(storyId: string, chapterId: string, language: string, input: TranslationReviewRequest) {
+    return this.http
+      .post<
+        ApiSuccessEnvelope<{
+          translation: ChapterTranslation;
+          chapter: AuthorManagedChapter | null;
+        }>
+      >(`${this.translationUrl(storyId, chapterId)}/${language}/review`, input, {
+        headers: { 'x-idempotency-key': crypto.randomUUID() },
+      })
+      .pipe(map((response) => response.data));
   }
 }

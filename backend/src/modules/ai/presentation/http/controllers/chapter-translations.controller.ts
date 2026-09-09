@@ -8,13 +8,11 @@ import {
   ParseUUIDPipe,
   Post,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 
 import { CurrentUserId, RequirePermissions } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
-import { ActiveAuthorGuard } from '@/modules/authors';
 
 import {
   GetChapterTranslationQuery,
@@ -31,7 +29,6 @@ import {
 } from '../responses';
 
 @Controller('author/stories/:storyId/chapters/:chapterId/translations')
-@UseGuards(ActiveAuthorGuard)
 export class ChapterTranslationsController {
   constructor(
     private readonly requestTranslation: RequestChapterTranslationCommandHandler,
@@ -41,7 +38,7 @@ export class ChapterTranslationsController {
   @Post(':targetLanguageCode')
   @HttpCode(HttpStatus.OK)
   @Idempotent({ required: false, ttlSeconds: 300 })
-  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async request(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
@@ -63,7 +60,7 @@ export class ChapterTranslationsController {
   }
 
   @Get(':targetLanguageCode')
-  @RequirePermissions(PermissionCode.CHAPTER_UPDATE_OWN)
+  @RequirePermissions(PermissionCode.STORY_READ)
   async get(
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,

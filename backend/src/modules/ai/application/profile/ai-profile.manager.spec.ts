@@ -12,6 +12,7 @@ describe('AiProfileManager', () => {
     persistence = {
       userExists: jest.fn().mockResolvedValue(true),
       storyExistsForOwner: jest.fn().mockResolvedValue(true),
+      storyExistsForEditor: jest.fn().mockResolvedValue(false),
       findUser: jest.fn().mockResolvedValue({
         userId: 'user-1',
         model: 'user-model',
@@ -72,5 +73,17 @@ describe('AiProfileManager', () => {
       code: 'RESOURCE_NOT_FOUND',
     });
     expect(findStory).not.toHaveBeenCalled();
+  });
+
+  it('allows contributor read without granting story configuration writes', async () => {
+    persistence.storyExistsForOwner.mockResolvedValue(false);
+    persistence.storyExistsForEditor.mockResolvedValue(true);
+    await expect(manager.getStory('user-1', 'story-1')).resolves.toMatchObject({
+      scope: 'STORY',
+    });
+    await expect(
+      manager.updateStory('user-1', 'story-1', {}),
+    ).rejects.toThrow();
+    expect(persistence.upsertStory.mock.calls).toHaveLength(0);
   });
 });

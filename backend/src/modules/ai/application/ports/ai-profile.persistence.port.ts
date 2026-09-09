@@ -38,6 +38,7 @@ export interface UpdateAiStoryProfileInput {
 export interface AiProfilePersistencePort {
   userExists(userId: string): Promise<boolean>;
   storyExistsForOwner(userId: string, storyId: string): Promise<boolean>;
+  storyExistsForEditor(userId: string, storyId: string): Promise<boolean>;
   findUser(userId: string): Promise<AiUserProfileRecord | null>;
   findStory(storyId: string): Promise<AiStoryProfileRecord | null>;
   upsertUser(

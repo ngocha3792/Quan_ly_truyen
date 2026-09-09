@@ -185,14 +185,7 @@ export class ChapterEditingSessionStore {
           chapter.version,
         ),
       );
-      this.chapter.set(restored);
-      if (this.revision() === revision) {
-        this.draft.set({ title: restored.title, content: restored.content });
-        this.savedRevision.set(revision);
-        await this.localQueue.flush();
-        await this.recovery.clearIfRevision(chapterRecoveryKey(this.scope), revision);
-      }
-      this.status.set(this.dirty() ? 'idle' : 'saved');
+      await this.adoptApprovedTranslation(restored, revision);
       return restored;
     } catch (error) {
       await this.handleError(error);
@@ -216,14 +209,7 @@ export class ChapterEditingSessionStore {
   }
 
   async discardRecoveries(): Promise<void> {
-    const entries = this.recoveries();
-    await Promise.all(
-      entries.map((entry) => this.recovery.clearIfRevision(entry.key, entry.revision)),
-    ).catch(() =>
-      this.recoveryError.set(
-        'Không thể xóa bản nháp cục bộ. Bạn có thể tiếp tục viết; bản cũ vẫn được giữ.',
-      ),
-    );
+    await this.localQueue.discard(this.recoveries());
     this.recoveries.set([]);
     if (this.dirty()) this.schedule();
   }
@@ -271,6 +257,21 @@ export class ChapterEditingSessionStore {
 
   adoptChapter(chapter: AuthorManagedChapter): void {
     this.chapter.set(chapter);
+  }
+  async adoptApprovedTranslation(
+    chapter: AuthorManagedChapter,
+    revision = this.revision(),
+  ): Promise<void> {
+    this.cancelTimer();
+    this.chapter.set(chapter);
+    if (this.revision() === revision) {
+      this.draft.set({ title: chapter.title, content: chapter.content });
+      this.savedRevision.set(revision);
+      await this.localQueue.flush();
+      if (this.scope) await this.recovery.clearIfRevision(chapterRecoveryKey(this.scope), revision);
+    }
+    this.lastSaved.set(new Date());
+    this.status.set(this.dirty() ? 'idle' : 'saved');
   }
   async synchronizeServer(): Promise<void> {
     if (!this.scope?.chapterId || this.busy()) return;

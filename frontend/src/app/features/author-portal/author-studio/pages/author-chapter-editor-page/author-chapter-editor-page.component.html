@@ -171,17 +171,17 @@
       }
 
       @if (!isCreate()) {
-        <app-chapter-translation-panel
-          [languages]="targetLanguageOptions"
-          [requesting]="translationStore.requesting()"
-          [translation]="translationStore.translation()"
-          [error]="translationStore.error() || storyProfileStore.error()"
-          [profile]="storyProfileStore.profile()"
-          [profileSaving]="storyProfileStore.saving()"
-          (translateRequested)="translationStore.request(storyId, chapterId()!, $event)"
-          (refreshRequested)="translationStore.refresh(storyId, chapterId()!, $event)"
-          (errorDismissed)="translationStore.clearError(); storyProfileStore.clearError()"
-          (profileUpdated)="storyProfileStore.update(storyId, $event)"
+        <app-ai-author-tools
+          [storyId]="storyId"
+          [chapterId]="chapterId()"
+          [sourceVersion]="session.chapter()?.version ?? null"
+          [unsaved]="session.dirty() || session.busy() || session.status() === 'conflict'"
+        />
+        <app-chapter-translation-workspace
+          [storyId]="storyId"
+          [chapterId]="chapterId()!"
+          [canEdit]="isEditable()"
+          (imported)="store.loadHistory(storyId, $event.id)"
         />
       }
     }

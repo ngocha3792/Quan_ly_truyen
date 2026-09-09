@@ -923,6 +923,212 @@
       ]
     },
     {
+      "id": "author-ai-tools",
+      "title": "Author AI jobs, characters and consistency",
+      "frontendRoute": "/author-studio/truyen/:storyId + /author-studio/truyen/:storyId/chuong/:chapterId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/author-studio.routes.ts",
+          "tokens": [
+            "path: 'author-studio'",
+            "path: 'truyen/:storyId'",
+            "path: 'truyen/:storyId/chuong/:chapterId'"
+          ]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/ai-jobs",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Post('ai-jobs')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "create(",
+                "/ai-jobs`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/stories/:storyId/ai-jobs",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Get('ai-jobs')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "jobs(",
+                "/ai-jobs`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/ai-jobs/:jobId/cancel",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Post('ai-jobs/:jobId/cancel')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "'cancel' | 'retry'",
+                "/ai-jobs/${jobId}/${action}"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/ai-jobs/:jobId/retry",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Post('ai-jobs/:jobId/retry')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "'cancel' | 'retry'",
+                "/ai-jobs/${jobId}/${action}"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/stories/:storyId/characters",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Get('characters')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "characters(",
+                "/characters`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/author/stories/:storyId/characters/:characterId",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Patch('characters/:characterId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "verify(",
+                "/characters/${characterId}"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/author/stories/:storyId/consistency-issues",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Get('consistency-issues')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "issues(",
+                "/consistency-issues`"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/author/stories/:storyId/consistency-issues/:issueId",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/ai-author-tools.controller.ts",
+            "tokens": [
+              "@Patch('consistency-issues/:issueId')"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/ai-tools/data-access/ai-author-http.repository.ts",
+              "tokens": [
+                "updateIssue(",
+                "/consistency-issues/${issueId}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-translation-review",
+      "title": "Author translation preview and review",
+      "frontendRoute": "/author-studio/truyen/:storyId/chuong/:chapterId",
+      "frontendRouteBindings": [
+        {
+          "file": "frontend/src/app/routes/author-studio.routes.ts",
+          "tokens": [
+            "path: 'author-studio'",
+            "path: 'truyen/:storyId'",
+            "path: 'truyen/:storyId/chuong/:chapterId'"
+          ]
+        }
+      ],
+      "contracts": [
+        {
+          "method": "POST",
+          "path": "/author/stories/:storyId/chapters/:chapterId/translations/:targetLanguageCode/review",
+          "backend": {
+            "file": "backend/src/modules/ai/presentation/http/controllers/translation-review.controller.ts",
+            "tokens": [
+              "@Post(':targetLanguageCode/review')",
+              "@Idempotent({ required: true"
+            ]
+          },
+          "frontend": [
+            {
+              "file": "frontend/src/app/features/author-portal/author-studio/chapter-translation/data-access/chapter-translation-http.repository.ts",
+              "tokens": [
+                "/review`",
+                "x-idempotency-key"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "author-analytics",
       "title": "Author analytics",
       "frontendRoute": "/author-studio/thong-ke + /author-studio/thong-ke/truyen/:storyId",

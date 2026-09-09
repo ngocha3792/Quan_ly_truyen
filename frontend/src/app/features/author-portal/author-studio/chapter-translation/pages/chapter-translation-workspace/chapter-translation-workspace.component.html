@@ -1,0 +1,17 @@
+<app-chapter-translation-panel
+  [languages]="languages"
+  [requesting]="store.requesting()"
+  [translation]="store.translation()"
+  [error]="store.error() || profile.error()"
+  [profile]="profile.profile()"
+  [profileSaving]="profile.saving()"
+  [reviewBusy]="reviewing()"
+  [reviewBlocked]="blocked()"
+  [requestBlocked]="requestBlocked()"
+  [currentVersion]="session.chapter()?.version ?? null"
+  (translateRequested)="store.request(storyId(), chapterId(), $event)"
+  (refreshRequested)="store.refresh(storyId(), chapterId(), $event)"
+  (errorDismissed)="store.clearError(); profile.clearError()"
+  (profileUpdated)="profile.update(storyId(), $event)"
+  (reviewed)="review($event)"
+/>

@@ -276,6 +276,11 @@ export async function mockAuthorEditorApi(
     transitions,
     reviews,
     chapter: () => chapter,
+    setChapterContent: (title: string, content: string) => {
+      chapter = { ...chapter, title, content, version: chapter.version + 1 };
+      snapshots.set(chapter.version, { ...chapter });
+      return chapter;
+    },
     setChapterStatus: (status: string) => {
       chapter = { ...chapter, status, version: chapter.version + 1 };
     },

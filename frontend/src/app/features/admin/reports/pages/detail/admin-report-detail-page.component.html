@@ -62,6 +62,53 @@
           {{ d.recentUserModerationCount }}
         </p>
         <p>{{ d.description || 'Không có mô tả.' }}</p>
+        @if (d.anchorContext; as anchor) {
+          <section class="anchor-context" aria-label="Bối cảnh bình luận theo đoạn">
+            <h3>Đoạn văn được báo cáo</h3>
+            <p class="anchor-note">
+              Bản chụp tại thời điểm gửi báo cáo, được giữ nguyên khi chương thay đổi.
+            </p>
+            <blockquote>{{ anchor.quote || 'Không có trích đoạn.' }}</blockquote>
+            <dl>
+              <div>
+                <dt>Phiên bản gốc</dt>
+                <dd>v{{ anchor.chapterVersion }}</dd>
+              </div>
+              <div>
+                <dt>Phiên bản lúc báo cáo</dt>
+                <dd>
+                  {{
+                    anchor.reportedChapterVersion === null
+                      ? '—'
+                      : 'v' + anchor.reportedChapterVersion
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>Đối chiếu gần nhất</dt>
+                <dd>
+                  {{ anchor.lastVerifiedVersion === null ? '—' : 'v' + anchor.lastVerifiedVersion }}
+                </dd>
+              </div>
+              <div>
+                <dt>Trạng thái vị trí</dt>
+                <dd>
+                  {{
+                    anchor.status === 'ORPHANED'
+                      ? 'Không còn khớp'
+                      : anchor.status === 'REANCHORED'
+                        ? 'Đã cập nhật vị trí'
+                        : 'Đang khớp'
+                  }}
+                </dd>
+              </div>
+              <div class="anchor-id">
+                <dt>Mã đoạn</dt>
+                <dd>{{ anchor.blockId }}</dd>
+              </div>
+            </dl>
+          </section>
+        }
       </section>
       <section class="card">
         <h2>Hành động kiểm duyệt</h2>

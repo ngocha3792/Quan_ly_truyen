@@ -256,4 +256,28 @@ describe('ChapterEditingSessionStore', () => {
     expect(repository.autosaveChapter).not.toHaveBeenCalled();
     expect(repository.updateChapter).not.toHaveBeenCalled();
   });
+
+  it('adopts an explicitly approved translation without scheduling another save', async () => {
+    await store.initialize('account', 'story', chapter);
+    await store.adoptApprovedTranslation(
+      { ...chapter, title: 'Reviewed', content: 'Reviewed translation', version: 5 },
+      0,
+    );
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(store.draft()).toEqual({ title: 'Reviewed', content: 'Reviewed translation' });
+    expect(store.chapter()?.version).toBe(5);
+    expect(store.dirty()).toBe(false);
+    expect(recovery.clearIfRevision).toHaveBeenCalledWith(expect.any(String), 0);
+    expect(repository.autosaveChapter).not.toHaveBeenCalled();
+    expect(repository.updateChapter).not.toHaveBeenCalled();
+  });
+
+  it('preserves a newer local revision instead of replacing it with a translation response', async () => {
+    await store.initialize('account', 'story', chapter);
+    store.change({ title: 'Local', content: 'New typing' });
+    await store.adoptApprovedTranslation({ ...chapter, content: 'Translated', version: 5 }, 0);
+    expect(store.draft().content).toBe('New typing');
+    expect(store.dirty()).toBe(true);
+    expect(recovery.clearIfRevision).not.toHaveBeenCalled();
+  });
 });

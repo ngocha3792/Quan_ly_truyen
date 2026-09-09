@@ -1,6 +1,26 @@
 import { CommentPolicy } from './comment.policy';
 
 describe('CommentPolicy', () => {
+  it('blocks configured whole words and phrases after Unicode and whitespace normalization', () => {
+    for (const text of ['BUY   NOW!', 'buy\u200B now', 'ＢＵＹ now']) {
+      expect(() =>
+        CommentPolicy.assertNotBlacklisted(text, ['buy now']),
+      ).toThrow('Bình luận chứa nội dung không được phép.');
+    }
+    expect(() =>
+      CommentPolicy.assertNotBlacklisted('classical literature', [
+        'ass',
+        '',
+        '   ',
+      ]),
+    ).not.toThrow();
+    expect(() =>
+      CommentPolicy.assertNotBlacklisted('x.y is blocked', ['x.y']),
+    ).toThrow();
+    expect(() =>
+      CommentPolicy.assertNotBlacklisted('xay is fine', ['x.y']),
+    ).not.toThrow();
+  });
   it('rejects whitespace-only content and keeps the existing 4000 character cap', () => {
     expect(() => CommentPolicy.validateBody('     ', 3)).toThrow();
     expect(() => CommentPolicy.validateBody('x'.repeat(4001), 3)).toThrow();

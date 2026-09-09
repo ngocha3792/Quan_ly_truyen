@@ -12,6 +12,70 @@ describe('RedisCommentAbuseGuardAdapter', () => {
 
   beforeEach(() => metrics.recordBlock.mockReset());
 
+  it('shares block and chapter quotas across root/reply writes while isolating users and chapters', async () => {
+    const counters = new Map<string, number>();
+    const limiter = new RedisCommentAbuseGuardAdapter(
+      {
+        available: true,
+        consume: (key, ttlSeconds) => {
+          const count = (counters.get(key) ?? 0) + 1;
+          counters.set(key, count);
+          return Promise.resolve({ count, ttlSeconds });
+        },
+      },
+      configService({
+        COMMENT_ABUSE_RATE_LIMIT_ENABLED: true,
+        COMMENT_WRITE_MINUTE_LIMIT: 100,
+      }),
+      metrics,
+    );
+    const write = (
+      user = 'reader',
+      chapterId = 'chapter',
+      anchorBlockId = 'block',
+    ) =>
+      limiter.consume('comment-write', user, undefined, {
+        chapterId,
+        anchorBlockId,
+      });
+    for (let index = 0; index < 3; index++) await write();
+    await expect(write()).rejects.toMatchObject({
+      code: 'COMMENT_ABUSE_RATE_LIMITED',
+      retryAfterSeconds: 3600,
+      details: { limit: 3, scope: 'block' },
+    });
+    await expect(write('other-reader')).resolves.toBeUndefined();
+    await expect(write('reader', 'other-chapter')).resolves.toBeUndefined();
+    for (let index = 0; index < 6; index++)
+      await write('reader', 'chapter', `other-block-${index}`);
+    await expect(
+      write('reader', 'chapter', 'fresh-block'),
+    ).rejects.toMatchObject({
+      code: 'COMMENT_ABUSE_RATE_LIMITED',
+      details: { limit: 10, scope: 'chapter' },
+    });
+  });
+
+  it('fails closed when a contextual counter cannot be read', async () => {
+    const limiter = new RedisCommentAbuseGuardAdapter(
+      {
+        available: true,
+        consume: (key) => {
+          if (key.startsWith('abuse:chapter:'))
+            return Promise.reject(new Error('Redis unavailable'));
+          return Promise.resolve({ count: 1, ttlSeconds: 60 });
+        },
+      },
+      configService({ COMMENT_ABUSE_RATE_LIMIT_ENABLED: true }),
+      metrics,
+    );
+    await expect(
+      limiter.consume('comment-write', 'reader', undefined, {
+        chapterId: 'chapter',
+      }),
+    ).rejects.toMatchObject({ code: 'ABUSE_PROTECTION_UNAVAILABLE' });
+  });
+
   it('shares the configured comment-write bucket and returns usable retry information', async () => {
     const counters = new Map<string, number>();
     const store: CommentAbuseRateLimitStorePort = {

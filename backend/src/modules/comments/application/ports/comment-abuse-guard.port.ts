@@ -6,6 +6,10 @@ export interface CommentAbuseGuardPort {
     scope: CommentAbuseScope,
     userId: string,
     ipAddress?: string,
+    context?: {
+      readonly chapterId?: string | null;
+      readonly anchorBlockId?: string;
+    },
   ): Promise<void>;
 }
 export const COMMENT_ABUSE_GUARD_PORT = Symbol('COMMENT_ABUSE_GUARD_PORT');

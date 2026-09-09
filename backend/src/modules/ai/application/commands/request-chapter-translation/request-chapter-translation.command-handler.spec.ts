@@ -89,6 +89,8 @@ describe('RequestChapterTranslationCommandHandler', () => {
     translations.findByChapterAndLanguage.mockResolvedValue({
       id: TRANSLATION_ID,
       status: 'COMPLETED',
+      requestedById: USER_ID,
+      connectionId: CONNECTION_ID,
       targetLanguageCode: 'en',
       sourceContentHash,
     });

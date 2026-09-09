@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+section {
+  margin-top: 24px;
+}
+h3 {
+  margin-bottom: 8px;
+}
+h4 {
+  margin: 0;
+}
+p,
+small {
+  color: var(--text-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+article {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+}
+header,
+.actions,
+.links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+header {
+  justify-content: space-between;
+}
+header span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+li {
+  margin-top: 8px;
+  line-height: 1.6;
+}
+ol {
+  padding-left: 24px;
+}
+a {
+  color: var(--primary-soft);
+}
+.issue {
+  margin-top: 12px;
+}
+.stale {
+  color: var(--warning);
+}
+.actions {
+  margin-top: 16px;
+}
+.closed {
+  border-style: dashed;
+}

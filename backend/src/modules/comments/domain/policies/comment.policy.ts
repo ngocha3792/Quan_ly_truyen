@@ -31,6 +31,30 @@ export class CommentPolicy {
       .toLocaleLowerCase('vi-VN');
   }
 
+  static assertNotBlacklisted(value: string, terms: readonly string[]): void {
+    const normalize = (text: string) =>
+      this.fingerprint(text).replace(/[\u200B-\u200D\uFEFF]/g, '');
+    const body = normalize(value);
+    for (const term of terms) {
+      const normalized = normalize(term);
+      if (!normalized) continue;
+      const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (
+        new RegExp(
+          `(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`,
+          'u',
+        ).test(body)
+      ) {
+        throw new InvalidInputException({
+          code: 'COMMENT_BLACKLISTED_CONTENT',
+          message:
+            'Bình luận chứa nội dung không được phép. Vui lòng chỉnh sửa trước khi gửi.',
+          details: { field: 'body' },
+        });
+      }
+    }
+  }
+
   static normalizeReportDescription(
     reason: string,
     description?: string,

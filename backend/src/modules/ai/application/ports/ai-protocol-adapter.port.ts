@@ -44,6 +44,8 @@ export interface AiCapabilityProbeResult {
 }
 
 export interface AiGenerateRequest {
+  /** Internal attribution requested by persisted author jobs. Never sent to providers. */
+  readonly includeExecutionMetadata?: boolean;
   readonly systemPrompt?: string;
   readonly messages: readonly AiMessage[];
   readonly temperature?: number;
@@ -58,6 +60,11 @@ export interface AiUsageTokens {
 }
 
 export interface AiGenerateResponse {
+  readonly execution?: {
+    readonly connectionId: string | null;
+    readonly protocol: AiProtocol;
+    readonly model: string;
+  };
   readonly content: string;
   readonly protocol: AiProtocol;
   readonly model: string;

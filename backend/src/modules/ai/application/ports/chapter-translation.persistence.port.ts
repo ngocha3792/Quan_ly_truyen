@@ -5,6 +5,11 @@ export const CHAPTER_TRANSLATION_PERSISTENCE_PORT = Symbol.for(
 );
 
 export interface ChapterTranslationRecord {
+  readonly generation?: number;
+  readonly sourceVersion?: number | null;
+  readonly reviewStatus?:
+    'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+  readonly revisionNotes?: string | null;
   readonly id: string;
   readonly chapterId: string;
   readonly targetLanguageCode: string;
@@ -21,6 +26,7 @@ export interface ChapterTranslationRecord {
 }
 
 export interface UpsertPendingChapterTranslationInput {
+  readonly sourceVersion?: number;
   readonly chapterId: string;
   readonly targetLanguageCode: string;
   readonly requestedById: string;
@@ -29,18 +35,23 @@ export interface UpsertPendingChapterTranslationInput {
 }
 
 export interface CompleteChapterTranslationInput {
+  readonly leaseToken?: string;
+  readonly generation?: number;
   readonly translationId: string;
   readonly translatedTitle: string;
   readonly translatedContent: string;
 }
 
 export interface FailChapterTranslationInput {
+  readonly leaseToken?: string;
+  readonly generation?: number;
   readonly translationId: string;
   readonly errorCode: string;
   readonly errorMessage: string;
 }
 
 export interface ChapterSourceForTranslation {
+  readonly version?: number;
   readonly storyId: string;
   readonly title: string;
   readonly content: string;
@@ -58,20 +69,19 @@ export interface ChapterTranslationPersistencePort {
     input: UpsertPendingChapterTranslationInput,
   ): Promise<ChapterTranslationRecord>;
 
-  markProcessing(translationId: string): Promise<void>;
+  markProcessing(
+    translationId: string,
+    generation: number,
+    leaseToken: string,
+  ): Promise<boolean>;
 
   markCompleted(input: CompleteChapterTranslationInput): Promise<void>;
 
   markFailed(input: FailChapterTranslationInput): Promise<void>;
 
-  /**
-   * Đọc trực tiếp title/content của chapter bằng Prisma, không qua
-   * CHAPTER_PERSISTENCE_PORT.findOwnedById (cần userId/storyId để check
-   * ownership — vô nghĩa trong ngữ cảnh worker vì ownership đã được xác
-   * nhận một lần lúc tạo yêu cầu dịch). Giữ AiWorkerModule không phụ
-   * thuộc ChaptersModule/AuthorsModule.
-   */
+  /** Recheck current owner/contributor permission when the worker reads source. */
   findChapterSource(
     chapterId: string,
+    userId?: string,
   ): Promise<ChapterSourceForTranslation | null>;
 }

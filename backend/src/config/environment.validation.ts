@@ -9,6 +9,7 @@ import {
   IsString,
   IsUrl,
   MinLength,
+  MaxLength,
   Max,
   Min,
   Matches,
@@ -435,6 +436,22 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(10000)
   COMMENT_WRITE_HOUR_LIMIT = 50;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10))
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  COMMENT_CHAPTER_HOUR_LIMIT = 10;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 3))
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  COMMENT_BLOCK_HOUR_LIMIT = 3;
+
+  @IsString()
+  @MaxLength(10000)
+  COMMENT_BLACKLIST_TERMS = '';
 
   @Transform(({ value }) => parseIntegerValue(value ?? 30))
   @IsInt()

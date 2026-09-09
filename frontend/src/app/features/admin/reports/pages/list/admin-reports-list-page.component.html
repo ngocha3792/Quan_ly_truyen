@@ -87,7 +87,16 @@
                 @for (item of data.items; track item.id) {
                   <tr>
                     <td>{{ reasonLabel(item.reason) }}</td>
-                    <td>{{ item.comment?.excerpt || '—' }}</td>
+                    <td>
+                      {{ item.comment?.excerpt || '—' }}
+                      @if (item.anchorContext; as anchor) {
+                        <p class="inline-context">
+                          Bình luận theo đoạn · v{{ anchor.chapterVersion }}<br />{{
+                            item.chapter?.title || item.story?.title
+                          }}
+                        </p>
+                      }
+                    </td>
                     <td>{{ item.reportedUser?.displayName || '—' }}</td>
                     <td>{{ item.reporter?.displayName || '—' }}</td>
                     <td><app-admin-report-status-badge [status]="item.status" /></td>

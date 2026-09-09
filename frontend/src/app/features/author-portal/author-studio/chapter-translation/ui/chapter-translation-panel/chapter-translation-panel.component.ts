@@ -8,7 +8,9 @@ import {
   ChapterTranslation,
   TargetLanguageOption,
   UpdateAiStoryProfilePayload,
+  TranslationReviewInput,
 } from '../../domain/chapter-translation.models';
+import { TranslationReviewComponent } from '../translation-review/translation-review.component';
 
 const STATUS_LABELS: Record<ChapterTranslation['status'], string> = {
   PENDING: 'Đang chờ xử lý',
@@ -20,7 +22,7 @@ const STATUS_LABELS: Record<ChapterTranslation['status'], string> = {
 @Component({
   selector: 'app-chapter-translation-panel',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, NoticeComponent],
+  imports: [FormsModule, ButtonComponent, NoticeComponent, TranslationReviewComponent],
   templateUrl: './chapter-translation-panel.component.html',
   styleUrl: './chapter-translation-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,11 +34,16 @@ export class ChapterTranslationPanelComponent {
   readonly error = input<string | null>(null);
   readonly profile = input<AiStoryProfile | null>(null);
   readonly profileSaving = input(false);
+  readonly reviewBusy = input(false);
+  readonly reviewBlocked = input(false);
+  readonly requestBlocked = input(false);
+  readonly currentVersion = input<number | null>(null);
 
   readonly translateRequested = output<string>();
   readonly refreshRequested = output<string>();
   readonly errorDismissed = output<void>();
   readonly profileUpdated = output<UpdateAiStoryProfilePayload>();
+  readonly reviewed = output<TranslationReviewInput>();
 
   protected readonly selectedLanguageCode = signal('');
   protected profileModel = '';

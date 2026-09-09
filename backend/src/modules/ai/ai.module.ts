@@ -1,10 +1,18 @@
 import { Module } from '@nestjs/common';
+import { TranslationReviewModule } from './translation-review.module';
 
 import { PrismaModule } from '@/infrastructure/database';
 import { CacheModule } from '@/infrastructure/cache';
 import { AuthAuthorizationModule } from '@/modules/auth';
 import { AuthorsModule } from '@/modules/authors';
 import { ChaptersModule } from '@/modules/chapters';
+import { OutboxCoreModule } from '@/infrastructure/queue/outbox/outbox-core.module';
+import { AI_AUTHOR_PERSISTENCE_PORT } from './application/author-tools/ai-author.persistence.port';
+import { AiAuthorConnectionResolver } from './application/author-tools/ai-author-connection.resolver';
+import { AiAuthorJobManager } from './application/author-tools/ai-author-job.manager';
+import { PrismaAiAuthorPersistence } from './infrastructure/persistence/prisma-ai-author.persistence';
+import { AiAuthorKnowledgePersistence } from './infrastructure/persistence/ai-author-knowledge.persistence';
+import { AiAuthorToolsController } from './presentation/http/controllers/ai-author-tools.controller';
 
 import {
   AI_CONNECTION_PERSISTENCE_PORT,
@@ -157,6 +165,8 @@ const applicationHandlers = [
 
 @Module({
   imports: [
+    TranslationReviewModule,
+    OutboxCoreModule,
     PrismaModule,
     CacheModule,
     AuthAuthorizationModule,
@@ -164,6 +174,7 @@ const applicationHandlers = [
     AuthorsModule,
   ],
   controllers: [
+    AiAuthorToolsController,
     AdminAiConnectionsController,
     AdminAiUsageController,
     AdminAiPolicyController,
@@ -176,6 +187,14 @@ const applicationHandlers = [
     ChapterTranslationsController,
   ],
   providers: [
+    AiAuthorConnectionResolver,
+    AiAuthorJobManager,
+    PrismaAiAuthorPersistence,
+    AiAuthorKnowledgePersistence,
+    {
+      provide: AI_AUTHOR_PERSISTENCE_PORT,
+      useExisting: PrismaAiAuthorPersistence,
+    },
     PrismaAiConnectionPersistence,
     PrismaAiConversationPersistence,
     PrismaAiUsagePersistence,

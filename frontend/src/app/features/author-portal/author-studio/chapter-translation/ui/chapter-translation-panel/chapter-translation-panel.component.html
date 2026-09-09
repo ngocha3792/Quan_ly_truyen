@@ -44,17 +44,37 @@
   }
 
   <div class="translation-controls">
-    <select [(ngModel)]="selectedLanguageCode" [disabled]="requesting()">
+    <select
+      aria-label="Ngôn ngữ bản dịch"
+      [(ngModel)]="selectedLanguageCode"
+      [disabled]="requesting() || reviewBusy()"
+      (ngModelChange)="refreshStatus()"
+    >
       @for (language of languages(); track language.code) {
         <option [value]="language.code">{{ language.label }}</option>
       }
     </select>
 
-    <app-button variant="primary" [loading]="requesting()" (click)="translateChapter()">
-      Dịch chương
+    <app-button
+      variant="primary"
+      [loading]="requesting()"
+      [disabled]="reviewBusy() || requestBlocked()"
+      (click)="translateChapter()"
+    >
+      {{
+        translation()?.reviewStatus === 'REJECTED' ||
+        translation()?.reviewStatus === 'REVISION_REQUESTED'
+          ? 'Dịch lại theo ghi chú'
+          : 'Dịch chương'
+      }}
     </app-button>
 
-    <app-button variant="secondary" [loading]="requesting()" (click)="refreshStatus()">
+    <app-button
+      variant="secondary"
+      [loading]="requesting()"
+      [disabled]="reviewBusy()"
+      (click)="refreshStatus()"
+    >
       Kiểm tra trạng thái
     </app-button>
   </div>
@@ -66,10 +86,13 @@
       </span>
 
       @if (result.status === 'COMPLETED') {
-        <div class="translation-content">
-          <strong>{{ result.translatedTitle }}</strong>
-          <p>{{ result.translatedContent }}</p>
-        </div>
+        <app-translation-review
+          [translation]="result"
+          [currentVersion]="currentVersion()"
+          [blocked]="reviewBlocked()"
+          [busy]="reviewBusy()"
+          (reviewed)="reviewed.emit($event)"
+        />
       }
 
       @if (result.status === 'FAILED' && result.errorMessage) {

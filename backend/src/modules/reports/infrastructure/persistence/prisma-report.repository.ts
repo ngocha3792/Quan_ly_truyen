@@ -10,6 +10,7 @@ import type {
   CloseReportPersistenceInput,
 } from '../../application/dto';
 import type { ReportRepositoryPort } from '../../application/ports/report.repository.port';
+import { reportAnchorContext } from './report-anchor-context';
 
 @Injectable()
 export class PrismaReportRepository implements ReportRepositoryPort {
@@ -81,6 +82,7 @@ export class PrismaReportRepository implements ReportRepositoryPort {
           id: true,
           status: true,
           reason: true,
+          evidence: true,
           createdAt: true,
           reporter: { select: { id: true, displayName: true } },
           reportedUser: { select: { id: true, displayName: true } },
@@ -103,6 +105,7 @@ export class PrismaReportRepository implements ReportRepositoryPort {
           : null,
         story: row.story,
         chapter: row.chapter,
+        anchorContext: reportAnchorContext(row.evidence),
       })),
       pagination: {
         page,
@@ -175,6 +178,7 @@ export class PrismaReportRepository implements ReportRepositoryPort {
       : 0;
     return {
       ...report,
+      anchorContext: reportAnchorContext(report.evidence),
       createdAt: report.createdAt.toISOString(),
       updatedAt: report.updatedAt.toISOString(),
       resolvedAt: report.resolvedAt?.toISOString() ?? null,

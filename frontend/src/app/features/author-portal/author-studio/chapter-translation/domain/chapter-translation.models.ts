@@ -10,6 +10,23 @@ export interface ChapterTranslation {
   readonly errorMessage: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+  readonly revisionNotes: string | null;
+  readonly sourceContentHash: string;
+  readonly generation: number;
+  readonly sourceVersion: number | null;
+}
+
+export interface TranslationReviewInput {
+  readonly decision: 'APPROVE' | 'REJECT' | 'REQUEST_REVISION';
+  readonly notes?: string;
+  readonly translatedTitle?: string;
+  readonly translatedContent?: string;
+}
+export interface TranslationReviewRequest extends TranslationReviewInput {
+  readonly expectedVersion: number;
+  readonly translationId: string;
+  readonly generation: number;
 }
 
 export interface TargetLanguageOption {

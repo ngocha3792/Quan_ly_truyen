@@ -77,7 +77,10 @@ export class AiProfileManager {
   }
 
   async getStory(userId: string, storyId: string): Promise<AiProfileView> {
-    if (!(await this.profiles.storyExistsForOwner(userId, storyId))) {
+    if (
+      !(await this.profiles.storyExistsForOwner(userId, storyId)) &&
+      !(await this.profiles.storyExistsForEditor(userId, storyId))
+    ) {
       throw new ResourceNotFoundException({
         resource: 'truyện',
         identifier: storyId,

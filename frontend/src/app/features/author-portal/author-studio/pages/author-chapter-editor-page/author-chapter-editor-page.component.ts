@@ -26,11 +26,8 @@ import { ChapterLocalRecoveryService } from '../../data-access/chapter-local-rec
 import { ChapterEditingSessionStore } from '../../data-access/chapter-editing-session.store';
 import { ChapterWorkflowStore } from '../../data-access/chapter-workflow.store';
 import { validateChapterImage } from '../../domain/chapter-image-validation';
-import { AiStoryProfileStore } from '../../chapter-translation/data-access/ai-story-profile.store';
-import { ChapterTranslationStore } from '../../chapter-translation/data-access/chapter-translation.store';
-import { provideChapterTranslation } from '../../chapter-translation/data-access/chapter-translation.providers';
-import { TARGET_LANGUAGE_OPTIONS } from '../../chapter-translation/domain/chapter-translation.models';
-import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/chapter-translation-panel/chapter-translation-panel.component';
+import { ChapterTranslationWorkspaceComponent } from '../../chapter-translation/pages/chapter-translation-workspace/chapter-translation-workspace.component';
+import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-author-tools.component';
 import { ChapterRichEditorComponent } from '../../ui/chapter-rich-editor/chapter-rich-editor.component';
 import { ChapterEditorSafetyComponent } from '../../ui/chapter-editor-safety/chapter-editor-safety.component';
 import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history/chapter-version-history.component';
@@ -48,16 +45,14 @@ import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history
     ButtonComponent,
     LoadingStateComponent,
     NoticeComponent,
-    ChapterTranslationPanelComponent,
+    ChapterTranslationWorkspaceComponent,
+    AiAuthorToolsComponent,
     ChapterRichEditorComponent,
     ChapterEditorSafetyComponent,
     ChapterVersionHistoryComponent,
   ],
   providers: [
     AuthorChapterEditorStore,
-    provideChapterTranslation(),
-    ChapterTranslationStore,
-    AiStoryProfileStore,
     ChapterLocalRecoveryService,
     ChapterRecoveryQueueService,
     ChapterEditingSessionStore,
@@ -78,9 +73,6 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected readonly store = inject(AuthorChapterEditorStore);
   protected readonly session = inject(ChapterEditingSessionStore);
   protected readonly workflow = inject(ChapterWorkflowStore);
-  protected readonly translationStore = inject(ChapterTranslationStore);
-  protected readonly storyProfileStore = inject(AiStoryProfileStore);
-  protected readonly targetLanguageOptions = TARGET_LANGUAGE_OPTIONS;
   private readonly auth = inject(AuthStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -170,7 +162,6 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   ngOnInit(): void {
     this.store.load(this.storyId, this.routeChapterId);
     if (this.routeChapterId) this.store.loadHistory(this.storyId, this.routeChapterId);
-    this.storyProfileStore.load(this.storyId);
   }
 
   @HostListener('window:beforeunload', ['$event'])

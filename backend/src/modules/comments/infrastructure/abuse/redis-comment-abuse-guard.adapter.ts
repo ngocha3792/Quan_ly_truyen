@@ -36,6 +36,10 @@ export class RedisCommentAbuseGuardAdapter implements CommentAbuseGuardPort {
     scope: CommentAbuseScope,
     userId: string,
     ipAddress?: string,
+    context?: {
+      readonly chapterId?: string | null;
+      readonly anchorBlockId?: string;
+    },
   ): Promise<void> {
     if (!this.enabled()) return;
     if (!this.store.available) throw new AbuseProtectionUnavailableException();
@@ -67,10 +71,45 @@ export class RedisCommentAbuseGuardAdapter implements CommentAbuseGuardPort {
           }
         }
       }
+      if (scope === 'comment-write' && context?.chapterId) {
+        const chapterKey = `abuse:chapter:${context.chapterId}:user:${userId}`;
+        await this.consumeContext(
+          chapterKey,
+          this.number('COMMENT_CHAPTER_HOUR_LIMIT', 10),
+          'chapter',
+        );
+        if (context.anchorBlockId) {
+          await this.consumeContext(
+            `${chapterKey}:block:${context.anchorBlockId}`,
+            this.number('COMMENT_BLOCK_HOUR_LIMIT', 3),
+            'block',
+          );
+        }
+      }
     } catch (error: unknown) {
       if (error instanceof RateLimitExceededException) throw error;
       throw new AbuseProtectionUnavailableException();
     }
+  }
+
+  private async consumeContext(
+    key: string,
+    limit: number,
+    scope: 'chapter' | 'block',
+  ): Promise<void> {
+    const result = await this.consumeKey(key, limit, 3600);
+    if (result.allowed) return;
+    this.metrics.recordBlock('comment');
+    throw new RateLimitExceededException({
+      code: 'COMMENT_ABUSE_RATE_LIMITED',
+      message:
+        scope === 'block'
+          ? 'Bạn đã bình luận quá nhiều trên đoạn văn này. Vui lòng thử lại sau.'
+          : 'Bạn đã bình luận quá nhiều trong chương này. Vui lòng thử lại sau.',
+      retryAfterSeconds: result.retryAfterSeconds,
+      limit,
+      details: { scope },
+    });
   }
 
   private enabled(): boolean {

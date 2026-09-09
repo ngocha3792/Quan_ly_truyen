@@ -1,0 +1,64 @@
+<section aria-label="Duyệt bản dịch" class="review">
+  <h4>Duyệt bản dịch trước khi nhập chương</h4>
+  <p>
+    Đọc và chỉnh sửa bản dịch dưới đây. Chỉ nút “Duyệt và nhập vào chương” mới lưu bản dịch thành
+    phiên bản chương mới.
+  </p>
+  @if (translation().reviewStatus === 'APPROVED') {
+    <app-notice kind="success" message="Bản dịch này đã được duyệt và nhập vào chương." />
+  }
+  @if (translation().reviewStatus === 'REJECTED') {
+    <app-notice message="Bản dịch đã bị từ chối. Bạn có thể yêu cầu dịch lại." />
+  }
+  @if (translation().reviewStatus === 'REVISION_REQUESTED') {
+    <app-notice message="Đã yêu cầu chỉnh sửa. Ghi chú sẽ được dùng khi dịch lại." />
+  }
+  @if (stale() && editable()) {
+    <app-notice
+      message="Chương đã thay đổi so với nguồn của bản dịch. Hãy dịch lại bản mới nhất trước khi nhập."
+    />
+  }
+  @if (blocked() && editable()) {
+    <app-notice
+      message="Hãy lưu bản nháp, xử lý xung đột và mở chương ở trạng thái bản nháp trước khi nhập bản dịch."
+    />
+  }
+  <label
+    >Tiêu đề bản dịch<input [(ngModel)]="title" maxlength="255" [disabled]="busy() || !editable()"
+  /></label>
+  <label
+    >Nội dung bản dịch<textarea
+      [(ngModel)]="content"
+      rows="12"
+      [disabled]="busy() || !editable()"
+    ></textarea>
+  </label>
+  @if (editable()) {
+    <label
+      >Ghi chú duyệt<textarea
+        [(ngModel)]="notes"
+        rows="3"
+        maxlength="2000"
+        placeholder="Bắt buộc khi từ chối hoặc yêu cầu sửa lại"
+        [disabled]="busy()"
+      ></textarea>
+    </label>
+    <div class="actions">
+      <app-button
+        [loading]="busy()"
+        [disabled]="blocked() || stale() || !title.trim() || !content.trim()"
+        (click)="review('APPROVE')"
+        >Duyệt và nhập vào chương</app-button
+      >
+      <app-button
+        variant="secondary"
+        [disabled]="busy() || !notes.trim()"
+        (click)="review('REQUEST_REVISION')"
+        >Yêu cầu sửa bản dịch</app-button
+      >
+      <app-button variant="danger" [disabled]="busy() || !notes.trim()" (click)="review('REJECT')"
+        >Từ chối bản dịch</app-button
+      >
+    </div>
+  }
+</section>

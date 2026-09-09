@@ -1,0 +1,124 @@
+@if (characters().length) {
+  <section aria-label="Nhân vật và dòng thời gian">
+    <h3>Nhân vật và dòng thời gian</h3>
+    <p>Thông tin do AI đề xuất; xác minh sau khi đối chiếu nội dung truyện.</p>
+    <div class="character-grid">
+      @for (character of characters(); track character.id) {
+        <article>
+          <header>
+            <h4>{{ character.name }}</h4>
+            <span>{{ character.isVerified ? 'Đã xác minh' : 'Chưa xác minh' }}</span>
+          </header>
+          @if (character.aliases.length) {
+            <small>Biệt danh: {{ character.aliases.join(', ') }}</small>
+          }
+          <p>{{ character.description }}</p>
+          @if (character.firstAppearance) {
+            <a
+              [routerLink]="[
+                '/author-studio/truyen',
+                storyId(),
+                'chuong',
+                character.firstAppearance,
+              ]"
+              >Chương xuất hiện đầu tiên</a
+            >
+          }
+          <ol>
+            @for (appearance of character.appearances; track $index) {
+              <li>
+                <a
+                  [routerLink]="[
+                    '/author-studio/truyen',
+                    storyId(),
+                    'chuong',
+                    appearance.chapterId,
+                  ]"
+                  >Lần xuất hiện {{ $index + 1 }}</a
+                >
+                · {{ appearance.role }} · {{ appearance.mentions }} lượt nhắc
+              </li>
+            }
+          </ol>
+          @for (relationship of character.relationships; track $index) {
+            <p>
+              <strong>{{ relationship.with }}</strong> · {{ relationship.type }}:
+              {{ relationship.description }}
+            </p>
+          }
+          <app-button variant="secondary" [disabled]="busy()" (click)="verified.emit(character)">{{
+            character.isVerified ? 'Bỏ xác minh' : 'Xác minh nhân vật'
+          }}</app-button>
+        </article>
+      }
+    </div>
+  </section>
+}
+@if (issues().length) {
+  <section aria-label="Cảnh báo nhất quán">
+    <h3>Cảnh báo nhất quán</h3>
+    <p>Đây là gợi ý để rà soát; đánh dấu đã xử lý không sửa nội dung chương.</p>
+    @for (issue of issues(); track issue.id) {
+      <article class="issue" [class.closed]="issue.isDismissed || issue.isResolved">
+        <header>
+          <strong>{{ issue.issueType }}</strong
+          ><span
+            >{{
+              issue.severity === 'HIGH'
+                ? 'Mức cao'
+                : issue.severity === 'MEDIUM'
+                  ? 'Mức vừa'
+                  : 'Mức thấp'
+            }}
+            · phiên bản {{ issue.sourceVersion }}</span
+          >
+        </header>
+        @if (issue.chapterId === chapterId() && sourceVersion() !== issue.sourceVersion) {
+          <p class="stale">Cảnh báo thuộc phiên bản cũ. Hãy phân tích lại sau khi lưu chương.</p>
+        }
+        <p>{{ issue.description }}</p>
+        @if (issue.suggestion) {
+          <p><strong>Gợi ý:</strong> {{ issue.suggestion }}</p>
+        }
+        <div class="links">
+          <a [routerLink]="['/author-studio/truyen', storyId(), 'chuong', issue.chapterId]"
+            >Mở chương</a
+          >
+          @for (id of issue.relatedChapterIds; track id) {
+            <a [routerLink]="['/author-studio/truyen', storyId(), 'chuong', id]"
+              >Chương liên quan {{ $index + 1 }}</a
+            >
+          }
+        </div>
+        <div class="actions">
+          @if (issue.isResolved || issue.isDismissed) {
+            <span>{{ issue.isResolved ? 'Đã xử lý' : 'Đã bỏ qua' }}</span
+            ><app-button
+              variant="secondary"
+              [disabled]="busy()"
+              (click)="
+                issueUpdated.emit({
+                  id: issue.id,
+                  input: { isResolved: false, isDismissed: false },
+                })
+              "
+              >Mở lại</app-button
+            >
+          } @else {
+            <app-button
+              variant="secondary"
+              [disabled]="busy()"
+              (click)="issueUpdated.emit({ id: issue.id, input: { isResolved: true } })"
+              >Đánh dấu đã xử lý</app-button
+            ><app-button
+              variant="secondary"
+              [disabled]="busy()"
+              (click)="issueUpdated.emit({ id: issue.id, input: { isDismissed: true } })"
+              >Bỏ qua cảnh báo</app-button
+            >
+          }
+        </div>
+      </article>
+    }
+  </section>
+}

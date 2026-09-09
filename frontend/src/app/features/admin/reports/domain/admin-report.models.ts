@@ -9,7 +9,18 @@ export type AdminReportReason =
   | 'MISINFORMATION'
   | 'OTHER';
 
+export interface AdminReportAnchorContext {
+  readonly blockId: string;
+  readonly quote: string;
+  readonly chapterVersion: number;
+  readonly reportedChapterVersion: number | null;
+  readonly lastVerifiedVersion: number | null;
+  readonly status: string;
+  readonly rootCommentId: string | null;
+}
+
 export interface AdminReportListItem {
+  readonly anchorContext?: AdminReportAnchorContext | null;
   readonly id: string;
   readonly status: AdminReportStatus;
   readonly reason: AdminReportReason;
@@ -32,6 +43,7 @@ export interface AdminReportList {
 }
 
 export interface AdminReportDetail {
+  readonly anchorContext?: AdminReportAnchorContext | null;
   readonly id: string;
   readonly reason: AdminReportReason;
   readonly description: string | null;

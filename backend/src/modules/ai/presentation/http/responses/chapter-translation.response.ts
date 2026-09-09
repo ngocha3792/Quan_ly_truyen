@@ -4,6 +4,12 @@ import type { ChapterTranslationRecord } from '../../../application/ports/chapte
 import type { RequestChapterTranslationResultView } from '../../../application/commands/request-chapter-translation/request-chapter-translation.view';
 
 export interface ChapterTranslationResponse {
+  readonly generation: number;
+  readonly sourceVersion: number | null;
+  readonly sourceContentHash: string;
+  readonly reviewStatus:
+    'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+  readonly revisionNotes: string | null;
   readonly id: string;
   readonly targetLanguageCode: string;
   readonly status: ChapterTranslationStatus;
@@ -25,6 +31,11 @@ export function toChapterTranslationResponse(
   record: ChapterTranslationRecord,
 ): ChapterTranslationResponse {
   return {
+    generation: record.generation ?? 1,
+    sourceVersion: record.sourceVersion ?? null,
+    sourceContentHash: record.sourceContentHash,
+    reviewStatus: record.reviewStatus ?? 'PENDING',
+    revisionNotes: record.revisionNotes ?? null,
     id: record.id,
     targetLanguageCode: record.targetLanguageCode,
     status: record.status,

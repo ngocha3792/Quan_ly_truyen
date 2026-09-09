@@ -183,6 +183,165 @@ describe('Comment + moderation PostgreSQL invariants', () => {
     await moduleRef.close();
   });
 
+  it('snapshots server-owned anchors on replies and keeps evidence unchanged after reanchoring', async () => {
+    const { chapter, root, blockId } = await createInlineThread();
+    const reply = await comments.createReply({
+      userId: readerB,
+      parentCommentId: root.id,
+      body: 'Reply under a verified anchor',
+    });
+    const report = await comments.createReport({
+      userId: readerA,
+      commentId: reply.id,
+      reason: 'SPAM',
+      anchorBlockId: randomUUID(),
+      anchorQuote: 'Forged client quote',
+      chapterVersion: 999,
+    });
+    const original = await prisma.report.findUniqueOrThrow({
+      where: { id: report.id },
+    });
+    expect(original.evidence).toMatchObject({
+      context: {
+        source: 'SERVER',
+        chapterId: chapter.id,
+        chapterVersion: 4,
+        anchor: {
+          blockId,
+          quote: 'Server-owned quote',
+          chapterVersion: 2,
+          lastVerifiedVersion: 3,
+          rootCommentId: root.id,
+        },
+      },
+    });
+    expect(JSON.stringify(original.evidence)).not.toContain(
+      'Forged client quote',
+    );
+    expect(JSON.stringify(original.evidence)).not.toContain(chapter.content);
+    await prisma.commentAnchor.update({
+      where: { commentId: root.id },
+      data: { quoteText: 'Reanchored quote', lastVerifiedVersion: 5 },
+    });
+    await prisma.chapter.update({
+      where: { id: chapter.id },
+      data: { version: 5 },
+    });
+    await prisma.comment.update({
+      where: { id: reply.id },
+      data: { body: 'Edited reply' },
+    });
+    const detail = await moduleRef.get(PrismaReportRepository).get(report.id);
+    expect(detail.evidence).toEqual(original.evidence);
+    expect(detail.anchorContext).toMatchObject({
+      quote: 'Server-owned quote',
+      chapterVersion: 2,
+      reportedChapterVersion: 4,
+    });
+    expect(report).not.toHaveProperty('evidence');
+    expect(report).not.toHaveProperty('anchorContext');
+  });
+
+  it('does not allow the generic reply endpoint to bypass paid inline-thread access', async () => {
+    const { chapter, root } = await createInlineThread();
+    const priceBand = await prisma.monetizationPriceBand.create({
+      data: { code: unique('inline'), label: 'Inline test', creditPrice: 5n },
+    });
+    await prisma.chapterMonetization.create({
+      data: {
+        chapterId: chapter.id,
+        accessType: 'PAID',
+        priceBandId: priceBand.id,
+        creditPrice: 5n,
+        previewContent: 'Public preview',
+      },
+    });
+    await expect(
+      comments.createReply({
+        userId: readerB,
+        parentCommentId: root.id,
+        body: 'Not entitled to this paid chapter',
+      }),
+    ).rejects.toMatchObject({ code: 'CHAPTER_NOT_FOUND' });
+    expect(await prisma.comment.count({ where: { parentId: root.id } })).toBe(
+      0,
+    );
+    await expect(
+      comments.createReply({
+        userId: authorId,
+        parentCommentId: root.id,
+        body: 'Author may reply to their own chapter',
+      }),
+    ).resolves.toMatchObject({ parentId: root.id });
+  });
+
+  it('ignores forged anchor context when reporting a regular comment', async () => {
+    const comment = await prisma.comment.create({
+      data: { storyId, userId: readerA, body: 'A normal comment' },
+    });
+    const report = await comments.createReport({
+      userId: readerB,
+      commentId: comment.id,
+      reason: 'SPAM',
+      anchorQuote: 'Fake quote',
+      anchorBlockId: randomUUID(),
+      chapterVersion: 99,
+    });
+    const row = await prisma.report.findUniqueOrThrow({
+      where: { id: report.id },
+    });
+    expect(row.evidence).toMatchObject({ context: { anchor: null } });
+  });
+
+  async function createInlineThread() {
+    await prisma.story.update({
+      where: { id: storyId },
+      data: {
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+        publishedAt: new Date(),
+      },
+    });
+    const chapter = await prisma.chapter.create({
+      data: {
+        storyId,
+        createdById: authorId,
+        updatedById: authorId,
+        number: 1,
+        title: 'Inline chapter',
+        slug: 'inline-chapter',
+        content:
+          'Private body must never be copied wholesale into report evidence',
+        version: 4,
+        status: 'PUBLISHED',
+        publishedAt: new Date(),
+      },
+    });
+    const blockId = randomUUID();
+    const root = await prisma.comment.create({
+      data: {
+        storyId,
+        chapterId: chapter.id,
+        userId: readerA,
+        body: 'Inline root',
+        anchor: {
+          create: {
+            chapterId: chapter.id,
+            chapterVersion: 2,
+            lastVerifiedVersion: 3,
+            startBlockId: blockId,
+            endBlockId: blockId,
+            startOffset: 0,
+            endOffset: 18,
+            quoteText: 'Server-owned quote',
+            quoteHash: 'a'.repeat(64),
+          },
+        },
+      },
+    });
+    return { chapter, root, blockId };
+  }
+
   it('keeps bounded reply depth, reaction uniqueness, immutable evidence and subtree counters correct', async () => {
     const root = await prisma.comment.create({
       data: { storyId, userId: readerA, body: 'Root comment' },
@@ -547,6 +706,9 @@ describe('Comment + moderation PostgreSQL invariants', () => {
       await prisma.comment.deleteMany({ where: { storyId: { in: storyIds } } });
       await prisma.story.deleteMany({ where: { id: { in: storyIds } } });
     }
+    await prisma.monetizationPriceBand.deleteMany({
+      where: { code: { contains: runId } },
+    });
     await prisma.moderationAction.deleteMany({
       where: {
         OR: [{ actorId: { in: userIds } }, { targetUserId: { in: userIds } }],

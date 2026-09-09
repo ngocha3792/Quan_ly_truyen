@@ -143,6 +143,35 @@ enum ChapterTranslationStatus {
   @@map("chapter_translation_status")
 }
 
+enum TranslationReviewStatus {
+  PENDING            @map("pending")
+  APPROVED           @map("approved")
+  REJECTED           @map("rejected")
+  REVISION_REQUESTED @map("revision_requested")
+
+  @@map("translation_review_status")
+}
+
+enum AiJobType {
+  CHAPTER_TRANSLATION  @map("chapter_translation")
+  CHAPTER_SUMMARY      @map("chapter_summary")
+  STORY_SUMMARY        @map("story_summary")
+  CHARACTER_EXTRACTION @map("character_extraction")
+  CONSISTENCY_CHECK    @map("consistency_check")
+
+  @@map("ai_job_type")
+}
+
+enum AiJobStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+  CANCELLED  @map("cancelled")
+
+  @@map("ai_job_status")
+}
+
 enum AccountDeletionStatus {
   REQUESTED @map("requested")
   CANCELED  @map("canceled")
@@ -618,6 +647,7 @@ model User {
   aiStoryProfiles              AiStoryProfile[]
   aiRateLimitBuckets           AiRateLimitBucket[]
   chapterTranslationsRequested ChapterTranslation[]
+  aiAuthorJobs                 AiAuthorJob[]
   wallets                      Wallet[]
   chapterPurchases             ChapterPurchase[]
   chapterPurchasesRefunded     ChapterPurchase[]          @relation("ChapterPurchaseRefundedBy")
@@ -1273,6 +1303,14 @@ model AiRateLimitBucket {
 }
 
 model ChapterTranslation {
+  sourceVersion      Int?                     @map("source_version")
+  generation         Int                      @default(1)
+  leaseToken         String?                  @map("lease_token") @db.Uuid
+  leaseExpiresAt     DateTime?                @map("lease_expires_at") @db.Timestamptz(3)
+  reviewStatus       TranslationReviewStatus  @default(PENDING) @map("review_status")
+  revisionNotes      String?                  @map("revision_notes") @db.VarChar(2000)
+  reviewedById       String?                  @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?                @map("reviewed_at") @db.Timestamptz(3)
   id                 String                   @id @default(uuid()) @db.Uuid
   chapterId          String                   @map("chapter_id") @db.Uuid
   targetLanguageCode String                   @map("target_language_code") @db.VarChar(10)
@@ -1294,6 +1332,80 @@ model ChapterTranslation {
   @@unique([chapterId, targetLanguageCode])
   @@index([status])
   @@map("chapter_translations")
+}
+
+model AiAuthorJob {
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @map("user_id") @db.Uuid
+  storyId        String      @map("story_id") @db.Uuid
+  chapterId      String?     @map("chapter_id") @db.Uuid
+  connectionId   String      @map("connection_id") @db.Uuid
+  jobType        AiJobType   @map("job_type")
+  status         AiJobStatus @default(PENDING)
+  sourceSnapshot Json        @map("source_snapshot") @db.JsonB
+  result         Json?       @db.JsonB
+  inputTokens    Int?        @map("input_tokens")
+  outputTokens   Int?        @map("output_tokens")
+  totalCost      Decimal?    @map("total_cost") @db.Decimal(12, 6)
+  protocol       String?     @db.VarChar(60)
+  model          String?     @db.VarChar(255)
+  failureReason  String?     @map("failure_reason") @db.VarChar(500)
+  retryCount     Int         @default(0) @map("retry_count")
+  leaseToken     String?     @map("lease_token") @db.Uuid
+  leaseExpiresAt DateTime?   @map("lease_expires_at") @db.Timestamptz(3)
+  startedAt      DateTime?   @map("started_at") @db.Timestamptz(3)
+  completedAt    DateTime?   @map("completed_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story          Story       @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter        Chapter?    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([storyId, jobType])
+  @@index([chapterId, jobType])
+  @@index([status, createdAt])
+  @@map("ai_author_jobs")
+}
+
+model StoryCharacter {
+  id              String   @id @default(uuid()) @db.Uuid
+  storyId         String   @map("story_id") @db.Uuid
+  name            String   @db.VarChar(255)
+  aliases         String[] @default([])
+  description     String?  @db.Text
+  firstAppearance String?  @map("first_appearance") @db.Uuid
+  appearances     Json?    @db.JsonB
+  relationships   Json?    @db.JsonB
+  extractedBy     String?  @map("extracted_by") @db.Uuid
+  isVerified      Boolean  @default(false) @map("is_verified")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  story           Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, name])
+  @@index([storyId])
+  @@map("story_characters")
+}
+
+model ChapterConsistencyIssue {
+  id                String   @id @default(uuid()) @db.Uuid
+  chapterId         String   @map("chapter_id") @db.Uuid
+  sourceVersion     Int      @map("source_version")
+  issueType         String   @map("issue_type") @db.VarChar(50)
+  severity          String   @db.VarChar(20)
+  description       String   @db.Text
+  suggestion        String?  @db.Text
+  blockId           String?  @map("block_id") @db.Uuid
+  relatedChapterIds String[] @default([]) @map("related_chapter_ids")
+  detectedBy        String   @map("detected_by") @db.Uuid
+  isDismissed       Boolean  @default(false) @map("is_dismissed")
+  isResolved        Boolean  @default(false) @map("is_resolved")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  chapter           Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, isDismissed, isResolved])
+  @@map("chapter_consistency_issues")
 }
 
 model RecoveryEmail {
@@ -1776,6 +1888,8 @@ model Story {
   dailyStats                StoryDailyStat[]
   analyticsEvents           ReaderAnalyticsEvent[]
   revenueAgreements         RevenueShareAgreement[]
+  aiAuthorJobs              AiAuthorJob[]
+  characters                StoryCharacter[]
 
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])
@@ -1891,20 +2005,20 @@ model Chapter {
   updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  story             Story                   @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  createdBy         User                    @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy         User                    @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  story             Story                     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdBy         User                      @relation("ChapterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy         User                      @relation("ChapterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   versions          ChapterVersion[]
   reviews           ChapterReview[]
   editSessions      ChapterEditSession[]
   media             ChapterMedia[]
   comments          Comment[]
-  lastReadEntries   LibraryEntry[]          @relation("LibraryLastReadChapter")
-  currentProgress   ReadingProgress[]       @relation("CurrentProgressChapter")
+  lastReadEntries   LibraryEntry[]            @relation("LibraryLastReadChapter")
+  currentProgress   ReadingProgress[]         @relation("CurrentProgressChapter")
   readingSessions   ReadingSession[]
   readingBookmarks  ReadingBookmark[]
-  reports           Report[]                @relation("ChapterReports")
-  moderationActions ModerationAction[]      @relation("ModerationChapter")
+  reports           Report[]                  @relation("ChapterReports")
+  moderationActions ModerationAction[]        @relation("ModerationChapter")
   dailyStats        ChapterDailyStat[]
   analyticsEvents   ReaderAnalyticsEvent[]
   translations      ChapterTranslation[]
@@ -1914,6 +2028,8 @@ model Chapter {
   entitlements      ChapterEntitlement[]
   commentAnchors    CommentAnchor[]
   ttsManifests      TtsManifest[]
+  aiAuthorJobs      AiAuthorJob[]
+  consistencyIssues ChapterConsistencyIssue[]
 
   @@unique([storyId, number])
   @@unique([storyId, slug])

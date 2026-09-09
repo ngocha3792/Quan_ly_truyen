@@ -3,6 +3,7 @@ export const CHAPTER_TRANSLATION_QUEUE_PORT = Symbol.for(
 );
 
 export interface EnqueueChapterTranslationInput {
+  readonly generation?: number;
   readonly translationId: string;
   readonly chapterId: string;
   readonly targetLanguageCode: string;

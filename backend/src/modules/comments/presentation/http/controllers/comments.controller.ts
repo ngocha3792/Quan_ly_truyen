@@ -171,9 +171,6 @@ export class CommentsController {
         reason: request.reason,
         description: request.description,
         ipAddress,
-        anchorBlockId: request.anchorBlockId,
-        anchorQuote: request.anchorQuote,
-        chapterVersion: request.chapterVersion,
       }),
     );
   }

@@ -318,6 +318,9 @@ jobs:
       - name: Comments integration
         run: npm run test:comments:integration
 
+      - name: AI author tools and translation review integration
+        run: npm run test:ai:integration
+
       - name: General API E2E
         run: npm run test:e2e
 

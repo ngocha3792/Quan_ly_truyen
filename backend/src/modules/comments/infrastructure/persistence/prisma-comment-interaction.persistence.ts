@@ -37,6 +37,10 @@ import type {
   ReactionSummaryView,
   ReportReasonName,
 } from '../../application/dto/comment.models';
+import {
+  assertInlineThreadAccess,
+  findThreadAnchor,
+} from './comment-thread-context';
 
 const REACTION_NAMES: readonly ReactionName[] = [
   'LIKE',
@@ -107,11 +111,16 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
     });
     if (!parentContext)
       throw new CommentNotFoundException(input.parentCommentId);
+    const anchorContext = await findThreadAnchor(
+      this.prisma,
+      input.parentCommentId,
+    );
 
     const body = await this.writeAbuse.prepare({
       userId: input.userId,
       storyId: parentContext.storyId,
       chapterId: parentContext.chapterId,
+      anchorBlockId: anchorContext?.startBlockId,
       body: input.body,
       ipAddress: input.ipAddress,
     });
@@ -121,6 +130,13 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
       if (!parent) throw new CommentNotFoundException(input.parentCommentId);
       if (parent.moderationStatus !== 'visible' || parent.deletedAt) {
         throw new CommentNotReplyableException();
+      }
+      if (anchorContext) {
+        await assertInlineThreadAccess(
+          tx,
+          input.userId,
+          anchorContext.chapterId,
+        );
       }
 
       let depth: 1 | 2;
@@ -487,11 +503,21 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
           },
         });
         if (!current) throw new CommentNotFoundException(input.commentId);
+        const anchor = await findThreadAnchor(tx, current.id);
+        const chapter = current.chapterId
+          ? await tx.chapter.findUnique({
+              where: { id: current.chapterId },
+              select: { version: true },
+            })
+          : null;
         return tx.report.create({
           data: {
             reporterId: input.userId,
             targetType: ReportTargetType.COMMENT,
             commentId: current.id,
+            reportedUserId: current.userId,
+            storyId: current.storyId,
+            chapterId: current.chapterId,
             reason,
             description,
             evidence: {
@@ -504,16 +530,24 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
                 moderationStatus: current.moderationStatus,
               },
               context: {
+                source: 'SERVER',
                 storyId: current.storyId,
                 chapterId: current.chapterId,
-                anchor:
-                  input.anchorBlockId || input.anchorQuote
-                    ? {
-                        blockId: input.anchorBlockId ?? null,
-                        quote: input.anchorQuote ?? null,
-                        chapterVersion: input.chapterVersion ?? null,
-                      }
-                    : null,
+                chapterVersion: chapter?.version ?? null,
+                // Immutable, server-derived evidence. Never trust client snapshots.
+                anchor: anchor
+                  ? {
+                      blockId: anchor.startBlockId,
+                      endBlockId: anchor.endBlockId,
+                      startOffset: anchor.startOffset,
+                      endOffset: anchor.endOffset,
+                      quote: anchor.quoteText.slice(0, 500),
+                      chapterVersion: anchor.chapterVersion,
+                      lastVerifiedVersion: anchor.lastVerifiedVersion,
+                      status: anchor.status,
+                      rootCommentId: anchor.rootCommentId,
+                    }
+                  : null,
               },
             },
           },

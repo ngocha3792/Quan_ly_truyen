@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   COMMENT_ABUSE_GUARD_PORT,
   type CommentAbuseGuardPort,
@@ -17,17 +18,33 @@ export class CommentWriteGuardAdapter implements CommentWriteGuardPort {
     private readonly recentComments: RecentCommentReaderPort,
     @Inject(COMMENT_ABUSE_GUARD_PORT)
     private readonly limiter: CommentAbuseGuardPort,
+    private readonly config: ConfigService,
   ) {}
+
+  validateBody(value: string): string {
+    const body = CommentPolicy.validateBody(value, this.limiter.maxLinks);
+    CommentPolicy.assertNotBlacklisted(
+      body,
+      (this.config.get<string>('COMMENT_BLACKLIST_TERMS') ?? '').split(
+        /[,;\n]/,
+      ),
+    );
+    return body;
+  }
 
   async prepare(input: {
     userId: string;
     storyId: string;
     chapterId?: string | null;
+    anchorBlockId?: string;
     body: string;
     ipAddress?: string;
   }): Promise<string> {
-    const body = CommentPolicy.validateBody(input.body, this.limiter.maxLinks);
-    await this.limiter.consume('comment-write', input.userId, input.ipAddress);
+    const body = this.validateBody(input.body);
+    await this.limiter.consume('comment-write', input.userId, input.ipAddress, {
+      chapterId: input.chapterId,
+      anchorBlockId: input.anchorBlockId,
+    });
 
     const from = new Date(
       Date.now() - this.limiter.duplicateWindowSeconds * 1000,

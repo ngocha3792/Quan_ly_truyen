@@ -46,6 +46,7 @@ export class CreateAnchoredCommentCommandHandler {
       userId,
       storyId: command.storyId,
       chapterId: command.chapterId,
+      anchorBlockId: command.anchor.startBlockId,
       body: command.body,
       ipAddress: command.ipAddress,
     });
