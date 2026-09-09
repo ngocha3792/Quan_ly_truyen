@@ -4,15 +4,15 @@
 :host {
   display: block;
 
-  --analytics-surface: #11161b;
-  --analytics-surface-raised: #161c22;
-  --analytics-border: #29323a;
-  --analytics-grid-line: #2a333b;
-  --analytics-cyan: #67e8f9;
-  --analytics-teal: #5eead4;
-  --analytics-amber: #fbbf24;
-  --analytics-rose: #fb7185;
-  --analytics-purple: #c084fc;
+  --analytics-surface: var(--surface-card);
+  --analytics-surface-raised: var(--surface-elevated);
+  --analytics-border: var(--border);
+  --analytics-grid-line: var(--border);
+  --analytics-cyan: var(--info);
+  --analytics-teal: var(--primary-soft);
+  --analytics-amber: var(--warning);
+  --analytics-rose: var(--danger);
+  --analytics-purple: var(--primary-soft);
 }
 
 .analytics-page {
@@ -31,10 +31,10 @@ app-tab-filter {
   --tab-padding: 0 15px;
   --tab-border: 1px solid var(--analytics-border);
   --tab-background: var(--analytics-surface);
-  --tab-hover-border-color: rgba(103, 232, 249, 0.45);
-  --tab-active-border-color: rgba(103, 232, 249, 0.5);
-  --tab-active-background: #155e75;
-  --tab-active-shadow: none;
+  --tab-hover-border-color: var(--primary-border);
+  --tab-active-border-color: var(--primary-border);
+  --tab-active-background: var(--primary-gradient);
+  --tab-active-shadow: var(--shadow-primary);
 }
 
 @media (max-width: 640px) {

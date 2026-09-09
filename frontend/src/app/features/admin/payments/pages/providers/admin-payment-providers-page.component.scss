@@ -7,11 +7,11 @@
 }
 
 .payment-providers-page {
-  --payment-panel: #0d1421;
-  --payment-field: #080f1b;
-  --payment-border: rgba(148, 163, 184, 0.16);
-  --payment-teal: #4fd1b5;
-  --payment-amber: #f1bc65;
+  --payment-panel: var(--surface-card);
+  --payment-field: rgba(6, 11, 22, 0.62);
+  --payment-border: var(--border);
+  --payment-teal: var(--success);
+  --payment-amber: var(--warning);
 }
 
 .review-link {

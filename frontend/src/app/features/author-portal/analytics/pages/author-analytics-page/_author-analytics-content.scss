@@ -2,7 +2,7 @@
   min-width: 0;
   padding: 1.25rem;
   border: 1px solid var(--analytics-border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--analytics-surface);
 }
 
@@ -32,7 +32,7 @@
   flex: 0 0 auto;
   gap: 0.45rem;
   padding-top: 0.15rem;
-  color: #aab4bd;
+  color: var(--text-secondary);
   font-size: 0.78rem;
   white-space: nowrap;
 }

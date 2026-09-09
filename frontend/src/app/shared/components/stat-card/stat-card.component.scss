@@ -20,12 +20,9 @@
 
   border: var(--stat-border, 1px solid var(--border));
 
-  border-radius: var(--stat-radius, 12px);
+  border-radius: var(--stat-radius, var(--radius-card));
 
-  background: var(
-    --stat-background,
-    linear-gradient(145deg, rgba(17, 25, 44, 0.98), rgba(10, 16, 31, 0.98))
-  );
+  background: var(--stat-background, var(--surface-card));
 
   box-shadow: var(--stat-shadow, none);
 }
@@ -43,7 +40,7 @@
 
   border-radius: var(--stat-icon-radius, 11px);
 
-  color: #bd7ffa;
+  color: var(--primary-soft);
 
   background: rgba(125, 61, 204, 0.2);
 }

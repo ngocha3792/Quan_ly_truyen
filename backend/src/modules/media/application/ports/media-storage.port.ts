@@ -51,6 +51,7 @@ export interface BuildMediaUrlInput {
   preferredFormat?: 'avif' | 'webp' | 'jpg';
   slice?: { readonly offsetY: number; readonly height: number };
   requiresSigning?: boolean;
+  watermarkText?: string;
 }
 
 export interface MediaStoragePort {

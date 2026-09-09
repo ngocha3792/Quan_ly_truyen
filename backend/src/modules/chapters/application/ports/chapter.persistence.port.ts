@@ -127,6 +127,7 @@ export interface UpdateAuthorChapterInput {
   readonly title?: string;
 
   readonly content?: string;
+  readonly expectedVersion?: number;
 
   readonly wordCount?: number;
 
@@ -149,6 +150,10 @@ export type UpdateAuthorChapterResult =
     }
   | {
       readonly status: 'story_pending_review';
+    }
+  | {
+      readonly status: 'version_conflict';
+      readonly currentVersion: number;
     };
 
 export interface ListAuthorChapterVersionsInput {

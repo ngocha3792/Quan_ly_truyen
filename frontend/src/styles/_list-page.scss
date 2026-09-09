@@ -4,7 +4,7 @@
 
 .workspace-page {
   min-height: calc(100vh - var(--header-height));
-  padding: 1.25rem 0 4rem;
+  padding: var(--space-5) 0 var(--space-8);
   color: var(--text-strong);
 }
 
@@ -12,7 +12,8 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
-  background: rgba(14, 21, 38, 0.88);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
 }
 
 .list-card__state {
@@ -22,16 +23,16 @@
 .list-card__toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.7rem;
-  padding: 14px 18px;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border);
 }
 
 .list-card__filters {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.7rem;
-  padding: 14px 18px;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border);
 }
 
@@ -39,14 +40,27 @@
 .list-card__filters > select,
 .list-card__toolbar > input,
 .list-card__toolbar > select {
-  min-height: 43px;
-  padding: 0 0.85rem;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: rgba(6, 11, 22, 0.55);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
   color: var(--text-strong);
   font: inherit;
   font-size: 0.9rem;
+  outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.list-card__filters > input:focus,
+.list-card__filters > select:focus,
+.list-card__toolbar > input:focus,
+.list-card__toolbar > select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
 }
 
 .list-card__filters > label {
@@ -60,14 +74,24 @@
 }
 
 .list-card__filters > label > input {
-  min-height: 43px;
-  padding: 0 0.7rem;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: rgba(6, 11, 22, 0.55);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
   color: var(--text-strong);
   font: inherit;
   font-size: 0.85rem;
+  outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.list-card__filters > label > input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
 }
 
 .list-card__table-scroll {
@@ -86,6 +110,14 @@
   border-bottom: 1px solid var(--border);
 }
 
+.list-card tbody tr {
+  transition: background var(--motion-fast);
+}
+
+.list-card tbody tr:hover {
+  background: rgba(197, 143, 255, 0.045);
+}
+
 .list-card th {
   color: var(--text-secondary);
   font-size: 12px;
@@ -97,7 +129,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 16px 18px;
+  padding: var(--space-4) var(--space-5);
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
@@ -109,6 +141,11 @@
 }
 
 @media (max-width: 700px) {
+  .list-card__toolbar,
+  .list-card__filters {
+    padding-inline: var(--space-4);
+  }
+
   .list-card__pagination {
     flex-direction: column;
     align-items: stretch;

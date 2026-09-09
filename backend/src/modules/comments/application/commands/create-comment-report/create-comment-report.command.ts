@@ -7,6 +7,9 @@ export class CreateCommentReportCommand {
       reason: ReportReasonName;
       description?: string;
       ipAddress?: string;
+      anchorBlockId?: string;
+      anchorQuote?: string;
+      chapterVersion?: number;
     },
   ) {}
 }

@@ -4,21 +4,21 @@
 }
 
 .author-page {
-  --author-surface: #0d141e;
-  --author-surface-raised: #111a25;
-  --author-surface-muted: #09111b;
-  --author-border: rgba(148, 163, 184, 0.15);
-  --author-border-strong: rgba(148, 163, 184, 0.25);
-  --author-accent: #38bdf8;
-  --author-accent-soft: #7dd3fc;
-  --author-teal: #2dd4bf;
-  --author-success: #34d399;
-  --author-warm: #fbbf24;
-  --author-brand: #c4b5fd;
+  --author-surface: var(--surface-card);
+  --author-surface-raised: var(--surface-elevated);
+  --author-surface-muted: var(--surface-1);
+  --author-border: var(--border);
+  --author-border-strong: var(--border-strong);
+  --author-accent: var(--info);
+  --author-accent-soft: var(--primary-soft);
+  --author-teal: var(--primary-soft);
+  --author-success: var(--success);
+  --author-warm: var(--warning);
+  --author-brand: var(--primary-soft);
 
   min-height: calc(100vh - 72px);
   padding: 1.25rem 0 4rem;
-  background: #070c14;
+  background: var(--page-bg);
   color: var(--text-strong);
 }
 

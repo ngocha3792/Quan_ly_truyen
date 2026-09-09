@@ -1,7 +1,7 @@
 :host {
   display: block;
   padding: 1.5rem;
-  color: #e5e7eb;
+  color: var(--text-strong);
 }
 
 .page-header,
@@ -25,7 +25,7 @@ h2 {
   font-size: 1.05rem;
 }
 .eyebrow {
-  color: #a78bfa;
+  color: var(--primary-soft);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -34,25 +34,25 @@ h2 {
 .operation-form > div > p:last-child,
 .refund-form > p {
   margin-top: 0.4rem;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 input,
 select,
 textarea,
 button {
-  border: 1px solid #374151;
-  border-radius: 0.65rem;
-  background: #111827;
-  color: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-strong);
   padding: 0.7rem 0.8rem;
   font: inherit;
 }
 
 button {
   cursor: pointer;
-  border-color: #7c3aed;
-  background: #7c3aed;
+  border-color: transparent;
+  background: var(--primary-gradient);
   font-weight: 700;
 }
 button:disabled {
@@ -60,12 +60,12 @@ button:disabled {
   opacity: 0.55;
 }
 button.secondary {
-  border-color: #4b5563;
+  border-color: var(--border-strong);
   background: transparent;
 }
 button.danger {
-  border-color: #dc2626;
-  background: #dc2626;
+  border-color: transparent;
+  background: var(--danger);
 }
 .search {
   display: flex;
@@ -79,21 +79,21 @@ button.danger {
 .panel,
 .metric-grid article {
   margin-top: 1rem;
-  border: 1px solid #263244;
-  border-radius: 0.9rem;
-  background: #101827;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
   padding: 1rem;
 }
 .notice.error {
-  border-color: #7f1d1d;
-  color: #fecaca;
+  border-color: rgba(242, 123, 138, 0.35);
+  color: var(--danger);
 }
 .notice.success {
-  border-color: #14532d;
-  color: #bbf7d0;
+  border-color: rgba(98, 218, 134, 0.35);
+  color: var(--success);
 }
 .loading {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .metric-grid,
@@ -110,13 +110,13 @@ button.danger {
 .metric-grid small,
 .rank-row small,
 td small {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 .metric-grid strong {
   font-size: 1.35rem;
 }
 .metric-grid .net {
-  border-color: #6d28d9;
+  border-color: var(--primary-border);
 }
 
 .rank-row {
@@ -124,7 +124,7 @@ td small {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.7rem 0;
-  border-bottom: 1px solid #263244;
+  border-bottom: 1px solid var(--border);
 }
 .rank-row span,
 td {
@@ -132,7 +132,7 @@ td {
   gap: 0.2rem;
 }
 .rank-row strong {
-  color: #c4b5fd;
+  color: var(--primary-soft);
 }
 
 .operation-form {
@@ -148,7 +148,7 @@ td {
 label {
   display: grid;
   gap: 0.35rem;
-  color: #d1d5db;
+  color: var(--text-secondary);
   font-size: 0.8rem;
 }
 label.reason {
@@ -175,12 +175,12 @@ table {
 th,
 td {
   padding: 0.75rem;
-  border-bottom: 1px solid #263244;
+  border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 th {
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -196,38 +196,38 @@ td small {
 .status {
   width: fit-content;
   border-radius: 999px;
-  background: #374151;
+  background: var(--surface-3);
   padding: 0.2rem 0.5rem;
   font-size: 0.7rem;
 }
 .status.completed,
 .status.paid {
-  background: #14532d;
-  color: #bbf7d0;
+  background: rgba(98, 218, 134, 0.12);
+  color: var(--success);
 }
 
 .status.awaiting_review {
-  color: #fde68a;
+  color: var(--warning);
   background: rgba(245, 158, 11, 0.16);
 }
 .status.refunded,
 .status.reversed {
-  background: #78350f;
-  color: #fde68a;
+  background: rgba(244, 198, 106, 0.12);
+  color: var(--warning);
 }
 .status.failed,
 .status.expired {
-  background: #7f1d1d;
-  color: #fecaca;
+  background: rgba(242, 123, 138, 0.12);
+  color: var(--danger);
 }
 .empty {
   padding: 1rem 0;
-  color: #9ca3af;
+  color: var(--text-muted);
   text-align: center;
 }
 
 .refund-form {
-  border-color: #92400e;
+  border-color: rgba(244, 198, 106, 0.35);
 }
 .refund-form textarea {
   width: 100%;

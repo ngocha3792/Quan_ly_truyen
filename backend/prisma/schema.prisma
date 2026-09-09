@@ -398,6 +398,47 @@ enum ChapterAccessType {
   @@map("chapter_access_type")
 }
 
+enum UnlockPolicy {
+  PERMANENT_PAID @map("permanent_paid")
+  EARLY_ACCESS   @map("early_access")
+
+  @@map("unlock_policy")
+}
+
+enum RevenueShareType {
+  AUTHOR_SHARE
+  PLATFORM_FEE
+  CONTRIBUTOR
+}
+
+enum AllocationStatus {
+  PENDING
+  SETTLED
+  REFUNDED
+}
+
+enum EarningStatus {
+  PENDING
+  AVAILABLE
+  RESERVED
+  PAID
+  FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutMethod {
+  BANK_TRANSFER
+  MOMO
+  ZALOPAY
+}
+
 enum ChapterPurchaseStatus {
   COMPLETED @map("completed")
   REFUNDED  @map("refunded")
@@ -570,6 +611,12 @@ model User {
   ttsManifests                 TtsManifest[]
   ttsUsage                     TtsUsage[]
   ttsQuota                     TtsQuota?
+  revenueAgreementsAsAuthor    RevenueShareAgreement[]    @relation("AgreementAuthor")
+  revenueAgreementsAsCreator   RevenueShareAgreement[]    @relation("AgreementCreator")
+  revenueAllocations           RevenueAllocation[]        @relation("RevenueAllocations")
+  earnings                     AuthorEarningLedger[]
+  payoutAccounts               PayoutAccount[]
+  payoutRequests               PayoutRequest[]
 
   @@index([status, createdAt])
   @@index([deletedAt])
@@ -664,15 +711,19 @@ model MonetizationPriceBand {
 }
 
 model ChapterMonetization {
-  chapterId      String            @id @map("chapter_id") @db.Uuid
-  accessType     ChapterAccessType @default(FREE) @map("access_type")
-  priceBandId    String?           @map("price_band_id") @db.Uuid
-  creditPrice    BigInt?           @map("credit_price")
-  previewContent String?           @map("preview_content") @db.Text
-  version        Int               @default(1)
-  updatedById    String?           @map("updated_by_id") @db.Uuid
-  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  chapterId            String            @id @map("chapter_id") @db.Uuid
+  accessType           ChapterAccessType @default(FREE) @map("access_type")
+  priceBandId          String?           @map("price_band_id") @db.Uuid
+  creditPrice          BigInt?           @map("credit_price")
+  previewContent       String?           @map("preview_content") @db.Text
+  unlockPolicy         UnlockPolicy      @default(PERMANENT_PAID) @map("unlock_policy")
+  freeAt               DateTime?         @map("free_at") @db.Timestamptz(3)
+  paidWindowDays       Int?              @map("paid_window_days")
+  originalPriceCredits BigInt?           @map("original_price_credits")
+  version              Int               @default(1)
+  updatedById          String?           @map("updated_by_id") @db.Uuid
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   chapter   Chapter                @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   priceBand MonetizationPriceBand? @relation(fields: [priceBandId], references: [id], onDelete: Restrict)
@@ -691,6 +742,9 @@ model ChapterPricingVersion {
   priceBandId    String?           @map("price_band_id") @db.Uuid
   creditPrice    BigInt?           @map("credit_price")
   previewContent String?           @map("preview_content") @db.Text
+  unlockPolicy   UnlockPolicy      @default(PERMANENT_PAID) @map("unlock_policy")
+  freeAt         DateTime?         @map("free_at") @db.Timestamptz(3)
+  paidWindowDays Int?              @map("paid_window_days")
   changedById    String            @map("changed_by_id") @db.Uuid
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -726,12 +780,143 @@ model ChapterPurchase {
   refundWalletTransaction WalletLedgerTransaction? @relation("ChapterPurchaseRefund", fields: [refundWalletTransactionId], references: [id], onDelete: Restrict)
   refundedBy              User?                    @relation("ChapterPurchaseRefundedBy", fields: [refundedById], references: [id], onDelete: Restrict)
   entitlement             ChapterEntitlement?
+  revenueAllocations      RevenueAllocation[]
 
   @@index([userId, createdAt, id])
   @@index([chapterId, createdAt])
   @@index([status, createdAt, id], map: "chapter_purchases_status_created_idx")
   @@index([refundedById, refundedAt], map: "chapter_purchases_refunder_refunded_idx")
   @@map("chapter_purchases")
+}
+
+model RevenueShareAgreement {
+  id                String              @id @default(uuid()) @db.Uuid
+  storyId           String              @map("story_id") @db.Uuid
+  version           Int                 @default(1)
+  authorUserId      String              @map("author_user_id") @db.Uuid
+  authorShare       Decimal             @map("author_share") @db.Decimal(5, 4)
+  platformFee       Decimal             @map("platform_fee") @db.Decimal(5, 4)
+  contributorShares Json?               @map("contributor_shares") @db.JsonB
+  effectiveFrom     DateTime            @map("effective_from") @db.Timestamptz(3)
+  effectiveTo       DateTime?           @map("effective_to") @db.Timestamptz(3)
+  createdBy         String              @map("created_by") @db.Uuid
+  approvedBy        String?             @map("approved_by") @db.Uuid
+  approvedAt        DateTime?           @map("approved_at") @db.Timestamptz(3)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  story             Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author            User                @relation("AgreementAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  creator           User                @relation("AgreementCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  allocations       RevenueAllocation[]
+
+  @@unique([storyId, version])
+  @@index([storyId, effectiveFrom, effectiveTo])
+  @@map("revenue_share_agreements")
+}
+
+model RevenueAllocation {
+  id                   String                @id @default(uuid()) @db.Uuid
+  purchaseId           String                @map("purchase_id") @db.Uuid
+  agreementId          String                @map("agreement_id") @db.Uuid
+  recipientUserId      String                @map("recipient_user_id") @db.Uuid
+  allocationType       RevenueShareType      @map("allocation_type")
+  grossAmount          BigInt                @map("gross_amount")
+  shareBasisPoints     Int                   @map("share_basis_points")
+  netAmount            BigInt                @map("net_amount")
+  status               AllocationStatus      @default(PENDING)
+  settledAt            DateTime?             @map("settled_at") @db.Timestamptz(3)
+  isRefund             Boolean               @default(false) @map("is_refund")
+  refundsAllocationId  String?               @unique @map("refunds_allocation_id") @db.Uuid
+  refundedBy           String?               @map("refunded_by") @db.Uuid
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  purchase             ChapterPurchase       @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  agreement            RevenueShareAgreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  recipient            User                  @relation("RevenueAllocations", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  refundsAllocation    RevenueAllocation?    @relation("RefundRelation", fields: [refundsAllocationId], references: [id], onDelete: Restrict)
+  refundedByAllocation RevenueAllocation?    @relation("RefundRelation")
+  earnings             AuthorEarningLedger[]
+
+  @@index([purchaseId])
+  @@index([recipientUserId, status, settledAt])
+  @@map("revenue_allocations")
+}
+
+model AuthorEarningLedger {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  allocationId    String            @map("allocation_id") @db.Uuid
+  amount          BigInt
+  status          EarningStatus     @default(PENDING)
+  settlementDate  DateTime          @map("settlement_date") @db.Timestamptz(3)
+  availableAt     DateTime?         @map("available_at") @db.Timestamptz(3)
+  payoutRequestId String?           @map("payout_request_id") @db.Uuid
+  reservedAt      DateTime?         @map("reserved_at") @db.Timestamptz(3)
+  paidAt          DateTime?         @map("paid_at") @db.Timestamptz(3)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  allocation      RevenueAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  payoutRequest   PayoutRequest?    @relation(fields: [payoutRequestId], references: [id], onDelete: Restrict)
+
+  @@unique([allocationId])
+  @@index([userId, status, availableAt])
+  @@map("author_earning_ledger")
+}
+
+model PayoutAccount {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  method         PayoutMethod
+  bankName       String?         @map("bank_name") @db.VarChar(255)
+  accountNumber  String?         @map("account_number") @db.VarChar(80)
+  accountName    String?         @map("account_name") @db.VarChar(255)
+  walletPhone    String?         @map("wallet_phone") @db.VarChar(20)
+  isVerified     Boolean         @default(false) @map("is_verified")
+  isActive       Boolean         @default(true) @map("is_active")
+  isPrimary      Boolean         @default(false) @map("is_primary")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payoutRequests PayoutRequest[]
+
+  @@index([userId, isActive])
+  @@map("payout_accounts")
+}
+
+model PayoutRequest {
+  id            String                @id @default(uuid()) @db.Uuid
+  userId        String                @map("user_id") @db.Uuid
+  accountId     String                @map("account_id") @db.Uuid
+  grossAmount   BigInt                @map("gross_amount")
+  feeAmount     BigInt                @map("fee_amount")
+  taxAmount     BigInt                @map("tax_amount")
+  netAmount     BigInt                @map("net_amount")
+  status        PayoutStatus          @default(PENDING)
+  providerTxnId String?               @map("provider_txn_id") @db.VarChar(255)
+  failureReason String?               @map("failure_reason") @db.Text
+  processedAt   DateTime?             @map("processed_at") @db.Timestamptz(3)
+  completedAt   DateTime?             @map("completed_at") @db.Timestamptz(3)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  account       PayoutAccount         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  earnings      AuthorEarningLedger[]
+  batch         PayoutBatch?          @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  batchId       String?               @map("batch_id") @db.Uuid
+
+  @@index([userId, status, createdAt])
+  @@map("payout_requests")
+}
+
+model PayoutBatch {
+  id            String          @id @default(uuid()) @db.Uuid
+  batchNumber   String          @unique @map("batch_number") @db.VarChar(80)
+  totalRequests Int             @map("total_requests")
+  totalAmount   BigInt          @map("total_amount")
+  status        PayoutStatus    @default(PENDING)
+  processedBy   String?         @map("processed_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  requests      PayoutRequest[]
+
+  @@index([status, createdAt])
+  @@map("payout_batches")
 }
 
 model ChapterEntitlement {
@@ -1570,6 +1755,7 @@ model Story {
   moderationActions         ModerationAction[]         @relation("ModerationStory")
   dailyStats                StoryDailyStat[]
   analyticsEvents           ReaderAnalyticsEvent[]
+  revenueAgreements         RevenueShareAgreement[]
 
   @@index([authorId, status, updatedAt])
   @@index([status, visibility, publishedAt])

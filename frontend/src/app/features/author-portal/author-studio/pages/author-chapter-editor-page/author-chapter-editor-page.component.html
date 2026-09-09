@@ -36,6 +36,19 @@
         <div class="content-field">
           <span class="content-toolbar">
             <span>Nội dung Markdown</span>
+            @if (!isCreate) {
+              <span class="autosave-status autosave-status--{{ store.autosaveStatus() }}">
+                {{
+                  store.autosaveStatus() === 'saving'
+                    ? 'Đang lưu tự động...'
+                    : store.autosaveStatus() === 'saved'
+                      ? 'Đã lưu tự động'
+                      : store.autosaveStatus() === 'conflict'
+                        ? 'Có xung đột phiên bản'
+                        : ''
+                }}
+              </span>
+            }
             @if (!isCreate && isEditable()) {
               <label class="image-upload-action">
                 <app-icon name="camera" [size]="15" />

@@ -23,6 +23,9 @@ export interface ChapterMonetizationRecord {
   readonly priceBandId: string | null;
   readonly creditPrice: bigint | null;
   readonly previewContent: string | null;
+  readonly unlockPolicy: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt: Date | null;
+  readonly paidWindowDays: number | null;
   readonly version: number;
   readonly updatedAt: Date;
 }
@@ -110,6 +113,9 @@ export interface SetChapterMonetizationInput {
   readonly chapterId: string;
   readonly accessType: ChapterAccessTypeName;
   readonly priceBandId?: string;
+  readonly unlockPolicy?: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt?: Date;
+  readonly paidWindowDays?: number;
   readonly ipAddress?: string;
   readonly userAgent?: string;
   readonly requestId?: string;

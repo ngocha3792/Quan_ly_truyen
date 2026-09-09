@@ -10,8 +10,7 @@
 
   color: var(--text-strong);
 
-  background:
-    radial-gradient(circle at 10% 5%, rgba(103, 44, 204, 0.08), transparent 480px), #060b16;
+  background: var(--page-bg);
 }
 
 .library-layout {
@@ -32,7 +31,7 @@
   font-size: 13.5px;
 
   strong {
-    color: #c281ff;
+    color: var(--primary-soft);
     font-weight: 650;
   }
 }

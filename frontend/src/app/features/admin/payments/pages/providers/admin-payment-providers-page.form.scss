@@ -2,7 +2,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--payment-border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--payment-panel);
 }
 
@@ -20,7 +20,7 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: var(--payment-teal);
   background: rgba(79, 209, 181, 0.1);
 }
@@ -54,7 +54,7 @@ textarea {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--payment-border);
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: var(--text-strong);
   background: var(--payment-field);
   font: inherit;

@@ -124,6 +124,7 @@ export interface AuthorStoryUpdateInput extends AuthorStoryDraftInput {
 export interface AuthorChapterDraftInput {
   readonly title: string;
   readonly content: string;
+  readonly expectedVersion?: number;
 }
 
 export interface MonetizationPriceBand {

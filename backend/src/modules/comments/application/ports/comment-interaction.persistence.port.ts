@@ -12,6 +12,9 @@ export interface CommentInteractionPersistencePort {
     parentCommentId: string;
     body: string;
     ipAddress?: string;
+    anchorBlockId?: string;
+    anchorQuote?: string;
+    chapterVersion?: number;
   }): Promise<CommentView>;
   listReplies(
     rootCommentId: string,

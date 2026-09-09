@@ -12,6 +12,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { BreadcrumbComponent } from '../../../../../shared/components/breadcrumb/breadcrumb.component';
@@ -21,6 +22,7 @@ import { LoadingStateComponent } from '../../../../../shared/components/loading-
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
+import { ChapterLocalRecoveryService } from '../../data-access/chapter-local-recovery.service';
 import { AiStoryProfileStore } from '../../chapter-translation/data-access/ai-story-profile.store';
 import { ChapterTranslationStore } from '../../chapter-translation/data-access/chapter-translation.store';
 import { provideChapterTranslation } from '../../chapter-translation/data-access/chapter-translation.providers';
@@ -50,6 +52,7 @@ import { ChapterTranslationPanelComponent } from '../../chapter-translation/ui/c
     provideChapterTranslation(),
     ChapterTranslationStore,
     AiStoryProfileStore,
+    ChapterLocalRecoveryService,
   ],
   templateUrl: './author-chapter-editor-page.component.html',
   styleUrls: [
@@ -68,6 +71,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly recovery = inject(ChapterLocalRecoveryService);
 
   protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
   private readonly chapterId = this.route.snapshot.paramMap.get('chapterId');
@@ -121,6 +125,25 @@ export class AuthorChapterEditorPageComponent implements OnInit {
         this.pricingForm.markAsPristine();
       }
     });
+    this.form.valueChanges
+      .pipe(
+        debounceTime(2500),
+        map((value) => ({ title: value.title?.trim() ?? '', content: value.content ?? '' })),
+        distinctUntilChanged(
+          (left, right) => left.title === right.title && left.content === right.content,
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((draft) => {
+        if (!this.chapterId || !this.isEditable() || !this.form.dirty || this.store.saving())
+          return;
+        void this.recovery.save({ chapterId: this.chapterId, ...draft });
+        const version = this.store.chapter()?.version;
+        if (version)
+          this.store
+            .autosave(this.storyId, this.chapterId, { ...draft, expectedVersion: version })
+            .subscribe();
+      });
   }
 
   ngOnInit(): void {
@@ -187,7 +210,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong']),
+        next: () => {
+          if (this.chapterId) void this.recovery.clear(this.chapterId);
+          void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong']);
+        },
         error: (error: unknown) => this.store.setError(error),
       });
   }

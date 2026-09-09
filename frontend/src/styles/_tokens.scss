@@ -6,11 +6,15 @@
   --surface-1: #0c1120;
   --surface-2: #11182a;
   --surface-3: #171e31;
+  --surface-card: rgba(14, 21, 38, 0.88);
+  --surface-card-solid: #0e1526;
+  --surface-elevated: rgba(20, 28, 48, 0.94);
   --surface-header: rgba(5, 9, 20, 0.86);
   --surface-overlay: rgba(2, 5, 14, 0.78);
   --surface-popover: rgba(12, 17, 32, 0.98);
   --border: rgba(132, 145, 179, 0.12);
   --border-strong: rgba(139, 151, 190, 0.18);
+  --border-focus: rgba(197, 143, 255, 0.72);
 
   // Content and accents
   --text-strong: #f3f1fa;
@@ -18,8 +22,15 @@
   --text-muted: #747d91;
   --text-on-accent: #fff;
   --primary: #8c4de8;
+  --primary-hover: #a263f2;
+  --primary-active: #7134cf;
+  --primary-border: rgba(197, 143, 255, 0.38);
   --primary-soft: #c58fff;
   --primary-gradient: linear-gradient(90deg, #d36cff, #7350ff);
+  --success: #62da86;
+  --warning: #f4c66a;
+  --danger: #f27b8a;
+  --info: #7eb5ff;
 
   // Shared layout and interaction
   --container: 1490px;
@@ -27,7 +38,21 @@
   --header-height: 72px;
   --header-height-compact: 64px;
   --control-height: 42px;
+  --control-height-sm: 36px;
+  --control-height-lg: 48px;
   --radius-panel: 14px;
+  --radius-card: 12px;
+  --radius-control: 9px;
+  --radius-sm: 6px;
   --radius-pill: 999px;
+  --shadow-panel: 0 18px 45px rgba(0, 0, 0, 0.22);
+  --shadow-primary: 0 10px 26px rgba(115, 80, 255, 0.28);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
   --motion-fast: 0.2s ease;
 }

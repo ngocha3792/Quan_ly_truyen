@@ -6,7 +6,7 @@
 .search-field {
   width: 100%;
 
-  min-height: var(--search-min-height, 43px);
+  min-height: var(--search-min-height, var(--control-height));
 
   display: flex;
   align-items: center;
@@ -15,13 +15,13 @@
 
   padding: var(--search-padding, 0 13px);
 
-  border: var(--search-border, 1px solid rgba(132, 145, 177, 0.18));
+  border: var(--search-border, 1px solid var(--border));
 
-  border-radius: var(--search-radius, 8px);
+  border-radius: var(--search-radius, var(--radius-control));
 
   color: var(--search-icon-color, #737d92);
 
-  background: var(--search-background, rgba(5, 10, 21, 0.46));
+  background: var(--search-background, rgba(6, 11, 22, 0.62));
 
   transition:
     border-color 160ms ease,
@@ -30,7 +30,7 @@
 }
 
 .search-field:focus-within {
-  border-color: var(--search-focus-border-color, rgba(168, 85, 247, 0.42));
+  border-color: var(--search-focus-border-color, var(--border-focus));
 
   box-shadow: var(--search-focus-shadow, 0 0 0 3px rgba(126, 34, 206, 0.09));
 }

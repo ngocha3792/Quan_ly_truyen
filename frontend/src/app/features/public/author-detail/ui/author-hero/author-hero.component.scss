@@ -13,7 +13,7 @@
   overflow: hidden;
   padding: 1.5rem 1.75rem;
   border: 1px solid var(--author-border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--author-surface-raised);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
   isolation: isolate;
@@ -203,7 +203,7 @@
   justify-content: center;
   gap: 8px;
   padding: 0 18px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   font-size: 0.85rem;
   font-weight: 650;
 }

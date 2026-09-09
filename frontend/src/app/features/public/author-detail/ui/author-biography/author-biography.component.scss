@@ -6,7 +6,7 @@
   margin-top: 0;
   padding: 1.25rem;
   border: 1px solid var(--author-border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--author-surface);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
 }

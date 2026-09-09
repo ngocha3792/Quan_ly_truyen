@@ -37,6 +37,7 @@ export function toChapterMonetizationResult(
   return {
     ...record,
     creditPrice: record.creditPrice?.toString() ?? null,
+    freeAt: record.freeAt?.toISOString() ?? null,
     updatedAt: record.updatedAt.toISOString(),
   };
 }

@@ -8,6 +8,7 @@ import {
   ChapterDraftOnlyMutationException,
   ChapterStoryPendingReviewException,
   ChapterNotFoundException,
+  ChapterVersionConflictException,
   ChapterTitleValueObject,
   countChapterWords,
 } from '../../../domain';
@@ -59,6 +60,8 @@ export class UpdateAuthorChapterCommandHandler {
         return ChapterResultMapper.toDto(result.chapter);
       case 'story_pending_review':
         throw new ChapterStoryPendingReviewException();
+      case 'version_conflict':
+        throw new ChapterVersionConflictException(result.currentVersion);
       case 'not_draft':
         throw new ChapterDraftOnlyMutationException();
       case 'not_found':

@@ -29,6 +29,11 @@ export class SetChapterMonetizationCommandHandler {
       chapterId: command.chapterId,
       accessType: command.accessType,
       ...(command.priceBandId ? { priceBandId: command.priceBandId } : {}),
+      ...(command.unlockPolicy ? { unlockPolicy: command.unlockPolicy } : {}),
+      ...(command.freeAt ? { freeAt: command.freeAt } : {}),
+      ...(command.paidWindowDays
+        ? { paidWindowDays: command.paidWindowDays }
+        : {}),
       ...(command.ipAddress ? { ipAddress: command.ipAddress } : {}),
       ...(command.userAgent ? { userAgent: command.userAgent } : {}),
       ...(command.requestId ? { requestId: command.requestId } : {}),

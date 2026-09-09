@@ -39,6 +39,12 @@ input {
   font-family: inherit;
 }
 button,
+input,
+select,
+textarea {
+  font-size: 0.9375rem;
+}
+button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
@@ -51,8 +57,62 @@ img {
   background: rgba(139, 76, 230, 0.55);
 }
 :focus-visible {
-  outline: 2px solid var(--primary-soft);
+  outline: 2px solid var(--border-focus);
   outline-offset: 3px;
+}
+
+/* Shared visual primitives. Prefer these classes in feature templates so
+   pages keep the same surface, field, and spacing language. */
+.ui-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
+}
+
+.ui-field {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  outline: none;
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-strong);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+textarea.ui-field {
+  min-height: 7rem;
+  padding-block: 0.75rem;
+  resize: vertical;
+}
+
+.ui-field::placeholder {
+  color: var(--text-muted);
+}
+
+.ui-field:hover {
+  border-color: var(--border-strong);
+}
+
+.ui-field:focus {
+  border-color: var(--border-focus);
+  background: rgba(10, 15, 29, 0.82);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
+}
+
+.ui-muted {
+  color: var(--text-muted);
+}
+
+.ui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 .page-container {
   width: min(100%, calc(var(--container) + var(--page-padding) * 2));

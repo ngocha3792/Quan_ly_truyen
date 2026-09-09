@@ -29,6 +29,15 @@ export class CloudinaryUrlAdapter implements MediaUrlPort {
     if (input.preferredFormat) {
       transformation.push({ fetch_format: input.preferredFormat });
     }
+    if (input.watermarkText)
+      transformation.push({
+        overlay: `text:Arial_12:${input.watermarkText}`,
+        opacity: 30,
+        gravity: 'south_east',
+        x: 10,
+        y: 10,
+        color: '#FFFFFF',
+      });
 
     if (input.resourceType === 'video') {
       return this.cloudinary.url(input.publicId, {

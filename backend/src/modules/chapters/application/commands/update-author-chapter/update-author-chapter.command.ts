@@ -15,5 +15,6 @@ export class UpdateAuthorChapterCommand {
     readonly userAgent: string | undefined,
 
     readonly requestId: string | undefined,
+    readonly expectedVersion: number | undefined = undefined,
   ) {}
 }

@@ -179,6 +179,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
               priceBandId: true,
               creditPrice: true,
               previewContent: true,
+              unlockPolicy: true,
+              freeAt: true,
+              paidWindowDays: true,
               version: true,
               updatedAt: true,
             },
@@ -198,6 +201,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           priceBandId: null,
           creditPrice: null,
           previewContent: null,
+          unlockPolicy: 'PERMANENT_PAID',
+          freeAt: null,
+          paidWindowDays: null,
           version: 0,
           updatedAt: chapter.updatedAt,
         }
@@ -267,6 +273,17 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             priceBandId: priceBand?.id ?? null,
             creditPrice,
             previewContent,
+            unlockPolicy: input.unlockPolicy ?? 'PERMANENT_PAID',
+            freeAt:
+              input.unlockPolicy === 'EARLY_ACCESS'
+                ? (input.freeAt ?? null)
+                : null,
+            paidWindowDays:
+              input.unlockPolicy === 'EARLY_ACCESS'
+                ? (input.paidWindowDays ?? null)
+                : null,
+            originalPriceCredits:
+              input.unlockPolicy === 'EARLY_ACCESS' ? creditPrice : null,
             version,
             updatedById: input.actorId,
           },
@@ -275,6 +292,17 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             priceBandId: priceBand?.id ?? null,
             creditPrice,
             previewContent,
+            unlockPolicy: input.unlockPolicy ?? 'PERMANENT_PAID',
+            freeAt:
+              input.unlockPolicy === 'EARLY_ACCESS'
+                ? (input.freeAt ?? null)
+                : null,
+            paidWindowDays:
+              input.unlockPolicy === 'EARLY_ACCESS'
+                ? (input.paidWindowDays ?? null)
+                : null,
+            originalPriceCredits:
+              input.unlockPolicy === 'EARLY_ACCESS' ? creditPrice : null,
             version,
             updatedById: input.actorId,
           },
@@ -284,6 +312,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             priceBandId: true,
             creditPrice: true,
             previewContent: true,
+            unlockPolicy: true,
+            freeAt: true,
+            paidWindowDays: true,
             version: true,
             updatedAt: true,
           },
@@ -296,6 +327,9 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
             priceBandId: row.priceBandId,
             creditPrice: row.creditPrice,
             previewContent: row.previewContent,
+            unlockPolicy: row.unlockPolicy,
+            freeAt: row.freeAt,
+            paidWindowDays: row.paidWindowDays,
             changedById: input.actorId,
           },
         });

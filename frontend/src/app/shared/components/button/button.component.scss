@@ -7,16 +7,18 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 7px;
+  min-height: var(--control-height, 42px);
+  padding: 0 1rem;
+  border-radius: var(--radius-control, 9px);
   font-size: 13.5px;
   font-weight: 650;
   cursor: pointer;
   white-space: nowrap;
   transition:
-    filter 140ms ease,
-    background 140ms ease;
+    filter var(--motion-fast),
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .btn:disabled {
@@ -27,7 +29,7 @@
 .btn-primary {
   border: 0;
   background: var(--primary-gradient, #7c3aed);
-  box-shadow: 0 10px 26px rgba(115, 80, 255, 0.28);
+  box-shadow: var(--shadow-primary);
   color: #fff;
 }
 
@@ -47,7 +49,7 @@
 
 .btn-danger {
   border: 0;
-  background: #b91c1c;
+  background: var(--danger);
   color: #fff;
 }
 
@@ -58,7 +60,7 @@
 .btn-success {
   border: 1px solid rgba(34, 197, 94, 0.25);
   background: rgba(34, 197, 94, 0.12);
-  color: #62da86;
+  color: var(--success);
 }
 
 .btn-success:hover:not(:disabled) {

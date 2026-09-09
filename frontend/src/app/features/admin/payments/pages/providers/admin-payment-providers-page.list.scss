@@ -30,8 +30,8 @@
   padding: 16px;
   border: 1px solid var(--payment-border);
   border-left: 3px solid #738097;
-  border-radius: 8px;
-  background: #0b121e;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
 }
 
 .provider-card--manual {
@@ -88,7 +88,7 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: var(--payment-teal);
   background: rgba(79, 209, 181, 0.1);
 }

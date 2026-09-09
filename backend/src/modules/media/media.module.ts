@@ -23,6 +23,7 @@ import {
   CloudinaryMediaAdapter,
   CloudinarySignatureAdapter,
   CloudinaryUrlAdapter,
+  LeakTokenService,
   CloudinaryWebhookInboxProcessor,
   CloudinaryWebhookMetricsObserver,
   CloudinaryWebhookAdapter,
@@ -45,6 +46,7 @@ import {
     cloudinaryProvider,
     CloudinarySignatureAdapter,
     CloudinaryUrlAdapter,
+    LeakTokenService,
     CloudinaryWebhookAdapter,
     CloudinaryWebhookInboxProcessor,
     CloudinaryWebhookMetricsObserver,
@@ -86,6 +88,7 @@ import {
   exports: [
     MEDIA_STORAGE,
     MEDIA_URL_BUILDER,
+    LeakTokenService,
     CloudinaryUrlAdapter,
     CloudinaryWebhookInboxProcessor,
     CleanupStaleMediaCommandHandler,

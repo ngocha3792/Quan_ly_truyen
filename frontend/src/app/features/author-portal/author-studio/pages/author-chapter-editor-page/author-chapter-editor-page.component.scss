@@ -30,6 +30,21 @@
   gap: 8px;
 }
 .content-toolbar {
+  .autosave-status {
+    margin-left: auto;
+    font-size: 12px;
+    color: #99a6bb;
+  }
+  .autosave-status--saving {
+    color: #e0a84a;
+  }
+  .autosave-status--saved {
+    color: #70c69b;
+  }
+  .autosave-status--conflict,
+  .autosave-status--error {
+    color: #ed7777;
+  }
   display: flex;
   align-items: center;
   justify-content: space-between;

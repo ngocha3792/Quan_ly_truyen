@@ -1,6 +1,6 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
+import { catchError, EMPTY, finalize, forkJoin, Observable, of, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
@@ -36,6 +36,7 @@ export class AuthorChapterEditorStore {
   readonly monetization = signal<AuthorChapterMonetization | null>(null);
   readonly priceBands = signal<readonly MonetizationPriceBand[]>([]);
   readonly monetizationSaving = signal(false);
+  readonly autosaveStatus = signal<'idle' | 'saving' | 'saved' | 'conflict' | 'error'>('idle');
   private readonly historyPageSize = 10;
   private readonly historyPage = signal(0);
 
@@ -191,6 +192,26 @@ export class AuthorChapterEditorStore {
     return request$.pipe(
       tap((chapter: AuthorManagedChapter) => this.chapter.set(chapter)),
       finalize(() => this.saving.set(false)),
+    );
+  }
+
+  autosave(
+    storyId: string,
+    chapterId: string,
+    input: AuthorChapterDraftInput,
+  ): Observable<AuthorManagedChapter> {
+    this.autosaveStatus.set('saving');
+    return this.repository.updateChapter(storyId, chapterId, input).pipe(
+      tap((chapter) => {
+        this.chapter.set(chapter);
+        this.autosaveStatus.set('saved');
+      }),
+      catchError((error: unknown) => {
+        this.autosaveStatus.set(
+          getApiErrorMessage(error).includes('xung đột') ? 'conflict' : 'error',
+        );
+        return EMPTY;
+      }),
     );
   }
 

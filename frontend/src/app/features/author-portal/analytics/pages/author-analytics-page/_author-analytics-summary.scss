@@ -9,16 +9,16 @@
   --stat-min-height: 116px;
   --stat-padding: 16px;
   --stat-gap: 13px;
-  --stat-radius: 8px;
+  --stat-radius: var(--radius-card);
   --stat-background: var(--analytics-surface);
   --stat-border: 1px solid color-mix(in srgb, var(--metric-accent) 24%, var(--analytics-border));
   --stat-icon-size: 44px;
-  --stat-icon-radius: 8px;
-  --stat-label-color: #c7d0d8;
+  --stat-icon-radius: var(--radius-control);
+  --stat-label-color: var(--text-secondary);
   --stat-label-size: 13px;
   --stat-value-size: 23px;
   --stat-value-line-height: 1.25;
-  --stat-description-color: #8f9aa5;
+  --stat-description-color: var(--text-muted);
   --stat-description-size: 11px;
 }
 
@@ -49,7 +49,7 @@
   gap: 1rem;
   padding: 0.95rem 1rem;
   border: 1px solid color-mix(in srgb, var(--analytics-cyan) 28%, var(--analytics-border));
-  border-left: 3px solid #22d3ee;
+  border-left: 3px solid var(--analytics-cyan);
   border-radius: 8px;
   background: var(--analytics-surface);
   color: var(--text-secondary);
@@ -72,7 +72,7 @@
 
 .data-note__updated {
   flex: 0 0 auto;
-  color: #aab4bd;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

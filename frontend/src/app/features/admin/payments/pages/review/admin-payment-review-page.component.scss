@@ -1,6 +1,6 @@
 :host {
   display: block;
-  color: #e5e7eb;
+  color: var(--text-strong);
 }
 header,
 article,
@@ -19,44 +19,61 @@ p {
   margin: 0;
 }
 header p {
-  color: #a78bfa;
+  color: var(--primary-soft);
   font-size: 12px;
 }
 a {
-  color: #c4b5fd;
+  color: var(--primary-soft);
 }
 .orders,
 .review-box {
   padding: 18px;
-  border: 1px solid #293548;
-  border-radius: 12px;
-  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
 }
 article {
   padding: 14px 0;
-  border-bottom: 1px solid #293548;
+  border-bottom: 1px solid var(--border);
 }
 article > div {
   display: grid;
   gap: 4px;
 }
 span {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
 }
 button {
-  min-height: 38px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 7px;
-  color: white;
-  background: #059669;
+  min-height: var(--control-height);
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-on-accent);
+  background: var(--success);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    filter var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-primary);
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 .danger {
-  background: #be123c;
+  background: var(--danger);
 }
 .secondary {
-  background: #334155;
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+  background: var(--surface-2);
 }
 .review-box {
   margin-top: 18px;
@@ -70,14 +87,21 @@ label {
 textarea {
   min-height: 100px;
   padding: 10px;
-  border: 1px solid #475569;
-  border-radius: 7px;
-  color: white;
-  background: #111827;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-strong);
+  background: rgba(6, 11, 22, 0.62);
+  font: inherit;
+  resize: vertical;
+}
+textarea:focus {
+  border-color: var(--border-focus);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
 }
 .error {
   margin-bottom: 12px;
-  color: #fda4af;
+  color: var(--danger);
 }
 @media (max-width: 850px) {
   article,

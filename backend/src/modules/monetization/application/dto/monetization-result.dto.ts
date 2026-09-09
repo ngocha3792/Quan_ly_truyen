@@ -14,6 +14,9 @@ export interface ChapterMonetizationResultDto {
   readonly priceBandId: string | null;
   readonly creditPrice: string | null;
   readonly previewContent: string | null;
+  readonly unlockPolicy: 'PERMANENT_PAID' | 'EARLY_ACCESS';
+  readonly freeAt: string | null;
+  readonly paidWindowDays: number | null;
   readonly version: number;
   readonly updatedAt: string;
 }

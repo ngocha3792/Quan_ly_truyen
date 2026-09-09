@@ -2,11 +2,6 @@
   display: block;
 }
 
-.list-card {
-  border-radius: 8px;
-  background: rgba(12, 18, 32, 0.9);
-}
-
 .status-tabs {
   --tab-min-height: 44px;
   --tab-padding: 0 15px;
@@ -49,8 +44,8 @@
   height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(5, 10, 21, 0.58);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
   color: var(--text-strong);
   color-scheme: dark;
   font: inherit;
@@ -60,9 +55,9 @@
 
 .list-card__filters > .filter-field input:focus,
 .list-card__filters > .filter-field select:focus {
-  border-color: rgba(181, 132, 255, 0.42);
+  border-color: var(--border-focus);
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.08);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
 }
 
 .filter-field--search app-search-field {

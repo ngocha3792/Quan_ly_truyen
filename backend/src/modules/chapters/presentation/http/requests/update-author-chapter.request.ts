@@ -1,4 +1,11 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 import { ChapterDraftPolicy } from '../../../domain';
 
@@ -12,4 +19,9 @@ export class UpdateAuthorChapterRequest {
   @IsOptional()
   @IsString()
   content?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  expectedVersion?: number;
 }

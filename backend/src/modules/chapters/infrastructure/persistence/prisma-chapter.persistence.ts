@@ -153,6 +153,9 @@ const PUBLIC_CHAPTER_READER_METADATA_SELECT = {
       accessType: true,
       creditPrice: true,
       previewContent: true,
+      unlockPolicy: true,
+      freeAt: true,
+      paidWindowDays: true,
     },
   },
 } satisfies Prisma.ChapterSelect;
@@ -553,6 +556,16 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         if (!current) {
           return {
             status: 'not_found',
+          };
+        }
+
+        if (
+          input.expectedVersion !== undefined &&
+          current.version !== input.expectedVersion
+        ) {
+          return {
+            status: 'version_conflict',
+            currentVersion: current.version,
           };
         }
 
@@ -1459,6 +1472,18 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
     // A corrupt paid configuration must never fail open and expose full content.
     const priceCredits = pricing.creditPrice?.toString() ?? '0';
+    const earlyAccessEnded =
+      pricing.unlockPolicy === 'EARLY_ACCESS' &&
+      ((pricing.freeAt && new Date() >= pricing.freeAt) ||
+        (!pricing.freeAt &&
+          pricing.paidWindowDays &&
+          chapter.publishedAt &&
+          new Date() >=
+            new Date(
+              chapter.publishedAt.getTime() +
+                pricing.paidWindowDays * 86_400_000,
+            )));
+    if (earlyAccessEnded) return { state: 'FREE', priceCredits };
     if (!pricing.creditPrice || !pricing.previewContent) {
       return { state: 'LOCKED', priceCredits };
     }

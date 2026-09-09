@@ -1,4 +1,11 @@
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 import {
   CHAPTER_ACCESS_TYPES,
@@ -12,4 +19,9 @@ export class SetChapterMonetizationRequest {
   @IsOptional()
   @IsUUID('4')
   priceBandId?: string;
+
+  @IsOptional() @IsIn(['PERMANENT_PAID', 'EARLY_ACCESS']) unlockPolicy?:
+    'PERMANENT_PAID' | 'EARLY_ACCESS';
+  @IsOptional() @IsDateString() freeAt?: string;
+  @IsOptional() @IsInt() @Min(1) paidWindowDays?: number;
 }

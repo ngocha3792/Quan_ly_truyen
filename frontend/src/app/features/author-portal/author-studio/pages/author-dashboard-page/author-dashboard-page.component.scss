@@ -18,17 +18,17 @@ app-page-heading {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .metric-grid app-stat-card {
   --stat-min-height: 104px;
   --stat-padding: 15px;
   --stat-gap: 12px;
-  --stat-radius: 8px;
-  --stat-background: #0d1421;
+  --stat-radius: var(--radius-card);
+  --stat-background: var(--surface-card);
   --stat-icon-size: 44px;
-  --stat-icon-radius: 8px;
+  --stat-icon-radius: var(--radius-control);
   --stat-label-size: 0.76rem;
   --stat-value-size: 1.35rem;
   --stat-description-size: 0.72rem;

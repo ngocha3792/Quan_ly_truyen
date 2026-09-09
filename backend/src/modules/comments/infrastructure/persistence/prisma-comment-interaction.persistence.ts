@@ -97,6 +97,9 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
     parentCommentId: string;
     body: string;
     ipAddress?: string;
+    anchorBlockId?: string;
+    anchorQuote?: string;
+    chapterVersion?: number;
   }): Promise<CommentView> {
     const parentContext = await this.prisma.comment.findUnique({
       where: { id: input.parentCommentId },
@@ -448,6 +451,9 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
     reason: ReportReasonName;
     description?: string;
     ipAddress?: string;
+    anchorBlockId?: string;
+    anchorQuote?: string;
+    chapterVersion?: number;
   }): Promise<CommentReportView> {
     await this.abuse.consume('report', input.userId, input.ipAddress);
     const reason = this.toReportReason(input.reason);
@@ -500,6 +506,14 @@ export class PrismaCommentInteractionPersistence implements CommentInteractionPe
               context: {
                 storyId: current.storyId,
                 chapterId: current.chapterId,
+                anchor:
+                  input.anchorBlockId || input.anchorQuote
+                    ? {
+                        blockId: input.anchorBlockId ?? null,
+                        quote: input.anchorQuote ?? null,
+                        chapterVersion: input.chapterVersion ?? null,
+                      }
+                    : null,
               },
             },
           },

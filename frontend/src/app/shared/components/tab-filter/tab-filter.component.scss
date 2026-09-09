@@ -29,11 +29,11 @@ button {
 
   flex: var(--tab-flex, 0 0 auto);
 
-  border: var(--tab-border, 1px solid rgba(132, 145, 177, 0.15));
+  border: var(--tab-border, 1px solid var(--border));
 
-  border-radius: var(--tab-radius, 7px);
+  border-radius: var(--tab-radius, var(--radius-control));
 
-  color: var(--tab-color, #969fb0);
+  color: var(--tab-color, var(--text-secondary));
 
   font-size: var(--tab-font-size, 0.85rem);
 
@@ -54,7 +54,7 @@ button {
 button:hover {
   color: var(--tab-hover-color, #e8e5ed);
 
-  border-color: var(--tab-hover-border-color, rgba(155, 92, 238, 0.3));
+  border-color: var(--tab-hover-border-color, var(--primary-border));
 }
 
 button.active {
@@ -62,7 +62,7 @@ button.active {
 
   color: var(--tab-active-color, #fff);
 
-  background: var(--tab-active-background, linear-gradient(135deg, #743bde, #a153eb));
+  background: var(--tab-active-background, var(--primary-gradient));
 
   box-shadow: var(--tab-active-shadow, 0 7px 18px rgba(114, 55, 216, 0.22));
 }

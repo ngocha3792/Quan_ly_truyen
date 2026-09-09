@@ -2,11 +2,6 @@
   display: block;
 }
 
-.list-card {
-  border-radius: 8px;
-  background: rgba(12, 18, 32, 0.9);
-}
-
 .list-card__toolbar.category-filters {
   display: grid;
   grid-template-columns: minmax(240px, 1.1fr) minmax(330px, 1.25fr) minmax(220px, 0.85fr);
@@ -34,8 +29,8 @@
   height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(5, 10, 21, 0.58);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
   color: var(--text-strong);
   color-scheme: dark;
   font: inherit;
@@ -44,9 +39,9 @@
 }
 
 .filter-field select:focus {
-  border-color: rgba(181, 132, 255, 0.42);
+  border-color: var(--border-focus);
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.08);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
 }
 
 .filter-field--search app-search-field {
@@ -85,8 +80,8 @@
   min-height: 43px;
   padding: 9px 11px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(5, 10, 21, 0.58);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
   color: var(--text-strong);
   font: inherit;
 }
