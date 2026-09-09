@@ -228,6 +228,9 @@ describe('VNPAY refund credit reservation integration', () => {
       where: { id: input.orderId },
     });
     const pendingId = randomUUID();
+    // Keep the fixture expired while respecting payment_orders_expiry_check:
+    // expires_at must be strictly after created_at (the DB default is now).
+    const pendingCreatedAt = new Date(Date.now() - 60_000);
     await prisma.paymentOrder.create({
       data: {
         id: pendingId,
@@ -240,7 +243,8 @@ describe('VNPAY refund credit reservation integration', () => {
         fiatAmountMinor: original.fiatAmountMinor,
         currency: 'VND',
         status: 'EXPIRED',
-        expiresAt: new Date(),
+        createdAt: pendingCreatedAt,
+        expiresAt: new Date(pendingCreatedAt.getTime() + 1_000),
         requestHash: 'b'.repeat(64),
         idempotencyKey: pendingId,
       },
