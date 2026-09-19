@@ -21,3 +21,4 @@ Run commands from `backend/`.
 | `npm run admin:create -- ...` | Create/upgrade initial admin |
 | `npm run maintenance:auth-cleanup` | Report expired auth records |
 | `npm run maintenance:story-counters` | Report counter mismatches |
+| `npm run content:import-chapters -- --base-url=... --identifier=... --story=... --input=...` | Import chapters into an existing story through the author API (see script header for all flags) |

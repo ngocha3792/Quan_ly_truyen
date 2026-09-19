@@ -139,6 +139,7 @@
     "test:authors-phase5:integration": "npm run test:authors-phase5:prepare && jest --config ./test/jest-author-follow-integration.json --runInBand",
     "maintenance:reader-analytics": "tsx scripts/maintenance/reconcile-reader-analytics.ts",
     "maintenance:reader-analytics-backfill": "tsx scripts/maintenance/backfill-reader-analytics.ts",
+    "content:import-chapters": "tsx scripts/tools/import-story-chapters.ts",
     "test:analytics:prepare": "node -r ts-node/register -r tsconfig-paths/register scripts/testing/prepare-postgres-test-environment.ts",
     "test:analytics:integration": "npm run test:analytics:prepare && jest --config ./test/jest-reader-analytics-integration.json --runInBand",
     "test:wallets:prepare": "node -r ts-node/register -r tsconfig-paths/register scripts/testing/prepare-postgres-test-environment.ts",
