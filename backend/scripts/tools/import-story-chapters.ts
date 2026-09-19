@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 
 import { isUuidV4 } from '@/common/utils/uuid.util';
 
@@ -27,10 +28,17 @@ import { runScript } from '../shared/script-runner';
  *     --identifier=author@example.com \
  *     --story=<story-slug-or-uuid> \
  *     --input=./chapters.txt \
- *     [--publish] [--dry-run] [--delay-ms=300] [--chapter-pattern=<regex>]
+ *     [--publish] [--dry-run] [--delay-ms=300] [--chapter-pattern=<regex>] \
+ *     [--totp-code=123456] [--recovery-code=...]
  *
  * Password: pass --password=... or, to avoid leaking it into shell history,
  * set the IMPORT_CHAPTERS_PASSWORD environment variable instead.
+ *
+ * MFA: if the account has 2FA enabled, login answers with an MFA challenge
+ * instead of a token. Pass --totp-code=<6 digits> (generated right before
+ * running, since it's time-limited) or --recovery-code=<code> to complete
+ * it non-interactively; if neither is given the script prompts for a TOTP
+ * code on stdin.
  *
  * Input: a single text file or a directory of text files. Chapters are
  * split on heading lines matching --chapter-pattern (default matches lines
@@ -123,8 +131,16 @@ void runScript({
     }
 
     const storyReference = requireArgument('story');
+    const totpCode = readArgument('totp-code');
+    const recoveryCode = readArgument('recovery-code');
 
-    const accessToken = await login(baseUrl, identifier, password);
+    const accessToken = await login(
+      baseUrl,
+      identifier,
+      password,
+      totpCode,
+      recoveryCode,
+    );
     const storyId = await resolveStoryId(
       baseUrl,
       accessToken,
@@ -300,33 +316,122 @@ async function login(
   baseUrl: string,
   identifier: string,
   password: string,
+  totpCode: string | undefined,
+  recoveryCode: string | undefined,
 ): Promise<string> {
   const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', connection: 'close' },
     body: JSON.stringify({ identifier, password }),
+  });
+
+  const body = await readJsonBody(response);
+
+  if (response.ok) {
+    return extractAccessToken(body, 'đăng nhập');
+  }
+
+  const errorCode = extractErrorCode(body);
+
+  if (errorCode === 'AUTH_MFA_ENROLLMENT_REQUIRED') {
+    throw new ScriptError(
+      'Tài khoản chưa thiết lập MFA. Hoàn tất thiết lập MFA qua giao diện ' +
+        'web trước — script này không hỗ trợ enroll MFA.',
+      ScriptExitCode.EXECUTION_ERROR,
+    );
+  }
+
+  if (errorCode === 'AUTH_MFA_REQUIRED') {
+    const mfaTicket = extractMfaTicket(body);
+
+    return completeMfaLogin(baseUrl, mfaTicket, totpCode, recoveryCode);
+  }
+
+  throw new ScriptError(
+    `Đăng nhập thất bại (HTTP ${response.status}): ${describeApiError(body)}`,
+    ScriptExitCode.EXECUTION_ERROR,
+  );
+}
+
+async function completeMfaLogin(
+  baseUrl: string,
+  mfaTicket: string,
+  totpCode: string | undefined,
+  recoveryCode: string | undefined,
+): Promise<string> {
+  const payload: Record<string, string> = { mfaTicket };
+
+  if (recoveryCode) {
+    payload.recoveryCode = recoveryCode;
+  } else {
+    payload.totpCode = totpCode ?? (await promptForTotpCode());
+  }
+
+  const response = await fetch(`${baseUrl}/api/v1/auth/mfa/verify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', connection: 'close' },
+    body: JSON.stringify(payload),
   });
 
   const body = await readJsonBody(response);
 
   if (!response.ok) {
     throw new ScriptError(
-      `Đăng nhập thất bại (HTTP ${response.status}): ${describeApiError(body)}`,
+      `Xác minh MFA thất bại (HTTP ${response.status}): ${describeApiError(body)}`,
       ScriptExitCode.EXECUTION_ERROR,
     );
   }
 
+  return extractAccessToken(body, 'xác minh MFA');
+}
+
+async function promptForTotpCode(): Promise<string> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    const answer = await rl.question('Tài khoản bật MFA — nhập mã TOTP 6 số: ');
+
+    return answer.trim();
+  } finally {
+    rl.close();
+  }
+}
+
+function extractAccessToken(body: unknown, context: string): string {
   const accessToken = (body as { data?: { accessToken?: unknown } })?.data
     ?.accessToken;
 
   if (typeof accessToken !== 'string' || !accessToken) {
     throw new ScriptError(
-      'Phản hồi đăng nhập không chứa accessToken.',
+      `Phản hồi ${context} không chứa accessToken.`,
       ScriptExitCode.EXECUTION_ERROR,
     );
   }
 
   return accessToken;
+}
+
+function extractErrorCode(body: unknown): string | undefined {
+  const code = (body as { error?: { code?: unknown } })?.error?.code;
+
+  return typeof code === 'string' ? code : undefined;
+}
+
+function extractMfaTicket(body: unknown): string {
+  const ticket = (body as { error?: { details?: { mfaTicket?: unknown } } })
+    ?.error?.details?.mfaTicket;
+
+  if (typeof ticket !== 'string' || !ticket) {
+    throw new ScriptError(
+      'Phản hồi AUTH_MFA_REQUIRED không chứa mfaTicket.',
+      ScriptExitCode.EXECUTION_ERROR,
+    );
+  }
+
+  return ticket;
 }
 
 async function resolveStoryId(
@@ -342,7 +447,10 @@ async function resolveStoryId(
   }
 
   const response = await fetch(`${baseUrl}/api/v1/author/stories`, {
-    headers: { authorization: `Bearer ${accessToken}` },
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      connection: 'close',
+    },
   });
 
   const body = await readJsonBody(response);
@@ -396,6 +504,7 @@ async function createChapter(
         'content-type': 'application/json',
         authorization: `Bearer ${accessToken}`,
         'x-idempotency-key': randomUUID(),
+        connection: 'close',
       },
       body: JSON.stringify({
         title: chapter.title,
@@ -429,6 +538,7 @@ async function publishChapter(
       headers: {
         authorization: `Bearer ${accessToken}`,
         'x-idempotency-key': randomUUID(),
+        connection: 'close',
       },
     },
   );
