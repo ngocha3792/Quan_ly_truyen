@@ -96,23 +96,23 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'monetization_price_bands_code_key',
 
-  'monetization_price_bands_active_sort_idx',
+  'monetization_price_bands_is_active_sort_order_idx',
 
-  'chapter_monetization_access_updated_idx',
+  'chapter_monetization_access_type_updated_at_idx',
 
-  'chapter_monetization_price_band_idx',
+  'chapter_monetization_price_band_id_idx',
 
-  'chapter_pricing_versions_chapter_version_key',
+  'chapter_pricing_versions_chapter_id_version_key',
 
-  'chapter_pricing_versions_actor_created_idx',
+  'chapter_pricing_versions_changed_by_id_created_at_idx',
 
   'chapter_purchases_wallet_transaction_key',
 
   'chapter_purchases_idempotency_key_key',
 
-  'chapter_purchases_user_history_idx',
+  'chapter_purchases_user_id_created_at_id_idx',
 
-  'chapter_purchases_chapter_created_idx',
+  'chapter_purchases_chapter_id_created_at_idx',
 
   'chapter_purchases_refund_wallet_transaction_key',
 
@@ -120,15 +120,15 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'chapter_purchases_refunder_refunded_idx',
 
-  'chapter_entitlements_purchase_key',
+  'chapter_entitlements_purchase_id_key',
 
-  'chapter_entitlements_user_chapter_key',
+  'chapter_entitlements_user_id_chapter_id_key',
 
-  'chapter_entitlements_chapter_status_idx',
+  'chapter_entitlements_chapter_id_status_idx',
 
   'credit_packages_code_key',
 
-  'credit_packages_active_sort_idx',
+  'credit_packages_is_active_sort_order_idx',
 
   'payment_orders_idempotency_key_key',
 
@@ -136,11 +136,11 @@ export const EXPECTED_PRODUCTION_INDEXES = [
 
   'payment_orders_provider_reference_unique',
 
-  'payment_orders_user_created_idx',
+  'payment_orders_user_id_created_at_id_idx',
 
-  'payment_orders_status_expiry_idx',
+  'payment_orders_status_expires_at_idx',
 
-  'payment_orders_provider_status_updated_idx',
+  'payment_orders_provider_status_updated_at_idx',
   'payment_orders_provider_connection_id_idx',
   'payment_orders_status_review_requested_idx',
   'payment_provider_connections_code_key',
