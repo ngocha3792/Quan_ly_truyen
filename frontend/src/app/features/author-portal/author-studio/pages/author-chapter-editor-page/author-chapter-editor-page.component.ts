@@ -267,9 +267,20 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       });
   }
 
-  protected uploadMangaPages(files: readonly File[]): void {
-    const id = this.chapterId();
-    if (!id) return;
+  protected async uploadMangaPages(files: readonly File[]): Promise<void> {
+    let id = this.chapterId();
+    if (!id) {
+      if (this.form.invalid) {
+        this.form.markAllAsTouched();
+        this.store.setError('Nhập tiêu đề chương trước khi tải trang truyện.');
+        return;
+      }
+      const chapter = await this.session.save();
+      if (!chapter) return;
+      id = chapter.id;
+      this.store.loadHistory(this.storyId, id);
+      void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong', id]);
+    }
     for (const file of files) {
       this.store
         .uploadPage(this.storyId, id, file)
@@ -278,18 +289,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     }
   }
 
-  protected moveMangaPageUp(mediaAssetId: string): void {
+  protected mangaPageAction(mediaAssetId: string, action: 'up' | 'down' | 'remove'): void {
     const id = this.chapterId();
-    if (id) this.store.movePage(this.storyId, id, mediaAssetId, -1);
-  }
-
-  protected moveMangaPageDown(mediaAssetId: string): void {
-    const id = this.chapterId();
-    if (id) this.store.movePage(this.storyId, id, mediaAssetId, 1);
-  }
-
-  protected removeMangaPage(mediaAssetId: string): void {
-    const id = this.chapterId();
-    if (id) this.store.removePage(this.storyId, id, mediaAssetId);
+    if (!id) return;
+    if (action === 'remove') this.store.removePage(this.storyId, id, mediaAssetId);
+    else this.store.movePage(this.storyId, id, mediaAssetId, action === 'up' ? -1 : 1);
   }
 }

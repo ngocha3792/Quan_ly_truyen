@@ -67,19 +67,18 @@
                 }
               </span>
             </span>
+            <app-manga-page-uploader
+              [pages]="store.mediaPages()"
+              [uploading]="store.uploadingPage() || session.busy()"
+              [reordering]="store.reorderingPages()"
+              [disabled]="!isEditable() || workflow.busy()"
+              (filesSelected)="uploadMangaPages($event)"
+              (moveUpRequested)="mangaPageAction($event, 'up')"
+              (moveDownRequested)="mangaPageAction($event, 'down')"
+              (removeRequested)="mangaPageAction($event, 'remove')"
+            />
             @if (isCreate()) {
-              <small>Lưu chương thành bản nháp trước để tải trang truyện.</small>
-            } @else {
-              <app-manga-page-uploader
-                [pages]="store.mediaPages()"
-                [uploading]="store.uploadingPage()"
-                [reordering]="store.reorderingPages()"
-                [disabled]="!isEditable() || workflow.busy()"
-                (filesSelected)="uploadMangaPages($event)"
-                (moveUpRequested)="moveMangaPageUp($event)"
-                (moveDownRequested)="moveMangaPageDown($event)"
-                (removeRequested)="removeMangaPage($event)"
-              />
+              <small>Cần nhập tiêu đề chương trước khi tải trang truyện.</small>
             }
           </div>
         } @else {

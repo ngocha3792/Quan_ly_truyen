@@ -25,13 +25,7 @@ interface AuthorMediaUploadIntent {
   readonly apiKey: string;
   readonly signature: string;
   readonly timestamp: number;
-  readonly parameters: {
-    readonly upload_preset: string;
-    readonly public_id: string;
-    readonly asset_folder: string;
-    readonly overwrite: boolean;
-    readonly tags: string;
-  };
+  readonly parameters: Readonly<Record<string, string | number | boolean>>;
 }
 
 interface CloudinaryUploadResponse {
@@ -109,11 +103,9 @@ export class AuthorMediaUploadService {
     formData.append('api_key', intent.apiKey);
     formData.append('timestamp', String(intent.timestamp));
     formData.append('signature', intent.signature);
-    formData.append('upload_preset', intent.parameters.upload_preset);
-    formData.append('public_id', intent.parameters.public_id);
-    formData.append('asset_folder', intent.parameters.asset_folder);
-    formData.append('overwrite', String(intent.parameters.overwrite));
-    formData.append('tags', intent.parameters.tags);
+    for (const [key, value] of Object.entries(intent.parameters)) {
+      formData.append(key, String(value));
+    }
     return this.http.post<CloudinaryUploadResponse>(intent.uploadUrl, formData);
   }
 
