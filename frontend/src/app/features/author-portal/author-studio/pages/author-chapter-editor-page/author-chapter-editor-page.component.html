@@ -94,14 +94,18 @@
                   · {{ session.lastSaved() | date: 'HH:mm:ss' }}
                 }
               </span>
-              @if (!isCreate() && isEditable()) {
+              @if (isEditable()) {
                 <label class="image-upload-action">
                   <app-icon name="camera" [size]="15" />
-                  {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
+                  {{
+                    store.uploadingImage() || session.busy()
+                      ? 'Đang tải ảnh...'
+                      : 'Chèn ảnh minh họa'
+                  }}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    [disabled]="store.uploadingImage()"
+                    [disabled]="store.uploadingImage() || session.busy()"
                     (change)="selectChapterImage($event)"
                   />
                 </label>
@@ -113,7 +117,7 @@
               (contentChange)="contentChanged($event)"
             />
             @if (isCreate()) {
-              <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
+              <small>Cần nhập tiêu đề chương trước khi chèn ảnh.</small>
             }
           </div>
         }

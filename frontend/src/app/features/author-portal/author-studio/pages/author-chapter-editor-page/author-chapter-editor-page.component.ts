@@ -204,6 +204,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected async save(): Promise<void> {
     if (!this.isEditable() || this.form.invalid || this.session.busy()) {
       this.form.markAllAsTouched();
+      if (this.form.invalid) this.store.setError('Nhập tiêu đề chương trước khi lưu.');
       return;
     }
     const wasNew = this.isCreate();
@@ -238,17 +239,19 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       .subscribe({ error: (error: unknown) => this.store.setError(error) });
   }
 
-  protected selectChapterImage(event: Event): void {
+  protected async selectChapterImage(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     input.value = '';
-    const id = this.chapterId();
-    if (!file || !id) return;
+    if (!file) return;
     const validationError = validateChapterImage(file);
     if (validationError) {
       this.store.setError(validationError);
       return;
     }
+    if (this.isCreate()) await this.save();
+    const id = this.chapterId();
+    if (!id) return;
     this.store
       .uploadImage(id, file)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -268,19 +271,9 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   }
 
   protected async uploadMangaPages(files: readonly File[]): Promise<void> {
-    let id = this.chapterId();
-    if (!id) {
-      if (this.form.invalid) {
-        this.form.markAllAsTouched();
-        this.store.setError('Nhập tiêu đề chương trước khi tải trang truyện.');
-        return;
-      }
-      const chapter = await this.session.save();
-      if (!chapter) return;
-      id = chapter.id;
-      this.store.loadHistory(this.storyId, id);
-      void this.router.navigate(['/author-studio/truyen', this.storyId, 'chuong', id]);
-    }
+    if (this.isCreate()) await this.save();
+    const id = this.chapterId();
+    if (!id) return;
     for (const file of files) {
       this.store
         .uploadPage(this.storyId, id, file)
