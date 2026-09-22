@@ -57,6 +57,7 @@ export class PrismaMediaQueryAdapter implements MediaQueryPort {
       publicId: media.publicId,
       resourceType: 'image',
       preset,
+      requiresSigning: media.deliveryType === 'authenticated',
     });
   }
 }

@@ -194,18 +194,17 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
       });
     }
 
+    const expectedDeliveryType =
+      media.purpose === MediaPurpose.CHAPTER_IMAGE ? 'authenticated' : 'upload';
     try {
       const stored = await this.mediaStorage.confirmUpload({
         publicId: input.dto.publicId,
         version: input.dto.version,
         responseSignature: input.dto.signature,
         resourceType: input.dto.resourceType,
-        deliveryType:
-          media.purpose === MediaPurpose.CHAPTER_IMAGE
-            ? 'authenticated'
-            : 'upload',
+        deliveryType: expectedDeliveryType,
       });
-      this.validateAuthoritativeAsset(media, stored);
+      this.validateAuthoritativeAsset(media, stored, expectedDeliveryType);
       const readyAt = new Date();
       const updated = await this.prisma.mediaAsset.updateMany({
         where: { id: media.id, status: MediaStatus.PROCESSING },
@@ -367,13 +366,14 @@ export class PrismaMediaCommandAdapter implements MediaCommandPort {
   private validateAuthoritativeAsset(
     pending: MediaAsset,
     stored: StoredMedia,
+    expectedDeliveryType: 'upload' | 'authenticated',
   ): void {
     const policy = MEDIA_UPLOAD_POLICIES[pending.purpose];
     if (
       !stored.providerAssetId ||
       stored.publicId !== pending.publicId ||
       stored.resourceType !== policy.resourceType ||
-      stored.deliveryType !== 'upload' ||
+      stored.deliveryType !== expectedDeliveryType ||
       stored.assetFolder !== pending.assetFolder ||
       !Number.isSafeInteger(stored.version) ||
       stored.version <= 0 ||
