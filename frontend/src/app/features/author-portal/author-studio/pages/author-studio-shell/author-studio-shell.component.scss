@@ -9,7 +9,7 @@
   color: var(--text-strong);
 }
 
-.author-studio-shell:has(.studio-content) {
+.author-studio-shell.is-ready {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
 }
@@ -76,7 +76,7 @@
 }
 
 @media (max-width: 900px) {
-  .author-studio-shell:has(.studio-content) {
+  .author-studio-shell.is-ready {
     grid-template-columns: 1fr;
   }
 

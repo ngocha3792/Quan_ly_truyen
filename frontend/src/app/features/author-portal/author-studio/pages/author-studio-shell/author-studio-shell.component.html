@@ -1,4 +1,4 @@
-<div class="author-studio-shell">
+<div class="author-studio-shell" [class.is-ready]="store.dashboard()">
   @if (store.dashboard(); as dashboard) {
     <div class="sidebar-column" [class.sidebar-column--open]="mobileOpen()">
       <app-studio-sidebar
