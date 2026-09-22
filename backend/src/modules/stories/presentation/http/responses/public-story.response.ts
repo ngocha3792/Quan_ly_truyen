@@ -13,6 +13,7 @@ export interface PublicStoryResponse {
   readonly slug: string;
   readonly title: string;
   readonly synopsis: string;
+  readonly format: string;
   readonly languageCode: string;
   readonly contentRating: string;
   readonly releaseYear: number | null;
@@ -66,6 +67,7 @@ export function toPublicStoryResponse(
     slug: result.slug,
     title: result.title,
     synopsis: result.synopsis,
+    format: result.format,
     languageCode: result.languageCode,
     contentRating: result.contentRating,
     releaseYear: result.releaseYear,

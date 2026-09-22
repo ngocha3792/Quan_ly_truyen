@@ -41,6 +41,7 @@ export interface PublicStoryDto {
   readonly slug: string;
   readonly title: string;
   readonly synopsis: string;
+  readonly format: string;
   readonly languageCode: string;
   readonly contentRating: string;
   readonly releaseYear: number | null;

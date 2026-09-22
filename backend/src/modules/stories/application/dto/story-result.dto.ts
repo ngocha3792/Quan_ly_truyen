@@ -27,6 +27,8 @@ export interface StoryResultDto {
 
   readonly synopsis: string;
 
+  readonly format: string;
+
   readonly languageCode: string;
 
   readonly status: string;

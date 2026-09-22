@@ -22,6 +22,7 @@ export class ChapterResultMapper {
       publishedAt: chapter.publishedAt,
       createdAt: chapter.createdAt,
       updatedAt: chapter.updatedAt,
+      ...(chapter.media !== undefined ? { media: chapter.media } : {}),
     };
   }
 }

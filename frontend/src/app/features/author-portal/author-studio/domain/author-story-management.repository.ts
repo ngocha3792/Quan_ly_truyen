@@ -3,6 +3,7 @@ import { ChapterVersionDiff } from './chapter-editing.models';
 
 import {
   AuthorChapterDraftInput,
+  AuthorChapterMediaPage,
   AuthorChapterVersion,
   AuthorChapterVersionPage,
   AuthorChapterMonetization,
@@ -99,6 +100,21 @@ export abstract class AuthorStoryManagementRepository {
   abstract uploadCover(storyId: string, file: File): Observable<AuthorStoryMedia>;
   abstract uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia>;
   abstract getMedia(mediaId: string): Observable<AuthorStoryMedia>;
+  abstract attachChapterMedia(
+    storyId: string,
+    chapterId: string,
+    pages: ReadonlyArray<{ readonly mediaAssetId: string; readonly caption?: string }>,
+  ): Observable<readonly AuthorChapterMediaPage[]>;
+  abstract reorderChapterMedia(
+    storyId: string,
+    chapterId: string,
+    orderedMediaAssetIds: readonly string[],
+  ): Observable<readonly AuthorChapterMediaPage[]>;
+  abstract removeChapterMedia(
+    storyId: string,
+    chapterId: string,
+    mediaAssetId: string,
+  ): Observable<readonly AuthorChapterMediaPage[]>;
   abstract listContributors(storyId: string): Observable<readonly AuthorStoryContributor[]>;
   abstract upsertContributor(
     storyId: string,

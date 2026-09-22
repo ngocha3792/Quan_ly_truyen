@@ -31,6 +31,7 @@ export class CreateAuthorStoryCommandHandler {
       userId,
       title,
       synopsis,
+      format: command.format,
       categoryIds: normalizeIds(command.categoryIds),
       tagIds: normalizeIds(command.tagIds),
       createdAt: new Date(),

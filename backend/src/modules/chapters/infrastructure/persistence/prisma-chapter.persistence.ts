@@ -9,6 +9,8 @@ import {
   ChapterEntitlementStatus,
   ChapterStatus,
   ContentFormat,
+  MediaPurpose,
+  MediaStatus,
   Prisma,
   StoryStatus,
   StoryVisibility,
@@ -57,6 +59,13 @@ import type {
   ScheduleAuthorChapterResult,
   UpdateAuthorChapterInput,
   UpdateAuthorChapterResult,
+  ChapterMediaRecord,
+  AttachChapterMediaInput,
+  AttachChapterMediaResult,
+  ReorderChapterMediaInput,
+  ReorderChapterMediaResult,
+  RemoveChapterMediaInput,
+  RemoveChapterMediaResult,
 } from '../../application';
 import {
   ChapterDraftPolicy,
@@ -293,7 +302,10 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         select: CHAPTER_SELECT,
       });
 
-      return chapter ? this.toRecord(chapter) : null;
+      if (!chapter) return null;
+
+      const media = await this.listChapterMedia(this.prisma, chapter.id);
+      return this.toRecord(chapter, media);
     } catch (error: unknown) {
       throw mapPrismaError(error, {
         operation: 'author-chapter-detail',
@@ -1398,6 +1410,249 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     return publishedCount;
   }
 
+  async attachMedia(
+    input: AttachChapterMediaInput,
+  ): Promise<AttachChapterMediaResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const story = await lockAndFindEditableStory(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+
+        if (!story) return { status: 'not_found' };
+
+        const chapterLocked = await lockChapterRowForStory(
+          tx,
+          input.chapterId,
+          story.id,
+        );
+
+        if (!chapterLocked) return { status: 'not_found' };
+
+        const current = await tx.chapter.findFirst({
+          where: { id: input.chapterId, storyId: story.id, deletedAt: null },
+          select: { id: true, status: true },
+        });
+
+        if (!current) return { status: 'not_found' };
+        if (current.status !== ChapterStatus.DRAFT) {
+          return { status: 'not_draft' };
+        }
+
+        const requestedIds = input.pages.map((page) => page.mediaAssetId);
+        const assets = await tx.mediaAsset.findMany({
+          where: {
+            id: { in: requestedIds },
+            uploaderId: input.userId,
+            purpose: MediaPurpose.CHAPTER_IMAGE,
+            status: MediaStatus.READY,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+
+        const validIds = new Set(assets.map((asset) => asset.id));
+        const invalidIds = requestedIds.filter((id) => !validIds.has(id));
+
+        if (invalidIds.length > 0) {
+          return { status: 'invalid_media', invalidIds };
+        }
+
+        const aggregate = await tx.chapterMedia.aggregate({
+          where: { chapterId: current.id },
+          _max: { sortOrder: true },
+        });
+        const startingOrder = (aggregate._max.sortOrder ?? -1) + 1;
+
+        await tx.chapterMedia.createMany({
+          data: input.pages.map((page, index) => ({
+            chapterId: current.id,
+            mediaAssetId: page.mediaAssetId,
+            sortOrder: startingOrder + index,
+            altText: page.altText ?? null,
+            caption: page.caption ?? null,
+          })),
+        });
+
+        return {
+          status: 'attached',
+          media: await this.listChapterMedia(tx, current.id),
+        };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-media-attach',
+        resource: 'Trang truyện',
+      });
+    }
+  }
+
+  async reorderMedia(
+    input: ReorderChapterMediaInput,
+  ): Promise<ReorderChapterMediaResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const story = await lockAndFindEditableStory(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+
+        if (!story) return { status: 'not_found' };
+
+        const chapterLocked = await lockChapterRowForStory(
+          tx,
+          input.chapterId,
+          story.id,
+        );
+
+        if (!chapterLocked) return { status: 'not_found' };
+
+        const current = await tx.chapter.findFirst({
+          where: { id: input.chapterId, storyId: story.id, deletedAt: null },
+          select: { id: true, status: true },
+        });
+
+        if (!current) return { status: 'not_found' };
+        if (current.status !== ChapterStatus.DRAFT) {
+          return { status: 'not_draft' };
+        }
+
+        const existing = await tx.chapterMedia.findMany({
+          where: { chapterId: current.id },
+          select: { mediaAssetId: true },
+        });
+
+        const existingIds = new Set(existing.map((row) => row.mediaAssetId));
+        const requestedIds = input.orderedMediaAssetIds;
+
+        const sameSet =
+          existingIds.size === requestedIds.length &&
+          requestedIds.every((id) => existingIds.has(id));
+
+        if (!sameSet) return { status: 'mismatch' };
+
+        // Two-phase update avoids violating the (chapterId, sortOrder)
+        // unique constraint while shuffling rows into their new order.
+        await Promise.all(
+          requestedIds.map((mediaAssetId, index) =>
+            tx.chapterMedia.update({
+              where: {
+                chapterId_mediaAssetId: {
+                  chapterId: current.id,
+                  mediaAssetId,
+                },
+              },
+              data: { sortOrder: -(index + 1) },
+            }),
+          ),
+        );
+        await Promise.all(
+          requestedIds.map((mediaAssetId, index) =>
+            tx.chapterMedia.update({
+              where: {
+                chapterId_mediaAssetId: {
+                  chapterId: current.id,
+                  mediaAssetId,
+                },
+              },
+              data: { sortOrder: index },
+            }),
+          ),
+        );
+
+        return {
+          status: 'reordered',
+          media: await this.listChapterMedia(tx, current.id),
+        };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-media-reorder',
+        resource: 'Trang truyện',
+      });
+    }
+  }
+
+  async removeMedia(
+    input: RemoveChapterMediaInput,
+  ): Promise<RemoveChapterMediaResult> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const story = await lockAndFindEditableStory(
+          tx,
+          input.storyId,
+          input.userId,
+        );
+
+        if (!story) return { status: 'not_found' };
+
+        const chapterLocked = await lockChapterRowForStory(
+          tx,
+          input.chapterId,
+          story.id,
+        );
+
+        if (!chapterLocked) return { status: 'not_found' };
+
+        const current = await tx.chapter.findFirst({
+          where: { id: input.chapterId, storyId: story.id, deletedAt: null },
+          select: { id: true, status: true },
+        });
+
+        if (!current) return { status: 'not_found' };
+        if (current.status !== ChapterStatus.DRAFT) {
+          return { status: 'not_draft' };
+        }
+
+        await tx.chapterMedia.deleteMany({
+          where: { chapterId: current.id, mediaAssetId: input.mediaAssetId },
+        });
+
+        return {
+          status: 'removed',
+          media: await this.listChapterMedia(tx, current.id),
+        };
+      });
+    } catch (error: unknown) {
+      throw mapPrismaError(error, {
+        operation: 'chapter-media-remove',
+        resource: 'Trang truyện',
+      });
+    }
+  }
+
+  private async listChapterMedia(
+    tx: Prisma.TransactionClient,
+    chapterId: string,
+  ): Promise<readonly ChapterMediaRecord[]> {
+    const rows = await tx.chapterMedia.findMany({
+      where: { chapterId },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        mediaAssetId: true,
+        sortOrder: true,
+        altText: true,
+        caption: true,
+        mediaAsset: {
+          select: { secureUrl: true, publicUrl: true, width: true, height: true },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      mediaAssetId: row.mediaAssetId,
+      sortOrder: row.sortOrder,
+      altText: row.altText,
+      caption: row.caption,
+      url: row.mediaAsset.secureUrl ?? row.mediaAsset.publicUrl ?? null,
+      width: row.mediaAsset.width,
+      height: row.mediaAsset.height,
+    }));
+  }
+
   async findPublicReader(
     storySlug: string,
     chapterNumber: string,
@@ -1677,7 +1932,10 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     };
   }
 
-  private toRecord(chapter: ChapterRow): ChapterRecord {
+  private toRecord(
+    chapter: ChapterRow,
+    media?: readonly ChapterMediaRecord[],
+  ): ChapterRecord {
     return {
       id: chapter.id,
       storyId: chapter.storyId,
@@ -1701,6 +1959,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       publishedAt: chapter.publishedAt,
       createdAt: chapter.createdAt,
       updatedAt: chapter.updatedAt,
+      ...(media !== undefined ? { media } : {}),
     };
   }
 }

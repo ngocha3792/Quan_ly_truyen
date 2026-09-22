@@ -52,18 +52,28 @@ import {
   UpdateAuthorChapterCommandHandler,
   RestoreAuthorChapterVersionCommand,
   RestoreAuthorChapterVersionCommandHandler,
+  AttachChapterMediaCommand,
+  AttachChapterMediaCommandHandler,
+  ReorderChapterMediaCommand,
+  ReorderChapterMediaCommandHandler,
+  RemoveChapterMediaCommand,
+  RemoveChapterMediaCommandHandler,
 } from '../../../application';
 import {
+  AttachChapterMediaRequest,
   CreateAuthorChapterRequest,
   ListAuthorChapterVersionsRequest,
+  ReorderChapterMediaRequest,
   ScheduleAuthorChapterRequest,
   UpdateAuthorChapterRequest,
 } from '../requests';
 import {
+  type ChapterMediaResponse,
   type ChapterResponse,
   type ChapterSummaryResponse,
   type ChapterVersionPageResponse,
   type ChapterVersionResponse,
+  toChapterMediaListResponse,
   toChapterResponse,
   toChapterSummaryResponse,
   toChapterVersionPageResponse,
@@ -85,6 +95,9 @@ export class AuthorChaptersController {
     private readonly publishChapter: PublishAuthorChapterCommandHandler,
     private readonly scheduleChapter: ScheduleAuthorChapterCommandHandler,
     private readonly cancelChapterSchedule: CancelAuthorChapterScheduleCommandHandler,
+    private readonly attachChapterMedia: AttachChapterMediaCommandHandler,
+    private readonly reorderChapterMedia: ReorderChapterMediaCommandHandler,
+    private readonly removeChapterMedia: RemoveChapterMediaCommandHandler,
   ) {}
 
   @Get(':chapterId/versions')
@@ -330,6 +343,85 @@ export class AuthorChaptersController {
     );
 
     return toChapterResponse(result);
+  }
+
+  @Post(':chapterId/media')
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.STORY_READ)
+  async attachMedia(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Body() request: AttachChapterMediaRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<readonly ChapterMediaResponse[]> {
+    const result = await this.attachChapterMedia.execute(
+      new AttachChapterMediaCommand(
+        userId,
+        storyId,
+        chapterId,
+        request.pages,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterMediaListResponse(result);
+  }
+
+  @Put(':chapterId/media/order')
+  @RequirePermissions(PermissionCode.STORY_READ)
+  async reorderMedia(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Body() request: ReorderChapterMediaRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<readonly ChapterMediaResponse[]> {
+    const result = await this.reorderChapterMedia.execute(
+      new ReorderChapterMediaCommand(
+        userId,
+        storyId,
+        chapterId,
+        request.orderedMediaAssetIds,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterMediaListResponse(result);
+  }
+
+  @Delete(':chapterId/media/:mediaAssetId')
+  @RequirePermissions(PermissionCode.STORY_READ)
+  async removeMedia(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
+    @Param('mediaAssetId', new ParseUUIDPipe({ version: '4' })) mediaAssetId: string,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ): Promise<readonly ChapterMediaResponse[]> {
+    const result = await this.removeChapterMedia.execute(
+      new RemoveChapterMediaCommand(
+        userId,
+        storyId,
+        chapterId,
+        mediaAssetId,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
+
+    return toChapterMediaListResponse(result);
   }
 
   @Delete(':chapterId')

@@ -1,9 +1,10 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, forkJoin, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
+  AuthorChapterMediaPage,
   AuthorChapterMonetization,
   AuthorChapterPricingInput,
   AuthorChapterVersion,
@@ -25,6 +26,9 @@ export class AuthorChapterEditorStore {
   readonly chapter = signal<AuthorManagedChapter | null>(null);
   readonly loading = signal(false);
   readonly uploadingImage = signal(false);
+  readonly mediaPages = signal<readonly AuthorChapterMediaPage[]>([]);
+  readonly uploadingPage = signal(false);
+  readonly reorderingPages = signal(false);
   readonly history = signal<readonly AuthorChapterVersionSummary[]>([]);
   readonly historyTotal = signal(0);
   readonly selectedVersion = signal<AuthorChapterVersion | null>(null);
@@ -77,6 +81,7 @@ export class AuthorChapterEditorStore {
         }) => {
           this.story.set(story);
           this.chapter.set(chapter);
+          this.mediaPages.set(chapter?.media ?? []);
           this.monetization.set(monetization?.config ?? null);
           this.priceBands.set(monetization?.bands ?? []);
         },
@@ -176,5 +181,65 @@ export class AuthorChapterEditorStore {
     return this.repository
       .uploadChapterImage(chapterId, file)
       .pipe(finalize(() => this.uploadingImage.set(false)));
+  }
+
+  uploadPage(storyId: string, chapterId: string, file: File): Observable<void> {
+    this.uploadingPage.set(true);
+    this.error.set(null);
+    return this.repository.uploadChapterImage(chapterId, file).pipe(
+      switchMap((media: AuthorStoryMedia) =>
+        this.repository.attachChapterMedia(storyId, chapterId, [{ mediaAssetId: media.id }]),
+      ),
+      tap((pages) => this.mediaPages.set(pages)),
+      map(() => undefined),
+      catchError((error: unknown) => {
+        this.error.set(getApiErrorMessage(error));
+        throw error;
+      }),
+      finalize(() => this.uploadingPage.set(false)),
+    );
+  }
+
+  movePage(storyId: string, chapterId: string, mediaAssetId: string, direction: -1 | 1): void {
+    if (this.reorderingPages()) return;
+    const pages = this.mediaPages();
+    const index = pages.findIndex((page) => page.mediaAssetId === mediaAssetId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= pages.length) return;
+
+    const reordered = [...pages];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    this.mediaPages.set(reordered);
+
+    this.reorderingPages.set(true);
+    this.error.set(null);
+    this.repository
+      .reorderChapterMedia(
+        storyId,
+        chapterId,
+        reordered.map((page) => page.mediaAssetId),
+      )
+      .pipe(
+        finalize(() => this.reorderingPages.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (pages) => this.mediaPages.set(pages),
+        error: (error: unknown) => {
+          this.mediaPages.set(pages);
+          this.error.set(getApiErrorMessage(error));
+        },
+      });
+  }
+
+  removePage(storyId: string, chapterId: string, mediaAssetId: string): void {
+    this.error.set(null);
+    this.repository
+      .removeChapterMedia(storyId, chapterId, mediaAssetId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (pages) => this.mediaPages.set(pages),
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
   }
 }

@@ -29,6 +29,7 @@ import { validateChapterImage } from '../../domain/chapter-image-validation';
 import { ChapterTranslationWorkspaceComponent } from '../../chapter-translation/pages/chapter-translation-workspace/chapter-translation-workspace.component';
 import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-author-tools.component';
 import { ChapterRichEditorComponent } from '../../ui/chapter-rich-editor/chapter-rich-editor.component';
+import { MangaPageUploaderComponent } from '../../ui/manga-page-uploader/manga-page-uploader.component';
 import { ChapterEditorSafetyComponent } from '../../ui/chapter-editor-safety/chapter-editor-safety.component';
 import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history/chapter-version-history.component';
 import { ChapterPricingComponent } from '../../ui/chapter-pricing/chapter-pricing.component';
@@ -50,6 +51,7 @@ import { AuthorChapterPricingInput } from '../../domain/author-story-management.
     ChapterTranslationWorkspaceComponent,
     AiAuthorToolsComponent,
     ChapterRichEditorComponent,
+    MangaPageUploaderComponent,
     ChapterEditorSafetyComponent,
     ChapterVersionHistoryComponent,
     ChapterPricingComponent,
@@ -82,6 +84,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   private readonly routeChapterId = this.route.snapshot.paramMap.get('chapterId');
   protected readonly chapterId = computed(() => this.session.chapter()?.id ?? this.routeChapterId);
   protected readonly isCreate = computed(() => !this.chapterId());
+  protected readonly isManga = computed(() => this.store.story()?.format === 'MANGA');
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
     content: [''],

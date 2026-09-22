@@ -1,0 +1,69 @@
+<div class="manga-pages">
+  <div class="manga-pages-header">
+    <span>Trang truyện · {{ store.mediaPages().length }} ảnh</span>
+
+    <label class="upload-action" [class.upload-action--disabled]="disabled()">
+      <app-icon name="camera" [size]="15" />
+      {{ store.uploadingPage() ? 'Đang tải ảnh...' : 'Thêm trang' }}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        [disabled]="disabled() || store.uploadingPage()"
+        (change)="selectFiles($event)"
+      />
+    </label>
+  </div>
+
+  @if (fileError()) {
+    <p class="manga-pages-error">{{ fileError() }}</p>
+  }
+
+  @if (store.mediaPages().length === 0) {
+    <p class="manga-pages-empty">Chưa có trang nào. Tải ảnh lên theo đúng thứ tự đọc.</p>
+  } @else {
+    <ol class="manga-pages-grid">
+      @for (page of store.mediaPages(); track page.mediaAssetId; let i = $index; let last = $last) {
+        <li class="manga-page-card">
+          <span class="manga-page-index">{{ i + 1 }}</span>
+
+          @if (page.url) {
+            <img [src]="page.url" [alt]="page.altText ?? 'Trang ' + (i + 1)" loading="lazy" />
+          } @else {
+            <div class="manga-page-placeholder">
+              <app-icon name="book-open" [size]="22" />
+            </div>
+          }
+
+          <div class="manga-page-actions">
+            <button
+              type="button"
+              [disabled]="disabled() || i === 0 || store.reorderingPages()"
+              (click)="moveUp(page.mediaAssetId)"
+              aria-label="Di chuyển lên"
+            >
+              <app-icon name="arrow-up" [size]="14" />
+            </button>
+            <button
+              type="button"
+              [disabled]="disabled() || last || store.reorderingPages()"
+              (click)="moveDown(page.mediaAssetId)"
+              aria-label="Di chuyển xuống"
+            >
+              <app-icon name="arrow-down" [size]="14" />
+            </button>
+            <button
+              type="button"
+              class="manga-page-remove"
+              [disabled]="disabled()"
+              (click)="remove(page.mediaAssetId)"
+              aria-label="Xóa trang"
+            >
+              <app-icon name="trash" [size]="14" />
+            </button>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+</div>

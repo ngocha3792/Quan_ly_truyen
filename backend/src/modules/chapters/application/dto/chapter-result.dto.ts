@@ -1,4 +1,5 @@
 import type { ChapterContentDocument } from '../../domain';
+import type { ChapterMediaRecord } from '../ports';
 
 export interface ChapterResultDto {
   readonly id: string;
@@ -36,4 +37,6 @@ export interface ChapterResultDto {
   readonly createdAt: Date;
 
   readonly updatedAt: Date;
+
+  readonly media?: readonly ChapterMediaRecord[];
 }

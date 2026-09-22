@@ -5,3 +5,6 @@ export * from './delete-author-chapter';
 export * from './publish-author-chapter';
 export * from './schedule-author-chapter';
 export * from './cancel-author-chapter-schedule';
+export * from './attach-chapter-media';
+export * from './reorder-chapter-media';
+export * from './remove-chapter-media';

@@ -17,6 +17,9 @@ import {
   CancelAuthorChapterScheduleCommandHandler,
   UpdateAuthorChapterCommandHandler,
   RestoreAuthorChapterVersionCommandHandler,
+  AttachChapterMediaCommandHandler,
+  ReorderChapterMediaCommandHandler,
+  RemoveChapterMediaCommandHandler,
 } from './application';
 import { PrismaChapterPersistence } from './infrastructure';
 import { GetVersionDiffQueryHandler } from './application/queries/get-version-diff/get-version-diff.query-handler';
@@ -49,6 +52,9 @@ import {
     CancelAuthorChapterScheduleCommandHandler,
     GetPublicChapterReaderQueryHandler,
     ListPublicStoryChaptersQueryHandler,
+    AttachChapterMediaCommandHandler,
+    ReorderChapterMediaCommandHandler,
+    RemoveChapterMediaCommandHandler,
     PrismaChapterPersistence,
     {
       provide: CHAPTER_PERSISTENCE_PORT,

@@ -29,6 +29,8 @@ export interface StoryResponse {
 
   readonly synopsis: string;
 
+  readonly format: string;
+
   readonly languageCode: string;
 
   readonly status: string;
@@ -59,6 +61,7 @@ export function toStoryResponse(result: StoryResultDto): StoryResponse {
     title: result.title,
     slug: result.slug,
     synopsis: result.synopsis,
+    format: result.format,
     languageCode: result.languageCode,
     status: result.status,
     visibility: result.visibility,

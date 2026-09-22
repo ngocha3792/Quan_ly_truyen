@@ -45,6 +45,8 @@ export interface ChapterRecord {
   readonly createdAt: Date;
 
   readonly updatedAt: Date;
+
+  readonly media?: readonly ChapterMediaRecord[];
 }
 
 export interface ChapterSummaryRecord {
@@ -295,6 +297,75 @@ export interface PublishDueScheduledChaptersInput {
   readonly requestId?: string;
 }
 
+export interface ChapterMediaRecord {
+  readonly mediaAssetId: string;
+  readonly sortOrder: number;
+  readonly altText: string | null;
+  readonly caption: string | null;
+  readonly url: string | null;
+  readonly width: number | null;
+  readonly height: number | null;
+}
+
+export interface AttachChapterMediaPageInput {
+  readonly mediaAssetId: string;
+  readonly altText?: string;
+  readonly caption?: string;
+}
+
+export interface AttachChapterMediaInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly pages: readonly AttachChapterMediaPageInput[];
+  readonly audit: ChapterAuditContext;
+}
+
+export type AttachChapterMediaResult =
+  | {
+      readonly status: 'attached';
+      readonly media: readonly ChapterMediaRecord[];
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'not_draft' }
+  | {
+      readonly status: 'invalid_media';
+      readonly invalidIds: readonly string[];
+    };
+
+export interface ReorderChapterMediaInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly orderedMediaAssetIds: readonly string[];
+  readonly audit: ChapterAuditContext;
+}
+
+export type ReorderChapterMediaResult =
+  | {
+      readonly status: 'reordered';
+      readonly media: readonly ChapterMediaRecord[];
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'not_draft' }
+  | { readonly status: 'mismatch' };
+
+export interface RemoveChapterMediaInput {
+  readonly userId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly mediaAssetId: string;
+  readonly audit: ChapterAuditContext;
+}
+
+export type RemoveChapterMediaResult =
+  | {
+      readonly status: 'removed';
+      readonly media: readonly ChapterMediaRecord[];
+    }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'not_draft' };
+
 export interface ChapterPersistencePort {
   listOwnedByStory(
     userId: string,
@@ -344,6 +415,14 @@ export interface ChapterPersistencePort {
   ): Promise<CancelAuthorChapterScheduleResult>;
 
   publishDueScheduled(input: PublishDueScheduledChaptersInput): Promise<number>;
+
+  attachMedia(input: AttachChapterMediaInput): Promise<AttachChapterMediaResult>;
+
+  reorderMedia(
+    input: ReorderChapterMediaInput,
+  ): Promise<ReorderChapterMediaResult>;
+
+  removeMedia(input: RemoveChapterMediaInput): Promise<RemoveChapterMediaResult>;
 
   findPublicReader(
     storySlug: string,

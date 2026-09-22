@@ -53,40 +53,66 @@
           </div>
         </label>
 
-        <div class="content-field">
-          <span class="content-toolbar">
-            <span>Nội dung chương · {{ wordCount() }} từ</span>
-            <span
-              class="autosave-status autosave-status--{{ session.status() }}"
-              role="status"
-              aria-live="polite"
-              >{{ statusText() }}
-              @if (session.lastSaved()) {
-                · {{ session.lastSaved() | date: 'HH:mm:ss' }}
+        @if (isManga()) {
+          <div class="content-field">
+            <span class="content-toolbar">
+              <span>Trang truyện</span>
+              <span
+                class="autosave-status autosave-status--{{ session.status() }}"
+                role="status"
+                aria-live="polite"
+                >{{ statusText() }}
+                @if (session.lastSaved()) {
+                  · {{ session.lastSaved() | date: 'HH:mm:ss' }}
+                }
+              </span>
+            </span>
+            @if (isCreate()) {
+              <small>Lưu chương thành bản nháp trước để tải trang truyện.</small>
+            } @else {
+              <app-manga-page-uploader
+                [storyId]="storyId"
+                [chapterId]="chapterId()!"
+                [disabled]="!isEditable() || workflow.busy()"
+              />
+            }
+          </div>
+        } @else {
+          <div class="content-field">
+            <span class="content-toolbar">
+              <span>Nội dung chương · {{ wordCount() }} từ</span>
+              <span
+                class="autosave-status autosave-status--{{ session.status() }}"
+                role="status"
+                aria-live="polite"
+                >{{ statusText() }}
+                @if (session.lastSaved()) {
+                  · {{ session.lastSaved() | date: 'HH:mm:ss' }}
+                }
+              </span>
+              @if (!isCreate() && isEditable()) {
+                <label class="image-upload-action">
+                  <app-icon name="camera" [size]="15" />
+                  {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    [disabled]="store.uploadingImage()"
+                    (change)="selectChapterImage($event)"
+                  />
+                </label>
               }
             </span>
-            @if (!isCreate() && isEditable()) {
-              <label class="image-upload-action">
-                <app-icon name="camera" [size]="15" />
-                {{ store.uploadingImage() ? 'Đang tải ảnh...' : 'Chèn ảnh minh họa' }}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  [disabled]="store.uploadingImage()"
-                  (change)="selectChapterImage($event)"
-                />
-              </label>
+            <app-chapter-rich-editor
+              [content]="session.draft().content"
+              [disabled]="!isEditable() || session.restoring() || workflow.busy()"
+              (contentChange)="contentChanged($event)"
+            />
+            @if (isCreate()) {
+              <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
             }
-          </span>
-          <app-chapter-rich-editor
-            [content]="session.draft().content"
-            [disabled]="!isEditable() || session.restoring() || workflow.busy()"
-            (contentChange)="contentChanged($event)"
-          />
-          @if (isCreate()) {
-            <small>Lưu chương thành bản nháp trước để tải và chèn ảnh minh họa.</small>
-          }
-        </div>
+          </div>
+        }
 
         <footer>
           @if (session.chapter(); as chapter) {

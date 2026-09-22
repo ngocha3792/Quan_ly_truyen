@@ -6,6 +6,8 @@ export class CreateAuthorStoryCommand {
 
     readonly synopsis: string | null | undefined,
 
+    readonly format: string | undefined,
+
     readonly categoryIds: readonly string[] | undefined,
 
     readonly tagIds: readonly string[] | undefined,

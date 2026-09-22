@@ -42,6 +42,7 @@ export class UpdateAuthorStoryCommandHandler {
       storyId: command.storyId,
       title,
       synopsis,
+      format: command.format,
       categoryIds: normalizeOptionalIds(command.categoryIds),
       tagIds: normalizeOptionalIds(command.tagIds),
       coverMediaId: command.coverMediaId,

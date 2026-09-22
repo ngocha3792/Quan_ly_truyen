@@ -1,4 +1,4 @@
-import type { ChapterResultDto } from '../../../application';
+import type { ChapterResultDto, ChapterMediaRecord } from '../../../application';
 import type { ChapterContentDocument } from '../../../domain';
 
 export interface ChapterResponse {
@@ -37,6 +37,8 @@ export interface ChapterResponse {
   readonly createdAt: string;
 
   readonly updatedAt: string;
+
+  readonly media?: readonly ChapterMediaRecord[];
 }
 
 export function toChapterResponse(result: ChapterResultDto): ChapterResponse {
@@ -59,5 +61,6 @@ export function toChapterResponse(result: ChapterResultDto): ChapterResponse {
     publishedAt: result.publishedAt?.toISOString() ?? null,
     createdAt: result.createdAt.toISOString(),
     updatedAt: result.updatedAt.toISOString(),
+    ...(result.media !== undefined ? { media: result.media } : {}),
   };
 }

@@ -59,6 +59,30 @@
           </label>
 
           <div class="field-group">
+            <span class="field-label">Định dạng truyện</span>
+            <div class="chip-list">
+              <button
+                type="button"
+                class="chip"
+                [class.chip--selected]="form.controls.format.value === 'NOVEL'"
+                [disabled]="!isEditable()"
+                (click)="form.controls.format.setValue('NOVEL'); form.markAsDirty()"
+              >
+                Truyện chữ
+              </button>
+              <button
+                type="button"
+                class="chip"
+                [class.chip--selected]="form.controls.format.value === 'MANGA'"
+                [disabled]="!isEditable()"
+                (click)="form.controls.format.setValue('MANGA'); form.markAsDirty()"
+              >
+                Manga · Truyện tranh
+              </button>
+            </div>
+          </div>
+
+          <div class="field-group">
             <span class="field-label">Thể loại</span>
             <div class="chip-list">
               @for (category of store.categories(); track category.id) {

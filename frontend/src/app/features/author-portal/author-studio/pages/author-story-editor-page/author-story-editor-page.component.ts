@@ -28,6 +28,7 @@ import {
   AuthorStoryDraftInput,
   AuthorStoryContributor,
   AuthorStoryContributorRole,
+  AuthorStoryFormat,
   AuthorStoryTag,
 } from '../../domain/author-story-management.models';
 
@@ -63,6 +64,7 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
     synopsis: [''],
+    format: ['NOVEL' as AuthorStoryFormat, Validators.required],
   });
   protected readonly contributorForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
@@ -113,7 +115,10 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
       const story = this.store.story();
       if (!story) return;
 
-      this.form.patchValue({ title: story.title, synopsis: story.synopsis }, { emitEvent: false });
+      this.form.patchValue(
+        { title: story.title, synopsis: story.synopsis, format: story.format },
+        { emitEvent: false },
+      );
       this.selectedCategoryIds.set(
         story.categories.map((category: AuthorStoryCategory) => category.id),
       );
@@ -288,6 +293,7 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
     return {
       title: value.title.trim(),
       synopsis: value.synopsis.trim(),
+      format: value.format,
       categoryIds: this.selectedCategoryIds(),
       tagIds: this.selectedTagIds(),
     };

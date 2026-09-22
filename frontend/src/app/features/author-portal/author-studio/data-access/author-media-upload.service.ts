@@ -1,14 +1,22 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, switchMap } from 'rxjs';
+import { from, map, Observable, switchMap } from 'rxjs';
 
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import { AuthorStoryMedia } from '../domain/author-story-management.models';
+import { compressImageForUpload } from './image-compression.util';
 
 const AUTHOR_MEDIA_PURPOSE = {
   storyCover: 'STORY_COVER',
   chapterImage: 'CHAPTER_IMAGE',
+} as const;
+
+const COMPRESSION_PRESETS = {
+  storyCover: { maxDimension: 1600, quality: 0.85 },
+  // Manga pages keep a higher quality/resolution ceiling than covers so
+  // line art and speech-bubble text stay legible after compression.
+  chapterImage: { maxDimension: 2000, quality: 0.92 },
 } as const;
 
 interface AuthorMediaUploadIntent {
@@ -39,11 +47,17 @@ export class AuthorMediaUploadService {
   private readonly config = inject(APP_RUNTIME_CONFIG);
 
   uploadStoryCover(storyId: string, file: File): Observable<AuthorStoryMedia> {
-    return this.upload(AUTHOR_MEDIA_PURPOSE.storyCover, storyId, file);
+    return from(compressImageForUpload(file, COMPRESSION_PRESETS.storyCover)).pipe(
+      switchMap((compressed) => this.upload(AUTHOR_MEDIA_PURPOSE.storyCover, storyId, compressed)),
+    );
   }
 
   uploadChapterImage(chapterId: string, file: File): Observable<AuthorStoryMedia> {
-    return this.upload(AUTHOR_MEDIA_PURPOSE.chapterImage, chapterId, file);
+    return from(compressImageForUpload(file, COMPRESSION_PRESETS.chapterImage)).pipe(
+      switchMap((compressed) =>
+        this.upload(AUTHOR_MEDIA_PURPOSE.chapterImage, chapterId, compressed),
+      ),
+    );
   }
 
   getMedia(mediaId: string): Observable<AuthorStoryMedia> {

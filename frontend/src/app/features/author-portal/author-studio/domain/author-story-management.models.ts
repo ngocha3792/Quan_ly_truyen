@@ -9,6 +9,7 @@ export type AuthorStoryStatus =
   | 'ARCHIVED';
 
 export type AuthorStoryVisibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+export type AuthorStoryFormat = 'NOVEL' | 'MANGA';
 export type AuthorChapterStatus =
   'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN' | 'ARCHIVED';
 export const AUTHOR_STORY_CONTRIBUTOR_ROLES = [
@@ -38,6 +39,7 @@ export interface AuthorManagedStory {
   readonly title: string;
   readonly slug: string;
   readonly synopsis: string;
+  readonly format: AuthorStoryFormat;
   readonly languageCode: string;
   readonly status: AuthorStoryStatus;
   readonly visibility: AuthorStoryVisibility;
@@ -71,6 +73,7 @@ export interface AuthorManagedChapter extends AuthorManagedChapterSummary {
   readonly updatedById: string;
   readonly content: string;
   readonly contentFormat: string;
+  readonly media?: readonly AuthorChapterMediaPage[];
 }
 
 export interface AuthorChapterVersionSummary {
@@ -117,6 +120,7 @@ export interface AuthorStoryMetadataTag {
 export interface AuthorStoryDraftInput {
   readonly title: string;
   readonly synopsis: string;
+  readonly format?: AuthorStoryFormat;
   readonly categoryIds: readonly string[];
   readonly tagIds: readonly string[];
 }
@@ -206,4 +210,14 @@ export interface AuthorStoryContributorInput {
   readonly role: AuthorStoryContributorRole;
   readonly creditName?: string;
   readonly canEdit: boolean;
+}
+
+export interface AuthorChapterMediaPage {
+  readonly mediaAssetId: string;
+  readonly sortOrder: number;
+  readonly altText: string | null;
+  readonly caption: string | null;
+  readonly url: string | null;
+  readonly width: number | null;
+  readonly height: number | null;
 }

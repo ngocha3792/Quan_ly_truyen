@@ -123,6 +123,26 @@ export class ChapterEmptyContentException extends InvalidInputException {
   }
 }
 
+export class InvalidChapterMediaException extends InvalidInputException {
+  constructor(invalidIds: readonly string[]) {
+    super({
+      code: 'CHAPTER_MEDIA_INVALID',
+      message: 'Một hoặc nhiều ảnh trang không hợp lệ hoặc chưa upload xong',
+      details: { field: 'pages', invalidIds },
+    });
+  }
+}
+
+export class ChapterMediaReorderMismatchException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'CHAPTER_MEDIA_REORDER_MISMATCH',
+      message: 'Danh sách sắp xếp không khớp với các trang hiện có của chương',
+      details: { field: 'orderedMediaAssetIds' },
+    });
+  }
+}
+
 export class ChapterStoryPendingReviewException extends ResourceConflictException {
   constructor() {
     super({

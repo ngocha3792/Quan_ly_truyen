@@ -31,6 +31,8 @@ export interface StoryRecord {
 
   readonly synopsis: string;
 
+  readonly format: string;
+
   readonly languageCode: string;
 
   readonly status: string;
@@ -105,6 +107,8 @@ export interface CreateAuthorStoryInput {
 
   readonly synopsis: string;
 
+  readonly format?: string;
+
   readonly categoryIds: readonly string[];
 
   readonly tagIds: readonly string[];
@@ -142,6 +146,8 @@ export interface UpdateAuthorStoryInput {
   readonly title?: string;
 
   readonly synopsis?: string;
+
+  readonly format?: string;
 
   readonly categoryIds?: readonly string[];
 

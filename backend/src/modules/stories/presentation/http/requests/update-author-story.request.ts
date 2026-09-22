@@ -1,6 +1,7 @@
 import {
   ArrayUnique,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -9,6 +10,7 @@ import {
 } from 'class-validator';
 
 import { StoryDraftPolicy } from '../../../domain';
+import { STORY_FORMAT_VALUES } from './create-author-story.request';
 
 export class UpdateAuthorStoryRequest {
   @IsOptional()
@@ -20,6 +22,10 @@ export class UpdateAuthorStoryRequest {
   @IsOptional()
   @IsString()
   synopsis?: string | null;
+
+  @IsOptional()
+  @IsIn(STORY_FORMAT_VALUES)
+  format?: string;
 
   @IsOptional()
   @IsArray()

@@ -12,6 +12,7 @@ import {
   Prisma,
   ModerationActionType,
   SubmissionStatus,
+  StoryFormat,
   StoryStatus,
   StoryVisibility,
 } from '@/generated/prisma/client';
@@ -50,6 +51,7 @@ const STORY_SELECT = {
   title: true,
   slug: true,
   synopsis: true,
+  format: true,
   languageCode: true,
   status: true,
   visibility: true,
@@ -93,6 +95,7 @@ const PUBLIC_STORY_SELECT = {
   title: true,
   slug: true,
   synopsis: true,
+  format: true,
   languageCode: true,
   contentRating: true,
   releaseYear: true,
@@ -295,6 +298,9 @@ export class PrismaStoryPersistence
               title: input.title,
               slug,
               synopsis: input.synopsis,
+              ...(input.format !== undefined
+                ? { format: input.format as StoryFormat }
+                : {}),
               status: StoryStatus.DRAFT,
               visibility: StoryVisibility.PRIVATE,
               createdAt: input.createdAt,
@@ -442,6 +448,8 @@ export class PrismaStoryPersistence
             input.title !== undefined && input.title !== current.title;
           const synopsisChanged =
             input.synopsis !== undefined && input.synopsis !== current.synopsis;
+          const formatChanged =
+            input.format !== undefined && input.format !== current.format;
           const categoriesChanged = hasCategoryChanges(
             current,
             input.categoryIds,
@@ -469,6 +477,7 @@ export class PrismaStoryPersistence
           if (
             !titleChanged &&
             !synopsisChanged &&
+            !formatChanged &&
             !categoriesChanged &&
             !tagsChanged &&
             !coverChanged
@@ -498,6 +507,11 @@ export class PrismaStoryPersistence
               ...(synopsisChanged
                 ? {
                     synopsis: input.synopsis,
+                  }
+                : {}),
+              ...(formatChanged
+                ? {
+                    format: input.format as StoryFormat,
                   }
                 : {}),
               ...(categoriesChanged && input.categoryIds !== undefined
@@ -568,6 +582,7 @@ export class PrismaStoryPersistence
                 title: current.title,
                 slug: current.slug,
                 synopsisLength: current.synopsis.length,
+                format: current.format,
                 categoryIds: current.categories.map(
                   ({ category }) => category.id,
                 ),
@@ -580,6 +595,7 @@ export class PrismaStoryPersistence
                 title: updated.title,
                 slug: updated.slug,
                 synopsisLength: updated.synopsis.length,
+                format: updated.format,
                 categoryIds: updated.categories.map(
                   ({ category }) => category.id,
                 ),
@@ -1371,6 +1387,7 @@ export class PrismaStoryPersistence
       title: story.title,
       slug: story.slug,
       synopsis: story.synopsis,
+      format: story.format,
       languageCode: story.languageCode,
       status: story.status,
       visibility: story.visibility,
@@ -1843,6 +1860,7 @@ function toPublicStoryDto(story: PublicStoryRow): PublicStoryDto {
     slug: story.slug,
     title: story.title,
     synopsis: story.synopsis,
+    format: story.format,
     languageCode: story.languageCode,
     contentRating: story.contentRating,
     releaseYear: story.releaseYear,

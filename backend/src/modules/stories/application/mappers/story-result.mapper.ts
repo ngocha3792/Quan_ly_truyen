@@ -9,6 +9,7 @@ export class StoryResultMapper {
       title: story.title,
       slug: story.slug,
       synopsis: story.synopsis,
+      format: story.format,
       languageCode: story.languageCode,
       status: story.status,
       visibility: story.visibility,
