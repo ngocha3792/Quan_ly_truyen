@@ -48,6 +48,7 @@ describe('CreateAuthorStoryCommandHandler', () => {
         USER_ID,
         '   Truyện    Mới   ',
         '   Giới thiệu truyện.   ',
+        undefined,
         [CATEGORY_ID, CATEGORY_ID],
         [TAG_ID, TAG_ID],
         '127.0.0.1',
@@ -83,6 +84,7 @@ describe('CreateAuthorStoryCommandHandler', () => {
       new CreateAuthorStoryCommand(
         USER_ID,
         'Truyện Mới',
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -139,6 +141,7 @@ function createCommand(userId: string | undefined): CreateAuthorStoryCommand {
     userId,
     'Truyện Mới',
     'Giới thiệu truyện.',
+    undefined,
     [CATEGORY_ID],
     [TAG_ID],
     undefined,

@@ -1,4 +1,7 @@
-import type { ChapterResultDto, ChapterMediaRecord } from '../../../application';
+import type {
+  ChapterResultDto,
+  ChapterMediaRecord,
+} from '../../../application';
 import type { ChapterContentDocument } from '../../../domain';
 
 export interface ChapterResponse {

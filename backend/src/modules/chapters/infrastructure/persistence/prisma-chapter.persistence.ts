@@ -1637,7 +1637,12 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         altText: true,
         caption: true,
         mediaAsset: {
-          select: { secureUrl: true, publicUrl: true, width: true, height: true },
+          select: {
+            secureUrl: true,
+            publicUrl: true,
+            width: true,
+            height: true,
+          },
         },
       },
     });

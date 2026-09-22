@@ -71,9 +71,14 @@
               <small>Lưu chương thành bản nháp trước để tải trang truyện.</small>
             } @else {
               <app-manga-page-uploader
-                [storyId]="storyId"
-                [chapterId]="chapterId()!"
+                [pages]="store.mediaPages()"
+                [uploading]="store.uploadingPage()"
+                [reordering]="store.reorderingPages()"
                 [disabled]="!isEditable() || workflow.busy()"
+                (filesSelected)="uploadMangaPages($event)"
+                (moveUpRequested)="moveMangaPageUp($event)"
+                (moveDownRequested)="moveMangaPageDown($event)"
+                (removeRequested)="removeMangaPage($event)"
               />
             }
           </div>

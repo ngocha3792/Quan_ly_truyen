@@ -404,7 +404,8 @@ export class AuthorChaptersController {
     @CurrentUserId() userId: string | undefined,
     @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
     @Param('chapterId', new ParseUUIDPipe({ version: '4' })) chapterId: string,
-    @Param('mediaAssetId', new ParseUUIDPipe({ version: '4' })) mediaAssetId: string,
+    @Param('mediaAssetId', new ParseUUIDPipe({ version: '4' }))
+    mediaAssetId: string,
     @ClientIp() ipAddress: string | undefined,
     @UserAgent() userAgent: string | undefined,
     @RequestId() requestId: string | undefined,

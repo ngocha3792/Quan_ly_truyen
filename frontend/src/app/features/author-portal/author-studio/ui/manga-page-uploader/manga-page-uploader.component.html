@@ -1,15 +1,15 @@
 <div class="manga-pages">
   <div class="manga-pages-header">
-    <span>Trang truyện · {{ store.mediaPages().length }} ảnh</span>
+    <span>Trang truyện · {{ pages().length }} ảnh</span>
 
     <label class="upload-action" [class.upload-action--disabled]="disabled()">
       <app-icon name="camera" [size]="15" />
-      {{ store.uploadingPage() ? 'Đang tải ảnh...' : 'Thêm trang' }}
+      {{ uploading() ? 'Đang tải ảnh...' : 'Thêm trang' }}
       <input
         type="file"
         accept="image/jpeg,image/png,image/webp"
         multiple
-        [disabled]="disabled() || store.uploadingPage()"
+        [disabled]="disabled() || uploading()"
         (change)="selectFiles($event)"
       />
     </label>
@@ -19,11 +19,11 @@
     <p class="manga-pages-error">{{ fileError() }}</p>
   }
 
-  @if (store.mediaPages().length === 0) {
+  @if (pages().length === 0) {
     <p class="manga-pages-empty">Chưa có trang nào. Tải ảnh lên theo đúng thứ tự đọc.</p>
   } @else {
     <ol class="manga-pages-grid">
-      @for (page of store.mediaPages(); track page.mediaAssetId; let i = $index; let last = $last) {
+      @for (page of pages(); track page.mediaAssetId; let i = $index; let last = $last) {
         <li class="manga-page-card">
           <span class="manga-page-index">{{ i + 1 }}</span>
 
@@ -38,7 +38,7 @@
           <div class="manga-page-actions">
             <button
               type="button"
-              [disabled]="disabled() || i === 0 || store.reorderingPages()"
+              [disabled]="disabled() || i === 0 || reordering()"
               (click)="moveUp(page.mediaAssetId)"
               aria-label="Di chuyển lên"
             >
@@ -46,7 +46,7 @@
             </button>
             <button
               type="button"
-              [disabled]="disabled() || last || store.reorderingPages()"
+              [disabled]="disabled() || last || reordering()"
               (click)="moveDown(page.mediaAssetId)"
               aria-label="Di chuyển xuống"
             >

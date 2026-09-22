@@ -20,11 +20,7 @@ export async function compressImageForUpload(
 
   try {
     const bitmap = await createImageBitmap(file);
-    const { width, height } = fitWithinDimension(
-      bitmap.width,
-      bitmap.height,
-      options.maxDimension,
-    );
+    const { width, height } = fitWithinDimension(bitmap.width, bitmap.height, options.maxDimension);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;

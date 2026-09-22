@@ -7,7 +7,6 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import { ChapterVersionDiff } from '../domain/chapter-editing.models';
 import {
   AuthorChapterDraftInput,
-  AuthorChapterMediaPage,
   AuthorChapterVersion,
   AuthorChapterMonetization,
   AuthorChapterPricingInput,
@@ -28,6 +27,7 @@ import {
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 import { AuthorChapterDraftHttpService } from './author-chapter-draft-http.service';
+import { AuthorChapterMediaHttpService } from './author-chapter-media-http.service';
 import { AuthorChapterVersionHttpService } from './author-chapter-version-http.service';
 import { AuthorChapterPublicationHttpService } from './author-chapter-publication-http.service';
 import { AuthorChapterMonetizationHttpService } from './author-chapter-monetization-http.service';
@@ -42,6 +42,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   private readonly chapterVersions = inject(AuthorChapterVersionHttpService);
   private readonly chapterPublication = inject(AuthorChapterPublicationHttpService);
   private readonly chapterMonetization = inject(AuthorChapterMonetizationHttpService);
+  private readonly chapterMedia = inject(AuthorChapterMediaHttpService);
   private readonly storiesUrl = `${this.config.apiBaseUrl}/author/stories`;
   private readonly metadataUrl = `${this.config.apiBaseUrl}/story-metadata`;
   private storyCreateRetry: CreateRetryState | null = null;
@@ -250,43 +251,16 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     return this.mediaUpload.getMedia(mediaId);
   }
 
-  attachChapterMedia(
-    storyId: string,
-    chapterId: string,
-    pages: ReadonlyArray<{ readonly mediaAssetId: string; readonly caption?: string }>,
-  ): Observable<readonly AuthorChapterMediaPage[]> {
-    return this.http
-      .post<ApiSuccessEnvelope<readonly AuthorChapterMediaPage[]>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/media`,
-        { pages },
-        { headers: idempotencyHeaders() },
-      )
-      .pipe(map((response) => response.data));
+  attachChapterMedia(...args: Parameters<AuthorChapterMediaHttpService['attach']>) {
+    return this.chapterMedia.attach(...args);
   }
 
-  reorderChapterMedia(
-    storyId: string,
-    chapterId: string,
-    orderedMediaAssetIds: readonly string[],
-  ): Observable<readonly AuthorChapterMediaPage[]> {
-    return this.http
-      .put<ApiSuccessEnvelope<readonly AuthorChapterMediaPage[]>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/media/order`,
-        { orderedMediaAssetIds },
-      )
-      .pipe(map((response) => response.data));
+  reorderChapterMedia(...args: Parameters<AuthorChapterMediaHttpService['reorder']>) {
+    return this.chapterMedia.reorder(...args);
   }
 
-  removeChapterMedia(
-    storyId: string,
-    chapterId: string,
-    mediaAssetId: string,
-  ): Observable<readonly AuthorChapterMediaPage[]> {
-    return this.http
-      .delete<ApiSuccessEnvelope<readonly AuthorChapterMediaPage[]>>(
-        `${this.storiesUrl}/${storyId}/chapters/${chapterId}/media/${mediaAssetId}`,
-      )
-      .pipe(map((response) => response.data));
+  removeChapterMedia(...args: Parameters<AuthorChapterMediaHttpService['remove']>) {
+    return this.chapterMedia.remove(...args);
   }
 
   listContributors(storyId: string): Observable<readonly AuthorStoryContributor[]> {

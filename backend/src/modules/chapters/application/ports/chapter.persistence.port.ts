@@ -416,13 +416,17 @@ export interface ChapterPersistencePort {
 
   publishDueScheduled(input: PublishDueScheduledChaptersInput): Promise<number>;
 
-  attachMedia(input: AttachChapterMediaInput): Promise<AttachChapterMediaResult>;
+  attachMedia(
+    input: AttachChapterMediaInput,
+  ): Promise<AttachChapterMediaResult>;
 
   reorderMedia(
     input: ReorderChapterMediaInput,
   ): Promise<ReorderChapterMediaResult>;
 
-  removeMedia(input: RemoveChapterMediaInput): Promise<RemoveChapterMediaResult>;
+  removeMedia(
+    input: RemoveChapterMediaInput,
+  ): Promise<RemoveChapterMediaResult>;
 
   findPublicReader(
     storySlug: string,

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
-import { AuthorChapterEditorStore } from '../../data-access/author-chapter-editor.store';
+import { AuthorChapterMediaPage } from '../../domain/author-story-management.models';
 import { validateChapterImage } from '../../domain/chapter-image-validation';
 
 @Component({
@@ -13,46 +13,50 @@ import { validateChapterImage } from '../../domain/chapter-image-validation';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MangaPageUploaderComponent {
-  readonly storyId = input.required<string>();
-  readonly chapterId = input.required<string>();
+  readonly pages = input.required<readonly AuthorChapterMediaPage[]>();
+  readonly uploading = input(false);
+  readonly reordering = input(false);
   readonly disabled = input(false);
 
-  protected readonly store = inject(AuthorChapterEditorStore);
+  readonly filesSelected = output<readonly File[]>();
+  readonly moveUpRequested = output<string>();
+  readonly moveDownRequested = output<string>();
+  readonly removeRequested = output<string>();
+
   protected readonly fileError = signal<string | null>(null);
 
-  protected async selectFiles(event: Event): Promise<void> {
+  protected selectFiles(event: Event): void {
     const target = event.target as HTMLInputElement;
     const files = Array.from(target.files ?? []);
     target.value = '';
     if (files.length === 0) return;
 
+    const validFiles: File[] = [];
+    let message: string | null = null;
+
     for (const file of files) {
-      const message = validateChapterImage(file);
-      if (message) {
-        this.fileError.set(message);
+      const error = validateChapterImage(file);
+      if (error) {
+        message = error;
         continue;
       }
-
-      this.fileError.set(null);
-      await new Promise<void>((resolve) => {
-        this.store.uploadPage(this.storyId(), this.chapterId(), file).subscribe({
-          next: () => resolve(),
-          error: () => resolve(),
-        });
-      });
+      validFiles.push(file);
     }
+
+    this.fileError.set(message);
+    if (validFiles.length > 0) this.filesSelected.emit(validFiles);
   }
 
   protected moveUp(mediaAssetId: string): void {
-    this.store.movePage(this.storyId(), this.chapterId(), mediaAssetId, -1);
+    this.moveUpRequested.emit(mediaAssetId);
   }
 
   protected moveDown(mediaAssetId: string): void {
-    this.store.movePage(this.storyId(), this.chapterId(), mediaAssetId, 1);
+    this.moveDownRequested.emit(mediaAssetId);
   }
 
   protected remove(mediaAssetId: string): void {
     if (!window.confirm('Xóa trang này khỏi chương?')) return;
-    this.store.removePage(this.storyId(), this.chapterId(), mediaAssetId);
+    this.removeRequested.emit(mediaAssetId);
   }
 }

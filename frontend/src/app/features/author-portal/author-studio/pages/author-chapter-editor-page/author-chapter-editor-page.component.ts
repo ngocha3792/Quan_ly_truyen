@@ -266,4 +266,30 @@ export class AuthorChapterEditorPageComponent implements OnInit {
         error: (error: unknown) => this.store.setError(error),
       });
   }
+
+  protected uploadMangaPages(files: readonly File[]): void {
+    const id = this.chapterId();
+    if (!id) return;
+    for (const file of files) {
+      this.store
+        .uploadPage(this.storyId, id, file)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ error: () => undefined });
+    }
+  }
+
+  protected moveMangaPageUp(mediaAssetId: string): void {
+    const id = this.chapterId();
+    if (id) this.store.movePage(this.storyId, id, mediaAssetId, -1);
+  }
+
+  protected moveMangaPageDown(mediaAssetId: string): void {
+    const id = this.chapterId();
+    if (id) this.store.movePage(this.storyId, id, mediaAssetId, 1);
+  }
+
+  protected removeMangaPage(mediaAssetId: string): void {
+    const id = this.chapterId();
+    if (id) this.store.removePage(this.storyId, id, mediaAssetId);
+  }
 }
