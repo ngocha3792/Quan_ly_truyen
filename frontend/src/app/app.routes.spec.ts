@@ -102,6 +102,7 @@ describe('application route composition', () => {
       'categories',
       'tags',
       'monetization',
+      'revenue',
       'settings/ai',
       'settings/payments',
       'payments/review',
