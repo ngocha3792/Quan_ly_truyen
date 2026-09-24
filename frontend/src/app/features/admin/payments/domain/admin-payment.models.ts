@@ -48,22 +48,74 @@ export interface PaymentProviderKindSchema {
   readonly fields: readonly PaymentProviderField[];
 }
 
+export const PAYMENT_ORDER_STATUSES = [
+  'CREATED',
+  'PENDING',
+  'AWAITING_REVIEW',
+  'PAID',
+  'FAILED',
+  'EXPIRED',
+  'REFUNDED',
+  'REVERSED',
+] as const;
+
+export type PaymentOrderStatus = (typeof PAYMENT_ORDER_STATUSES)[number];
+
 export interface ManualReviewOrder {
   readonly id: string;
   readonly userEmail: string;
   readonly userDisplayName: string;
   readonly packageLabel: string;
   readonly provider: string;
+  readonly providerKind?: PaymentProviderKind;
   readonly providerReference: string | null;
   readonly creditAmount: string;
   readonly fiatAmountMinor: string;
   readonly currency: string;
-  readonly status: 'AWAITING_REVIEW';
+  readonly status: PaymentOrderStatus;
   readonly transferClaim: Record<string, unknown> | null;
   readonly createdAt: string;
+  readonly settledAt: string | null;
+}
+
+/** Bộ lọc của hàng chờ đối soát, khớp đúng tham số API hỗ trợ. */
+export interface ManualReviewFilters {
+  readonly search: string;
+  readonly status: PaymentOrderStatus | '';
+  readonly provider: string;
+  readonly from: string;
+  readonly to: string;
+  /** Lọc phía client: chỉ đơn chờ duyệt đã quá 24 giờ. */
+  readonly overdueOnly: boolean;
+}
+
+export const EMPTY_MANUAL_REVIEW_FILTERS: ManualReviewFilters = {
+  search: '',
+  status: 'AWAITING_REVIEW',
+  provider: '',
+  from: '',
+  to: '',
+  overdueOnly: false,
+};
+
+/** Số liệu đối soát, tính bằng SQL nên không phụ thuộc trang đang tải. */
+export interface PaymentReconciliation {
+  readonly paidOrders: number;
+  readonly paidOrdersWithoutLedger: number;
+  readonly orphanTopUpTransactions: number;
+  readonly pendingExpiredOrders: number;
+  readonly awaitingReviewOrders: number;
+  readonly awaitingReviewOlderThan24h: number;
+  readonly awaitingReviewAmountMinor: string;
+  readonly confirmedToday: number;
 }
 
 export interface PageResult<T> {
   readonly items: readonly T[];
-  readonly pagination: { readonly totalItems: number };
+  readonly pagination: {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly totalItems: number;
+    readonly totalPages: number;
+  };
 }

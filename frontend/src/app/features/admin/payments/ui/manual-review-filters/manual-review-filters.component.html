@@ -1,0 +1,87 @@
+<section class="mrv-panel">
+  <header class="mrv-panel__head">
+    <span class="mrv-panel__icon"><app-icon name="filter" [size]="18" /></span>
+    <div class="mrv-panel__title">
+      <h2>Bộ lọc &amp; tìm kiếm</h2>
+      <p>Tìm theo mã giao dịch, email hoặc tên người gửi.</p>
+    </div>
+  </header>
+
+  <form (ngSubmit)="submit()">
+    <div class="mrv-filters">
+      <label class="mrv-field">
+        Tìm kiếm
+        <input
+          name="search"
+          type="search"
+          placeholder="Nhập mã giao dịch / tên người gửi…"
+          [value]="form().search"
+          (input)="patch('search', readValue($event))"
+        />
+      </label>
+
+      <label class="mrv-field">
+        Trạng thái
+        <select
+          name="status"
+          [value]="form().status"
+          (change)="patch('status', $any(readValue($event)))"
+        >
+          <option value="">Tất cả trạng thái</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ statusLabel(status) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="mrv-field">
+        Ngân hàng
+        <select
+          name="provider"
+          [value]="form().provider"
+          (change)="patch('provider', readValue($event))"
+        >
+          <option value="">Tất cả ngân hàng</option>
+          @for (provider of providers(); track provider.code) {
+            <option [value]="provider.code">{{ provider.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="mrv-field">
+        Từ ngày
+        <input
+          name="from"
+          type="date"
+          [value]="form().from"
+          (change)="patch('from', readValue($event))"
+        />
+      </label>
+
+      <label class="mrv-field">
+        Đến ngày
+        <input
+          name="to"
+          type="date"
+          [value]="form().to"
+          (change)="patch('to', readValue($event))"
+        />
+      </label>
+    </div>
+
+    <div class="mrv-filter-actions">
+      <label class="mrv-toggle">
+        <input
+          type="checkbox"
+          name="overdueOnly"
+          [checked]="form().overdueOnly"
+          (change)="toggleOverdue($event)"
+        />
+        Chỉ hiển thị đơn quá hạn
+      </label>
+
+      <app-button variant="primary" type="submit" [loading]="busy()">Lọc</app-button>
+      <app-button variant="secondary" type="button" (click)="clear()">Xóa lọc</app-button>
+    </div>
+  </form>
+</section>

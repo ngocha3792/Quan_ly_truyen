@@ -1,0 +1,42 @@
+<aside class="mrv-aside">
+  <section class="mrv-panel mrv-panel--status" [class.mrv-panel--offline]="!serviceEnabled()">
+    <span class="mrv-status-dot" aria-hidden="true"></span>
+    <div>
+      <h2>{{ serviceEnabled() ? 'Dịch vụ hiện đang khả dụng' : 'Dịch vụ đang tắt' }}</h2>
+      <p>
+        @if (serviceEnabled()) {
+          Hệ thống xác nhận thủ công đang hoạt động bình thường.
+        } @else {
+          Nạp Credit đang tắt nên người đọc không tạo được đơn mới. Bật
+          <code>MONETIZATION_ENABLED</code> và <code>PAYMENT_PROVIDER_ENABLED</code> để mở lại.
+        }
+      </p>
+    </div>
+  </section>
+
+  <section class="mrv-panel">
+    <header class="mrv-panel__head">
+      <span class="mrv-panel__icon"><app-icon name="info" [size]="18" /></span>
+      <div class="mrv-panel__title"><h2>Hướng dẫn xác nhận</h2></div>
+    </header>
+    <ol class="mrv-steps">
+      @for (step of steps; track step.title) {
+        <li>
+          <strong>{{ step.title }}</strong>
+          <span>{{ step.detail }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section class="mrv-panel mrv-panel--note">
+    <span class="mrv-panel__icon"><app-icon name="alert-triangle" [size]="18" /></span>
+    <div>
+      <h2>Lưu ý</h2>
+      <p>
+        Xác nhận là thao tác cộng tiền thật và không tự hoàn lại được. Mọi thao tác đều ghi vào nhật
+        ký audit kèm lý do và tài khoản thực hiện.
+      </p>
+    </div>
+  </section>
+</aside>

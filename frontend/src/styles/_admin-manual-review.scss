@@ -1,0 +1,567 @@
+// Bề mặt cho màn đối soát chuyển khoản thủ công. Để ở global vì trang và các
+// component con dùng chung một ngôn ngữ panel/field/bảng; mọi class đều có
+// tiền tố `mrv-` để không chạm vào trang khác.
+
+.mrv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--space-2);
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 999px;
+  background: rgba(125, 61, 204, 0.18);
+  color: var(--primary-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mrv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mrv-link-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.mrv-link-action:hover {
+  border-color: var(--border-focus);
+  background: rgba(125, 61, 204, 0.14);
+}
+
+.mrv-notice {
+  margin: 0 0 var(--space-4);
+  padding: 0.7rem 0.95rem;
+  border: 1px solid rgba(22, 163, 74, 0.38);
+  border-radius: var(--radius-control);
+  background: rgba(22, 163, 74, 0.12);
+  color: #86efac;
+  font-size: 0.85rem;
+}
+
+/* Thống kê --------------------------------------------------------------- */
+
+.mrv-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.mrv-stat-grid app-stat-card {
+  --stat-value-size: 19px;
+  --stat-icon-size: 44px;
+}
+
+.mrv-stat-meta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bố cục ----------------------------------------------------------------- */
+
+.mrv-layout {
+  display: grid;
+  // Cột phải cố định hẹp để bảng đủ chỗ hiện cả cột trạng thái và thao tác;
+  // nút xác nhận là thao tác chính, không được nằm ngoài vùng nhìn thấy.
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.mrv-stack,
+.mrv-aside {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+// Con của grid là thẻ host của component, mà host mặc định là inline nên nó
+// không nhận ô lưới và các panel chồng đè lên nhau.
+app-manual-review-filters,
+app-manual-review-table,
+app-manual-review-aside {
+  display: block;
+  min-width: 0;
+}
+
+/* Panel ------------------------------------------------------------------ */
+
+.mrv-panel {
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
+}
+
+.mrv-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.mrv-panel__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--primary-soft);
+  background: rgba(125, 61, 204, 0.2);
+}
+
+.mrv-panel__title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.mrv-panel__title h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.mrv-panel__title p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.mrv-panel__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* Trường nhập ------------------------------------------------------------ */
+
+.mrv-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.mrv-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mrv-field--block {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+.mrv-field input,
+.mrv-field select,
+.mrv-field textarea,
+.mrv-inline-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-strong);
+  color-scheme: dark;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.mrv-field textarea {
+  margin-top: 0.35rem;
+  resize: vertical;
+}
+
+.mrv-field input::placeholder,
+.mrv-field textarea::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.mrv-field input:focus,
+.mrv-field select:focus,
+.mrv-field textarea:focus {
+  border-color: var(--border-focus);
+  background: rgba(10, 15, 29, 0.82);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
+}
+
+.mrv-field__hint {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-align: right;
+}
+
+.mrv-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mrv-inline-field select {
+  width: auto;
+  min-height: var(--control-height-sm);
+  padding: 0 0.6rem;
+}
+
+.mrv-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.mrv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-right: auto;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mrv-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-soft);
+}
+
+/* Bảng ------------------------------------------------------------------- */
+
+.mrv-empty {
+  padding: 1.5rem 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.mrv-table-scroll {
+  overflow-x: auto;
+}
+
+.mrv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+// Chỉ khoá xuống dòng ở những cột mà ngắt dòng làm sai nghĩa (mã, số tiền,
+// nút). Các cột còn lại được phép xuống dòng để cả bảng vừa khung, nếu không
+// nút xác nhận bị đẩy ra ngoài vùng nhìn thấy.
+.mrv-table__code,
+.mrv-table__amount,
+.mrv-table__actions {
+  white-space: nowrap;
+}
+
+.mrv-table th {
+  padding: 0.55rem 0.5rem;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.mrv-table td {
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  color: var(--text-strong);
+  vertical-align: middle;
+}
+
+.mrv-table tbody tr:hover {
+  background: rgba(125, 61, 204, 0.08);
+}
+
+.mrv-row--overdue td {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.mrv-table__code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+}
+
+.mrv-table__amount {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mrv-table__note {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mrv-sender__email {
+  word-break: break-all;
+}
+
+.mrv-table__actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mrv-sender,
+.mrv-credits {
+  display: block;
+}
+
+.mrv-sender {
+  font-weight: 600;
+}
+
+.mrv-sender__email,
+.mrv-credits,
+.mrv-currency {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.mrv-overdue-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  color: #fca5a5;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mrv-action {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-strong);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.mrv-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mrv-action--confirm:not(:disabled):hover {
+  border-color: rgba(22, 163, 74, 0.6);
+  background: rgba(22, 163, 74, 0.16);
+  color: #86efac;
+}
+
+.mrv-action--reject:not(:disabled):hover {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+}
+
+.mrv-action-empty {
+  color: var(--text-muted);
+}
+
+.mrv-table-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* Cột phải --------------------------------------------------------------- */
+
+.mrv-panel--status,
+.mrv-panel--note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.mrv-panel--status h2,
+.mrv-panel--note h2 {
+  margin: 0 0 0.25rem;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+}
+
+.mrv-panel--status p,
+.mrv-panel--note p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.mrv-panel--status code {
+  font-size: 0.74rem;
+}
+
+.mrv-status-dot {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.3rem;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+}
+
+.mrv-panel--offline .mrv-status-dot {
+  background: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18);
+}
+
+.mrv-steps {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.mrv-steps li {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.mrv-steps strong {
+  display: block;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+
+/* Hộp thoại quyết định --------------------------------------------------- */
+
+.mrv-decision-facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.mrv-decision-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mrv-decision-facts dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.mrv-decision-facts dd {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.mrv-decision-warning {
+  margin: var(--space-3) 0 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: var(--radius-control);
+  background: rgba(249, 115, 22, 0.12);
+  color: #fdba74;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.mrv-decision-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 1200px) {
+  .mrv-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mrv-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mrv-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mrv-panel {
+    padding: var(--space-4);
+  }
+
+  .mrv-panel__tools {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mrv-toggle {
+    width: 100%;
+    margin-right: 0;
+  }
+}

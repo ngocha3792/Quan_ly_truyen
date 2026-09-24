@@ -5,11 +5,13 @@ import { map } from 'rxjs';
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
+  ManualReviewFilters,
   ManualReviewOrder,
   PageResult,
   PaymentProviderConnection,
   PaymentProviderKindSchema,
   PaymentProviderWrite,
+  PaymentReconciliation,
 } from '../domain/admin-payment.models';
 
 @Injectable({ providedIn: 'root' })
@@ -47,15 +49,24 @@ export class AdminPaymentApiService {
   deleteProvider(id: string) {
     return this.http.delete(`${this.base}/payment-providers/${id}`);
   }
-  reviewQueue() {
-    const params = new HttpParams()
-      .set('status', 'AWAITING_REVIEW')
-      .set('page', 1)
-      .set('pageSize', 100);
+  reviewQueue(filters: ManualReviewFilters, page: number, pageSize: number) {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    // `overdueOnly` cố ý không gửi lên: API không có tham số này, lọc ở client.
+    if (filters.status) params = params.set('status', filters.status);
+    if (filters.search.trim()) params = params.set('search', filters.search.trim());
+    if (filters.provider.trim()) params = params.set('provider', filters.provider.trim());
+    if (filters.from) params = params.set('from', `${filters.from}T00:00:00.000Z`);
+    if (filters.to) params = params.set('to', `${filters.to}T23:59:59.999Z`);
     return this.http
       .get<ApiSuccessEnvelope<PageResult<ManualReviewOrder>>>(`${this.base}/payment-orders`, {
         params,
       })
+      .pipe(map((r) => r.data));
+  }
+
+  reconciliation() {
+    return this.http
+      .get<ApiSuccessEnvelope<PaymentReconciliation>>(`${this.base}/reconciliation`)
       .pipe(map((r) => r.data));
   }
   confirm(id: string, reason: string) {
