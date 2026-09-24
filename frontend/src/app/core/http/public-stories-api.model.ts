@@ -212,6 +212,19 @@ export interface PublicStoryChapterListApiResponse {
     readonly totalPages: number;
   };
 }
+export interface ChapterContentSegmentApi {
+  readonly type: 'text' | 'image';
+  /** Vị trí bắt đầu của đoạn trong text nguồn của block. */
+  readonly offset: number;
+  /** Chỉ có ở đoạn chữ. */
+  readonly text?: string;
+  /** Chỉ có ở đoạn ảnh; server đã lọc chỉ còn http/https. */
+  readonly url?: string;
+  readonly alt?: string;
+  /** Chỉ có ở đoạn ảnh: độ dài chuỗi Markdown bị thay bằng thẻ img. */
+  readonly length?: number;
+}
+
 export interface ChapterContentBlockApi {
   readonly id: string;
   /**
@@ -227,6 +240,8 @@ export interface ChapterContentBlockApi {
   readonly level?: number;
   /** Heading: số ký tự tiền tố Markdown bị ẩn khi hiển thị. */
   readonly textOffset?: number;
+  /** Paragraph có ảnh lẫn giữa chữ: các đoạn chữ/ảnh kèm offset text nguồn. */
+  readonly segments?: readonly ChapterContentSegmentApi[];
   readonly marks: readonly {
     readonly type: 'bold' | 'italic' | 'code' | 'link';
     readonly from: number;

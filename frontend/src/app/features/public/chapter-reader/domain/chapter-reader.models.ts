@@ -45,6 +45,18 @@ export interface ChapterComicMedia {
   readonly slices: readonly ChapterComicSlice[];
 }
 
+/** Một đoạn của paragraph có ảnh lẫn giữa chữ. */
+export interface ChapterContentSegment {
+  readonly type: 'text' | 'image';
+  /** Vị trí bắt đầu của đoạn trong text nguồn của block. */
+  readonly offset: number;
+  /** Chỉ có ở đoạn chữ. */
+  readonly text?: string;
+  /** Chỉ có ở đoạn ảnh; server đã lọc chỉ còn http/https. */
+  readonly url?: string;
+  readonly alt?: string;
+}
+
 export interface ChapterContentBlock {
   readonly id: string | null;
   readonly type:
@@ -60,6 +72,12 @@ export interface ChapterContentBlock {
    * theo text nguồn nên offset lấy từ DOM phải cộng lại số này.
    */
   readonly textOffset?: number;
+  /**
+   * Paragraph lẫn ảnh giữa chữ. Mỗi đoạn chữ được render thành một span mang
+   * `data-block-offset` bằng offset của nó, nên neo bình luận vẫn quy về đúng
+   * vị trí trong text nguồn.
+   */
+  readonly segments?: readonly ChapterContentSegment[];
 }
 
 export type ChapterCommentAuthor = PublicCommentAuthor;

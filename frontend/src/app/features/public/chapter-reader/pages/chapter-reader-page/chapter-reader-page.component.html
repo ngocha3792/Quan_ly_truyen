@@ -113,6 +113,26 @@
                       [attr.data-heading-level]="block.level"
                       [textContent]="block.text.slice(block.textOffset)"
                     ></p>
+                  } @else if (block.segments?.length) {
+                    <p class="chapter-mixed-block">
+                      @for (segment of block.segments; track segment.offset) {
+                        @if (segment.type === 'image') {
+                          <img
+                            class="chapter-inline-image__img"
+                            [src]="segment.url"
+                            [alt]="segment.alt || 'Ảnh minh họa trong chương'"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        } @else {
+                          <span
+                            [attr.data-block-id]="block.id"
+                            [attr.data-block-offset]="segment.offset"
+                            [textContent]="segment.text"
+                          ></span>
+                        }
+                      }
+                    </p>
                   } @else {
                     <p
                       [attr.data-block-id]="block.id"

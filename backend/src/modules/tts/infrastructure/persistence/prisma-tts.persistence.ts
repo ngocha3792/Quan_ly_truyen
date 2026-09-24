@@ -20,7 +20,7 @@ import {
 import { MEDIA_URL_BUILDER, type MediaUrlPort } from '@/modules/media';
 import {
   isChapterContentDocument,
-  isChapterImageBlock,
+  stripChapterImageMarkdown,
 } from '@/modules/chapters';
 import {
   TTS_PROVIDER_PORT,
@@ -172,13 +172,16 @@ export class PrismaTtsPersistence implements TtsPersistencePort {
           );
         }
         const blocks = chapter.contentDocument.blocks
+          .map((block) => ({
+            id: block.id,
+            type: block.type,
+            // Giọng đọc sẽ phát ra nguyên chuỗi URL nếu giữ Markdown ảnh lại,
+            // nên bỏ ảnh trước; block chỉ có ảnh sẽ rỗng và bị lọc ngay sau.
+            text: stripChapterImageMarkdown(block.text),
+          }))
           .filter(
             (block) =>
-              block.type !== 'horizontal_rule' &&
-              // Block chỉ chứa ảnh thì không có gì để đọc; nếu giữ lại, giọng
-              // đọc sẽ phát ra nguyên chuỗi URL.
-              !isChapterImageBlock(block) &&
-              block.text.trim().length > 0,
+              block.type !== 'horizontal_rule' && block.text.trim().length > 0,
           )
           .map((block, blockIndex) => ({
             blockId: block.id,

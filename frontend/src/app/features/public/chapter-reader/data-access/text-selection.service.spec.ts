@@ -109,6 +109,35 @@ describe('TextSelectionService', () => {
     });
   });
 
+  it('keeps source offsets when a selection spans an image sitting inside a paragraph', () => {
+    // Block nguồn có ảnh lẫn giữa chữ; reader dựng mỗi đoạn chữ thành một span
+    // mang offset của nó, nên hai đầu neo vẫn quy về đúng vị trí trong nguồn.
+    const markdown = '![x](https://cdn.test/a.jpg)';
+    const before = 'Trước ';
+    const after = ' sau đoạn văn đủ dài';
+    const source = `${before}${markdown}${after}`;
+    const afterOffset = before.length + markdown.length;
+    container.innerHTML =
+      `<p><span data-block-id="first" data-block-offset="0">${before}</span>` +
+      `<img src="https://cdn.test/a.jpg" alt="x" />` +
+      `<span data-block-id="first" data-block-offset="${afterOffset}">${after}</span></p>`;
+    const [first, last] = container.querySelectorAll('span');
+    const range = document.createRange();
+    range.setStart(first.firstChild!, 0);
+    range.setEnd(last.firstChild!, after.length);
+
+    const captured = capture(range);
+
+    expect(captured).toMatchObject({
+      startBlockId: 'first',
+      startOffset: 0,
+      endBlockId: 'first',
+      endOffset: source.length,
+    });
+    // Server cắt từ nguồn bằng cặp offset này phải ra đúng cả đoạn đã chọn.
+    expect(source.slice(captured!.startOffset, captured!.endOffset)).toBe(source);
+  });
+
   it('does not anchor a selection containing only a comment badge', () => {
     container.innerHTML =
       '<p data-block-id="first">Đoạn văn đủ dài.</p><button>12 bình luận theo đoạn</button>';
