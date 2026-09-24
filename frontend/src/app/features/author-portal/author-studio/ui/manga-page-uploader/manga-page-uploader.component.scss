@@ -142,3 +142,24 @@
   color: #fca5a5;
   border-color: rgba(248, 113, 113, 0.35);
 }
+
+/* Kéo thả ----------------------------------------------------------------- */
+
+.manga-pages--file-drop {
+  border-color: var(--border-focus);
+  background: rgba(197, 143, 255, 0.07);
+}
+
+.manga-page-card[draggable='true'] {
+  cursor: grab;
+}
+
+.manga-page-card--dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.manga-page-card--drop-target {
+  outline: 2px dashed var(--border-focus);
+  outline-offset: 2px;
+}

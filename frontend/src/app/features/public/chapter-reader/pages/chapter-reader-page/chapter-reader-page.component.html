@@ -1,4 +1,8 @@
-<main class="chapter-page" [class.chapter-page--lights-off]="store.lightsOff()">
+<main
+  class="chapter-page"
+  [class.chapter-page--lights-off]="store.lightsOff()"
+  [class.chapter-page--manga]="store.isManga()"
+>
   @if (store.loading()) {
     <section class="reader-card"><p>Đang tải chương...</p></section>
   } @else if (store.error(); as error) {
@@ -31,7 +35,7 @@
 
           <div class="chapter-divider"></div>
 
-          @if (textToSpeechEnabled && view.chapter.accessState !== 'LOCKED') {
+          @if (textToSpeechEnabled && store.hasText() && view.chapter.accessState !== 'LOCKED') {
             <app-tts-player
               [chapterId]="view.chapter.id"
               [blocks]="view.chapter.blocks"
@@ -78,43 +82,59 @@
             }
           </nav>
 
-          <article
-            #chapterContent
-            class="chapter-content"
-            [attr.data-reader-chapter-id]="view.chapter.id"
-            [style.font-size.px]="store.fontSize()"
-          >
-            @for (block of view.chapter.blocks; track block.id ?? $index) {
-              <div class="chapter-content-block">
-                <p
-                  [attr.data-block-id]="block.id"
-                  [textContent]="block.text"
-                  [class.chapter-separator]="
-                    block.type === 'horizontal_rule' || block.text === '---'
-                  "
-                ></p>
-                @if (
-                  !store.offlineMode() &&
-                    inline.enabled &&
-                    block.id &&
-                    inline.count(view.comments, block.id);
-                  as count
-                ) {
-                  <button
-                    class="anchor-comment-bubble"
-                    type="button"
-                    [attr.aria-label]="count + ' bình luận ở đoạn này'"
-                    (click)="inline.openBlock(block.id)"
-                  >
-                    {{ count }}
-                  </button>
-                }
-              </div>
-            }
-          </article>
+          @if (store.hasBlocks()) {
+            <article
+              #chapterContent
+              class="chapter-content"
+              [attr.data-reader-chapter-id]="view.chapter.id"
+              [style.font-size.px]="store.fontSize()"
+            >
+              @for (block of view.chapter.blocks; track block.id ?? $index) {
+                <div class="chapter-content-block">
+                  @if (block.type === 'image' && block.url) {
+                    <figure class="chapter-inline-image">
+                      <img
+                        [src]="block.url"
+                        [alt]="block.alt || 'Ảnh minh họa trong chương'"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      @if (block.alt) {
+                        <figcaption>{{ block.alt }}</figcaption>
+                      }
+                    </figure>
+                  } @else {
+                    <p
+                      [attr.data-block-id]="block.id"
+                      [textContent]="block.text"
+                      [class.chapter-separator]="
+                        block.type === 'horizontal_rule' || block.text === '---'
+                      "
+                    ></p>
+                  }
+                  @if (
+                    !store.offlineMode() &&
+                      inline.enabled &&
+                      block.id &&
+                      inline.count(view.comments, block.id);
+                    as count
+                  ) {
+                    <button
+                      class="anchor-comment-bubble"
+                      type="button"
+                      [attr.aria-label]="count + ' bình luận ở đoạn này'"
+                      (click)="inline.openBlock(block.id)"
+                    >
+                      {{ count }}
+                    </button>
+                  }
+                </div>
+              }
+            </article>
+          }
 
           @if (comicDeliveryEnabled && view.chapter.media.length) {
-            <div class="chapter-comic-media">
+            <div class="chapter-comic-media" [class.chapter-comic-media--manga]="store.isManga()">
               @for (media of view.chapter.media; track media.mediaAssetId) {
                 <app-chapter-image-slices
                   [media]="media"

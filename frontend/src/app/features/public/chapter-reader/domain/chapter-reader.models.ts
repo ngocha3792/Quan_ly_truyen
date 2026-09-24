@@ -47,8 +47,12 @@ export interface ChapterComicMedia {
 
 export interface ChapterContentBlock {
   readonly id: string | null;
-  readonly type: 'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule';
+  readonly type:
+    'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule' | 'image';
   readonly text: string;
+  /** Chỉ có ở block ảnh; server đã lọc chỉ còn http/https. */
+  readonly url?: string;
+  readonly alt?: string;
 }
 
 export type ChapterCommentAuthor = PublicCommentAuthor;

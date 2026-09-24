@@ -1,4 +1,10 @@
-<div class="manga-pages">
+<div
+  class="manga-pages"
+  [class.manga-pages--file-drop]="fileDropActive()"
+  (dragover)="dragOverDropZone($event)"
+  (dragleave)="dragLeaveDropZone($event)"
+  (drop)="dropFiles($event)"
+>
   <div class="manga-pages-header">
     <span>Trang truyện · {{ pages().length }} ảnh</span>
 
@@ -20,11 +26,22 @@
   }
 
   @if (pages().length === 0) {
-    <p class="manga-pages-empty">Chưa có trang nào. Tải ảnh lên theo đúng thứ tự đọc.</p>
+    <p class="manga-pages-empty">
+      Chưa có trang nào. Kéo ảnh vào đây hoặc bấm "Thêm trang", theo đúng thứ tự đọc.
+    </p>
   } @else {
     <ol class="manga-pages-grid">
       @for (page of pages(); track page.mediaAssetId; let i = $index; let last = $last) {
-        <li class="manga-page-card">
+        <li
+          class="manga-page-card"
+          [class.manga-page-card--dragging]="draggingId() === page.mediaAssetId"
+          [class.manga-page-card--drop-target]="dropTargetId() === page.mediaAssetId"
+          [attr.draggable]="canReorder()"
+          (dragstart)="dragStart($event, page.mediaAssetId)"
+          (dragover)="dragOverPage($event, page.mediaAssetId)"
+          (drop)="dropOnPage($event, page.mediaAssetId)"
+          (dragend)="dragEnd()"
+        >
           <span class="manga-page-index">{{ i + 1 }}</span>
 
           @if (page.url) {

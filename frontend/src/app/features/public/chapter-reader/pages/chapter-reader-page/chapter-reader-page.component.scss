@@ -295,3 +295,56 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Ảnh chèn giữa nội dung chữ ---------------------------------------------- */
+
+.chapter-inline-image {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.chapter-inline-image img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: rgba(120, 130, 160, 0.08);
+}
+
+.chapter-inline-image figcaption {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* Trang truyện tranh ------------------------------------------------------ */
+
+.chapter-comic-media {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* Chương thuần ảnh đọc bằng cách cuộn dọc, ảnh tràn hết bề ngang khung đọc
+   nên bỏ padding ngang của card và bỏ luôn khoảng cách giữa các trang. */
+.chapter-comic-media--manga {
+  gap: 0;
+  margin: 16px -25px -17px;
+}
+
+.chapter-page--manga .chapter-layout {
+  width: min(1180px, 100%);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chapter-page--manga .reader-card {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .chapter-comic-media--manga {
+    margin-inline: -14px;
+  }
+}

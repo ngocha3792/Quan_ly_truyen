@@ -2,7 +2,11 @@ import type {
   PublicChapterNavigationDto,
   PublicChapterReaderDto,
 } from '../../../application';
-import type { ChapterContentDocument } from '../../../domain';
+import type {
+  ChapterContentBlock,
+  ChapterContentDocument,
+} from '../../../domain';
+import { resolveChapterImageBlock } from '../../../domain';
 
 export interface PublicChapterNavigationResponse {
   readonly id: string;
@@ -46,8 +50,50 @@ export interface PublicUnlockedChapterReaderResponse extends PublicChapterReader
   };
   readonly content: string;
   readonly contentFormat: string;
-  readonly contentDocument?: ChapterContentDocument;
+  readonly contentDocument?: PublicChapterReaderDocument;
   readonly documentSchemaVersion?: number;
+}
+
+/**
+ * Block dành cho reader. Giống block lưu trữ, nhưng paragraph chỉ chứa đúng một
+ * ảnh Markdown được đổi sang type 'image' kèm url/alt đã kiểm tra an toàn, để
+ * client render thẻ img thay vì in chuỗi URL.
+ */
+export type PublicChapterReaderBlock =
+  | ChapterContentBlock
+  | {
+      readonly id: string;
+      readonly type: 'image';
+      readonly text: string;
+      readonly marks: readonly [];
+      readonly url: string;
+      readonly alt: string;
+    };
+
+export interface PublicChapterReaderDocument {
+  readonly schemaVersion: number;
+  readonly blocks: readonly PublicChapterReaderBlock[];
+}
+
+function toReaderDocument(
+  document: ChapterContentDocument,
+): PublicChapterReaderDocument {
+  return {
+    schemaVersion: document.schemaVersion,
+    blocks: document.blocks.map((block) => {
+      if (block.type !== 'paragraph') return block;
+      const image = resolveChapterImageBlock(block.text);
+      return image
+        ? {
+            id: block.id,
+            type: 'image' as const,
+            text: block.text,
+            marks: [] as const,
+            ...image,
+          }
+        : block;
+    }),
+  };
 }
 
 export interface PublicLockedChapterReaderResponse extends PublicChapterReaderChapterBaseResponse {
@@ -108,7 +154,7 @@ function toChapterResponse(
     contentFormat: chapter.contentFormat,
     ...('contentDocument' in chapter && chapter.contentDocument
       ? {
-          contentDocument: chapter.contentDocument,
+          contentDocument: toReaderDocument(chapter.contentDocument),
           documentSchemaVersion: chapter.documentSchemaVersion,
         }
       : {}),
