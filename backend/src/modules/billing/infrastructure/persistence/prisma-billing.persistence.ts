@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import {
   AccountStatus,
@@ -11,6 +12,7 @@ import {
   AppException,
   IdempotencyConflictException,
 } from '@/common/exceptions';
+import { ANALYTICS_CONFIG_KEY, type AnalyticsConfig } from '@/config';
 import { mapPrismaError, PrismaService } from '@/infrastructure/database';
 import { TransactionalReceiptService } from '@/modules/notifications';
 
@@ -114,14 +116,28 @@ interface PaymentReconciliationRow {
   pendingExpiredOrders: bigint;
   awaitingReviewOrders: bigint;
   awaitingReviewOlderThan24h: bigint;
+  awaitingReviewAmountMinor: bigint;
+  confirmedToday: bigint;
 }
 
 @Injectable()
 export class PrismaBillingPersistence implements BillingPersistencePort {
+  /**
+   * Múi giờ vận hành, dùng để cắt mốc "hôm nay" khi đối soát. Lấy lại
+   * ANALYTICS_TIME_ZONE thay vì thêm biến môi trường mới, để người vận hành
+   * không phải giữ hai giá trị đồng bộ với nhau.
+   */
+  private readonly timeZone: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly receipts: TransactionalReceiptService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.timeZone =
+      config.get<AnalyticsConfig>(ANALYTICS_CONFIG_KEY)?.timeZone ??
+      'Asia/Ho_Chi_Minh';
+  }
 
   async resolveConnection(
     id?: string,
@@ -828,7 +844,22 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
         COUNT(*) FILTER (
           WHERE po.status = 'awaiting_review'
             AND po.review_requested_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'
-        )::bigint AS "awaitingReviewOlderThan24h"
+        )::bigint AS "awaitingReviewOlderThan24h",
+        COALESCE(
+          SUM(po.fiat_amount_minor) FILTER (WHERE po.status = 'awaiting_review'),
+          0
+        )::bigint AS "awaitingReviewAmountMinor",
+        -- Đổi cả hai vế sang giờ vận hành rồi mới cắt ngày, để "hôm nay" là
+        -- hôm nay của người đối soát chứ không phải của UTC.
+        COUNT(*) FILTER (
+          WHERE po.status = 'paid'
+            AND po.settled_at IS NOT NULL
+            AND (po.settled_at AT TIME ZONE ${this.timeZone})
+                >= date_trunc(
+                     'day',
+                     CURRENT_TIMESTAMP AT TIME ZONE ${this.timeZone}
+                   )
+        )::bigint AS "confirmedToday"
       FROM payment_orders po
       LEFT JOIN wallet_ledger_transactions wt ON wt.id = po.wallet_transaction_id
     `);
@@ -839,6 +870,10 @@ export class PrismaBillingPersistence implements BillingPersistencePort {
       pendingExpiredOrders: Number(row?.pendingExpiredOrders ?? 0n),
       awaitingReviewOrders: Number(row?.awaitingReviewOrders ?? 0n),
       awaitingReviewOlderThan24h: Number(row?.awaitingReviewOlderThan24h ?? 0n),
+      awaitingReviewAmountMinor: (
+        row?.awaitingReviewAmountMinor ?? 0n
+      ).toString(),
+      confirmedToday: Number(row?.confirmedToday ?? 0n),
     };
   }
 }

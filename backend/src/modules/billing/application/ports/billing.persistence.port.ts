@@ -110,6 +110,13 @@ export interface PaymentReconciliationRecord {
   readonly pendingExpiredOrders: number;
   readonly awaitingReviewOrders: number;
   readonly awaitingReviewOlderThan24h: number;
+  /**
+   * Tổng tiền đang chờ duyệt, đơn vị nhỏ nhất. Chuỗi vì BigInt không qua được
+   * JSON, và cộng ở SQL để không phụ thuộc vào trang đang tải ở client.
+   */
+  readonly awaitingReviewAmountMinor: string;
+  /** Số đơn đã xác nhận trong ngày hôm nay theo múi giờ vận hành. */
+  readonly confirmedToday: number;
 }
 
 export interface BillingPersistencePort {

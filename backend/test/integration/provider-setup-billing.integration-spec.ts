@@ -42,7 +42,11 @@ describe('Admin VNPAY setup and authenticated IPN integration', () => {
     });
     const vault = new PaymentCredentialVault(config);
     const receipts = { enqueue: jest.fn() };
-    const persistence = new PrismaBillingPersistence(prisma, receipts as never);
+    const persistence = new PrismaBillingPersistence(
+      prisma,
+      receipts as never,
+      config,
+    );
     const provider = new VnpayPaymentProviderAdapter(
       new VnpayOperationsClient(),
     );

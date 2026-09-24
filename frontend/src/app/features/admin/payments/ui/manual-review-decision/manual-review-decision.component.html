@@ -1,0 +1,67 @@
+@if (order(); as current) {
+  <app-dialog-shell
+    [open]="true"
+    [busy]="busy()"
+    [eyebrow]="confirming() ? 'Xác nhận đơn' : 'Từ chối đơn'"
+    [title]="confirming() ? 'Cộng Credit cho người gửi' : 'Từ chối đơn chuyển khoản'"
+    dialogTitleId="manual-review-decision-title"
+    (closed)="dismiss()"
+  >
+    <dl class="mrv-decision-facts">
+      <div>
+        <dt>Mã giao dịch</dt>
+        <dd>{{ reference(current) }}</dd>
+      </div>
+      <div>
+        <dt>Người gửi</dt>
+        <dd>{{ current.userDisplayName }} · {{ current.userEmail }}</dd>
+      </div>
+      <div>
+        <dt>Số tiền</dt>
+        <dd>{{ amount(current) | number }} {{ current.currency }}</dd>
+      </div>
+      <div>
+        <dt>Credit sẽ cộng</dt>
+        <dd>{{ current.creditAmount | number }} Credit</dd>
+      </div>
+    </dl>
+
+    @if (confirming()) {
+      <p class="mrv-decision-warning">
+        Thao tác này cộng tiền thật vào ví người gửi và không tự hoàn lại được. Chỉ xác nhận khi đã
+        thấy tiền về trong sao kê ngân hàng.
+      </p>
+    }
+
+    <label class="mrv-field mrv-field--block">
+      Lý do (10–{{ maxLength }} ký tự)
+      <textarea
+        rows="3"
+        [attr.maxlength]="maxLength"
+        [value]="reason()"
+        (input)="updateReason($event)"
+        [placeholder]="
+          confirming()
+            ? 'Ví dụ: Đã đối chiếu sao kê Vietcombank lúc 10:15, số tiền khớp.'
+            : 'Ví dụ: Số tiền chuyển thiếu so với đơn, đã liên hệ người gửi.'
+        "
+      ></textarea>
+      <span class="mrv-field__hint">{{ trimmed().length }}/{{ maxLength }}</span>
+    </label>
+
+    <div class="mrv-decision-actions">
+      <app-button variant="secondary" type="button" [disabled]="busy()" (click)="dismiss()">
+        Huỷ
+      </app-button>
+      <app-button
+        [variant]="confirming() ? 'success' : 'danger'"
+        type="button"
+        [disabled]="!valid()"
+        [loading]="busy()"
+        (click)="submit()"
+      >
+        {{ confirming() ? 'Xác nhận và cộng Credit' : 'Từ chối đơn' }}
+      </app-button>
+    </div>
+  </app-dialog-shell>
+}

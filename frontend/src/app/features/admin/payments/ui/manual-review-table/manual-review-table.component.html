@@ -1,0 +1,103 @@
+<section class="mrv-panel">
+  <header class="mrv-panel__head">
+    <span class="mrv-panel__icon"><app-icon name="wallet" [size]="18" /></span>
+    <div class="mrv-panel__title">
+      <h2>Danh sách đơn chờ xác nhận</h2>
+      <p>{{ totalItems() | number }} đơn khớp bộ lọc hiện tại.</p>
+    </div>
+    <div class="mrv-panel__tools">
+      <label class="mrv-inline-field">
+        Hiển thị
+        <select [value]="pageSize()" (change)="readPageSize($event)">
+          @for (size of pageSizes; track size) {
+            <option [value]="size">{{ size }} dòng</option>
+          }
+        </select>
+      </label>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="mrv-empty">Đang tải…</p>
+  } @else if (!orders().length) {
+    <p class="mrv-empty">Không có đơn nào khớp bộ lọc.</p>
+  } @else {
+    <div class="mrv-table-scroll">
+      <table class="mrv-table">
+        <thead>
+          <tr>
+            <th scope="col">Mã giao dịch</th>
+            <th scope="col">Người gửi</th>
+            <th scope="col">Ngân hàng</th>
+            <th scope="col" class="mrv-table__amount">Số tiền</th>
+            <th scope="col">Nội dung CK</th>
+            <th scope="col">Thời gian gửi</th>
+            <th scope="col">Trạng thái</th>
+            <th scope="col" class="mrv-table__actions">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr [class.mrv-row--overdue]="overdue(order)">
+              <td class="mrv-table__code">{{ reference(order) }}</td>
+              <td>
+                <span class="mrv-sender">{{ order.userDisplayName }}</span>
+                <span class="mrv-sender__email">{{ order.userEmail }}</span>
+              </td>
+              <td>{{ order.provider }}</td>
+              <td class="mrv-table__amount">
+                {{ amount(order) | number }} <span class="mrv-currency">{{ order.currency }}</span>
+                <span class="mrv-credits">{{ order.creditAmount | number }} Credit</span>
+              </td>
+              <td class="mrv-table__note">{{ note(order) }}</td>
+              <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <app-status-badge [tone]="status(order).tone">{{
+                  status(order).label
+                }}</app-status-badge>
+                @if (overdue(order)) {
+                  <span class="mrv-overdue-tag">Quá hạn</span>
+                }
+              </td>
+              <td class="mrv-table__actions">
+                @if (canReview(order)) {
+                  <button
+                    type="button"
+                    class="mrv-action mrv-action--confirm"
+                    [disabled]="reviewingId() === order.id"
+                    [attr.aria-label]="'Xác nhận đơn ' + reference(order)"
+                    title="Xác nhận"
+                    (click)="decided.emit({ order, action: 'confirm' })"
+                  >
+                    <app-icon name="check" [size]="16" />
+                  </button>
+                  <button
+                    type="button"
+                    class="mrv-action mrv-action--reject"
+                    [disabled]="reviewingId() === order.id"
+                    [attr.aria-label]="'Từ chối đơn ' + reference(order)"
+                    title="Từ chối"
+                    (click)="decided.emit({ order, action: 'reject' })"
+                  >
+                    <app-icon name="close" [size]="16" />
+                  </button>
+                } @else {
+                  <span class="mrv-action-empty">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="mrv-table-foot">
+      <span>Trang {{ page() }} / {{ totalPages() }} · {{ totalItems() | number }} đơn</span>
+      <app-pagination
+        [page]="page()"
+        [totalPages]="totalPages()"
+        (pageChange)="pageChanged.emit($event)"
+      />
+    </footer>
+  }
+</section>
