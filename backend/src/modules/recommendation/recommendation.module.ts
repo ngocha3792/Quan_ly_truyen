@@ -28,6 +28,8 @@ import {
   exports: [
     PrismaRecommendationPersistence,
     PrismaRecommendationExperimentPersistence,
+    RECOMMENDATION_PORT,
+    RECOMMENDATION_EXPERIMENT_PORT,
   ],
 })
 export class RecommendationModule {}
