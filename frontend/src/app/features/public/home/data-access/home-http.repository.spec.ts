@@ -16,6 +16,7 @@ describe('HomeHttpRepository recommendations', () => {
   let api: {
     list: ReturnType<typeof vi.fn>;
     recommendations: ReturnType<typeof vi.fn>;
+    trackRecommendationImpression: ReturnType<typeof vi.fn>;
   };
   let repository: HomeHttpRepository;
 
@@ -37,6 +38,7 @@ describe('HomeHttpRepository recommendations', () => {
           ],
         }),
       ),
+      trackRecommendationImpression: vi.fn(() => of(undefined)),
     };
     TestBed.configureTestingModule({
       providers: [HomeHttpRepository, { provide: PublicStoriesApiClient, useValue: api }],
@@ -52,7 +54,16 @@ describe('HomeHttpRepository recommendations', () => {
     expect(result.recommendedStories[0]).toMatchObject({
       id: 'recommended',
       recommendationReason: 'Vì bạn thường đọc Tiên hiệp',
+      recommendationReasonCode: 'PREFERRED_CATEGORY',
+      recommendationMatchedCategories: ['Tiên hiệp'],
     });
+    expect(api.trackRecommendationImpression).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: 'homepage',
+        recommendedStoryIds: ['recommended'],
+        algorithm: 'hybrid',
+      }),
+    );
   });
 
   it('falls back to rating order when the recommendation endpoint fails', async () => {

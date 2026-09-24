@@ -10,7 +10,9 @@ import {
   PublicStoryApiPage,
   PublicStoryChapterListApiResponse,
   PublicStoryListParams,
+  RecommendationPreferencesApi,
   StoryRecommendationFeedApi,
+  TrackRecommendationImpressionApiRequest,
   UnlockChapterApiResponse,
 } from './public-stories-api.model';
 
@@ -51,6 +53,36 @@ export class PublicStoriesApiClient {
         { params },
       )
       .pipe(map((response) => response.data));
+  }
+
+  recommendationPreferences(): Observable<RecommendationPreferencesApi> {
+    return this.http
+      .get<ApiSuccessEnvelope<RecommendationPreferencesApi>>(
+        `${this.config.apiBaseUrl}/recommendations/preferences`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  updateRecommendationPreferences(
+    request: RecommendationPreferencesApi,
+  ): Observable<RecommendationPreferencesApi> {
+    return this.http
+      .patch<ApiSuccessEnvelope<RecommendationPreferencesApi>>(
+        `${this.config.apiBaseUrl}/recommendations/preferences`,
+        request,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  trackRecommendationImpression(
+    request: TrackRecommendationImpressionApiRequest,
+  ): Observable<void> {
+    return this.http
+      .post<ApiSuccessEnvelope<null>>(
+        `${this.config.apiBaseUrl}/recommendations/impressions`,
+        request,
+      )
+      .pipe(map(() => undefined));
   }
 
   chapter(storySlug: string, chapterNumber: string): Observable<PublicChapterReaderApiResponse> {

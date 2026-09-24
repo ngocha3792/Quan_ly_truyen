@@ -22,6 +22,12 @@
   </div>
 }
 
+@if (recommendationPreferencesStore.error()) {
+  <div class="alert error-alert">
+    Không thể tải tùy chọn cá nhân hóa gợi ý. Gợi ý mặc định vẫn được giữ nguyên.
+  </div>
+}
+
 @if (store.user(); as currentUser) {
   <div class="profile-layout">
     <app-account-profile-form
@@ -30,9 +36,11 @@
       [saving]="store.saving()"
       [avatarChanged]="avatarFileState() !== null"
       [preferences]="preferencesStore.preferences()"
+      [recommendationPersonalizationEnabled]="recommendationPreferencesStore.enabled()"
       (saveRequested)="save($event)"
       (avatarSelected)="setAvatar($event)"
       (preferencesChanged)="preferencesStore.update($event)"
+      (recommendationPersonalizationChanged)="recommendationPreferencesStore.update($event)"
       (cancelRequested)="cancel()"
     />
 

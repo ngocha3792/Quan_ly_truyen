@@ -1,0 +1,29 @@
+<a
+  class="recommendation-card"
+  [routerLink]="['/truyen', story().slug]"
+  [attr.aria-label]="'Đọc ' + story().title"
+  data-testid="recommendation-card"
+>
+  <img [src]="story().coverUrl" [alt]="story().title" loading="lazy" />
+  <span class="recommendation-shade"></span>
+  <div class="recommendation-copy">
+    <span class="recommendation-reason">
+      <app-icon name="sparkles" [size]="13" />
+      {{ story().recommendationReason || story().categories[0] || 'Đề xuất cho bạn' }}
+    </span>
+    <h3>{{ story().title }}</h3>
+    <p>{{ story().description }}</p>
+    @if (story().recommendationMatchedCategories?.length) {
+      <div class="recommendation-matches" aria-label="Thể loại phù hợp">
+        @for (category of story().recommendationMatchedCategories; track category) {
+          <span>{{ category }}</span>
+        }
+      </div>
+    }
+    <div class="recommendation-meta">
+      <small><app-icon name="star" [size]="14" />{{ story().rating }}</small>
+      <small><app-icon name="eye" [size]="14" />{{ story().views | compactNumber }}</small>
+      <b>{{ story().latestChapter ? 'Ch.' + story().latestChapter!.number : 'Chưa có chương' }}</b>
+    </div>
+  </div>
+</a>

@@ -18,6 +18,7 @@ import { CommentsWorkerModule } from './modules/comments';
 import { TtsWorkerModule } from './modules/tts';
 import { SearchWorkerModule } from './modules/search';
 import { RevenueWorkerModule } from './modules/revenue';
+import { RecommendationWorkerModule } from './modules/recommendation/recommendation-worker.module';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -45,6 +46,7 @@ const queueWorkersEnabled =
           TtsWorkerModule,
           SearchWorkerModule,
           RevenueWorkerModule,
+          RecommendationWorkerModule,
         ]
       : []),
   ],

@@ -127,6 +127,14 @@
           })
         "
       />
+
+      <app-profile-switch
+        title="Cá nhân hóa gợi ý truyện"
+        description="Dùng lịch sử đọc, theo dõi và đánh giá để sắp xếp gợi ý phù hợp hơn"
+        icon="sparkles"
+        [checked]="recommendationPersonalizationEnabled()"
+        (checkedChange)="recommendationPersonalizationChanged.emit($event)"
+      />
     </div>
   </section>
 

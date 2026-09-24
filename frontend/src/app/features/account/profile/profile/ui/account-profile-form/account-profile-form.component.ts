@@ -40,11 +40,15 @@ export class AccountProfileFormComponent {
 
   readonly preferences = input.required<AccountUiPreferences>();
 
+  readonly recommendationPersonalizationEnabled = input(true);
+
   readonly saveRequested = output<AccountProfileFormValue>();
 
   readonly avatarSelected = output<File | null>();
 
   readonly preferencesChanged = output<Partial<AccountUiPreferences>>();
+
+  readonly recommendationPersonalizationChanged = output<boolean>();
 
   readonly cancelRequested = output<void>();
 

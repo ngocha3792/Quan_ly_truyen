@@ -1,8 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { catchError, forkJoin, map, Observable, of } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, tap } from 'rxjs';
 
 import { PublicStoriesApiClient } from '../../../../core/http/public-stories-api.client';
-import { PublicStoryApiItem } from '../../../../core/http/public-stories-api.model';
+import {
+  PublicStoryApiItem,
+  StoryRecommendationFeedApi,
+} from '../../../../core/http/public-stories-api.model';
 import { STORY_COVER_PLACEHOLDER } from '../../../../shared/models/story.model';
 import { HomePageData, Story } from '../domain/home.models';
 import { HomeRepository } from './home.repository';
@@ -69,6 +72,8 @@ export class HomeHttpRepository implements HomeRepository {
           recommendedStories: recommendations.items.map((item) => ({
             ...toStory(item.story),
             recommendationReason: item.reason,
+            recommendationReasonCode: item.reasonCode,
+            recommendationMatchedCategories: item.matchedCategories,
           })),
           recommendationsPersonalized: recommendations.personalized,
           topStories: popularStories.slice(0, 8),
@@ -80,10 +85,13 @@ export class HomeHttpRepository implements HomeRepository {
 
   private loadRecommendations() {
     return this.api.recommendations(8).pipe(
+      tap((feed) => this.trackRecommendationImpression(feed)),
       catchError(() =>
         this.api.list({ sort: 'rating', pageSize: 8 }).pipe(
           map((page) => ({
             personalized: false,
+            algorithm: 'heuristic' as const,
+            experiment: null,
             items: page.items.map((story) => {
               const highRated = story.stats.ratingCount > 0 && story.stats.ratingAverage >= 4;
               return {
@@ -99,6 +107,21 @@ export class HomeHttpRepository implements HomeRepository {
         ),
       ),
     );
+  }
+
+  private trackRecommendationImpression(feed: StoryRecommendationFeedApi): void {
+    if (feed.items.length === 0) return;
+
+    void this.api
+      .trackRecommendationImpression({
+        context: 'homepage',
+        recommendedStoryIds: feed.items.map(({ story }) => story.id),
+        algorithm: feed.algorithm ?? (feed.personalized ? 'hybrid' : 'heuristic'),
+        experimentId: feed.experiment?.id ?? null,
+        variant: feed.experiment?.variant ?? null,
+      })
+      .pipe(catchError(() => of(undefined)))
+      .subscribe();
   }
 
   findStoryBySlug(slug: string): Observable<Story | null> {

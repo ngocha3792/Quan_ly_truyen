@@ -7,6 +7,7 @@ import { StoryCardComponent } from '../../../../../shared/components/story-card/
 import { CompactNumberPipe } from '../../../../../shared/pipes/compact-number.pipe';
 import { RelativeTimePipe } from '../../../../../shared/pipes/relative-time.pipe';
 import { HomeStore } from '../../data-access/home.store';
+import { RecommendationCardComponent } from '../../ui/recommendation-card/recommendation-card.component';
 
 @Component({
   selector: 'app-home-page',
@@ -17,6 +18,7 @@ import { HomeStore } from '../../data-access/home.store';
     RelativeTimePipe,
     IconComponent,
     SectionHeadingComponent,
+    RecommendationCardComponent,
     StoryCardComponent,
   ],
 

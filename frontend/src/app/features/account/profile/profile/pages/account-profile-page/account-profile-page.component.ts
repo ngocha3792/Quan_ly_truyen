@@ -9,6 +9,7 @@ import { ProfileCompletionCardComponent } from '../../ui/profile-completion-card
 import { AccountProfileFormValue } from '../../domain/account-profile.models';
 
 import { AccountPreferencesStore } from '../../data-access/account-preferences.store';
+import { RecommendationPreferencesStore } from '../../data-access/recommendation-preferences.store';
 
 import { AccountProfileStore } from '../../data-access/account-profile.store';
 
@@ -32,12 +33,16 @@ export class AccountProfilePageComponent implements OnInit {
 
   protected readonly preferencesStore = inject(AccountPreferencesStore);
 
+  protected readonly recommendationPreferencesStore = inject(RecommendationPreferencesStore);
+
   protected readonly avatarFileState = signal<File | null>(null);
 
   ngOnInit(): void {
     this.store.load();
 
     this.preferencesStore.load();
+
+    this.recommendationPreferencesStore.load();
   }
 
   protected save(formValue: AccountProfileFormValue): void {

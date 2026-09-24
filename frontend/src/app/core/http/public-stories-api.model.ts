@@ -64,12 +64,31 @@ export type StoryRecommendationReasonApi =
 
 export interface StoryRecommendationFeedApi {
   readonly personalized: boolean;
+  /** Optional rollout metadata. Older API versions omit these fields. */
+  readonly algorithm?: 'heuristic' | 'collaborative' | 'hybrid';
+  readonly experiment?: {
+    readonly id: string;
+    readonly variant: 'control' | 'treatment';
+  } | null;
   readonly items: readonly {
     readonly story: PublicStoryApiItem;
     readonly reasonCode: StoryRecommendationReasonApi;
     readonly reason: string;
     readonly matchedCategories: readonly string[];
   }[];
+}
+
+export interface RecommendationPreferencesApi {
+  readonly personalizationEnabled: boolean;
+}
+
+export interface TrackRecommendationImpressionApiRequest {
+  readonly context: 'homepage' | 'story_detail' | 'catalog';
+  readonly contextStoryId?: string;
+  readonly recommendedStoryIds: readonly string[];
+  readonly algorithm: 'heuristic' | 'collaborative' | 'hybrid';
+  readonly experimentId?: string | null;
+  readonly variant?: 'control' | 'treatment' | null;
 }
 
 export interface PublicStoryListParams {

@@ -51,6 +51,7 @@ import { OfflineReadingModule } from './modules/offline-reading';
 import { TtsModule } from './modules/tts';
 import { SearchModule } from './modules/search';
 import { RevenueModule } from './modules/revenue';
+import { RecommendationModule } from './modules/recommendation/recommendation.module';
 @Module({
   imports: [
     AppConfigModule,
@@ -82,6 +83,7 @@ import { RevenueModule } from './modules/revenue';
     TtsModule,
     SearchModule,
     RevenueModule,
+    RecommendationModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

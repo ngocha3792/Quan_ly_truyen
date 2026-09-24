@@ -21,6 +21,10 @@ export interface Story {
   readonly status: 'ONGOING' | 'COMPLETED' | 'HIATUS';
   readonly badge?: 'NEW' | 'HOT' | 'FULL';
   readonly recommendationReason?: string;
+  /** Explainability metadata supplied by the recommendation feed. */
+  readonly recommendationReasonCode?:
+    'FOLLOWED_AUTHOR' | 'PREFERRED_CATEGORY' | 'HIGH_RATING' | 'POPULAR';
+  readonly recommendationMatchedCategories?: readonly string[];
 }
 
 export interface HeroSlide {
