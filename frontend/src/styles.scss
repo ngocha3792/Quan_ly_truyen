@@ -2,6 +2,10 @@
 @use './styles/list-page';
 @use './styles/admin-ai';
 @use './styles/admin-ai-charts';
+@use './styles/admin-audit';
+@use './styles/admin-audit-charts';
+@use './styles/admin-audit-detail';
+@use './styles/admin-audit-payload';
 
 :root {
   font-family:

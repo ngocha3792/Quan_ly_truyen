@@ -1,0 +1,256 @@
+// Tables, payload viewers, key/value grids and the related-event timeline for
+// the admin audit log workspace.
+
+.audit-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.audit-table th,
+.audit-table td {
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.audit-table th {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(6, 11, 22, 0.4);
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.audit-table tbody tr {
+  transition: background var(--motion-fast);
+}
+
+.audit-table tbody tr:hover {
+  background: rgba(197, 143, 255, 0.045);
+}
+
+.audit-table td small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.audit-actor {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.audit-actor span {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+}
+
+.audit-code {
+  display: inline-block;
+  max-width: 15rem;
+}
+
+.audit-table .audit-code {
+  max-width: 8rem;
+}
+
+.audit-table .audit-badge {
+  max-width: 8rem;
+}
+
+.audit-table .audit-actor span {
+  max-width: 8.5rem;
+  white-space: nowrap;
+}
+
+.audit-code {
+  overflow: hidden;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.audit-code--link {
+  color: var(--primary-soft);
+  text-decoration: none;
+}
+
+.audit-code--link:hover {
+  text-decoration: underline;
+}
+
+.audit-badge {
+  display: inline-block;
+  max-width: 12rem;
+  overflow: hidden;
+  padding: 0.18rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: rgba(140, 77, 232, 0.15);
+  color: var(--primary-soft);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.audit-icon-button:hover {
+  border-color: var(--primary-border);
+  color: var(--primary-soft);
+  background: rgba(197, 143, 255, 0.1);
+}
+
+.audit-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.audit-pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Key/value grid --------------------------------------------------------- */
+
+.audit-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.audit-kv > div {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.audit-kv dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.audit-kv dd {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+}
+
+.audit-kv dd .audit-code {
+  max-width: 100%;
+}
+
+.audit-kv dd .audit-badge {
+  flex: 0 0 auto;
+}
+
+.audit-wrap {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Change table ----------------------------------------------------------- */
+
+.audit-change-value {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-change-value--before {
+  background: rgba(242, 123, 138, 0.14);
+  color: #f7a8b4;
+}
+
+.audit-change-value--after {
+  background: rgba(98, 218, 134, 0.14);
+  color: #8fe3ac;
+}
+
+.audit-change-value--empty {
+  background: rgba(132, 145, 179, 0.14);
+  color: var(--text-muted);
+}
+
+.audit-change-arrow {
+  color: var(--text-muted);
+}
+
+.audit-change-type {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: rgba(132, 145, 179, 0.16);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.audit-change-type--added {
+  background: rgba(98, 218, 134, 0.16);
+  color: #8fe3ac;
+}
+
+.audit-change-type--removed {
+  background: rgba(242, 123, 138, 0.16);
+  color: #f7a8b4;
+}

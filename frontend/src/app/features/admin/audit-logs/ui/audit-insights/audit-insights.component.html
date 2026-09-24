@@ -1,0 +1,60 @@
+<div class="audit-stack">
+  <section class="audit-panel">
+    <header class="audit-panel__head">
+      <span class="audit-panel__icon"><app-icon name="fire" [size]="18" /></span>
+      <div class="audit-panel__title">
+        <h2>Hoạt động nổi bật</h2>
+        <p>Hành động xuất hiện nhiều nhất trong trang đang xem.</p>
+      </div>
+    </header>
+    <ul class="audit-bar-list">
+      @for (row of rows(); track row.key) {
+        <li class="audit-bar-row">
+          <span class="audit-bar-row__label" [title]="row.label">{{ row.label }}</span>
+          <span class="audit-bar-row__value">{{ formatCount(row.count) }}</span>
+          <span class="audit-bar-track" aria-hidden="true">
+            <span class="audit-bar-fill" [style.width.%]="row.share"></span>
+          </span>
+        </li>
+      } @empty {
+        <li class="audit-empty">Chưa có sự kiện nào để tổng hợp.</li>
+      }
+    </ul>
+  </section>
+
+  <section class="audit-panel">
+    <header class="audit-panel__head">
+      <span class="audit-panel__icon"><app-icon name="chart" [size]="18" /></span>
+      <div class="audit-panel__title">
+        <h2>Phân bố theo đối tượng</h2>
+        <p>Tỷ trọng loại đối tượng trong trang đang xem.</p>
+      </div>
+    </header>
+    <div class="audit-donut-row">
+      <div
+        class="audit-donut"
+        role="img"
+        [style.background]="gradient()"
+        [attr.aria-label]="
+          'Phân bố ' + formatCount(items().length) + ' sự kiện theo loại đối tượng'
+        "
+      >
+        <span class="audit-donut__center">
+          <strong>{{ formatCount(items().length) }}</strong>
+          <small>sự kiện</small>
+        </span>
+      </div>
+      <ul class="audit-legend">
+        @for (segment of segments(); track segment.label) {
+          <li class="audit-legend__item">
+            <span class="audit-swatch" aria-hidden="true" [style.background]="segment.color"></span>
+            <span class="audit-legend__label" [title]="segment.label">{{ segment.label }}</span>
+            <span class="audit-legend__value">{{ segment.shareLabel }}</span>
+          </li>
+        } @empty {
+          <li class="audit-empty">Chưa có dữ liệu.</li>
+        }
+      </ul>
+    </div>
+  </section>
+</div>

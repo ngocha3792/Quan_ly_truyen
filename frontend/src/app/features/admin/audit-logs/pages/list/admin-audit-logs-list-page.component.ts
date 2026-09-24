@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   OnInit,
@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../../../../core/http/api-error.util';
 import {
@@ -19,28 +19,50 @@ import {
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { EmptyStateComponent } from '../../../../../shared/components/empty-state/empty-state.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
-import { LinkButtonComponent } from '../../../../../shared/components/link-button/link-button.component';
+import { IconComponent, IconName } from '../../../../../shared/components/icon/icon.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { PaginationComponent } from '../../../../../shared/components/pagination/pagination.component';
+import {
+  StatCardComponent,
+  StatCardTone,
+} from '../../../../../shared/components/stat-card/stat-card.component';
 import { AdminAuditLogsApiService } from '../../data-access/admin-audit-logs-api.service';
 import type { AdminAuditLogList } from '../../domain/admin-audit-log.models';
+import {
+  distinctActions,
+  distinctActors,
+  distinctEntityTypes,
+  formatCount,
+  toCsv,
+} from '../../domain/audit-insights';
+import { AuditEventTableComponent } from '../../ui/audit-event-table/audit-event-table.component';
+import { AuditInsightsComponent } from '../../ui/audit-insights/audit-insights.component';
+
+interface AuditStat {
+  readonly label: string;
+  readonly value: string;
+  readonly meta: string;
+  readonly icon: IconName;
+  readonly tone: StatCardTone;
+}
 
 @Component({
   selector: 'app-admin-audit-logs-list-page',
   standalone: true,
   imports: [
-    DatePipe,
     FormsModule,
-    RouterLink,
     BreadcrumbComponent,
     ButtonComponent,
-    LinkButtonComponent,
+    IconComponent,
     PageHeadingComponent,
     PaginationComponent,
+    StatCardComponent,
     EmptyStateComponent,
     ErrorAlertComponent,
     LoadingStateComponent,
+    AuditEventTableComponent,
+    AuditInsightsComponent,
   ],
   templateUrl: './admin-audit-logs-list-page.component.html',
   styleUrl: './admin-audit-logs-list-page.component.scss',
@@ -61,6 +83,44 @@ export class AdminAuditLogsListPageComponent implements OnInit {
   protected readonly result = signal<AdminAuditLogList | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
+  protected readonly pageSizes = [20, 50, 100] as const;
+  protected readonly stats = computed<readonly AuditStat[]>(() => {
+    const result = this.result();
+    const items = result?.items ?? [];
+    const shown = `Trong ${formatCount(items.length)} sự kiện đang xem`;
+    return [
+      {
+        label: 'Sự kiện khớp bộ lọc',
+        value: result ? formatCount(result.pagination.totalItems) : '—',
+        meta: result
+          ? `Trang ${result.pagination.page}/${result.pagination.totalPages || 1}`
+          : 'Chưa tải',
+        icon: 'history',
+        tone: 'purple',
+      },
+      {
+        label: 'Người thực hiện',
+        value: formatCount(distinctActors(items)),
+        meta: shown,
+        icon: 'users',
+        tone: 'blue',
+      },
+      {
+        label: 'Loại hành động',
+        value: formatCount(distinctActions(items)),
+        meta: shown,
+        icon: 'zap',
+        tone: 'orange',
+      },
+      {
+        label: 'Loại đối tượng',
+        value: formatCount(distinctEntityTypes(items)),
+        meta: shown,
+        icon: 'grid',
+        tone: 'pink',
+      },
+    ];
+  });
 
   protected actorId = '';
   protected action = '';
@@ -70,6 +130,7 @@ export class AdminAuditLogsListPageComponent implements OnInit {
   protected from = '';
   protected to = '';
   protected page = 1;
+  protected pageSize = 20;
 
   ngOnInit(): void {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -81,6 +142,8 @@ export class AdminAuditLogsListPageComponent implements OnInit {
       this.from = this.toLocalInput(params.get('from'));
       this.to = this.toLocalInput(params.get('to'));
       this.page = Math.max(1, Number(params.get('page') ?? 1) || 1);
+      const size = Number(params.get('pageSize') ?? 20) || 20;
+      this.pageSize = this.pageSizes.includes(size as (typeof this.pageSizes)[number]) ? size : 20;
       this.load();
     });
   }
@@ -105,6 +168,27 @@ export class AdminAuditLogsListPageComponent implements OnInit {
     void this.navigate(page);
   }
 
+  protected changePageSize(size: number): void {
+    this.pageSize = Number(size) || 20;
+    void this.navigate(1);
+  }
+
+  protected copy(value: string): void {
+    void globalThis.navigator?.clipboard?.writeText(value);
+  }
+
+  /** Xuất đúng những sự kiện đang hiển thị; API audit không có endpoint export. */
+  protected exportCsv(): void {
+    const items = this.result()?.items ?? [];
+    if (items.length === 0) return;
+    const url = URL.createObjectURL(new Blob([toCsv(items)], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-logs-trang-${this.page}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   private async navigate(page: number): Promise<void> {
     await this.router.navigate([], {
       relativeTo: this.route,
@@ -117,6 +201,7 @@ export class AdminAuditLogsListPageComponent implements OnInit {
         from: this.toIso(this.from),
         to: this.toIso(this.to),
         page: page > 1 ? page : null,
+        pageSize: this.pageSize === 20 ? null : this.pageSize,
       },
     });
   }
@@ -134,7 +219,7 @@ export class AdminAuditLogsListPageComponent implements OnInit {
         from: this.toIso(this.from) ?? undefined,
         to: this.toIso(this.to) ?? undefined,
         page: this.page,
-        pageSize: 20,
+        pageSize: this.pageSize,
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),

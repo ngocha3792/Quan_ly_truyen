@@ -1,0 +1,132 @@
+// Bar list and donut marks for the admin audit log workspace.
+
+/* Bars and donut --------------------------------------------------------- */
+
+.audit-bar-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.3rem 0.75rem;
+  min-width: 0;
+}
+
+.audit-bar-row__label {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-bar-row__value {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-bar-track {
+  grid-column: 1 / -1;
+  display: block;
+  overflow: hidden;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(132, 145, 179, 0.14);
+}
+
+.audit-bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-gradient);
+}
+
+.audit-donut-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.audit-donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+}
+
+.audit-donut::after {
+  content: '';
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background: var(--surface-card-solid);
+}
+
+.audit-donut__center {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.audit-donut__center strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-donut__center small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.audit-legend {
+  flex: 1 1 8rem;
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-legend__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.audit-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.audit-legend__label {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-legend__value {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}

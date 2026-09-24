@@ -3,118 +3,130 @@
     <app-breadcrumb [items]="breadcrumbs" />
     <app-page-heading
       title="Nhật ký audit"
-      description="Timeline chỉ đọc, payload đã được sanitize ở server."
+      description="Theo dõi lịch sử thao tác, payload thay đổi và truy vết sự kiện trong hệ thống."
       icon="history"
-    />
+    >
+      <div class="audit-actions">
+        <app-button variant="secondary" type="button" [loading]="loading()" (click)="load()">
+          Làm mới
+        </app-button>
+        <app-button
+          variant="primary"
+          type="button"
+          [disabled]="!result()?.items?.length"
+          (click)="exportCsv()"
+        >
+          Xuất CSV
+        </app-button>
+      </div>
+    </app-page-heading>
 
-    <section class="list-card">
-      <form class="list-card__filters" (ngSubmit)="applyFilters()">
-        <label class="filter-field">
-          <span>ID người thực hiện</span>
-          <input name="actorId" [(ngModel)]="actorId" placeholder="UUID" />
-        </label>
-        <label class="filter-field">
-          <span>Hành động</span>
-          <input name="action" [(ngModel)]="action" placeholder="user.status.changed" />
-        </label>
-        <label class="filter-field">
-          <span>Loại đối tượng</span>
-          <input name="entityType" [(ngModel)]="entityType" placeholder="user" />
-        </label>
-        <label class="filter-field">
-          <span>ID đối tượng</span>
-          <input name="entityId" [(ngModel)]="entityId" placeholder="UUID" />
-        </label>
-        <label class="filter-field">
-          <span>Request ID</span>
-          <input name="requestId" [(ngModel)]="requestId" placeholder="Request ID" />
-        </label>
-        <label class="filter-field">
-          <span>Từ thời điểm</span>
-          <input name="from" type="datetime-local" [(ngModel)]="from" />
-        </label>
-        <label class="filter-field">
-          <span>Đến thời điểm</span>
-          <input name="to" type="datetime-local" [(ngModel)]="to" />
-        </label>
-        <div class="filter-actions">
-          <app-button variant="primary" type="submit">Lọc</app-button>
-          <app-button variant="secondary" type="button" (click)="clearFilters()"
-            >Xóa lọc</app-button
-          >
+    <div class="audit-stat-grid">
+      @for (stat of stats(); track stat.label) {
+        <app-stat-card
+          [label]="stat.label"
+          [value]="stat.value"
+          [icon]="stat.icon"
+          [tone]="stat.tone"
+        >
+          <span statMeta class="audit-stat-meta">{{ stat.meta }}</span>
+        </app-stat-card>
+      }
+    </div>
+
+    <div class="audit-layout">
+      <section class="audit-panel">
+        <header class="audit-panel__head">
+          <span class="audit-panel__icon"><app-icon name="filter" [size]="18" /></span>
+          <div class="audit-panel__title">
+            <h2>Bộ lọc nâng cao</h2>
+            <p>Mọi bộ lọc khớp chính xác và được lưu trên URL để chia sẻ lại.</p>
+          </div>
+        </header>
+        <form (ngSubmit)="applyFilters()">
+          <div class="audit-filters">
+            <label class="audit-field">
+              ID người thực hiện
+              <input name="actorId" [(ngModel)]="actorId" placeholder="UUID" />
+            </label>
+            <label class="audit-field">
+              Hành động
+              <input name="action" [(ngModel)]="action" placeholder="user.status.changed" />
+            </label>
+            <label class="audit-field">
+              Loại đối tượng
+              <input name="entityType" [(ngModel)]="entityType" placeholder="user" />
+            </label>
+            <label class="audit-field">
+              ID đối tượng
+              <input name="entityId" [(ngModel)]="entityId" placeholder="UUID" />
+            </label>
+            <label class="audit-field">
+              Request ID
+              <input name="requestId" [(ngModel)]="requestId" placeholder="Request ID" />
+            </label>
+            <label class="audit-field">
+              Từ thời điểm
+              <input name="from" type="datetime-local" [(ngModel)]="from" />
+            </label>
+            <label class="audit-field">
+              Đến thời điểm
+              <input name="to" type="datetime-local" [(ngModel)]="to" />
+            </label>
+          </div>
+          <div class="audit-filter-actions">
+            <app-button variant="primary" type="submit">Lọc</app-button>
+            <app-button variant="secondary" type="button" (click)="clearFilters()">
+              Xóa lọc
+            </app-button>
+          </div>
+        </form>
+      </section>
+
+      <app-audit-insights [items]="result()?.items || []" />
+    </div>
+
+    <section class="audit-panel">
+      <header class="audit-panel__head">
+        <span class="audit-panel__icon"><app-icon name="history" [size]="18" /></span>
+        <div class="audit-panel__title">
+          <h2>Danh sách sự kiện</h2>
+          <p>Timeline chỉ đọc, payload đã được sanitize ở server.</p>
         </div>
-      </form>
+        <div class="audit-panel__tools">
+          <span class="audit-field">
+            <select
+              name="pageSize"
+              aria-label="Số dòng mỗi trang"
+              [ngModel]="pageSize"
+              (ngModelChange)="changePageSize($event)"
+            >
+              @for (size of pageSizes; track size) {
+                <option [value]="size">{{ size }}/trang</option>
+              }
+            </select>
+          </span>
+        </div>
+      </header>
 
       @if (error()) {
-        <div class="list-card__state">
-          <app-error-alert
-            title="Không thể tải nhật ký audit"
-            [message]="error()"
-            (retry)="load()"
-          />
-        </div>
+        <app-error-alert title="Không thể tải nhật ký audit" [message]="error()" (retry)="load()" />
       }
       @if (loading() && !result()) {
-        <div class="list-card__state">
-          <app-loading-state message="Đang tải audit timeline..." />
-        </div>
+        <app-loading-state message="Đang tải audit timeline..." />
       } @else if (result(); as data) {
         @if (data.items.length === 0) {
-          <div class="list-card__state">
-            <app-empty-state
-              icon="history"
-              title="Không có audit event phù hợp"
-              description="Thử điều chỉnh bộ lọc để xem thêm kết quả."
-            />
-          </div>
+          <app-empty-state
+            icon="history"
+            title="Không có audit event phù hợp"
+            description="Thử điều chỉnh bộ lọc để xem thêm kết quả."
+          />
         } @else {
-          <div class="list-card__table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Thời gian</th>
-                  <th>Người thực hiện</th>
-                  <th>Hành động</th>
-                  <th>Đối tượng</th>
-                  <th>Request ID</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of data.items; track item.id) {
-                  <tr>
-                    <td>{{ item.createdAt | date: 'short' }}</td>
-                    <td>{{ item.actor?.displayName || 'Không xác định/đã xóa' }}</td>
-                    <td>
-                      <code>{{ item.action }}</code>
-                    </td>
-                    <td>
-                      <code>{{ item.entityType }}</code
-                      ><br />{{ item.entityId || '—' }}
-                    </td>
-                    <td>
-                      @if (item.requestId) {
-                        <a
-                          [routerLink]="['/admin/audit-logs']"
-                          [queryParams]="{ requestId: item.requestId }"
-                          >{{ item.requestId }}</a
-                        >
-                      } @else {
-                        —
-                      }
-                    </td>
-                    <td>
-                      <app-link-button [routerLink]="['/admin/audit-logs', item.id]"
-                        >Xem</app-link-button
-                      >
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          <footer class="list-card__pagination">
-            <span>Tổng {{ data.pagination.totalItems }} sự kiện</span>
+          <app-audit-event-table [items]="data.items" (copyRequested)="copy($event)" />
+          <footer class="audit-pagination-bar">
+            <span>
+              Hiển thị {{ data.items.length }} trong {{ data.pagination.totalItems }} sự kiện
+            </span>
             <app-pagination
               [page]="page"
               [totalPages]="data.pagination.totalPages || 1"

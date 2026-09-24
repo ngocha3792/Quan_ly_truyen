@@ -1,58 +1,18 @@
 :host {
   display: block;
 }
-.state {
-  padding: 18px 0;
+
+.audit-payload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-4);
 }
-.back-button {
-  color: #a78bfa;
-  font-size: 13px;
-  font-weight: 700;
+
+.audit-kv dd a {
+  color: var(--primary-soft);
   text-decoration: none;
-  white-space: nowrap;
 }
-.card {
-  margin-top: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.9rem;
-  padding: 1rem;
-  min-width: 0;
-  background: rgba(14, 21, 38, 0.88);
-}
-.payload-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-.payload-grid .card {
-  margin-top: 0;
-}
-dl {
-  display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr);
-  gap: 0.6rem 1rem;
-  margin: 0;
-}
-dt {
-  font-weight: 700;
-}
-dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-dd app-button,
-dd a {
-  margin-left: 0.5rem;
-}
-.ua {
-  white-space: pre-wrap;
-}
-@media (max-width: 760px) {
-  .payload-grid {
-    grid-template-columns: 1fr;
-  }
-  dl {
-    grid-template-columns: 1fr;
-  }
+
+.audit-kv dd a:hover {
+  text-decoration: underline;
 }

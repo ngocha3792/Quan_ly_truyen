@@ -3,9 +3,7 @@
     <app-breadcrumb [items]="breadcrumbs" />
 
     @if (error()) {
-      <div class="state">
-        <app-error-alert title="Không thể tải audit event" [message]="error()" (retry)="load()" />
-      </div>
+      <app-error-alert title="Không thể tải audit event" [message]="error()" (retry)="load()" />
     }
     @if (loading() && !detail()) {
       <app-loading-state message="Đang tải audit event..." />
@@ -15,90 +13,169 @@
         [description]="d.createdAt | date: 'medium'"
         icon="history"
       >
-        <a class="back-button" routerLink="/admin/audit-logs">← Danh sách audit log</a>
+        <div class="audit-actions">
+          <app-button variant="secondary" type="button" (click)="back()">
+            Danh sách audit log
+          </app-button>
+          @if (d.requestId; as requestId) {
+            <app-button variant="secondary" type="button" (click)="copy(requestId)">
+              Sao chép request ID
+            </app-button>
+          }
+          <app-button variant="secondary" type="button" (click)="exportJson(d)">
+            Xuất JSON
+          </app-button>
+          @if (entityLink(d); as link) {
+            <app-button variant="primary" type="button" (click)="open(link)">
+              Mở đối tượng
+            </app-button>
+          }
+        </div>
       </app-page-heading>
 
-      <section class="summary card">
-        <h2>Tổng quan</h2>
-        <dl>
-          <dt>Audit ID</dt>
-          <dd>
-            <code>{{ d.id }}</code>
-            <app-button variant="secondary" type="button" (click)="copy(d.id)">Copy</app-button>
-          </dd>
-          <dt>Người thực hiện</dt>
-          <dd>
-            @if (d.actor) {
-              <a [routerLink]="['/admin/users', d.actor.id]">{{ d.actor.displayName }}</a> ·
-              {{ d.actor.email }}
-            } @else {
-              Không xác định/đã xóa
-            }
-            @if (d.actorId) {
-              <br /><code>{{ d.actorId }}</code>
-              <app-button variant="secondary" type="button" (click)="copy(d.actorId)"
-                >Copy</app-button
-              >
-            }
-          </dd>
-          <dt>Đối tượng</dt>
-          <dd>
-            <code>{{ d.entity.type }}</code> · <code>{{ d.entity.id || '—' }}</code>
-            @if (entityLink(d); as link) {
-              <a [routerLink]="link">Mở đối tượng</a>
-            }
-            @if (d.entity.id) {
-              <app-button variant="secondary" type="button" (click)="copy(d.entity.id)"
-                >Copy</app-button
-              >
-            }
-          </dd>
-          <dt>Request ID</dt>
-          <dd>
-            @if (d.requestId) {
-              <a [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: d.requestId }">{{
-                d.requestId
-              }}</a>
-              <app-button variant="secondary" type="button" (click)="copy(d.requestId)"
-                >Copy</app-button
-              >
-            } @else {
-              —
-            }
-          </dd>
-        </dl>
-      </section>
+      <div class="audit-stat-grid">
+        @for (stat of stats(); track stat.label) {
+          <app-stat-card
+            [label]="stat.label"
+            [value]="stat.value"
+            [icon]="stat.icon"
+            [tone]="stat.tone"
+          >
+            <span statMeta class="audit-stat-meta">{{ stat.meta }}</span>
+          </app-stat-card>
+        }
+      </div>
 
-      <section class="card">
-        <h2>Thay đổi</h2>
-        <app-audit-diff [changes]="d.changes" />
-      </section>
+      <div class="audit-detail-grid">
+        <div class="audit-stack">
+          <section class="audit-panel">
+            <header class="audit-panel__head">
+              <span class="audit-panel__icon"><app-icon name="info" [size]="18" /></span>
+              <div class="audit-panel__title">
+                <h2>Tổng quan</h2>
+                <p>Định danh và bối cảnh của sự kiện.</p>
+              </div>
+            </header>
+            <dl class="audit-kv">
+              <div>
+                <dt>Audit ID</dt>
+                <dd>
+                  <code class="audit-code" [title]="d.id">{{ d.id }}</code>
+                  <button
+                    type="button"
+                    class="audit-icon-button"
+                    aria-label="Sao chép audit ID"
+                    (click)="copy(d.id)"
+                  >
+                    <app-icon name="copy" [size]="14" />
+                  </button>
+                </dd>
+              </div>
+              <div>
+                <dt>Request ID</dt>
+                <dd>
+                  @if (d.requestId; as requestId) {
+                    <a
+                      class="audit-code audit-code--link"
+                      [routerLink]="['/admin/audit-logs']"
+                      [queryParams]="{ requestId }"
+                      [title]="requestId"
+                      >{{ requestId }}</a
+                    >
+                    <button
+                      type="button"
+                      class="audit-icon-button"
+                      aria-label="Sao chép request ID"
+                      (click)="copy(requestId)"
+                    >
+                      <app-icon name="copy" [size]="14" />
+                    </button>
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Người thực hiện</dt>
+                <dd class="audit-wrap">
+                  @if (d.actor; as actor) {
+                    <a [routerLink]="['/admin/users', actor.id]">{{ actor.displayName }}</a>
+                    <span class="audit-stat-meta">{{ actor.email }}</span>
+                  } @else {
+                    Không xác định/đã xóa
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Hành động</dt>
+                <dd>
+                  <code class="audit-code" [title]="d.action">{{ d.action }}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Đối tượng</dt>
+                <dd>
+                  <span class="audit-badge">{{ d.entity.type }}</span>
+                  <code class="audit-code" [title]="d.entity.id || ''">{{
+                    d.entity.id || '—'
+                  }}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>IP</dt>
+                <dd>{{ d.client.ipAddress || '—' }}</dd>
+              </div>
+              <div>
+                <dt>User-Agent</dt>
+                <dd class="audit-wrap">{{ d.client.userAgent || '—' }}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <section class="payload-grid">
-        <article class="card">
-          <h2>Trước</h2>
-          <app-audit-json-viewer [value]="d.oldValues" />
-        </article>
-        <article class="card">
-          <h2>Sau</h2>
-          <app-audit-json-viewer [value]="d.newValues" />
-        </article>
-      </section>
+          <section class="audit-panel">
+            <header class="audit-panel__head">
+              <span class="audit-panel__icon"><app-icon name="shuffle" [size]="18" /></span>
+              <div class="audit-panel__title">
+                <h2>Thay đổi</h2>
+                <p>{{ d.changes.length }} trường thay đổi giữa hai snapshot.</p>
+              </div>
+            </header>
+            <app-audit-diff [changes]="d.changes" />
+          </section>
 
-      <section class="card">
-        <h2>Metadata</h2>
-        <app-audit-json-viewer [value]="d.metadata" />
-      </section>
+          <section class="audit-panel">
+            <header class="audit-panel__head">
+              <span class="audit-panel__icon"><app-icon name="draft" [size]="18" /></span>
+              <div class="audit-panel__title">
+                <h2>Payload</h2>
+                <p>Snapshot trước và sau, đã được sanitize ở server.</p>
+              </div>
+            </header>
+            <div class="audit-payload-grid">
+              <app-audit-json-viewer label="Payload trước" [value]="d.oldValues" />
+              <app-audit-json-viewer label="Payload sau" [value]="d.newValues" />
+            </div>
+          </section>
 
-      <section class="card">
-        <h2>Bối cảnh request</h2>
-        <dl>
-          <dt>IP</dt>
-          <dd>{{ d.client.ipAddress || '—' }}</dd>
-          <dt>User-Agent</dt>
-          <dd class="ua">{{ d.client.userAgent || '—' }}</dd>
-        </dl>
-      </section>
+          <section class="audit-panel">
+            <header class="audit-panel__head">
+              <span class="audit-panel__icon"><app-icon name="settings" [size]="18" /></span>
+              <div class="audit-panel__title">
+                <h2>Metadata</h2>
+                <p>Dữ liệu kèm theo do nơi ghi audit cung cấp.</p>
+              </div>
+            </header>
+            <app-audit-json-viewer label="Metadata" [value]="d.metadata" />
+          </section>
+        </div>
+
+        <app-audit-related-events
+          [events]="related()"
+          [currentId]="d.id"
+          [requestId]="d.requestId"
+          [loading]="relatedLoading()"
+        />
+      </div>
     }
   </div>
 </main>

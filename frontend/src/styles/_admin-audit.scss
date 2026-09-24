@@ -1,0 +1,206 @@
+// Surfaces for the admin audit log workspace (list + detail). Global so the
+// pages and their presentational children share one panel, field and table
+// language; every class is prefixed `audit-` to stay out of other pages.
+
+.audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.audit-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.audit-stat-grid app-stat-card {
+  --stat-value-size: 19px;
+  --stat-icon-size: 44px;
+}
+
+.audit-stat-meta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  align-items: start;
+}
+
+.audit-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.audit-stack {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Panel ------------------------------------------------------------------ */
+
+.audit-panel {
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
+}
+
+.audit-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.audit-panel__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--primary-soft);
+  background: rgba(125, 61, 204, 0.2);
+}
+
+.audit-panel__title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.audit-panel__title h2,
+.audit-panel__title h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.audit-panel__title p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.audit-panel__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.audit-note {
+  display: block;
+  margin-top: var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.audit-empty {
+  padding: 1.25rem 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Filters ---------------------------------------------------------------- */
+
+.audit-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.audit-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.audit-field input,
+.audit-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-strong);
+  color-scheme: dark;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.audit-field input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.audit-field input:focus,
+.audit-field select:focus {
+  border-color: var(--border-focus);
+  background: rgba(10, 15, 29, 0.82);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
+}
+
+.audit-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 1200px) {
+  .audit-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audit-layout,
+  .audit-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .audit-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .audit-panel {
+    padding: var(--space-4);
+  }
+
+  .audit-panel__tools {
+    width: 100%;
+    margin-left: 0;
+  }
+}
