@@ -1,0 +1,57 @@
+<div class="connection-grid">
+  @for (connection of connections(); track connection.id) {
+    <section class="connection-card">
+      <header>
+        <h2>{{ connection.name }}</h2>
+        <span class="provider-badge">{{ labels[connection.provider] }}</span>
+      </header>
+      @if (connection.defaultModel) {
+        <p class="model">{{ connection.defaultModel }}</p>
+      }
+      @if (connection.baseUrl) {
+        <p class="base-url">{{ connection.baseUrl }}</p>
+      }
+      <small
+        >{{ protocolLabels[connection.protocol] }} · {{ authLabels[connection.authType] }}</small
+      >
+      @if (connection.capabilities; as capabilities) {
+        <div class="capability-list">
+          @for (capability of capabilityKeys; track capability) {
+            <span class="capability" [class.capability--unsupported]="!capabilities[capability]">
+              {{ capabilities[capability] ? '✓' : '×' }} {{ capabilityLabels[capability] }}
+            </span>
+          }
+        </div>
+        <small>Đã dò cho model {{ connection.capabilityModel }}</small>
+      } @else {
+        <small>Chưa dò capability cho model hiện tại.</small>
+      }
+      <span class="status" [class.status--disabled]="!connection.enabled">
+        {{ connection.enabled ? '● Đang bật' : '○ Đã tắt' }}
+      </span>
+      <div class="actions">
+        <app-button
+          variant="secondary"
+          [loading]="testingId() === connection.id"
+          (click)="test.emit(connection)"
+        >
+          Test
+        </app-button>
+        <app-button variant="secondary" (click)="browseModels.emit(connection)">Models</app-button>
+        <app-button
+          variant="secondary"
+          [loading]="probingId() === connection.id"
+          (click)="probe.emit(connection)"
+        >
+          Dò khả năng
+        </app-button>
+        <app-button variant="secondary" (click)="edit.emit(connection)">Sửa</app-button>
+        <app-button variant="danger" [disabled]="mutating()" (click)="remove.emit(connection)">
+          Xóa
+        </app-button>
+      </div>
+    </section>
+  } @empty {
+    <p class="empty-hint">Chưa có kết nối AI nào. Bấm "Thêm kết nối" để bắt đầu.</p>
+  }
+</div>

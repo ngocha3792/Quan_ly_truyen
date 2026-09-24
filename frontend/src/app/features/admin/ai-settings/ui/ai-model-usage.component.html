@@ -1,0 +1,50 @@
+<section class="ai-panel">
+  <header class="ai-panel__head">
+    <span class="ai-panel__icon"><app-icon name="grid" [size]="18" /></span>
+    <div class="ai-panel__title">
+      <h2>Theo model</h2>
+      <p>Thống kê số lượng yêu cầu, token và tỷ lệ lỗi từng model AI.</p>
+    </div>
+  </header>
+  <div class="ai-table-wrap">
+    <table class="ai-table">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Yêu cầu</th>
+          <th>Token</th>
+          <th>Tỷ lệ lỗi</th>
+          <th>Mức sử dụng</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.key) {
+          <tr>
+            <td>
+              <strong [title]="row.model">{{ row.model }}</strong>
+              <small>{{ row.protocol ? protocolLabels[row.protocol] : 'Không rõ protocol' }}</small>
+            </td>
+            <td class="ai-numeric">{{ formatCount(row.requests) }}</td>
+            <td class="ai-numeric">{{ formatCount(row.totalTokens) }}</td>
+            <td class="ai-numeric">{{ formatPercent(row.errorRate) }}</td>
+            <td>
+              <span class="ai-cell-bar">
+                <span class="ai-bar-track" aria-hidden="true">
+                  <span
+                    class="ai-bar-fill"
+                    [style.width.%]="shares().get(row.key)?.share || 0"
+                  ></span>
+                </span>
+                <span class="ai-bar-row__value">{{ shares().get(row.key)?.display || '0%' }}</span>
+              </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="ai-empty">Chưa có dữ liệu trong khoảng thời gian này.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,264 @@
+// Policy toggle, field and agreement-form surfaces for the admin revenue workspace.
+
+/* Toggle ---------------------------------------------------------------- */
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: 22rem;
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.switch-track {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: rgba(132, 145, 179, 0.25);
+  transition: background var(--motion-fast);
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--motion-fast);
+}
+
+.switch input:checked + .switch-track {
+  background: var(--primary);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(20px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+.switch-copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.switch-copy strong {
+  font-size: 0.85rem;
+}
+
+.switch-copy small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* Fields ---------------------------------------------------------------- */
+
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field--wide {
+  grid-column: 1 / -1;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: rgba(6, 11, 22, 0.62);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.field textarea {
+  min-height: 5.5rem;
+  padding-block: 0.65rem;
+  resize: vertical;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--border-focus);
+  background: rgba(10, 15, 29, 0.82);
+  box-shadow: 0 0 0 3px rgba(197, 143, 255, 0.12);
+}
+
+.field input[type='checkbox'] {
+  width: 18px;
+  min-height: 18px;
+}
+
+/* Policy card ----------------------------------------------------------- */
+
+.policy-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  margin-bottom: var(--space-5);
+}
+
+.policy-aside {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.aside-art {
+  display: grid;
+  place-items: center;
+  min-height: 7.5rem;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-card);
+  color: var(--primary-soft);
+  background: linear-gradient(145deg, rgba(139, 92, 246, 0.16), rgba(14, 21, 38, 0.6));
+}
+
+.aside-note {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: rgba(6, 11, 22, 0.5);
+}
+
+.aside-note app-icon {
+  flex: 0 0 auto;
+  color: var(--info);
+}
+
+.aside-note div {
+  min-width: 0;
+}
+
+.aside-note strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.aside-note p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Agreements card ------------------------------------------------------- */
+
+.agreement-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.create-card {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(150deg, rgba(139, 92, 246, 0.14), rgba(14, 21, 38, 0.55));
+}
+
+.create-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.create-card__head h3 {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+}
+
+.create-card__head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.contributor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.detail-row td {
+  white-space: normal;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: var(--space-3);
+  padding: 0.35rem 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.detail-grid strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

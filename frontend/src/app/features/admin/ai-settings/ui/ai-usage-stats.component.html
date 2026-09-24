@@ -1,0 +1,7 @@
+<div class="ai-stat-grid">
+  @for (stat of stats(); track stat.label) {
+    <app-stat-card [label]="stat.label" [value]="stat.value" [icon]="stat.icon" [tone]="stat.tone">
+      <span statMeta class="ai-stat-meta">{{ stat.meta }}</span>
+    </app-stat-card>
+  }
+</div>

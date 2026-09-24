@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -8,10 +15,18 @@ import {
 import { ButtonComponent } from '../../../../../shared/components/button/button.component';
 import { DialogShellComponent } from '../../../../../shared/components/dialog-shell/dialog-shell.component';
 import { ErrorAlertComponent } from '../../../../../shared/components/error-alert/error-alert.component';
+import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { LoadingStateComponent } from '../../../../../shared/components/loading-state/loading-state.component';
 import { NoticeComponent } from '../../../../../shared/components/notice/notice.component';
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AdminAiConnectionManagerStore } from '../../data-access/admin-ai-connection-manager.store';
+import { connectionRows } from '../../domain/ai-usage.metrics';
+import { AiBarListComponent } from '../../ui/ai-bar-list.component';
+import { AiConnectionListComponent } from '../../ui/ai-connection-list.component';
+import { AiConnectionStatusComponent } from '../../ui/ai-connection-status.component';
+import { AiModelUsageComponent } from '../../ui/ai-model-usage.component';
+import { AiPerformanceComponent } from '../../ui/ai-performance.component';
+import { AiUsageStatsComponent } from '../../ui/ai-usage-stats.component';
 import {
   AI_AUTH_TYPE_LABELS,
   AI_AUTH_TYPES,
@@ -40,6 +55,13 @@ import {
     NoticeComponent,
     ButtonComponent,
     DialogShellComponent,
+    IconComponent,
+    AiBarListComponent,
+    AiConnectionListComponent,
+    AiConnectionStatusComponent,
+    AiModelUsageComponent,
+    AiPerformanceComponent,
+    AiUsageStatsComponent,
   ],
   providers: [AdminAiConnectionManagerStore],
   templateUrl: './admin-ai-settings-page.component.html',
@@ -64,6 +86,10 @@ export class AdminAiSettingsPageComponent implements OnInit {
   protected readonly usageLoading = this.manager.usageLoading;
   protected readonly usageError = this.manager.usageError;
   protected readonly editorOpen = signal(false);
+  protected readonly connectionRows = computed(() => {
+    const usage = this.usage();
+    return usage ? connectionRows(usage) : [];
+  });
   protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
     { label: 'Trang chủ', route: '/' },
     { label: 'Quản trị' },
@@ -100,8 +126,9 @@ export class AdminAiSettingsPageComponent implements OnInit {
     this.manager.loadUsage(this.usageFrom, this.usageTo);
   }
 
-  protected formatNumber(value: number): string {
-    return new Intl.NumberFormat('vi-VN').format(value);
+  protected reload(): void {
+    this.manager.load();
+    this.loadUsage();
   }
 
   protected get isAdvanced(): boolean {

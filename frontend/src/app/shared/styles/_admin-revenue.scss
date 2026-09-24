@@ -1,0 +1,6 @@
+// Entry point for the admin "Doanh thu & chi trả" workspace styles.
+// Split across three partials so each stays inside the architecture line budget.
+
+@use './admin-revenue-base';
+@use './admin-revenue-forms';
+@use './admin-revenue-tables';
