@@ -25,6 +25,14 @@ describe('maintenance worker isolation', () => {
     'AUTH_ADMIN_MFA_ENABLED',
     'AUTH_OAUTH_ENABLED',
 
+    'COMMENT_ABUSE_RATE_LIMIT_ENABLED',
+
+    'READER_REALTIME_PROGRESS_SYNC_ENABLED',
+    'READER_INLINE_COMMENTS_ENABLED',
+    'READER_OFFLINE_READING_ENABLED',
+
+    'SEARCH_MEILISEARCH_ENABLED',
+
     'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK',
   ] as const;
 
@@ -73,6 +81,16 @@ describe('maintenance worker isolation', () => {
       AUTH_ADMIN_MFA_ENABLED: 'false',
 
       AUTH_OAUTH_ENABLED: 'false',
+
+      COMMENT_ABUSE_RATE_LIMIT_ENABLED: 'false',
+
+      READER_REALTIME_PROGRESS_SYNC_ENABLED: 'false',
+
+      READER_INLINE_COMMENTS_ENABLED: 'false',
+
+      READER_OFFLINE_READING_ENABLED: 'false',
+
+      SEARCH_MEILISEARCH_ENABLED: 'false',
 
       ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK: 'true',
     });

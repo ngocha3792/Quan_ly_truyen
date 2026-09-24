@@ -38,6 +38,14 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
     'AUTH_ADMIN_MFA_ENABLED',
     'AUTH_OAUTH_ENABLED',
 
+    'COMMENT_ABUSE_RATE_LIMIT_ENABLED',
+
+    'READER_REALTIME_PROGRESS_SYNC_ENABLED',
+    'READER_INLINE_COMMENTS_ENABLED',
+    'READER_OFFLINE_READING_ENABLED',
+
+    'SEARCH_MEILISEARCH_ENABLED',
+
     'ALLOW_IN_MEMORY_INFRASTRUCTURE_FALLBACK',
   ] as const;
 
@@ -110,6 +118,21 @@ describe('Cloudinary-disabled runtime bootstrap', () => {
       AUTH_ADMIN_MFA_ENABLED: 'false',
 
       AUTH_OAUTH_ENABLED: 'false',
+
+      COMMENT_ABUSE_RATE_LIMIT_ENABLED: 'false',
+
+      /*
+       * Nhóm reader và search cũng nằm trong số tính năng bắt buộc Redis:
+       * realtime progress sync và inline comments yêu cầu trực tiếp, offline
+       * reading yêu cầu gián tiếp qua realtime progress sync.
+       */
+      READER_REALTIME_PROGRESS_SYNC_ENABLED: 'false',
+
+      READER_INLINE_COMMENTS_ENABLED: 'false',
+
+      READER_OFFLINE_READING_ENABLED: 'false',
+
+      SEARCH_MEILISEARCH_ENABLED: 'false',
 
       /*
        * Test environment được phép dùng adapter fallback
