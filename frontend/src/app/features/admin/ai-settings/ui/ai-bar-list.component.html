@@ -1,0 +1,14 @@
+<ul class="ai-bar-list">
+  @for (row of rows(); track row.key) {
+    <li class="ai-bar-row">
+      <span class="ai-bar-row__label" [title]="row.label">{{ row.label }}</span>
+      <span class="ai-bar-row__hint">{{ row.hint }}</span>
+      <span class="ai-bar-track" aria-hidden="true">
+        <span class="ai-bar-fill" [style.width.%]="row.share"></span>
+      </span>
+      <span class="ai-bar-row__value">{{ row.display }}</span>
+    </li>
+  } @empty {
+    <li class="ai-empty">{{ emptyMessage() }}</li>
+  }
+</ul>

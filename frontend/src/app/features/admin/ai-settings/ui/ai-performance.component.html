@@ -1,0 +1,56 @@
+<section class="ai-panel">
+  <header class="ai-panel__head">
+    <span class="ai-panel__icon"><app-icon name="chart" [size]="18" /></span>
+    <div class="ai-panel__title">
+      <h2>Hiệu suất &amp; phân bổ</h2>
+      <p>Tổng quan hiệu suất và cách token được chia giữa các model.</p>
+    </div>
+  </header>
+  <div class="ai-mini-stats">
+    <article class="ai-mini">
+      <span>Tokens / yêu cầu</span>
+      <strong>{{ tokensPerRequest() }}</strong>
+    </article>
+    <article class="ai-mini">
+      <span>Tỷ lệ thành công</span>
+      <strong>{{ successRate() }}</strong>
+    </article>
+    <article class="ai-mini">
+      <span>Chi phí ước tính</span>
+      <strong class="ai-mini__muted">Chưa cấu hình</strong>
+    </article>
+  </div>
+  <div class="ai-distribution">
+    <figure class="ai-donut-figure">
+      <figcaption>Phân bổ token theo model</figcaption>
+      <div
+        class="ai-donut"
+        [style.background]="gradient()"
+        role="img"
+        [attr.aria-label]="
+          'Phân bổ token theo model, tổng ' + formatCount(totalTokens()) + ' token'
+        "
+      >
+        <span class="ai-donut__center">
+          <strong>{{ formatCount(totalTokens()) }}</strong>
+          <small>token</small>
+        </span>
+      </div>
+      <ul class="ai-legend">
+        @for (segment of segments(); track segment.label) {
+          <li class="ai-legend__item">
+            <span class="ai-swatch" aria-hidden="true" [style.background]="segment.color"></span>
+            <span class="ai-legend__label" [title]="segment.label">{{ segment.label }}</span>
+            <span class="ai-legend__value">{{ segment.shareLabel }}</span>
+          </li>
+        } @empty {
+          <li class="ai-empty">Chưa có token nào được ghi nhận.</li>
+        }
+      </ul>
+    </figure>
+    <div class="ai-latency">
+      <h3>Độ trễ trung bình theo model</h3>
+      <app-ai-bar-list [rows]="latencyRows()" />
+    </div>
+  </div>
+</section>

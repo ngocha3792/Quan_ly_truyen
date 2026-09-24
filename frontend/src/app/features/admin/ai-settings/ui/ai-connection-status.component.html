@@ -1,0 +1,28 @@
+<section class="ai-panel">
+  <header class="ai-panel__head">
+    <span class="ai-panel__icon"><app-icon name="sparkles" [size]="18" /></span>
+    <div class="ai-panel__title">
+      <h2>Trạng thái kết nối AI</h2>
+      <p>{{ enabledCount() }}/{{ connections().length }} kết nối đang bật cho toàn hệ thống.</p>
+    </div>
+  </header>
+  <ul class="ai-status-grid">
+    @for (connection of connections(); track connection.id) {
+      <li class="ai-status-chip" [class.ai-status-chip--off]="!connection.enabled">
+        <span class="ai-status-chip__head">
+          <span class="ai-dot" aria-hidden="true"></span>
+          <strong [title]="connection.name">{{ connection.name }}</strong>
+        </span>
+        <small>{{ labels[connection.provider] }}</small>
+        <small class="ai-status-chip__model" [title]="connection.defaultModel || ''">
+          {{ connection.defaultModel || 'Chưa đặt model mặc định' }}
+        </small>
+        <span class="ai-status-chip__state">
+          {{ connection.enabled ? 'Đang bật' : 'Đã tắt' }}
+        </span>
+      </li>
+    } @empty {
+      <li class="ai-empty">Chưa có kết nối AI nào.</li>
+    }
+  </ul>
+</section>
