@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { RevenuePolicy } from '../../../../core/revenue/revenue.models';
 
 @Component({
   selector: 'app-revenue-policy',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, IconComponent],
   templateUrl: './revenue-policy.component.html',
   styleUrl: './revenue-policy.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

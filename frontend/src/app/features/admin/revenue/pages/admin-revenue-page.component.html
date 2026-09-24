@@ -1,18 +1,39 @@
-<section class="admin-revenue-page">
+<main class="admin-revenue-page">
+  <app-breadcrumb [items]="breadcrumbs" />
   <app-page-heading
     title="Doanh thu & chi trả"
     description="Quản lý chia doanh thu, xác minh tài khoản và chi trả tác giả."
     icon="wallet"
-    ><button type="button" class="secondary" [disabled]="loading()" (click)="load()">
-      Làm mới
-    </button></app-page-heading
   >
+    <div class="heading-actions">
+      <button type="button" class="ghost-button" [disabled]="loading()" (click)="load()">
+        <app-icon name="rotate-ccw" [size]="16" />
+        Làm mới
+      </button>
+      <button type="button" class="primary-button" [disabled]="!report()" (click)="exportReport()">
+        <app-icon name="arrow-down" [size]="16" />
+        Xuất báo cáo
+      </button>
+    </div>
+  </app-page-heading>
   @if (error(); as message) {
     <p class="notice error" role="alert">{{ message }}</p>
   }
   @if (success(); as message) {
     <p class="notice success" role="status">{{ message }}</p>
   }
+  <div class="stat-grid">
+    @for (stat of stats(); track stat.label) {
+      <app-stat-card
+        [label]="stat.label"
+        [value]="stat.value"
+        [icon]="stat.icon"
+        [tone]="stat.tone"
+      >
+        <span statMeta class="stat-meta">{{ stat.meta }}</span>
+      </app-stat-card>
+    }
+  </div>
   @if (loading() && !policy()) {
     <div class="panel loading" role="status">Đang tải dữ liệu đối soát...</div>
   }
@@ -25,13 +46,20 @@
   }
   <app-revenue-agreements />
   <section class="panel">
-    <h2>Xác minh tài khoản nhận tiền</h2>
+    <header class="panel-head">
+      <span class="panel-icon"><app-icon name="shield" [size]="20" /></span>
+      <div class="panel-title">
+        <h2>Xác minh tài khoản nhận tiền</h2>
+        <p>Quản lý và xác minh tài khoản ngân hàng/tài khoản nhận tiền của tác giả.</p>
+      </div>
+    </header>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Chủ tài khoản</th>
+            <th>Tác giả</th>
             <th>Phương thức</th>
+            <th>Tài khoản nhận tiền</th>
             <th>Mã hồ sơ</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
@@ -40,72 +68,87 @@
         <tbody>
           @for (account of accounts(); track account.id) {
             <tr>
-              <td>
-                {{ account.accountName || account.userId
-                }}<small>{{ account.accountNumberMasked || account.walletPhoneMasked }}</small>
-              </td>
+              <td>{{ account.accountName || account.userId }}</td>
               <td>{{ account.bankName || account.method }}</td>
+              <td>{{ account.accountNumberMasked || account.walletPhoneMasked || '—' }}</td>
               <td>{{ account.kycReference || 'Chưa gửi' }}</td>
               <td>
-                {{
-                  !account.isActive
-                    ? 'Đã ngừng dùng'
-                    : account.isVerified
-                      ? 'Đã xác minh'
-                      : 'Chờ xác minh'
-                }}
+                <app-status-badge
+                  [tone]="
+                    !account.isActive ? 'neutral' : account.isVerified ? 'success' : 'warning'
+                  "
+                  >{{
+                    !account.isActive
+                      ? 'Đã ngừng dùng'
+                      : account.isVerified
+                        ? 'Đã xác minh'
+                        : 'Chờ xác minh'
+                  }}</app-status-badge
+                >
               </td>
               <td>
                 @if (account.isActive) {
-                  <button type="button" class="secondary" (click)="review(account)">Xem xét</button>
+                  <button type="button" class="ghost-button" (click)="review(account)">
+                    Xem xét
+                  </button>
                 }
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="5" class="empty">Chưa có tài khoản nhận tiền.</td>
+              <td colspan="6" class="empty">Chưa có tài khoản nhận tiền.</td>
             </tr>
           }
         </tbody>
       </table>
     </div>
     @if (reviewAccountId) {
-      <form class="account-form" (ngSubmit)="submitReview()">
+      <form class="inline-form" (ngSubmit)="submitReview()">
         <h3>Kết quả xác minh</h3>
-        <label
-          >Kết quả<select name="reviewVerified" [(ngModel)]="reviewVerified">
-            <option [ngValue]="true">Xác minh thành công</option>
-            <option [ngValue]="false">Từ chối / thu hồi xác minh</option>
-          </select></label
-        ><label
-          >Mã bằng chứng và lý do kiểm tra<input
-            name="reviewReference"
-            [(ngModel)]="reviewReference"
-            required
-            maxlength="255"
-        /></label>
+        <div class="fields-grid">
+          <label class="field"
+            >Kết quả<select name="reviewVerified" [(ngModel)]="reviewVerified">
+              <option [ngValue]="true">Xác minh thành công</option>
+              <option [ngValue]="false">Từ chối / thu hồi xác minh</option>
+            </select></label
+          >
+          <label class="field field--wide"
+            >Mã bằng chứng và lý do kiểm tra<input
+              name="reviewReference"
+              [(ngModel)]="reviewReference"
+              required
+              maxlength="255"
+          /></label>
+        </div>
         <div class="actions">
-          <button type="submit" [disabled]="pending()">Lưu xác minh</button
-          ><button type="button" class="secondary" (click)="reviewAccountId = ''">Đóng</button>
+          <button type="submit" class="primary-button" [disabled]="pending()">Lưu xác minh</button>
+          <button type="button" class="ghost-button" (click)="reviewAccountId = ''">Đóng</button>
         </div>
       </form>
     }
   </section>
   <section class="panel">
-    <div class="section-heading">
-      <h2>Yêu cầu chi trả</h2>
-      <button
-        type="button"
-        (click)="createBatch()"
-        [disabled]="pending() || selected().length === 0"
-      >
-        Tạo lô ({{ selected().length }})
-      </button>
-    </div>
-    <p class="muted">
-      Tạo lô đưa yêu cầu sang trạng thái đang chi trả. Xuất lô để chuyển khoản, sau đó nhập mã giao
-      dịch và bằng chứng cho từng yêu cầu.
-    </p>
+    <header class="panel-head">
+      <span class="panel-icon"><app-icon name="wallet" [size]="20" /></span>
+      <div class="panel-title">
+        <h2>Yêu cầu chi trả</h2>
+        <p>
+          Tạo lô đưa yêu cầu sang trạng thái đang chi trả. Xuất lô để chuyển khoản, sau đó nhập mã
+          giao dịch và bằng chứng cho từng yêu cầu.
+        </p>
+      </div>
+      <div class="panel-tools">
+        <button
+          type="button"
+          class="primary-button"
+          (click)="createBatch()"
+          [disabled]="pending() || selected().length === 0"
+        >
+          <app-icon name="plus" [size]="16" />
+          Tạo lô ({{ selected().length }})
+        </button>
+      </div>
+    </header>
     <div class="table-wrap">
       <table>
         <thead>
@@ -136,13 +179,15 @@
                 {{ request.userId
                 }}<small>{{ request.createdAt | date: 'dd/MM/yyyy HH:mm' }}</small>
               </td>
-              <td>{{ format(request.grossAmount) }}</td>
-              <td>{{ format(request.feeAmount) }} / {{ format(request.taxAmount) }}</td>
-              <td>{{ format(request.fiatAmountMinor) }} VND</td>
+              <td class="numeric">{{ format(request.grossAmount) }}</td>
+              <td class="numeric">
+                {{ format(request.feeAmount) }} / {{ format(request.taxAmount) }}
+              </td>
+              <td class="numeric">{{ format(request.fiatAmountMinor) }} VND</td>
               <td><app-revenue-status [status]="request.status" /></td>
               <td>
                 @if (request.status === 'PROCESSING') {
-                  <button class="secondary" type="button" (click)="choosePayment(request.id)">
+                  <button class="ghost-button" type="button" (click)="choosePayment(request.id)">
                     Ghi kết quả chi trả
                   </button>
                 }
@@ -157,89 +202,67 @@
       </table>
     </div>
     @if (paymentId) {
-      <form class="account-form" (ngSubmit)="submitPayment()">
+      <form class="inline-form" (ngSubmit)="submitPayment()">
         <h3>Kết quả chi trả {{ paymentId }}</h3>
-        <label
-          >Kết quả<select name="paymentResult" [(ngModel)]="paymentResult">
-            <option value="complete">Đã chuyển tiền thành công</option>
-            <option value="fail">Chuyển tiền thất bại, giải phóng Credit</option>
-          </select></label
-        >
-        @if (paymentResult === 'complete') {
-          <label
-            >Mã giao dịch ngân hàng<input
-              name="providerTxnId"
-              [(ngModel)]="providerTxnId"
+        <div class="fields-grid">
+          <label class="field"
+            >Kết quả<select name="paymentResult" [(ngModel)]="paymentResult">
+              <option value="complete">Đã chuyển tiền thành công</option>
+              <option value="fail">Chuyển tiền thất bại, giải phóng Credit</option>
+            </select></label
+          >
+          @if (paymentResult === 'complete') {
+            <label class="field"
+              >Mã giao dịch ngân hàng<input
+                name="providerTxnId"
+                [(ngModel)]="providerTxnId"
+                required
+                maxlength="255"
+            /></label>
+          } @else {
+            <label class="field field--wide"
+              >Lý do thất bại<textarea
+                name="failureReason"
+                [(ngModel)]="failureReason"
+                required
+                maxlength="500"
+              ></textarea>
+            </label>
+          }
+          <label class="field"
+            >Mã bằng chứng đối soát<input
+              name="evidenceReference"
+              [(ngModel)]="evidenceReference"
               required
               maxlength="255"
           /></label>
-        } @else {
-          <label
-            >Lý do thất bại<textarea
-              name="failureReason"
-              [(ngModel)]="failureReason"
-              required
-              maxlength="500"
-            ></textarea>
-          </label>
-        }
-        <label
-          >Mã bằng chứng đối soát<input
-            name="evidenceReference"
-            [(ngModel)]="evidenceReference"
-            required
-            maxlength="255"
-        /></label>
+        </div>
         <div class="actions">
-          <button type="submit" [disabled]="pending()">Xác nhận kết quả chi trả</button
-          ><button type="button" class="secondary" (click)="paymentId = ''">Đóng</button>
+          <button type="submit" class="primary-button" [disabled]="pending()">
+            Xác nhận kết quả chi trả
+          </button>
+          <button type="button" class="ghost-button" (click)="paymentId = ''">Đóng</button>
         </div>
       </form>
     }
   </section>
-  <section class="panel">
-    <h2>Lô chi trả</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Lô</th>
-            <th>Số yêu cầu</th>
-            <th>Tổng</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (batch of batches(); track batch.id) {
-            <tr>
-              <td>{{ batch.batchNumber }}</td>
-              <td>{{ batch.totalRequests }}</td>
-              <td>{{ format(batch.totalAmount) }}</td>
-              <td><app-revenue-status [status]="batch.status" /></td>
-              <td>
-                <button
-                  type="button"
-                  class="secondary"
-                  [disabled]="pending()"
-                  (click)="exportBatch(batch.id)"
-                >
-                  Xuất lô chuyển khoản
-                </button>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="5" class="empty">Chưa có lô chi trả.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </section>
+  <app-payout-batches
+    [batches]="batches()"
+    [pending]="pending()"
+    (exportRequested)="exportBatch($event)"
+  />
   @if (report(); as data) {
     <section class="panel">
-      <h2>Đối soát sổ doanh thu</h2>
+      <header class="panel-head">
+        <span class="panel-icon"><app-icon name="chart" [size]="20" /></span>
+        <div class="panel-title">
+          <h2>Đối soát sổ doanh thu</h2>
+          <p>
+            Cập nhật {{ data.generatedAt | date: 'dd/MM/yyyy HH:mm' }}. Các số liệu lấy từ sổ giao
+            dịch, đơn vị Credit.
+          </p>
+        </div>
+      </header>
       <div class="metric-grid">
         <article class="metric">
           <span>Doanh thu mua chương</span><strong>{{ format(data.purchaseGrossCredits) }}</strong>
@@ -251,13 +274,15 @@
           <span>Đã hoàn</span><strong>{{ format(data.refundedCredits) }}</strong>
         </article>
         <article class="metric">
+          <span>Thu nhập tác giả</span><strong>{{ format(data.earningsCredits) }}</strong>
+        </article>
+        <article class="metric">
+          <span>Đã chi trả</span><strong>{{ format(data.paidCredits) }}</strong>
+        </article>
+        <article class="metric">
           <span>Chênh lệch</span><strong>{{ format(data.differenceCredits) }}</strong>
         </article>
       </div>
-      <p class="muted">
-        Cập nhật {{ data.generatedAt | date: 'dd/MM/yyyy HH:mm' }}. Các số liệu lấy từ sổ giao dịch,
-        đơn vị Credit.
-      </p>
     </section>
   }
-</section>
+</main>
