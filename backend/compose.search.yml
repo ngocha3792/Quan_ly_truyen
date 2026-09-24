@@ -14,8 +14,8 @@ services:
     volumes:
       - meilisearch-data:/meili_data
     networks: [backend]
-    mem_limit: 512m
-    cpus: 1.0
+    mem_limit: ${MEILISEARCH_MEMORY_LIMIT:-512m}
+    cpus: ${MEILISEARCH_CPU_LIMIT:-1.00}
     logging:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }
