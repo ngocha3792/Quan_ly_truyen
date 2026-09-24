@@ -36,20 +36,6 @@ ADR.
   defines the chosen product and architecture.
 - [THREAT_MODEL.md](./THREAT_MODEL.md) defines security boundaries and required
   mitigations.
-- [SPRINT_0_ACCEPTANCE.md](./SPRINT_0_ACCEPTANCE.md) records permissions, feature
-  flags, rollout gates, and unresolved external dependencies.
-- [SPRINT_1_IMPLEMENTATION.md](./SPRINT_1_IMPLEMENTATION.md) records the wallet,
-  ledger, API, reconciliation, and verification contract now implemented.
-- [SPRINT_2_IMPLEMENTATION.md](./SPRINT_2_IMPLEMENTATION.md) records chapter price
-  bands, purchase/entitlement atomicity, content gating, APIs, and rollout state.
-- [SPRINT_3_IMPLEMENTATION.md](./SPRINT_3_IMPLEMENTATION.md) records Credit packages,
-  payment orders, verified webhook settlement, reconciliation, and the remaining
-  provider-selection gate.
-- [SPRINT_4_IMPLEMENTATION.md](./SPRINT_4_IMPLEMENTATION.md) records admin explorers,
-  compensating chapter refunds, audited wallet adjustments, ledger-backed revenue,
-  and transactional receipts.
-- [SPRINT_5_IMPLEMENTATION.md](./SPRINT_5_IMPLEMENTATION.md) records staged rollout,
-  content-leak/concurrency probes, financial metrics/alerts, and ledger restore gates.
 
 ## Public policy
 

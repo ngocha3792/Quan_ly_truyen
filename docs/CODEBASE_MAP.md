@@ -143,7 +143,6 @@ Quan-ly-truyen/
     ├── CẤU_TRÚC_VÀ_DESIGN_PATTERNS.md  # Vietnamese architecture guide
     ├── REPO_CONTEXT.md       # Detailed reconnaissance doc
     ├── CI_CD_FIXES.md
-    ├── SPRINT_3_PLAN_COMIC_PIPELINE.md
     └── *.patch files         # Phase 0-2 architecture patches
 ```
 
