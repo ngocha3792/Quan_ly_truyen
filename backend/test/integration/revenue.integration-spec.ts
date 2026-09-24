@@ -201,7 +201,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   it('reserves partial earnings exactly and serializes repeated and competing payout requests', async () => {
     const fixture = await seed();
     await purchase(fixture);
-    await settlement.settlePending();
+    await settleAll();
     const account = await verifiedAccount(fixture);
     const key = randomUUID();
     const [first, replay] = await Promise.all([
@@ -234,7 +234,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   it('requires verified active account ownership and the minimum withdrawal before reserving', async () => {
     const fixture = await seed();
     await purchase(fixture);
-    await settlement.settlePending();
+    await settleAll();
     const account = await createAccount(fixture);
     await expect(
       payouts.createRequest(fixture.authorId, account.id, '100', randomUUID()),
@@ -264,7 +264,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   it('snapshots fees, tax, conversion and payee when policy and account data later change', async () => {
     const fixture = await seed({ price: 2_000n });
     await purchase(fixture);
-    await settlement.settlePending();
+    await settleAll();
     const account = await verifiedAccount(fixture);
     await policy(fixture.platformId, {
       feeBasisPoints: 250,
@@ -304,7 +304,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   it('closes a batch after evidenced completion and failure while balancing paid and released earnings', async () => {
     const fixture = await seed();
     await purchase(fixture);
-    await settlement.settlePending();
+    await settleAll();
     const account = await verifiedAccount(fixture);
     const first = await payouts.createRequest(
       fixture.authorId,
@@ -363,7 +363,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   it('keeps refunded paid earnings as debt and prevents another withdrawal', async () => {
     const fixture = await seed();
     await purchase(fixture);
-    await settlement.settlePending();
+    await settleAll();
     const account = await verifiedAccount(fixture);
     const request = await payouts.createRequest(
       fixture.authorId,
@@ -421,7 +421,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
         slug: author.username,
       },
     });
-    await policy(platform.id, { settlementDelayDays: options.delay ?? 0 });
+    await policy(platform.id, { settlementDelayDays: options.delay ?? 1 });
     const publishedAt = new Date();
     const story = await prisma.story.create({
       data: {
@@ -550,7 +550,7 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
   ) {
     return payouts.updatePolicy(platformId, {
       enabled: true,
-      settlementDelayDays: 0,
+      settlementDelayDays: 1,
       minimumPayoutCredits: '100',
       minimumPlatformFeeBasisPoints: 1000,
       feeBasisPoints: 0,
@@ -559,6 +559,13 @@ describe('revenue PostgreSQL allocations, settlement and payouts', () => {
       platformUserId: platformId,
       ...overrides,
     });
+  }
+  /*
+   * Chính sách tối thiểu giữ tiền 1 ngày, nên test nào cần earnings đã
+   * settle phải hỏi ở thời điểm vượt qua khoảng giữ đó.
+   */
+  function settleAll() {
+    return settlement.settlePending(100, new Date(Date.now() + 2 * 86_400_000));
   }
   async function assertBalancedJournal() {
     const events = await prisma.revenueJournalEntry.groupBy({
