@@ -88,12 +88,11 @@
               <div class="chapter-content-block">
                 <p
                   [attr.data-block-id]="block.id"
+                  [textContent]="block.text"
                   [class.chapter-separator]="
                     block.type === 'horizontal_rule' || block.text === '---'
                   "
-                >
-                  {{ block.text }}
-                </p>
+                ></p>
                 @if (
                   !store.offlineMode() &&
                     inline.enabled &&

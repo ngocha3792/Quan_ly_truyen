@@ -1,5 +1,6 @@
 import {
   createTextRangeAnchor,
+  normalizeAnchorQuote,
   reanchorTextRange,
   verifyTextRangeAnchor,
 } from './text-range-anchor.value-object';
@@ -16,6 +17,27 @@ const blocks = [
 ] as const;
 
 describe('text range anchor', () => {
+  it('accepts a paragraph ending at the next block boundary but rejects an offset shifted by one', () => {
+    const quote =
+      'Quả nhiên không lâu sau, tiếng bước chân lẹp xẹp vang lên từ xa. Kiyotaka đứng thẳng dậy.';
+    const source = [{ ...blocks[0], text: quote }, blocks[1]];
+    const anchor = createTextRangeAnchor(
+      source,
+      source[0].id,
+      0,
+      source[1].id,
+      0,
+    )!;
+    expect(normalizeAnchorQuote(anchor.quoteText)).toBe(quote);
+    expect(verifyTextRangeAnchor(anchor, source).valid).toBe(true);
+    expect(
+      verifyTextRangeAnchor({ ...anchor, startOffset: 1 }, source),
+    ).toEqual({
+      valid: false,
+      reason: 'quote_mismatch',
+    });
+  });
+
   it('creates and verifies a server-derived multi-block anchor', () => {
     const anchor = createTextRangeAnchor(
       blocks,

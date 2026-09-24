@@ -15,25 +15,27 @@ export class TextSelectionService {
     if (!selection || selection.rangeCount !== 1 || selection.isCollapsed) return this.clear();
     const range = selection.getRangeAt(0);
     if (!container.contains(range.commonAncestorContainer)) return this.clear();
-    const startBlock = closestBlock(range.startContainer, container);
-    const endBlock = closestBlock(range.endContainer, container);
-    const startBlockId = startBlock?.dataset['blockId'];
-    const endBlockId = endBlock?.dataset['blockId'];
-    const quoteText = selection.toString();
+    const parts = [...container.querySelectorAll<HTMLElement>('[data-block-id]')]
+      .filter((block) => range.intersectsNode(block))
+      .map((block) => selectedPart(block, range))
+      .filter((part) => part.endOffset > part.startOffset);
+    const start = parts[0];
+    const end = parts.at(-1);
+    // Browser Selection text adds layout newlines and may include comment
+    // badges. The server uses source text joined by two newlines instead.
+    const quoteText = parts.map((part) => part.text).join('\n\n');
     if (
-      !startBlock ||
-      !endBlock ||
-      !startBlockId ||
-      !endBlockId ||
-      quoteText.trim().length < 10 ||
-      quoteText.trim().length > 2000
+      !start ||
+      !end ||
+      quoteText.normalize('NFC').replace(/\s+/gu, ' ').trim().length < 10 ||
+      quoteText.length > 2000
     )
       return this.clear();
     const captured: CapturedTextSelection = {
-      startBlockId,
-      startOffset: offsetWithin(startBlock, range.startContainer, range.startOffset),
-      endBlockId,
-      endOffset: offsetWithin(endBlock, range.endContainer, range.endOffset),
+      startBlockId: start.id,
+      startOffset: start.startOffset,
+      endBlockId: end.id,
+      endOffset: end.endOffset,
       quoteText,
       rect: pickRect(range),
     };
@@ -47,10 +49,21 @@ export class TextSelectionService {
   }
 }
 
-function closestBlock(node: Node, container: HTMLElement): HTMLElement | null {
-  const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
-  const block = element?.closest<HTMLElement>('[data-block-id]') ?? null;
-  return block && container.contains(block) ? block : null;
+function selectedPart(block: HTMLElement, selection: Range) {
+  const intersection = block.ownerDocument.createRange();
+  intersection.selectNodeContents(block);
+  if (selection.compareBoundaryPoints(Range.START_TO_START, intersection) > 0)
+    intersection.setStart(selection.startContainer, selection.startOffset);
+  if (selection.compareBoundaryPoints(Range.END_TO_END, intersection) < 0)
+    intersection.setEnd(selection.endContainer, selection.endOffset);
+  const startOffset = offsetWithin(block, intersection.startContainer, intersection.startOffset);
+  const endOffset = offsetWithin(block, intersection.endContainer, intersection.endOffset);
+  return {
+    id: block.dataset['blockId']!,
+    startOffset,
+    endOffset,
+    text: (block.textContent ?? '').slice(startOffset, endOffset),
+  };
 }
 
 function offsetWithin(block: HTMLElement, node: Node, offset: number): number {
