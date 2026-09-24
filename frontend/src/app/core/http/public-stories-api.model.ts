@@ -214,8 +214,19 @@ export interface PublicStoryChapterListApiResponse {
 }
 export interface ChapterContentBlockApi {
   readonly id: string;
-  readonly type: 'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule';
+  /**
+   * 'image' chỉ xuất hiện ở API đọc chương: server nhận ra block chỉ chứa một
+   * ảnh Markdown và trả kèm url/alt đã kiểm tra an toàn.
+   */
+  readonly type:
+    'paragraph' | 'heading' | 'blockquote' | 'list' | 'code' | 'horizontal_rule' | 'image';
   readonly text: string;
+  readonly url?: string;
+  readonly alt?: string;
+  /** Heading: cấp 1-6. */
+  readonly level?: number;
+  /** Heading: số ký tự tiền tố Markdown bị ẩn khi hiển thị. */
+  readonly textOffset?: number;
   readonly marks: readonly {
     readonly type: 'bold' | 'italic' | 'code' | 'link';
     readonly from: number;

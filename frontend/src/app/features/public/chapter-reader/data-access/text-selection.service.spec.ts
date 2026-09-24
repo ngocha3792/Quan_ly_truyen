@@ -39,6 +39,28 @@ describe('TextSelectionService', () => {
     });
   });
 
+  it('adds back the Markdown prefix a heading hides, so the server anchor still matches', () => {
+    // Nguồn là "## Tiêu đề chương rất dài"; reader chỉ hiển thị phần sau "## ".
+    const displayed = 'Tiêu đề chương rất dài';
+    container.innerHTML = `<p data-block-id="22222222-2222-4222-8222-222222222222" data-block-offset="3">${displayed}</p>`;
+    const heading = container.querySelector('p')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(heading, 0);
+    range.setEnd(heading, displayed.length);
+
+    const captured = capture(range);
+
+    // Offset phải tính theo text nguồn, tức là lệch đúng 3 ký tự "## ".
+    expect(captured).toMatchObject({
+      startOffset: 3,
+      endOffset: 3 + displayed.length,
+      quoteText: displayed,
+    });
+    // Server cắt từ nguồn bằng offset này phải ra đúng đoạn đang hiển thị.
+    const source = `## ${displayed}`;
+    expect(source.slice(captured!.startOffset, captured!.endOffset)).toBe(displayed);
+  });
+
   it('ends at the selected paragraph when the range ends at offset zero of the next block', () => {
     const quote =
       'Quả nhiên không lâu sau, tiếng bước chân lẹp xẹp vang lên từ xa. Kiyotaka đứng thẳng dậy.';

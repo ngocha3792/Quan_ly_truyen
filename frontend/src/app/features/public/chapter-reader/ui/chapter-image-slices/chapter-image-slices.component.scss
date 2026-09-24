@@ -7,9 +7,23 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(100deg, #eee 30%, #f7f7f7 50%, #eee 70%);
+
+  /* Skeleton theo tông nền của trang đọc; bản cũ dùng #eee nên trang truyện
+     tranh nhấp nháy mảng trắng giữa các trang trên nền tối. */
+  background: linear-gradient(
+    100deg,
+    rgba(120, 130, 160, 0.1) 30%,
+    rgba(120, 130, 160, 0.18) 50%,
+    rgba(120, 130, 160, 0.1) 70%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Ảnh đã hiện thì không cần chạy shimmer nữa. */
+.comic__slice:has(picture.is-loaded) {
+  background: none;
+  animation: none;
 }
 picture,
 img {
@@ -25,7 +39,9 @@ picture.is-loaded {
   opacity: 1;
 }
 img {
-  object-fit: cover;
+  /* contain chứ không phải cover: trang truyện tranh không được cắt xén khi
+     kích thước slice lệch vài pixel so với ảnh gốc. */
+  object-fit: contain;
 }
 .comic__caption {
   text-align: center;

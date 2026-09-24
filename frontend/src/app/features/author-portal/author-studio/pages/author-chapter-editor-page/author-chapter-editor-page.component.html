@@ -76,6 +76,7 @@
               (moveUpRequested)="mangaPageAction($event, 'up')"
               (moveDownRequested)="mangaPageAction($event, 'down')"
               (removeRequested)="mangaPageAction($event, 'remove')"
+              (reorderRequested)="reorderMangaPages($event)"
             />
             @if (isCreate()) {
               <small>Cần nhập tiêu đề chương trước khi tải trang truyện.</small>

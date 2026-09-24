@@ -282,6 +282,12 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     }
   }
 
+  protected reorderMangaPages(orderedMediaAssetIds: readonly string[]): void {
+    const id = this.chapterId();
+    if (!id) return;
+    this.store.reorderPages(this.storyId, id, orderedMediaAssetIds);
+  }
+
   protected mangaPageAction(mediaAssetId: string, action: 'up' | 'down' | 'remove'): void {
     const id = this.chapterId();
     if (!id) return;

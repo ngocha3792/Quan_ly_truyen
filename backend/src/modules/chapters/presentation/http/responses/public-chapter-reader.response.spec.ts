@@ -1,63 +1,111 @@
 import type { PublicChapterReaderDto } from '../../../application';
+
 import { toPublicChapterReaderResponse } from './public-chapter-reader.response';
 
-describe('toPublicChapterReaderResponse', () => {
-  it('never includes full content in the locked response variant', () => {
-    const result: PublicChapterReaderDto = {
-      story: { id: 'story-1', slug: 'story', title: 'Story' },
-      chapter: {
-        id: 'chapter-1',
-        number: 1,
-        title: 'Chapter',
-        slug: 'chapter-1',
-        access: { state: 'LOCKED', priceCredits: '25' },
-        previewContent: 'Preview only',
-        previewFormat: 'MARKDOWN',
-        wordCount: 1_000,
-        views: 10,
-        comments: 2,
-        publishedAt: new Date('2026-09-07T00:00:00.000Z'),
-        updatedAt: new Date('2026-09-07T01:00:00.000Z'),
+function readerDto(
+  blocks: readonly { id: string; type: string; text: string }[],
+): PublicChapterReaderDto {
+  return {
+    story: { id: 'story-1', slug: 'truyen', title: 'Truyện' },
+    chapter: {
+      id: 'chapter-1',
+      number: 1,
+      title: 'Chương 1',
+      slug: 'chuong-1',
+      wordCount: 10,
+      views: 0,
+      comments: 0,
+      publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      access: { state: 'FREE', priceCredits: null },
+      content: '',
+      contentFormat: 'markdown',
+      contentDocument: {
+        schemaVersion: 1,
+        blocks: blocks.map((block) => ({ ...block, marks: [] })),
       },
-      navigation: { previous: null, next: null },
-    };
+      documentSchemaVersion: 1,
+    },
+    navigation: { previous: null, next: null },
+  } as unknown as PublicChapterReaderDto;
+}
 
-    const response = toPublicChapterReaderResponse(result);
+function readerBlocks(dto: PublicChapterReaderDto) {
+  const chapter = toPublicChapterReaderResponse(dto).chapter;
+  if (!('contentDocument' in chapter) || !chapter.contentDocument) {
+    throw new Error('Response thiếu content document');
+  }
+  return chapter.contentDocument.blocks;
+}
 
-    expect(response.chapter).toMatchObject({
-      access: { state: 'LOCKED', priceCredits: '25' },
-      previewContent: 'Preview only',
+describe('toPublicChapterReaderResponse', () => {
+  it('turns a Markdown-image paragraph into an image block the reader can render', () => {
+    const blocks = readerBlocks(
+      readerDto([
+        { id: 'b1', type: 'paragraph', text: 'Hắn mở cửa.' },
+        {
+          id: 'b2',
+          type: 'paragraph',
+          text: '![Cảnh mở đầu](https://cdn.test/a.jpg)',
+        },
+      ]),
+    );
+
+    expect(blocks[0]).toMatchObject({ id: 'b1', type: 'paragraph' });
+    expect(blocks[1]).toMatchObject({
+      id: 'b2',
+      type: 'image',
+      url: 'https://cdn.test/a.jpg',
+      alt: 'Cảnh mở đầu',
     });
-    expect(response.chapter).not.toHaveProperty('content');
-    expect(response.chapter).not.toHaveProperty('contentFormat');
   });
 
-  it('drops an accidentally attached full-content field from a locked DTO', () => {
-    const compromised = {
-      story: { id: 'story-1', slug: 'story', title: 'Story' },
-      chapter: {
-        id: 'chapter-1',
-        number: 1,
-        title: 'Chapter',
-        slug: 'chapter-1',
-        access: { state: 'LOCKED', priceCredits: '25' },
-        previewContent: 'Preview only',
-        previewFormat: 'MARKDOWN',
-        content: 'FULL_CONTENT_SENTINEL_MUST_NOT_LEAK',
-        contentFormat: 'MARKDOWN',
-        wordCount: 1_000,
-        views: 10,
-        comments: 2,
-        publishedAt: new Date('2026-09-07T00:00:00.000Z'),
-        updatedAt: new Date('2026-09-07T01:00:00.000Z'),
-      },
-      navigation: { previous: null, next: null },
-    } as unknown as PublicChapterReaderDto;
-
-    const serialized = JSON.stringify(
-      toPublicChapterReaderResponse(compromised),
+  it('keeps the original Markdown in text so offline and legacy clients still work', () => {
+    const [block] = readerBlocks(
+      readerDto([
+        { id: 'b1', type: 'paragraph', text: '![a](https://cdn.test/a.jpg)' },
+      ]),
     );
-    expect(serialized).not.toContain('FULL_CONTENT_SENTINEL_MUST_NOT_LEAK');
-    expect(serialized).not.toContain('contentFormat');
+
+    expect(block.text).toBe('![a](https://cdn.test/a.jpg)');
+  });
+
+  it('leaves an unsafe image target as an ordinary paragraph', () => {
+    const [block] = readerBlocks(
+      readerDto([
+        { id: 'b1', type: 'paragraph', text: '![x](javascript:alert(1))' },
+      ]),
+    );
+
+    expect(block.type).toBe('paragraph');
+    expect(block).not.toHaveProperty('url');
+  });
+
+  it('marks a heading with its level and the prefix length the reader hides', () => {
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'heading', text: '### Hồi thứ ba' }]),
+    );
+
+    expect(block).toMatchObject({ type: 'heading', level: 3, textOffset: 4 });
+    // Text nguồn giữ nguyên để neo bình luận vẫn cắt đúng.
+    expect(block.text).toBe('### Hồi thứ ba');
+  });
+
+  it('leaves a heading without a usable prefix untouched', () => {
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'heading', text: '#KhongCoKhoangTrang' }]),
+    );
+
+    expect(block).not.toHaveProperty('textOffset');
+  });
+
+  it('never rewrites a block that is not a paragraph', () => {
+    const [block] = readerBlocks(
+      readerDto([
+        { id: 'b1', type: 'code', text: '![a](https://cdn.test/a.jpg)' },
+      ]),
+    );
+
+    expect(block.type).toBe('code');
   });
 });

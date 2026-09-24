@@ -209,8 +209,28 @@ export class AuthorChapterEditorStore {
 
     const reordered = [...pages];
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-    this.mediaPages.set(reordered);
+    this.commitPageOrder(storyId, chapterId, pages, reordered);
+  }
 
+  /** Thứ tự tùy ý từ thao tác kéo thả. */
+  reorderPages(storyId: string, chapterId: string, orderedMediaAssetIds: readonly string[]): void {
+    if (this.reorderingPages()) return;
+    const pages = this.mediaPages();
+    const byId = new Map(pages.map((page) => [page.mediaAssetId, page]));
+    const reordered = orderedMediaAssetIds
+      .map((id) => byId.get(id))
+      .filter((page): page is AuthorChapterMediaPage => page !== undefined);
+    if (reordered.length !== pages.length) return;
+    this.commitPageOrder(storyId, chapterId, pages, reordered);
+  }
+
+  private commitPageOrder(
+    storyId: string,
+    chapterId: string,
+    previous: readonly AuthorChapterMediaPage[],
+    reordered: readonly AuthorChapterMediaPage[],
+  ): void {
+    this.mediaPages.set(reordered);
     this.reorderingPages.set(true);
     this.error.set(null);
     this.repository
@@ -226,7 +246,7 @@ export class AuthorChapterEditorStore {
       .subscribe({
         next: (pages) => this.mediaPages.set(pages),
         error: (error: unknown) => {
-          this.mediaPages.set(pages);
+          this.mediaPages.set(previous);
           this.error.set(getApiErrorMessage(error));
         },
       });

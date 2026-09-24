@@ -58,10 +58,13 @@ function selectedPart(block: HTMLElement, selection: Range) {
     intersection.setEnd(selection.endContainer, selection.endOffset);
   const startOffset = offsetWithin(block, intersection.startContainer, intersection.startOffset);
   const endOffset = offsetWithin(block, intersection.endContainer, intersection.endOffset);
+  // Heading ẩn tiền tố Markdown khi hiển thị, nhưng server neo theo text nguồn,
+  // nên phải cộng lại số ký tự đã ẩn.
+  const hidden = Number(block.dataset['blockOffset'] ?? 0) || 0;
   return {
     id: block.dataset['blockId']!,
-    startOffset,
-    endOffset,
+    startOffset: startOffset + hidden,
+    endOffset: endOffset + hidden,
     text: (block.textContent ?? '').slice(startOffset, endOffset),
   };
 }

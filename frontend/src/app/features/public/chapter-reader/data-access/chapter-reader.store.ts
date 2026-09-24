@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, EMPTY, finalize, map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { AuthStore } from '../../../../core/auth/auth.store';
@@ -28,6 +28,16 @@ export class ChapterReaderStore {
   private readonly viewState = signal<ChapterReaderView | null>(null);
 
   readonly view = this.viewState.asReadonly();
+  /** Chương truyện tranh: có trang ảnh đính kèm qua pipeline comic. */
+  readonly isManga = computed(() => (this.viewState()?.chapter.media.length ?? 0) > 0);
+  /** Có block nào để dựng khung nội dung không (block ảnh cũng tính). */
+  readonly hasBlocks = computed(() => (this.viewState()?.chapter.blocks.length ?? 0) > 0);
+  /** Có chữ để đọc thành tiếng không — chương thuần ảnh thì không. */
+  readonly hasText = computed(() =>
+    (this.viewState()?.chapter.blocks ?? []).some(
+      (block) => block.type !== 'image' && block.text.trim().length > 0,
+    ),
+  );
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly fontSize = signal(18);
