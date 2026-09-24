@@ -1,0 +1,47 @@
+<section class="panel">
+  <header class="panel-head">
+    <span class="panel-icon"><app-icon name="grid" [size]="20" /></span>
+    <div class="panel-title">
+      <h2>Lô chi trả</h2>
+      <p>Xuất lô để chuyển khoản theo danh sách đã chốt.</p>
+    </div>
+  </header>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Lô</th>
+          <th>Số yêu cầu</th>
+          <th>Tổng</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (batch of batches(); track batch.id) {
+          <tr>
+            <td>{{ batch.batchNumber }}</td>
+            <td class="numeric">{{ batch.totalRequests }}</td>
+            <td class="numeric">{{ format(batch.totalAmount) }}</td>
+            <td><app-revenue-status [status]="batch.status" /></td>
+            <td>
+              <button
+                type="button"
+                class="ghost-button"
+                [disabled]="pending()"
+                (click)="exportRequested.emit(batch.id)"
+              >
+                <app-icon name="arrow-down" [size]="16" />
+                Xuất lô chuyển khoản
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">Chưa có lô chi trả.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

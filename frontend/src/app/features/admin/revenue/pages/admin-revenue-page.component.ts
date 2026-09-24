@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   OnInit,
@@ -18,23 +19,47 @@ import {
   PayoutRequest,
   RevenuePolicy,
 } from '../../../../core/revenue/revenue.models';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+} from '../../../../shared/components/breadcrumb/breadcrumb.component';
+import { IconComponent, IconName } from '../../../../shared/components/icon/icon.component';
 import { PageHeadingComponent } from '../../../../shared/components/page-heading/page-heading.component';
 import { RevenueStatusComponent } from '../../../../shared/components/revenue-status/revenue-status.component';
+import {
+  StatCardComponent,
+  StatCardTone,
+} from '../../../../shared/components/stat-card/stat-card.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { AdminRevenueHttpService } from '../data-access/admin-revenue-http.service';
 import { RevenueReconciliation } from '../domain/admin-revenue.models';
+import { PayoutBatchesComponent } from '../ui/payout-batches.component';
 import { RevenueAgreementsComponent } from './revenue-agreements.component';
 import { RevenuePolicyComponent } from '../ui/revenue-policy.component';
+
+interface RevenueStat {
+  readonly label: string;
+  readonly value: string;
+  readonly meta: string;
+  readonly icon: IconName;
+  readonly tone: StatCardTone;
+}
 
 @Component({
   selector: 'app-admin-revenue-page',
   standalone: true,
   imports: [
+    BreadcrumbComponent,
     DatePipe,
     FormsModule,
+    IconComponent,
     PageHeadingComponent,
+    PayoutBatchesComponent,
     RevenueStatusComponent,
     RevenueAgreementsComponent,
     RevenuePolicyComponent,
+    StatCardComponent,
+    StatusBadgeComponent,
   ],
   templateUrl: './admin-revenue-page.component.html',
   styleUrl: './admin-revenue-page.component.scss',
@@ -54,6 +79,50 @@ export class AdminRevenuePageComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly format = formatCredits;
+  protected readonly breadcrumbs: readonly BreadcrumbItem[] = [
+    { label: 'Quản trị', route: '/admin' },
+    { label: 'Doanh thu & chi trả' },
+  ];
+  protected readonly stats = computed<readonly RevenueStat[]>(() => {
+    const report = this.report();
+    const accounts = this.accounts();
+    const waitingAccounts = accounts.filter((a) => a.isActive && !a.isVerified).length;
+    const pendingRequests = this.requests().filter((r) => r.status === 'PENDING');
+    const pendingCredits = pendingRequests.reduce((sum, r) => sum + toBigInt(r.grossAmount), 0n);
+    const grossVnd = report && this.toFiat(report.purchaseGrossCredits);
+    return [
+      {
+        label: 'Doanh thu mua chương',
+        value: grossVnd ? `${grossVnd} VND` : '—',
+        meta: report ? `${formatCredits(report.purchaseGrossCredits)} Credit` : 'Chưa có số liệu',
+        icon: 'wallet',
+        tone: 'purple',
+      },
+      {
+        label: 'Chênh lệch đối soát',
+        value: report ? `${formatCredits(report.differenceCredits)} Credit` : '—',
+        meta: report
+          ? `Đã phân bổ ${formatCredits(report.allocatedGrossCredits)} · Đã hoàn ${formatCredits(report.refundedCredits)}`
+          : 'Chưa có số liệu',
+        icon: 'clock',
+        tone: 'orange',
+      },
+      {
+        label: 'Yêu cầu chờ chi trả',
+        value: `${pendingRequests.length} yêu cầu`,
+        meta: `${formatCredits(pendingCredits.toString())} Credit chờ tạo lô`,
+        icon: 'lock',
+        tone: 'blue',
+      },
+      {
+        label: 'Tài khoản chờ xác minh',
+        value: `${waitingAccounts} tài khoản`,
+        meta: `Trên tổng ${accounts.length} tài khoản`,
+        icon: 'user',
+        tone: 'pink',
+      },
+    ];
+  });
   protected reviewAccountId = '';
   protected reviewReference = '';
   protected reviewVerified = true;
@@ -161,18 +230,38 @@ export class AdminRevenuePageComponent implements OnInit {
         finalize(() => this.pending.set(false)),
       )
       .subscribe({
-        next: (data) => {
-          const url = URL.createObjectURL(
-            new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-          );
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `payout-batch-${id}.json`;
-          link.click();
-          URL.revokeObjectURL(url);
-        },
+        next: (data) => this.download(data, `payout-batch-${id}.json`),
         error: (e: unknown) => this.error.set(getApiErrorMessage(e, 'Không thể xuất lô chi trả.')),
       });
+  }
+  protected exportReport(): void {
+    const report = this.report();
+    if (!report) return;
+    this.download(
+      {
+        generatedAt: report.generatedAt,
+        reconciliation: report,
+        policy: this.policy(),
+        payoutRequests: this.requests(),
+        payoutBatches: this.batches(),
+      },
+      `revenue-report-${report.generatedAt.slice(0, 10)}.json`,
+    );
+  }
+  private toFiat(credits: string): string | null {
+    const rate = this.policy()?.fiatMinorPerCredit;
+    if (!rate || !/^\d+$/u.test(rate) || !/^-?\d+$/u.test(credits)) return null;
+    return new Intl.NumberFormat('vi-VN').format(BigInt(credits) * BigInt(rate));
+  }
+  private download(data: unknown, filename: string): void {
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
   private run(
     action: Observable<unknown>,
@@ -197,4 +286,7 @@ export class AdminRevenuePageComponent implements OnInit {
         error: (e: unknown) => this.error.set(getApiErrorMessage(e, 'Thao tác chưa thể hoàn tất.')),
       });
   }
+}
+function toBigInt(value: string): bigint {
+  return /^-?\d+$/u.test(value) ? BigInt(value) : 0n;
 }

@@ -1,16 +1,28 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
+import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { SearchFieldComponent } from '../../../../shared/components/search-field/search-field.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { AdminRevenueHttpService } from '../data-access/admin-revenue-http.service';
 import { RevenueAgreement } from '../domain/admin-revenue.models';
+
+type AgreementFilter = 'all' | 'active' | 'expired';
 
 @Component({
   selector: 'app-revenue-agreements',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, IconComponent, SearchFieldComponent, StatusBadgeComponent],
   templateUrl: './revenue-agreements.component.html',
   styleUrl: './revenue-agreements.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +33,20 @@ export class RevenueAgreementsComponent {
   protected readonly agreements = signal<readonly RevenueAgreement[]>([]);
   protected readonly pending = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly loaded = signal(false);
+  protected readonly filter = signal<AgreementFilter>('all');
+  protected readonly expandedId = signal<string | null>(null);
+  protected readonly visibleAgreements = computed(() => {
+    const mode = this.filter();
+    return this.agreements().filter((a) =>
+      mode === 'active' ? !a.effectiveTo : mode === 'expired' ? !!a.effectiveTo : true,
+    );
+  });
+  protected readonly filterOptions: readonly { value: AgreementFilter; label: string }[] = [
+    { value: 'all', label: 'Tất cả trạng thái' },
+    { value: 'active', label: 'Đang hiệu lực' },
+    { value: 'expired', label: 'Hết hiệu lực' },
+  ];
   protected storyId = '';
   protected authorPercent = '';
   protected platformPercent = '';
@@ -37,9 +63,30 @@ export class RevenueAgreementsComponent {
         finalize(() => this.pending.set(false)),
       )
       .subscribe({
-        next: (v) => this.agreements.set(v),
+        next: (v) => {
+          this.agreements.set(v);
+          this.loaded.set(true);
+          this.expandedId.set(null);
+        },
         error: (e: unknown) => this.error.set(getApiErrorMessage(e, 'Không thể tải thỏa thuận.')),
       });
+  }
+  protected contributorPercent(agreement: RevenueAgreement): number {
+    return agreement.contributorShares.reduce((sum, c) => sum + c.shareBps, 0) / 100;
+  }
+  protected toggleDetail(id: string): void {
+    this.expandedId.update((current) => (current === id ? null : id));
+  }
+  protected reuse(agreement: RevenueAgreement): void {
+    this.authorPercent = String(agreement.authorShareBps / 100);
+    this.platformPercent = String(agreement.platformFeeBps / 100);
+    this.contributors = agreement.contributorShares.map((c) => ({
+      userId: c.userId,
+      percent: String(c.shareBps / 100),
+    }));
+  }
+  protected copyStoryId(value: string): void {
+    void globalThis.navigator?.clipboard?.writeText(value);
   }
   protected create(): void {
     const authorShareBps = percentToBasisPoints(this.authorPercent);
@@ -75,7 +122,10 @@ export class RevenueAgreementsComponent {
         finalize(() => this.pending.set(false)),
       )
       .subscribe({
-        next: (v) => this.agreements.update((rows) => [v, ...rows]),
+        next: (v) => {
+          this.agreements.update((rows) => [v, ...rows]);
+          this.loaded.set(true);
+        },
         error: (e: unknown) =>
           this.error.set(getApiErrorMessage(e, 'Không thể tạo phiên bản thỏa thuận.')),
       });
