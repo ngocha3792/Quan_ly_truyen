@@ -1,0 +1,209 @@
+// Donut, legend, mini stats and tables for the admin "Trợ lý AI" workspace.
+
+.ai-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.ai-mini {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: rgba(6, 11, 22, 0.45);
+}
+
+.ai-mini span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-mini strong {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-mini__muted {
+  color: var(--text-muted) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600;
+}
+
+/* Donut ------------------------------------------------------------------ */
+
+.ai-distribution {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.ai-donut-figure {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+}
+
+.ai-donut-figure figcaption {
+  justify-self: start;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ai-donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 142px;
+  height: 142px;
+  border-radius: 50%;
+}
+
+.ai-donut::after {
+  content: '';
+  position: absolute;
+  inset: 26px;
+  border-radius: 50%;
+  background: var(--surface-card-solid);
+}
+
+.ai-donut__center {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  max-width: 80px;
+  text-align: center;
+}
+
+.ai-donut__center strong {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.ai-donut__center small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.ai-legend {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-legend__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ai-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.ai-legend__label {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-legend__value {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-latency {
+  min-width: 0;
+}
+
+/* Table ------------------------------------------------------------------ */
+
+.ai-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.ai-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ai-table th,
+.ai-table td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ai-table th {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(6, 11, 22, 0.4);
+}
+
+.ai-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ai-table tbody tr {
+  transition: background var(--motion-fast);
+}
+
+.ai-table tbody tr:hover {
+  background: rgba(197, 143, 255, 0.045);
+}
+
+.ai-table td strong {
+  display: block;
+  max-width: 11rem;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+}
+
+.ai-table td small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.ai-numeric {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
