@@ -1,5 +1,6 @@
 import {
   InvalidModerationReasonException,
+  InvalidTakedownReasonException,
   InvalidWarningMessageException,
 } from '../exceptions';
 
@@ -18,10 +19,25 @@ export interface CommentModerationPlan {
   readonly auditAction: string;
 }
 
+function normalizeReasonText(value: string): string {
+  return value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+}
+
 export function normalizeModerationReason(value: string): string {
-  const normalized = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  const normalized = normalizeReasonText(value);
   if (normalized.length < 10 || normalized.length > 2000)
     throw new InvalidModerationReasonException();
+  return normalized;
+}
+
+/**
+ * Cùng luật độ dài với lý do kiểm duyệt, nhưng báo mã lỗi riêng để client gỡ
+ * nội dung không nhận mã nói về bình luận.
+ */
+export function normalizeTakedownReason(value: string): string {
+  const normalized = normalizeReasonText(value);
+  if (normalized.length < 10 || normalized.length > 2000)
+    throw new InvalidTakedownReasonException();
   return normalized;
 }
 
