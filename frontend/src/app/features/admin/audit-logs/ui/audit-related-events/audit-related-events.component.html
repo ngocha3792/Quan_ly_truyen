@@ -1,0 +1,45 @@
+<section class="audit-panel">
+  <header class="audit-panel__head">
+    <span class="audit-panel__icon"><app-icon name="activity" [size]="18" /></span>
+    <div class="audit-panel__title">
+      <h2>Sự kiện liên quan</h2>
+      <p>Các sự kiện khác ghi nhận trong cùng một request.</p>
+    </div>
+  </header>
+  @if (!requestId()) {
+    <p class="audit-empty">Sự kiện này không có request ID để truy vết.</p>
+  } @else if (loading()) {
+    <p class="audit-empty">Đang tải sự kiện liên quan...</p>
+  } @else {
+    <ul class="audit-timeline">
+      @for (event of events(); track event.id) {
+        <li
+          class="audit-timeline__item"
+          [class.audit-timeline__item--current]="event.id === currentId()"
+        >
+          @if (event.id === currentId()) {
+            <span class="audit-timeline__action" [title]="event.action">{{ event.action }}</span>
+          } @else {
+            <a
+              class="audit-timeline__action"
+              [routerLink]="['/admin/audit-logs', event.id]"
+              [title]="event.action"
+              >{{ event.action }}</a
+            >
+          }
+          <span class="audit-timeline__meta">{{
+            event.createdAt | date: 'dd/MM/yy, HH:mm:ss'
+          }}</span>
+          <span class="audit-badge" [title]="event.entityType">{{ event.entityType }}</span>
+        </li>
+      } @empty {
+        <li class="audit-empty">Không có sự kiện nào khác trong request này.</li>
+      }
+    </ul>
+    @if (requestId(); as id) {
+      <a class="audit-note" [routerLink]="['/admin/audit-logs']" [queryParams]="{ requestId: id }">
+        Xem toàn bộ sự kiện của request này
+      </a>
+    }
+  }
+</section>

@@ -1,24 +1,50 @@
-@if (changes.length === 0) {
-  <p class="empty">Không có before/after snapshot thay đổi được ghi nhận.</p>
+@if (changes().length === 0) {
+  <p class="audit-empty">Không có before/after snapshot thay đổi được ghi nhận.</p>
 } @else {
-  <div class="changes">
-    @for (change of changes; track change.path + ':' + change.type) {
-      <article class="change">
-        <header>
-          <code>{{ change.path }}</code>
-          <span>{{ change.type }}</span>
-        </header>
-        <div class="values">
-          <div>
-            <strong>Before</strong>
-            <pre>{{ format(change.before) }}</pre>
-          </div>
-          <div>
-            <strong>After</strong>
-            <pre>{{ format(change.after) }}</pre>
-          </div>
-        </div>
-      </article>
-    }
+  <div class="audit-table-wrap">
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th>Trường</th>
+          <th>Trước</th>
+          <th></th>
+          <th>Sau</th>
+          <th>Loại thay đổi</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (change of changes(); track change.path + ':' + change.type) {
+          <tr>
+            <td>
+              <code class="audit-code" [title]="change.path">{{ change.path }}</code>
+            </td>
+            <td>
+              <span
+                class="audit-change-value"
+                [class.audit-change-value--before]="change.before !== null"
+                [class.audit-change-value--empty]="change.before === null"
+                [title]="format(change.before)"
+                >{{ format(change.before) }}</span
+              >
+            </td>
+            <td class="audit-change-arrow" aria-hidden="true">→</td>
+            <td>
+              <span
+                class="audit-change-value"
+                [class.audit-change-value--after]="change.after !== null"
+                [class.audit-change-value--empty]="change.after === null"
+                [title]="format(change.after)"
+                >{{ format(change.after) }}</span
+              >
+            </td>
+            <td>
+              <span class="audit-change-type" [class]="'audit-change-type--' + change.type">
+                {{ typeLabels[change.type] }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
   </div>
 }

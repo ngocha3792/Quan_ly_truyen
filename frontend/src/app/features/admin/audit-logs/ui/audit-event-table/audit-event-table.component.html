@@ -1,0 +1,85 @@
+<div class="audit-table-wrap">
+  <table class="audit-table">
+    <thead>
+      <tr>
+        <th>Thời gian</th>
+        <th>Người thực hiện</th>
+        <th>Hành động</th>
+        <th>Đối tượng</th>
+        <th>Loại</th>
+        <th>Request ID</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td>{{ item.createdAt | date: 'dd/MM/yy, HH:mm' }}</td>
+          <td>
+            <span class="audit-actor">
+              <app-user-avatar
+                [name]="item.actor?.displayName || '?'"
+                [size]="26"
+                aria-hidden="true"
+              />
+              <span [title]="item.actor?.displayName || ''">
+                {{ item.actor?.displayName || 'Không xác định/đã xóa' }}
+              </span>
+            </span>
+          </td>
+          <td>
+            <code class="audit-code" [title]="item.action">{{ item.action }}</code>
+          </td>
+          <td>
+            <code class="audit-code" [title]="item.entityId || ''">{{ item.entityId || '—' }}</code>
+          </td>
+          <td>
+            <span class="audit-badge" [title]="item.entityType">{{ item.entityType }}</span>
+          </td>
+          <td>
+            @if (item.requestId; as requestId) {
+              <span class="audit-row-actions">
+                <a
+                  class="audit-code audit-code--link"
+                  [routerLink]="['/admin/audit-logs']"
+                  [queryParams]="{ requestId }"
+                  [title]="requestId"
+                  >{{ requestId }}</a
+                >
+                <button
+                  type="button"
+                  class="audit-icon-button"
+                  aria-label="Sao chép request ID"
+                  (click)="copyRequested.emit(requestId)"
+                >
+                  <app-icon name="copy" [size]="14" />
+                </button>
+              </span>
+            } @else {
+              —
+            }
+          </td>
+          <td>
+            <span class="audit-row-actions">
+              <a
+                class="audit-icon-button"
+                [routerLink]="['/admin/audit-logs', item.id]"
+                [attr.aria-label]="'Xem chi tiết sự kiện ' + item.action"
+              >
+                <app-icon name="eye" [size]="14" />
+              </a>
+              <button
+                type="button"
+                class="audit-icon-button"
+                aria-label="Sao chép audit ID"
+                (click)="copyRequested.emit(item.id)"
+              >
+                <app-icon name="copy" [size]="14" />
+              </button>
+            </span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

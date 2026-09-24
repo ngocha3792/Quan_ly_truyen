@@ -1,18 +1,22 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+
 import type { AdminAuditChange, SafeAuditValue } from '../../domain/admin-audit-log.models';
 
 @Component({
   selector: 'app-audit-diff',
   standalone: true,
   templateUrl: './audit-diff.component.html',
-  styleUrl: './audit-diff.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuditDiffComponent {
-  @Input({ required: true }) changes: readonly AdminAuditChange[] = [];
-
+  readonly changes = input.required<readonly AdminAuditChange[]>();
+  protected readonly typeLabels: Readonly<Record<AdminAuditChange['type'], string>> = {
+    added: 'thêm mới',
+    removed: 'xóa bỏ',
+    changed: 'thay đổi',
+  };
   protected format(value: SafeAuditValue | null): string {
-    if (value === null) return '—';
+    if (value === null || value === undefined) return '—';
     return typeof value === 'string' ? value : JSON.stringify(value);
   }
 }

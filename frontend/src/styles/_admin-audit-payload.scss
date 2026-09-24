@@ -1,0 +1,115 @@
+// Payload viewer and related-event timeline for the admin audit log detail page.
+
+/* Payload viewer --------------------------------------------------------- */
+
+.audit-payload {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: rgba(6, 11, 22, 0.55);
+}
+
+.audit-payload__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.audit-payload__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  max-height: 22rem;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.audit-payload__gutter {
+  padding: 0.6rem 0.5rem 0.6rem 0.75rem;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.audit-payload__code {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  color: var(--text-secondary);
+  white-space: pre;
+}
+
+/* Related timeline ------------------------------------------------------- */
+
+.audit-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-timeline__item {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0 0 var(--space-4) var(--space-5);
+  border-left: 1px solid var(--border);
+}
+
+.audit-timeline__item:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+.audit-timeline__item::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.35rem;
+  inset-inline-start: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.audit-timeline__item--current::before {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(140, 77, 232, 0.25);
+}
+
+.audit-timeline__action {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.audit-timeline__action:hover {
+  color: var(--primary-soft);
+  text-decoration: underline;
+}
+
+.audit-timeline__meta {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .audit-pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

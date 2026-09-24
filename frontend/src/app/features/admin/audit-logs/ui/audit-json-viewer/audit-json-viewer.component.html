@@ -1,1 +1,12 @@
-<pre class="audit-json">{{ format() }}</pre>
+<div class="audit-payload">
+  <header class="audit-payload__head">
+    <span>{{ label() }}</span>
+    <button type="button" class="audit-icon-button" aria-label="Sao chép JSON" (click)="copy()">
+      <app-icon name="copy" [size]="14" />
+    </button>
+  </header>
+  <div class="audit-payload__body">
+    <pre class="audit-payload__gutter" aria-hidden="true">{{ lineNumbers() }}</pre>
+    <pre class="audit-payload__code">{{ text() }}</pre>
+  </div>
+</div>
