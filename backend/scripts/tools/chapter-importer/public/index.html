@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chapter Importer</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2e38; --text: #e6e8ec;
+    --muted: #8a90a0; --accent: #5b8cff; --ok: #3ecf8e; --warn: #f5a623; --err: #ff5c5c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0; font-size: 18px; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  section.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  section.panel h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input[type=text], input[type=password], textarea {
+    width: 100%; background: #0c0e12; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 8px 10px; font: inherit;
+  }
+  textarea { resize: vertical; min-height: 70px; font-family: ui-monospace, Consolas, monospace; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+  .field { margin-bottom: 10px; }
+  button {
+    background: var(--accent); color: white; border: none; border-radius: 6px;
+    padding: 9px 16px; font: inherit; cursor: pointer; font-weight: 600;
+  }
+  button.secondary { background: #2a2e38; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-line { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); }
+  .dot.err { background: var(--err); }
+  .credRow { display: none; }
+  .credRow.show { display: grid; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  .warn { color: var(--warn); }
+  .err { color: var(--err); }
+  .muted { color: var(--muted); }
+  #log {
+    background: #0c0e12; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;
+    height: 260px; overflow-y: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; white-space: pre-wrap;
+  }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .summary div { background: #0c0e12; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
+  .summary .num { font-size: 20px; font-weight: 700; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  #dropzone {
+    border: 2px dashed var(--border); border-radius: 8px; padding: 22px; text-align: center;
+    color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  #dropzone:hover, #dropzone.dragover { border-color: var(--accent); background: rgba(91,140,255,0.06); }
+  #fileList { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  #fileList li { display: flex; justify-content: space-between; background: #0c0e12; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12.5px; }
+  #fileList li .name { color: var(--text); }
+  #fileList li .state { color: var(--muted); }
+  #fileList li .state.ok { color: var(--ok); }
+  #fileList li .state.err { color: var(--err); }
+</style>
+</head>
+<body>
+<header><h1>📚 Chapter Importer</h1></header>
+<main>
+
+  <section class="panel">
+    <h2>1. Kết nối &amp; đăng nhập</h2>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="baseUrl" value="https://103.74.100.55.nip.io" />
+    </div>
+    <div class="row">
+      <div>
+        <strong>Tác giả</strong>
+        <div class="status-line"><span class="dot" id="authorDot"></span><span id="authorStatus">chưa kiểm tra</span>
+          <button class="secondary" id="authorCheck" type="button">Kiểm tra / Refresh</button></div>
+        <div class="row credRow" id="authorCreds">
+          <div class="field"><label>Identifier</label><input type="text" id="authorId" /></div>
+          <div class="field"><label>Password</label><input type="password" id="authorPw" /></div>
+          <div class="field"><label>TOTP</label><input type="text" id="authorTotp" /></div>
+          <div class="field" style="align-self:end"><button id="authorLogin" type="button">Đăng nhập</button></div>
+        </div>
+      </div>
+      <div>
+        <strong>Admin</strong>
+        <div class="status-line"><span class="dot" id="adminDot"></span><span id="adminStatus">chưa kiểm tra</span>
+          <button class="secondary" id="adminCheck" type="button">Kiểm tra / Refresh</button></div>
+        <div class="row credRow" id="adminCreds">
+          <div class="field"><label>Identifier</label><input type="text" id="adminId" /></div>
+          <div class="field"><label>Password</label><input type="password" id="adminPw" /></div>
+          <div class="field"><label>TOTP</label><input type="text" id="adminTotp" /></div>
+          <div class="field" style="align-self:end"><button id="adminLogin" type="button">Đăng nhập</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>2. Truyện đích</h2>
+    <div class="row">
+      <div class="field"><label>Từ khóa khớp truyện đã có (để trống nếu chỉ tạo mới)</label>
+        <input type="text" id="storyHint" placeholder="vd: thực giáo" /></div>
+      <div class="field"><label>Tên truyện mới (nếu không khớp từ khóa trên)</label>
+        <input type="text" id="createTitle" placeholder="để trống nếu bắt buộc phải khớp truyện có sẵn" /></div>
+    </div>
+    <button class="secondary" id="listStories" type="button">Xem danh sách truyện của tôi</button>
+    <div id="storyList" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. File chương &amp; nhận diện tiêu đề</h2>
+    <div class="field">
+      <label>Chọn file (.txt) — kéo thả hoặc bấm để chọn, có thể chọn nhiều file cùng lúc theo đúng thứ tự nối chương</label>
+      <div id="dropzone" tabindex="0">
+        <div id="dropzoneHint">📄 Kéo thả file .txt vào đây, hoặc bấm để chọn từ máy</div>
+        <input type="file" id="fileInput" accept=".txt" multiple style="display:none" />
+      </div>
+      <ul id="fileList"></ul>
+    </div>
+    <div class="field">
+      <label>Hoặc dán trực tiếp đường dẫn file đã có sẵn trên máy (mỗi dòng một file, không cần upload lại) — danh sách phía trên sẽ tự nối thêm vào đây</label>
+      <textarea id="paths" placeholder="D:\chuong-1-25.txt&#10;D:\chuong-26-50.txt"></textarea>
+    </div>
+    <div class="field">
+      <label>Regex tùy chỉnh cho dòng tiêu đề (để trống để tự động nhận diện — Chương/Chapter, Lời mở đầu, Ngoại truyện, Hậu truyện, Lời bạt...)</label>
+      <input type="text" id="pattern" placeholder="vd: ^\*{0,2}Chương \d+" />
+    </div>
+    <div class="actions">
+      <button id="detect" type="button">Xem trước (không gọi API)</button>
+      <span class="checkbox"><input type="checkbox" id="force" /> Bỏ qua kiểm tra trùng với truyện đích</span>
+    </div>
+    <div id="preview"></div>
+  </section>
+
+  <section class="panel">
+    <h2>4. Chạy import</h2>
+    <button id="runImport" type="button">Tạo → Duyệt → Xuất bản</button>
+    <div id="log" style="margin-top:12px; display:none;"></div>
+    <div id="summary"></div>
+  </section>
+
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function baseUrl() { return $('baseUrl').value.trim(); }
+function pathsList() { return $('paths').value.split('\n').map(s => s.trim()).filter(Boolean); }
+
+async function postJson(url, body) {
+  const resp = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error ?? `HTTP ${resp.status}`);
+  return data;
+}
+
+async function checkSession(role) {
+  const dot = $(role + 'Dot'); const status = $(role + 'Status'); const creds = $(role + 'Creds');
+  try {
+    const resp = await fetch(`/api/session/status?baseUrl=${encodeURIComponent(baseUrl())}&role=${role}`);
+    const data = await resp.json();
+    if (data.hasCookies && !data.expiringSoon) {
+      dot.className = 'dot ok'; status.textContent = `sẵn sàng (hết hạn ${data.expiresAt ?? '?'})`;
+      creds.classList.remove('show');
+    } else if (data.hasCookies) {
+      // try a real refresh via login endpoint (no creds needed if refresh token still valid)
+      const login = await postJson('/api/session/login', { baseUrl: baseUrl(), role });
+      if (login.ok) { dot.className = 'dot ok'; status.textContent = `đã refresh (hết hạn ${login.expiresAt})`; creds.classList.remove('show'); }
+      else { dot.className = 'dot err'; status.textContent = login.error; creds.classList.add('show'); }
+    } else {
+      dot.className = 'dot err'; status.textContent = 'chưa đăng nhập lần nào'; creds.classList.add('show');
+    }
+  } catch (err) {
+    dot.className = 'dot err'; status.textContent = err.message; creds.classList.add('show');
+  }
+}
+
+async function doLogin(role) {
+  const dot = $(role + 'Dot'); const status = $(role + 'Status');
+  try {
+    const login = await postJson('/api/session/login', {
+      baseUrl: baseUrl(), role,
+      identifier: $(role + 'Id').value.trim(),
+      password: $(role + 'Pw').value,
+      totp: $(role + 'Totp').value.trim(),
+    });
+    if (login.ok) { dot.className = 'dot ok'; status.textContent = `đăng nhập OK (hết hạn ${login.expiresAt})`; $(role + 'Creds').classList.remove('show'); }
+    else { dot.className = 'dot err'; status.textContent = login.error; }
+  } catch (err) { dot.className = 'dot err'; status.textContent = err.message; }
+}
+
+$('authorCheck').onclick = () => checkSession('author');
+$('adminCheck').onclick = () => checkSession('admin');
+$('authorLogin').onclick = () => doLogin('author');
+$('adminLogin').onclick = () => doLogin('admin');
+
+$('listStories').onclick = async () => {
+  const el = $('storyList'); el.textContent = 'Đang tải...';
+  try {
+    const { stories } = await postJson('/api/stories', { baseUrl: baseUrl() });
+    el.innerHTML = stories.map(s => `<div>• ${s.title} <span class="muted">(${s.status})</span></div>`).join('') || '(chưa có truyện nào)';
+  } catch (err) { el.innerHTML = `<span class="err">${err.message}</span>`; }
+};
+
+function addPath(p) {
+  const ta = $('paths');
+  const lines = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!lines.includes(p)) lines.push(p);
+  ta.value = lines.join('\n');
+}
+
+function addFileRow(name) {
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="name">${name}</span><span class="state">đang tải lên...</span>`;
+  $('fileList').appendChild(li);
+  return li;
+}
+
+async function uploadOneFile(file) {
+  const row = addFileRow(file.name);
+  try {
+    const resp = await fetch(`/api/upload?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error ?? `HTTP ${resp.status}`);
+    row.querySelector('.state').textContent = `✓ đã tải (${(data.size / 1024).toFixed(1)} KB)`;
+    row.querySelector('.state').classList.add('ok');
+    addPath(data.path);
+  } catch (err) {
+    row.querySelector('.state').textContent = err.message;
+    row.querySelector('.state').classList.add('err');
+  }
+}
+
+async function handleFiles(fileList) {
+  // Upload sequentially so multi-file chapter order in the textarea matches selection order.
+  for (const file of fileList) await uploadOneFile(file);
+}
+
+const dropzone = $('dropzone');
+const fileInput = $('fileInput');
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
+['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+dropzone.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files); });
+
+let lastPreview = null;
+
+$('detect').onclick = async () => {
+  const el = $('preview'); el.innerHTML = 'Đang phân tích...';
+  try {
+    const data = await postJson('/api/detect', { paths: pathsList(), pattern: $('pattern').value.trim() || undefined });
+    lastPreview = data;
+    const warnings = data.warnings.map(w => `<div class="warn">⚠ ${w}</div>`).join('');
+    const rows = data.preview.slice(0, 6).map(c => `<tr><td>${c.title}</td><td>${c.length} ký tự</td></tr>`).join('');
+    const more = data.preview.length > 6 ? `<tr><td colspan="2" class="muted">... và ${data.preview.length - 6} chương khác</td></tr>` : '';
+    el.innerHTML = `
+      <div><strong>${data.totalChapters}</strong> chương phát hiện được.</div>
+      ${warnings}
+      <table><thead><tr><th>Tiêu đề</th><th>Độ dài</th></tr></thead><tbody>${rows}${more}</tbody></table>
+    `;
+  } catch (err) { el.innerHTML = `<span class="err">${err.message}</span>`; }
+};
+
+$('runImport').onclick = async () => {
+  const logEl = $('log'); const summaryEl = $('summary');
+  logEl.style.display = 'block'; logEl.textContent = ''; summaryEl.innerHTML = '';
+  const { jobId } = await postJson('/api/import', {
+    baseUrl: baseUrl(),
+    paths: pathsList(),
+    pattern: $('pattern').value.trim() || undefined,
+    storyHint: $('storyHint').value.trim() || undefined,
+    createStoryTitle: $('createTitle').value.trim() || undefined,
+    force: $('force').checked,
+  });
+  const es = new EventSource(`/api/import/${jobId}/stream`);
+  es.addEventListener('log', (ev) => {
+    logEl.textContent += JSON.parse(ev.data) + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  });
+  es.addEventListener('done', (ev) => {
+    const { error, result } = JSON.parse(ev.data);
+    es.close();
+    if (error) { summaryEl.innerHTML = `<div class="err">LỖI: ${error}</div>`; return; }
+    summaryEl.innerHTML = `
+      <div class="summary">
+        <div><div class="num">${result.createdCount}</div><div class="muted">chương tạo mới</div></div>
+        <div><div class="num">${result.submitOk}/${result.submitOk + result.submitFail}</div><div class="muted">submit</div></div>
+        <div><div class="num">${result.approveOk}/${result.approveOk + result.approveFail}</div><div class="muted">approve</div></div>
+        <div><div class="num">${result.publishOk}/${result.publishOk + result.publishFail}</div><div class="muted">publish</div></div>
+      </div>`;
+  });
+};
+
+checkSession('author');
+checkSession('admin');
+</script>
+</body>
+</html>

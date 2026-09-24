@@ -139,3 +139,6 @@ frontend/playwright-report/
 .hardening-backup/
 
 .tmp/
+
+# Dữ liệu dịch/nháp cục bộ
+backend/dich.txt

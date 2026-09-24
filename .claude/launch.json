@@ -12,6 +12,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "frontend\\dev-remote.cmd"],
       "port": 4200
+    },
+    {
+      "name": "chapter-importer",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["backend/scripts/tools/chapter-importer/server.mjs"],
+      "port": 5177
     }
   ]
 }
