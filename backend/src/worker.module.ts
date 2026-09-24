@@ -17,6 +17,7 @@ import { BillingWorkerModule } from './modules/billing';
 import { CommentsWorkerModule } from './modules/comments';
 import { TtsWorkerModule } from './modules/tts';
 import { SearchWorkerModule } from './modules/search';
+import { RevenueWorkerModule } from './modules/revenue';
 
 const queueWorkersEnabled =
   process.env.QUEUE_ENABLED === 'true' &&
@@ -43,6 +44,7 @@ const queueWorkersEnabled =
           CommentsWorkerModule,
           TtsWorkerModule,
           SearchWorkerModule,
+          RevenueWorkerModule,
         ]
       : []),
   ],

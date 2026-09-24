@@ -52,5 +52,10 @@ export class StudioSidebarComponent {
       route: '/author-studio/thong-ke',
       icon: 'chart',
     },
+    {
+      label: 'Doanh thu & rút tiền',
+      route: '/author-studio/doanh-thu',
+      icon: 'wallet',
+    },
   ];
 }

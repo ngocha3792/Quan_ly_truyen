@@ -64,6 +64,14 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
           ),
       },
       {
+        path: 'doanh-thu',
+        title: appPageTitle('Doanh thu và rút tiền'),
+        loadComponent: () =>
+          import('../features/author-portal/revenue/pages/author-revenue-page.component').then(
+            (module) => module.AuthorRevenuePageComponent,
+          ),
+      },
+      {
         path: 'thong-ke/truyen/:storyId',
         canActivate: [permissionGuard(AUTH_PERMISSIONS.ANALYTICS_READ)],
         title: appPageTitle('Thống kê truyện'),

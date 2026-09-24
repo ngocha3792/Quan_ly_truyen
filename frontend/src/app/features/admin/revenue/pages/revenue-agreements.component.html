@@ -1,0 +1,95 @@
+<section class="panel">
+  <div class="section-heading"><h2>Thỏa thuận chia doanh thu</h2></div>
+  <p class="muted">
+    Mỗi thay đổi tạo phiên bản mới, chỉ áp dụng cho giao dịch phát sinh từ thời điểm hiệu lực.
+  </p>
+  @if (error(); as message) {
+    <p class="notice error" role="alert">{{ message }}</p>
+  }
+  <form class="account-form" (ngSubmit)="load()">
+    <label>Mã truyện<input name="storyId" [(ngModel)]="storyId" required /></label
+    ><button type="submit" class="secondary" [disabled]="pending()">Xem thỏa thuận</button>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Phiên bản</th>
+          <th>Tác giả</th>
+          <th>Nền tảng</th>
+          <th>Cộng tác viên</th>
+          <th>Hiệu lực</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of agreements(); track a.id) {
+          <tr>
+            <td>v{{ a.version }}</td>
+            <td>{{ a.authorShareBps / 100 }}%</td>
+            <td>{{ a.platformFeeBps / 100 }}%</td>
+            <td>
+              @for (c of a.contributorShares; track c.userId) {
+                <small>{{ c.userId }} · {{ c.shareBps / 100 }}%</small>
+              }
+            </td>
+            <td>
+              {{ a.effectiveFrom | date: 'dd/MM/yyyy HH:mm' }} →
+              {{ a.effectiveTo ? (a.effectiveTo | date: 'dd/MM/yyyy HH:mm') : 'Hiện hành' }}
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">Nhập mã truyện để xem các phiên bản.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <form class="account-form" (ngSubmit)="create()">
+    <h3>Tạo phiên bản mới</h3>
+    <div class="fields-grid">
+      <label
+        >Tỷ lệ tác giả (%)<input
+          name="authorPercent"
+          [(ngModel)]="authorPercent"
+          inputmode="decimal"
+          required /></label
+      ><label
+        >Tỷ lệ nền tảng (%)<input
+          name="platformPercent"
+          [(ngModel)]="platformPercent"
+          inputmode="decimal"
+          required /></label
+      ><label
+        >Hiệu lực từ<input name="effectiveFrom" [(ngModel)]="effectiveFrom" type="datetime-local"
+      /></label>
+    </div>
+    @for (c of contributors; track $index) {
+      <div class="fields-grid">
+        <label
+          >Mã cộng tác viên<input
+            [name]="'contributorId' + $index"
+            [(ngModel)]="c.userId"
+            required /></label
+        ><label
+          >Tỷ lệ (%)<input
+            [name]="'contributorPercent' + $index"
+            [(ngModel)]="c.percent"
+            inputmode="decimal"
+            required /></label
+        ><button type="button" class="secondary" (click)="contributors.splice($index, 1)">
+          Bỏ cộng tác viên
+        </button>
+      </div>
+    }
+    <div class="actions">
+      <button
+        type="button"
+        class="secondary"
+        (click)="contributors.push({ userId: '', percent: '' })"
+      >
+        Thêm cộng tác viên</button
+      ><button type="submit" [disabled]="pending() || !storyId">Phê duyệt thỏa thuận mới</button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,24 @@
+.status {
+  display: inline-flex;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--surface-elevated);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.status--available,
+.status--paid,
+.status--completed {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+.status--processing,
+.status--reserved {
+  color: var(--primary-soft);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.status--failed {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}

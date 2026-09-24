@@ -339,6 +339,9 @@ jobs:
       - name: Billing integration
         run: npm run test:billing:integration
 
+      - name: Revenue allocation, settlement and payout integration
+        run: npm run test:revenue:integration
+
       - name: Search indexing and PostgreSQL fallback integration
         env:
           SEARCH_TEST_MEILI_HOST: http://127.0.0.1:7700

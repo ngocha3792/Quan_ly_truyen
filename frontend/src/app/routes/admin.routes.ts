@@ -127,6 +127,15 @@ export const ADMIN_ROUTES: Routes = [
           ),
       },
       {
+        path: 'revenue',
+        title: appPageTitle('Doanh thu và chi trả'),
+        canActivate: paymentReviewGuards,
+        loadComponent: () =>
+          import('../features/admin/revenue/pages/admin-revenue-page.component').then(
+            (m) => m.AdminRevenuePageComponent,
+          ),
+      },
+      {
         path: 'settings/ai',
         title: appPageTitle('Trợ lý AI'),
         canActivate: aiSettingsGuards,

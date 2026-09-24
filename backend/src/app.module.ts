@@ -50,6 +50,7 @@ import { BillingModule } from './modules/billing';
 import { OfflineReadingModule } from './modules/offline-reading';
 import { TtsModule } from './modules/tts';
 import { SearchModule } from './modules/search';
+import { RevenueModule } from './modules/revenue';
 @Module({
   imports: [
     AppConfigModule,
@@ -80,6 +81,7 @@ import { SearchModule } from './modules/search';
     OfflineReadingModule,
     TtsModule,
     SearchModule,
+    RevenueModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

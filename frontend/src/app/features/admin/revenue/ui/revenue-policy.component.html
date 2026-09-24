@@ -1,0 +1,84 @@
+<section class="panel">
+  <h2>Chính sách chia doanh thu & chi trả</h2>
+  <p class="muted">
+    Chính sách mới áp dụng cho giao dịch/yêu cầu phát sinh sau khi lưu. Số liệu đã chốt giữ nguyên
+    để đối soát.
+  </p>
+  @if (form; as value) {
+    <form class="account-form" (ngSubmit)="save.emit(value)">
+      <label class="checkbox-label"
+        ><input name="enabled" type="checkbox" [(ngModel)]="value.enabled" />Mở tính doanh thu và
+        yêu cầu rút tiền</label
+      >
+      <div class="fields-grid">
+        <label
+          >Chờ đối soát (ngày)<input
+            name="settlementDelayDays"
+            type="number"
+            min="0"
+            max="365"
+            step="1"
+            [(ngModel)]="value.settlementDelayDays"
+            required
+        /></label>
+        <label
+          >Rút tối thiểu (Credit)<input
+            name="minimumPayoutCredits"
+            inputmode="numeric"
+            pattern="[1-9][0-9]*"
+            [(ngModel)]="value.minimumPayoutCredits"
+            required
+        /></label>
+        <label
+          >Phí (basis points, 100 = 1%)<input
+            name="feeBasisPoints"
+            type="number"
+            min="0"
+            max="9999"
+            step="1"
+            [(ngModel)]="value.feeBasisPoints"
+            required
+        /></label>
+        <label
+          >Thuế (basis points, 100 = 1%)<input
+            name="taxBasisPoints"
+            type="number"
+            min="0"
+            max="9999"
+            step="1"
+            [(ngModel)]="value.taxBasisPoints"
+            required
+        /></label>
+        <label
+          >Tỷ giá VND / Credit<input
+            name="fiatMinorPerCredit"
+            inputmode="numeric"
+            pattern="[1-9][0-9]*"
+            [(ngModel)]="value.fiatMinorPerCredit"
+            required
+        /></label>
+        <label
+          >Mức chia tối thiểu nền tảng (basis points)<input
+            name="minimumPlatformFeeBasisPoints"
+            type="number"
+            min="0"
+            max="10000"
+            step="1"
+            [(ngModel)]="value.minimumPlatformFeeBasisPoints"
+            required
+        /></label>
+        <label
+          >Mã tài khoản nền tảng<input
+            name="platformUserId"
+            [(ngModel)]="value.platformUserId"
+            [required]="value.enabled"
+        /></label>
+      </div>
+      <p class="muted">
+        Đơn vị chi trả: VND. Hệ thống ghi nhận chuyển khoản thủ công; xác nhận hoàn tất chỉ sau khi
+        đã có bằng chứng chuyển tiền.
+      </p>
+      <button type="submit" [disabled]="pending()">Lưu chính sách</button>
+    </form>
+  }
+</section>

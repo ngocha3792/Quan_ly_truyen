@@ -1,0 +1,294 @@
+<section class="revenue-page">
+  <app-breadcrumb [items]="breadcrumbs" />
+  <app-page-heading
+    title="Doanh thu & rút tiền"
+    description="Thu nhập từ giao dịch mua chương, tài khoản nhận tiền và lịch sử chi trả."
+    icon="wallet"
+  >
+    <button class="secondary" type="button" [disabled]="loading()" (click)="load()">Làm mới</button>
+  </app-page-heading>
+  @if (error(); as message) {
+    <p class="notice error" role="alert">{{ message }}</p>
+  }
+  @if (success(); as message) {
+    <p class="notice success" role="status">{{ message }}</p>
+  }
+  @if (loading() && !summary()) {
+    <div class="panel loading" role="status">Đang tải sổ doanh thu...</div>
+  }
+  @if (summary(); as data) {
+    <div class="metric-grid" aria-label="Tổng quan doanh thu">
+      <article class="metric metric--available">
+        <span>Có thể rút</span><strong>{{ format(data.available) }}</strong
+        ><small>Credit</small>
+      </article>
+      <article class="metric">
+        <span>Chờ đối soát</span><strong>{{ format(data.pending) }}</strong
+        ><small>Khả dụng sau {{ data.policy.settlementDelayDays }} ngày</small>
+      </article>
+      <article class="metric">
+        <span>Đang chi trả</span><strong>{{ format(data.reserved) }}</strong
+        ><small>Credit đã giữ chỗ</small>
+      </article>
+      <article class="metric">
+        <span>Đã chi trả</span><strong>{{ format(data.paid) }}</strong
+        ><small>Credit trong lịch sử</small>
+      </article>
+    </div>
+    @if (!data.policy.enabled) {
+      <p class="notice" role="status">
+        Hệ thống rút tiền đang tạm đóng. Bạn vẫn có thể xem thu nhập và quản lý tài khoản.
+      </p>
+    }
+    <div class="content-grid">
+      <section class="panel">
+        <div class="section-heading"><h2>Yêu cầu rút tiền</h2></div>
+        <p class="muted">
+          Tối thiểu {{ format(data.policy.minimumPayoutCredits) }} Credit. Tỷ giá hiện tại: 1 Credit
+          = {{ format(data.policy.fiatMinorPerCredit) }} VND.
+        </p>
+        <p class="muted">
+          Chi trả qua chuyển khoản thủ công sau khi quản trị viên đối soát. Phí, thuế và tỷ giá được
+          chốt khi gửi yêu cầu.
+        </p>
+        @if (verifiedAccounts().length === 0) {
+          <p class="notice">Cần tài khoản đang hoạt động và đã xác minh trước khi rút tiền.</p>
+        }
+        <form (ngSubmit)="submitPayout()" class="account-form">
+          <label
+            >Tài khoản nhận<select
+              name="payoutAccountId"
+              [(ngModel)]="payoutAccountId"
+              required
+              [disabled]="!data.policy.enabled"
+            >
+              <option value="">Chọn tài khoản đã xác minh</option>
+              @for (account of verifiedAccounts(); track account.id) {
+                <option [value]="account.id">
+                  {{ account.bankName || account.method }} ·
+                  {{ account.accountNumberMasked || account.walletPhoneMasked }}
+                </option>
+              }
+            </select></label
+          >
+          <label
+            >Số Credit cần rút<input
+              name="payoutAmount"
+              [(ngModel)]="payoutAmount"
+              inputmode="numeric"
+              pattern="[1-9][0-9]*"
+              required
+              [disabled]="!data.policy.enabled"
+          /></label>
+          @if (quote(); as q) {
+            <dl class="quote" aria-label="Ước tính chi trả">
+              <div>
+                <dt>Phí ({{ data.policy.feeBasisPoints / 100 }}%)</dt>
+                <dd>{{ format(q.fee) }} Credit</dd>
+              </div>
+              <div>
+                <dt>Thuế ({{ data.policy.taxBasisPoints / 100 }}%)</dt>
+                <dd>{{ format(q.tax) }} Credit</dd>
+              </div>
+              <div>
+                <dt>Sau phí và thuế</dt>
+                <dd>{{ format(q.net) }} Credit</dd>
+              </div>
+              <div>
+                <dt>Thực nhận dự kiến</dt>
+                <dd>
+                  <strong>{{ format(q.vnd) }} VND</strong>
+                </dd>
+              </div>
+            </dl>
+          }
+          <button
+            type="submit"
+            [disabled]="submitting() || !data.policy.enabled || !quote() || !payoutAccountId"
+          >
+            Gửi yêu cầu rút tiền
+          </button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="section-heading"><h2>Tài khoản nhận tiền</h2></div>
+        <div class="account-list">
+          @for (account of accounts(); track account.id) {
+            <article class="account-row">
+              <div>
+                <strong
+                  >{{ account.bankName || account.method }}
+                  {{ account.isPrimary ? '· Mặc định' : '' }}</strong
+                ><small
+                  >{{ account.accountName }} ·
+                  {{ account.accountNumberMasked || account.walletPhoneMasked }}</small
+                ><small>{{
+                  !account.isActive
+                    ? 'Đã ngừng sử dụng'
+                    : account.isVerified
+                      ? 'Đã xác minh'
+                      : 'Chưa được xác minh'
+                }}</small>
+              </div>
+              @if (account.isActive) {
+                <div class="actions">
+                  @if (!account.isPrimary) {
+                    <button
+                      class="secondary"
+                      type="button"
+                      [disabled]="submitting()"
+                      (click)="updateAccount(account.id, { isPrimary: true })"
+                    >
+                      Đặt mặc định
+                    </button>
+                  }
+                  <button
+                    class="secondary"
+                    type="button"
+                    [disabled]="submitting()"
+                    (click)="updateAccount(account.id, { isActive: false })"
+                  >
+                    Ngừng sử dụng
+                  </button>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="muted">Chưa có tài khoản nhận tiền.</p>
+          }
+        </div>
+        <form class="account-form" (ngSubmit)="submitAccount()">
+          <h3>Thêm tài khoản</h3>
+          <label
+            >Phương thức<select name="method" [(ngModel)]="accountForm.method">
+              <option value="BANK_TRANSFER">Ngân hàng</option>
+              <option value="MOMO">MoMo</option>
+              <option value="ZALOPAY">ZaloPay</option>
+            </select></label
+          >
+          @if (accountForm.method === 'BANK_TRANSFER') {
+            <label
+              >Ngân hàng<input
+                name="bankName"
+                [(ngModel)]="accountForm.bankName"
+                required
+                maxlength="255" /></label
+            ><label
+              >Số tài khoản<input
+                name="accountNumber"
+                [(ngModel)]="accountForm.accountNumber"
+                required
+                maxlength="50" /></label
+            ><label
+              >Tên chủ tài khoản<input
+                name="accountName"
+                [(ngModel)]="accountForm.accountName"
+                required
+                maxlength="255"
+            /></label>
+          } @else {
+            <label
+              >Số điện thoại ví<input
+                name="walletPhone"
+                [(ngModel)]="accountForm.walletPhone"
+                required
+                maxlength="20"
+            /></label>
+          }
+          <label
+            >Mã hồ sơ xác minh<input
+              name="kycReference"
+              [(ngModel)]="accountForm.kycReference"
+              required
+              maxlength="255"
+          /></label>
+          <small class="muted"
+            >Nhập mã tham chiếu hồ sơ đã gửi qua kênh hỗ trợ bảo mật. Không nhập số giấy tờ hoặc
+            liên kết ảnh công khai.</small
+          >
+          <button class="secondary" type="submit" [disabled]="submitting()">
+            Gửi tài khoản để xác minh
+          </button>
+        </form>
+      </section>
+    </div>
+    <section class="panel">
+      <h2>Lịch sử yêu cầu rút</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ngày tạo</th>
+              <th>Credit</th>
+              <th>Phí / thuế</th>
+              <th>Thực nhận</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (request of requests(); track request.id) {
+              <tr>
+                <td>{{ request.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ format(request.grossAmount) }}</td>
+                <td>{{ format(request.feeAmount) }} / {{ format(request.taxAmount) }}</td>
+                <td>{{ format(request.fiatAmountMinor) }} VND</td>
+                <td>
+                  <app-revenue-status [status]="request.status" />
+                  @if (request.failureReason) {
+                    <small>{{ request.failureReason }}</small>
+                  }
+                </td>
+                <td>
+                  @if (request.status === 'PENDING') {
+                    <button
+                      class="secondary"
+                      type="button"
+                      (click)="cancel(request.id)"
+                      [disabled]="submitting()"
+                    >
+                      Hủy yêu cầu
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td class="empty" colspan="6">Chưa có yêu cầu rút tiền.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Lịch sử thu nhập gần đây</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ngày ghi nhận</th>
+              <th>Credit</th>
+              <th>Trạng thái</th>
+              <th>Ngày khả dụng</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of data.items; track entry.id) {
+              <tr>
+                <td>{{ entry.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ format(entry.amount) }}</td>
+                <td><app-revenue-status [status]="entry.status" /></td>
+                <td>{{ entry.settlementDate | date: 'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td class="empty" colspan="4">Chưa có thu nhập được ghi nhận.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

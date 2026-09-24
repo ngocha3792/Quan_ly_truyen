@@ -106,6 +106,12 @@ const NAVIGATION_ITEMS: readonly AdminNavigationItem[] = [
     permission: AUTH_PERMISSIONS.PAYMENT_READ_ADMIN,
     requiresMonetization: true,
   },
+  {
+    label: 'Doanh thu & chi trả',
+    route: '/admin/revenue',
+    icon: 'wallet',
+    permission: AUTH_PERMISSIONS.PAYMENT_ORDER_SETTLE_ADMIN,
+  },
 ];
 
 @Component({

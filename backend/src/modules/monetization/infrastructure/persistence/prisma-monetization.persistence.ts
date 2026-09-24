@@ -28,6 +28,10 @@ import {
   WalletBalanceLimitExceededException,
 } from '@/modules/wallets';
 import { TransactionalReceiptService } from '@/modules/notifications';
+import {
+  allocatePurchaseRevenue,
+  refundPurchaseRevenue,
+} from '@/modules/revenue';
 
 import type {
   ChapterMonetizationRecord,
@@ -638,6 +642,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           },
           select: { id: true },
         });
+        await allocatePurchaseRevenue(tx, createdPurchase.id);
         await tx.chapterEntitlement.upsert({
           where: {
             userId_chapterId: {
@@ -936,6 +941,7 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
           },
           select: PURCHASE_SELECT,
         });
+        await refundPurchaseRevenue(tx, purchase.id);
         await tx.auditLog.create({
           data: {
             actorId: input.actorId,
