@@ -223,6 +223,10 @@ export interface ChapterContentBlockApi {
   readonly text: string;
   readonly url?: string;
   readonly alt?: string;
+  /** Heading: cấp 1-6. */
+  readonly level?: number;
+  /** Heading: số ký tự tiền tố Markdown bị ẩn khi hiển thị. */
+  readonly textOffset?: number;
   readonly marks: readonly {
     readonly type: 'bold' | 'italic' | 'code' | 'link';
     readonly from: number;

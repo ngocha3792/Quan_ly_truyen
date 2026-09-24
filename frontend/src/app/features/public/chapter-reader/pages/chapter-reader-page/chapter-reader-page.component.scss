@@ -348,3 +348,30 @@
     margin-inline: -14px;
   }
 }
+
+/* Heading trong nội dung chương ------------------------------------------ */
+
+.chapter-heading {
+  margin: 22px 0 10px;
+  color: var(--text-strong, #f3f1fa);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.chapter-heading[data-heading-level='1'] {
+  font-size: 1.5em;
+}
+
+.chapter-heading[data-heading-level='2'] {
+  font-size: 1.3em;
+}
+
+.chapter-heading[data-heading-level='3'] {
+  font-size: 1.15em;
+}
+
+.chapter-heading[data-heading-level='4'],
+.chapter-heading[data-heading-level='5'],
+.chapter-heading[data-heading-level='6'] {
+  font-size: 1.05em;
+}

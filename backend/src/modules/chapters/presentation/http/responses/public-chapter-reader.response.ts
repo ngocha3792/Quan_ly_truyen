@@ -6,7 +6,10 @@ import type {
   ChapterContentBlock,
   ChapterContentDocument,
 } from '../../../domain';
-import { resolveChapterImageBlock } from '../../../domain';
+import {
+  resolveChapterHeadingBlock,
+  resolveChapterImageBlock,
+} from '../../../domain';
 
 export interface PublicChapterNavigationResponse {
   readonly id: string;
@@ -61,6 +64,13 @@ export interface PublicUnlockedChapterReaderResponse extends PublicChapterReader
  */
 export type PublicChapterReaderBlock =
   | ChapterContentBlock
+  | (ChapterContentBlock & {
+      readonly type: 'heading';
+      /** 1-6 theo số dấu # trong nguồn. */
+      readonly level: number;
+      /** Số ký tự tiền tố client phải bỏ khi hiển thị và cộng lại khi neo. */
+      readonly textOffset: number;
+    })
   | {
       readonly id: string;
       readonly type: 'image';
@@ -81,6 +91,12 @@ function toReaderDocument(
   return {
     schemaVersion: document.schemaVersion,
     blocks: document.blocks.map((block) => {
+      if (block.type === 'heading') {
+        const heading = resolveChapterHeadingBlock(block.text);
+        return heading
+          ? { ...block, type: 'heading' as const, ...heading }
+          : block;
+      }
       if (block.type !== 'paragraph') return block;
       const image = resolveChapterImageBlock(block.text);
       return image

@@ -67,3 +67,33 @@ export function isChapterImageBlock(
     block.type === 'paragraph' && resolveChapterImageBlock(block.text) !== null
   );
 }
+
+/** Tiền tố `#{1,6}` + khoảng trắng của một heading Markdown. */
+const MARKDOWN_HEADING = /^(?<hashes>#{1,6})[\t ]+(?=\S)/u;
+
+export interface ChapterHeadingBlockContent {
+  /** 1-6 theo số dấu #. */
+  readonly level: number;
+  /**
+   * Số ký tự tiền tố bị ẩn khi hiển thị. Neo bình luận được tính theo text
+   * nguồn nên client phải cộng lại số này vào offset lấy từ DOM.
+   */
+  readonly textOffset: number;
+}
+
+/**
+ * Chỉ xử lý heading một dòng — đúng dạng parser sinh ra. Blockquote, list và
+ * code có ký hiệu lặp trên từng dòng nên một offset duy nhất không mô tả được,
+ * vì vậy để nguyên.
+ */
+export function resolveChapterHeadingBlock(
+  text: string,
+): ChapterHeadingBlockContent | null {
+  if (text.includes('\n')) return null;
+  const match = MARKDOWN_HEADING.exec(text);
+  if (!match?.groups) return null;
+  return {
+    level: (match.groups['hashes'] ?? '').length,
+    textOffset: match[0].length,
+  };
+}

@@ -81,6 +81,24 @@ describe('toPublicChapterReaderResponse', () => {
     expect(block).not.toHaveProperty('url');
   });
 
+  it('marks a heading with its level and the prefix length the reader hides', () => {
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'heading', text: '### Hồi thứ ba' }]),
+    );
+
+    expect(block).toMatchObject({ type: 'heading', level: 3, textOffset: 4 });
+    // Text nguồn giữ nguyên để neo bình luận vẫn cắt đúng.
+    expect(block.text).toBe('### Hồi thứ ba');
+  });
+
+  it('leaves a heading without a usable prefix untouched', () => {
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'heading', text: '#KhongCoKhoangTrang' }]),
+    );
+
+    expect(block).not.toHaveProperty('textOffset');
+  });
+
   it('never rewrites a block that is not a paragraph', () => {
     const [block] = readerBlocks(
       readerDto([

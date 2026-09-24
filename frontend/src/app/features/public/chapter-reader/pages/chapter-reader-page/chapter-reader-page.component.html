@@ -103,6 +103,16 @@
                         <figcaption>{{ block.alt }}</figcaption>
                       }
                     </figure>
+                  } @else if (block.type === 'heading' && block.textOffset) {
+                    <p
+                      class="chapter-heading"
+                      role="heading"
+                      [attr.aria-level]="(block.level ?? 1) + 1"
+                      [attr.data-block-id]="block.id"
+                      [attr.data-block-offset]="block.textOffset"
+                      [attr.data-heading-level]="block.level"
+                      [textContent]="block.text.slice(block.textOffset)"
+                    ></p>
                   } @else {
                     <p
                       [attr.data-block-id]="block.id"

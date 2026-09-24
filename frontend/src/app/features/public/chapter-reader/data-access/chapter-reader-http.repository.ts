@@ -206,6 +206,7 @@ function toChapterReaderView(result: PublicChapterReaderApiResponse): ChapterRea
           type: block.type,
           text: block.text,
           ...(block.url ? { url: block.url, alt: block.alt ?? '' } : {}),
+          ...(block.textOffset ? { level: block.level ?? 2, textOffset: block.textOffset } : {}),
         }))
       : toParagraphs(content).map((text) => ({
           id: null,
