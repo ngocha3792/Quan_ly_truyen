@@ -2,7 +2,7 @@
 # docker compose --env-file .env.production -f compose.production.yml -f compose.search.yml --profile search up -d
 services:
   meilisearch:
-    image: getmeili/meilisearch:v1.10
+    image: ${MEILISEARCH_IMAGE:?MEILISEARCH_IMAGE is required}
     profiles: [search]
     restart: unless-stopped
     environment:

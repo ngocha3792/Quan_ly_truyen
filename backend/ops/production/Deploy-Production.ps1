@@ -298,6 +298,19 @@ function Ensure-InfrastructureImages {
     }
   )
 
+  # The application pull below fetches only the GHCR images, and the prune that
+  # precedes it drops any image no container currently holds. Without this the
+  # first deploy after search is enabled reaches "up --wait meilisearch" with
+  # no image on the host.
+  if ($SearchIndexingEnabled) {
+    $InfrastructureImages += @{
+      Service = 'meilisearch'
+      Image = Get-DotEnvValue `
+        -Path $EnvironmentFilePath `
+        -Name 'MEILISEARCH_IMAGE'
+    }
+  }
+
   foreach ($InfrastructureImage in $InfrastructureImages) {
     $Service = [string]$InfrastructureImage.Service
     $Image = [string]$InfrastructureImage.Image
