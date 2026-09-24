@@ -305,12 +305,24 @@
   margin: 18px 0;
 }
 
-.chapter-inline-image img {
+/* Ảnh nằm chung block với chữ: xuống dòng riêng cho dễ đọc, nhưng các span
+   chữ quanh nó vẫn là inline nên neo bình luận cắt đúng ký tự. */
+.chapter-mixed-block {
+  margin: 0;
+}
+
+.chapter-inline-image img,
+.chapter-inline-image__img {
   width: auto;
   max-width: 100%;
   height: auto;
   border-radius: 10px;
   background: rgba(120, 130, 160, 0.08);
+}
+
+.chapter-inline-image__img {
+  display: block;
+  margin: 18px auto;
 }
 
 .chapter-inline-image figcaption {

@@ -70,6 +70,39 @@ describe('toPublicChapterReaderResponse', () => {
     expect(block.text).toBe('![a](https://cdn.test/a.jpg)');
   });
 
+  it('splits a paragraph that mixes an image with text into segments', () => {
+    // Trình soạn thảo chèn ảnh ngay cạnh chữ nên cả hai nằm chung một block;
+    // nếu không cắt ra, reader in nguyên chuỗi Markdown lên màn hình.
+    const markdown = '![anh](https://cdn.test/a.jpg)';
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'paragraph', text: `${markdown}A` }]),
+    );
+
+    expect(block.type).toBe('paragraph');
+    expect(block).toMatchObject({
+      segments: [
+        {
+          type: 'image',
+          url: 'https://cdn.test/a.jpg',
+          alt: 'anh',
+          offset: 0,
+          length: markdown.length,
+        },
+        { type: 'text', text: 'A', offset: markdown.length },
+      ],
+    });
+    // Text nguồn giữ nguyên để neo bình luận vẫn cắt đúng.
+    expect(block.text).toBe(`${markdown}A`);
+  });
+
+  it('leaves a paragraph without any image free of segments', () => {
+    const [block] = readerBlocks(
+      readerDto([{ id: 'b1', type: 'paragraph', text: 'Hắn mở cửa.' }]),
+    );
+
+    expect(block).not.toHaveProperty('segments');
+  });
+
   it('leaves an unsafe image target as an ordinary paragraph', () => {
     const [block] = readerBlocks(
       readerDto([

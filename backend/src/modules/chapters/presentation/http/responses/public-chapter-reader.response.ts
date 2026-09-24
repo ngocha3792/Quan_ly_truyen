@@ -9,7 +9,9 @@ import type {
 import {
   resolveChapterHeadingBlock,
   resolveChapterImageBlock,
+  resolveChapterInlineImages,
 } from '../../../domain';
+import type { ChapterInlineSegment } from '../../../domain';
 
 export interface PublicChapterNavigationResponse {
   readonly id: string;
@@ -60,7 +62,8 @@ export interface PublicUnlockedChapterReaderResponse extends PublicChapterReader
 /**
  * Block dành cho reader. Giống block lưu trữ, nhưng paragraph chỉ chứa đúng một
  * ảnh Markdown được đổi sang type 'image' kèm url/alt đã kiểm tra an toàn, để
- * client render thẻ img thay vì in chuỗi URL.
+ * client render thẻ img thay vì in chuỗi URL. Paragraph có ảnh lẫn giữa chữ
+ * thì giữ nguyên type và kèm `segments` để client dựng chữ và ảnh xen kẽ.
  */
 export type PublicChapterReaderBlock =
   | ChapterContentBlock
@@ -78,7 +81,11 @@ export type PublicChapterReaderBlock =
       readonly marks: readonly [];
       readonly url: string;
       readonly alt: string;
-    };
+    }
+  | (ChapterContentBlock & {
+      readonly type: 'paragraph';
+      readonly segments: readonly ChapterInlineSegment[];
+    });
 
 export interface PublicChapterReaderDocument {
   readonly schemaVersion: number;
@@ -99,14 +106,18 @@ function toReaderDocument(
       }
       if (block.type !== 'paragraph') return block;
       const image = resolveChapterImageBlock(block.text);
-      return image
-        ? {
-            id: block.id,
-            type: 'image' as const,
-            text: block.text,
-            marks: [] as const,
-            ...image,
-          }
+      if (image) {
+        return {
+          id: block.id,
+          type: 'image' as const,
+          text: block.text,
+          marks: [] as const,
+          ...image,
+        };
+      }
+      const segments = resolveChapterInlineImages(block.text);
+      return segments
+        ? { ...block, type: 'paragraph' as const, segments }
         : block;
     }),
   };

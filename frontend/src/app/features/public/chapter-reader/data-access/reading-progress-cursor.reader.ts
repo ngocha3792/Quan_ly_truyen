@@ -35,7 +35,11 @@ export function readVisibleTextCursor(
   if (!element?.dataset['blockId']) return null;
   const rect = element.getBoundingClientRect();
   const ratioInBlock = Math.max(0, Math.min(1, (sampleY - rect.top) / Math.max(1, rect.height)));
-  const characterOffset = Math.round((element.textContent?.length ?? 0) * ratioInBlock);
+  // Heading ẩn tiền tố Markdown, paragraph lẫn ảnh thì mỗi đoạn chữ là một
+  // span riêng — cả hai mang sẵn offset trong text nguồn, phải cộng lại.
+  const hiddenOffset = Number(element.dataset['blockOffset'] ?? 0) || 0;
+  const characterOffset =
+    hiddenOffset + Math.round((element.textContent?.length ?? 0) * ratioInBlock);
   const scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
   return {
     schemaVersion: 1,

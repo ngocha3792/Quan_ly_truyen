@@ -1,5 +1,3 @@
-import type { ChapterContentBlock } from './chapter-content-document.value-object';
-
 /**
  * Ảnh trong nội dung chương được lưu nguyên dạng Markdown trong text của block
  * (schema v1 không có block type riêng cho ảnh). Reader cần biết đâu là ảnh để
@@ -59,13 +57,90 @@ export function resolveChapterImageBlock(
   return null;
 }
 
-/** True khi block chỉ là ảnh — dùng để bỏ qua block khi đọc thành tiếng. */
-export function isChapterImageBlock(
-  block: Pick<ChapterContentBlock, 'type' | 'text'>,
-): boolean {
-  return (
-    block.type === 'paragraph' && resolveChapterImageBlock(block.text) !== null
-  );
+/**
+ * Ảnh do trình soạn thảo chèn vào giữa câu chữ nên nằm chung block với chữ.
+ * Reader cần biết ranh giới từng đoạn để vừa dựng thẻ img vừa giữ nguyên text
+ * nguồn cho neo bình luận, nên chỗ này cắt block thành các đoạn có offset.
+ */
+export type ChapterInlineSegment =
+  | {
+      readonly type: 'text';
+      readonly text: string;
+      /** Vị trí bắt đầu của đoạn trong text nguồn của block. */
+      readonly offset: number;
+    }
+  | {
+      readonly type: 'image';
+      readonly url: string;
+      readonly alt: string;
+      readonly offset: number;
+      /** Độ dài chuỗi Markdown bị thay bằng thẻ img. */
+      readonly length: number;
+    };
+
+/** Bản quét toàn chuỗi của MARKDOWN_IMAGE — không neo đầu/cuối. */
+const INLINE_MARKDOWN_IMAGE =
+  /!\[(?<alt>[^\]]*)\]\([\t ]*<?(?<url>[^\s<>()]+)>?(?:[\t ]+["'(][^\n]*["')])?[\t ]*\)/gu;
+
+/**
+ * Trả về các đoạn của một block có lẫn ảnh giữa chữ, hoặc null khi block không
+ * chứa ảnh nào dùng được. Ảnh có scheme không an toàn bị bỏ qua và nằm lại
+ * trong đoạn chữ, giống hệt cách block chỉ-một-ảnh xử lý.
+ */
+export function resolveChapterInlineImages(
+  text: string,
+): readonly ChapterInlineSegment[] | null {
+  const segments: ChapterInlineSegment[] = [];
+  let cursor = 0;
+
+  INLINE_MARKDOWN_IMAGE.lastIndex = 0;
+  for (
+    let match = INLINE_MARKDOWN_IMAGE.exec(text);
+    match;
+    match = INLINE_MARKDOWN_IMAGE.exec(text)
+  ) {
+    const url = match.groups?.['url'] ?? '';
+    if (!isSafeImageUrl(url)) continue;
+
+    if (match.index > cursor) {
+      segments.push({
+        type: 'text',
+        text: text.slice(cursor, match.index),
+        offset: cursor,
+      });
+    }
+    segments.push({
+      type: 'image',
+      url,
+      alt: (match.groups?.['alt'] ?? '').trim(),
+      offset: match.index,
+      length: match[0].length,
+    });
+    cursor = match.index + match[0].length;
+  }
+
+  if (segments.length === 0) return null;
+  if (cursor < text.length) {
+    segments.push({ type: 'text', text: text.slice(cursor), offset: cursor });
+  }
+
+  return segments;
+}
+
+/**
+ * Bỏ phần Markdown ảnh khỏi text — dùng cho đọc thành tiếng, vì giọng đọc sẽ
+ * phát ra nguyên chuỗi URL nếu giữ lại. Trả về chuỗi rỗng khi block chỉ có ảnh.
+ */
+export function stripChapterImageMarkdown(text: string): string {
+  const segments = resolveChapterInlineImages(text);
+  if (!segments) return text;
+
+  return segments
+    .filter((segment) => segment.type === 'text')
+    .map((segment) => segment.text)
+    .join(' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
 }
 
 /** Tiền tố `#{1,6}` + khoảng trắng của một heading Markdown. */

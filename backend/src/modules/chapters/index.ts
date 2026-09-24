@@ -8,10 +8,12 @@ export {
   ChapterTitleValueObject,
   ChapterVersionConflictException,
   isChapterContentDocument,
-  isChapterImageBlock,
   resolveChapterHeadingBlock,
   resolveChapterImageBlock,
+  resolveChapterInlineImages,
+  stripChapterImageMarkdown,
   type ChapterContentDocument,
   type ChapterHeadingBlockContent,
   type ChapterImageBlockContent,
+  type ChapterInlineSegment,
 } from './domain';
