@@ -163,7 +163,7 @@ Quan-ly-truyen/
 | **categories** | Admin taxonomy category management | Hierarchical structure |
 | **tags** | Admin tag CRUD and merge | |
 | **comments** | Public comment reads, authenticated comment writes/replies/reactions/reports | Uses Prisma + Redis |
-| **moderation** | Admin comment moderation (hold/hide/restore/remove), user warn/ban | Imports Users public contract |
+| **moderation** | Admin comment moderation (hold/hide/restore/remove), user warn/ban, content takedown (gỡ truyện/chương lỡ xuất bản) | Imports Users public contract |
 | **reports** | Admin report management (list/detail/resolve/reject) | |
 | **ratings** | Story rating CRUD | Updates aggregate counters |
 | **libraries** | Personal library status for stories | |
@@ -840,6 +840,7 @@ Quan-ly-truyen/
 **Moderation**:
 - /reports/* (user submission)
 - Admin: /admin/reports/*, /admin/moderation/*
+- Admin (không có UI): DELETE /admin/content-takedown/chapters/:id, DELETE /admin/content-takedown/stories/:id — xem `backend/docs/ADMIN_CONTENT_TAKEDOWN.md`
 
 **Analytics**:
 - Public: POST /reader-analytics/events (ingestion)
