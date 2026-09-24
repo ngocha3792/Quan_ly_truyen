@@ -1,6 +1,6 @@
-<aside class="mrv-aside">
-  <section class="mrv-panel mrv-panel--status" [class.mrv-panel--offline]="!serviceEnabled()">
-    <span class="mrv-status-dot" aria-hidden="true"></span>
+<aside class="ops-aside">
+  <section class="ops-panel ops-panel--status" [class.ops-panel--offline]="!serviceEnabled()">
+    <span class="ops-status-dot" aria-hidden="true"></span>
     <div>
       <h2>{{ serviceEnabled() ? 'Dịch vụ hiện đang khả dụng' : 'Dịch vụ đang tắt' }}</h2>
       <p>
@@ -14,12 +14,12 @@
     </div>
   </section>
 
-  <section class="mrv-panel">
-    <header class="mrv-panel__head">
-      <span class="mrv-panel__icon"><app-icon name="info" [size]="18" /></span>
-      <div class="mrv-panel__title"><h2>Hướng dẫn xác nhận</h2></div>
+  <section class="ops-panel">
+    <header class="ops-panel__head">
+      <span class="ops-panel__icon"><app-icon name="info" [size]="18" /></span>
+      <div class="ops-panel__title"><h2>Hướng dẫn xác nhận</h2></div>
     </header>
-    <ol class="mrv-steps">
+    <ol class="ops-steps">
       @for (step of steps; track step.title) {
         <li>
           <strong>{{ step.title }}</strong>
@@ -29,8 +29,8 @@
     </ol>
   </section>
 
-  <section class="mrv-panel mrv-panel--note">
-    <span class="mrv-panel__icon"><app-icon name="alert-triangle" [size]="18" /></span>
+  <section class="ops-panel ops-panel--note">
+    <span class="ops-panel__icon"><app-icon name="alert-triangle" [size]="18" /></span>
     <div>
       <h2>Lưu ý</h2>
       <p>

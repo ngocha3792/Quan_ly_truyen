@@ -1,0 +1,75 @@
+@if (order(); as current) {
+  <app-dialog-shell
+    [open]="true"
+    [busy]="busy()"
+    [eyebrow]="automated() ? 'Hoàn tiền qua cổng' : 'Ghi nhận chuyển trả thủ công'"
+    [title]="automated() ? 'Gửi lệnh hoàn tiền' : 'Xác nhận đã chuyển trả'"
+    dialogTitleId="gateway-refund-title"
+    (closed)="dismiss()"
+  >
+    <dl class="ops-decision-facts">
+      <div>
+        <dt>Người thanh toán</dt>
+        <dd>{{ current.userDisplayName }} · {{ current.userEmail }}</dd>
+      </div>
+      <div>
+        <dt>Số tiền</dt>
+        <dd>{{ amount(current) | number }} {{ current.currency }}</dd>
+      </div>
+      <div>
+        <dt>Credit thu lại</dt>
+        <dd>{{ current.creditAmount | number }} Credit</dd>
+      </div>
+    </dl>
+
+    <p class="ops-decision-warning">
+      @if (automated()) {
+        Lệnh được gửi sang cổng thanh toán. Credit bị giữ lại ngay; nếu cổng báo thất bại thì Credit
+        tự trả về ví người dùng.
+      } @else {
+        Chỉ ghi nhận sau khi <strong>tiền đã thực sự chuyển đi</strong>. Hệ thống sẽ thu lại Credit
+        ngay và không tự hoàn tác được.
+      }
+    </p>
+
+    @if (!automated()) {
+      <label class="ops-field ops-field--block">
+        Mã giao dịch chuyển trả
+        <input
+          type="text"
+          maxlength="160"
+          placeholder="vd: FT24268999111"
+          [value]="transferReference()"
+          (input)="updateReference($event)"
+        />
+      </label>
+    }
+
+    <label class="ops-field ops-field--block">
+      Lý do (5–{{ maxLength }} ký tự)
+      <textarea
+        rows="3"
+        [attr.maxlength]="maxLength"
+        [value]="reason()"
+        (input)="updateReason($event)"
+        placeholder="Ví dụ: Người dùng nạp nhầm gói, đã liên hệ và thống nhất hoàn lại."
+      ></textarea>
+      <span class="ops-field__hint">{{ trimmedReason().length }}/{{ maxLength }}</span>
+    </label>
+
+    <div class="ops-decision-actions">
+      <app-button variant="secondary" type="button" [disabled]="busy()" (click)="dismiss()">
+        Huỷ
+      </app-button>
+      <app-button
+        variant="danger"
+        type="button"
+        [disabled]="!valid()"
+        [loading]="busy()"
+        (click)="submit()"
+      >
+        {{ automated() ? 'Gửi lệnh hoàn tiền' : 'Ghi nhận đã chuyển trả' }}
+      </app-button>
+    </div>
+  </app-dialog-shell>
+}

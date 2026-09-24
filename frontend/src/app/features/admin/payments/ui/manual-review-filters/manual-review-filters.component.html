@@ -1,15 +1,15 @@
-<section class="mrv-panel">
-  <header class="mrv-panel__head">
-    <span class="mrv-panel__icon"><app-icon name="filter" [size]="18" /></span>
-    <div class="mrv-panel__title">
+<section class="ops-panel">
+  <header class="ops-panel__head">
+    <span class="ops-panel__icon"><app-icon name="filter" [size]="18" /></span>
+    <div class="ops-panel__title">
       <h2>Bộ lọc &amp; tìm kiếm</h2>
       <p>Tìm theo mã giao dịch, email hoặc tên người gửi.</p>
     </div>
   </header>
 
   <form (ngSubmit)="submit()">
-    <div class="mrv-filters">
-      <label class="mrv-field">
+    <div class="ops-filters">
+      <label class="ops-field">
         Tìm kiếm
         <input
           name="search"
@@ -20,7 +20,7 @@
         />
       </label>
 
-      <label class="mrv-field">
+      <label class="ops-field">
         Trạng thái
         <select
           name="status"
@@ -34,7 +34,7 @@
         </select>
       </label>
 
-      <label class="mrv-field">
+      <label class="ops-field">
         Ngân hàng
         <select
           name="provider"
@@ -48,7 +48,7 @@
         </select>
       </label>
 
-      <label class="mrv-field">
+      <label class="ops-field">
         Từ ngày
         <input
           name="from"
@@ -58,7 +58,7 @@
         />
       </label>
 
-      <label class="mrv-field">
+      <label class="ops-field">
         Đến ngày
         <input
           name="to"
@@ -69,8 +69,8 @@
       </label>
     </div>
 
-    <div class="mrv-filter-actions">
-      <label class="mrv-toggle">
+    <div class="ops-filter-actions">
+      <label class="ops-toggle">
         <input
           type="checkbox"
           name="overdueOnly"

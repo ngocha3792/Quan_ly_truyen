@@ -2,13 +2,13 @@
   <div class="page-container">
     <app-breadcrumb [items]="breadcrumbs" />
 
-    <span class="mrv-eyebrow">Manual review</span>
+    <span class="ops-eyebrow">Manual review</span>
     <app-page-heading
       title="Đơn chuyển khoản chờ xác nhận"
       description="Quản lý các giao dịch chuyển khoản thủ công đang chờ xác nhận, đối soát và xử lý."
       icon="wallet"
     >
-      <div class="mrv-actions">
+      <div class="ops-actions">
         <app-button
           variant="secondary"
           type="button"
@@ -17,7 +17,7 @@
         >
           Làm mới
         </app-button>
-        <a class="mrv-link-action" routerLink="/admin/settings/payments">Cấu hình ngân hàng</a>
+        <a class="ops-link-action" routerLink="/admin/settings/payments">Cấu hình ngân hàng</a>
         <app-button
           variant="primary"
           type="button"
@@ -33,10 +33,10 @@
       <app-error-alert [message]="error" (retry)="store.load()" />
     }
     @if (store.notice(); as notice) {
-      <p class="mrv-notice" role="status">{{ notice }}</p>
+      <p class="ops-notice" role="status">{{ notice }}</p>
     }
 
-    <div class="mrv-stat-grid">
+    <div class="ops-stat-grid">
       @for (stat of stats(); track stat.label) {
         <app-stat-card
           [label]="stat.label"
@@ -44,13 +44,13 @@
           [icon]="stat.icon"
           [tone]="stat.tone"
         >
-          <span statMeta class="mrv-stat-meta">{{ stat.meta }}</span>
+          <span statMeta class="ops-stat-meta">{{ stat.meta }}</span>
         </app-stat-card>
       }
     </div>
 
-    <div class="mrv-layout">
-      <div class="mrv-stack">
+    <div class="ops-layout">
+      <div class="ops-stack">
         <app-manual-review-filters
           [value]="store.filters()"
           [busy]="store.loading()"

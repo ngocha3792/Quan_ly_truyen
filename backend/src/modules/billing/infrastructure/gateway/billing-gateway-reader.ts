@@ -71,6 +71,28 @@ export class BillingGatewayReader {
     };
   }
 
+  /**
+   * Chỉ lấy trạng thái đơn và loại cổng. Không chặn theo cổng và không giải mã
+   * credential, để hoàn tiền tay dùng được với chuyển khoản thủ công.
+   */
+  async getRefundContext(orderId: string) {
+    const order = await this.prisma.paymentOrder.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        providerConnection: { select: { kind: true } },
+      },
+    });
+    if (!order)
+      throw new BillingResourceNotFoundException('đơn thanh toán', orderId);
+    return {
+      orderId: order.id,
+      status: order.status,
+      providerKind: order.providerConnection?.kind ?? null,
+    };
+  }
+
   async listRefunds(orderId: string): Promise<readonly BillingRefundRecord[]> {
     return (
       await this.prisma.billingRefund.findMany({
