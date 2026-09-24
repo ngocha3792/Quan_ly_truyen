@@ -380,6 +380,18 @@ $ObservabilityProjectName = Get-DotEnvValue `
   -Path $EnvironmentFilePath `
   -Name 'OBSERVABILITY_COMPOSE_PROJECT_NAME'
 
+# Grafana, Prometheus, Loki, Tempo and Alloy together outweigh the whole
+# application stack, which small single-host deployments cannot afford. Hosts
+# opt out through their own environment file rather than the command line,
+# because the release workflow invokes this script without arguments and the
+# environment file is the only state a deploy preserves. Absent flag keeps the
+# stack enabled so existing environments are unaffected.
+if ((Get-DotEnvValue `
+      -Path $EnvironmentFilePath `
+      -Name 'OBSERVABILITY_STACK_ENABLED') -eq 'false') {
+  $SkipObservability = $true
+}
+
 $ObservabilityCompose = @(
   'compose',
   '--env-file', $EnvironmentFilePath
