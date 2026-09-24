@@ -164,6 +164,10 @@ export const EXPECTED_PRODUCTION_INDEXES = [
   'chapter_media_slices_status_updated_idx',
   'comment_regions_comment_id_key',
   'comment_regions_chapter_media_idx',
+  'chapter_media_ocr_page_language_key',
+  'chapter_media_ocr_chapter_status_idx',
+  'chapter_media_ocr_status_updated_idx',
+  'chapter_media_ocr_requested_by_idx',
 ] as const;
 
 export const EXPECTED_PRODUCTION_CONSTRAINTS = [

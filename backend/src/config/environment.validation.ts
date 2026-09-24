@@ -659,6 +659,43 @@ export class EnvironmentVariables {
 
   @Transform(({ value }) => parseBooleanValue(value ?? false))
   @IsBoolean()
+  READER_OCR_ENABLED = false;
+
+  @IsOptional()
+  @IsUrl({
+    require_tld: false,
+    protocols: ['http', 'https'],
+    require_protocol: true,
+  })
+  OCR_BASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  OCR_API_KEY?: string;
+
+  @IsString()
+  OCR_DEFAULT_LANGUAGE = 'ch';
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 120_000))
+  @IsInt()
+  @Min(5_000)
+  @Max(600_000)
+  OCR_REQUEST_TIMEOUT_MS = 120_000;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 20))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  OCR_MAX_BATCH_SIZE = 20;
+
+  @Transform(({ value }) => parseIntegerValue(value ?? 10 * 1024 * 1024))
+  @IsInt()
+  @Min(64 * 1024)
+  OCR_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+  @Transform(({ value }) => parseBooleanValue(value ?? false))
+  @IsBoolean()
   SEARCH_MEILISEARCH_ENABLED = false;
 
   @IsUrl({
@@ -1180,6 +1217,28 @@ function validateCrossFieldRules(config: EnvironmentVariables): void {
   ) {
     throw new Error(
       'READER_CONTENT_DOCUMENT_ENABLED must be true when text to speech is enabled',
+    );
+  }
+
+  if (config.READER_OCR_ENABLED && !config.READER_COMIC_DELIVERY_ENABLED) {
+    throw new Error(
+      'READER_COMIC_DELIVERY_ENABLED must be true when OCR is enabled because OCR only reads comic pages',
+    );
+  }
+  if (
+    config.READER_OCR_ENABLED &&
+    (!config.QUEUE_ENABLED || !config.REDIS_ENABLED)
+  ) {
+    throw new Error(
+      'QUEUE_ENABLED and REDIS_ENABLED must be true when OCR is enabled',
+    );
+  }
+  if (
+    config.READER_OCR_ENABLED &&
+    (!config.OCR_BASE_URL || !config.OCR_API_KEY)
+  ) {
+    throw new Error(
+      'OCR_BASE_URL and OCR_API_KEY are required when OCR is enabled',
     );
   }
 

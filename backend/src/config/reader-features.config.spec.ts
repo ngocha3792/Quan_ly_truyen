@@ -29,6 +29,7 @@ describe('readerFeaturesConfig', () => {
       comicDeliveryEnabled: false,
       offlineReadingEnabled: false,
       textToSpeechEnabled: false,
+      ocrEnabled: false,
     });
   });
 
@@ -45,6 +46,7 @@ describe('readerFeaturesConfig', () => {
       comicDeliveryEnabled: false,
       offlineReadingEnabled: false,
       textToSpeechEnabled: false,
+      ocrEnabled: false,
     });
   });
 });

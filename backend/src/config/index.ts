@@ -26,3 +26,4 @@ export {
   default as readerFeaturesConfig,
   READER_FEATURES_CONFIG_KEY,
 } from './reader-features.config';
+export { default as ocrConfig, OCR_CONFIG_KEY } from './ocr.config';

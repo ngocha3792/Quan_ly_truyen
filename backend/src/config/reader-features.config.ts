@@ -25,5 +25,6 @@ export default registerAs(
     offlineReadingEnabled:
       process.env.READER_OFFLINE_READING_ENABLED === 'true',
     textToSpeechEnabled: process.env.READER_TEXT_TO_SPEECH_ENABLED === 'true',
+    ocrEnabled: process.env.READER_OCR_ENABLED === 'true',
   }),
 );

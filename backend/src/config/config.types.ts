@@ -379,4 +379,14 @@ export interface ReaderFeaturesConfig {
   comicDeliveryEnabled: boolean;
   offlineReadingEnabled: boolean;
   textToSpeechEnabled: boolean;
+  ocrEnabled: boolean;
+}
+
+export interface OcrConfig {
+  baseUrl: string;
+  apiKey: string;
+  defaultLanguage: string;
+  requestTimeoutMs: number;
+  maxBatchSize: number;
+  maxImageBytes: number;
 }

@@ -52,6 +52,7 @@ import { TtsModule } from './modules/tts';
 import { SearchModule } from './modules/search';
 import { RevenueModule } from './modules/revenue';
 import { RecommendationModule } from './modules/recommendation/recommendation.module';
+import { OcrModule } from './modules/ocr';
 @Module({
   imports: [
     AppConfigModule,
@@ -84,6 +85,7 @@ import { RecommendationModule } from './modules/recommendation/recommendation.mo
     SearchModule,
     RevenueModule,
     RecommendationModule,
+    OcrModule,
     CommonGuardsModule,
     InfrastructureModule,
     HealthModule,

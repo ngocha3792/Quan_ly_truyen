@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   TTS: 'tts',
   SEARCH: 'search',
   RECOMMENDATION: 'recommendation',
+  OCR: 'ocr',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

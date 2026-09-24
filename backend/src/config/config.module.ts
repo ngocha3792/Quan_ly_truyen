@@ -21,6 +21,7 @@ import monetizationConfig from './monetization.config';
 import billingConfig from './billing.config';
 import readerFeaturesConfig from './reader-features.config';
 import searchConfig from './search.config';
+import ocrConfig from './ocr.config';
 
 @Global()
 @Module({
@@ -51,6 +52,7 @@ import searchConfig from './search.config';
         billingConfig,
         readerFeaturesConfig,
         searchConfig,
+        ocrConfig,
       ],
       validate: validateEnvironment,
     }),

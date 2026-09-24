@@ -371,6 +371,15 @@ enum MediaSliceStatus {
   @@map("media_slice_status")
 }
 
+enum ChapterMediaOcrStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+
+  @@map("chapter_media_ocr_status")
+}
+
 enum MediaResourceType {
   IMAGE @map("image")
   VIDEO @map("video")
@@ -644,6 +653,7 @@ model User {
   chaptersCreated              Chapter[]                  @relation("ChapterCreatedBy")
   chaptersUpdated              Chapter[]                  @relation("ChapterUpdatedBy")
   chapterVersions              ChapterVersion[]
+  chapterMediaOcrRequests      ChapterMediaOcr[]
   chapterReviews               ChapterReview[]
   chapterEditSessions          ChapterEditSession[]
   comments                     Comment[]
@@ -1925,6 +1935,7 @@ model ChapterMedia {
   mediaAsset     MediaAsset          @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
   slices         ChapterMediaSlice[]
   commentRegions CommentRegion[]
+  ocr            ChapterMediaOcr[]
 
   @@id([chapterId, mediaAssetId])
   @@unique([chapterId, sortOrder])
@@ -1969,6 +1980,34 @@ model ChapterMediaSlice {
   @@unique([chapterId, mediaAssetId, sliceIndex], map: "chapter_media_slices_media_index_key")
   @@index([processingStatus, updatedAt], map: "chapter_media_slices_status_updated_idx")
   @@map("chapter_media_slices")
+}
+
+/// One recognised page per language. Boxes are stored normalised to the page
+/// the same way CommentRegion stores them, so a caller can overlay them without
+/// knowing the pixel size the recognition ran at.
+model ChapterMediaOcr {
+  id            String                @id @default(uuid()) @db.Uuid
+  chapterId     String                @map("chapter_id") @db.Uuid
+  mediaAssetId  String                @map("media_asset_id") @db.Uuid
+  language      String                @db.VarChar(16)
+  status        ChapterMediaOcrStatus @default(PENDING)
+  text          String?               @db.Text
+  lines         Json?                 @db.JsonB
+  lineCount     Int                   @default(0) @map("line_count")
+  failureReason String?               @map("failure_reason") @db.VarChar(1000)
+  requestedById String                @map("requested_by_id") @db.Uuid
+  completedAt   DateTime?             @map("completed_at") @db.Timestamptz(3)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  chapterMedia ChapterMedia @relation(fields: [chapterId, mediaAssetId], references: [chapterId, mediaAssetId], onDelete: Cascade)
+  requestedBy  User         @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@unique([chapterId, mediaAssetId, language], map: "chapter_media_ocr_page_language_key")
+  @@index([chapterId, status], map: "chapter_media_ocr_chapter_status_idx")
+  @@index([status, updatedAt], map: "chapter_media_ocr_status_updated_idx")
+  @@index([requestedById], map: "chapter_media_ocr_requested_by_idx")
+  @@map("chapter_media_ocr")
 }
 
 model Story {

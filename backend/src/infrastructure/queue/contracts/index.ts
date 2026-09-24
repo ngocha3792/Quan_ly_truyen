@@ -6,3 +6,4 @@ export * from './story-scheduling.contracts';
 export * from './ai-translation.contracts';
 export * from './tts.contracts';
 export * from './search.contracts';
+export * from './ocr.contracts';

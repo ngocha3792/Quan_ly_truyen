@@ -104,5 +104,6 @@ function readerFeatures(portableCursorEnabled: boolean) {
     comicDeliveryEnabled: false,
     offlineReadingEnabled: false,
     textToSpeechEnabled: false,
+    ocrEnabled: false,
   };
 }
