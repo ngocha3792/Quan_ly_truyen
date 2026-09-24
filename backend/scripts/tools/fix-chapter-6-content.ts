@@ -15,7 +15,8 @@
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { PrismaClient } from '@prisma/client';
+import { createScriptPrismaClient } from '../shared/prisma-client';
+import { Prisma } from '@/generated/prisma/client';
 import { countChapterWords } from '@/modules/chapters/domain/value-objects/chapter-fields.value-object';
 import { createBackfilledChapterContentDocument } from '@/modules/chapters/domain/value-objects/chapter-content-document.value-object';
 
@@ -27,40 +28,61 @@ async function main() {
     'utf8',
   );
 
-  const prisma = new PrismaClient();
+  const prisma = createScriptPrismaClient();
   try {
     const current = await prisma.chapter.findUniqueOrThrow({
       where: { id: CHAPTER_ID },
-      select: { id: true, title: true, version: true, status: true, content: true },
+      select: {
+        id: true,
+        title: true,
+        version: true,
+        status: true,
+        content: true,
+      },
     });
 
-    console.log(`Trước khi sửa: "${current.title}" (${current.content.length} ký tự, version ${current.version}, status ${current.status})`);
+    console.log(
+      `Trước khi sửa: "${current.title}" (${current.content.length} ký tự, version ${current.version}, status ${current.status})`,
+    );
 
     if (current.status !== 'PUBLISHED') {
-      throw new Error(`Chương đang ở trạng thái ${current.status}, không phải PUBLISHED — dừng lại để kiểm tra thủ công.`);
+      throw new Error(
+        `Chương đang ở trạng thái ${current.status}, không phải PUBLISHED — dừng lại để kiểm tra thủ công.`,
+      );
     }
 
     const wordCount = countChapterWords(correctedContent);
-    const contentDocument = createBackfilledChapterContentDocument(correctedContent, CHAPTER_ID);
+    const contentDocument = createBackfilledChapterContentDocument(
+      correctedContent,
+      CHAPTER_ID,
+    );
 
     const updated = await prisma.chapter.update({
       where: { id: CHAPTER_ID },
       data: {
         content: correctedContent,
-        contentDocument: contentDocument as unknown as object,
+        contentDocument: contentDocument as unknown as Prisma.InputJsonValue,
         wordCount,
         version: { increment: 1 },
       },
-      select: { id: true, title: true, version: true, wordCount: true, content: true },
+      select: {
+        id: true,
+        title: true,
+        version: true,
+        wordCount: true,
+        content: true,
+      },
     });
 
-    console.log(`Sau khi sửa: "${updated.title}" (${updated.content.length} ký tự, ${updated.wordCount} từ, version ${updated.version})`);
+    console.log(
+      `Sau khi sửa: "${updated.title}" (${updated.content.length} ký tự, ${updated.wordCount} từ, version ${updated.version})`,
+    );
   } finally {
     await prisma.$disconnect();
   }
 }
 
-main().catch((err) => {
-  console.error('LỖI:', err.message ?? err);
+main().catch((error: unknown) => {
+  console.error('LỖI:', error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
