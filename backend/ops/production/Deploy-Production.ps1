@@ -168,6 +168,26 @@ if (Test-Path -LiteralPath $HostOverrideComposeFile -PathType Leaf) {
   )
 }
 
+# Meilisearch runs behind a compose profile so hosts that fall back to the
+# PostgreSQL search path never pay for the container. The overlay is applied
+# whenever the deployed environment enables search indexing, otherwise a
+# deploy would silently drop the index the API expects to be reachable.
+$SearchComposeFile = Join-Path $BackendRoot 'compose.search.yml'
+$SearchIndexingEnabled = (Get-DotEnvValue `
+    -Path $EnvironmentFilePath `
+    -Name 'SEARCH_MEILISEARCH_ENABLED') -eq 'true'
+
+if ($SearchIndexingEnabled) {
+  if (-not (Test-Path -LiteralPath $SearchComposeFile -PathType Leaf)) {
+    throw 'compose.search.yml is missing while SEARCH_MEILISEARCH_ENABLED=true.'
+  }
+
+  $Compose += @(
+    '-f', 'compose.search.yml',
+    '--profile', 'search'
+  )
+}
+
 function Invoke-DockerCompose {
   param(
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -461,7 +481,13 @@ else {
 Write-Host '[4/9] Starting PostgreSQL and Redis...' `
   -ForegroundColor Cyan
 
-Invoke-DockerCompose -Arguments @('up', '-d', '--wait', 'postgres', 'redis')
+$InfrastructureServices = @('postgres', 'redis')
+
+if ($SearchIndexingEnabled) {
+  $InfrastructureServices += 'meilisearch'
+}
+
+Invoke-DockerCompose -Arguments (@('up', '-d', '--wait') + $InfrastructureServices)
 
 Write-Host '[5/9] Applying database migrations...' `
   -ForegroundColor Cyan
