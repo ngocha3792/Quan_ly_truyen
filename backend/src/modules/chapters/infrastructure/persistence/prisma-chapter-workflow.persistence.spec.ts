@@ -43,6 +43,7 @@ describe('Chapter review authorization and version invariant', () => {
       userRole: {
         findFirst: jest.fn().mockResolvedValue({ roleId: 'reviewer-role' }),
       },
+      chapterMedia: { count: jest.fn().mockResolvedValue(0) },
       chapterReview: { create: jest.fn() },
       chapterEditSession: { deleteMany: jest.fn() },
       auditLog: { create: jest.fn() },
@@ -142,6 +143,53 @@ describe('Chapter review authorization and version invariant', () => {
         newValues: { status: 'APPROVED', version: 5, reviewedVersion: 4 },
       }) as unknown,
     });
+  });
+
+  it('submits a manga chapter that carries pages instead of text', async () => {
+    const { chapter, tx, persistence } = setup();
+    chapter.status = 'DRAFT';
+    chapter.content = '';
+    tx.chapterMedia.count.mockResolvedValue(12);
+    tx.chapter.update.mockResolvedValue({
+      ...chapter,
+      status: 'IN_REVIEW',
+      version: 5,
+    });
+
+    const result = await persistence.transition(
+      input({ userId: owner, action: 'submit' }),
+    );
+
+    expect(result).toMatchObject({ status: 'IN_REVIEW', version: 5 });
+    expect(tx.chapterMedia.count).toHaveBeenCalledWith({
+      where: { chapterId },
+    });
+  });
+
+  it('still blocks a submit with neither text nor pages', async () => {
+    const { chapter, tx, persistence } = setup();
+    chapter.status = 'DRAFT';
+    chapter.content = '   ';
+    tx.chapterMedia.count.mockResolvedValue(0);
+
+    await expect(
+      persistence.transition(input({ userId: owner, action: 'submit' })),
+    ).rejects.toMatchObject({ code: 'CHAPTER_EMPTY_CONTENT' });
+    expect(tx.chapter.update).not.toHaveBeenCalled();
+  });
+
+  it('does not query pages when the chapter already has text', async () => {
+    const { chapter, tx, persistence } = setup();
+    chapter.status = 'DRAFT';
+    tx.chapter.update.mockResolvedValue({
+      ...chapter,
+      status: 'IN_REVIEW',
+      version: 5,
+    });
+
+    await persistence.transition(input({ userId: owner, action: 'submit' }));
+
+    expect(tx.chapterMedia.count).not.toHaveBeenCalled();
   });
 
   it('requires the active owner for submit and reopen', async () => {

@@ -274,12 +274,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     if (this.isCreate()) await this.save();
     const id = this.chapterId();
     if (!id) return;
-    for (const file of files) {
-      this.store
-        .uploadPage(this.storyId, id, file)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ error: () => undefined });
-    }
+    this.store
+      .uploadPages(this.storyId, id, files)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
   }
 
   protected reorderMangaPages(orderedMediaAssetIds: readonly string[]): void {

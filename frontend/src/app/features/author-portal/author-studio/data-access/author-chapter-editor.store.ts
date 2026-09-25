@@ -1,6 +1,18 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  EMPTY,
+  finalize,
+  forkJoin,
+  from,
+  map,
+  Observable,
+  of,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
 import {
@@ -183,19 +195,35 @@ export class AuthorChapterEditorStore {
       .pipe(finalize(() => this.uploadingImage.set(false)));
   }
 
-  uploadPage(storyId: string, chapterId: string, file: File): Observable<void> {
+  /**
+   * Tải từng ảnh một, không song song.
+   *
+   * Với truyện tranh thì thứ tự trang chính là nội dung, mà chạy song song thì
+   * trang được gắn theo ảnh nào tải xong trước chứ không theo thứ tự người dùng
+   * chọn. Nặng hơn: mỗi lần gắn trả về nguyên danh sách trang và ghi đè
+   * `mediaPages`, nên phản hồi về muộn của một yêu cầu cũ xoá mất trang vừa
+   * thêm — đó là lý do phải F5 mới thấy đủ ảnh.
+   *
+   * Một ảnh hỏng chỉ bỏ qua ảnh đó và báo lỗi, phần còn lại vẫn tải tiếp.
+   */
+  uploadPages(storyId: string, chapterId: string, files: readonly File[]): Observable<void> {
+    if (files.length === 0) return EMPTY;
     this.uploadingPage.set(true);
     this.error.set(null);
-    return this.repository.uploadChapterImage(chapterId, file).pipe(
-      switchMap((media: AuthorStoryMedia) =>
-        this.repository.attachChapterMedia(storyId, chapterId, [{ mediaAssetId: media.id }]),
+    return from(files).pipe(
+      concatMap((file) =>
+        this.repository.uploadChapterImage(chapterId, file).pipe(
+          switchMap((media: AuthorStoryMedia) =>
+            this.repository.attachChapterMedia(storyId, chapterId, [{ mediaAssetId: media.id }]),
+          ),
+          tap((pages) => this.mediaPages.set(pages)),
+          catchError((error: unknown) => {
+            this.error.set(getApiErrorMessage(error));
+            return EMPTY;
+          }),
+        ),
       ),
-      tap((pages) => this.mediaPages.set(pages)),
       map(() => undefined),
-      catchError((error: unknown) => {
-        this.error.set(getApiErrorMessage(error));
-        throw error;
-      }),
       finalize(() => this.uploadingPage.set(false)),
     );
   }

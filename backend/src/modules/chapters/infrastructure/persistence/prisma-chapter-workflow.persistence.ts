@@ -95,11 +95,19 @@ export class PrismaChapterWorkflowPersistence implements ChapterWorkflowPort {
           code: 'CHAPTER_INVALID_TRANSITION',
           message: 'Trạng thái chương đã thay đổi hoặc thao tác không hợp lệ',
         });
-      if (input.action === 'submit' && !chapter.content.trim())
-        throw new ResourceConflictException({
-          code: 'CHAPTER_EMPTY_CONTENT',
-          message: 'Chương phải có nội dung trước khi gửi duyệt',
+      if (input.action === 'submit' && !chapter.content.trim()) {
+        // Chương truyện tranh không có chữ nào: nội dung của nó là các trang
+        // ảnh trong chapter_media, nên chỉ đọc `content` là chặn nhầm.
+        const pageCount = await tx.chapterMedia.count({
+          where: { chapterId: chapter.id },
         });
+        if (pageCount === 0)
+          throw new ResourceConflictException({
+            code: 'CHAPTER_EMPTY_CONTENT',
+            message:
+              'Chương phải có nội dung hoặc ít nhất một trang ảnh trước khi gửi duyệt',
+          });
+      }
       const now = new Date();
       const version = chapter.version + 1;
       if (!authorAction) {

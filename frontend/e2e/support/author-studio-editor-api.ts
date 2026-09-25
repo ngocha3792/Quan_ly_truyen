@@ -20,7 +20,14 @@ interface CapturedSave {
 /** All API traffic is fulfilled locally; these tests never mutate a real backend. */
 export async function mockAuthorEditorApi(
   context: BrowserContext,
-  options: { reviewer?: boolean; storyStatus?: string; chapterStatus?: string } = {},
+  options: {
+    reviewer?: boolean;
+    storyStatus?: string;
+    chapterStatus?: string;
+    storyFormat?: string;
+    /** Độ trễ giả của lần tải ảnh thứ n, tính bằng ms. */
+    uploadDelaysMs?: readonly number[];
+  } = {},
 ) {
   let chapter = {
     id: CHAPTER_ID,
@@ -57,6 +64,9 @@ export async function mockAuthorEditorApi(
     comment?: string;
     idempotencyKey: string;
   }[] = [];
+  const mangaUploads: string[] = [];
+  const mangaAttached: string[] = [];
+  let mangaPages: Record<string, unknown>[] = [];
   let holdNext = false;
   let releasePending: (() => void) | undefined;
   await context.addInitScript(() =>
@@ -109,6 +119,7 @@ export async function mockAuthorEditorApi(
         synopsis: '',
         languageCode: 'vi',
         status: options.storyStatus ?? 'PUBLISHED',
+        format: options.storyFormat ?? 'NOVEL',
         visibility: 'PUBLIC',
         contentRating: 'GENERAL',
         coverMediaId: null,
@@ -170,6 +181,49 @@ export async function mockAuthorEditorApi(
       };
       return ok(chapter);
     }
+    if (path === '/api/v1/media/upload-intents' && method === 'POST') {
+      const input = route.request().postDataJSON() as { originalName: string };
+      const index = mangaUploads.length;
+      mangaUploads.push(input.originalName);
+      // Ảnh đầu chậm nhất: chạy song song thì trang sẽ gắn ngược thứ tự chọn.
+      const delay = options.uploadDelaysMs?.[index];
+      if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+      return ok({
+        mediaAssetId: `media-${index + 1}`,
+        uploadUrl: 'https://upload.test.invalid/v1/upload',
+        apiKey: 'test-key',
+        timestamp: 1,
+        signature: 'test-signature',
+        parameters: { folder: 'chapters' },
+      });
+    }
+    if (path.startsWith('/api/v1/media/upload-intents/') && path.endsWith('/confirm')) {
+      const mediaAssetId = path.split('/').at(-2) ?? 'media';
+      return ok({
+        id: mediaAssetId,
+        url: `https://cdn.test.invalid/${mediaAssetId}.webp`,
+        width: 800,
+        height: 1200,
+      });
+    }
+    if (path === `${chapterPath}/media` && method === 'POST') {
+      const input = route.request().postDataJSON() as {
+        pages: ReadonlyArray<{ mediaAssetId: string }>;
+      };
+      for (const page of input.pages) mangaAttached.push(page.mediaAssetId);
+      // Máy chủ luôn trả về nguyên danh sách trang hiện có của chương.
+      mangaPages = mangaAttached.map((mediaAssetId, index) => ({
+        mediaAssetId,
+        sortOrder: index,
+        altText: null,
+        caption: null,
+        url: `https://cdn.test.invalid/${mediaAssetId}.webp`,
+        width: 800,
+        height: 1200,
+      }));
+      return ok(mangaPages);
+    }
+    if (path === `${chapterPath}/media` && method === 'GET') return ok(mangaPages);
     if (path.includes('/edit-sessions')) {
       if (method === 'GET') return ok([]);
       if (method === 'DELETE') return route.fulfill({ status: 204 });
@@ -270,6 +324,18 @@ export async function mockAuthorEditorApi(
       },
     });
   }
+  // Cloudinary thật nằm ngoài /api/v1 nên cần route riêng.
+  await context.route('https://upload.test.invalid/**', (route) =>
+    route.fulfill({
+      json: {
+        public_id: 'chapters/page',
+        version: 1,
+        signature: 'cloudinary-signature',
+        resource_type: 'image',
+      },
+    }),
+  );
+
   return {
     saves,
     restores,
@@ -284,6 +350,8 @@ export async function mockAuthorEditorApi(
     setChapterStatus: (status: string) => {
       chapter = { ...chapter, status, version: chapter.version + 1 };
     },
+    mangaUploads,
+    mangaAttached,
     holdNextSave: () => {
       holdNext = true;
     },
