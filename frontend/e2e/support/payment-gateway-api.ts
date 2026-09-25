@@ -52,6 +52,7 @@ export async function mockPaymentGatewayApi(context: BrowserContext) {
     ],
   };
   const order = () => ({
+    refund: refundRows[0] ?? undefined,
     id: PAYMENT_ID,
     packageId: 'package-1',
     provider: 'vnpay-test',
@@ -141,6 +142,15 @@ export async function mockPaymentGatewayApi(context: BrowserContext) {
       }
       return ok(allowlist);
     }
+    if (path.endsWith('/admin/billing/reconciliation'))
+      return ok({
+        paidOrders: 1,
+        paidOrdersWithoutLedger: 0,
+        orphanTopUpTransactions: 0,
+        pendingExpiredOrders: 0,
+        awaitingReviewOrders: 0,
+        awaitingReviewOlderThan24h: 0,
+      });
     if (path.endsWith('/payment-orders'))
       return ok({
         items: [order()],
@@ -170,6 +180,7 @@ export async function mockPaymentGatewayApi(context: BrowserContext) {
             reason: request.postDataJSON().reason,
             providerRefundId: null,
             createdAt: '2026-09-09T00:00:00.000Z',
+            completedAt: null,
           },
         ];
         return ok(refundRows[0]);

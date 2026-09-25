@@ -61,17 +61,19 @@ test.describe('Payment gateway administration and checkout with controlled respo
     const api = await mockPaymentGatewayApi(context);
     api.settle();
     await page.goto('/admin/payments/gateway');
-    await page.getByRole('button', { name: 'Đối soát', exact: true }).click();
+    const row = page.getByRole('row').filter({ hasText: 'reference-1' });
+    await row.getByRole('button', { name: 'Đối soát đơn reference-1' }).click();
     await expect(page.getByText('Đã đối soát với VNPAY.')).toBeVisible();
     expect(api.reconciliations()).toBe(1);
-    await page.getByRole('button', { name: 'Lịch sử / Hoàn tiền' }).click();
-    await page.getByLabel('Lý do hoàn tiền').fill('Khách hàng đề nghị hoàn toàn bộ đơn.');
-    await page
-      .getByRole('checkbox', { name: 'Tôi xác nhận hoàn toàn bộ đơn và thu hồi Credit.' })
-      .check();
-    await page.getByRole('button', { name: 'Gửi yêu cầu hoàn tiền' }).click();
+    await row.getByRole('button', { name: 'Hoàn tiền đơn reference-1' }).click();
+    const dialog = page.getByRole('dialog');
+    // Đơn VNPay hoàn qua cổng nên hộp thoại chỉ hỏi lý do, không hỏi mã chuyển trả.
+    await expect(dialog.getByRole('textbox')).toHaveCount(1);
+    await dialog.getByRole('textbox').fill('Khách hàng đề nghị hoàn toàn bộ đơn.');
+    await dialog.getByRole('button', { name: 'Gửi lệnh hoàn tiền' }).click();
     await expect(page.getByText('Chưa rõ kết quả', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Gửi yêu cầu hoàn tiền' })).toHaveCount(0);
+    // Lệnh hoàn chưa rõ kết quả thì không được mở hoàn tiền lần hai cho cùng đơn.
+    await expect(row.getByRole('button', { name: 'Hoàn tiền đơn reference-1' })).toHaveCount(0);
     expect(api.refunds).toHaveLength(1);
     expect(api.refunds[0]['idempotencyKey']).toBeTruthy();
   });
