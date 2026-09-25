@@ -1,6 +1,7 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
 import {
+  ChapterInsertAmbiguousAnchorException,
   ChapterInsertAnchorNotFoundException,
   ChapterInsertNoGapException,
   ChapterStoryNotFoundException,
@@ -12,6 +13,7 @@ const USER_ID = '11111111-1111-4111-8111-111111111111';
 const STORY_ID = '22222222-2222-4222-8222-222222222222';
 const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
 const ANCHOR_ID = '44444444-4444-4444-8444-444444444444';
+const BEFORE_ID = '55555555-5555-4555-8555-555555555555';
 
 describe('CreateAuthorChapterCommandHandler', () => {
   let persistence: {
@@ -52,6 +54,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
         'Jest',
         'chapter-create-request',
         undefined,
+        undefined,
       ),
     );
 
@@ -88,6 +91,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       ),
     );
 
@@ -115,6 +119,33 @@ describe('CreateAuthorChapterCommandHandler', () => {
       Record<string, unknown>,
     ][];
     expect(inputs[inputs.length - 1][0]).not.toHaveProperty('afterChapterId');
+  });
+
+  it('chuyển mốc chèn phía trước xuống persistence', async () => {
+    persistence.createDraft.mockResolvedValue({
+      status: 'created',
+      chapter: createChapterRecord(),
+    });
+
+    await handler.execute(createCommand(USER_ID, undefined, ANCHOR_ID));
+    expect(persistence.createDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ beforeChapterId: ANCHOR_ID }),
+    );
+    const input = persistence.createDraft.mock.calls as [
+      Record<string, unknown>,
+    ][];
+    expect(input[0][0]).not.toHaveProperty('afterChapterId');
+  });
+
+  /*
+   * Trước một chương và sau một chương là hai chỗ khác nhau. Nhận cả hai rồi tự
+   * chọn một là âm thầm đặt chương vào nơi tác giả không yêu cầu.
+   */
+  it('từ chối khi nhận cả hai mốc chèn một lúc', async () => {
+    await expect(
+      handler.execute(createCommand(USER_ID, ANCHOR_ID, BEFORE_ID)),
+    ).rejects.toBeInstanceOf(ChapterInsertAmbiguousAnchorException);
+    expect(persistence.createDraft).not.toHaveBeenCalled();
   });
 
   it('báo rõ khi mốc chèn không còn nữa', async () => {
@@ -161,6 +192,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
 function createCommand(
   userId: string | undefined,
   afterChapterId?: string,
+  beforeChapterId?: string,
 ): CreateAuthorChapterCommand {
   return new CreateAuthorChapterCommand(
     userId,
@@ -171,6 +203,7 @@ function createCommand(
     undefined,
     undefined,
     afterChapterId,
+    beforeChapterId,
   );
 }
 

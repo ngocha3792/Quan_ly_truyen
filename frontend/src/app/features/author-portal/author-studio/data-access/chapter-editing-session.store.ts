@@ -2,6 +2,7 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs';
 import { getApiErrorCode, getApiErrorMessage } from '../../../../core/http/api-error.util';
 import { AuthorManagedChapter } from '../domain/author-story-management.models';
+import { ChapterInsertAnchor } from '../domain/chapter-insert-anchor';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 import {
   ChapterDraft,
@@ -18,7 +19,7 @@ export class ChapterEditingSessionStore {
   private readonly localQueue = inject(ChapterRecoveryQueueService);
   private readonly destroyRef = inject(DestroyRef);
   private scope: ChapterRecoveryScope | null = null;
-  private insertAfter: string | null = null;
+  private insertAnchor: ChapterInsertAnchor = {};
   private timer: ReturnType<typeof setTimeout> | null = null;
   private activeSave: Promise<AuthorManagedChapter | null> | null = null;
   private disposed = false;
@@ -48,12 +49,12 @@ export class ChapterEditingSessionStore {
     accountId: string,
     storyId: string,
     chapter: AuthorManagedChapter | null,
-    /** Chèn chương mới ngay sau chương này; bỏ trống thì thêm vào đuôi truyện. */
-    insertAfter?: string,
+    /** Mốc chèn; bỏ trống thì chương mới thêm vào đuôi truyện. */
+    insertAnchor?: ChapterInsertAnchor,
   ): Promise<void> {
     if (this.ready) return;
     this.ready = true;
-    this.insertAfter = insertAfter ?? null;
+    this.insertAnchor = insertAnchor ?? {};
     this.scope = { accountId, storyId, chapterId: chapter?.id ?? null, tabId: this.recovery.tabId };
     this.chapter.set(chapter);
     this.draft.set({ title: chapter?.title ?? '', content: chapter?.content ?? '' });
@@ -124,9 +125,8 @@ export class ChapterEditingSessionStore {
     const input = {
       title: snapshot.title.trim(),
       content: snapshot.content,
-      ...(current ? { expectedVersion: current.version } : {}),
-      // Chỉ có ý nghĩa ở lần tạo đầu tiên; các lần lưu sau đã có `current`.
-      ...(!current && this.insertAfter ? { afterChapterId: this.insertAfter } : {}),
+      // Mốc chèn chỉ có nghĩa ở lần tạo đầu; các lần lưu sau đã có `current`.
+      ...(current ? { expectedVersion: current.version } : this.insertAnchor),
     };
     this.busy.set(true);
     this.status.set('saving');

@@ -17,6 +17,15 @@
             + Viết chương mới
           </app-link-button>
         }
+        @if (firstChapter(); as first) {
+          <app-link-button
+            variant="secondary"
+            [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
+            [queryParams]="{ 'chen-truoc': first.id }"
+          >
+            + Chèn chương mở đầu
+          </app-link-button>
+        }
       </app-page-heading>
 
       @if (story.status === 'PENDING_REVIEW') {

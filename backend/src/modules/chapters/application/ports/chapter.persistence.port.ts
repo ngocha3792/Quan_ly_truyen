@@ -112,6 +112,14 @@ export interface CreateAuthorChapterInput {
    */
   readonly afterChapterId?: string;
 
+  /**
+   * Chèn chương mới ngay trước chương này. Dùng để thêm chương mở đầu: trỏ vào
+   * chương đầu truyện thì chương mới nằm giữa 0 và số của nó.
+   *
+   * Không đi cùng `afterChapterId` — tầng application chặn trước.
+   */
+  readonly beforeChapterId?: string;
+
   readonly createdAt: Date;
 
   readonly audit: ChapterAuditContext;

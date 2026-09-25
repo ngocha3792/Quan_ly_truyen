@@ -233,6 +233,7 @@ export class AuthorChaptersController {
         userAgent,
         requestId,
         request.afterChapterId,
+        request.beforeChapterId,
       ),
     );
 
