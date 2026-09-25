@@ -559,6 +559,19 @@ services:
     cap_drop:
       - ALL
 
+    # Entrypoint của Postgres khởi động bằng root: nó chown thư mục data,
+    # chmod thư mục socket rồi mới hạ quyền xuống user postgres. `cap_drop:
+    # ALL` cắt sạch mấy quyền đó nên container chết ngay khi initdb với
+    # "chown: /var/lib/postgresql/data: Operation not permitted".
+    # Trả lại đúng bộ tối thiểu thay vì bỏ hẳn phần siết quyền. Service
+    # `postgres` chính không siết capability nên không dính lỗi này.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+
     security_opt:
       - no-new-privileges:true
 
