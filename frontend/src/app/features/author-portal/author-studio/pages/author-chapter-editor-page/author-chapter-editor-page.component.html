@@ -17,11 +17,8 @@
         message="Chương này đang hiển thị cho độc giả. Mỗi lần bấm Lưu là họ thấy ngay, nên không có tự lưu nháp ở đây. Đường dẫn chương giữ nguyên dù bạn đổi tiêu đề."
       />
     }
-    @if (isInsert()) {
-      <app-notice
-        kind="info"
-        message="Chương này sẽ được chèn ngay sau chương bạn đã chọn, không thêm vào cuối truyện. Số chương do hệ thống đặt để giữ nguyên số của các chương đã có."
-      />
+    @if (insertNotice(); as notice) {
+      <app-notice kind="info" [message]="notice" />
     }
     @if (store.error()) {
       <app-notice kind="error" [message]="store.error()" />

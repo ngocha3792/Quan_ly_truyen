@@ -194,4 +194,35 @@ test.describe('Chèn chương vào giữa hai chương đã có', () => {
       afterChapterId: FIRST_CHAPTER,
     });
   });
+
+  /*
+   * Nút "Chèn chương sau" của từng dòng với tới được mọi chỗ trừ một chỗ: phía
+   * trước chương đầu tiên. Đó là việc của nút này.
+   */
+  test('chèn chương mở đầu gửi mốc phía trước chương đầu tiên', async ({ page }) => {
+    createdChapters.length = 0;
+    await mockApi(page);
+
+    await page.goto('/tim-kiem');
+    await expect(page.getByRole('heading', { name: 'Tìm kiếm', exact: true })).toBeVisible();
+    await page.evaluate((storyId) => {
+      history.pushState(null, '', `/author-studio/truyen/${storyId}/chuong`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, STORY_ID);
+
+    await page.getByRole('link', { name: '+ Chèn chương mở đầu' }).click();
+
+    await expect(page).toHaveURL(new RegExp(`chen-truoc=${FIRST_CHAPTER}`));
+    await expect(page.getByText('sẽ thành chương mở đầu')).toBeVisible();
+
+    await page.getByLabel('Tiêu đề chương').fill('Mở đầu');
+    await page.getByRole('button', { name: 'Lưu chương' }).click();
+
+    await expect.poll(() => createdChapters.length).toBeGreaterThan(0);
+    expect(createdChapters[0]).toMatchObject({
+      title: 'Mở đầu',
+      beforeChapterId: FIRST_CHAPTER,
+    });
+    expect(createdChapters[0]).not.toHaveProperty('afterChapterId');
+  });
 });

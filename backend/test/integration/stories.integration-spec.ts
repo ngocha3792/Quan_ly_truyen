@@ -1173,6 +1173,113 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ).toMatchObject({ status: 'format_locked' });
   });
 
+  it('chèn chương mở đầu trước chương đầu tiên đã xuất bản', async () => {
+    const author = await createAuthor('insert-prologue');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const first = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+    const second = await createChapter(author.id, story.id, 2, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+
+    const created = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Mở đầu',
+      content: 'Chương mở đầu viết sau.',
+      wordCount: 5,
+      beforeChapterId: first.id,
+      createdAt: new Date(),
+      audit: audit('insert-prologue'),
+    });
+
+    expect(created.status).toBe('created');
+    if (created.status !== 'created') return;
+    // Chia đôi khoảng từ 0 tới số của chương đầu.
+    expect(created.chapter.number).toBe(0.5);
+    expect(created.chapter.slug).toContain('chuong-0-5');
+
+    const ordered = await prisma.chapter.findMany({
+      where: { storyId: story.id },
+      orderBy: { number: 'asc' },
+      select: { id: true, number: true, slug: true },
+    });
+
+    // Chương mở đầu đứng trước, và hai chương cũ giữ nguyên số lẫn slug.
+    expect(ordered.map((row) => row.number.toNumber())).toEqual([0.5, 1, 2]);
+    expect(ordered[1]).toMatchObject({ id: first.id, slug: first.slug });
+    expect(ordered[2]).toMatchObject({ id: second.id, slug: second.slug });
+  });
+
+  it('chèn liên tiếp nhiều chương mở đầu rồi báo hết chỗ', async () => {
+    const author = await createAuthor('prologue-stack');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    await createChapter(author.id, story.id, 1);
+
+    /*
+     * Cột `Decimal(10, 2)` chỉ giữ hai chữ số thập phân nên khoảng trước chương
+     * 1 có đáy: 0.5, 0.25, 0.12, 0.06, 0.03, 0.01 rồi hết.
+     */
+    const numbers: number[] = [];
+
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      const firstNow = await prisma.chapter.findFirstOrThrow({
+        where: { storyId: story.id },
+        orderBy: { number: 'asc' },
+        select: { id: true },
+      });
+      const result = await chapters.createDraft({
+        userId: author.id,
+        storyId: story.id,
+        title: `Mở đầu ${attempt}`,
+        content: 'Nội dung',
+        wordCount: 1,
+        beforeChapterId: firstNow.id,
+        createdAt: new Date(),
+        audit: audit(`prologue-${attempt}`),
+      });
+
+      if (result.status === 'created') {
+        numbers.push(result.chapter.number);
+        continue;
+      }
+
+      expect(result).toMatchObject({ status: 'no_gap', afterNumber: 0 });
+      break;
+    }
+
+    expect(numbers).toEqual([0.5, 0.25, 0.12, 0.06, 0.03, 0.01]);
+  });
+
+  it('không chèn được trước một chương đã bị xoá', async () => {
+    const author = await createAuthor('prologue-missing');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    const first = await createChapter(author.id, story.id, 1);
+    await prisma.chapter.update({
+      where: { id: first.id },
+      data: { deletedAt: new Date() },
+    });
+
+    expect(
+      await chapters.createDraft({
+        userId: author.id,
+        storyId: story.id,
+        title: 'Mở đầu',
+        content: 'Nội dung',
+        wordCount: 1,
+        beforeChapterId: first.id,
+        createdAt: new Date(),
+        audit: audit('prologue-missing'),
+      }),
+    ).toMatchObject({ status: 'anchor_not_found' });
+  });
+
   it('chèn chương vào giữa hai chương đã xuất bản mà không đụng số của chúng', async () => {
     const author = await createAuthor('insert-between');
     const story = await createStory(author.id, StoryStatus.PUBLISHED, {

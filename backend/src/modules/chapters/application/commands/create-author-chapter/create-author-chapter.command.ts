@@ -15,5 +15,7 @@ export class CreateAuthorChapterCommand {
     readonly requestId: string | undefined,
 
     readonly afterChapterId: string | undefined,
+
+    readonly beforeChapterId: string | undefined,
   ) {}
 }
