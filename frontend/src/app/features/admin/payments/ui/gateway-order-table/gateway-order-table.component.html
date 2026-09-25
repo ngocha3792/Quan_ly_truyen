@@ -1,0 +1,118 @@
+<section class="ops-panel">
+  <header class="ops-panel__head">
+    <span class="ops-panel__icon"><app-icon name="wallet" [size]="18" /></span>
+    <div class="ops-panel__title">
+      <h2>Danh sách đối soát &amp; hoàn tiền</h2>
+      <p>{{ totalItems() | number }} giao dịch khớp bộ lọc hiện tại.</p>
+    </div>
+    <div class="ops-panel__tools">
+      <label class="ops-inline-field">
+        Hiển thị
+        <select [value]="pageSize()" (change)="readPageSize($event)">
+          @for (size of pageSizes; track size) {
+            <option [value]="size">{{ size }} dòng</option>
+          }
+        </select>
+      </label>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="ops-empty">Đang tải…</p>
+  } @else if (!orders().length) {
+    <p class="ops-empty">Không có giao dịch nào khớp bộ lọc.</p>
+  } @else {
+    <div class="ops-table-scroll">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th scope="col">Mã đơn</th>
+            <th scope="col">Người thanh toán</th>
+            <th scope="col">Nhà cung cấp</th>
+            <th scope="col" class="ops-table__amount">Số tiền</th>
+            <th scope="col">Trạng thái</th>
+            <th scope="col">Cập nhật</th>
+            <th scope="col" class="ops-table__actions">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td class="ops-table__code">{{ reference(order) }}</td>
+              <td>
+                <span class="gw-payer">{{ order.userDisplayName }}</span>
+                <span class="gw-payer__email">{{ order.userEmail }}</span>
+              </td>
+              <td>
+                {{ order.provider }}
+                @if (!automated(order)) {
+                  <span class="gw-manual-tag" title="Cổng này không có API đối soát/hoàn tiền">
+                    thủ công
+                  </span>
+                }
+              </td>
+              <td class="ops-table__amount">
+                {{ amount(order) | number }} <span class="ops-currency">{{ order.currency }}</span>
+                <span class="ops-credits">{{ order.creditAmount | number }} Credit</span>
+              </td>
+              <td>
+                <app-status-badge [tone]="tone(order.status)">
+                  {{ label(order.status) }}
+                </app-status-badge>
+                @if (order.refund) {
+                  <span class="ops-table__refund">{{ refundLabel(order) }}</span>
+                }
+              </td>
+              <td>{{ order.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="ops-table__actions">
+                @if (canReconcile() && automated(order)) {
+                  <button
+                    type="button"
+                    class="ops-action"
+                    title="Đối soát với cổng"
+                    [disabled]="busyOrderId() === order.id"
+                    [attr.aria-label]="'Đối soát đơn ' + reference(order)"
+                    (click)="acted.emit({ order, action: 'reconcile' })"
+                  >
+                    <app-icon name="rotate-ccw" [size]="16" />
+                  </button>
+                }
+                @if (canStartRefund(order)) {
+                  <button
+                    type="button"
+                    class="ops-action ops-action--refund"
+                    [title]="
+                      automated(order) ? 'Hoàn tiền qua cổng' : 'Ghi nhận chuyển trả thủ công'
+                    "
+                    [disabled]="busyOrderId() === order.id"
+                    [attr.aria-label]="'Hoàn tiền đơn ' + reference(order)"
+                    (click)="
+                      acted.emit({
+                        order,
+                        action: automated(order) ? 'refund' : 'refund-manual',
+                      })
+                    "
+                  >
+                    <app-icon name="arrow-down" [size]="16" />
+                  </button>
+                }
+                @if (!canReconcile() && !canStartRefund(order)) {
+                  <span class="ops-action-empty">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="ops-table-foot">
+      <span>Trang {{ page() }} / {{ totalPages() }} · {{ totalItems() | number }} giao dịch</span>
+      <app-pagination
+        [page]="page()"
+        [totalPages]="totalPages()"
+        (pageChange)="pageChanged.emit($event)"
+      />
+    </footer>
+  }
+</section>

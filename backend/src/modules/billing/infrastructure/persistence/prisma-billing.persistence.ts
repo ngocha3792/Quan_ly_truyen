@@ -103,6 +103,20 @@ const ADMIN_ORDER_SELECT = {
   },
   user: { select: { email: true, displayName: true } },
   creditPackage: { select: { label: true } },
+  // Lần hoàn tiền gần nhất, để màn đối soát biết đơn đang ở đâu trong quy
+  // trình mà không phải gọi thêm một API cho từng dòng.
+  refunds: {
+    select: {
+      id: true,
+      status: true,
+      reason: true,
+      providerRefundId: true,
+      createdAt: true,
+      completedAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.PaymentOrderSelect;
 
 type AdminOrderRow = Prisma.PaymentOrderGetPayload<{
@@ -896,12 +910,25 @@ function toAdminOrderRecord(row: AdminOrderRow) {
   const config = jsonObject(
     row.providerConfigSnapshot ?? connection?.config ?? null,
   );
+  const [refund] = row.refunds;
   return {
     ...toOrderRecord(row),
     userEmail: row.user.email,
     userDisplayName: row.user.displayName,
     packageLabel: row.creditPackage.label,
     providerKind: connection?.kind,
+    ...(refund
+      ? {
+          refund: {
+            id: refund.id,
+            status: refund.status,
+            reason: refund.reason,
+            providerRefundId: refund.providerRefundId,
+            createdAt: refund.createdAt.toISOString(),
+            completedAt: refund.completedAt?.toISOString() ?? null,
+          },
+        }
+      : {}),
     providerConfigurationReady:
       connection?.kind === 'VNPAY'
         ? !!(

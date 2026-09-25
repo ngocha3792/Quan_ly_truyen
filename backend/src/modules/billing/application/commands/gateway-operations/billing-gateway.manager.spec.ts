@@ -57,6 +57,11 @@ describe('billing gateway manager', () => {
     const calls: string[] = [];
     const persistence = {
       getOrder: jest.fn().mockResolvedValue(order),
+      getRefundContext: jest.fn().mockResolvedValue({
+        orderId: order.orderId,
+        status: 'PAID',
+        providerKind: 'VNPAY',
+      }),
       listRefunds: jest.fn().mockResolvedValue([]),
       reserveRefund: jest.fn().mockImplementation(() => {
         calls.push('reserve');
@@ -259,5 +264,111 @@ describe('billing gateway manager', () => {
       }),
     ).rejects.toThrow();
     expect(provider.refundPayment).not.toHaveBeenCalled();
+  });
+});
+
+describe('billing gateway manager manual refund', () => {
+  const manualSetup = (
+    options: { providerKind?: string | null; supportsRefund?: boolean } = {},
+  ) => {
+    const calls: string[] = [];
+    const persistence = {
+      getOrder: jest.fn().mockResolvedValue(order),
+      getRefundContext: jest.fn().mockResolvedValue({
+        orderId,
+        status: 'PAID',
+        providerKind:
+          options.providerKind === undefined
+            ? 'MANUAL_BANK_TRANSFER'
+            : options.providerKind,
+      }),
+      listRefunds: jest.fn().mockResolvedValue([]),
+      reserveRefund: jest.fn().mockImplementation(() => {
+        calls.push('reserve');
+        return Promise.resolve({ refund, replayed: false });
+      }),
+      finishRefund: jest.fn().mockImplementation(() => {
+        calls.push('finish');
+        return Promise.resolve({ ...refund, status: 'COMPLETED' });
+      }),
+      applyVerifiedRefund: jest.fn().mockResolvedValue(undefined),
+      recordReconciliation: jest.fn().mockResolvedValue(undefined),
+    };
+    const provider = options.supportsRefund
+      ? { refundPayment: jest.fn(), queryPayment: jest.fn() }
+      : {};
+    const manager = new BillingGatewayManager(
+      persistence,
+      { getAdapter: () => provider } as unknown as PaymentProviderRegistryPort,
+      { settleSucceeded: jest.fn() },
+    );
+    return { manager, persistence, provider, calls };
+  };
+
+  const input = {
+    actorId,
+    orderId,
+    reason: 'Người dùng chuyển nhầm, đã chuyển trả lại',
+    transferReference: 'FT24268999111',
+    idempotencyKey: 'manual-refund-key-1',
+  };
+
+  it('đi qua đúng đường giữ rồi chốt Credit như hoàn tiền qua cổng', async () => {
+    const { manager, persistence, calls } = manualSetup();
+
+    await manager.refundManually(input);
+
+    expect(calls).toEqual(['reserve', 'finish']);
+    expect(persistence.reserveRefund).toHaveBeenCalledWith({
+      actorId,
+      orderId,
+      reason: input.reason,
+      idempotencyKey: 'billing-refund:manual-refund-key-1',
+    });
+  });
+
+  it('ghi mã giao dịch chuyển trả làm bằng chứng đối soát', async () => {
+    const { manager, persistence } = manualSetup();
+
+    await manager.refundManually(input);
+
+    expect(persistence.finishRefund).toHaveBeenCalledWith(refund.id, {
+      status: 'SUCCEEDED',
+      responseCode: 'MANUAL_TRANSFER',
+      providerRefundId: 'FT24268999111',
+    });
+  });
+
+  // Nếu không chặn, admin có thể đánh dấu đơn VNPay là đã hoàn trong khi
+  // tiền chưa hề chạy qua cổng.
+  it('từ chối khi cổng có hoàn tiền tự động', async () => {
+    const { manager, persistence } = manualSetup({
+      providerKind: 'VNPAY',
+      supportsRefund: true,
+    });
+
+    await expect(manager.refundManually(input)).rejects.toThrow();
+    expect(persistence.reserveRefund).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['lý do quá ngắn', { reason: 'ngan' }],
+    ['thiếu mã chuyển trả', { transferReference: 'x' }],
+    ['khóa idempotency sai định dạng', { idempotencyKey: 'ngắn' }],
+  ])('từ chối %s trước khi chạm vào ví', async (_label, override) => {
+    const { manager, persistence } = manualSetup();
+
+    await expect(
+      manager.refundManually({ ...input, ...override }),
+    ).rejects.toThrow();
+    expect(persistence.reserveRefund).not.toHaveBeenCalled();
+  });
+
+  it('không chốt lại khi đơn đã có lệnh hoàn tiền trùng khóa', async () => {
+    const { manager, persistence } = manualSetup();
+    persistence.reserveRefund.mockResolvedValue({ refund, replayed: true });
+
+    await expect(manager.refundManually(input)).resolves.toEqual(refund);
+    expect(persistence.finishRefund).not.toHaveBeenCalled();
   });
 });

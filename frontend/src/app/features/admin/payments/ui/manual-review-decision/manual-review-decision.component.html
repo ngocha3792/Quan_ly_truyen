@@ -7,7 +7,7 @@
     dialogTitleId="manual-review-decision-title"
     (closed)="dismiss()"
   >
-    <dl class="mrv-decision-facts">
+    <dl class="ops-decision-facts">
       <div>
         <dt>Mã giao dịch</dt>
         <dd>{{ reference(current) }}</dd>
@@ -27,13 +27,13 @@
     </dl>
 
     @if (confirming()) {
-      <p class="mrv-decision-warning">
+      <p class="ops-decision-warning">
         Thao tác này cộng tiền thật vào ví người gửi và không tự hoàn lại được. Chỉ xác nhận khi đã
         thấy tiền về trong sao kê ngân hàng.
       </p>
     }
 
-    <label class="mrv-field mrv-field--block">
+    <label class="ops-field ops-field--block">
       Lý do (10–{{ maxLength }} ký tự)
       <textarea
         rows="3"
@@ -46,10 +46,10 @@
             : 'Ví dụ: Số tiền chuyển thiếu so với đơn, đã liên hệ người gửi.'
         "
       ></textarea>
-      <span class="mrv-field__hint">{{ trimmed().length }}/{{ maxLength }}</span>
+      <span class="ops-field__hint">{{ trimmed().length }}/{{ maxLength }}</span>
     </label>
 
-    <div class="mrv-decision-actions">
+    <div class="ops-decision-actions">
       <app-button variant="secondary" type="button" [disabled]="busy()" (click)="dismiss()">
         Huỷ
       </app-button>

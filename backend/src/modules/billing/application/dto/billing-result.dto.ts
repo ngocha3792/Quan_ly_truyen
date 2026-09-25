@@ -69,6 +69,15 @@ export interface AdminPaymentOrderResultDto extends PaymentOrderResultDto {
   readonly packageLabel: string;
   readonly walletTransactionId: string | null;
   readonly failureCode: string | null;
+  /** Lần hoàn tiền gần nhất của đơn, nếu có. */
+  readonly refund?: {
+    readonly id: string;
+    readonly status: string;
+    readonly reason: string;
+    readonly providerRefundId: string | null;
+    readonly createdAt: string;
+    readonly completedAt: string | null;
+  };
 }
 
 export interface AdminPaymentOrderPageResultDto {

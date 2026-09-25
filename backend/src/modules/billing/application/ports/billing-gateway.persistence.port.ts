@@ -28,6 +28,17 @@ export interface BillingGatewayOrder extends PaymentGatewayOrderInput {
   readonly status: string;
 }
 
+/**
+ * Thông tin tối thiểu để quyết định có cho hoàn tiền tay hay không. Cố ý
+ * không đi qua `getOrder` vì hàm đó chặn cứng mọi đơn không phải VNPay và
+ * còn giải mã credential — thứ hoàn tiền tay không cần tới.
+ */
+export interface BillingRefundContext {
+  readonly orderId: string;
+  readonly status: string;
+  readonly providerKind: string | null;
+}
+
 export interface ReserveBillingRefundInput {
   readonly actorId: string;
   readonly orderId: string;
@@ -37,6 +48,7 @@ export interface ReserveBillingRefundInput {
 
 export interface BillingGatewayPersistencePort {
   getOrder(orderId: string): Promise<BillingGatewayOrder>;
+  getRefundContext(orderId: string): Promise<BillingRefundContext>;
   listRefunds(orderId: string): Promise<readonly BillingRefundRecord[]>;
   reserveRefund(
     input: ReserveBillingRefundInput,

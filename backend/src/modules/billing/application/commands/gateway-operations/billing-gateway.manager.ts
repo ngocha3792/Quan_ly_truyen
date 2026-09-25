@@ -38,6 +38,62 @@ export class BillingGatewayManager {
     return this.persistence.listRefunds(orderId);
   }
 
+  /**
+   * Hoàn tiền cho cổng không có API hoàn tiền — hiện là chuyển khoản tay:
+   * admin tự chuyển trả rồi ghi lại mã giao dịch chuyển đi làm bằng chứng.
+   *
+   * Dùng đúng `reserveRefund` + `finishRefund` mà VNPay đang dùng, chỉ thay
+   * lời gọi nhà cung cấp bằng xác nhận của admin. Nhờ vậy phần động tới ví
+   * (khoá ví, ghi sổ kép, idempotency, audit log, chặn khi người dùng đã tiêu
+   * hết Credit) không phát sinh một dòng logic tiền bạc nào mới.
+   */
+  async refundManually(input: {
+    readonly actorId: string | undefined;
+    readonly orderId: string;
+    readonly reason: string;
+    readonly transferReference: string;
+    readonly idempotencyKey: string | undefined;
+  }) {
+    const actorId = validateActorOrder(input.actorId, input.orderId);
+    const reason = input.reason.trim();
+    const key = input.idempotencyKey?.trim() ?? '';
+    const transferReference = input.transferReference.trim();
+    if (
+      reason.length < 5 ||
+      reason.length > 500 ||
+      transferReference.length < 3 ||
+      transferReference.length > 160 ||
+      !/^[a-zA-Z0-9_.:-]{8,160}$/u.test(key)
+    ) {
+      throw new InvalidBillingInputException(
+        'Cần lý do, mã giao dịch chuyển trả và khóa idempotency hợp lệ',
+      );
+    }
+    const context = await this.persistence.getRefundContext(input.orderId);
+    // Chặn dùng hoàn tiền tay để lách cổng có hoàn tiền tự động: nếu không,
+    // admin có thể đánh dấu đơn VNPay là đã hoàn mà tiền chưa hề chạy.
+    if (
+      context.providerKind &&
+      this.providers.getAdapter(context.providerKind as never).refundPayment
+    ) {
+      throw new InvalidBillingInputException(
+        'Cổng này hoàn tiền tự động, hãy dùng hoàn tiền qua cổng thay vì ghi nhận thủ công',
+      );
+    }
+    const reserved = await this.persistence.reserveRefund({
+      actorId,
+      orderId: input.orderId,
+      reason,
+      idempotencyKey: `billing-refund:${key}`,
+    });
+    if (reserved.replayed) return reserved.refund;
+    return this.persistence.finishRefund(reserved.refund.id, {
+      status: 'SUCCEEDED',
+      responseCode: 'MANUAL_TRANSFER',
+      providerRefundId: transferReference,
+    });
+  }
+
   async refund(
     input: Omit<ReserveBillingRefundInput, 'actorId' | 'idempotencyKey'> & {
       actorId: string | undefined;

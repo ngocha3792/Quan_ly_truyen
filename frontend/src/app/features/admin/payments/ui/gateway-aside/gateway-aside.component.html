@@ -1,0 +1,39 @@
+<aside class="ops-aside">
+  <section class="ops-panel ops-panel--note">
+    <span class="ops-panel__icon"><app-icon name="info" [size]="18" /></span>
+    <div>
+      <h2>Cổng nào làm được gì</h2>
+      <p>
+        Chỉ <strong>VNPay</strong> có API truy vấn và hoàn tiền, nên chỉ đơn VNPay mới đối soát và
+        hoàn tiền tự động được. Đơn chuyển khoản thủ công phải tự chuyển trả rồi ghi nhận lại mã
+        giao dịch — hệ thống thu lại Credit theo đúng đường đó.
+      </p>
+    </div>
+  </section>
+
+  <section class="ops-panel">
+    <header class="ops-panel__head">
+      <span class="ops-panel__icon"><app-icon name="history" [size]="18" /></span>
+      <div class="ops-panel__title"><h2>Quy trình xử lý</h2></div>
+    </header>
+    <ol class="ops-steps">
+      @for (step of steps; track step.title) {
+        <li>
+          <strong>{{ step.title }}</strong>
+          <span>{{ step.detail }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section class="ops-panel ops-panel--warning">
+    <span class="ops-panel__icon"><app-icon name="alert-triangle" [size]="18" /></span>
+    <div>
+      <h2>Lưu ý</h2>
+      <p>
+        Hoàn tiền thu lại Credit khỏi ví người dùng. Nếu họ đã tiêu hết, lệnh sẽ bị từ chối vì số dư
+        không đủ chứ hệ thống không để ví âm.
+      </p>
+    </div>
+  </section>
+</aside>

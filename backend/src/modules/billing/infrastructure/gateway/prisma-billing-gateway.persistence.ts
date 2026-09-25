@@ -39,6 +39,10 @@ export class PrismaBillingGatewayPersistence implements BillingGatewayPersistenc
     return this.reader.getOrder(orderId);
   }
 
+  getRefundContext(orderId: string) {
+    return this.reader.getRefundContext(orderId);
+  }
+
   listRefunds(orderId: string) {
     return this.reader.listRefunds(orderId);
   }

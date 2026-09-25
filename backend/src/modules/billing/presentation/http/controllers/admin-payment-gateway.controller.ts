@@ -15,7 +15,10 @@ import { PermissionCode } from '@/common/enums';
 
 import { BillingGatewayManager } from '../../../application/commands/gateway-operations/billing-gateway.manager';
 import { BillingOperationsFeatureGuard } from '../guards';
-import { RefundPaymentOrderRequest } from '../requests/refund-payment-order.request';
+import {
+  ManualRefundPaymentOrderRequest,
+  RefundPaymentOrderRequest,
+} from '../requests/refund-payment-order.request';
 
 @Controller('admin/billing/payment-orders')
 @UseGuards(BillingOperationsFeatureGuard)
@@ -39,6 +42,24 @@ export class AdminPaymentGatewayController {
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
   ) {
     return this.manager.listRefunds(actorId, orderId);
+  }
+
+  @Post(':orderId/refunds/manual')
+  @HttpCode(200)
+  @RequirePermissions(PermissionCode.PAYMENT_REFUND_ADMIN)
+  refundManually(
+    @CurrentUserId() actorId: string | undefined,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+    @Headers('x-idempotency-key') idempotencyKey: string | undefined,
+    @Body() input: ManualRefundPaymentOrderRequest,
+  ) {
+    return this.manager.refundManually({
+      actorId,
+      orderId,
+      idempotencyKey,
+      reason: input.reason,
+      transferReference: input.transferReference,
+    });
   }
 
   @Post(':orderId/refunds')

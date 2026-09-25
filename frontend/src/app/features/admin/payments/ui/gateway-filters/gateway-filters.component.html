@@ -1,0 +1,57 @@
+<section class="ops-panel">
+  <header class="ops-panel__head">
+    <span class="ops-panel__icon"><app-icon name="filter" [size]="18" /></span>
+    <div class="ops-panel__title">
+      <h2>Bộ lọc &amp; tìm kiếm</h2>
+      <p>Tìm theo email, mã đơn hoặc mã giao dịch của cổng.</p>
+    </div>
+  </header>
+
+  <form (ngSubmit)="submit()">
+    <div class="ops-filters">
+      <label class="ops-field">
+        Tìm kiếm
+        <input
+          type="search"
+          placeholder="Email, mã đơn hoặc mã giao dịch…"
+          [value]="form().search"
+          (input)="patch('search', readValue($event))"
+        />
+      </label>
+
+      <label class="ops-field">
+        Trạng thái
+        <select [value]="form().status" (change)="patch('status', readValue($event))">
+          @for (status of statuses; track status.value) {
+            <option [value]="status.value">{{ status.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="ops-field">
+        Nhà cung cấp
+        <input
+          type="text"
+          placeholder="vd: vnpay"
+          [value]="form().provider"
+          (input)="patch('provider', readValue($event))"
+        />
+      </label>
+
+      <label class="ops-field">
+        Từ ngày
+        <input type="date" [value]="form().from" (change)="patch('from', readValue($event))" />
+      </label>
+
+      <label class="ops-field">
+        Đến ngày
+        <input type="date" [value]="form().to" (change)="patch('to', readValue($event))" />
+      </label>
+    </div>
+
+    <div class="ops-filter-actions">
+      <app-button variant="primary" type="submit" [loading]="busy()">Lọc</app-button>
+      <app-button variant="secondary" type="button" (click)="clear()">Xóa lọc</app-button>
+    </div>
+  </form>
+</section>
