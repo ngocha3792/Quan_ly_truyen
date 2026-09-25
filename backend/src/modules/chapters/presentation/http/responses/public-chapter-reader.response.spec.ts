@@ -141,4 +141,51 @@ describe('toPublicChapterReaderResponse', () => {
 
     expect(block.type).toBe('code');
   });
+
+  /*
+   * Chương truyện tranh không có một chữ nào: nội dung của nó là các trang ảnh.
+   * Tầng dữ liệu dựng đủ trang kèm URL đã ký và giao diện biết render chúng,
+   * nhưng response bỏ rơi chúng ở giữa nên người đọc thấy trang trắng.
+   */
+  it('passes manga pages through to the reader', () => {
+    const page = {
+      mediaAssetId: 'media-1',
+      sortOrder: 0,
+      altText: 'Trang 1',
+      caption: null,
+      width: 906,
+      height: 1278,
+      slices: [
+        {
+          id: 'media-1:full',
+          sliceIndex: 0,
+          width: 906,
+          height: 1278,
+          offsetY: 0,
+          aspectRatio: 906 / 1278,
+          urls: {
+            avif: 'https://cdn.test/a.avif',
+            webp: 'https://cdn.test/a.webp',
+            jpeg: 'https://cdn.test/a.jpg',
+          },
+        },
+      ],
+    };
+
+    const dto = readerDto([]);
+    const withPages = {
+      ...dto,
+      chapter: { ...dto.chapter, media: [page] },
+    } as unknown as PublicChapterReaderDto;
+
+    const chapter = toPublicChapterReaderResponse(withPages).chapter;
+
+    expect('media' in chapter ? chapter.media : undefined).toEqual([page]);
+  });
+
+  it('leaves the field out for a chapter that has no pages', () => {
+    const chapter = toPublicChapterReaderResponse(readerDto([])).chapter;
+
+    expect('media' in chapter).toBe(false);
+  });
 });
