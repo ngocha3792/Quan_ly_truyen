@@ -4,9 +4,7 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
 
 import {
-  ChapterDraftOnlyMutationException,
   ChapterNotFoundException,
-  ChapterStoryPendingReviewException,
   ChapterVersionNotFoundException,
   ChapterVersionConflictException,
 } from '../../../domain';
@@ -48,10 +46,6 @@ export class RestoreAuthorChapterVersionCommandHandler {
         throw new ChapterVersionConflictException(result.currentVersion);
       case 'restored':
         return ChapterResultMapper.toDto(result.chapter);
-      case 'story_pending_review':
-        throw new ChapterStoryPendingReviewException();
-      case 'not_draft':
-        throw new ChapterDraftOnlyMutationException();
       case 'version_not_found':
         throw new ChapterVersionNotFoundException(
           command.chapterId,

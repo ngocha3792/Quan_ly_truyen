@@ -5,8 +5,8 @@ import { isUuidV4 } from '@/common/utils';
 
 import {
   ChapterContentValueObject,
-  ChapterDraftOnlyMutationException,
-  ChapterStoryPendingReviewException,
+  ChapterAutosaveNotAllowedException,
+  ChapterLiveContentRequiredException,
   ChapterNotFoundException,
   ChapterVersionConflictException,
   ChapterTitleValueObject,
@@ -60,12 +60,12 @@ export class UpdateAuthorChapterCommandHandler {
     switch (result.status) {
       case 'updated':
         return ChapterResultMapper.toDto(result.chapter);
-      case 'story_pending_review':
-        throw new ChapterStoryPendingReviewException();
+      case 'autosave_not_allowed':
+        throw new ChapterAutosaveNotAllowedException();
       case 'version_conflict':
         throw new ChapterVersionConflictException(result.currentVersion);
-      case 'not_draft':
-        throw new ChapterDraftOnlyMutationException();
+      case 'empty_content':
+        throw new ChapterLiveContentRequiredException();
       case 'not_found':
       default:
         throw new ChapterNotFoundException(command.chapterId);

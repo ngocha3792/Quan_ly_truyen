@@ -7,7 +7,7 @@ import {
   InvalidStoryCategoriesException,
   InvalidStoryCoverException,
   InvalidStoryTagsException,
-  StoryDraftOnlyMutationException,
+  StoryFormatLockedException,
   StoryNotFoundException,
   StorySynopsisValueObject,
   StoryTitleValueObject,
@@ -57,8 +57,8 @@ export class UpdateAuthorStoryCommandHandler {
     switch (result.status) {
       case 'updated':
         return StoryResultMapper.toDto(result.story);
-      case 'not_draft':
-        throw new StoryDraftOnlyMutationException();
+      case 'format_locked':
+        throw new StoryFormatLockedException();
       case 'invalid_categories':
         throw new InvalidStoryCategoriesException(result.invalidIds);
       case 'invalid_tags':

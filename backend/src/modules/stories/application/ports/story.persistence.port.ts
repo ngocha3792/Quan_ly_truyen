@@ -170,7 +170,8 @@ export type UpdateAuthorStoryResult =
       readonly status: 'not_found';
     }
   | {
-      readonly status: 'not_draft';
+      /** Truyện đã xuất bản không đổi được NOVEL <-> MANGA. */
+      readonly status: 'format_locked';
     }
   | {
       readonly status: 'invalid_categories';

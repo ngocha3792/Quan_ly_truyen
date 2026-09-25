@@ -58,7 +58,7 @@ export class ChapterDraftOnlyMutationException extends ResourceConflictException
     super({
       code: 'CHAPTER_DRAFT_ONLY_MUTATION',
       resource: 'chương',
-      message: 'Chỉ chương ở trạng thái bản nháp mới có thể chỉnh sửa hoặc xóa',
+      message: 'Chỉ chương ở trạng thái bản nháp mới có thể xóa',
     });
   }
 }
@@ -118,6 +118,32 @@ export class ChapterEmptyContentException extends InvalidInputException {
     super({
       code: 'CHAPTER_EMPTY_CONTENT',
       message: 'Chương phải có nội dung trước khi xuất bản',
+      details: { field: 'content' },
+    });
+  }
+}
+
+/**
+ * Autosave 2.5 giây một lần là để cứu bản nháp đang gõ. Chương đã xuất bản
+ * hiện thẳng cho độc giả nên chỉ nhận cái bấm Lưu của tác giả.
+ */
+export class ChapterAutosaveNotAllowedException extends ResourceConflictException {
+  constructor() {
+    super({
+      code: 'CHAPTER_AUTOSAVE_NOT_ALLOWED',
+      resource: 'chương',
+      message:
+        'Chương đã lên bài không tự lưu nháp; hãy bấm Lưu khi sửa xong vì độc giả thấy ngay',
+    });
+  }
+}
+
+export class ChapterLiveContentRequiredException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'CHAPTER_LIVE_CONTENT_REQUIRED',
+      message:
+        'Chương đang hiển thị cho độc giả không được để trống; hãy giữ lại nội dung hoặc gỡ chương xuống trước',
       details: { field: 'content' },
     });
   }

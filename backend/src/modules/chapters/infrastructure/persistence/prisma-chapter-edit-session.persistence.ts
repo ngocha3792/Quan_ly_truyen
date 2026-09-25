@@ -134,10 +134,10 @@ export class PrismaChapterEditSessionPersistence implements ChapterEditSessionPo
     chapterId: string,
   ) {
     const story = await lockAndFindEditableStory(tx, storyId, userId);
-    if (!story || story.status === 'PENDING_REVIEW')
-      throw new ChapterNotFoundException();
+    if (!story) throw new ChapterNotFoundException();
+    // Phiên soạn thảo mở cho chương ở mọi trạng thái, đúng như quyền sửa.
     const chapter = await tx.chapter.findFirst({
-      where: { id: chapterId, storyId, deletedAt: null, status: 'DRAFT' },
+      where: { id: chapterId, storyId, deletedAt: null },
       select: { id: true },
     });
     if (!chapter) throw new ChapterNotFoundException();

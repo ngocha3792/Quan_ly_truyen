@@ -1,7 +1,8 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
 import {
-  ChapterDraftOnlyMutationException,
+  ChapterAutosaveNotAllowedException,
+  ChapterLiveContentRequiredException,
   ChapterNotFoundException,
   ChapterVersionConflictException,
 } from '../../../domain';
@@ -105,14 +106,28 @@ describe('UpdateAuthorChapterCommandHandler', () => {
     );
   });
 
-  it('không cho sửa chapter không còn là draft', async () => {
+  /*
+   * Sửa mở ở mọi giai đoạn, nên hai lời từ chối còn lại đều là để bảo vệ
+   * độc giả chứ không phải để bảo vệ quy trình duyệt.
+   */
+  it('nói rõ khi autosave chạm vào chương không còn là bản nháp', async () => {
     persistence.updateDraft.mockResolvedValue({
-      status: 'not_draft',
+      status: 'autosave_not_allowed',
     });
 
     await expect(
       handler.execute(createCommand(USER_ID)),
-    ).rejects.toBeInstanceOf(ChapterDraftOnlyMutationException);
+    ).rejects.toBeInstanceOf(ChapterAutosaveNotAllowedException);
+  });
+
+  it('chặn việc bỏ trắng một chương độc giả đang đọc', async () => {
+    persistence.updateDraft.mockResolvedValue({
+      status: 'empty_content',
+    });
+
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(ChapterLiveContentRequiredException);
   });
 
   it('passes the expected version and autosave type through to the atomic writer', async () => {

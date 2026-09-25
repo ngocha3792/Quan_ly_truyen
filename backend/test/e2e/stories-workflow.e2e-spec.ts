@@ -285,11 +285,25 @@ describe('Stories author-to-public HTTP workflow E2E', () => {
       chapters: [expect.objectContaining({ id: chapter.id })],
     });
 
-    await request(httpServer())
+    /*
+     * Truyện đang chờ duyệt vẫn sửa được: tác giả không phải huỷ yêu cầu duyệt
+     * chỉ để chữa một câu tóm tắt. Sửa tóm tắt chứ không đổi tiêu đề ở đây vì
+     * truyện chưa xuất bản thì slug chạy theo tiêu đề, mà phần sau của luồng
+     * này còn đọc trang công khai bằng slug lúc tạo.
+     */
+    const editedWhilePending = await request(httpServer())
       .patch(`/api/v1/author/stories/${storyId}`)
       .set('Authorization', `Bearer ${authorToken}`)
-      .send({ title: 'Pending review must be immutable' })
-      .expect(409);
+      .send({ synopsis: 'Sửa tóm tắt trong lúc chờ duyệt.' })
+      .expect(200);
+    expect(
+      unwrap<{ synopsis: string; slug: string }>(
+        editedWhilePending.body as unknown,
+      ),
+    ).toMatchObject({
+      synopsis: 'Sửa tóm tắt trong lúc chờ duyệt.',
+      slug: createdStory.slug,
+    });
 
     await request(httpServer())
       .post(`/api/v1/admin/story-submissions/${submissionId}/approve`)

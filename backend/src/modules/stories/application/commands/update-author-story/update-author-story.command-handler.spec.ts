@@ -4,7 +4,7 @@ import {
   InvalidStoryCategoriesException,
   InvalidStoryCoverException,
   InvalidStoryTagsException,
-  StoryDraftOnlyMutationException,
+  StoryFormatLockedException,
   StoryNotFoundException,
 } from '../../../domain';
 
@@ -117,14 +117,18 @@ describe('UpdateAuthorStoryCommandHandler', () => {
     );
   });
 
-  it('không cho sửa story không còn ở trạng thái draft', async () => {
+  /*
+   * Sửa truyện mở ở mọi giai đoạn. Chỗ duy nhất còn khoá là định dạng của
+   * truyện đã xuất bản: lật NOVEL sang MANGA là mọi chương cũ hoá trang trắng.
+   */
+  it('không cho đổi định dạng của truyện đã xuất bản', async () => {
     persistence.updateDraft.mockResolvedValue({
-      status: 'not_draft',
+      status: 'format_locked',
     });
 
     await expect(
       handler.execute(createCommand(USER_ID)),
-    ).rejects.toBeInstanceOf(StoryDraftOnlyMutationException);
+    ).rejects.toBeInstanceOf(StoryFormatLockedException);
   });
 
   it('map category không hợp lệ thành domain exception', async () => {

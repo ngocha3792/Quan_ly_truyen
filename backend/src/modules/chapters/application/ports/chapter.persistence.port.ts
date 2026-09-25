@@ -127,9 +127,6 @@ export type CreateAuthorChapterResult =
       readonly status: 'story_not_found';
     }
   | {
-      readonly status: 'story_pending_review';
-    }
-  | {
       /** `afterChapterId` không thuộc truyện này, hoặc đã bị xoá. */
       readonly status: 'anchor_not_found';
     }
@@ -172,10 +169,12 @@ export type UpdateAuthorChapterResult =
       readonly status: 'not_found';
     }
   | {
-      readonly status: 'not_draft';
+      /** Autosave chỉ dành cho bản nháp; xem `ChapterEditPolicy`. */
+      readonly status: 'autosave_not_allowed';
     }
   | {
-      readonly status: 'story_pending_review';
+      /** Sửa kiểu này sẽ để lại trang trắng cho độc giả đang đọc. */
+      readonly status: 'empty_content';
     }
   | {
       readonly status: 'version_conflict';
@@ -215,9 +214,7 @@ export type RestoreAuthorChapterVersionResult =
       readonly chapter: ChapterRecord;
     }
   | { readonly status: 'not_found' }
-  | { readonly status: 'version_not_found' }
-  | { readonly status: 'not_draft' }
-  | { readonly status: 'story_pending_review' };
+  | { readonly status: 'version_not_found' };
 
 export interface DeleteAuthorChapterInput {
   readonly userId: string;
@@ -347,7 +344,6 @@ export type AttachChapterMediaResult =
       readonly media: readonly ChapterMediaRecord[];
     }
   | { readonly status: 'not_found' }
-  | { readonly status: 'not_draft' }
   | {
       readonly status: 'invalid_media';
       readonly invalidIds: readonly string[];
@@ -367,7 +363,6 @@ export type ReorderChapterMediaResult =
       readonly media: readonly ChapterMediaRecord[];
     }
   | { readonly status: 'not_found' }
-  | { readonly status: 'not_draft' }
   | { readonly status: 'mismatch' };
 
 export interface RemoveChapterMediaInput {
@@ -384,7 +379,10 @@ export type RemoveChapterMediaResult =
       readonly media: readonly ChapterMediaRecord[];
     }
   | { readonly status: 'not_found' }
-  | { readonly status: 'not_draft' };
+  | {
+      /** Gỡ nốt trang này thì chương đang hiện ra thành trang trắng. */
+      readonly status: 'empty_content';
+    };
 
 export interface ChapterPersistencePort {
   listOwnedByStory(
