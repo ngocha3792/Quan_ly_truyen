@@ -985,8 +985,52 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     return user;
   }
 
+  /**
+   * Chương truyện tranh không có một chữ nào: nội dung của nó là các trang ảnh
+   * trong `chapter_media`. Cổng gửi duyệt chỉ đếm `content` thì truyện tranh
+   * lúc nào cũng bị báo thiếu chương và không bao giờ gửi duyệt được.
+   */
+  it('gửi duyệt được truyện tranh có chương toàn trang ảnh', async () => {
+    const author = await createAuthor('manga-submit');
+    const ready = await createReviewReadyDraft(author.id, {
+      chapterContent: '',
+      pages: 3,
+    });
+
+    const submitted = await stories.submitForReview({
+      userId: author.id,
+      storyId: ready.storyId,
+      authorNote: 'Truyện tranh sẵn sàng',
+      submittedAt: new Date(),
+      audit: audit('manga-submit'),
+    });
+
+    expect(submitted.status).toBe('submitted');
+  });
+
+  it('vẫn chặn truyện mà chương không có cả chữ lẫn trang ảnh', async () => {
+    const author = await createAuthor('empty-submit');
+    const ready = await createReviewReadyDraft(author.id, {
+      chapterContent: '   ',
+    });
+
+    const submitted = await stories.submitForReview({
+      userId: author.id,
+      storyId: ready.storyId,
+      authorNote: 'Chưa có gì',
+      submittedAt: new Date(),
+      audit: audit('empty-submit'),
+    });
+
+    expect(submitted).toMatchObject({
+      status: 'not_ready',
+      missing: ['chapter'],
+    });
+  });
+
   async function createReviewReadyDraft(
     userId: string,
+    options: { readonly chapterContent?: string; readonly pages?: number } = {},
   ): Promise<{ storyId: string }> {
     const story = await createStory(userId, StoryStatus.DRAFT, {
       synopsis: 'Đủ dữ liệu để gửi duyệt.',
@@ -1022,9 +1066,31 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       where: { id: story.id },
       data: { coverMediaId: cover.id },
     });
-    await createChapter(userId, story.id, 1, {
-      content: 'Nội dung hợp lệ.',
+    const chapter = await createChapter(userId, story.id, 1, {
+      content: options.chapterContent ?? 'Nội dung hợp lệ.',
     });
+
+    for (let index = 0; index < (options.pages ?? 0); index += 1) {
+      const page = await prisma.mediaAsset.create({
+        data: {
+          uploaderId: userId,
+          purpose: MediaPurpose.CHAPTER_IMAGE,
+          status: MediaStatus.READY,
+          resourceType: MediaResourceType.IMAGE,
+          storageProvider: 'integration-test',
+          publicId: unique(`page-${index}`),
+          secureUrl: 'https://example.test/page.webp',
+          readyAt: new Date(),
+        },
+      });
+      await prisma.chapterMedia.create({
+        data: {
+          chapterId: chapter.id,
+          mediaAssetId: page.id,
+          sortOrder: index,
+        },
+      });
+    }
 
     return { storyId: story.id };
   }
