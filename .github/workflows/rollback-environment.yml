@@ -127,6 +127,8 @@ jobs:
           printf '%s' "${GHCR_TOKEN}" | ssh \
             -i "${HOME}/.ssh/deploy_key" \
             -o BatchMode=yes \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
             -p "${port}" \
@@ -171,6 +173,8 @@ jobs:
           ssh \
             -i "${HOME}/.ssh/deploy_key" \
             -o BatchMode=yes \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
             -p "${port}" \

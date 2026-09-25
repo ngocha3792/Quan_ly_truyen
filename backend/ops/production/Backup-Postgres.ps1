@@ -128,33 +128,69 @@ Write-Host `
   'Creating local PostgreSQL backup...' `
   -ForegroundColor Cyan
 
-Invoke-Compose `
-  --profile maintenance `
-  run `
-  --rm `
-  backup-postgres
+$BackupOutput =
+  Invoke-Compose `
+    --profile maintenance `
+    run `
+    --rm `
+    backup-postgres
+
+$BackupOutput |
+  ForEach-Object { Write-Host $_ }
 
 
 # ------------------------------------------------------------
-# 2. Locate newly-created dump
+# 2. Identify the dump THIS run created
+#
+# Deliberately not "the newest .dump in the directory". A production
+# deploy runs this same script (Invoke-Release.ps1 calls it before the
+# readiness gate), so a scheduled backup and a deploy can overlap. With
+# a directory scan each run picks up whichever dump finished last —
+# including the other run's, whose .sha256 is not written yet — and
+# fails with a checksum that was never missing.
+#
+# The container prints the path it wrote as its last line. That is the
+# only handle that stays correct while another run is in flight.
 # ------------------------------------------------------------
 
-$LatestDump =
-  Get-ChildItem `
-    -LiteralPath $BackupDirectory `
-    -Filter '*.dump' `
-    -File |
-  Sort-Object `
-    LastWriteTimeUtc `
-    -Descending |
-  Select-Object -First 1
+$DumpName =
+  $BackupOutput |
+  ForEach-Object {
+    if ($_ -match 'Backup completed:\s*/backups/(?<name>[^/\s]+\.dump)\s*$') {
+      $Matches['name']
+    }
+  } |
+  Select-Object -Last 1
 
-if (-not $LatestDump) {
-  throw 'Backup service completed but no .dump file was found.'
+if (-not $DumpName) {
+  throw 'Backup service completed but did not report the dump it wrote.'
 }
 
+$DumpPath =
+  Join-Path `
+    $BackupDirectory `
+    $DumpName
+
+if (
+  -not (
+    Test-Path `
+      -LiteralPath $DumpPath `
+      -PathType Leaf
+  )
+) {
+  throw (
+    "Backup service reported {0} but the file is missing: {1}" -f
+    $DumpName,
+    $DumpPath
+  )
+}
+
+$DumpFile =
+  Get-Item `
+    -LiteralPath $DumpPath
+
 $ChecksumFile =
-  "$($LatestDump.FullName).sha256"
+  "$($DumpFile.FullName).sha256"
 
 if (
   -not (
@@ -172,13 +208,13 @@ if (
 $Verification = & (
   Join-Path $PSScriptRoot 'Test-PostgresBackupArtifact.ps1'
 ) `
-  -BackupFile $LatestDump.FullName `
+  -BackupFile $DumpFile.FullName `
   -EnvironmentFile $EnvironmentFilePath `
   -MaxAgeHours 2
 
 Write-Host (
   "Local backup verified: {0} ({1} bytes)" -f
-  $LatestDump.Name,
+  $DumpFile.Name,
   $Verification.SizeBytes
 ) -ForegroundColor Green
 
@@ -196,7 +232,7 @@ function Write-BackupStatus {
   $Status = [ordered]@{
     version         = 1
     completedAt     = [DateTime]::UtcNow.ToString('o')
-    dumpFile        = $LatestDump.Name
+    dumpFile        = $DumpFile.Name
     sizeBytes       = [long]$Verification.SizeBytes
     sha256          = [string]$Verification.Sha256
     offsiteVerified = $OffsiteVerified
@@ -303,7 +339,7 @@ if ($LASTEXITCODE -ne 0) {
 # ------------------------------------------------------------
 
 $DumpContainerPath =
-  "/backups/$($LatestDump.Name)"
+  "/backups/$($DumpFile.Name)"
 
 $ChecksumContainerPath =
   "$DumpContainerPath.sha256"
