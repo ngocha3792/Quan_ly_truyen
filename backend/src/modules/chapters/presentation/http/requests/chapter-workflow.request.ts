@@ -9,7 +9,15 @@ import {
   Max,
   MaxLength,
   Min,
+  IsUUID,
 } from 'class-validator';
+
+export class ApproveAllChaptersRequest {
+  /** Bỏ trống là duyệt toàn hệ thống, không giới hạn trong một truyện. */
+  @IsOptional()
+  @IsUUID('4')
+  storyId?: string;
+}
 
 export class ChapterWorkflowRequest {
   @IsInt()
