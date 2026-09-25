@@ -61,6 +61,8 @@ export interface AuthorManagedChapterSummary {
   readonly slug: string;
   readonly status: AuthorChapterStatus;
   readonly wordCount: number;
+  /** Số trang ảnh. Chương truyện tranh có wordCount 0 nhưng pageCount > 0. */
+  readonly pageCount: number;
   readonly version: number;
   readonly scheduledAt: string | null;
   readonly publishedAt: string | null;

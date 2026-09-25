@@ -6,6 +6,8 @@ export interface ChapterSummaryResultDto {
   readonly slug: string;
   readonly status: string;
   readonly wordCount: number;
+  /** Số trang ảnh; chương truyện tranh có wordCount 0 nhưng pageCount > 0. */
+  readonly pageCount: number;
   readonly version: number;
   readonly scheduledAt: Date | null;
   readonly publishedAt: Date | null;

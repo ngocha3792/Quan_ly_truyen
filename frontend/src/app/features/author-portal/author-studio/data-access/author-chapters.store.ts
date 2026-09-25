@@ -143,13 +143,16 @@ export class AuthorChaptersStore {
   private replaceChapter(changed: AuthorManagedChapter): void {
     this.chaptersState.update((chapters: readonly AuthorManagedChapterSummary[]) =>
       chapters.map((chapter: AuthorManagedChapterSummary) =>
-        chapter.id === changed.id ? toChapterSummary(changed) : chapter,
+        chapter.id === changed.id ? toChapterSummary(changed, chapter) : chapter,
       ),
     );
   }
 }
 
-function toChapterSummary(chapter: AuthorManagedChapter): AuthorManagedChapterSummary {
+function toChapterSummary(
+  chapter: AuthorManagedChapter,
+  previous: AuthorManagedChapterSummary,
+): AuthorManagedChapterSummary {
   return {
     id: chapter.id,
     storyId: chapter.storyId,
@@ -158,6 +161,13 @@ function toChapterSummary(chapter: AuthorManagedChapter): AuthorManagedChapterSu
     slug: chapter.slug,
     status: chapter.status,
     wordCount: chapter.wordCount,
+    /*
+     * Phản hồi chi tiết chỉ kèm `media` ở vài endpoint, còn xuất bản hay hẹn
+     * giờ thì không. Cả hai thao tác đều không đổi số trang, nên giữ lại của
+     * dòng cũ thay vì đặt về 0 — đặt 0 là nút xuất bản biến mất ngay sau khi
+     * bấm, đúng cái lỗi bản vá này sửa.
+     */
+    pageCount: chapter.media?.length ?? previous.pageCount,
     version: chapter.version,
     scheduledAt: chapter.scheduledAt,
     publishedAt: chapter.publishedAt,

@@ -168,3 +168,49 @@ describe('Publish gates accept a chapter whose content is pages, not text', () =
     expect(tx.chapterMedia.count).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Giao diện quyết định hiện nút xuất bản dựa trên dòng danh sách chương. Dòng
+ * đó chỉ có `wordCount`, luôn bằng 0 với truyện tranh, nên phải kèm số trang.
+ */
+describe('Chapter list rows carry the page count', () => {
+  it('reports how many pages each chapter has', async () => {
+    const rows = [
+      { wordCount: 1200, media: 0 },
+      { wordCount: 0, media: 18 },
+    ].map((row, index) => ({
+      id: `chapter-${index}`,
+      storyId,
+      number: new Prisma.Decimal(index + 1),
+      title: `Chương ${index + 1}`,
+      slug: `chuong-${index + 1}`,
+      status: 'APPROVED',
+      wordCount: row.wordCount,
+      version: 1,
+      scheduledAt: null,
+      publishedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      _count: { media: row.media },
+    }));
+
+    const prisma = {
+      story: { findFirst: jest.fn().mockResolvedValue({ id: storyId }) },
+      chapter: { findMany: jest.fn().mockResolvedValue(rows) },
+    };
+
+    const persistence = new PrismaChapterPersistence(
+      prisma as never,
+      {} as never,
+      {} as never,
+      { build: () => null } as never,
+    );
+
+    const summaries = await persistence.listOwnedByStory(userId, storyId);
+
+    expect(summaries?.map((row) => [row.wordCount, row.pageCount])).toEqual([
+      [1200, 0],
+      [0, 18],
+    ]);
+  });
+});

@@ -113,6 +113,9 @@ const CHAPTER_SUMMARY_SELECT = {
   publishedAt: true,
   createdAt: true,
   updatedAt: true,
+  // Chương truyện tranh có wordCount 0; số trang ảnh là thứ duy nhất cho biết
+  // nó có nội dung hay không.
+  _count: { select: { media: true } },
 } satisfies Prisma.ChapterSelect;
 
 type ChapterSummaryRow = Prisma.ChapterGetPayload<{
@@ -1949,6 +1952,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       slug: chapter.slug,
       status: chapter.status,
       wordCount: chapter.wordCount,
+      pageCount: chapter._count.media,
       version: chapter.version,
       scheduledAt: chapter.scheduledAt,
       publishedAt: chapter.publishedAt,
