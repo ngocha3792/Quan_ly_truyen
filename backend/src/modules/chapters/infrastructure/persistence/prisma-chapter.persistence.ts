@@ -1032,7 +1032,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         if (!ChapterWorkflowPolicy.canPublish(current.status)) {
           return { status: 'not_draft' };
         }
-        if (!current.content.trim()) {
+        if (!(await chapterHasContent(tx, current))) {
           return { status: 'empty_content' };
         }
 
@@ -1139,7 +1139,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         if (!ChapterWorkflowPolicy.canPublish(current.status)) {
           return { status: 'not_schedulable' };
         }
-        if (!current.content.trim()) return { status: 'empty_content' };
+        if (!(await chapterHasContent(tx, current)))
+          return { status: 'empty_content' };
 
         const updated = await tx.chapter.update({
           where: { id: current.id },
@@ -1338,7 +1339,8 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           }),
         ]);
 
-        if (!story || !current || !current.content.trim()) return false;
+        if (!story || !current) return false;
+        if (!(await chapterHasContent(tx, current))) return false;
 
         const updated = await tx.chapter.update({
           where: { id: current.id },
@@ -2026,6 +2028,24 @@ async function lockOwnedStoryRow(
   `);
 
   return rows.length === 1;
+}
+
+/**
+ * Chương truyện tranh không có một chữ nào: nội dung của nó là các trang ảnh
+ * trong `chapter_media`. Mọi cổng chặn "chương rỗng" phải hỏi cả hai nguồn,
+ * nếu không thì truyện tranh không bao giờ xuất bản được.
+ */
+async function chapterHasContent(
+  tx: Prisma.TransactionClient,
+  chapter: { readonly id: string; readonly content: string },
+): Promise<boolean> {
+  if (chapter.content.trim()) return true;
+
+  const pages = await tx.chapterMedia.count({
+    where: { chapterId: chapter.id },
+  });
+
+  return pages > 0;
 }
 
 async function lockChapterRowForStory(

@@ -1433,11 +1433,20 @@ async function getStoryPublicationMissing(
   });
   if (!activeCategory) missing.push('category');
 
+  // Chương truyện tranh không có chữ nào: nội dung của nó là các trang ảnh
+  // trong `chapter_media`. Chỉ đếm `content` là truyện tranh không bao giờ
+  // gửi duyệt được, lúc nào cũng báo thiếu chương.
   const chapterRows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-    SELECT "id" FROM "chapters"
-    WHERE "story_id" = ${story.id}::uuid
-      AND "deleted_at" IS NULL
-      AND length(btrim("content")) > 0
+    SELECT c."id" FROM "chapters" c
+    WHERE c."story_id" = ${story.id}::uuid
+      AND c."deleted_at" IS NULL
+      AND (
+        length(btrim(c."content")) > 0
+        OR EXISTS (
+          SELECT 1 FROM "chapter_media" m
+          WHERE m."chapter_id" = c."id"
+        )
+      )
     LIMIT 1
   `);
   if (chapterRows.length === 0) missing.push('chapter');
