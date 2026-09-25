@@ -50,7 +50,7 @@
                   <th>#</th>
                   <th>Tiêu đề</th>
                   <th>Trạng thái</th>
-                  <th>Số từ</th>
+                  <th>Dung lượng</th>
                   <th>Cập nhật</th>
                   <th></th>
                 </tr>
@@ -73,7 +73,13 @@
                         </small>
                       }
                     </td>
-                    <td>{{ chapter.wordCount }}</td>
+                    <td>
+                      @if (chapter.wordCount > 0 || chapter.pageCount === 0) {
+                        {{ chapter.wordCount }} từ
+                      } @else {
+                        {{ chapter.pageCount }} trang
+                      }
+                    </td>
                     <td>{{ chapter.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
                     <td class="actions">
                       <app-link-button

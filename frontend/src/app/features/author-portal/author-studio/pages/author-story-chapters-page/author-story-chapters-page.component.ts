@@ -85,11 +85,16 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
     return story.status !== 'PENDING_REVIEW' && chapter.status === 'DRAFT';
   }
 
+  /**
+   * Chương truyện tranh không có chữ nào nên `wordCount` luôn bằng 0; nội dung
+   * của nó là các trang ảnh. Chỉ đếm chữ thì nút xuất bản và hẹn giờ không bao
+   * giờ hiện ra cho truyện tranh.
+   */
   protected canPublish(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
     return (
       story.status === 'PUBLISHED' &&
       (chapter.status === 'APPROVED' || chapter.status === 'SCHEDULED') &&
-      chapter.wordCount > 0
+      (chapter.wordCount > 0 || chapter.pageCount > 0)
     );
   }
 

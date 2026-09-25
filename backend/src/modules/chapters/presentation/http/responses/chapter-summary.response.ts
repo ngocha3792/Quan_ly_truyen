@@ -8,6 +8,7 @@ export interface ChapterSummaryResponse {
   readonly slug: string;
   readonly status: string;
   readonly wordCount: number;
+  readonly pageCount: number;
   readonly version: number;
   readonly scheduledAt: string | null;
   readonly publishedAt: string | null;
@@ -26,6 +27,7 @@ export function toChapterSummaryResponse(
     slug: result.slug,
     status: result.status,
     wordCount: result.wordCount,
+    pageCount: result.pageCount,
     version: result.version,
     scheduledAt: result.scheduledAt?.toISOString() ?? null,
     publishedAt: result.publishedAt?.toISOString() ?? null,

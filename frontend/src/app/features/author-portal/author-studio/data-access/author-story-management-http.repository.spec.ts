@@ -212,6 +212,7 @@ function scheduledChapter(): AuthorManagedChapter {
     contentFormat: 'MARKDOWN',
     status: 'SCHEDULED',
     wordCount: 2,
+    pageCount: 0,
     version: 1,
     scheduledAt: '2026-09-08T02:00:00.000Z',
     publishedAt: null,

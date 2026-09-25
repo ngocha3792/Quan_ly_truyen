@@ -11,6 +11,7 @@ export class ChapterSummaryResultMapper {
       slug: chapter.slug,
       status: chapter.status,
       wordCount: chapter.wordCount,
+      pageCount: chapter.pageCount,
       version: chapter.version,
       scheduledAt: chapter.scheduledAt,
       publishedAt: chapter.publishedAt,
