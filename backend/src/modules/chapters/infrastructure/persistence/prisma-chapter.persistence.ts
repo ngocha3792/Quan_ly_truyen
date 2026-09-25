@@ -1460,21 +1460,39 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           return { status: 'invalid_media', invalidIds };
         }
 
-        const aggregate = await tx.chapterMedia.aggregate({
-          where: { chapterId: current.id },
-          _max: { sortOrder: true },
+        // Gắn trang phải idempotent. Trình duyệt tải nhiều ảnh một lúc, và một
+        // lần thử lại hoặc bấm hai lần sẽ gửi lại trang đã có; nếu cứ chèn thì
+        // khoá chính (chapter_id, media_asset_id) vỡ và người dùng nhận đúng
+        // câu "Trang truyện đã tồn tại" thay vì thấy ảnh của mình.
+        const attached = await tx.chapterMedia.findMany({
+          where: { chapterId: current.id, mediaAssetId: { in: requestedIds } },
+          select: { mediaAssetId: true },
         });
-        const startingOrder = (aggregate._max.sortOrder ?? -1) + 1;
 
-        await tx.chapterMedia.createMany({
-          data: input.pages.map((page, index) => ({
-            chapterId: current.id,
-            mediaAssetId: page.mediaAssetId,
-            sortOrder: startingOrder + index,
-            altText: page.altText ?? null,
-            caption: page.caption ?? null,
-          })),
+        const skip = new Set(attached.map((row) => row.mediaAssetId));
+        const pending = input.pages.filter((page) => {
+          if (skip.has(page.mediaAssetId)) return false;
+          skip.add(page.mediaAssetId);
+          return true;
         });
+
+        if (pending.length > 0) {
+          const aggregate = await tx.chapterMedia.aggregate({
+            where: { chapterId: current.id },
+            _max: { sortOrder: true },
+          });
+          const startingOrder = (aggregate._max.sortOrder ?? -1) + 1;
+
+          await tx.chapterMedia.createMany({
+            data: pending.map((page, index) => ({
+              chapterId: current.id,
+              mediaAssetId: page.mediaAssetId,
+              sortOrder: startingOrder + index,
+              altText: page.altText ?? null,
+              caption: page.caption ?? null,
+            })),
+          });
+        }
 
         return {
           status: 'attached',
