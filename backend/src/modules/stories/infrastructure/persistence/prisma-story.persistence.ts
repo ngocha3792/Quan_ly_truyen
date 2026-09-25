@@ -43,7 +43,11 @@ import type {
   UpdateAuthorStoryInput,
   UpdateAuthorStoryResult,
 } from '../../application';
-import { rankStoryRecommendations, StoryDraftPolicy } from '../../domain';
+import {
+  rankStoryRecommendations,
+  StoryDraftPolicy,
+  StoryEditPolicy,
+} from '../../domain';
 
 const STORY_SELECT = {
   id: true,
@@ -423,16 +427,6 @@ export class PrismaStoryPersistence
             };
           }
 
-          if (
-            !(
-              [StoryStatus.DRAFT, StoryStatus.REJECTED] as StoryStatus[]
-            ).includes(current.status)
-          ) {
-            return {
-              status: 'not_draft',
-            };
-          }
-
           const taxonomyValidation = await validateTaxonomy(
             tx,
             input.categoryIds,
@@ -458,6 +452,15 @@ export class PrismaStoryPersistence
           const coverChanged =
             input.coverMediaId !== undefined &&
             input.coverMediaId !== current.coverMediaId;
+
+          if (
+            formatChanged &&
+            !StoryEditPolicy.allowsFormatChange(current.publishedAt)
+          ) {
+            return {
+              status: 'format_locked',
+            };
+          }
 
           if (coverChanged && input.coverMediaId !== null) {
             const validCover = await validateAndLockStoryCover(
@@ -489,7 +492,9 @@ export class PrismaStoryPersistence
           }
 
           const nextSlug =
-            titleChanged && input.title !== undefined
+            titleChanged &&
+            input.title !== undefined &&
+            !StoryEditPolicy.keepsPublishedSlug(current.publishedAt)
               ? await createAvailableStorySlug(tx, input.title, current.id)
               : current.slug;
 

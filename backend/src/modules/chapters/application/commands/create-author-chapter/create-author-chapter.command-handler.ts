@@ -10,7 +10,6 @@ import {
   ChapterInsertAnchorNotFoundException,
   ChapterInsertNoGapException,
   ChapterStoryNotFoundException,
-  ChapterStoryPendingReviewException,
 } from '../../../domain';
 import type { ChapterResultDto } from '../../dto';
 import { ChapterResultMapper } from '../../mappers';
@@ -54,8 +53,6 @@ export class CreateAuthorChapterCommandHandler {
     switch (result.status) {
       case 'created':
         return ChapterResultMapper.toDto(result.chapter);
-      case 'story_pending_review':
-        throw new ChapterStoryPendingReviewException();
       case 'anchor_not_found':
         throw new ChapterInsertAnchorNotFoundException();
       case 'no_gap':

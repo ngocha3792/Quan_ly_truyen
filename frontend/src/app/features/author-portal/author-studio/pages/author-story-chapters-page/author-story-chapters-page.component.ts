@@ -77,21 +77,38 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
     this.page.set(page);
   }
 
-  protected canCreate(story: AuthorManagedStory): boolean {
-    return story.status !== 'PENDING_REVIEW';
-  }
-
-  protected canEdit(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
-    return story.status !== 'PENDING_REVIEW' && chapter.status === 'DRAFT';
+  protected canCreate(): boolean {
+    return true;
   }
 
   /**
-   * Chèn được sau bất kỳ chương nào, kể cả chương đã xuất bản: chương mới nhận
-   * số nằm giữa nên không chương cũ nào bị đổi số hay đổi slug. Chỉ chặn khi
-   * truyện đang chờ duyệt, đúng như máy chủ chặn.
+   * Sửa được ở mọi giai đoạn: chương đang duyệt, đã duyệt, đã hẹn giờ hay đã
+   * xuất bản đều mở, kể cả khi truyện đang chờ duyệt. Máy chủ cũng vậy; chỗ
+   * duy nhất còn khoá là xoá chương.
    */
-  protected canInsertAfter(story: AuthorManagedStory): boolean {
-    return story.status !== 'PENDING_REVIEW';
+  protected canEdit(): boolean {
+    return true;
+  }
+
+  /**
+   * Chèn được sau bất kỳ chương nào: chương mới nhận số nằm giữa nên không
+   * chương cũ nào bị đổi số hay đổi slug.
+   */
+  protected canInsertAfter(): boolean {
+    return true;
+  }
+
+  /**
+   * Xoá thì vẫn chỉ bản nháp, đúng như máy chủ: gỡ hẳn một chương độc giả
+   * đang đọc là chuyện khác với sửa nó.
+   */
+  protected canDelete(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
+    return story.status !== 'PENDING_REVIEW' && chapter.status === 'DRAFT';
+  }
+
+  /** Chương đang hiện cho độc giả — sửa là họ thấy ngay. */
+  protected isLive(chapter: AuthorManagedChapterSummary): boolean {
+    return chapter.status === 'PUBLISHED';
   }
 
   /**
@@ -112,7 +129,7 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   }
 
   protected deleteChapter(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): void {
-    if (!this.canEdit(story, chapter)) return;
+    if (!this.canDelete(story, chapter)) return;
     if (!window.confirm(`Xóa bản nháp chương ${chapter.number}: “${chapter.title}”?`)) return;
     this.store.deleteDraft(story.id, chapter.id);
   }

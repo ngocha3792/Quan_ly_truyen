@@ -248,13 +248,39 @@ describe('ChapterEditingSessionStore', () => {
     expect(store.dirty()).toBe(true);
   });
 
-  it('does not autosave a chapter that has entered review', async () => {
+  /*
+   * Tác giả sửa được ở mọi giai đoạn, nhưng chỉ bằng cái bấm Lưu: chương đã
+   * xuất bản hiện thẳng cho độc giả nên autosave 2.5 giây một lần sẽ đẩy cả
+   * câu đang gõ dở ra ngoài.
+   */
+  it('không tự lưu chương đã rời bản nháp, nhưng vẫn lưu tay được', async () => {
     await store.initialize('account', 'story', { ...chapter, status: 'IN_REVIEW' });
     store.change({ title: chapter.title, content: 'Stale editor event' });
     await vi.advanceTimersByTimeAsync(5000);
-    await store.save();
     expect(repository.autosaveChapter).not.toHaveBeenCalled();
     expect(repository.updateChapter).not.toHaveBeenCalled();
+
+    await store.save();
+    expect(repository.autosaveChapter).not.toHaveBeenCalled();
+    expect(repository.updateChapter).toHaveBeenCalledWith(
+      'story',
+      chapter.id,
+      expect.objectContaining({ content: 'Stale editor event' }),
+    );
+  });
+
+  it('lưu tay được chương đã xuất bản mà không hề tự lưu', async () => {
+    await store.initialize('account', 'story', { ...chapter, status: 'PUBLISHED' });
+    store.change({ title: chapter.title, content: 'Sửa lỗi chính tả' });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(repository.autosaveChapter).not.toHaveBeenCalled();
+
+    await store.save();
+    expect(repository.updateChapter).toHaveBeenCalledWith(
+      'story',
+      chapter.id,
+      expect.objectContaining({ content: 'Sửa lỗi chính tả' }),
+    );
   });
 
   it('adopts an explicitly approved translation without scheduling another save', async () => {

@@ -1,9 +1,7 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
 import {
-  ChapterDraftOnlyMutationException,
   ChapterNotFoundException,
-  ChapterStoryPendingReviewException,
   ChapterVersionNotFoundException,
   ChapterVersionConflictException,
 } from '../../../domain';
@@ -79,11 +77,13 @@ describe('RestoreAuthorChapterVersionCommandHandler', () => {
     );
   });
 
+  /*
+   * Khôi phục phiên bản cũ giờ chạy ở mọi giai đoạn, nên hai lời từ chối
+   * "chưa phải bản nháp" và "truyện đang chờ duyệt" không còn nữa.
+   */
   it.each([
     ['not_found', ChapterNotFoundException],
     ['version_not_found', ChapterVersionNotFoundException],
-    ['not_draft', ChapterDraftOnlyMutationException],
-    ['story_pending_review', ChapterStoryPendingReviewException],
   ] as const)('maps %s persistence status', async (status, errorType) => {
     persistence.restoreDraftVersion.mockResolvedValue({ status });
     await expect(handler.execute(command(USER_ID))).rejects.toBeInstanceOf(

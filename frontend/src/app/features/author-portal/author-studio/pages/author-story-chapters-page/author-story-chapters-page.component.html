@@ -9,7 +9,7 @@
       >
         <a [routerLink]="['/author-studio/truyen', story.id]" class="back">← {{ story.title }}</a>
 
-        @if (canCreate(story)) {
+        @if (canCreate()) {
           <app-link-button
             variant="primary"
             [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
@@ -22,7 +22,7 @@
       @if (story.status === 'PENDING_REVIEW') {
         <app-notice
           kind="info"
-          message="Truyện đang chờ duyệt. Hủy yêu cầu duyệt ở trang truyện trước khi thay đổi chương."
+          message="Truyện đang chờ duyệt. Bạn vẫn sửa được chương; chỉ việc xóa chương là phải chờ duyệt xong."
         />
       }
 
@@ -86,10 +86,10 @@
                         variant="secondary"
                         [routerLink]="['/author-studio/truyen', story.id, 'chuong', chapter.id]"
                         >{{
-                          canEdit(story, chapter) ? 'Sửa / Gửi duyệt' : 'Chi tiết / Duyệt'
+                          isLive(chapter) ? 'Sửa (độc giả thấy ngay)' : 'Sửa chương'
                         }}</app-link-button
                       >
-                      @if (canEdit(story, chapter)) {
+                      @if (canDelete(story, chapter)) {
                         <app-button
                           variant="danger"
                           [disabled]="store.actionChapterId() === chapter.id"
@@ -98,7 +98,7 @@
                           Xóa
                         </app-button>
                       }
-                      @if (canInsertAfter(story)) {
+                      @if (canInsertAfter()) {
                         <app-link-button
                           variant="secondary"
                           [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"

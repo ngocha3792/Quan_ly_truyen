@@ -85,8 +85,18 @@ export class StoryDraftOnlyMutationException extends ResourceConflictException {
     super({
       code: 'STORY_DRAFT_ONLY_MUTATION',
       resource: 'truyện',
+      message: 'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể xóa',
+    });
+  }
+}
+
+export class StoryFormatLockedException extends ResourceConflictException {
+  constructor() {
+    super({
+      code: 'STORY_FORMAT_LOCKED',
+      resource: 'truyện',
       message:
-        'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể chỉnh sửa hoặc xóa',
+        'Truyện đã xuất bản không đổi được giữa truyện chữ và truyện tranh: các chương cũ lưu nội dung theo đúng định dạng hiện tại',
     });
   }
 }

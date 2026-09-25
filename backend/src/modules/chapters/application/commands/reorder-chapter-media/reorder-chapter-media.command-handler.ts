@@ -4,7 +4,6 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
 
 import {
-  ChapterDraftOnlyMutationException,
   ChapterMediaReorderMismatchException,
   ChapterNotFoundException,
 } from '../../../domain';
@@ -42,8 +41,6 @@ export class ReorderChapterMediaCommandHandler {
     switch (result.status) {
       case 'reordered':
         return result.media;
-      case 'not_draft':
-        throw new ChapterDraftOnlyMutationException();
       case 'mismatch':
         throw new ChapterMediaReorderMismatchException();
       case 'not_found':

@@ -4,7 +4,7 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
 
 import {
-  ChapterDraftOnlyMutationException,
+  ChapterLiveContentRequiredException,
   ChapterNotFoundException,
 } from '../../../domain';
 import type { ChapterMediaRecord } from '../../ports';
@@ -41,8 +41,8 @@ export class RemoveChapterMediaCommandHandler {
     switch (result.status) {
       case 'removed':
         return result.media;
-      case 'not_draft':
-        throw new ChapterDraftOnlyMutationException();
+      case 'empty_content':
+        throw new ChapterLiveContentRequiredException();
       case 'not_found':
       default:
         throw new ChapterNotFoundException(command.chapterId);

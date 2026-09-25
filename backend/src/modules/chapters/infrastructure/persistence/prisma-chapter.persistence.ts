@@ -69,6 +69,7 @@ import type {
 } from '../../application';
 import {
   ChapterDraftPolicy,
+  ChapterEditPolicy,
   ChapterInsertPolicy,
   createBackfilledChapterContentDocument,
   createChapterContentDocument,
@@ -439,12 +440,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
-        if (story.status === StoryStatus.PENDING_REVIEW) {
-          return {
-            status: 'story_pending_review',
-          };
-        }
-
         /*
          * Chèn giữa hai chương chạy trong chính giao dịch đã khoá truyện ở
          * trên, nên hai lần chèn song song không thể cùng chọn một số và làm
@@ -553,12 +548,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
-        if (story.status === StoryStatus.PENDING_REVIEW) {
-          return {
-            status: 'story_pending_review',
-          };
-        }
-
         const chapterLocked = await lockChapterRowForStory(
           tx,
           input.chapterId,
@@ -596,9 +585,17 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
-        if (current.status !== ChapterStatus.DRAFT) {
+        /*
+         * Sửa được ở mọi giai đoạn, nhưng autosave thì không: chương đã xuất
+         * bản hiện thẳng cho độc giả, nên chỉ cái bấm Lưu của tác giả mới được
+         * đẩy lên.
+         */
+        if (
+          input.saveType === 'AUTOSAVE' &&
+          !ChapterEditPolicy.allowsAutosave(current.status)
+        ) {
           return {
-            status: 'not_draft',
+            status: 'autosave_not_allowed',
           };
         }
 
@@ -641,9 +638,26 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         const nextWordCount = contentChanged
           ? (input.wordCount ?? current.wordCount)
           : current.wordCount;
-        const nextSlug = titleChanged
-          ? createChapterSlug(current.number.toNumber(), nextTitle)
-          : current.slug;
+
+        /*
+         * Xoá sạch chữ của một chương đang hiện ra cũng là trang trắng. Truyện
+         * tranh không có chữ nhưng có trang ảnh nên vẫn tính là có nội dung.
+         */
+        if (
+          contentChanged &&
+          ChapterEditPolicy.requiresContent(current.status) &&
+          !(await chapterHasContent(tx, {
+            id: current.id,
+            content: nextContent,
+          }))
+        ) {
+          return { status: 'empty_content' };
+        }
+        const nextSlug =
+          titleChanged &&
+          !ChapterEditPolicy.keepsPublishedSlug(current.publishedAt)
+            ? createChapterSlug(current.number.toNumber(), nextTitle)
+            : current.slug;
         const nextVersion = current.version + 1;
         const currentDocument = toContentDocument(
           current.contentDocument,
@@ -765,9 +779,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         );
 
         if (!story) return { status: 'not_found' };
-        if (story.status === StoryStatus.PENDING_REVIEW) {
-          return { status: 'story_pending_review' };
-        }
 
         const chapterLocked = await lockChapterRowForStory(
           tx,
@@ -794,10 +805,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
             currentVersion: current.version,
           };
         }
-        if (current.status !== ChapterStatus.DRAFT) {
-          return { status: 'not_draft' };
-        }
-
         const source = await tx.chapterVersion.findUnique({
           where: {
             chapterId_version: {
@@ -826,7 +833,9 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           where: { id: current.id },
           data: {
             title: source.title,
-            slug: createChapterSlug(current.number.toNumber(), source.title),
+            slug: ChapterEditPolicy.keepsPublishedSlug(current.publishedAt)
+              ? current.slug
+              : createChapterSlug(current.number.toNumber(), source.title),
             content: source.content,
             contentDocument: toPrismaJson(sourceDocument),
             documentSchemaVersion: sourceDocument.schemaVersion,
@@ -1445,9 +1454,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         });
 
         if (!current) return { status: 'not_found' };
-        if (current.status !== ChapterStatus.DRAFT) {
-          return { status: 'not_draft' };
-        }
 
         const requestedIds = input.pages.map((page) => page.mediaAssetId);
         const assets = await tx.mediaAsset.findMany({
@@ -1542,9 +1548,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         });
 
         if (!current) return { status: 'not_found' };
-        if (current.status !== ChapterStatus.DRAFT) {
-          return { status: 'not_draft' };
-        }
 
         const existing = await tx.chapterMedia.findMany({
           where: { chapterId: current.id },
@@ -1625,17 +1628,26 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
 
         const current = await tx.chapter.findFirst({
           where: { id: input.chapterId, storyId: story.id, deletedAt: null },
-          select: { id: true, status: true },
+          select: { id: true, status: true, content: true },
         });
 
         if (!current) return { status: 'not_found' };
-        if (current.status !== ChapterStatus.DRAFT) {
-          return { status: 'not_draft' };
-        }
 
         await tx.chapterMedia.deleteMany({
           where: { chapterId: current.id, mediaAssetId: input.mediaAssetId },
         });
+
+        /*
+         * Gỡ trang cuối của một chương đang hiện ra thì độc giả nhận trang
+         * trắng. Xoá trước rồi đếm để khỏi phải đoán trang vừa gỡ có thật hay
+         * không; giao dịch quay lui nên không mất gì.
+         */
+        if (
+          ChapterEditPolicy.requiresContent(current.status) &&
+          !(await chapterHasContent(tx, current))
+        ) {
+          return { status: 'empty_content' };
+        }
 
         return {
           status: 'removed',

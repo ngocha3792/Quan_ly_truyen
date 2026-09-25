@@ -30,10 +30,10 @@
     @if (store.loading()) {
       <app-loading-state message="Đang tải dữ liệu truyện..." />
     } @else {
-      @if (!isEditable()) {
+      @if (isPublished()) {
         <app-notice
           kind="info"
-          message="Truyện ở trạng thái hiện tại chỉ đọc. Nếu đang chờ duyệt, hãy hủy yêu cầu duyệt trước khi chỉnh sửa."
+          message="Truyện đã xuất bản: sửa xong là độc giả thấy ngay. Đường dẫn giữ nguyên dù bạn đổi tiêu đề, để link đã chia sẻ không chết. Định dạng thì không đổi được nữa vì các chương cũ lưu nội dung theo đúng định dạng hiện tại."
         />
       }
 
@@ -65,7 +65,7 @@
                 type="button"
                 class="chip"
                 [class.chip--selected]="form.controls.format.value === 'NOVEL'"
-                [disabled]="!isEditable()"
+                [disabled]="!isEditable() || isPublished()"
                 (click)="form.controls.format.setValue('NOVEL'); form.markAsDirty()"
               >
                 Truyện chữ
@@ -74,7 +74,7 @@
                 type="button"
                 class="chip"
                 [class.chip--selected]="form.controls.format.value === 'MANGA'"
-                [disabled]="!isEditable()"
+                [disabled]="!isEditable() || isPublished()"
                 (click)="form.controls.format.setValue('MANGA'); form.markAsDirty()"
               >
                 Manga · Truyện tranh

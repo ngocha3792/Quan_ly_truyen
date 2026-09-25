@@ -103,10 +103,13 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   ]);
   protected readonly isEditable = computed(() => {
     const story = this.store.story();
-    if (!story || story.status === 'PENDING_REVIEW') return false;
+    if (!story) return false;
     if (this.isCreate()) return true;
-    return this.workflow.workflow()?.canEdit === true && this.session.chapter()?.status === 'DRAFT';
+    // Mọi giai đoạn đều sửa được; máy chủ quyết định qua `canEdit`.
+    return this.workflow.workflow()?.canEdit === true;
   });
+  /** Chương đang hiện cho độc giả: mỗi lần lưu là họ thấy ngay. */
+  protected readonly isLive = computed(() => this.session.chapter()?.status === 'PUBLISHED');
   protected readonly wordCount = computed(
     () => this.session.draft().content.trim().split(/\s+/).filter(Boolean).length,
   );

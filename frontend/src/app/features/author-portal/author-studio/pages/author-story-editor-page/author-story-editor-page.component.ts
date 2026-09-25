@@ -88,10 +88,16 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
       label: this.isCreate() ? 'Tạo truyện mới' : (this.store.story()?.title ?? 'Chỉnh sửa truyện'),
     },
   ]);
-  protected readonly isEditable = computed(() => {
-    const story = this.store.story();
-    return !story || story.status === 'DRAFT' || story.status === 'REJECTED';
-  });
+  /*
+   * Sửa được ở mọi giai đoạn. Truyện đã xuất bản vẫn đổi được tiêu đề, tóm
+   * tắt, ảnh bìa và thể loại; máy chủ giữ nguyên slug cũ để link độc giả đã
+   * lưu không chết, và khoá định dạng vì chương cũ lưu nội dung theo đúng
+   * định dạng hiện tại.
+   */
+  protected readonly isEditable = computed(() => true);
+  protected readonly isPublished = computed(
+    () => this.store.story()?.publishedAt !== null && !!this.store.story(),
+  );
   protected readonly canSubmit = computed(() => {
     const status = this.store.story()?.status;
     return status === 'DRAFT' || status === 'REJECTED';

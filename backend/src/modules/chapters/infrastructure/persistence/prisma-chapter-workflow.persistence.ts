@@ -194,13 +194,17 @@ export class PrismaChapterWorkflowPersistence implements ChapterWorkflowPort {
       chapter.story.contributors.some(
         (item) => item.userId === userId && item.canEdit,
       );
-    const canMutate =
-      chapter.story.author.lifecycleStatus === 'ACTIVE' &&
-      chapter.story.status !== 'PENDING_REVIEW';
+    const authorActive = chapter.story.author.lifecycleStatus === 'ACTIVE';
+    const canMutate = authorActive && chapter.story.status !== 'PENDING_REVIEW';
     return {
       chapter: workflowChapterRecord(chapter),
       storyTitle: chapter.story.title,
-      canEdit: canMutate && editable && chapter.status === 'DRAFT',
+      /*
+       * Sửa mở ở mọi giai đoạn: chương đang duyệt, đã duyệt, đã hẹn giờ hay
+       * đã xuất bản đều sửa được, kể cả khi truyện đang chờ duyệt. Chỉ các
+       * bước chuyển trạng thái bên dưới mới còn bị chặn.
+       */
+      canEdit: authorActive && editable,
       canSubmit: canMutate && owner && chapter.status === 'DRAFT',
       canReopen: canMutate && owner && chapter.status === 'APPROVED',
       canPublish:

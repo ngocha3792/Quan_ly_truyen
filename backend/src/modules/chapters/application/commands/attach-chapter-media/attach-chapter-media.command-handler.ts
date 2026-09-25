@@ -4,7 +4,6 @@ import { AuthenticationRequiredException } from '@/common/exceptions';
 import { isUuidV4 } from '@/common/utils';
 
 import {
-  ChapterDraftOnlyMutationException,
   ChapterNotFoundException,
   InvalidChapterMediaException,
 } from '../../../domain';
@@ -42,8 +41,6 @@ export class AttachChapterMediaCommandHandler {
     switch (result.status) {
       case 'attached':
         return result.media;
-      case 'not_draft':
-        throw new ChapterDraftOnlyMutationException();
       case 'invalid_media':
         throw new InvalidChapterMediaException(result.invalidIds);
       case 'not_found':

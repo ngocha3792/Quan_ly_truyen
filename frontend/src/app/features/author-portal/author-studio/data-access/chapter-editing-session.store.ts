@@ -87,6 +87,7 @@ export class ChapterEditingSessionStore {
     );
   }
 
+  // Tự lưu chỉ cho bản nháp; máy chủ chặn (CHAPTER_AUTOSAVE_NOT_ALLOWED).
   private schedule(): void {
     this.cancelTimer();
     if (this.chapter()?.status !== 'DRAFT' || this.status() === 'conflict') return;
@@ -110,7 +111,8 @@ export class ChapterEditingSessionStore {
       this.disposed ||
       this.status() === 'conflict' ||
       this.recoveries().length ||
-      (this.chapter() !== null && this.chapter()?.status !== 'DRAFT') ||
+      // Lưu tay mở ở mọi giai đoạn; chỉ lần tự lưu mới bị giới hạn ở bản nháp.
+      (!manual && this.chapter() !== null && this.chapter()?.status !== 'DRAFT') ||
       !this.draft().title.trim()
     )
       return null;

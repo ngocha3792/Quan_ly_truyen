@@ -815,29 +815,43 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
       audit: audit('chapter-submit'),
     });
     expect(review).toMatchObject({ status: 'IN_REVIEW', version: 2 });
+    /*
+     * Sửa mở ở mọi giai đoạn, nên tác giả chỉnh lại chương ngay giữa lúc đang
+     * duyệt. Bản sửa đẩy version lên, và chính cái đó chặn người duyệt bấm
+     * duyệt một bản chữ họ chưa từng đọc.
+     */
     expect(
       await chapters.updateDraft({
         userId: owner.id,
         storyId: story.id,
         chapterId: chapter.id,
         expectedVersion: 2,
-        title: 'Bypass review',
+        title: 'Sửa giữa lúc đang duyệt',
         updatedAt: new Date(),
         audit: {},
       }),
-    ).toMatchObject({ status: 'not_draft' });
-    const decisions = await Promise.allSettled([
+    ).toMatchObject({ status: 'updated', chapter: { version: 3 } });
+    await expect(
       workflow.transition({
         userId: reviewer.id,
         chapterId: chapter.id,
         expectedVersion: 2,
+        action: 'APPROVED',
+        audit: audit('approve-stale-text'),
+      }),
+    ).rejects.toMatchObject({ code: 'CHAPTER_VERSION_CONFLICT' });
+    const decisions = await Promise.allSettled([
+      workflow.transition({
+        userId: reviewer.id,
+        chapterId: chapter.id,
+        expectedVersion: 3,
         action: 'APPROVED',
         audit: audit('approve-chapter'),
       }),
       workflow.transition({
         userId: reviewer.id,
         chapterId: chapter.id,
-        expectedVersion: 2,
+        expectedVersion: 3,
         action: 'REQUEST_CHANGES',
         comment: 'More detail',
         audit: audit('reject-chapter'),
@@ -854,7 +868,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ).toBe(1);
     expect(
       await prisma.chapterVersion.count({
-        where: { chapterId: chapter.id, version: 3, isRetained: true },
+        where: { chapterId: chapter.id, version: 4, isRetained: true },
       }),
     ).toBe(1);
     expect(
@@ -879,7 +893,7 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
           userId: owner.id,
           storyId: story.id,
           chapterId: chapter.id,
-          expectedVersion: 2,
+          expectedVersion: 3,
           action: 'reopen',
           audit: {},
         }),
@@ -889,11 +903,11 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
           userId: owner.id,
           storyId: story.id,
           chapterId: chapter.id,
-          expectedVersion: 3,
+          expectedVersion: 4,
           action: 'reopen',
           audit: {},
         }),
-      ).toMatchObject({ status: 'DRAFT', version: 4 });
+      ).toMatchObject({ status: 'DRAFT', version: 5 });
     }
   });
 
@@ -990,6 +1004,175 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
    * chỗ trống là hữu hạn: đây là test trên database thật, nơi khoá duy nhất
    * (story_id, number) và độ chính xác của cột thực sự tồn tại.
    */
+  it('sửa chương đã xuất bản thì hiện ngay mà không đổi đường dẫn', async () => {
+    const author = await createAuthor('edit-live');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+      content: 'Bản gốc có lỗi chính tả.',
+    });
+
+    const updated = await chapters.updateDraft({
+      userId: author.id,
+      storyId: story.id,
+      chapterId: chapter.id,
+      title: 'Tiêu đề đã sửa',
+      content: 'Bản đã sửa lỗi chính tả.',
+      wordCount: 5,
+      saveType: 'MANUAL_SAVE',
+      updatedAt: new Date(),
+      audit: audit('edit-live'),
+    });
+
+    expect(updated.status).toBe('updated');
+
+    const fresh = await prisma.chapter.findUniqueOrThrow({
+      where: { id: chapter.id },
+      select: { title: true, slug: true, content: true, status: true },
+    });
+
+    // Độc giả thấy bản mới ngay: chương không bị rút về nháp để duyệt lại.
+    expect(fresh.status).toBe(ChapterStatus.PUBLISHED);
+    expect(fresh.content).toBe('Bản đã sửa lỗi chính tả.');
+    expect(fresh.title).toBe('Tiêu đề đã sửa');
+    // Nhưng đường dẫn giữ nguyên, nếu không thì mọi link đã chia sẻ chết.
+    expect(fresh.slug).toBe(chapter.slug);
+
+    // Bản cũ vẫn nằm trong lịch sử phiên bản nên khôi phục lại được.
+    const history = await prisma.chapterVersion.findMany({
+      where: { chapterId: chapter.id },
+      select: { content: true },
+    });
+    expect(history.map((row) => row.content)).toContain(
+      'Bản đã sửa lỗi chính tả.',
+    );
+  });
+
+  it('không cho autosave hay bỏ trắng một chương độc giả đang đọc', async () => {
+    const author = await createAuthor('live-guards');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const chapter = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+      content: 'Nội dung đang hiển thị.',
+    });
+
+    /*
+     * Autosave 2.5 giây một lần sẽ đẩy cả câu đang gõ dở ra cho độc giả, nên
+     * chương đã lên bài chỉ nhận cái bấm Lưu của tác giả.
+     */
+    expect(
+      await chapters.updateDraft({
+        userId: author.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        content: 'Đang gõ dở một câ',
+        wordCount: 4,
+        saveType: 'AUTOSAVE',
+        updatedAt: new Date(),
+        audit: audit('live-autosave'),
+      }),
+    ).toMatchObject({ status: 'autosave_not_allowed' });
+
+    expect(
+      await chapters.updateDraft({
+        userId: author.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        content: '   ',
+        wordCount: 0,
+        saveType: 'MANUAL_SAVE',
+        updatedAt: new Date(),
+        audit: audit('live-empty'),
+      }),
+    ).toMatchObject({ status: 'empty_content' });
+
+    const fresh = await prisma.chapter.findUniqueOrThrow({
+      where: { id: chapter.id },
+      select: { content: true },
+    });
+    expect(fresh.content).toBe('Nội dung đang hiển thị.');
+  });
+
+  it('sửa được chương ngay cả khi truyện đang chờ duyệt', async () => {
+    const author = await createAuthor('edit-pending');
+    const story = await createStory(author.id, StoryStatus.PENDING_REVIEW);
+    const chapter = await createChapter(author.id, story.id, 1);
+
+    expect(
+      await chapters.updateDraft({
+        userId: author.id,
+        storyId: story.id,
+        chapterId: chapter.id,
+        content: 'Viết tiếp trong lúc chờ duyệt.',
+        wordCount: 6,
+        saveType: 'MANUAL_SAVE',
+        updatedAt: new Date(),
+        audit: audit('edit-pending'),
+      }),
+    ).toMatchObject({ status: 'updated' });
+
+    // Thêm chương mới cũng không còn bị chặn.
+    expect(
+      (
+        await chapters.createDraft({
+          userId: author.id,
+          storyId: story.id,
+          title: 'Chương mới khi đang chờ duyệt',
+          content: 'Nội dung',
+          wordCount: 1,
+          createdAt: new Date(),
+          audit: audit('create-pending'),
+        })
+      ).status,
+    ).toBe('created');
+  });
+
+  it('sửa truyện đã xuất bản nhưng giữ đường dẫn và khoá định dạng', async () => {
+    const author = await createAuthor('edit-published-story');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+
+    const renamed = await stories.updateDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Tên truyện hoàn toàn mới',
+      synopsis: 'Tóm tắt viết lại.',
+      updatedAt: new Date(),
+      audit: audit('rename-published'),
+    });
+
+    expect(renamed.status).toBe('updated');
+    if (renamed.status !== 'updated') return;
+    expect(renamed.story.title).toBe('Tên truyện hoàn toàn mới');
+    // Repo không có bảng redirect slug cũ, nên đổi slug là giết mọi link cũ.
+    expect(renamed.story.slug).toBe(story.slug);
+
+    /*
+     * Chương truyện chữ lưu nội dung ở `content`, chương truyện tranh lưu ở
+     * các trang ảnh. Lật định dạng khi độc giả đang đọc là mọi chương cũ hoá
+     * trang trắng.
+     */
+    expect(
+      await stories.updateDraft({
+        userId: author.id,
+        storyId: story.id,
+        format: 'MANGA',
+        updatedAt: new Date(),
+        audit: audit('flip-format'),
+      }),
+    ).toMatchObject({ status: 'format_locked' });
+  });
+
   it('chèn chương vào giữa hai chương đã xuất bản mà không đụng số của chúng', async () => {
     const author = await createAuthor('insert-between');
     const story = await createStory(author.id, StoryStatus.PUBLISHED, {
