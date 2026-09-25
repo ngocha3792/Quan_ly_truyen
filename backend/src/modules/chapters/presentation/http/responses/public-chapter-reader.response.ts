@@ -1,4 +1,5 @@
 import type {
+  PublicChapterMediaDto,
   PublicChapterNavigationDto,
   PublicChapterReaderDto,
 } from '../../../application';
@@ -57,6 +58,11 @@ export interface PublicUnlockedChapterReaderResponse extends PublicChapterReader
   readonly contentFormat: string;
   readonly contentDocument?: PublicChapterReaderDocument;
   readonly documentSchemaVersion?: number;
+  /**
+   * Trang ảnh của chương truyện tranh, kèm URL đã ký. Chỉ có khi bật
+   * `READER_COMIC_DELIVERY_ENABLED`; chương truyện chữ không có trường này.
+   */
+  readonly media?: readonly PublicChapterMediaDto[];
 }
 
 /**
@@ -185,6 +191,10 @@ function toChapterResponse(
           documentSchemaVersion: chapter.documentSchemaVersion,
         }
       : {}),
+    // Không có dòng này thì chương truyện tranh ra trang trắng: tầng dữ liệu
+    // dựng đủ trang kèm URL đã ký, giao diện biết render, nhưng response bỏ rơi
+    // chúng ở giữa.
+    ...(chapter.media ? { media: chapter.media } : {}),
   };
 }
 
