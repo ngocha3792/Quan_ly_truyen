@@ -82,8 +82,11 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
   private readonly routeChapterId = this.route.snapshot.paramMap.get('chapterId');
+  /** Mốc chèn danh sách chương truyền sang: tạo chương mới ngay sau chương này. */
+  private readonly insertAfter = this.route.snapshot.queryParamMap.get('chen-sau') ?? undefined;
   protected readonly chapterId = computed(() => this.session.chapter()?.id ?? this.routeChapterId);
   protected readonly isCreate = computed(() => !this.chapterId());
+  protected readonly isInsert = computed(() => this.isCreate() && !!this.insertAfter);
   protected readonly isManga = computed(() => this.store.story()?.format === 'MANGA');
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
@@ -124,9 +127,9 @@ export class AuthorChapterEditorPageComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      if (this.store.story() && !this.store.loading() && this.auth.user()?.id) {
-        void this.session.initialize(this.auth.user()!.id, this.storyId, this.store.chapter());
-      }
+      const userId = this.auth.user()?.id;
+      if (this.store.story() && !this.store.loading() && userId)
+        void this.session.initialize(userId, this.storyId, this.store.chapter(), this.insertAfter);
     });
     effect(() => {
       this.form.patchValue(this.session.draft(), { emitEvent: false });
@@ -191,12 +194,8 @@ export class AuthorChapterEditorPageComponent implements OnInit {
 
   protected async restoreVersion(version: number): Promise<void> {
     if (!this.isEditable() || this.session.busy()) return;
-    if (
-      !window.confirm(
-        `Khôi phục phiên bản ${version} thành phiên bản mới? Các thay đổi chưa lưu trong trình soạn thảo sẽ bị thay thế.`,
-      )
-    )
-      return;
+    const confirmation = `Khôi phục phiên bản ${version} thành phiên bản mới? Các thay đổi chưa lưu trong trình soạn thảo sẽ bị thay thế.`;
+    if (!window.confirm(confirmation)) return;
     const chapter = await this.session.restore(version);
     if (chapter) this.store.loadHistory(this.storyId, chapter.id);
   }

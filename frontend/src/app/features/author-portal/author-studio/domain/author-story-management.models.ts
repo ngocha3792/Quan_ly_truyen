@@ -135,6 +135,11 @@ export interface AuthorChapterDraftInput {
   readonly title: string;
   readonly content: string;
   readonly expectedVersion?: number;
+  /**
+   * Chỉ dùng khi tạo mới: chèn chương ngay sau chương này thay vì thêm vào đuôi
+   * truyện. Máy chủ chọn số nằm giữa nó và chương liền kề phía sau.
+   */
+  readonly afterChapterId?: string;
 }
 
 export interface MonetizationPriceBand {

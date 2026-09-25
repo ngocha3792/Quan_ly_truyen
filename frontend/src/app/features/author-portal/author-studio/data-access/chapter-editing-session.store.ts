@@ -18,6 +18,7 @@ export class ChapterEditingSessionStore {
   private readonly localQueue = inject(ChapterRecoveryQueueService);
   private readonly destroyRef = inject(DestroyRef);
   private scope: ChapterRecoveryScope | null = null;
+  private insertAfter: string | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private activeSave: Promise<AuthorManagedChapter | null> | null = null;
   private disposed = false;
@@ -47,9 +48,12 @@ export class ChapterEditingSessionStore {
     accountId: string,
     storyId: string,
     chapter: AuthorManagedChapter | null,
+    /** Chèn chương mới ngay sau chương này; bỏ trống thì thêm vào đuôi truyện. */
+    insertAfter?: string,
   ): Promise<void> {
     if (this.ready) return;
     this.ready = true;
+    this.insertAfter = insertAfter ?? null;
     this.scope = { accountId, storyId, chapterId: chapter?.id ?? null, tabId: this.recovery.tabId };
     this.chapter.set(chapter);
     this.draft.set({ title: chapter?.title ?? '', content: chapter?.content ?? '' });
@@ -85,12 +89,8 @@ export class ChapterEditingSessionStore {
 
   private schedule(): void {
     this.cancelTimer();
-    if (
-      this.chapter()?.status !== 'DRAFT' ||
-      this.status() === 'conflict' ||
-      this.recoveries().length
-    )
-      return;
+    if (this.chapter()?.status !== 'DRAFT' || this.status() === 'conflict') return;
+    if (this.recoveries().length) return;
     this.timer = setTimeout(() => {
       this.timer = null;
       void this.save(false);
@@ -123,6 +123,8 @@ export class ChapterEditingSessionStore {
       title: snapshot.title.trim(),
       content: snapshot.content,
       ...(current ? { expectedVersion: current.version } : {}),
+      // Chỉ có ý nghĩa ở lần tạo đầu tiên; các lần lưu sau đã có `current`.
+      ...(!current && this.insertAfter ? { afterChapterId: this.insertAfter } : {}),
     };
     this.busy.set(true);
     this.status.set('saving');
@@ -172,18 +174,14 @@ export class ChapterEditingSessionStore {
     this.cancelTimer();
     const chapter = this.chapter();
     if (!this.scope || !chapter || this.status() === 'conflict' || this.busy()) return null;
+    const { storyId } = this.scope;
     this.busy.set(true);
     this.restoring.set(true);
     this.status.set('saving');
     const revision = this.revision();
     try {
       const restored = await firstValueFrom(
-        this.repository.restoreChapterVersion(
-          this.scope.storyId,
-          chapter.id,
-          version,
-          chapter.version,
-        ),
+        this.repository.restoreChapterVersion(storyId, chapter.id, version, chapter.version),
       );
       await this.adoptApprovedTranslation(restored, revision);
       return restored;

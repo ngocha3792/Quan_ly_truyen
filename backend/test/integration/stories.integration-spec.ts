@@ -985,6 +985,166 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     return user;
   }
 
+  /*
+   * Chèn chương vào giữa hai chương đã có. Cột `number` là Decimal(10, 2) nên
+   * chỗ trống là hữu hạn: đây là test trên database thật, nơi khoá duy nhất
+   * (story_id, number) và độ chính xác của cột thực sự tồn tại.
+   */
+  it('chèn chương vào giữa hai chương đã xuất bản mà không đụng số của chúng', async () => {
+    const author = await createAuthor('insert-between');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const first = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+    const second = await createChapter(author.id, story.id, 2, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+
+    const created = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Ngoại truyện',
+      content: 'Bổ sung ý giữa hai chương.',
+      wordCount: 5,
+      afterChapterId: first.id,
+      createdAt: new Date(),
+      audit: audit('insert-between'),
+    });
+
+    expect(created.status).toBe('created');
+    if (created.status !== 'created') return;
+    expect(created.chapter.number).toBe(1.5);
+    expect(created.chapter.slug).toContain('chuong-1-5');
+
+    const [freshFirst, freshSecond] = await Promise.all([
+      prisma.chapter.findUniqueOrThrow({
+        where: { id: first.id },
+        select: { number: true, slug: true, status: true },
+      }),
+      prisma.chapter.findUniqueOrThrow({
+        where: { id: second.id },
+        select: { number: true, slug: true, status: true },
+      }),
+    ]);
+
+    // Chương đã xuất bản giữ nguyên số và slug, nên link độc giả đã lưu không gãy.
+    expect(freshFirst.number.toNumber()).toBe(1);
+    expect(freshSecond.number.toNumber()).toBe(2);
+    expect(freshSecond.slug).toBe(second.slug);
+    expect(freshSecond.status).toBe(ChapterStatus.PUBLISHED);
+
+    const order = await prisma.chapter.findMany({
+      where: { storyId: story.id },
+      orderBy: { number: 'asc' },
+      select: { number: true },
+    });
+    expect(order.map((row) => row.number.toNumber())).toEqual([1, 1.5, 2]);
+  });
+
+  it('chèn tiếp vào khoảng đã hẹp lại', async () => {
+    const author = await createAuthor('insert-twice');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    const first = await createChapter(author.id, story.id, 1);
+    await createChapter(author.id, story.id, 2);
+
+    const insert = () =>
+      chapters.createDraft({
+        userId: author.id,
+        storyId: story.id,
+        title: 'Chen ngang',
+        content: 'Nội dung',
+        wordCount: 2,
+        afterChapterId: first.id,
+        createdAt: new Date(),
+        audit: audit('insert-twice'),
+      });
+
+    const firstInsert = await insert();
+    const secondInsert = await insert();
+
+    expect(firstInsert.status).toBe('created');
+    expect(secondInsert.status).toBe('created');
+    if (firstInsert.status !== 'created' || secondInsert.status !== 'created')
+      return;
+
+    expect(firstInsert.chapter.number).toBe(1.5);
+    expect(secondInsert.chapter.number).toBe(1.25);
+  });
+
+  it('từ chối khi hai chương đã sát nhau, thay vì làm vỡ khoá duy nhất', async () => {
+    const author = await createAuthor('insert-no-gap');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    const first = await createChapter(author.id, story.id, 1.5);
+    await createChapter(author.id, story.id, 1.51);
+
+    const result = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Không còn chỗ',
+      content: 'Nội dung',
+      wordCount: 2,
+      afterChapterId: first.id,
+      createdAt: new Date(),
+      audit: audit('insert-no-gap'),
+    });
+
+    expect(result).toMatchObject({
+      status: 'no_gap',
+      afterNumber: 1.5,
+      beforeNumber: 1.51,
+    });
+
+    const count = await prisma.chapter.count({ where: { storyId: story.id } });
+    expect(count).toBe(2);
+  });
+
+  it('không cho lấy chương của truyện khác làm mốc chèn', async () => {
+    const author = await createAuthor('insert-foreign');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    const otherStory = await createStory(author.id, StoryStatus.DRAFT);
+    const foreign = await createChapter(author.id, otherStory.id, 1);
+
+    const result = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Mốc lạ',
+      content: 'Nội dung',
+      wordCount: 2,
+      afterChapterId: foreign.id,
+      createdAt: new Date(),
+      audit: audit('insert-foreign'),
+    });
+
+    expect(result.status).toBe('anchor_not_found');
+  });
+
+  it('chèn sau chương cuối thì thành thêm vào đuôi với số nguyên', async () => {
+    const author = await createAuthor('insert-tail');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    await createChapter(author.id, story.id, 1);
+    const last = await createChapter(author.id, story.id, 1.5);
+
+    const created = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Chương kế',
+      content: 'Nội dung',
+      wordCount: 2,
+      afterChapterId: last.id,
+      createdAt: new Date(),
+      audit: audit('insert-tail'),
+    });
+
+    expect(created.status).toBe('created');
+    if (created.status !== 'created') return;
+    expect(created.chapter.number).toBe(2);
+  });
+
   /**
    * Chương truyện tranh không có một chữ nào: nội dung của nó là các trang ảnh
    * trong `chapter_media`. Cổng gửi duyệt chỉ đếm `content` thì truyện tranh

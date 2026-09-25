@@ -69,6 +69,7 @@ import type {
 } from '../../application';
 import {
   ChapterDraftPolicy,
+  ChapterInsertPolicy,
   createBackfilledChapterContentDocument,
   createChapterContentDocument,
   isChapterContentDocument,
@@ -444,18 +445,20 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
-        const lastChapter = await tx.chapter.findFirst({
-          where: {
-            storyId: story.id,
-          },
-          orderBy: {
-            number: 'desc',
-          },
-          select: {
-            number: true,
-          },
-        });
-        const number = Math.floor(lastChapter?.number.toNumber() ?? 0) + 1;
+        /*
+         * Chèn giữa hai chương chạy trong chính giao dịch đã khoá truyện ở
+         * trên, nên hai lần chèn song song không thể cùng chọn một số và làm
+         * vỡ khoá duy nhất (storyId, number).
+         */
+        const placement = await resolveNewChapterNumber(
+          tx,
+          story.id,
+          input.afterChapterId,
+        );
+
+        if (placement.status !== 'ok') return placement;
+
+        const number = placement.number;
         const chapterId = randomUUID();
         const slug = createChapterSlug(number, input.title);
         const contentDocument = createChapterContentDocument(input.content);
@@ -2050,6 +2053,67 @@ async function chapterHasContent(
   });
 
   return pages > 0;
+}
+
+type NewChapterNumber =
+  | { readonly status: 'ok'; readonly number: number }
+  | { readonly status: 'anchor_not_found' }
+  | {
+      readonly status: 'no_gap';
+      readonly afterNumber: number;
+      readonly beforeNumber: number;
+    };
+
+/**
+ * Số cho chương sắp tạo: thêm vào đuôi khi không chỉ định mốc, còn có mốc thì
+ * nằm giữa mốc đó và chương liền kề phía sau.
+ */
+async function resolveNewChapterNumber(
+  tx: Prisma.TransactionClient,
+  storyId: string,
+  afterChapterId: string | undefined,
+): Promise<NewChapterNumber> {
+  if (!afterChapterId) {
+    const last = await tx.chapter.findFirst({
+      where: { storyId },
+      orderBy: { number: 'desc' },
+      select: { number: true },
+    });
+
+    return {
+      status: 'ok',
+      number: Math.floor(last?.number.toNumber() ?? 0) + 1,
+    };
+  }
+
+  const anchor = await tx.chapter.findFirst({
+    where: { id: afterChapterId, storyId, deletedAt: null },
+    select: { number: true },
+  });
+
+  if (!anchor) return { status: 'anchor_not_found' };
+
+  const afterNumber = anchor.number.toNumber();
+
+  // Chương xoá mềm vẫn giữ số của nó, nên phải tính cả chúng khi tìm chỗ trống.
+  const next = await tx.chapter.findFirst({
+    where: { storyId, number: { gt: anchor.number } },
+    orderBy: { number: 'asc' },
+    select: { number: true },
+  });
+
+  const beforeNumber = next?.number.toNumber() ?? null;
+  const number = ChapterInsertPolicy.numberBetween(afterNumber, beforeNumber);
+
+  if (number === null) {
+    return {
+      status: 'no_gap',
+      afterNumber,
+      beforeNumber: beforeNumber ?? afterNumber,
+    };
+  }
+
+  return { status: 'ok', number };
 }
 
 async function lockChapterRowForStory(

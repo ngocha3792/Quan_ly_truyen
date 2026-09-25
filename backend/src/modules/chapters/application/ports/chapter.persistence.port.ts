@@ -106,6 +106,12 @@ export interface CreateAuthorChapterInput {
 
   readonly wordCount: number;
 
+  /**
+   * Chèn chương mới ngay sau chương này thay vì thêm vào đuôi truyện. Số chương
+   * sẽ nằm giữa nó và chương liền kề phía sau.
+   */
+  readonly afterChapterId?: string;
+
   readonly createdAt: Date;
 
   readonly audit: ChapterAuditContext;
@@ -122,6 +128,18 @@ export type CreateAuthorChapterResult =
     }
   | {
       readonly status: 'story_pending_review';
+    }
+  | {
+      /** `afterChapterId` không thuộc truyện này, hoặc đã bị xoá. */
+      readonly status: 'anchor_not_found';
+    }
+  | {
+      /** Hai chương liền kề đã sát nhau, không còn số nào chèn vào giữa. */
+      readonly status: 'no_gap';
+
+      readonly afterNumber: number;
+
+      readonly beforeNumber: number;
     };
 
 export interface UpdateAuthorChapterInput {
