@@ -143,6 +143,28 @@ export class ChapterMediaReorderMismatchException extends InvalidInputException 
   }
 }
 
+export class ChapterInsertAnchorNotFoundException extends ResourceConflictException {
+  constructor() {
+    super({
+      code: 'CHAPTER_INSERT_ANCHOR_NOT_FOUND',
+      resource: 'chương',
+      message: 'Không tìm thấy chương để chèn vào sau; hãy tải lại danh sách',
+    });
+  }
+}
+
+export class ChapterInsertNoGapException extends ResourceConflictException {
+  constructor(afterNumber: number, beforeNumber: number) {
+    super({
+      code: 'CHAPTER_INSERT_NO_GAP',
+      resource: 'chương',
+      message:
+        `Không còn số chương nào nằm giữa ${afterNumber} và ${beforeNumber}. ` +
+        'Hãy chèn vào một khoảng khác, hoặc đánh số lại hai chương này.',
+    });
+  }
+}
+
 export class ChapterStoryPendingReviewException extends ResourceConflictException {
   constructor() {
     super({

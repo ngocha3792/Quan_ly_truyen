@@ -232,6 +232,7 @@ export class AuthorChaptersController {
         ipAddress,
         userAgent,
         requestId,
+        request.afterChapterId,
       ),
     );
 

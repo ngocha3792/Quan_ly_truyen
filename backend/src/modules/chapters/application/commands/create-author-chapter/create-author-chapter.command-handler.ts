@@ -7,6 +7,8 @@ import {
   ChapterContentValueObject,
   ChapterTitleValueObject,
   countChapterWords,
+  ChapterInsertAnchorNotFoundException,
+  ChapterInsertNoGapException,
   ChapterStoryNotFoundException,
   ChapterStoryPendingReviewException,
 } from '../../../domain';
@@ -38,6 +40,9 @@ export class CreateAuthorChapterCommandHandler {
       title,
       content,
       wordCount: countChapterWords(content),
+      ...(command.afterChapterId
+        ? { afterChapterId: command.afterChapterId }
+        : {}),
       createdAt: new Date(),
       audit: {
         ipAddress: command.ipAddress,
@@ -51,6 +56,13 @@ export class CreateAuthorChapterCommandHandler {
         return ChapterResultMapper.toDto(result.chapter);
       case 'story_pending_review':
         throw new ChapterStoryPendingReviewException();
+      case 'anchor_not_found':
+        throw new ChapterInsertAnchorNotFoundException();
+      case 'no_gap':
+        throw new ChapterInsertNoGapException(
+          result.afterNumber,
+          result.beforeNumber,
+        );
       case 'story_not_found':
       default:
         throw new ChapterStoryNotFoundException(command.storyId);

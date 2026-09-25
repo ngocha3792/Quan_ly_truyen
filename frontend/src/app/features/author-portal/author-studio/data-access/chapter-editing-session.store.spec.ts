@@ -272,6 +272,35 @@ describe('ChapterEditingSessionStore', () => {
     expect(repository.updateChapter).not.toHaveBeenCalled();
   });
 
+  it('sends the insert anchor when creating, then never again on later saves', async () => {
+    repository.createChapter.mockReturnValue(of({ ...chapter, version: 1 }));
+    await store.initialize('account', 'story', null, 'anchor-chapter');
+    store.change({ title: chapter.title, content: 'Chương chèn' });
+    await store.save();
+    expect(repository.createChapter).toHaveBeenCalledWith(
+      'story',
+      expect.objectContaining({ afterChapterId: 'anchor-chapter' }),
+    );
+    store.change({ title: chapter.title, content: 'Sửa tiếp' });
+    await store.save();
+    expect(repository.updateChapter).toHaveBeenCalledWith(
+      'story',
+      chapter.id,
+      expect.not.objectContaining({ afterChapterId: expect.anything() }),
+    );
+  });
+
+  it('omits the insert anchor entirely when the chapter is appended to the end', async () => {
+    repository.createChapter.mockReturnValue(of({ ...chapter, version: 1 }));
+    await store.initialize('account', 'story', null);
+    store.change({ title: chapter.title, content: 'Chương cuối' });
+    await store.save();
+    expect(repository.createChapter).toHaveBeenCalledWith(
+      'story',
+      expect.not.objectContaining({ afterChapterId: expect.anything() }),
+    );
+  });
+
   it('preserves a newer local revision instead of replacing it with a translation response', async () => {
     await store.initialize('account', 'story', chapter);
     store.change({ title: 'Local', content: 'New typing' });

@@ -1,12 +1,17 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
-import { ChapterStoryNotFoundException } from '../../../domain';
+import {
+  ChapterInsertAnchorNotFoundException,
+  ChapterInsertNoGapException,
+  ChapterStoryNotFoundException,
+} from '../../../domain';
 import { CreateAuthorChapterCommand } from './create-author-chapter.command';
 import { CreateAuthorChapterCommandHandler } from './create-author-chapter.command-handler';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const STORY_ID = '22222222-2222-4222-8222-222222222222';
 const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
+const ANCHOR_ID = '44444444-4444-4444-8444-444444444444';
 
 describe('CreateAuthorChapterCommandHandler', () => {
   let persistence: {
@@ -46,6 +51,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
         '127.0.0.1',
         'Jest',
         'chapter-create-request',
+        undefined,
       ),
     );
 
@@ -81,6 +87,7 @@ describe('CreateAuthorChapterCommandHandler', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       ),
     );
 
@@ -90,6 +97,54 @@ describe('CreateAuthorChapterCommandHandler', () => {
         wordCount: 0,
       }),
     );
+  });
+
+  it('chuyển mốc chèn xuống persistence, và không gửi trường thừa khi thêm vào đuôi', async () => {
+    persistence.createDraft.mockResolvedValue({
+      status: 'created',
+      chapter: createChapterRecord(),
+    });
+
+    await handler.execute(createCommand(USER_ID, ANCHOR_ID));
+    expect(persistence.createDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ afterChapterId: ANCHOR_ID }),
+    );
+
+    await handler.execute(createCommand(USER_ID));
+    const inputs = persistence.createDraft.mock.calls as [
+      Record<string, unknown>,
+    ][];
+    expect(inputs[inputs.length - 1][0]).not.toHaveProperty('afterChapterId');
+  });
+
+  it('báo rõ khi mốc chèn không còn nữa', async () => {
+    persistence.createDraft.mockResolvedValue({ status: 'anchor_not_found' });
+
+    await expect(
+      handler.execute(createCommand(USER_ID, ANCHOR_ID)),
+    ).rejects.toBeInstanceOf(ChapterInsertAnchorNotFoundException);
+  });
+
+  /*
+   * Hai chương sát nhau thì cột Decimal(10, 2) hết chỗ. Lỗi phải nói ra hai số
+   * đó để tác giả biết chèn chỗ khác, thay vì một lỗi database khó hiểu.
+   */
+  it('nói rõ hai số chương khi không còn chỗ chèn', async () => {
+    persistence.createDraft.mockResolvedValue({
+      status: 'no_gap',
+      afterNumber: 1.5,
+      beforeNumber: 1.51,
+    });
+
+    await expect(
+      handler.execute(createCommand(USER_ID, ANCHOR_ID)),
+    ).rejects.toMatchObject({
+      code: 'CHAPTER_INSERT_NO_GAP',
+      message: expect.stringContaining('1.5') as unknown,
+    });
+    await expect(
+      handler.execute(createCommand(USER_ID, ANCHOR_ID)),
+    ).rejects.toBeInstanceOf(ChapterInsertNoGapException);
   });
 
   it('ẩn story không tồn tại hoặc không thuộc author bằng not found', async () => {
@@ -103,7 +158,10 @@ describe('CreateAuthorChapterCommandHandler', () => {
   });
 });
 
-function createCommand(userId: string | undefined): CreateAuthorChapterCommand {
+function createCommand(
+  userId: string | undefined,
+  afterChapterId?: string,
+): CreateAuthorChapterCommand {
   return new CreateAuthorChapterCommand(
     userId,
     STORY_ID,
@@ -112,6 +170,7 @@ function createCommand(userId: string | undefined): CreateAuthorChapterCommand {
     undefined,
     undefined,
     undefined,
+    afterChapterId,
   );
 }
 

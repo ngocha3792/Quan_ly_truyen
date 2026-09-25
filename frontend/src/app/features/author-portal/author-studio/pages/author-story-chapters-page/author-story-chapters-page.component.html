@@ -98,6 +98,14 @@
                           Xóa
                         </app-button>
                       }
+                      @if (canInsertAfter(story)) {
+                        <app-link-button
+                          variant="secondary"
+                          [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'tao-moi']"
+                          [queryParams]="{ 'chen-sau': chapter.id }"
+                          >Chèn chương sau</app-link-button
+                        >
+                      }
                       @if (canPublish(story, chapter)) {
                         <app-button
                           variant="success"

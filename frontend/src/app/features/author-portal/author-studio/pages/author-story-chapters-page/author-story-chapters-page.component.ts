@@ -86,6 +86,15 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   }
 
   /**
+   * Chèn được sau bất kỳ chương nào, kể cả chương đã xuất bản: chương mới nhận
+   * số nằm giữa nên không chương cũ nào bị đổi số hay đổi slug. Chỉ chặn khi
+   * truyện đang chờ duyệt, đúng như máy chủ chặn.
+   */
+  protected canInsertAfter(story: AuthorManagedStory): boolean {
+    return story.status !== 'PENDING_REVIEW';
+  }
+
+  /**
    * Chương truyện tranh không có chữ nào nên `wordCount` luôn bằng 0; nội dung
    * của nó là các trang ảnh. Chỉ đếm chữ thì nút xuất bản và hẹn giờ không bao
    * giờ hiện ra cho truyện tranh.
