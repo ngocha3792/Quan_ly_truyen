@@ -66,7 +66,8 @@ export class AuthorChaptersStore {
       });
   }
 
-  deleteDraft(storyId: string, chapterId: string): void {
+  /** Xoá chương ở bất kỳ trạng thái nào; máy chủ tự hoàn tiền mọi lượt mua. */
+  remove(storyId: string, chapterId: string): void {
     if (this.actionChapterId()) return;
 
     this.actionChapterId.set(chapterId);
