@@ -15,6 +15,7 @@ import {
   UpdatePriceBandCommandHandler,
   ListAdminPurchasesQueryHandler,
   RefundChapterPurchaseCommandHandler,
+  RefundChapterPurchasesCommandHandler,
   GetRevenueAnalyticsQueryHandler,
 } from './application';
 import {
@@ -54,6 +55,7 @@ import { MonetizationSecurityModule } from './monetization-security.module';
     UpdatePriceBandCommandHandler,
     ListAdminPurchasesQueryHandler,
     RefundChapterPurchaseCommandHandler,
+    RefundChapterPurchasesCommandHandler,
     GetRevenueAnalyticsQueryHandler,
     MonetizationFeatureGuard,
     AuthorPricingFeatureGuard,
@@ -64,5 +66,10 @@ import { MonetizationSecurityModule } from './monetization-security.module';
       useExisting: PrismaMonetizationPersistence,
     },
   ],
+  /*
+   * Mở ra cho module khác dùng: chương và truyện bị xoá phải hoàn tiền qua
+   * đúng đường hoàn tiền này, không được tự dựng lại bút toán riêng.
+   */
+  exports: [RefundChapterPurchasesCommandHandler],
 })
 export class MonetizationModule {}

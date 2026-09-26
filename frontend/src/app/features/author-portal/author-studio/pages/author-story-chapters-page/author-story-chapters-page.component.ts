@@ -22,6 +22,7 @@ import {
   AuthorManagedChapterSummary,
   AuthorManagedStory,
 } from '../../domain/author-story-management.models';
+import { describeChapterDeleteWarning } from '../../domain/delete-warning';
 
 const PAGE_SIZE = 20;
 
@@ -139,11 +140,11 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   );
 
   /**
-   * Xoá thì vẫn chỉ bản nháp, đúng như máy chủ: gỡ hẳn một chương độc giả
-   * đang đọc là chuyện khác với sửa nó.
+   * Xoá được ở mọi trạng thái, trừ khi truyện đang chờ duyệt: xoá giữa lượt
+   * duyệt là rút nội dung ngay dưới tay người đang đọc để duyệt.
    */
-  protected canDelete(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): boolean {
-    return story.status !== 'PENDING_REVIEW' && chapter.status === 'DRAFT';
+  protected canDelete(story: AuthorManagedStory): boolean {
+    return story.status !== 'PENDING_REVIEW';
   }
 
   /** Chương đang hiện cho độc giả — sửa là họ thấy ngay. */
@@ -169,9 +170,9 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   }
 
   protected deleteChapter(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): void {
-    if (!this.canDelete(story, chapter)) return;
-    if (!window.confirm(`Xóa bản nháp chương ${chapter.number}: “${chapter.title}”?`)) return;
-    this.store.deleteDraft(story.id, chapter.id);
+    if (!this.canDelete(story)) return;
+    if (!window.confirm(describeChapterDeleteWarning(chapter))) return;
+    this.store.remove(story.id, chapter.id);
   }
 
   protected publishChapter(story: AuthorManagedStory, chapter: AuthorManagedChapterSummary): void {

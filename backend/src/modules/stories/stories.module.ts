@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthAuthorizationModule } from '@/modules/auth';
 import { AuthorsModule } from '@/modules/authors';
+import { MonetizationModule } from '@/modules/monetization';
 
 import {
   ApproveStorySubmissionCommandHandler,
@@ -41,7 +42,12 @@ import {
 } from './presentation/http';
 
 @Module({
-  imports: [PrismaModule, AuthAuthorizationModule, AuthorsModule],
+  imports: [
+    PrismaModule,
+    AuthAuthorizationModule,
+    AuthorsModule,
+    MonetizationModule,
+  ],
   controllers: [
     PublicStoriesController,
     StoryRecommendationsController,

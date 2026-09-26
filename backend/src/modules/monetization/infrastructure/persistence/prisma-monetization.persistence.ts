@@ -44,6 +44,8 @@ import type {
   SetChapterMonetizationInput,
   UnlockChapterInput,
   UnlockChapterRecord,
+  ListRefundableChapterPurchasesInput,
+  RefundableChapterPurchaseRecord,
   RefundChapterPurchaseInput,
   RefundChapterPurchaseRecord,
   RevenueAnalyticsRecord,
@@ -819,6 +821,27 @@ export class PrismaMonetizationPersistence implements MonetizationPersistencePor
         resource: 'Purchase explorer',
       });
     }
+  }
+
+  /**
+   * Các giao dịch mua còn hoàn được của một chương, hoặc của cả một truyện.
+   *
+   * Chỉ lấy `COMPLETED`: giao dịch đã hoàn rồi thì gọi lại chỉ tốn một vòng
+   * idempotency, còn giao dịch chưa xong thì không có gì để trả lại.
+   */
+  async listRefundableChapterPurchases(
+    input: ListRefundableChapterPurchasesInput,
+  ): Promise<readonly RefundableChapterPurchaseRecord[]> {
+    return this.prisma.chapterPurchase.findMany({
+      where: {
+        status: ChapterPurchaseStatus.COMPLETED,
+        ...(input.chapterId ? { chapterId: input.chapterId } : {}),
+        ...(input.storyId ? { chapter: { storyId: input.storyId } } : {}),
+      },
+      orderBy: { createdAt: 'asc' },
+      take: input.limit,
+      select: { id: true, chapterId: true },
+    });
   }
 
   async refundChapterPurchase(

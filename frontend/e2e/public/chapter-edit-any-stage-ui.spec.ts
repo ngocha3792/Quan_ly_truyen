@@ -161,7 +161,7 @@ async function mockApi(page: Page): Promise<void> {
 }
 
 test.describe('Tác giả sửa được chương ở mọi giai đoạn', () => {
-  test('chương đã xuất bản vẫn mở để sửa, nhưng không còn nút xóa', async ({ page }) => {
+  test('chương đã xuất bản vừa sửa vừa xóa được', async ({ page }) => {
     await mockApi(page);
 
     // Vào một route client-side trước: page.route không chặn được fetch của SSR.
@@ -182,15 +182,52 @@ test.describe('Tác giả sửa được chương ở mọi giai đoạn', () =>
     const editLink = publishedRow.getByRole('link', { name: 'Sửa (độc giả thấy ngay)' });
     await expect(editLink).toBeVisible();
 
-    // Nhưng xóa thì vẫn là chuyện khác: gỡ hẳn một chương độc giả đang đọc.
-    await expect(publishedRow.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+    // Xóa cũng mở luôn, không còn chỉ dành cho bản nháp.
+    await expect(publishedRow.getByRole('button', { name: 'Xóa' })).toBeVisible();
 
-    // Bản nháp thì ngược lại: nhãn bình thường và vẫn xóa được.
     const draftRow = page.getByRole('row').filter({ hasText: 'Chương hai' });
     await expect(draftRow.getByRole('link', { name: 'Sửa chương' })).toBeVisible();
     await expect(draftRow.getByRole('button', { name: 'Xóa' })).toBeVisible();
 
     await editLink.click();
     await expect(page).toHaveURL(new RegExp(`chuong/${FIRST_CHAPTER}`));
+  });
+
+  test('hộp xác nhận nói thẳng chuyện hoàn tiền trước khi xóa chương đã xuất bản', async ({
+    page,
+  }) => {
+    await mockApi(page);
+
+    await page.goto('/tim-kiem');
+    await expect(page.getByRole('heading', { name: 'Tìm kiếm', exact: true })).toBeVisible();
+    await page.evaluate((storyId) => {
+      history.pushState(null, '', `/author-studio/truyen/${storyId}/chuong`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, STORY_ID);
+
+    const messages: string[] = [];
+    page.on('dialog', (dialog) => {
+      messages.push(dialog.message());
+      // Bấm Hủy: test này chỉ đọc lời cảnh báo, không xóa thật.
+      void dialog.dismiss();
+    });
+
+    await page
+      .getByRole('row')
+      .filter({ hasText: 'Chương một' })
+      .getByRole('button', { name: 'Xóa' })
+      .click();
+    await expect.poll(() => messages.length).toBe(1);
+    expect(messages[0]).toContain('hoàn tiền tự động');
+    expect(messages[0]).toContain('Không hoàn tác được');
+
+    // Bản nháp chẳng có đồng nào để hoàn nên không dọa nhầm.
+    await page
+      .getByRole('row')
+      .filter({ hasText: 'Chương hai' })
+      .getByRole('button', { name: 'Xóa' })
+      .click();
+    await expect.poll(() => messages.length).toBe(2);
+    expect(messages[1]).not.toContain('hoàn tiền');
   });
 });

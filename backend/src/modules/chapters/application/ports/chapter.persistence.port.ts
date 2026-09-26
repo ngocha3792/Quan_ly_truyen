@@ -273,9 +273,6 @@ export type DeleteAuthorChapterResult =
       readonly status: 'not_found';
     }
   | {
-      readonly status: 'not_draft';
-    }
-  | {
       readonly status: 'story_pending_review';
     };
 
@@ -481,7 +478,13 @@ export interface ChapterPersistencePort {
     input: RestoreAuthorChapterVersionInput,
   ): Promise<RestoreAuthorChapterVersionResult>;
 
-  deleteDraft(
+  /**
+   * Xoá mềm một chương ở bất kỳ trạng thái nào, kể cả đã xuất bản.
+   *
+   * Không tự hoàn tiền: nơi gọi phải hoàn xong mọi lượt mua trước khi gọi hàm
+   * này, vì xoá trước rồi hoàn sau là để người đọc mất cả tiền lẫn chương.
+   */
+  deleteOwned(
     input: DeleteAuthorChapterInput,
   ): Promise<DeleteAuthorChapterResult>;
 

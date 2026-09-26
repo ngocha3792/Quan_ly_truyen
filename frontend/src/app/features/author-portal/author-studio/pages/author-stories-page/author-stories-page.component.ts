@@ -21,6 +21,7 @@ import { PaginationComponent } from '../../../../../shared/components/pagination
 import { SearchFieldComponent } from '../../../../../shared/components/search-field/search-field.component';
 import { AuthorStoriesStore } from '../../data-access/author-stories.store';
 import { AuthorManagedStory, AuthorStoryStatus } from '../../domain/author-story-management.models';
+import { describeStoryDeleteWarning } from '../../domain/delete-warning';
 
 const PAGE_SIZE = 20;
 
@@ -87,14 +88,18 @@ export class AuthorStoriesPageComponent implements OnInit {
     this.page.set(page);
   }
 
+  /**
+   * Xoá được ở mọi trạng thái, trừ khi truyện đang chờ duyệt: xoá giữa lượt
+   * duyệt là rút nội dung ngay dưới tay người đang đọc để duyệt.
+   */
   protected canDelete(story: AuthorManagedStory): boolean {
-    return story.status === 'DRAFT' || story.status === 'REJECTED';
+    return story.status !== 'PENDING_REVIEW';
   }
 
   protected deleteStory(story: AuthorManagedStory): void {
     if (!this.canDelete(story)) return;
-    if (!window.confirm(`Xóa bản nháp “${story.title}”?`)) return;
-    this.store.deleteDraft(story.id);
+    if (!window.confirm(describeStoryDeleteWarning(story))) return;
+    this.store.remove(story.id);
   }
 
   protected statusLabel(status: AuthorStoryStatus): string {

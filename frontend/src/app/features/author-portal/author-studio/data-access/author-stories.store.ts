@@ -33,7 +33,8 @@ export class AuthorStoriesStore {
       });
   }
 
-  deleteDraft(storyId: string): void {
+  /** Xoá truyện ở bất kỳ trạng thái nào; máy chủ tự hoàn tiền mọi lượt mua. */
+  remove(storyId: string): void {
     if (this.actionStoryId()) return;
 
     this.actionStoryId.set(storyId);

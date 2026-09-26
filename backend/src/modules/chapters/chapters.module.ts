@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '@/infrastructure/database';
 import { AuthorsModule } from '@/modules/authors';
 import { MediaModule } from '@/modules/media';
+import { MonetizationModule } from '@/modules/monetization';
 import {
   CHAPTER_PERSISTENCE_PORT,
   CreateAuthorChapterCommandHandler,
@@ -33,7 +34,13 @@ import {
 } from './presentation';
 
 @Module({
-  imports: [PrismaModule, AuthorsModule, MediaModule, ChapterWorkflowModule],
+  imports: [
+    PrismaModule,
+    AuthorsModule,
+    MediaModule,
+    MonetizationModule,
+    ChapterWorkflowModule,
+  ],
   controllers: [
     AuthorChaptersController,
     PublicChaptersController,

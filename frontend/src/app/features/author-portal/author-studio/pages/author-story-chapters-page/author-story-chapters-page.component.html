@@ -128,7 +128,7 @@
                           isLive(chapter) ? 'Sửa (độc giả thấy ngay)' : 'Sửa chương'
                         }}</app-link-button
                       >
-                      @if (canDelete(story, chapter)) {
+                      @if (canDelete(story)) {
                         <app-button
                           variant="danger"
                           [disabled]="store.actionChapterId() === chapter.id"

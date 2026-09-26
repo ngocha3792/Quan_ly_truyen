@@ -55,16 +55,6 @@ export class ChapterVersionNotFoundException extends ResourceNotFoundException {
   }
 }
 
-export class ChapterDraftOnlyMutationException extends ResourceConflictException {
-  constructor() {
-    super({
-      code: 'CHAPTER_DRAFT_ONLY_MUTATION',
-      resource: 'chương',
-      message: 'Chỉ chương ở trạng thái bản nháp mới có thể xóa',
-    });
-  }
-}
-
 export class ChapterStoryNotPublishedException extends ResourceConflictException {
   constructor() {
     super({
