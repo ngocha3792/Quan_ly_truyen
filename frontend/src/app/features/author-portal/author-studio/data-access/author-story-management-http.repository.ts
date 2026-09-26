@@ -12,6 +12,7 @@ import {
   AuthorChapterPricingInput,
   AuthorChapterVersionPage,
   AuthorManagedChapter,
+  BulkChapterActionResult,
   ChapterImportResult,
   ImportedChapterDraft,
   AuthorManagedChapterSummary,
@@ -73,9 +74,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .pipe(
         map((response: ApiSuccessEnvelope<AuthorManagedStory>) => response.data),
         tap(() => {
-          if (this.storyCreateRetry?.key === retry.key) {
-            this.storyCreateRetry = null;
-          }
+          if (this.storyCreateRetry?.key === retry.key) this.storyCreateRetry = null;
         }),
       );
   }
@@ -115,13 +114,10 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
   }
 
   cancelSubmission(storyId: string): Observable<AuthorStoryPublication> {
+    const url = `${this.storiesUrl}/${storyId}/submission/cancel`;
     return this.http
-      .post<ApiSuccessEnvelope<AuthorStoryPublication>>(
-        `${this.storiesUrl}/${storyId}/submission/cancel`,
-        {},
-        { headers: idempotencyHeaders() },
-      )
-      .pipe(map((response: ApiSuccessEnvelope<AuthorStoryPublication>) => response.data));
+      .post<ApiSuccessEnvelope<AuthorStoryPublication>>(url, {}, { headers: idempotencyHeaders() })
+      .pipe(map((response) => response.data));
   }
 
   listChapters(storyId: string): Observable<readonly AuthorManagedChapterSummary[]> {
@@ -224,6 +220,14 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
     chapters: readonly ImportedChapterDraft[],
   ): Observable<ChapterImportResult> {
     return this.drafts.importDrafts(storyId, chapters);
+  }
+
+  submitAllChapters(storyId: string): Observable<BulkChapterActionResult> {
+    return this.chapterPublication.submitAll(storyId);
+  }
+
+  publishAllChapters(storyId: string): Observable<BulkChapterActionResult> {
+    return this.chapterPublication.publishAll(storyId);
   }
 
   scheduleChapter(

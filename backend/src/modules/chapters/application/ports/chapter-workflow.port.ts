@@ -34,8 +34,55 @@ export interface ChapterWorkflowMutation {
   audit: { ipAddress?: string; userAgent?: string; requestId?: string };
 }
 
+/** Một chương bị bỏ qua trong lô, kèm lý do đủ rõ để hiện ra cho người bấm. */
+export interface SkippedBulkChapter {
+  readonly chapterId: string;
+
+  readonly number: number;
+
+  readonly title: string;
+
+  readonly code: string;
+
+  readonly message: string;
+}
+
+export interface BulkChapterWorkflowInput {
+  readonly userId: string;
+
+  /**
+   * `approve` gom chương IN_REVIEW (admin duyệt), `submit` gom chương DRAFT
+   * (tác giả gửi duyệt).
+   */
+  readonly action: 'approve' | 'submit';
+
+  /** Giới hạn trong một truyện; bỏ trống là toàn hệ thống. */
+  readonly storyId?: string;
+
+  readonly audit: {
+    ipAddress?: string;
+    userAgent?: string;
+    requestId?: string;
+  };
+}
+
+export interface BulkChapterWorkflowResult {
+  readonly succeeded: readonly ChapterRecord[];
+
+  readonly skipped: readonly SkippedBulkChapter[];
+
+  /**
+   * Số chương còn đủ điều kiện nhưng vượt trần mỗi lần gọi. Khác 0 thì giao
+   * diện gọi tiếp.
+   */
+  readonly remaining: number;
+}
+
 export interface ChapterWorkflowPort {
   transition(input: ChapterWorkflowMutation): Promise<ChapterRecord>;
+  transitionMany(
+    input: BulkChapterWorkflowInput,
+  ): Promise<BulkChapterWorkflowResult>;
   get(
     userId: string,
     chapterId: string,

@@ -11,6 +11,7 @@ import {
   AuthorManagedChapter,
   ChapterImportResult,
   ImportedChapterDraft,
+  BulkChapterActionResult,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
   AuthorStoryDraftInput,
@@ -94,6 +95,8 @@ export abstract class AuthorStoryManagementRepository {
     storyId: string,
     chapters: readonly ImportedChapterDraft[],
   ): Observable<ChapterImportResult>;
+  abstract submitAllChapters(storyId: string): Observable<BulkChapterActionResult>;
+  abstract publishAllChapters(storyId: string): Observable<BulkChapterActionResult>;
   abstract scheduleChapter(
     storyId: string,
     chapterId: string,

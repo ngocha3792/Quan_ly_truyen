@@ -1,3 +1,4 @@
+export * from './bulk-chapter-action-result.dto';
 export * from './chapter-result.dto';
 export * from './chapter-version-result.dto';
 export * from './chapter-summary-result.dto';

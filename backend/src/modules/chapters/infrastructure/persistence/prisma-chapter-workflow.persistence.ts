@@ -6,11 +6,16 @@ import {
 } from '@/common/exceptions';
 import { PrismaService } from '@/infrastructure/database';
 import type {
+  BulkChapterWorkflowInput,
+  BulkChapterWorkflowResult,
   ChapterWorkflowMutation,
   ChapterWorkflowPort,
   ChapterWorkflowRecord,
+  SkippedBulkChapter,
 } from '../../application/ports/chapter-workflow.port';
+import type { ChapterRecord } from '../../application/ports/chapter.persistence.port';
 import {
+  ChapterBulkActionPolicy,
   ChapterNotFoundException,
   ChapterVersionConflictException,
 } from '../../domain';
@@ -162,6 +167,80 @@ export class PrismaChapterWorkflowPersistence implements ChapterWorkflowPort {
     });
   }
 
+  /**
+   * Chạy cùng một `transition` cho từng chương đủ điều kiện, mỗi chương một
+   * giao dịch riêng.
+   *
+   * Không gộp cả lô vào một giao dịch: một chương rỗng làm cả lô quay lui thì
+   * người bấm mất hết phần đã duyệt được. Tách ra thì phần xong vẫn xong, phần
+   * vướng được kể tên kèm lý do.
+   *
+   * Gọi lại chính `transition` thay vì viết lại thân nó, nên toàn bộ luật sẵn
+   * có vẫn nguyên: quyền, không tự duyệt truyện mình, chặn chương rỗng, ghi bản
+   * ghi duyệt, ghi audit log, xoá phiên soạn thảo.
+   */
+  async transitionMany(
+    input: BulkChapterWorkflowInput,
+  ): Promise<BulkChapterWorkflowResult> {
+    const where: Prisma.ChapterWhereInput = {
+      status: ChapterBulkActionPolicy.sourceStatus(input.action),
+      deletedAt: null,
+      story: {
+        deletedAt: null,
+        ...(input.storyId ? { id: input.storyId } : {}),
+        // Tác giả chỉ gom được chương của truyện mình; admin gom được mọi truyện.
+        ...(input.action === 'submit' ? editableStoryWhere(input.userId) : {}),
+      },
+    };
+
+    const [candidates, total] = await Promise.all([
+      this.prisma.chapter.findMany({
+        where,
+        orderBy: [{ storyId: 'asc' }, { number: 'asc' }],
+        take: ChapterBulkActionPolicy.MAX_PER_CALL,
+        select: {
+          id: true,
+          storyId: true,
+          number: true,
+          title: true,
+          version: true,
+        },
+      }),
+      this.prisma.chapter.count({ where }),
+    ]);
+
+    const succeeded: ChapterRecord[] = [];
+    const skipped: SkippedBulkChapter[] = [];
+
+    for (const candidate of candidates) {
+      try {
+        succeeded.push(
+          await this.transition({
+            userId: input.userId,
+            storyId: candidate.storyId,
+            chapterId: candidate.id,
+            /*
+             * Đọc version ngoài giao dịch rồi để `transition` kiểm lại bên
+             * trong. Tác giả sửa chương đúng lúc này thì nó báo xung đột và
+             * chương đó bị bỏ qua, chứ không duyệt một bản chữ không ai đọc.
+             */
+            expectedVersion: candidate.version,
+            action: input.action === 'approve' ? 'APPROVED' : 'submit',
+            audit: input.audit,
+          }),
+        );
+      } catch (error: unknown) {
+        skipped.push(describeSkippedChapter(candidate, error));
+      }
+    }
+
+    return {
+      succeeded,
+      skipped,
+      remaining: Math.max(0, total - candidates.length),
+    };
+  }
+
   async get(
     userId: string,
     chapterId: string,
@@ -261,4 +340,32 @@ export async function assertChapterReviewer(
     throw new AccessDeniedException({
       message: 'Bạn không có quyền duyệt chương',
     });
+}
+
+/**
+ * Biến lỗi của một chương thành dòng lý do hiện được cho người bấm.
+ *
+ * Lỗi miền của repo đều mang `code` và `message` tiếng Việt sẵn, nên dùng lại
+ * thay vì tự dịch. Lỗi lạ thì nói thẳng là lạ chứ không nuốt: nuốt đi là người
+ * bấm tưởng chương đó không đủ điều kiện, trong khi thật ra hệ thống hỏng.
+ */
+function describeSkippedChapter(
+  chapter: { id: string; number: Prisma.Decimal; title: string },
+  error: unknown,
+): SkippedBulkChapter {
+  const known =
+    typeof error === 'object' && error !== null
+      ? (error as { code?: unknown; message?: unknown })
+      : {};
+
+  return {
+    chapterId: chapter.id,
+    number: chapter.number.toNumber(),
+    title: chapter.title,
+    code: typeof known.code === 'string' ? known.code : 'CHAPTER_BULK_FAILED',
+    message:
+      typeof known.message === 'string' && known.message.trim()
+        ? known.message
+        : 'Không xử lý được chương này',
+  };
 }

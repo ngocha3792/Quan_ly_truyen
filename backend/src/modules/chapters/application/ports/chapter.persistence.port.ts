@@ -310,6 +310,30 @@ export type PublishAuthorChapterResult =
       readonly status: 'empty_content';
     };
 
+export interface PublishManyAuthorChaptersInput {
+  readonly userId: string;
+
+  readonly storyId: string;
+
+  readonly publishedAt: Date;
+
+  readonly audit: ChapterAuditContext;
+}
+
+export interface PublishManyAuthorChaptersResult {
+  readonly published: readonly ChapterRecord[];
+
+  /** Chương đủ trạng thái nhưng không xuất bản được, kèm lý do. */
+  readonly skipped: readonly {
+    readonly chapterId: string;
+    readonly number: number;
+    readonly title: string;
+    readonly status: Exclude<PublishAuthorChapterResult['status'], 'published'>;
+  }[];
+
+  readonly remaining: number;
+}
+
 export interface ScheduleAuthorChapterInput {
   readonly userId: string;
   readonly storyId: string;
@@ -464,6 +488,10 @@ export interface ChapterPersistencePort {
   publish(
     input: PublishAuthorChapterInput,
   ): Promise<PublishAuthorChapterResult>;
+
+  publishMany(
+    input: PublishManyAuthorChaptersInput,
+  ): Promise<PublishManyAuthorChaptersResult>;
 
   schedule(
     input: ScheduleAuthorChapterInput,
