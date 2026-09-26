@@ -1,12 +1,17 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/http/api-error.util';
+import {
+  describeSkippedBulkChapters,
+  summariseBulkChapterResult,
+} from '../../../../shared/utils/bulk-chapter-result.util';
 import {
   AuthorManagedChapter,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
+  BulkChapterActionResult,
 } from '../domain/author-story-management.models';
 import { AuthorStoryManagementRepository } from '../domain/author-story-management.repository';
 
@@ -22,11 +27,21 @@ export class AuthorChaptersStore {
   readonly actionChapterId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly bulkBusy = signal(false);
+  /** Lý do từng chương bị lô bỏ qua, một dòng một chương. */
+  readonly bulkSkipped = signal<readonly string[]>([]);
 
-  load(storyId: string): void {
+  /**
+   * `keepNotices` để một lô vừa chạy xong tải lại danh sách mà không xoá mất
+   * tóm tắt của chính nó — tóm tắt mới là thứ người bấm cần đọc.
+   */
+  load(storyId: string, keepNotices = false): void {
     this.loading.set(true);
     this.error.set(null);
-    this.success.set(null);
+    if (!keepNotices) {
+      this.success.set(null);
+      this.bulkSkipped.set([]);
+    }
 
     forkJoin({
       story: this.repository.getStory(storyId),
@@ -135,6 +150,53 @@ export class AuthorChaptersStore {
         next: (draft: AuthorManagedChapter) => {
           this.replaceChapter(draft);
           this.success.set('Đã huỷ lịch; chương trở lại bản nháp.');
+        },
+        error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
+      });
+  }
+
+  /** Gửi duyệt hết bản nháp của truyện. */
+  submitAllDrafts(storyId: string): void {
+    this.runBulk(() => this.repository.submitAllChapters(storyId), 'gửi duyệt', storyId);
+  }
+
+  /** Xuất bản hết chương đã duyệt của truyện. */
+  publishAllApproved(storyId: string): void {
+    this.runBulk(() => this.repository.publishAllChapters(storyId), 'xuất bản', storyId);
+  }
+
+  /**
+   * Chạy một lô rồi tải lại danh sách.
+   *
+   * Tải lại cả danh sách thay vì vá từng dòng: một lô đổi hàng chục chương nên
+   * vá tay dễ lệch với máy chủ hơn là tốn thêm một lượt gọi.
+   */
+  private runBulk(
+    /*
+     * Hàm tạo chứ không phải observable dựng sẵn: dựng sẵn thì lời gọi đã xảy
+     * ra trước khi qua được cổng chặn bên dưới.
+     */
+    send: () => Observable<BulkChapterActionResult>,
+    verb: string,
+    storyId: string,
+  ): void {
+    if (this.bulkBusy() || this.actionChapterId()) return;
+
+    this.bulkBusy.set(true);
+    this.error.set(null);
+    this.success.set(null);
+    this.bulkSkipped.set([]);
+
+    send()
+      .pipe(
+        finalize(() => this.bulkBusy.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result: BulkChapterActionResult) => {
+          this.success.set(summariseBulkChapterResult(result, verb));
+          this.bulkSkipped.set(describeSkippedBulkChapters(result));
+          this.load(storyId, true);
         },
         error: (error: unknown) => this.error.set(getApiErrorMessage(error)),
       });

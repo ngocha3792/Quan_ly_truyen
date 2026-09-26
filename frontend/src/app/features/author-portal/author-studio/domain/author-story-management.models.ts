@@ -131,6 +131,21 @@ export interface AuthorStoryUpdateInput extends AuthorStoryDraftInput {
   readonly coverMediaId?: string | null;
 }
 
+export interface SkippedBulkChapter {
+  readonly chapterId: string;
+  readonly number: number;
+  readonly title: string;
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface BulkChapterActionResult {
+  readonly changed: readonly { readonly id: string }[];
+  readonly skipped: readonly SkippedBulkChapter[];
+  /** Còn bấy nhiêu chương chưa tới lượt vì vượt trần mỗi lần gọi. */
+  readonly remaining: number;
+}
+
 export interface AuthorChapterDraftInput {
   readonly title: string;
   readonly content: string;
