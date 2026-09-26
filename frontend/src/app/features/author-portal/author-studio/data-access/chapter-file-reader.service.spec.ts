@@ -111,4 +111,37 @@ describe('ChapterFileReaderService', () => {
       expect(result.text).toContain(paragraph);
     }
   });
+
+  describe('tiêu đề chương đặt bằng Heading 1 của Word', () => {
+    /*
+     * Người viết Word hay dùng Heading 1 cho tiêu đề chương, và mammoth biến nó
+     * thành <h1>. Nếu phẳng hoá sinh ra "## Chương 1: ..." thì bộ tách chương
+     * không nhận ra dòng tiêu đề nữa và cả bản thảo thành một chương duy nhất.
+     */
+    const HEADING_FIXTURE = 'e2e/fixtures/ban-thao-tieu-de-heading.docx';
+
+    async function headingDocx(): Promise<File> {
+      const bytes = await readFile(HEADING_FIXTURE);
+      return new File([new Uint8Array(bytes)], 'ban-thao.docx', {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+    }
+
+    it('vẫn tách được chương và không sinh dấu thăng markdown', async () => {
+      const result = await service.read(await headingDocx());
+
+      expect(result.text).not.toContain('#');
+      expect(result.text).toContain('Chương 1: Khởi đầu');
+    });
+
+    it('tách đúng hai chương với ảnh đúng chỗ', async () => {
+      const result = await service.read(await headingDocx());
+      const parsed = parseChaptersFromText(result.text);
+
+      expect(parsed.chapters.map((chapter) => chapter.title)).toEqual(['Khởi đầu', 'Gặp gỡ']);
+      expect(parsed.chapters.map((chapter) => chapter.imageIndexes)).toEqual([[0], [1]]);
+      // Lời tựa rỗng: tiêu đề chương đầu là dòng đầu tiên của file.
+      expect(parsed.ignoredPreamble).toBe('');
+    });
+  });
 });
