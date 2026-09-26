@@ -314,7 +314,14 @@ ALERTMANAGER_CPU_LIMIT=0.25
 BACKUP_MEMORY_LIMIT=512m
 BACKUP_CPU_LIMIT=0.75
 POSTGRES_BACKUP_DIRECTORY=./backups
+# Two caps, on two different axes, and the count is the one that binds.
+# BACKUP_RETENTION_DAYS is the container's coarse age floor. It cannot
+# bound the disk on its own: backups run several times a day, so 14 days
+# of them is tens of gigabytes.
 BACKUP_RETENTION_DAYS=14
+# Local dumps kept after the off-host copy is verified. Restic holds the
+# history; these are only here for a fast local restore.
+POSTGRES_LOCAL_BACKUP_KEEP=2
 POSTGRES_DB=$(Get-QuotedEnvValue $PostgresDatabase)
 POSTGRES_USER=$(Get-QuotedEnvValue $PostgresUser)
 POSTGRES_PASSWORD=$PostgresPassword

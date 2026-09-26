@@ -255,6 +255,193 @@ function Write-BackupStatus {
 
 
 # ------------------------------------------------------------
+# Local retention
+#
+# The backup container already prunes /backups, but on the wrong axis:
+# `find -mtime +$BACKUP_RETENTION_DAYS` is an age floor, and backups run
+# several times a day. Fourteen days of them is tens of gigabytes, so the
+# disk filled and took a deploy down with it long before any file was old
+# enough to be swept. The bound has to be a count, not an age.
+#
+# Two rules make deleting a backup safe to automate:
+#   * never delete a dump that is not confirmed present off-host, and
+#   * never delete a dump whose .sha256 is still missing, because that
+#     is a concurrent run mid-write, not a leftover (a scheduled backup
+#     and a deploy can overlap — see the note in section 2).
+# ------------------------------------------------------------
+
+function Get-OffsiteDumpName {
+  <#
+    .SYNOPSIS
+    Basenames of every .dump restic currently holds under the postgres tag.
+
+    Returns $null — not an empty list — when the repository cannot be
+    read or parsed. The caller must treat that as "delete nothing":
+    an empty list would otherwise read as "off-host holds nothing",
+    which is the one case where deleting local copies loses data.
+  #>
+
+  $Output =
+    Invoke-Compose `
+      --profile maintenance `
+      run `
+      --rm `
+      --no-deps `
+      backup-offsite `
+      snapshots `
+      --tag postgres `
+      --json
+
+  $Text = ($Output -join "`n")
+  $Start = $Text.IndexOf('[')
+  $End = $Text.LastIndexOf(']')
+
+  if ($Start -lt 0 -or $End -le $Start) {
+    Write-Host `
+      'Could not read the off-host snapshot list; keeping every local dump.' `
+      -ForegroundColor Yellow
+
+    return $null
+  }
+
+  try {
+    $Snapshots =
+      $Text.Substring($Start, $End - $Start + 1) |
+      ConvertFrom-Json
+  }
+  catch {
+    Write-Host `
+      "Could not parse the off-host snapshot list ($($_.Exception.Message)); keeping every local dump." `
+      -ForegroundColor Yellow
+
+    return $null
+  }
+
+  $Names = [Collections.Generic.List[string]]::new()
+
+  foreach ($Snapshot in $Snapshots) {
+    foreach ($SnapshotPath in $Snapshot.paths) {
+      if ($SnapshotPath -match '(?<name>[^/\\]+\.dump)$') {
+        $Names.Add($Matches['name'])
+      }
+    }
+  }
+
+  # The comma is load-bearing. Returning the list bare lets PowerShell
+  # unroll it, which collapses an empty list to no output at all — and
+  # then "off-host holds nothing" arrives at the caller looking exactly
+  # like "the repository could not be read". Those must stay separable:
+  # one of them is the state where deleting local dumps loses data.
+  return ,$Names
+}
+
+function Remove-SupersededLocalBackup {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$Keep,
+
+    # $null means the off-host list is unknown, so nothing is deleted.
+    # An empty list means off-host genuinely holds no dump, which also
+    # deletes nothing.
+    [AllowNull()]
+    [AllowEmptyCollection()]
+    [Collections.Generic.List[string]]$OffsiteDumpName
+  )
+
+  # Sorted by filename, not by mtime: the name carries the UTC stamp of
+  # the dump itself, while mtime moves again when the checksum pass
+  # rewrites nothing but still touches the directory entry.
+  $Dumps =
+    Get-ChildItem -LiteralPath $BackupDirectory -Filter '*.dump' -File |
+    Sort-Object -Property Name -Descending
+
+  if ($Dumps.Count -le $Keep) {
+    return
+  }
+
+  $Candidates = $Dumps | Select-Object -Skip $Keep
+  $RemovedCount = 0
+  $RemovedBytes = [long]0
+
+  foreach ($Candidate in $Candidates) {
+    if ($Candidate.Name -eq $DumpFile.Name) {
+      # Belt and braces: this run's own dump sorts newest, so $Keep >= 1
+      # already excludes it.
+      continue
+    }
+
+    $ChecksumPath = "$($Candidate.FullName).sha256"
+
+    if (-not (Test-Path -LiteralPath $ChecksumPath -PathType Leaf)) {
+      Write-Host `
+        "Keeping $($Candidate.Name): checksum not written yet (another run may be in flight)." `
+        -ForegroundColor Yellow
+
+      continue
+    }
+
+    if ($null -eq $OffsiteDumpName -or -not $OffsiteDumpName.Contains($Candidate.Name)) {
+      Write-Host `
+        "Keeping $($Candidate.Name): no confirmed off-host copy." `
+        -ForegroundColor Yellow
+
+      continue
+    }
+
+    $RemovedBytes += $Candidate.Length
+    Remove-Item -LiteralPath $Candidate.FullName -Force
+    Remove-Item -LiteralPath $ChecksumPath -Force
+    $RemovedCount++
+  }
+
+  if ($RemovedCount -gt 0) {
+    Write-Host (
+      'Local retention removed {0} superseded dump(s), {1:N0} MiB reclaimed.' -f
+      $RemovedCount,
+      ($RemovedBytes / 1MB)
+    ) -ForegroundColor Green
+  }
+}
+
+function Remove-StaleLocalTempFile {
+  <#
+    .SYNOPSIS
+    Clears .tmp files a previous run could not finish writing.
+
+    A full disk leaves a zero-byte backup-last-success.json.tmp behind;
+    it is never read, but it hides the real reason the marker went
+    stale from anyone reading the directory.
+  #>
+
+  $Cutoff = [DateTime]::UtcNow.AddHours(-1)
+
+  Get-ChildItem -LiteralPath $BackupDirectory -Filter '*.tmp' -File |
+    Where-Object { $_.LastWriteTimeUtc -lt $Cutoff } |
+    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+}
+
+function Get-LocalBackupKeepCount {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$Default
+  )
+
+  $Configured = Get-EnvValue -Name 'POSTGRES_LOCAL_BACKUP_KEEP'
+  $Parsed = 0
+
+  if (
+    -not [string]::IsNullOrWhiteSpace($Configured) -and
+    [int]::TryParse($Configured, [ref]$Parsed) -and
+    $Parsed -ge 1
+  ) {
+    return $Parsed
+  }
+
+  return $Default
+}
+
+
+# ------------------------------------------------------------
 # 3. Initialize/check encrypted off-host repository
 # ------------------------------------------------------------
 
@@ -265,11 +452,19 @@ $OffsiteEnabled =
 if (
   $OffsiteEnabled -ne 'true'
 ) {
+  Remove-StaleLocalTempFile
   Write-BackupStatus -OffsiteVerified $false
 
   Write-Host `
     'Off-site backup is disabled. Local PostgreSQL backup completed.' `
     -ForegroundColor Yellow
+
+  Write-Host (
+    'Local dumps are never pruned while off-site backup is disabled: ' +
+    'they are the only copy. {0} currently held in {1}.' -f
+    (Get-ChildItem -LiteralPath $BackupDirectory -Filter '*.dump' -File).Count,
+    $BackupDirectory
+  ) -ForegroundColor Yellow
 
   return
 }
@@ -420,6 +615,25 @@ Invoke-Compose `
   check
 
 Write-BackupStatus -OffsiteVerified $true
+
+
+# ------------------------------------------------------------
+# 7. Local retention
+#
+# Last, and only once `check` has passed: until the off-host repository
+# is verified readable there is nothing to fall back on, so a local
+# dump deleted before this point could be the last copy.
+# ------------------------------------------------------------
+
+Write-Host `
+  'Applying local backup retention policy...' `
+  -ForegroundColor Cyan
+
+Remove-StaleLocalTempFile
+
+Remove-SupersededLocalBackup `
+  -Keep (Get-LocalBackupKeepCount -Default 2) `
+  -OffsiteDumpName (Get-OffsiteDumpName)
 
 
 Write-Host `
