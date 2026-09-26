@@ -9,6 +9,7 @@ import {
   AuthorChapterMonetization,
   AuthorChapterPricingInput,
   AuthorManagedChapter,
+  BulkChapterActionResult,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
   AuthorStoryDraftInput,
@@ -88,6 +89,8 @@ export abstract class AuthorStoryManagementRepository {
   ): Observable<ChapterVersionDiff>;
   abstract deleteChapter(storyId: string, chapterId: string): Observable<void>;
   abstract publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter>;
+  abstract submitAllChapters(storyId: string): Observable<BulkChapterActionResult>;
+  abstract publishAllChapters(storyId: string): Observable<BulkChapterActionResult>;
   abstract scheduleChapter(
     storyId: string,
     chapterId: string,

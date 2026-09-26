@@ -52,6 +52,8 @@ import type {
   ListAuthorChapterVersionsInput,
   PublishDueScheduledChaptersInput,
   PublishAuthorChapterInput,
+  PublishManyAuthorChaptersInput,
+  PublishManyAuthorChaptersResult,
   PublishAuthorChapterResult,
   RestoreAuthorChapterVersionInput,
   RestoreAuthorChapterVersionResult,
@@ -68,6 +70,7 @@ import type {
   RemoveChapterMediaResult,
 } from '../../application';
 import {
+  ChapterBulkActionPolicy,
   ChapterDraftPolicy,
   ChapterEditPolicy,
   ChapterInsertPolicy,
@@ -1006,6 +1009,65 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         resource: 'Chương',
       });
     }
+  }
+
+  /**
+   * Xuất bản mọi chương đã duyệt của một truyện, mỗi chương một giao dịch riêng.
+   *
+   * Không gộp cả lô: một chương rỗng làm cả lô quay lui thì tác giả mất hết
+   * phần đã lên bài được. Gọi lại chính `publish` nên mọi luật sẵn có vẫn
+   * nguyên, kể cả cổng chặn chương không có chữ lẫn trang ảnh.
+   */
+  async publishMany(
+    input: PublishManyAuthorChaptersInput,
+  ): Promise<PublishManyAuthorChaptersResult> {
+    const where: Prisma.ChapterWhereInput = {
+      storyId: input.storyId,
+      status: ChapterStatus.APPROVED,
+      deletedAt: null,
+      story: { deletedAt: null, ...editableStoryWhere(input.userId) },
+    };
+
+    const [candidates, total] = await Promise.all([
+      this.prisma.chapter.findMany({
+        where,
+        orderBy: { number: 'asc' },
+        take: ChapterBulkActionPolicy.MAX_PER_CALL,
+        select: { id: true, number: true, title: true },
+      }),
+      this.prisma.chapter.count({ where }),
+    ]);
+
+    const published: ChapterRecord[] = [];
+    const skipped: PublishManyAuthorChaptersResult['skipped'][number][] = [];
+
+    for (const candidate of candidates) {
+      const result = await this.publish({
+        userId: input.userId,
+        storyId: input.storyId,
+        chapterId: candidate.id,
+        publishedAt: input.publishedAt,
+        audit: input.audit,
+      });
+
+      if (result.status === 'published') {
+        published.push(result.chapter);
+        continue;
+      }
+
+      skipped.push({
+        chapterId: candidate.id,
+        number: candidate.number.toNumber(),
+        title: candidate.title,
+        status: result.status,
+      });
+    }
+
+    return {
+      published,
+      skipped,
+      remaining: Math.max(0, total - candidates.length),
+    };
   }
 
   async publish(

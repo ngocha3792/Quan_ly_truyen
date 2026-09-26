@@ -17,9 +17,14 @@ import {
 } from '@/common/decorators';
 import { Idempotent } from '@/common/decorators/interceptor';
 import { PermissionCode } from '@/common/enums';
+import {
+  BulkChapterWorkflowCommand,
+  BulkChapterWorkflowCommandHandler,
+} from '../../../application/commands/bulk-chapter-workflow';
 import { ChapterWorkflowCommandHandler } from '../../../application/commands/chapter-workflow/chapter-workflow.command-handler';
 import { ChapterWorkflowQueryHandler } from '../../../application/queries/chapter-workflow/chapter-workflow.query-handler';
 import {
+  ApproveAllChaptersRequest,
   ListChapterReviewsRequest,
   ReviewChapterRequest,
 } from '../requests/chapter-workflow.request';
@@ -30,6 +35,7 @@ import { toChapterResponse } from '../responses';
 export class AdminChapterReviewsController {
   constructor(
     private readonly commands: ChapterWorkflowCommandHandler,
+    private readonly bulkCommands: BulkChapterWorkflowCommandHandler,
     private readonly queries: ChapterWorkflowQueryHandler,
   ) {}
 
@@ -46,6 +52,34 @@ export class AdminChapterReviewsController {
         chapter: toChapterResponse(chapter),
       })),
     };
+  }
+
+  /**
+   * Duyệt mọi chương đang chờ.
+   *
+   * Có `storyId` thì gói trong một truyện; bỏ trống là toàn hệ thống. Đặt trước
+   * route `:chapterId` cho rõ thứ tự, dù `ParseUUIDPipe` cũng đã chặn.
+   */
+  @Post('approve-all')
+  @HttpCode(200)
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  async approveAll(
+    @CurrentUserId() userId: string | undefined,
+    @Body() request: ApproveAllChaptersRequest,
+    @ClientIp() ipAddress?: string,
+    @UserAgent() userAgent?: string,
+    @RequestId() requestId?: string,
+  ) {
+    return this.bulkCommands.execute(
+      new BulkChapterWorkflowCommand(
+        userId,
+        'approve',
+        request.storyId,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
   }
 
   @Get(':chapterId')

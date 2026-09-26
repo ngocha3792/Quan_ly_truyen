@@ -4,6 +4,7 @@ import { map } from 'rxjs';
 import { APP_RUNTIME_CONFIG } from '../../../../core/config/app-config.token';
 import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
+  BulkChapterActionResult,
   ChapterReviewItem,
   ChapterReviewPage,
   ReviewDecision,
@@ -23,6 +24,17 @@ export class ChapterReviewApiService {
       .get<ApiSuccessEnvelope<ChapterReviewItem>>(`${this.base}/${id}`)
       .pipe(map((r) => r.data));
   }
+  /** Duyệt hết chương đang chờ; bỏ trống `storyId` là toàn hệ thống. */
+  approveAll(storyId?: string) {
+    return this.http
+      .post<ApiSuccessEnvelope<BulkChapterActionResult>>(
+        `${this.base}/approve-all`,
+        storyId ? { storyId } : {},
+        { headers: { 'x-idempotency-key': globalThis.crypto.randomUUID() } },
+      )
+      .pipe(map((r) => r.data));
+  }
+
   review(id: string, expectedVersion: number, decision: ReviewDecision, comment: string) {
     return this.http.post(
       `${this.base}/${id}`,

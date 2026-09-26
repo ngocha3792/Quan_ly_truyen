@@ -26,6 +26,24 @@
             + Chèn chương mở đầu
           </app-link-button>
         }
+        @if (draftCount()) {
+          <app-button
+            variant="secondary"
+            [disabled]="store.bulkBusy()"
+            (click)="submitAllDrafts(story)"
+          >
+            Gửi duyệt tất cả ({{ draftCount() }})
+          </app-button>
+        }
+        @if (story.status === 'PUBLISHED' && approvedCount()) {
+          <app-button
+            variant="success"
+            [disabled]="store.bulkBusy()"
+            (click)="publishAllApproved(story)"
+          >
+            Xuất bản tất cả ({{ approvedCount() }})
+          </app-button>
+        }
       </app-page-heading>
 
       @if (story.status === 'PENDING_REVIEW') {
@@ -40,6 +58,12 @@
       }
       @if (store.success()) {
         <app-notice kind="success" [message]="store.success()" />
+      }
+      @if (store.bulkSkipped().length) {
+        <app-notice
+          kind="info"
+          [message]="'Không xử lý được: ' + store.bulkSkipped().join(' | ')"
+        />
       }
 
       <section class="list-card">

@@ -81,6 +81,30 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
     return true;
   }
 
+  /** Số bản nháp gửi duyệt được; 0 thì nút gửi duyệt hàng loạt không hiện. */
+  protected readonly draftCount = computed(
+    () => this.store.chapters().filter((chapter) => chapter.status === 'DRAFT').length,
+  );
+
+  /** Số chương đã duyệt đang chờ lên bài. */
+  protected readonly approvedCount = computed(
+    () => this.store.chapters().filter((chapter) => chapter.status === 'APPROVED').length,
+  );
+
+  /**
+   * Gửi duyệt hết bản nháp. Chương rỗng bị máy chủ bỏ qua kèm lý do chứ không
+   * làm hỏng cả lô, nên không lọc trước ở đây.
+   */
+  protected submitAllDrafts(story: AuthorManagedStory): void {
+    if (!window.confirm(`Gửi duyệt ${this.draftCount()} bản nháp của truyện này?`)) return;
+    this.store.submitAllDrafts(story.id);
+  }
+
+  protected publishAllApproved(story: AuthorManagedStory): void {
+    if (!window.confirm(`Xuất bản ${this.approvedCount()} chương đã duyệt ngay bây giờ?`)) return;
+    this.store.publishAllApproved(story.id);
+  }
+
   /**
    * Sửa được ở mọi giai đoạn: chương đang duyệt, đã duyệt, đã hẹn giờ hay đã
    * xuất bản đều mở, kể cả khi truyện đang chờ duyệt. Máy chủ cũng vậy; chỗ

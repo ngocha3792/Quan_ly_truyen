@@ -43,6 +43,8 @@ import {
   ListAuthorChapterVersionsQuery,
   ListAuthorChapterVersionsQueryHandler,
   PublishAuthorChapterCommand,
+  BulkPublishChaptersCommand,
+  BulkPublishChaptersCommandHandler,
   PublishAuthorChapterCommandHandler,
   ScheduleAuthorChapterCommand,
   ScheduleAuthorChapterCommandHandler,
@@ -93,6 +95,7 @@ export class AuthorChaptersController {
     private readonly getChapterVersion: GetAuthorChapterVersionQueryHandler,
     private readonly restoreChapterVersion: RestoreAuthorChapterVersionCommandHandler,
     private readonly publishChapter: PublishAuthorChapterCommandHandler,
+    private readonly publishAllChapters: BulkPublishChaptersCommandHandler,
     private readonly scheduleChapter: ScheduleAuthorChapterCommandHandler,
     private readonly cancelChapterSchedule: CancelAuthorChapterScheduleCommandHandler,
     private readonly attachChapterMedia: AttachChapterMediaCommandHandler,
@@ -238,6 +241,35 @@ export class AuthorChaptersController {
     );
 
     return toChapterResponse(result);
+  }
+
+  /**
+   * Xuất bản mọi chương đã duyệt của truyện trong một lần bấm.
+   *
+   * Đặt trước route `:chapterId/...` là vô hại vì `publish-all` chỉ có một đoạn
+   * đường dẫn, nhưng để cạnh `publish` cho dễ đọc.
+   */
+  @Post('publish-all')
+  @UseGuards(ActiveAuthorGuard)
+  @HttpCode(HttpStatus.OK)
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.CHAPTER_PUBLISH_OWN)
+  async publishAll(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ) {
+    return this.publishAllChapters.execute(
+      new BulkPublishChaptersCommand(
+        userId,
+        storyId,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
   }
 
   @Post(':chapterId/publish')
