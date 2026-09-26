@@ -12,6 +12,8 @@ import {
   AuthorChapterPricingInput,
   AuthorChapterVersionPage,
   AuthorManagedChapter,
+  ChapterImportResult,
+  ImportedChapterDraft,
   AuthorManagedChapterSummary,
   AuthorManagedStory,
   AuthorStoryDraftInput,
@@ -93,19 +95,13 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>>(
         `${this.metadataUrl}/categories`,
       )
-      .pipe(
-        map(
-          (response: ApiSuccessEnvelope<readonly AuthorStoryMetadataCategory[]>) => response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
   listTags(): Observable<readonly AuthorStoryMetadataTag[]> {
     return this.http
       .get<ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>>(`${this.metadataUrl}/tags`)
-      .pipe(
-        map((response: ApiSuccessEnvelope<readonly AuthorStoryMetadataTag[]>) => response.data),
-      );
+      .pipe(map((response) => response.data));
   }
 
   submitStory(storyId: string, authorNote: string): Observable<AuthorStoryPublication> {
@@ -133,11 +129,7 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
       .get<ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>>(
         `${this.storiesUrl}/${storyId}/chapters`,
       )
-      .pipe(
-        map(
-          (response: ApiSuccessEnvelope<readonly AuthorManagedChapterSummary[]>) => response.data,
-        ),
-      );
+      .pipe(map((response) => response.data));
   }
 
   getChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
@@ -225,6 +217,13 @@ export class AuthorStoryManagementHttpRepository implements AuthorStoryManagemen
 
   publishChapter(storyId: string, chapterId: string): Observable<AuthorManagedChapter> {
     return this.chapterPublication.publish(storyId, chapterId);
+  }
+
+  importChapters(
+    storyId: string,
+    chapters: readonly ImportedChapterDraft[],
+  ): Observable<ChapterImportResult> {
+    return this.drafts.importDrafts(storyId, chapters);
   }
 
   scheduleChapter(

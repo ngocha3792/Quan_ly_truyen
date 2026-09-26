@@ -1,0 +1,32 @@
+:host {
+  display: block;
+}
+.picker,
+.preview {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+.picker__file,
+.preview__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.preview__note,
+.preview__progress {
+  color: var(--text-secondary);
+}
+.preview__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.preview__table th,
+.preview__table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}

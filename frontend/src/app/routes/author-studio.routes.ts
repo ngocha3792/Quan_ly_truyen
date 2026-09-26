@@ -89,6 +89,15 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
           ),
       },
       {
+        path: 'truyen/:storyId/chuong/nhap-file',
+        canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
+        title: appPageTitle('Nhập chương từ file'),
+        loadComponent: () =>
+          import('../features/author-portal/author-studio/pages/author-chapter-import-page/author-chapter-import-page.component').then(
+            (module) => module.AuthorChapterImportPageComponent,
+          ),
+      },
+      {
         path: 'truyen/:storyId/chuong/tao-moi',
         canDeactivate: [chapterEditorLeaveGuard],
         canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],

@@ -131,6 +131,22 @@ export interface AuthorStoryUpdateInput extends AuthorStoryDraftInput {
   readonly coverMediaId?: string | null;
 }
 
+export interface ImportedChapterDraft {
+  readonly title: string;
+  readonly content: string;
+}
+
+export interface ChapterImportResult {
+  readonly created: readonly { readonly id: string; readonly number: number }[];
+  /** Chương không tạo được, kèm vị trí trong danh sách gửi lên. */
+  readonly skipped: readonly {
+    readonly index: number;
+    readonly title: string;
+    readonly code: string;
+    readonly message: string;
+  }[];
+}
+
 export interface AuthorChapterDraftInput {
   readonly title: string;
   readonly content: string;

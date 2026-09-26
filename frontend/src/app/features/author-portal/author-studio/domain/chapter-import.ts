@@ -41,7 +41,7 @@ function fallbackTitle(numberInFile: number): string {
 export function parseChaptersFromText(raw: string): ChapterImportParseResult {
   const lines = raw.replace(/\r\n?/g, '\n').split('\n');
   const chapters: ParsedImportChapter[] = [];
-  let preamble: string[] = [];
+  const preamble: string[] = [];
   let current: { numberInFile: number; title: string; body: string[] } | null = null;
 
   const flush = (): void => {
