@@ -300,7 +300,7 @@ describe('ChapterEditingSessionStore', () => {
 
   it('sends the insert anchor when creating, then never again on later saves', async () => {
     repository.createChapter.mockReturnValue(of({ ...chapter, version: 1 }));
-    await store.initialize('account', 'story', null, 'anchor-chapter');
+    await store.initialize('account', 'story', null, { afterChapterId: 'anchor-chapter' });
     store.change({ title: chapter.title, content: 'Chương chèn' });
     await store.save();
     expect(repository.createChapter).toHaveBeenCalledWith(
@@ -312,6 +312,23 @@ describe('ChapterEditingSessionStore', () => {
     expect(repository.updateChapter).toHaveBeenCalledWith(
       'story',
       chapter.id,
+      expect.not.objectContaining({ afterChapterId: expect.anything() }),
+    );
+  });
+
+  it('gửi mốc chèn phía trước khi tạo chương mở đầu', async () => {
+    repository.createChapter.mockReturnValue(of({ ...chapter, version: 1 }));
+    await store.initialize('account', 'story', null, {
+      beforeChapterId: 'first-chapter',
+    });
+    store.change({ title: chapter.title, content: 'Chương mở đầu' });
+    await store.save();
+    expect(repository.createChapter).toHaveBeenCalledWith(
+      'story',
+      expect.objectContaining({ beforeChapterId: 'first-chapter' }),
+    );
+    expect(repository.createChapter).toHaveBeenCalledWith(
+      'story',
       expect.not.objectContaining({ afterChapterId: expect.anything() }),
     );
   });

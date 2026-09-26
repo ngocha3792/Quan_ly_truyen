@@ -448,11 +448,14 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
          * trên, nên hai lần chèn song song không thể cùng chọn một số và làm
          * vỡ khoá duy nhất (storyId, number).
          */
-        const placement = await resolveNewChapterNumber(
-          tx,
-          story.id,
-          input.afterChapterId,
-        );
+        const placement = await resolveNewChapterNumber(tx, story.id, {
+          ...(input.afterChapterId
+            ? { afterChapterId: input.afterChapterId }
+            : {}),
+          ...(input.beforeChapterId
+            ? { beforeChapterId: input.beforeChapterId }
+            : {}),
+        });
 
         if (placement.status !== 'ok') return placement;
 
@@ -2139,15 +2142,24 @@ type NewChapterNumber =
     };
 
 /**
- * Số cho chương sắp tạo: thêm vào đuôi khi không chỉ định mốc, còn có mốc thì
- * nằm giữa mốc đó và chương liền kề phía sau.
+ * Số cho chương sắp tạo.
+ *
+ * Không có mốc thì thêm vào đuôi. Có `afterChapterId` thì nằm giữa mốc đó và
+ * chương liền kề phía sau. Có `beforeChapterId` thì nằm giữa chương liền kề
+ * phía trước và mốc đó — mốc là chương đầu truyện thì phía trước coi như số 0,
+ * nên chương 1 sinh ra chương mở đầu 0.5.
  */
 async function resolveNewChapterNumber(
   tx: Prisma.TransactionClient,
   storyId: string,
-  afterChapterId: string | undefined,
+  anchor: {
+    readonly afterChapterId?: string;
+    readonly beforeChapterId?: string;
+  },
 ): Promise<NewChapterNumber> {
-  if (!afterChapterId) {
+  const anchorId = anchor.afterChapterId ?? anchor.beforeChapterId;
+
+  if (!anchorId) {
     const last = await tx.chapter.findFirst({
       where: { storyId },
       orderBy: { number: 'desc' },
@@ -2160,23 +2172,32 @@ async function resolveNewChapterNumber(
     };
   }
 
-  const anchor = await tx.chapter.findFirst({
-    where: { id: afterChapterId, storyId, deletedAt: null },
+  const anchorRow = await tx.chapter.findFirst({
+    where: { id: anchorId, storyId, deletedAt: null },
     select: { number: true },
   });
 
-  if (!anchor) return { status: 'anchor_not_found' };
+  if (!anchorRow) return { status: 'anchor_not_found' };
 
-  const afterNumber = anchor.number.toNumber();
-
-  // Chương xoá mềm vẫn giữ số của nó, nên phải tính cả chúng khi tìm chỗ trống.
-  const next = await tx.chapter.findFirst({
-    where: { storyId, number: { gt: anchor.number } },
-    orderBy: { number: 'asc' },
+  /*
+   * Chương xoá mềm vẫn giữ số của nó, nên phải tính cả chúng khi tìm chỗ
+   * trống: bỏ qua là đụng `@@unique([storyId, number])` với một chương đã xoá.
+   */
+  const neighbour = await tx.chapter.findFirst({
+    where: {
+      storyId,
+      number: anchor.afterChapterId
+        ? { gt: anchorRow.number }
+        : { lt: anchorRow.number },
+    },
+    orderBy: { number: anchor.afterChapterId ? 'asc' : 'desc' },
     select: { number: true },
   });
 
-  const beforeNumber = next?.number.toNumber() ?? null;
+  const [afterNumber, beforeNumber] = anchor.afterChapterId
+    ? [anchorRow.number.toNumber(), neighbour?.number.toNumber() ?? null]
+    : [neighbour?.number.toNumber() ?? 0, anchorRow.number.toNumber()];
+
   const number = ChapterInsertPolicy.numberBetween(afterNumber, beforeNumber);
 
   if (number === null) {

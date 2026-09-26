@@ -61,4 +61,19 @@ describe('Choosing the number for a chapter inserted between two others', () => 
       expect(result).toBe(Math.round(result! * 100) / 100);
     }
   });
+  /*
+   * Chèn chương mở đầu gọi đúng hàm này với `after` là 0: phía trước chương đầu
+   * truyện không có chương nào nên coi như số 0.
+   */
+  describe('chèn trước chương đầu truyện', () => {
+    it('chia đôi khoảng từ 0 tới số của chương đầu', () => {
+      expect(ChapterInsertPolicy.numberBetween(0, 1)).toBe(0.5);
+      expect(ChapterInsertPolicy.numberBetween(0, 0.5)).toBe(0.25);
+      expect(ChapterInsertPolicy.numberBetween(0, 0.02)).toBe(0.01);
+    });
+
+    it('hết chỗ khi chương đầu đã là 0.01', () => {
+      expect(ChapterInsertPolicy.numberBetween(0, 0.01)).toBeNull();
+    });
+  });
 });

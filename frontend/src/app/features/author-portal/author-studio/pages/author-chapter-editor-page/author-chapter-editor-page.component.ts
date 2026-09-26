@@ -34,6 +34,7 @@ import { ChapterEditorSafetyComponent } from '../../ui/chapter-editor-safety/cha
 import { ChapterVersionHistoryComponent } from '../../ui/chapter-version-history/chapter-version-history.component';
 import { ChapterPricingComponent } from '../../ui/chapter-pricing/chapter-pricing.component';
 import { AuthorChapterPricingInput } from '../../domain/author-story-management.models';
+import { describeInsertAnchor, readInsertAnchor } from '../../domain/chapter-insert-anchor';
 
 @Component({
   selector: 'app-author-chapter-editor-page',
@@ -82,11 +83,13 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly storyId = this.route.snapshot.paramMap.get('storyId') ?? '';
   private readonly routeChapterId = this.route.snapshot.paramMap.get('chapterId');
-  /** Mốc chèn danh sách chương truyền sang: tạo chương mới ngay sau chương này. */
-  private readonly insertAfter = this.route.snapshot.queryParamMap.get('chen-sau') ?? undefined;
+  /** Mốc chèn do danh sách chương truyền sang qua query param. */
+  private readonly insertAnchor = readInsertAnchor(this.route.snapshot.queryParamMap);
   protected readonly chapterId = computed(() => this.session.chapter()?.id ?? this.routeChapterId);
   protected readonly isCreate = computed(() => !this.chapterId());
-  protected readonly isInsert = computed(() => this.isCreate() && !!this.insertAfter);
+  protected readonly insertNotice = computed(() =>
+    this.isCreate() ? describeInsertAnchor(this.insertAnchor) : null,
+  );
   protected readonly isManga = computed(() => this.store.story()?.format === 'MANGA');
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
@@ -101,13 +104,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     },
     { label: this.isCreate() ? 'Viết chương mới' : 'Chỉnh sửa chương' },
   ]);
-  protected readonly isEditable = computed(() => {
-    const story = this.store.story();
-    if (!story) return false;
-    if (this.isCreate()) return true;
-    // Mọi giai đoạn đều sửa được; máy chủ quyết định qua `canEdit`.
-    return this.workflow.workflow()?.canEdit === true;
-  });
+  // Mọi giai đoạn đều sửa được; với chương đã có, máy chủ quyết qua `canEdit`.
+  protected readonly isEditable = computed(
+    () => !!this.store.story() && (this.isCreate() || this.workflow.workflow()?.canEdit === true),
+  );
   /** Chương đang hiện cho độc giả: mỗi lần lưu là họ thấy ngay. */
   protected readonly isLive = computed(() => this.session.chapter()?.status === 'PUBLISHED');
   protected readonly wordCount = computed(
@@ -132,7 +132,7 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     effect(() => {
       const userId = this.auth.user()?.id;
       if (this.store.story() && !this.store.loading() && userId)
-        void this.session.initialize(userId, this.storyId, this.store.chapter(), this.insertAfter);
+        void this.session.initialize(userId, this.storyId, this.store.chapter(), this.insertAnchor);
     });
     effect(() => {
       this.form.patchValue(this.session.draft(), { emitEvent: false });

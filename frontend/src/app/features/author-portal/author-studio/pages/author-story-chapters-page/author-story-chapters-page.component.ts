@@ -123,6 +123,22 @@ export class AuthorStoryChaptersPageComponent implements OnInit {
   }
 
   /**
+   * Chương đầu truyện, để chèn chương mở đầu phía trước nó. Đây là chỗ duy nhất
+   * nút "Chèn chương sau" của từng dòng không với tới được.
+   *
+   * Lấy theo số nhỏ nhất chứ không lấy phần tử đầu mảng: trang này phân trang
+   * phía client và không tự sắp xếp lại danh sách máy chủ trả về.
+   */
+  protected readonly firstChapter = computed(() =>
+    this.store
+      .chapters()
+      .reduce<AuthorManagedChapterSummary | null>(
+        (lowest, chapter) => (!lowest || chapter.number < lowest.number ? chapter : lowest),
+        null,
+      ),
+  );
+
+  /**
    * Xoá thì vẫn chỉ bản nháp, đúng như máy chủ: gỡ hẳn một chương độc giả
    * đang đọc là chuyện khác với sửa nó.
    */

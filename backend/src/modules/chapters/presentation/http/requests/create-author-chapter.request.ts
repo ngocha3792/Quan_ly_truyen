@@ -25,4 +25,12 @@ export class CreateAuthorChapterRequest {
   @IsOptional()
   @IsUUID('4')
   afterChapterId?: string;
+
+  /**
+   * Chèn chương mới ngay trước chương này. Trỏ vào chương đầu truyện để thêm
+   * chương mở đầu.
+   */
+  @IsOptional()
+  @IsUUID('4')
+  beforeChapterId?: string;
 }

@@ -155,6 +155,12 @@ export interface AuthorChapterDraftInput {
    * truyện. Máy chủ chọn số nằm giữa nó và chương liền kề phía sau.
    */
   readonly afterChapterId?: string;
+
+  /**
+   * Chỉ dùng khi tạo mới: chèn chương ngay trước chương này. Trỏ vào chương đầu
+   * truyện để thêm chương mở đầu.
+   */
+  readonly beforeChapterId?: string;
 }
 
 export interface MonetizationPriceBand {

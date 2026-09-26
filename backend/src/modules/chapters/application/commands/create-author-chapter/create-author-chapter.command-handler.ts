@@ -7,6 +7,7 @@ import {
   ChapterContentValueObject,
   ChapterTitleValueObject,
   countChapterWords,
+  ChapterInsertAmbiguousAnchorException,
   ChapterInsertAnchorNotFoundException,
   ChapterInsertNoGapException,
   ChapterStoryNotFoundException,
@@ -30,6 +31,11 @@ export class CreateAuthorChapterCommandHandler {
     command: CreateAuthorChapterCommand,
   ): Promise<ChapterResultDto> {
     const userId = requireAuthorUserId(command.userId);
+
+    if (command.afterChapterId && command.beforeChapterId) {
+      throw new ChapterInsertAmbiguousAnchorException();
+    }
+
     const title = ChapterTitleValueObject.create(command.title).value;
     const content = ChapterContentValueObject.create(command.content).value;
 
@@ -41,6 +47,9 @@ export class CreateAuthorChapterCommandHandler {
       wordCount: countChapterWords(content),
       ...(command.afterChapterId
         ? { afterChapterId: command.afterChapterId }
+        : {}),
+      ...(command.beforeChapterId
+        ? { beforeChapterId: command.beforeChapterId }
         : {}),
       createdAt: new Date(),
       audit: {

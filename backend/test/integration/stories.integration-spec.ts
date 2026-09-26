@@ -969,6 +969,177 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ).rejects.toMatchObject({ code: 'CHAPTER_NOT_FOUND' });
   });
 
+  it('duyệt hàng loạt xử từng chương một và kể tên chương vướng', async () => {
+    const owner = await createAuthor('bulk-approve-owner');
+    const reviewer = await createReviewer('bulk-approve-reviewer');
+    const story = await createStory(owner.id, StoryStatus.PUBLISHED, {
+      publishedAt: new Date(),
+    });
+    const workflow = moduleRef.get(PrismaChapterWorkflowPersistence);
+
+    const first = await createChapter(owner.id, story.id, 1, {
+      status: ChapterStatus.IN_REVIEW,
+    });
+    const second = await createChapter(owner.id, story.id, 2, {
+      status: ChapterStatus.IN_REVIEW,
+    });
+    /*
+     * Truyện mà chính người duyệt có chân: luật "không tự duyệt truyện mình
+     * tham gia" phải giữ nguyên trong lô, không thì lô là đường tắt quanh nó.
+     */
+    const ownStory = await createStory(owner.id, StoryStatus.DRAFT);
+    await prisma.storyContributor.create({
+      data: {
+        storyId: ownStory.id,
+        userId: reviewer.id,
+        role: 'EDITOR',
+        canEdit: true,
+      },
+    });
+    const ownChapter = await createChapter(owner.id, ownStory.id, 1, {
+      status: ChapterStatus.IN_REVIEW,
+    });
+
+    const result = await workflow.transitionMany({
+      userId: reviewer.id,
+      action: 'approve',
+      audit: audit('bulk-approve'),
+    });
+
+    expect(result.succeeded.map((chapter) => chapter.id).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
+    expect(result.skipped).toEqual([
+      expect.objectContaining({ chapterId: ownChapter.id }),
+    ]);
+    expect(result.remaining).toBe(0);
+
+    const statuses = await prisma.chapter.findMany({
+      where: { id: { in: [first.id, second.id, ownChapter.id] } },
+      select: { id: true, status: true },
+    });
+    expect(
+      statuses.filter((row) => row.status === ChapterStatus.APPROVED),
+    ).toHaveLength(2);
+
+    /*
+     * Lô gọi lại chính `transition`, nên mỗi chương duyệt được phải có đúng một
+     * bản ghi duyệt. Thiếu nó là lô đã đi đường tắt vòng qua quy trình.
+     */
+    expect(
+      await prisma.chapterReview.count({
+        where: { chapterId: { in: [first.id, second.id] } },
+      }),
+    ).toBe(2);
+  });
+
+  it('duyệt hàng loạt gói trong một truyện thì không đụng truyện khác', async () => {
+    const owner = await createAuthor('bulk-scope-owner');
+    const reviewer = await createReviewer('bulk-scope-reviewer');
+    const target = await createStory(owner.id, StoryStatus.DRAFT);
+    const other = await createStory(owner.id, StoryStatus.DRAFT);
+    const inTarget = await createChapter(owner.id, target.id, 1, {
+      status: ChapterStatus.IN_REVIEW,
+    });
+    const inOther = await createChapter(owner.id, other.id, 1, {
+      status: ChapterStatus.IN_REVIEW,
+    });
+    const workflow = moduleRef.get(PrismaChapterWorkflowPersistence);
+
+    const result = await workflow.transitionMany({
+      userId: reviewer.id,
+      action: 'approve',
+      storyId: target.id,
+      audit: audit('bulk-scope'),
+    });
+
+    expect(result.succeeded.map((chapter) => chapter.id)).toEqual([
+      inTarget.id,
+    ]);
+    expect(
+      await prisma.chapter.findUniqueOrThrow({
+        where: { id: inOther.id },
+        select: { status: true },
+      }),
+    ).toMatchObject({ status: ChapterStatus.IN_REVIEW });
+  });
+
+  it('gửi duyệt hàng loạt bỏ qua chương rỗng thay vì làm hỏng cả lô', async () => {
+    const owner = await createAuthor('bulk-submit-owner');
+    const story = await createStory(owner.id, StoryStatus.DRAFT);
+    const filled = await createChapter(owner.id, story.id, 1, {
+      content: 'Có nội dung',
+    });
+    const empty = await createChapter(owner.id, story.id, 2, {
+      content: '   ',
+    });
+    const workflow = moduleRef.get(PrismaChapterWorkflowPersistence);
+
+    const result = await workflow.transitionMany({
+      userId: owner.id,
+      action: 'submit',
+      storyId: story.id,
+      audit: audit('bulk-submit'),
+    });
+
+    expect(result.succeeded.map((chapter) => chapter.id)).toEqual([filled.id]);
+    expect(result.skipped).toEqual([
+      expect.objectContaining({
+        chapterId: empty.id,
+        code: 'CHAPTER_EMPTY_CONTENT',
+      }),
+    ]);
+
+    // Chương rỗng vẫn nằm nguyên ở bản nháp, không bị kéo theo lô.
+    expect(
+      await prisma.chapter.findUniqueOrThrow({
+        where: { id: empty.id },
+        select: { status: true },
+      }),
+    ).toMatchObject({ status: ChapterStatus.DRAFT });
+  });
+
+  it('xuất bản hàng loạt chỉ lấy chương đã duyệt của truyện đã xuất bản', async () => {
+    const owner = await createAuthor('bulk-publish-owner');
+    const story = await createStory(owner.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const approved = await createChapter(owner.id, story.id, 1, {
+      status: ChapterStatus.APPROVED,
+    });
+    const stillDraft = await createChapter(owner.id, story.id, 2);
+    const approvedEmpty = await createChapter(owner.id, story.id, 3, {
+      status: ChapterStatus.APPROVED,
+      content: '',
+    });
+
+    const result = await chapters.publishMany({
+      userId: owner.id,
+      storyId: story.id,
+      publishedAt: new Date(),
+      audit: audit('bulk-publish'),
+    });
+
+    expect(result.published.map((chapter) => chapter.id)).toEqual([
+      approved.id,
+    ]);
+    expect(result.skipped).toEqual([
+      expect.objectContaining({
+        chapterId: approvedEmpty.id,
+        status: 'empty_content',
+      }),
+    ]);
+
+    // Bản nháp không nằm trong lô này nên không được nhắc tới, cũng không đổi.
+    expect(
+      await prisma.chapter.findUniqueOrThrow({
+        where: { id: stillDraft.id },
+        select: { status: true },
+      }),
+    ).toMatchObject({ status: ChapterStatus.DRAFT });
+  });
+
   async function createReviewer(label: string): Promise<{ id: string }> {
     const user = await createUser(label);
     const permission = await prisma.permission.upsert({
@@ -1171,6 +1342,113 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
         audit: audit('flip-format'),
       }),
     ).toMatchObject({ status: 'format_locked' });
+  });
+
+  it('chèn chương mở đầu trước chương đầu tiên đã xuất bản', async () => {
+    const author = await createAuthor('insert-prologue');
+    const story = await createStory(author.id, StoryStatus.PUBLISHED, {
+      visibility: StoryVisibility.PUBLIC,
+      publishedAt: new Date(),
+    });
+    const first = await createChapter(author.id, story.id, 1, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+    const second = await createChapter(author.id, story.id, 2, {
+      status: ChapterStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+
+    const created = await chapters.createDraft({
+      userId: author.id,
+      storyId: story.id,
+      title: 'Mở đầu',
+      content: 'Chương mở đầu viết sau.',
+      wordCount: 5,
+      beforeChapterId: first.id,
+      createdAt: new Date(),
+      audit: audit('insert-prologue'),
+    });
+
+    expect(created.status).toBe('created');
+    if (created.status !== 'created') return;
+    // Chia đôi khoảng từ 0 tới số của chương đầu.
+    expect(created.chapter.number).toBe(0.5);
+    expect(created.chapter.slug).toContain('chuong-0-5');
+
+    const ordered = await prisma.chapter.findMany({
+      where: { storyId: story.id },
+      orderBy: { number: 'asc' },
+      select: { id: true, number: true, slug: true },
+    });
+
+    // Chương mở đầu đứng trước, và hai chương cũ giữ nguyên số lẫn slug.
+    expect(ordered.map((row) => row.number.toNumber())).toEqual([0.5, 1, 2]);
+    expect(ordered[1]).toMatchObject({ id: first.id, slug: first.slug });
+    expect(ordered[2]).toMatchObject({ id: second.id, slug: second.slug });
+  });
+
+  it('chèn liên tiếp nhiều chương mở đầu rồi báo hết chỗ', async () => {
+    const author = await createAuthor('prologue-stack');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    await createChapter(author.id, story.id, 1);
+
+    /*
+     * Cột `Decimal(10, 2)` chỉ giữ hai chữ số thập phân nên khoảng trước chương
+     * 1 có đáy: 0.5, 0.25, 0.12, 0.06, 0.03, 0.01 rồi hết.
+     */
+    const numbers: number[] = [];
+
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      const firstNow = await prisma.chapter.findFirstOrThrow({
+        where: { storyId: story.id },
+        orderBy: { number: 'asc' },
+        select: { id: true },
+      });
+      const result = await chapters.createDraft({
+        userId: author.id,
+        storyId: story.id,
+        title: `Mở đầu ${attempt}`,
+        content: 'Nội dung',
+        wordCount: 1,
+        beforeChapterId: firstNow.id,
+        createdAt: new Date(),
+        audit: audit(`prologue-${attempt}`),
+      });
+
+      if (result.status === 'created') {
+        numbers.push(result.chapter.number);
+        continue;
+      }
+
+      expect(result).toMatchObject({ status: 'no_gap', afterNumber: 0 });
+      break;
+    }
+
+    expect(numbers).toEqual([0.5, 0.25, 0.12, 0.06, 0.03, 0.01]);
+  });
+
+  it('không chèn được trước một chương đã bị xoá', async () => {
+    const author = await createAuthor('prologue-missing');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    const first = await createChapter(author.id, story.id, 1);
+    await prisma.chapter.update({
+      where: { id: first.id },
+      data: { deletedAt: new Date() },
+    });
+
+    expect(
+      await chapters.createDraft({
+        userId: author.id,
+        storyId: story.id,
+        title: 'Mở đầu',
+        content: 'Nội dung',
+        wordCount: 1,
+        beforeChapterId: first.id,
+        createdAt: new Date(),
+        audit: audit('prologue-missing'),
+      }),
+    ).toMatchObject({ status: 'anchor_not_found' });
   });
 
   it('chèn chương vào giữa hai chương đã xuất bản mà không đụng số của chúng', async () => {

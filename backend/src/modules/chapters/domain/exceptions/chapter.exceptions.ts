@@ -169,6 +169,17 @@ export class ChapterMediaReorderMismatchException extends InvalidInputException 
   }
 }
 
+export class ChapterInsertAmbiguousAnchorException extends InvalidInputException {
+  constructor() {
+    super({
+      code: 'CHAPTER_INSERT_AMBIGUOUS_ANCHOR',
+      message:
+        'Chỉ chọn một mốc chèn: trước một chương hoặc sau một chương, không cả hai',
+      details: { field: 'beforeChapterId' },
+    });
+  }
+}
+
 export class ChapterInsertAnchorNotFoundException extends ResourceConflictException {
   constructor() {
     super({
