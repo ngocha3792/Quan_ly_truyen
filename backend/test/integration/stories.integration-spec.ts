@@ -1140,6 +1140,110 @@ describe('Stories PostgreSQL race and ownership invariants', () => {
     ).toMatchObject({ status: ChapterStatus.DRAFT });
   });
 
+  it('nhập nhiều chương nối vào đuôi truyện theo đúng thứ tự trong file', async () => {
+    const author = await createAuthor('import-order');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+    // Truyện đã có sẵn một chương: chương nhập vào phải nối tiếp, không đè lên.
+    await createChapter(author.id, story.id, 1);
+
+    const result = await chapters.importDrafts({
+      userId: author.id,
+      storyId: story.id,
+      chapters: [
+        { title: 'Khởi đầu', content: 'Nội dung một.', wordCount: 3 },
+        { title: 'Gặp gỡ', content: 'Nội dung hai.', wordCount: 3 },
+        { title: 'Chia ly', content: 'Nội dung ba.', wordCount: 3 },
+      ],
+      createdAt: new Date(),
+      audit: audit('import-order'),
+    });
+
+    expect(result.skipped).toEqual([]);
+    expect(result.created.map((chapter) => chapter.number)).toEqual([2, 3, 4]);
+    expect(result.created.map((chapter) => chapter.title)).toEqual([
+      'Khởi đầu',
+      'Gặp gỡ',
+      'Chia ly',
+    ]);
+
+    /*
+     * Chương nhập vào phải đi đúng đường như chương viết tay: mỗi chương có
+     * bản ghi phiên bản đầu tiên và một dòng audit log. Thiếu nghĩa là đường
+     * nhập đã đi tắt vòng qua `createDraft`.
+     */
+    const ids = result.created.map((chapter) => chapter.id);
+    expect(
+      await prisma.chapterVersion.count({ where: { chapterId: { in: ids } } }),
+    ).toBe(3);
+    expect(
+      await prisma.auditLog.count({
+        where: { entityId: { in: ids }, entityType: 'chapter' },
+      }),
+    ).toBe(3);
+
+    const slugs = await prisma.chapter.findMany({
+      where: { id: { in: ids } },
+      select: { slug: true },
+      orderBy: { number: 'asc' },
+    });
+    expect(slugs.map((row) => row.slug)).toEqual([
+      expect.stringContaining('chuong-2'),
+      expect.stringContaining('chuong-3'),
+      expect.stringContaining('chuong-4'),
+    ]);
+  });
+
+  it('nhập được cả chương chưa có nội dung', async () => {
+    const author = await createAuthor('import-empty');
+    const story = await createStory(author.id, StoryStatus.DRAFT);
+
+    const result = await chapters.importDrafts({
+      userId: author.id,
+      storyId: story.id,
+      chapters: [
+        { title: 'Có chữ', content: 'Nội dung.', wordCount: 2 },
+        // Bản thảo hay có tiêu đề chương mà chưa viết gì; chặn là hỏng cả lô.
+        { title: 'Chưa viết', content: '', wordCount: 0 },
+      ],
+      createdAt: new Date(),
+      audit: audit('import-empty'),
+    });
+
+    expect(result.skipped).toEqual([]);
+    expect(result.created).toHaveLength(2);
+    expect(result.created[1]).toMatchObject({ content: '', wordCount: 0 });
+  });
+
+  it('dừng sớm và kể tên khi truyện không phải của người nhập', async () => {
+    const owner = await createAuthor('import-owner');
+    const stranger = await createAuthor('import-stranger');
+    const story = await createStory(owner.id, StoryStatus.DRAFT);
+
+    const result = await chapters.importDrafts({
+      userId: stranger.id,
+      storyId: story.id,
+      chapters: [
+        { title: 'Một', content: 'a', wordCount: 1 },
+        { title: 'Hai', content: 'b', wordCount: 1 },
+        { title: 'Ba', content: 'c', wordCount: 1 },
+      ],
+      createdAt: new Date(),
+      audit: audit('import-stranger'),
+    });
+
+    expect(result.created).toEqual([]);
+    /*
+     * Chương đầu hỏng vì truyện không phải của người này thì các chương sau
+     * cũng hỏng y hệt. Dừng ở chương đầu thay vì lặp lại cùng một lỗi ba lần.
+     */
+    expect(result.skipped).toEqual([
+      expect.objectContaining({ index: 0, code: 'CHAPTER_STORY_NOT_FOUND' }),
+    ]);
+    expect(await prisma.chapter.count({ where: { storyId: story.id } })).toBe(
+      0,
+    );
+  });
+
   async function createReviewer(label: string): Promise<{ id: string }> {
     const user = await createUser(label);
     const permission = await prisma.permission.upsert({

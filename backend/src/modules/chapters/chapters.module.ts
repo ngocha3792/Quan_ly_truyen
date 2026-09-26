@@ -6,6 +6,7 @@ import { MonetizationModule } from '@/modules/monetization';
 import {
   CHAPTER_PERSISTENCE_PORT,
   CreateAuthorChapterCommandHandler,
+  ImportAuthorChaptersCommandHandler,
   DeleteAuthorChapterCommandHandler,
   GetAuthorChapterQueryHandler,
   GetAuthorChapterVersionQueryHandler,
@@ -48,6 +49,7 @@ import {
   providers: [
     GetVersionDiffQueryHandler,
     CreateAuthorChapterCommandHandler,
+    ImportAuthorChaptersCommandHandler,
     UpdateAuthorChapterCommandHandler,
     DeleteAuthorChapterCommandHandler,
     ListAuthorChaptersQueryHandler,

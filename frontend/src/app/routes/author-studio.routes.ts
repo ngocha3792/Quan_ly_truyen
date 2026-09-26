@@ -11,10 +11,20 @@ import {
   chapterEditorLeaveGuard,
 } from '../features/author-portal/author-studio/data-access/chapter-editor-access.guard';
 
+/** Đoạn đường dẫn cố định đứng cùng vị trí với `:chapterId`. */
+const CHAPTER_PATH_KEYWORDS = new Set(['tao-moi', 'nhap-file']);
+
 export const AUTHOR_STUDIO_ROUTES: Routes = [
   {
     path: 'author-studio/truyen/:storyId/chuong/:chapterId',
-    canMatch: [(_route, segments) => segments[segments.length - 1]?.path !== 'tao-moi'],
+    /*
+     * Các đoạn đường dẫn cố định nằm cùng chỗ với `:chapterId` phải được loại
+     * ra, không thì route này nuốt chúng và mở nhầm trình soạn thảo với một id
+     * không có thật.
+     */
+    canMatch: [
+      (_route, segments) => !CHAPTER_PATH_KEYWORDS.has(segments[segments.length - 1]?.path ?? ''),
+    ],
     canActivate: [authenticatedGuard, chapterEditorAccessGuard],
     canDeactivate: [chapterEditorLeaveGuard],
     providers: provideAuthorStoryManagement(),
@@ -86,6 +96,15 @@ export const AUTHOR_STUDIO_ROUTES: Routes = [
         loadComponent: () =>
           import('../features/author-portal/author-studio/pages/author-story-editor-page/author-story-editor-page.component').then(
             (module) => module.AuthorStoryEditorPageComponent,
+          ),
+      },
+      {
+        path: 'truyen/:storyId/chuong/nhap-file',
+        canActivate: [permissionGuard(AUTH_PERMISSIONS.CHAPTER_CREATE)],
+        title: appPageTitle('Nhập chương từ file'),
+        loadComponent: () =>
+          import('../features/author-portal/author-studio/pages/author-chapter-import-page/author-chapter-import-page.component').then(
+            (module) => module.AuthorChapterImportPageComponent,
           ),
       },
       {

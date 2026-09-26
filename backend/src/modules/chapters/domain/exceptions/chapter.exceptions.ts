@@ -4,6 +4,8 @@ import {
   ResourceNotFoundException,
 } from '@/common/exceptions';
 
+import { ChapterImportPolicy } from '../policies/chapter-import.policy';
+
 export class InvalidChapterFieldException extends InvalidInputException {
   constructor(field: string, message: string) {
     super({
@@ -166,6 +168,16 @@ export class ChapterInsertAmbiguousAnchorException extends InvalidInputException
       message:
         'Chỉ chọn một mốc chèn: trước một chương hoặc sau một chương, không cả hai',
       details: { field: 'beforeChapterId' },
+    });
+  }
+}
+
+export class ChapterImportTooManyException extends InvalidInputException {
+  constructor(received: number) {
+    super({
+      code: 'CHAPTER_IMPORT_TOO_MANY',
+      message: `Mỗi lần chỉ nhập được tối đa ${ChapterImportPolicy.MAX_PER_CALL} chương, nhận được ${received}`,
+      details: { field: 'chapters' },
     });
   }
 }

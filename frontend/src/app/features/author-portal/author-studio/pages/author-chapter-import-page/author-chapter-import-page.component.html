@@ -1,0 +1,109 @@
+<main class="workspace-page">
+  <div class="page-container">
+    <app-breadcrumb [items]="breadcrumbs()" />
+    <app-page-heading
+      title="Nhập chương từ file"
+      description="Tách bản thảo thành từng chương theo dòng “Chương 1: Tên chương”."
+      icon="chapter"
+    >
+      <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']" class="back"
+        >← Danh sách chương</a
+      >
+    </app-page-heading>
+
+    @if (store.error()) {
+      <app-notice kind="error" [message]="store.error()" />
+    }
+    @if (store.success()) {
+      <app-notice kind="success" [message]="store.success()" />
+    }
+    @if (store.skipped().length) {
+      <app-notice kind="info" [message]="'Không tạo được: ' + store.skipped().join(' | ')" />
+    }
+
+    <section class="picker">
+      <label class="field">
+        <span>Chọn bản thảo (.txt, .md hoặc .docx, tối đa 20MB)</span>
+        <input
+          type="file"
+          class="ui-field"
+          [accept]="accept"
+          [disabled]="store.reading() || store.importing()"
+          (change)="selectFile($event)"
+        />
+      </label>
+      @if (store.fileName()) {
+        <p class="picker__file">
+          {{ store.fileName() }}
+          <app-button [disabled]="store.importing()" (click)="store.clear()">Bỏ file</app-button>
+        </p>
+      }
+    </section>
+
+    @if (store.reading()) {
+      <app-loading-state message="Đang đọc file..." />
+    }
+
+    @if (preamble()) {
+      <app-notice
+        kind="info"
+        message="File có một đoạn nằm trước chương đầu tiên. Đoạn này sẽ không được nhập — hãy tự thêm nó vào một chương nếu cần giữ."
+      />
+    }
+
+    @if (store.parsed()) {
+      @if (chapters().length) {
+        <section class="preview">
+          <div class="preview__toolbar">
+            <strong>Tìm thấy {{ chapters().length }} chương</strong>
+            <app-button
+              variant="primary"
+              [loading]="store.importing()"
+              [disabled]="store.importing()"
+              (click)="confirm()"
+            >
+              Tạo {{ chapters().length }} chương nháp
+            </app-button>
+          </div>
+          @if (store.importing()) {
+            <p class="preview__progress">Đã tạo {{ store.importedCount() }} chương...</p>
+          }
+          <p class="preview__note">
+            Các chương được thêm vào cuối truyện theo đúng thứ tự trong file. Số ghi trong file chỉ
+            để bạn đối chiếu; số chương thật do hệ thống đặt.
+          </p>
+          <table class="preview__table">
+            <thead>
+              <tr>
+                <th scope="col">Số trong file</th>
+                <th scope="col">Tiêu đề</th>
+                <th scope="col">Độ dài</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (chapter of chapters(); track $index) {
+                <tr>
+                  <td>{{ chapter.numberInFile }}</td>
+                  <td>{{ chapter.title }}</td>
+                  <td>
+                    @if (chapter.wordCount) {
+                      {{ chapter.wordCount }} từ
+                    } @else {
+                      <em>chưa có nội dung</em>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      } @else {
+        <app-empty-state
+          icon="chapter"
+          title="Không tìm thấy chương nào"
+          description="Mỗi chương cần bắt đầu bằng một dòng như “Chương 1: Tên chương”."
+        />
+      }
+    }
+  </div>
+</main>

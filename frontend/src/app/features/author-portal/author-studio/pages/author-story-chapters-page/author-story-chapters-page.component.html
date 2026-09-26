@@ -16,6 +16,12 @@
           >
             + Viết chương mới
           </app-link-button>
+          <app-link-button
+            variant="secondary"
+            [routerLink]="['/author-studio/truyen', story.id, 'chuong', 'nhap-file']"
+          >
+            Nhập từ file
+          </app-link-button>
         }
         @if (firstChapter(); as first) {
           <app-link-button
