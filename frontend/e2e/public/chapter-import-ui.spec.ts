@@ -26,6 +26,11 @@ function chapter(id: string, number: number, title: string) {
 
 /** Thân request của lệnh nhập chương mà giao diện gửi lên. */
 const importRequests: { chapters: { title: string; content: string }[] }[] = [];
+const imageIntents: { ownerId: string; originalName: string }[] = [];
+const chapterPatches: { chapterId: string; content: string }[] = [];
+
+const CHAPTER_ONE = '66666666-6666-4666-8666-666666666666';
+const CHAPTER_TWO = '77777777-7777-4777-8777-777777777777';
 
 async function mockApi(page: Page): Promise<void> {
   await page.addInitScript(() =>
@@ -112,11 +117,42 @@ async function mockApi(page: Page): Promise<void> {
       );
       return ok({
         created: [
-          { id: '66666666-6666-4666-8666-666666666666', number: 1 },
-          { id: '77777777-7777-4777-8777-777777777777', number: 2 },
+          { id: CHAPTER_ONE, number: 1, version: 1 },
+          { id: CHAPTER_TWO, number: 2, version: 1 },
         ],
         skipped: [],
       });
+    }
+
+    // Ảnh của chương: upload-intent lấy chapterId làm chủ sở hữu.
+    if (path === '/api/v1/media/upload-intents' && request.method() === 'POST') {
+      const input = request.postDataJSON() as { ownerId: string; originalName: string };
+      imageIntents.push(input);
+      return ok({
+        mediaAssetId: `media-${imageIntents.length}`,
+        uploadUrl: 'https://upload.test.invalid/v1/upload',
+        apiKey: 'test-key',
+        timestamp: 1,
+        signature: 'test-signature',
+        parameters: { folder: 'chapters' },
+      });
+    }
+
+    if (path.startsWith('/api/v1/media/upload-intents/') && path.endsWith('/confirm')) {
+      const mediaAssetId = path.split('/').at(-2) ?? 'media';
+      return ok({
+        id: mediaAssetId,
+        deliveryUrl: `https://cdn.test.invalid/${mediaAssetId}.webp`,
+      });
+    }
+
+    // Vá nội dung chương sau khi ảnh đã lên CDN.
+    for (const chapterId of [CHAPTER_ONE, CHAPTER_TWO]) {
+      if (path.endsWith(`/chapters/${chapterId}`) && request.method() === 'PATCH') {
+        const input = request.postDataJSON() as { content: string };
+        chapterPatches.push({ chapterId, content: input.content });
+        return ok({ id: chapterId, version: 2 });
+      }
     }
 
     if (path.endsWith(`/author/stories/${STORY_ID}/chapters`)) {
@@ -174,6 +210,21 @@ async function mockApi(page: Page): Promise<void> {
 
     return ok(null);
   });
+
+  /*
+   * Cloudinary thật nằm ngoài /api/v1 nên cần route riêng. Không có nó thì bước
+   * tải ảnh thất bại và test chỉ kiểm được nửa đường.
+   */
+  await page.route('https://upload.test.invalid/**', (route) =>
+    route.fulfill({
+      json: {
+        public_id: 'chapters/import',
+        version: 1,
+        signature: 'cloudinary-signature',
+        resource_type: 'image',
+      },
+    }),
+  );
 }
 
 test.describe('Nhập chương từ file', () => {
@@ -228,6 +279,66 @@ test.describe('Nhập chương từ file', () => {
     expect(importRequests[0].chapters).toEqual([
       { title: 'Khởi đầu', content: 'Nội dung chương một.' },
       { title: 'Gặp gỡ', content: 'Nội dung chương hai.' },
+    ]);
+  });
+
+  test('đọc ảnh trong .docx và đưa vào đúng chương', async ({ page }) => {
+    importRequests.length = 0;
+    imageIntents.length = 0;
+    chapterPatches.length = 0;
+    await mockApi(page);
+
+    await page.goto('/tim-kiem');
+    await expect(page.getByRole('heading', { name: 'Tìm kiếm', exact: true })).toBeVisible();
+    await page.evaluate((storyId) => {
+      history.pushState(null, '', `/author-studio/truyen/${storyId}/chuong/nhap-file`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, STORY_ID);
+    await expect(page.getByRole('heading', { name: 'Nhập chương từ file' })).toBeVisible();
+
+    // File .docx thật, dựng lại được bằng scripts/make-chapter-import-fixture.py.
+    await page.getByLabel(/Chọn bản thảo/).setInputFiles('e2e/fixtures/ban-thao-co-anh.docx');
+
+    await expect(page.getByText('Tìm thấy 2 chương')).toBeVisible();
+    await expect(page.getByText('2 ảnh')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Khởi đầu' })).toBeVisible();
+
+    page.once('dialog', (dialog) => void dialog.accept());
+    await page.getByRole('button', { name: 'Tạo 2 chương nháp' }).click();
+
+    await expect.poll(() => importRequests.length).toBe(1);
+
+    /*
+     * Chương được tạo với ảnh đã lược bỏ: gửi placeholder lên rồi mới thay là
+     * mỗi lần tải ảnh hỏng để lại một tấm ảnh vỡ nằm vĩnh viễn trong chương.
+     */
+    expect(importRequests[0].chapters).toEqual([
+      { title: 'Khởi đầu', content: 'Trời đổ mưa suốt đêm.\n\nHắn bước ra khỏi cửa.' },
+      { title: 'Gặp gỡ', content: 'Nàng đứng đó, không nói gì.' },
+    ]);
+
+    // Mỗi ảnh tải lên dưới đúng chương của nó.
+    await expect.poll(() => imageIntents.length).toBe(2);
+    expect(imageIntents.map((intent) => [intent.ownerId, intent.originalName])).toEqual([
+      [CHAPTER_ONE, 'anh-nhap-1.png'],
+      [CHAPTER_TWO, 'anh-nhap-2.png'],
+    ]);
+
+    // Rồi URL thật được vá vào nội dung, đúng vị trí giữa hai đoạn.
+    await expect.poll(() => chapterPatches.length).toBe(2);
+    expect(chapterPatches).toEqual([
+      {
+        chapterId: CHAPTER_ONE,
+        content:
+          'Trời đổ mưa suốt đêm.\n\n' +
+          '![Cảnh mưa](https://cdn.test.invalid/media-1.webp)\n\n' +
+          'Hắn bước ra khỏi cửa.',
+      },
+      {
+        chapterId: CHAPTER_TWO,
+        content:
+          '![Chân dung](https://cdn.test.invalid/media-2.webp)\n\n' + 'Nàng đứng đó, không nói gì.',
+      },
     ]);
   });
 });
