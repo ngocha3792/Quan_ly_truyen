@@ -75,6 +75,31 @@ Backup chỉ được ghi nhận thành công sau khi SHA-256 khớp, `pg_restor
 
 Windows dùng `Register-ScheduledTasks.ps1`. Linux dùng `cron.example` hoặc systemd timer.
 
+### Giới hạn dung lượng thư mục backup
+
+Thư mục `/backups` có hai giới hạn, trên hai trục khác nhau:
+
+| Biến | Trục | Nơi áp dụng |
+|---|---|---|
+| `BACKUP_RETENTION_DAYS` (mặc định 14) | tuổi file | container `backup-postgres`, `find -mtime` |
+| `POSTGRES_LOCAL_BACKUP_KEEP` (mặc định 2) | số bản | `Backup-Postgres.ps1`, sau khi verify off-host |
+
+**Chỉ giới hạn theo số bản mới thật sự chặn được dung lượng.** Backup chạy vài lần mỗi ngày, nên "cũ hơn 14 ngày" vẫn để lại hàng chục GB trên đĩa — đủ để làm đầy đĩa và đánh sập lần deploy kế tiếp trước khi có file nào đủ già để bị quét.
+
+Bản địa phương chỉ xoá khi thoả cả ba điều kiện:
+
+1. Off-host `check` đã chạy xong và pass — trước thời điểm đó chưa có gì để dựa vào.
+2. Tên file có mặt trong `restic snapshots --tag postgres`. Không đọc được kho thì không xoá gì.
+3. File `.sha256` đi kèm đã tồn tại — thiếu nó nghĩa là một lần chạy khác đang ghi dở, không phải rác.
+
+Khi `OFFSITE_BACKUP_ENABLED` khác `true`, bản địa phương **không bao giờ** bị xoá theo số bản: lúc đó chúng là bản duy nhất.
+
+Logic này có test ở `Backup-Postgres.Retention.Tests.ps1`, chạy trong CI job `Backend / quality`:
+
+```powershell
+Invoke-Pester -Path ./ops/production/Backup-Postgres.Retention.Tests.ps1
+```
+
 ## Restore drill and recovery gate
 
 Mặc định mục tiêu là backup không cũ hơn 26 giờ (`BACKUP_RPO_HOURS=26`) và restore drill không cũ hơn 8 ngày (`RESTORE_DRILL_MAX_AGE_DAYS=8`). Chạy restore drill ít nhất mỗi tuần:

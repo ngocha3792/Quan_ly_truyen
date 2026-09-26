@@ -449,6 +449,11 @@ services:
           sha256sum "$${filename}" > "$${filename}.sha256"
         )
 
+        # Coarse age floor only. This cannot bound the directory by
+        # itself: backups run several times a day, so "older than 14
+        # days" still leaves tens of gigabytes on disk. The cap that
+        # actually binds is POSTGRES_LOCAL_BACKUP_KEEP, applied by
+        # Backup-Postgres.ps1 once the off-host copy is verified.
         find /backups \
           -type f \
           -mtime "+$${BACKUP_RETENTION_DAYS}" \

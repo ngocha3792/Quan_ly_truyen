@@ -170,6 +170,28 @@ jobs:
       - name: Architecture boundary guardrails
         run: npm run architecture:check
 
+      # This code deletes database backups. It is PowerShell, so it is
+      # outside every other gate in this job.
+      - name: Production backup retention tests
+        shell: pwsh
+        working-directory: backend/ops/production
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          if (-not (Get-Module -ListAvailable -Name Pester |
+              Where-Object { $_.Version -ge [version]'5.0' })) {
+            Install-Module Pester `
+              -Force -Scope CurrentUser -SkipPublisherCheck -MinimumVersion 5.0
+          }
+
+          $Configuration = New-PesterConfiguration
+          $Configuration.Run.Path = './Backup-Postgres.Retention.Tests.ps1'
+          $Configuration.Run.Exit = $true
+          $Configuration.Output.Verbosity = 'Detailed'
+
+          Invoke-Pester -Configuration $Configuration
+
       - name: Validate Prisma schema and migration layout
         run: npm run db:validate
 
