@@ -4,6 +4,7 @@ import {
   computed,
   DestroyRef,
   effect,
+  HostListener,
   inject,
   OnDestroy,
   OnInit,
@@ -21,6 +22,8 @@ import { NoticeComponent } from '../../../../../shared/components/notice/notice.
 import { PageHeadingComponent } from '../../../../../shared/components/page-heading/page-heading.component';
 import { AuthorStoryEditorStore } from '../../data-access/author-story-editor.store';
 import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-author-tools.component';
+import { validateCoverImage } from '../../domain/chapter-image-validation';
+import { isTypingTarget, readPastedImages } from '../../domain/clipboard-image';
 import {
   AUTHOR_STORY_CONTRIBUTOR_ROLES,
   AuthorManagedStory,
@@ -95,13 +98,10 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
    * định dạng hiện tại.
    */
   protected readonly isEditable = computed(() => true);
-  protected readonly isPublished = computed(
-    () => this.store.story()?.publishedAt !== null && !!this.store.story(),
+  protected readonly isPublished = computed(() => !!this.store.story()?.publishedAt);
+  protected readonly canSubmit = computed(() =>
+    ['DRAFT', 'REJECTED'].includes(this.store.story()?.status ?? ''),
   );
-  protected readonly canSubmit = computed(() => {
-    const status = this.store.story()?.status;
-    return status === 'DRAFT' || status === 'REJECTED';
-  });
   protected readonly canCancel = computed(() => this.store.story()?.status === 'PENDING_REVIEW');
   protected readonly displayedCoverUrl = computed(
     () => this.coverPreviewUrl() ?? (this.clearCover() ? null : this.store.coverUrl()),
@@ -173,15 +173,29 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     input.value = '';
-    if (!file) return;
+    if (file) this.applyCover(file, validateCoverImage(file));
+  }
 
-    const message = validateCover(file);
-    if (message) {
-      this.fileError.set(message);
-      return;
-    }
+  /**
+   * Chụp màn hình xong bấm Ctrl+V là xong, không phải bấm vào ô chọn file. Vì
+   * nghe ở mức `document` nên phải tự tránh mọi chỗ đang gõ chữ.
+   */
+  @HostListener('document:paste', ['$event'])
+  protected pasteCover(event: ClipboardEvent): void {
+    if (isTypingTarget(event.target)) return;
+    const pasted = readPastedImages(Array.from(event.clipboardData?.files ?? []), new Date());
+    if (!pasted.carriedImage) return;
+    event.preventDefault();
+    // Ảnh bìa chỉ có một; dán nhiều tấm thì lấy tấm đầu.
+    const [file] = pasted.files;
+    if (file) this.applyCover(file, validateCoverImage(file));
+    else this.fileError.set(pasted.error);
+  }
 
-    this.fileError.set(null);
+  private applyCover(file: File, message: string | null): void {
+    this.fileError.set(message);
+    if (message) return;
+
     this.clearCover.set(false);
     this.coverFile.set(file);
     this.revokePreview();
@@ -257,13 +271,7 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () =>
-          this.contributorForm.reset({
-            email: '',
-            role: 'EDITOR',
-            creditName: '',
-            canEdit: true,
-          }),
+        next: () => this.contributorForm.reset(),
         error: () => undefined,
       });
   }
@@ -321,15 +329,6 @@ export class AuthorStoryEditorPageComponent implements OnInit, OnDestroy {
 
 function toggleId(ids: readonly string[], id: string): readonly string[] {
   return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
-}
-
-function validateCover(file: File): string | null {
-  if (file.size > 10 * 1024 * 1024) return 'Ảnh bìa không được vượt quá 10 MB.';
-  const mime = file.type.toLowerCase();
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const mimeValid = !mime || ['image/jpeg', 'image/png', 'image/webp'].includes(mime);
-  const extensionValid = ['jpg', 'jpeg', 'png', 'webp'].includes(extension ?? '');
-  return mimeValid && extensionValid ? null : 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
 }
 
 const CONTRIBUTOR_ROLE_LABELS: Record<AuthorStoryContributorRole, string> = {

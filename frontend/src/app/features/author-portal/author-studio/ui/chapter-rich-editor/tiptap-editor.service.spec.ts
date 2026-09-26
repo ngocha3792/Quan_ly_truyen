@@ -1,3 +1,5 @@
+import { Slice } from '@tiptap/pm/model';
+
 import { TiptapEditorService } from './tiptap-editor.service';
 
 describe('TiptapEditorService', () => {
@@ -117,5 +119,61 @@ describe('TiptapEditorService', () => {
     expect(service.getContent()).toContain('![Ảnh \\[1\\]](https://example.com/a.webp)');
     service.setContent(`${service.getContent()}\n`);
     expect(host.querySelector('img')?.getAttribute('alt')).toBe('Ảnh [1]');
+  });
+
+  describe('dán ảnh vào vùng soạn thảo', () => {
+    function imageFile(type = 'image/png'): File {
+      return new File([new Uint8Array([1, 2, 3])], '', { type });
+    }
+
+    /**
+     * Gọi thẳng `handlePaste` mà tiptap đã đăng ký: jsdom không dựng được
+     * `DataTransfer` nên không dán thật qua DOM được, nhưng đây đúng là hàm
+     * ProseMirror gọi và đúng hình dạng sự kiện nó truyền vào.
+     */
+    function paste(files: readonly File[]): boolean {
+      const event = new Event('paste') as ClipboardEvent;
+      Object.defineProperty(event, 'clipboardData', { value: { files } });
+      const handler = service.editor!.view.props.handlePaste!;
+      return handler(service.editor!.view, event, Slice.empty) ?? false;
+    }
+
+    it('chuyển ảnh dán vào cho nơi gọi và nuốt sự kiện', () => {
+      const onPaste = vi.fn<(files: readonly File[], error: string | null) => void>();
+      service.create(host, 'Nội dung', false, onChange, onPaste);
+
+      // Nuốt sự kiện mới chặn được tiptap nhúng base64 vào nội dung chương.
+      expect(paste([imageFile()])).toBe(true);
+      expect(onPaste).toHaveBeenCalledTimes(1);
+      const [files, error] = onPaste.mock.calls[0];
+      expect(files).toHaveLength(1);
+      expect(files[0].name).toMatch(/^anh-dan-\d{8}-\d{6}\.png$/);
+      expect(error).toBeNull();
+    });
+
+    it('để tiptap tự xử lý khi dán chữ', () => {
+      const onPaste = vi.fn<(files: readonly File[], error: string | null) => void>();
+      service.create(host, 'Nội dung', false, onChange, onPaste);
+
+      expect(paste([])).toBe(false);
+      expect(onPaste).not.toHaveBeenCalled();
+    });
+
+    it('báo lý do khi kiểu ảnh không dán được', () => {
+      const onPaste = vi.fn<(files: readonly File[], error: string | null) => void>();
+      service.create(host, 'Nội dung', false, onChange, onPaste);
+
+      expect(paste([imageFile('image/tiff')])).toBe(true);
+      const [files, error] = onPaste.mock.calls[0];
+      expect(files).toEqual([]);
+      expect(error).toContain('JPG, PNG hay WebP');
+    });
+
+    it('không nuốt sự kiện khi nơi gọi không nhận ảnh dán', () => {
+      service.create(host, 'Nội dung', false, onChange);
+
+      // Không có người nhận thì thà để tiptap xử lý còn hơn nuốt im lặng.
+      expect(paste([imageFile()])).toBe(false);
+    });
   });
 });

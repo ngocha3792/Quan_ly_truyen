@@ -40,6 +40,11 @@ export class ChapterRichEditorComponent {
   readonly content = input('');
   readonly disabled = input(false);
   readonly contentChange = output<string>();
+  /** Ảnh dán thẳng vào vùng soạn thảo; trang cha tải lên rồi chèn vào con trỏ. */
+  readonly imagePasted = output<{
+    readonly files: readonly File[];
+    readonly error: string | null;
+  }>();
   protected readonly editorService = inject(TiptapEditorService);
   protected readonly ready = signal(false);
   protected readonly linkOpen = signal(false);
@@ -65,6 +70,7 @@ export class ChapterRichEditorComponent {
           this.content(),
           this.disabled(),
           (value) => this.contentChange.emit(value),
+          (files, error) => this.imagePasted.emit({ files, error }),
         );
         this.ready.set(true);
       },

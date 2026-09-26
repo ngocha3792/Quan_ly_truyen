@@ -1,8 +1,38 @@
+/**
+ * Luật ảnh tải lên, dùng chung cho trang truyện tranh và ảnh bìa.
+ *
+ * Hai chỗ này từng có hai bản kiểm tra riêng với cùng một bộ luật — sửa một
+ * bên là lệch bên kia.
+ */
+
+const MAX_BYTES = 10 * 1024 * 1024;
+const EXTENSIONS: readonly string[] = ['jpg', 'jpeg', 'png', 'webp'];
+const MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+const FORMAT_MESSAGE = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
+const SIZE_MESSAGE = 'Ảnh không được vượt quá 10 MB.';
+
+/**
+ * Báo riêng "quá nặng" và "sai định dạng": gộp thành một câu là để người dùng
+ * đi sửa sai chỗ — một tấm PNG đúng định dạng nhưng nặng 15 MB thì không có
+ * thông báo nào chỉ đúng vấn đề.
+ */
+function rejectImage(file: File): string | null {
+  if (file.size > MAX_BYTES) return SIZE_MESSAGE;
+
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const mime = file.type.toLowerCase();
+  // Thiếu MIME type thì tin vào đuôi file; một số trình duyệt bỏ trống.
+  const accepted = EXTENSIONS.includes(extension) && (!mime || MIME_TYPES.includes(mime));
+
+  return accepted ? null : FORMAT_MESSAGE;
+}
+
 export function validateChapterImage(file: File): string | null {
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  return file.size > 10 * 1024 * 1024 ||
-    !['jpg', 'jpeg', 'png', 'webp'].includes(extension ?? '') ||
-    (file.type && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
-    ? 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP, tối đa 10 MB.'
-    : null;
+  return rejectImage(file);
+}
+
+export function validateCoverImage(file: File): string | null {
+  const message = rejectImage(file);
+  return message === FORMAT_MESSAGE ? `Ảnh bìa: ${message.toLowerCase()}` : message;
 }

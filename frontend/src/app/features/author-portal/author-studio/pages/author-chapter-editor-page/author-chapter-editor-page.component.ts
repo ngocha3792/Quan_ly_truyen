@@ -26,6 +26,7 @@ import { ChapterLocalRecoveryService } from '../../data-access/chapter-local-rec
 import { ChapterEditingSessionStore } from '../../data-access/chapter-editing-session.store';
 import { ChapterWorkflowStore } from '../../data-access/chapter-workflow.store';
 import { validateChapterImage } from '../../domain/chapter-image-validation';
+import { illustrationAlt } from '../../domain/clipboard-image';
 import { ChapterTranslationWorkspaceComponent } from '../../chapter-translation/pages/chapter-translation-workspace/chapter-translation-workspace.component';
 import { AiAuthorToolsComponent } from '../../ai-tools/pages/ai-author-tools/ai-author-tools.component';
 import { ChapterRichEditorComponent } from '../../ui/chapter-rich-editor/chapter-rich-editor.component';
@@ -113,20 +114,11 @@ export class AuthorChapterEditorPageComponent implements OnInit {
   protected readonly wordCount = computed(
     () => this.session.draft().content.trim().split(/\s+/).filter(Boolean).length,
   );
-  protected readonly statusText = computed(() => {
-    const status = this.session.status();
-    return status === 'saving'
-      ? 'Đang lưu...'
-      : status === 'saved'
-        ? 'Đã lưu'
-        : status === 'conflict'
-          ? 'Có xung đột'
-          : status === 'error'
-            ? 'Chưa lưu được — thử lưu lại'
-            : this.session.dirty()
-              ? 'Có thay đổi chưa lưu'
-              : 'Sẵn sàng';
-  });
+  protected readonly statusText = computed(
+    () =>
+      SAVE_STATUS_TEXT[this.session.status()] ??
+      (this.session.dirty() ? 'Có thay đổi chưa lưu' : 'Sẵn sàng'),
+  );
 
   constructor() {
     effect(() => {
@@ -145,11 +137,9 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       if (id && this.store.story()) void this.workflow.start(this.storyId, id);
     });
     effect(() => {
-      if (
-        (this.workflow.workflow()?.version ?? 0) > (this.session.chapter()?.version ?? 0) &&
-        !this.session.busy()
-      )
-        void this.session.synchronizeServer();
+      const serverAhead =
+        (this.workflow.workflow()?.version ?? 0) > (this.session.chapter()?.version ?? 0);
+      if (serverAhead && !this.session.busy()) void this.session.synchronizeServer();
     });
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -241,11 +231,20 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       .subscribe({ error: (error: unknown) => this.store.setError(error) });
   }
 
-  protected async selectChapterImage(event: Event): Promise<void> {
+  protected selectChapterImage(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     input.value = '';
-    if (!file) return;
+    if (file) void this.insertIllustration(file);
+  }
+
+  /** Ảnh dán thẳng vào vùng soạn thảo: cùng đường tải lên với nút chọn ảnh. */
+  protected pasteIllustration(pasted: { files: readonly File[]; error: string | null }): void {
+    if (pasted.error) this.store.setError(pasted.error);
+    for (const file of pasted.files) void this.insertIllustration(file);
+  }
+
+  private async insertIllustration(file: File): Promise<void> {
     const validationError = validateChapterImage(file);
     if (validationError) {
       this.store.setError(validationError);
@@ -258,16 +257,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
       .uploadImage(id, file)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (media) => {
-          if (!media.deliveryUrl) {
-            this.store.setError('Ảnh đã tải lên nhưng chưa có URL phân phối.');
-            return;
-          }
-          this.richEditor?.insertImage(
-            media.deliveryUrl,
-            file.name.replace(/\.[^.]+$/, '').trim() || 'Ảnh minh họa',
-          );
-        },
+        next: (media) =>
+          media.deliveryUrl
+            ? this.richEditor?.insertImage(media.deliveryUrl, illustrationAlt(file.name))
+            : this.store.setError('Ảnh đã tải lên nhưng chưa có URL phân phối.'),
         error: (error: unknown) => this.store.setError(error),
       });
   }
@@ -295,3 +288,10 @@ export class AuthorChapterEditorPageComponent implements OnInit {
     else this.store.movePage(this.storyId, id, mediaAssetId, action === 'up' ? -1 : 1);
   }
 }
+
+const SAVE_STATUS_TEXT: Readonly<Record<string, string>> = {
+  saving: 'Đang lưu...',
+  saved: 'Đã lưu',
+  conflict: 'Có xung đột',
+  error: 'Chưa lưu được — thử lưu lại',
+};
