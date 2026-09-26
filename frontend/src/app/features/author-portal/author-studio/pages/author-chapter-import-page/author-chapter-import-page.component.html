@@ -3,7 +3,7 @@
     <app-breadcrumb [items]="breadcrumbs()" />
     <app-page-heading
       title="Nhập chương từ file"
-      description="Tách bản thảo thành từng chương theo dòng “Chương 1: Tên chương”."
+      description="Tách bản thảo thành từng chương theo dòng “Chương 1: Tên chương”. File .docx có ảnh chèn sẵn thì ảnh cũng được đưa vào đúng chương."
       icon="chapter"
     >
       <a [routerLink]="['/author-studio/truyen', storyId, 'chuong']" class="back"
@@ -19,6 +19,12 @@
     }
     @if (store.skipped().length) {
       <app-notice kind="info" [message]="'Không tạo được: ' + store.skipped().join(' | ')" />
+    }
+    @if (store.imageProblems().length) {
+      <app-notice
+        kind="error"
+        [message]="'Ảnh không vào được chương: ' + store.imageProblems().join(' | ')"
+      />
     }
 
     <section class="picker">
@@ -55,7 +61,12 @@
       @if (chapters().length) {
         <section class="preview">
           <div class="preview__toolbar">
-            <strong>Tìm thấy {{ chapters().length }} chương</strong>
+            <strong>
+              Tìm thấy {{ chapters().length }} chương
+              @if (store.images().length) {
+                · {{ store.images().length }} ảnh
+              }
+            </strong>
             <app-button
               variant="primary"
               [loading]="store.importing()"
@@ -66,11 +77,21 @@
             </app-button>
           </div>
           @if (store.importing()) {
-            <p class="preview__progress">Đã tạo {{ store.importedCount() }} chương...</p>
+            <p class="preview__progress">
+              Đã tạo {{ store.importedCount() }} chương
+              @if (store.images().length) {
+                · đã tải {{ store.uploadedImageCount() }}/{{ store.images().length }} ảnh
+              }
+              ...
+            </p>
           }
           <p class="preview__note">
             Các chương được thêm vào cuối truyện theo đúng thứ tự trong file. Số ghi trong file chỉ
             để bạn đối chiếu; số chương thật do hệ thống đặt.
+            @if (store.images().length) {
+              Ảnh được tải lên sau khi chương đã tạo, nên bước này lâu hơn một chút. Ảnh nào tải
+              không lên thì chương vẫn được tạo, chỉ thiếu ảnh đó và sẽ có báo rõ.
+            }
           </p>
           <table class="preview__table">
             <thead>
@@ -78,6 +99,7 @@
                 <th scope="col">Số trong file</th>
                 <th scope="col">Tiêu đề</th>
                 <th scope="col">Độ dài</th>
+                <th scope="col">Ảnh</th>
               </tr>
             </thead>
             <tbody>
@@ -90,6 +112,13 @@
                       {{ chapter.wordCount }} từ
                     } @else {
                       <em>chưa có nội dung</em>
+                    }
+                  </td>
+                  <td>
+                    @if (chapter.imageIndexes.length) {
+                      {{ chapter.imageIndexes.length }}
+                    } @else {
+                      <em>—</em>
                     }
                   </td>
                 </tr>

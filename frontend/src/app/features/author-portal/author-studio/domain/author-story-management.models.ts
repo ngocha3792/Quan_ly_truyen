@@ -137,7 +137,17 @@ export interface ImportedChapterDraft {
 }
 
 export interface ChapterImportResult {
-  readonly created: readonly { readonly id: string; readonly number: number }[];
+  /**
+   * Chương đã tạo, theo đúng thứ tự gửi lên (đã lược chương bị bỏ).
+   *
+   * `version` là thứ cần để vá nội dung ngay sau khi tạo — ví dụ chèn URL ảnh
+   * vừa tải lên — vì `updateChapter` bắt buộc có `expectedVersion`.
+   */
+  readonly created: readonly {
+    readonly id: string;
+    readonly number: number;
+    readonly version: number;
+  }[];
   /** Chương không tạo được, kèm vị trí trong danh sách gửi lên. */
   readonly skipped: readonly {
     readonly index: number;

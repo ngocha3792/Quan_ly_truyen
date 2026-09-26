@@ -8,6 +8,8 @@
 const MAX_BYTES = 10 * 1024 * 1024;
 const EXTENSIONS: readonly string[] = ['jpg', 'jpeg', 'png', 'webp'];
 const MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+/** Cùng thứ tự với `MIME_TYPES`. */
+const MIME_EXTENSIONS: readonly string[] = ['jpg', 'png', 'webp'];
 
 const FORMAT_MESSAGE = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.';
 const SIZE_MESSAGE = 'Ảnh không được vượt quá 10 MB.';
@@ -30,6 +32,17 @@ function rejectImage(file: File): string | null {
 
 export function validateChapterImage(file: File): string | null {
   return rejectImage(file);
+}
+
+/**
+ * Đuôi file chuẩn cho một MIME type ảnh, `null` nếu kiểu đó không nhận.
+ *
+ * Ảnh lấy từ clipboard hay từ trong file .docx đều đến dưới dạng bytes trần,
+ * không có tên; phải tự đặt tên đúng đuôi thì mới qua được `validateChapterImage`.
+ */
+export function imageExtensionForMime(mime: string): string | null {
+  const index = MIME_TYPES.indexOf(mime.toLowerCase());
+  return index < 0 ? null : MIME_EXTENSIONS[index];
 }
 
 export function validateCoverImage(file: File): string | null {
