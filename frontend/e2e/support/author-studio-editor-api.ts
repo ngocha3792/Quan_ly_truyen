@@ -205,6 +205,9 @@ export async function mockAuthorEditorApi(
       return ok({
         id: mediaAssetId,
         url: `https://cdn.test.invalid/${mediaAssetId}.webp`,
+        // Ảnh minh họa truyện chữ chèn theo `deliveryUrl`, đúng tên field mà
+        // media-response.dto.ts của máy chủ trả về.
+        deliveryUrl: `https://cdn.test.invalid/${mediaAssetId}.webp`,
         width: 800,
         height: 1200,
       });
