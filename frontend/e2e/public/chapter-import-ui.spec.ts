@@ -300,13 +300,26 @@ test.describe('Nhập chương từ file', () => {
     await page.getByLabel(/Chọn bản thảo/).setInputFiles('e2e/fixtures/ban-thao-co-anh.docx');
 
     /*
-     * Nới riêng mốc chờ đầu tiên. mammoth nằm trong một chunk nạp động, và trên
-     * server vừa khởi động Angular phải biên dịch chunk đó theo yêu cầu — lần
-     * đọc .docx đầu tiên vì thế chậm hơn hẳn mọi lần sau (đo được 6,7s trên máy
-     * rảnh, quá 10s trên runner CI). Đây là chi phí biên dịch một lần, không
-     * phải điều kiện đang được kiểm; các mốc sau giữ mặc định.
+     * Chờ "cái nào đến trước": số chương, hay thông báo lỗi.
+     *
+     * Đọc file hỏng thì trang hiện thông báo lỗi và không bao giờ hiện số
+     * chương, nên nếu chỉ chờ số chương thì thất bại hiện ra dưới dạng hết giờ
+     * mà không nói được vì sao. Cách này đưa luôn câu lỗi vào báo cáo.
+     *
+     * Mốc chờ nới rộng vì mammoth nằm trong chunk nạp động: trên server vừa
+     * khởi động Angular phải biên dịch chunk đó theo yêu cầu, lần đọc .docx đầu
+     * tiên vì thế chậm hơn hẳn mọi lần sau.
      */
-    await expect(page.getByText('Tìm thấy 2 chương')).toBeVisible({ timeout: 60_000 });
+    const readError = page.locator('.notice[data-kind="error"]');
+    await expect
+      .poll(
+        async () => {
+          if (await readError.count()) return `lỗi: ${await readError.first().innerText()}`;
+          return (await page.getByText('Tìm thấy 2 chương').count()) ? 'đã tách xong' : 'đang đọc';
+        },
+        { timeout: 40_000 },
+      )
+      .toBe('đã tách xong');
     await expect(page.getByText('2 ảnh')).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Khởi đầu' })).toBeVisible();
 
