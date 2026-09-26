@@ -299,7 +299,14 @@ test.describe('Nhập chương từ file', () => {
     // File .docx thật, dựng lại được bằng scripts/make-chapter-import-fixture.py.
     await page.getByLabel(/Chọn bản thảo/).setInputFiles('e2e/fixtures/ban-thao-co-anh.docx');
 
-    await expect(page.getByText('Tìm thấy 2 chương')).toBeVisible();
+    /*
+     * Nới riêng mốc chờ đầu tiên. mammoth nằm trong một chunk nạp động, và trên
+     * server vừa khởi động Angular phải biên dịch chunk đó theo yêu cầu — lần
+     * đọc .docx đầu tiên vì thế chậm hơn hẳn mọi lần sau (đo được 6,7s trên máy
+     * rảnh, quá 10s trên runner CI). Đây là chi phí biên dịch một lần, không
+     * phải điều kiện đang được kiểm; các mốc sau giữ mặc định.
+     */
+    await expect(page.getByText('Tìm thấy 2 chương')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText('2 ảnh')).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Khởi đầu' })).toBeVisible();
 
