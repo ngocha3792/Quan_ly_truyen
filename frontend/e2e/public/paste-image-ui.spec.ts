@@ -34,6 +34,18 @@ async function pasteImage(page: Page, options: { fileName?: string; mimeType?: s
   );
 }
 
+/** Dán vào đúng phần tử đang giữ con trỏ, thay vì vào `document`. */
+async function pasteIntoFocused(page: Page) {
+  await page.evaluate(async (dataUrl) => {
+    const blob = await (await fetch(dataUrl)).blob();
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([blob], '', { type: 'image/png' }));
+    (document.activeElement ?? document).dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
+    );
+  }, PNG_DATA_URL);
+}
+
 test.describe('Dán ảnh bằng Ctrl+V', () => {
   test('dán ảnh chụp màn hình vào chương truyện tranh thành một trang mới', async ({
     page,
@@ -156,5 +168,86 @@ test.describe('Dán ảnh bằng Ctrl+V', () => {
 
     await expect(page.locator('.notice[data-kind="error"]')).toContainText('JPG, PNG hay WebP');
     await expect(coverBox).toContainText('Chưa có ảnh bìa');
+  });
+});
+
+test.describe('Dán ảnh vào trình soạn thảo truyện chữ', () => {
+  test('dán khi con trỏ đang ở trong vùng soạn thảo', async ({ page, context }) => {
+    const api = await mockAuthorEditorApi(context, {
+      storyStatus: 'DRAFT',
+      storyFormat: 'NOVEL',
+    });
+
+    await page.goto(EDITOR_URL);
+    const editor = page.locator('[role="textbox"]');
+    await expect(editor).toBeVisible();
+    await editor.click();
+
+    await pasteIntoFocused(page);
+
+    await expect(editor.locator('img[src]')).toHaveCount(1);
+    expect(api.mangaUploads).toHaveLength(1);
+  });
+
+  test('dán khi con trỏ KHÔNG ở trong vùng soạn thảo', async ({ page, context }) => {
+    const api = await mockAuthorEditorApi(context, {
+      storyStatus: 'DRAFT',
+      storyFormat: 'NOVEL',
+    });
+
+    await page.goto(EDITOR_URL);
+    const editor = page.locator('[role="textbox"]');
+    await expect(editor).toBeVisible();
+
+    // Không bấm vào đâu cả: đúng như người dùng chụp màn hình xong bấm Ctrl+V.
+    await pasteImage(page);
+
+    await expect(editor.locator('img[src]')).toHaveCount(1);
+    expect(api.mangaUploads).toHaveLength(1);
+  });
+
+  test('dán chữ vào vùng soạn thảo vẫn chạy như thường', async ({ page, context }) => {
+    const api = await mockAuthorEditorApi(context, {
+      storyStatus: 'DRAFT',
+      storyFormat: 'NOVEL',
+    });
+
+    await page.goto(EDITOR_URL);
+    const editor = page.locator('[role="textbox"]');
+    await expect(editor).toBeVisible();
+    await editor.click();
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.setData('text/plain', 'chu dan vao');
+      (document.activeElement ?? document).dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
+      );
+    });
+
+    // Đây là thứ dễ vỡ nhất của cả tính năng: nuốt sai một lần là người dùng
+    // không dán được chữ vào chương nữa.
+    await expect(editor).toContainText('chu dan vao');
+    expect(api.mangaUploads).toEqual([]);
+  });
+
+  test('con trỏ ở ô tiêu đề thì không chèn ảnh vào nội dung', async ({ page, context }) => {
+    const api = await mockAuthorEditorApi(context, {
+      storyStatus: 'DRAFT',
+      storyFormat: 'NOVEL',
+    });
+
+    await page.goto(EDITOR_URL);
+    const editor = page.locator('[role="textbox"]');
+    await expect(editor).toBeVisible();
+    await page
+      .getByLabel(/tiêu đề/i)
+      .first()
+      .click();
+
+    await pasteIntoFocused(page);
+
+    await expect(editor.locator('img[src]')).toHaveCount(0);
+    expect(api.mangaUploads).toEqual([]);
   });
 });

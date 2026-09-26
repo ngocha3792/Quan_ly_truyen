@@ -5,6 +5,7 @@ import {
   DestroyRef,
   effect,
   ElementRef,
+  HostListener,
   inject,
   input,
   output,
@@ -13,6 +14,7 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 
+import { isTypingTarget, readPastedImages } from '../../domain/clipboard-image';
 import { isSafeEditorUrl } from './chapter-editor.extensions';
 import { TiptapEditorService } from './tiptap-editor.service';
 
@@ -85,6 +87,28 @@ export class ChapterRichEditorComponent {
 
   insertImage(url: string, alt: string): boolean {
     return this.editorService.insertImage(url, alt);
+  }
+
+  /**
+   * Dán ảnh khi con trỏ CHƯA ở trong vùng soạn thảo.
+   *
+   * `editorProps.handlePaste` của tiptap chỉ nhận được sự kiện khi con trỏ đã
+   * nằm trong vùng contenteditable — chụp màn hình xong bấm Ctrl+V ngay thì
+   * chẳng có gì xảy ra, đúng như báo lỗi từ người dùng.
+   *
+   * Hai đường không bao giờ cùng chạy: vùng soạn thảo là contenteditable nên
+   * `isTypingTarget` đúng bằng ranh giới giữa chúng. Con trỏ ở ô tiêu đề thì
+   * cả hai đều tránh, vì lúc đó người dùng đang dán chữ.
+   */
+  @HostListener('document:paste', ['$event'])
+  protected pasteFromPage(event: ClipboardEvent): void {
+    if (this.disabled() || isTypingTarget(event.target)) return;
+
+    const pasted = readPastedImages(Array.from(event.clipboardData?.files ?? []), new Date());
+    if (!pasted.carriedImage) return;
+
+    event.preventDefault();
+    this.imagePasted.emit(pasted);
   }
 
   protected isActive(name: string): boolean {
