@@ -5,6 +5,7 @@ import { MediaModule } from '@/modules/media';
 import {
   CHAPTER_PERSISTENCE_PORT,
   CreateAuthorChapterCommandHandler,
+  ImportAuthorChaptersCommandHandler,
   DeleteAuthorChapterCommandHandler,
   GetAuthorChapterQueryHandler,
   GetAuthorChapterVersionQueryHandler,
@@ -41,6 +42,7 @@ import {
   providers: [
     GetVersionDiffQueryHandler,
     CreateAuthorChapterCommandHandler,
+    ImportAuthorChaptersCommandHandler,
     UpdateAuthorChapterCommandHandler,
     DeleteAuthorChapterCommandHandler,
     ListAuthorChaptersQueryHandler,

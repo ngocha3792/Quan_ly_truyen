@@ -51,6 +51,8 @@ import type {
   FindAuthorChapterVersionInput,
   ListAuthorChapterVersionsInput,
   PublishDueScheduledChaptersInput,
+  ImportAuthorChaptersInput,
+  ImportAuthorChaptersResult,
   PublishAuthorChapterInput,
   PublishManyAuthorChaptersInput,
   PublishManyAuthorChaptersResult,
@@ -535,6 +537,55 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         resource: 'Chương',
       });
     }
+  }
+
+  /**
+   * Tạo lần lượt các chương nhập từ một bản thảo, mỗi chương một giao dịch.
+   *
+   * Không gộp cả lô: một chương hỏng làm cả lô quay lui thì tác giả phải nhập
+   * lại từ đầu. Tách ra thì phần vào được vẫn vào, phần hỏng được kể tên kèm
+   * vị trí trong file.
+   *
+   * Gọi lại chính `createDraft` nên chương nhập vào đi đúng đường như chương
+   * viết tay: cùng cách đánh số nối đuôi, cùng slug, cùng bản ghi phiên bản đầu
+   * tiên, cùng audit log.
+   */
+  async importDrafts(
+    input: ImportAuthorChaptersInput,
+  ): Promise<ImportAuthorChaptersResult> {
+    const created: ChapterRecord[] = [];
+    const skipped: ImportAuthorChaptersResult['skipped'][number][] = [];
+
+    for (const [index, chapter] of input.chapters.entries()) {
+      const result = await this.createDraft({
+        userId: input.userId,
+        storyId: input.storyId,
+        title: chapter.title,
+        content: chapter.content,
+        wordCount: chapter.wordCount,
+        createdAt: input.createdAt,
+        audit: input.audit,
+      });
+
+      if (result.status === 'created') {
+        created.push(result.chapter);
+        continue;
+      }
+
+      skipped.push({
+        index,
+        title: chapter.title,
+        ...describeImportFailure(result.status),
+      });
+
+      /*
+       * Truyện không còn hoặc không phải của người này thì các chương sau cũng
+       * hỏng y hệt. Dừng sớm thay vì lặp lại cùng một lỗi vài chục lần.
+       */
+      if (result.status === 'story_not_found') break;
+    }
+
+    return { created, skipped };
   }
 
   async updateDraft(
@@ -2611,4 +2662,21 @@ function describeChapterChanges(
   if (titleChanged && contentChanged) return 'Chỉnh sửa tiêu đề và nội dung';
   if (titleChanged) return 'Chỉnh sửa tiêu đề';
   return 'Chỉnh sửa nội dung';
+}
+
+/** Lý do một chương nhập vào không tạo được, viết cho tác giả đọc. */
+function describeImportFailure(status: string): {
+  readonly code: string;
+  readonly message: string;
+} {
+  if (status === 'story_not_found')
+    return {
+      code: 'CHAPTER_STORY_NOT_FOUND',
+      message: 'Không tìm thấy truyện này, hoặc bạn không còn quyền sửa nó',
+    };
+
+  return {
+    code: 'CHAPTER_IMPORT_FAILED',
+    message: 'Không tạo được chương này từ bản thảo',
+  };
 }

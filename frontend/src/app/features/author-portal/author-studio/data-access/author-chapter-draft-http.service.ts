@@ -6,6 +6,8 @@ import { ApiSuccessEnvelope } from '../../../../core/http/api-envelope.model';
 import {
   AuthorChapterDraftInput,
   AuthorManagedChapter,
+  ChapterImportResult,
+  ImportedChapterDraft,
 } from '../domain/author-story-management.models';
 import { type CreateRetryState, idempotencyHeaders, reuseCreateKey } from './idempotency-http.util';
 
@@ -55,6 +57,20 @@ export class AuthorChapterDraftHttpService {
       )
       .pipe(map((response) => response.data));
   }
+  /** Nhập một lô chương nháp đã tách sẵn từ bản thảo. */
+  importDrafts(
+    storyId: string,
+    chapters: readonly ImportedChapterDraft[],
+  ): Observable<ChapterImportResult> {
+    return this.http
+      .post<ApiSuccessEnvelope<ChapterImportResult>>(
+        `${this.url(storyId)}/import`,
+        { chapters },
+        { headers: idempotencyHeaders() },
+      )
+      .pipe(map((response) => response.data));
+  }
+
   private url(storyId: string): string {
     return `${this.config.apiBaseUrl}/author/stories/${storyId}/chapters`;
   }

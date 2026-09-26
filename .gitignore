@@ -45,6 +45,8 @@ frontend/dist/
 frontend/node_modules/
 frontend/.angular/
 frontend/.angular/cache/
+# Chạy ng build từ thư mục gốc thì cache rơi ra đây chứ không vào frontend/.
+.angular/
 
 # =============================================================================
 # PRISMA

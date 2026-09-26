@@ -147,6 +147,35 @@ export type CreateAuthorChapterResult =
       readonly beforeNumber: number;
     };
 
+export interface ImportAuthorChaptersInput {
+  readonly userId: string;
+
+  readonly storyId: string;
+
+  /** Đã tách và chuẩn hoá ở tầng application; thứ tự là thứ tự thêm vào đuôi. */
+  readonly chapters: readonly {
+    readonly title: string;
+    readonly content: string;
+    readonly wordCount: number;
+  }[];
+
+  readonly createdAt: Date;
+
+  readonly audit: ChapterAuditContext;
+}
+
+export interface ImportAuthorChaptersResult {
+  readonly created: readonly ChapterRecord[];
+
+  /** Chương không tạo được, kèm vị trí trong danh sách gửi lên. */
+  readonly skipped: readonly {
+    readonly index: number;
+    readonly title: string;
+    readonly code: string;
+    readonly message: string;
+  }[];
+}
+
 export interface UpdateAuthorChapterInput {
   readonly userId: string;
 
@@ -431,6 +460,10 @@ export interface ChapterPersistencePort {
   createDraft(
     input: CreateAuthorChapterInput,
   ): Promise<CreateAuthorChapterResult>;
+
+  importDrafts(
+    input: ImportAuthorChaptersInput,
+  ): Promise<ImportAuthorChaptersResult>;
 
   updateDraft(
     input: UpdateAuthorChapterInput,
