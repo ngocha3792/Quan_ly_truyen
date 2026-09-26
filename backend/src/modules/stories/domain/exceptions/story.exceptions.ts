@@ -80,12 +80,13 @@ export class StoryNotFoundException extends ResourceNotFoundException {
   }
 }
 
-export class StoryDraftOnlyMutationException extends ResourceConflictException {
+export class StoryPendingReviewDeletionException extends ResourceConflictException {
   constructor() {
     super({
-      code: 'STORY_DRAFT_ONLY_MUTATION',
+      code: 'STORY_PENDING_REVIEW_DELETION',
       resource: 'truyện',
-      message: 'Chỉ truyện bản nháp hoặc truyện bị từ chối mới có thể xóa',
+      message:
+        'Truyện đang chờ duyệt thì chưa xóa được; hãy hủy lượt gửi duyệt rồi xóa',
     });
   }
 }

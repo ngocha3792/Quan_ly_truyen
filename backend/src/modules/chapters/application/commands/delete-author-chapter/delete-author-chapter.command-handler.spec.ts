@@ -1,8 +1,8 @@
 import { AuthenticationRequiredException } from '@/common/exceptions';
 
 import {
-  ChapterDraftOnlyMutationException,
   ChapterNotFoundException,
+  ChapterStoryPendingReviewException,
 } from '../../../domain';
 import { DeleteAuthorChapterCommand } from './delete-author-chapter.command';
 import { DeleteAuthorChapterCommandHandler } from './delete-author-chapter.command-handler';
@@ -13,17 +13,26 @@ const CHAPTER_ID = '33333333-3333-4333-8333-333333333333';
 
 describe('DeleteAuthorChapterCommandHandler', () => {
   let persistence: {
-    deleteDraft: jest.Mock;
+    findOwnedById: jest.Mock;
+    deleteOwned: jest.Mock;
   };
+
+  let refunds: { execute: jest.Mock };
 
   let handler: DeleteAuthorChapterCommandHandler;
 
   beforeEach(() => {
     persistence = {
-      deleteDraft: jest.fn(),
+      findOwnedById: jest.fn().mockResolvedValue({ id: CHAPTER_ID }),
+      deleteOwned: jest.fn().mockResolvedValue({ status: 'deleted' }),
     };
 
-    handler = new DeleteAuthorChapterCommandHandler(persistence as never);
+    refunds = { execute: jest.fn().mockResolvedValue({ refunded: 0 }) };
+
+    handler = new DeleteAuthorChapterCommandHandler(
+      persistence as never,
+      refunds as never,
+    );
   });
 
   it('yêu cầu authenticated author UUID hợp lệ', async () => {
@@ -31,12 +40,57 @@ describe('DeleteAuthorChapterCommandHandler', () => {
       handler.execute(createCommand(undefined)),
     ).rejects.toBeInstanceOf(AuthenticationRequiredException);
 
-    expect(persistence.deleteDraft).not.toHaveBeenCalled();
+    expect(persistence.deleteOwned).not.toHaveBeenCalled();
+    expect(refunds.execute).not.toHaveBeenCalled();
   });
 
   it('gửi ownership scope, audit context và thời điểm soft delete', async () => {
-    persistence.deleteDraft.mockResolvedValue({
-      status: 'deleted',
+    await handler.execute(
+      new DeleteAuthorChapterCommand(
+        USER_ID,
+        STORY_ID,
+        CHAPTER_ID,
+        '127.0.0.1',
+        'Jest',
+        'chapter-delete-request',
+      ),
+    );
+
+    expect(persistence.deleteOwned).toHaveBeenCalledWith({
+      userId: USER_ID,
+      storyId: STORY_ID,
+      chapterId: CHAPTER_ID,
+      deletedAt: expect.any(Date) as unknown,
+      audit: {
+        ipAddress: '127.0.0.1',
+        userAgent: 'Jest',
+        requestId: 'chapter-delete-request',
+      },
+    });
+  });
+
+  it('xóa được chapter đã xuất bản', async () => {
+    persistence.findOwnedById.mockResolvedValue({
+      id: CHAPTER_ID,
+      status: 'PUBLISHED',
+    });
+
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).resolves.toBeUndefined();
+
+    expect(persistence.deleteOwned).toHaveBeenCalled();
+  });
+
+  it('hoàn tiền mọi lượt mua của chương trước khi xóa', async () => {
+    const order: string[] = [];
+    refunds.execute.mockImplementation(() => {
+      order.push('refund');
+      return Promise.resolve({ refunded: 2 });
+    });
+    persistence.deleteOwned.mockImplementation(() => {
+      order.push('delete');
+      return Promise.resolve({ status: 'deleted' });
     });
 
     await handler.execute(
@@ -50,31 +104,42 @@ describe('DeleteAuthorChapterCommandHandler', () => {
       ),
     );
 
-    expect(persistence.deleteDraft).toHaveBeenCalledWith({
-      userId: USER_ID,
-      storyId: STORY_ID,
-      chapterId: CHAPTER_ID,
-      deletedAt: expect.any(Date) as unknown,
-      audit: {
+    expect(order).toEqual(['refund', 'delete']);
+    expect(refunds.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: USER_ID,
+        scope: { chapterId: CHAPTER_ID },
+        reason: expect.stringContaining('xoá') as unknown,
         ipAddress: '127.0.0.1',
         userAgent: 'Jest',
         requestId: 'chapter-delete-request',
-      },
-    });
+      }),
+    );
   });
 
-  it('không cho xóa chapter không còn là draft', async () => {
-    persistence.deleteDraft.mockResolvedValue({
-      status: 'not_draft',
+  it('không chạm tới tiền khi chapter không thuộc author', async () => {
+    persistence.findOwnedById.mockResolvedValue(null);
+
+    await expect(
+      handler.execute(createCommand(USER_ID)),
+    ).rejects.toBeInstanceOf(ChapterNotFoundException);
+
+    expect(refunds.execute).not.toHaveBeenCalled();
+    expect(persistence.deleteOwned).not.toHaveBeenCalled();
+  });
+
+  it('giữ nguyên cổng chặn truyện đang chờ duyệt', async () => {
+    persistence.deleteOwned.mockResolvedValue({
+      status: 'story_pending_review',
     });
 
     await expect(
       handler.execute(createCommand(USER_ID)),
-    ).rejects.toBeInstanceOf(ChapterDraftOnlyMutationException);
+    ).rejects.toBeInstanceOf(ChapterStoryPendingReviewException);
   });
 
   it('ẩn chapter không tồn tại, story sai hoặc không thuộc author bằng not found', async () => {
-    persistence.deleteDraft.mockResolvedValue({
+    persistence.deleteOwned.mockResolvedValue({
       status: 'not_found',
     });
 

@@ -907,7 +907,17 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
     }
   }
 
-  async deleteDraft(
+  /**
+   * Xoá mềm một chương ở bất kỳ trạng thái nào.
+   *
+   * Cổng `DRAFT` đã bỏ: tác giả được rút cả chương đã xuất bản. Nhưng cổng
+   * truyện đang chờ duyệt thì giữ — xoá giữa lượt duyệt là rút nội dung ngay
+   * dưới tay người đang đọc để duyệt, khác hẳn việc sửa (sửa còn tăng version
+   * nên quyết định cũ tự hết hiệu lực).
+   *
+   * Hàm này không đụng tới tiền. Ai gọi phải hoàn hết lượt mua trước.
+   */
+  async deleteOwned(
     input: DeleteAuthorChapterInput,
   ): Promise<DeleteAuthorChapterResult> {
     try {
@@ -957,12 +967,6 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
           };
         }
 
-        if (current.status !== ChapterStatus.DRAFT) {
-          return {
-            status: 'not_draft',
-          };
-        }
-
         await tx.chapter.update({
           where: {
             id: current.id,
@@ -977,7 +981,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
         await tx.auditLog.create({
           data: {
             actorId: input.userId,
-            action: 'chapter.draft.deleted',
+            action: 'chapter.deleted',
             entityType: 'chapter',
             entityId: current.id,
             oldValues: {
@@ -1005,7 +1009,7 @@ export class PrismaChapterPersistence implements ChapterPersistencePort {
       });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
-        operation: 'chapter-draft-delete',
+        operation: 'chapter-delete',
         resource: 'Chương',
       });
     }

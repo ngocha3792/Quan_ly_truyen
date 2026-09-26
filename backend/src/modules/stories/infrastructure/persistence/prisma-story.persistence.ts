@@ -636,7 +636,16 @@ export class PrismaStoryPersistence
     throw new Error('Unreachable story slug retry state');
   }
 
-  async deleteDraft(
+  /**
+   * Xoá mềm một truyện ở bất kỳ trạng thái nào, kéo theo mọi chương của nó.
+   *
+   * Cổng `DRAFT`/`REJECTED` đã bỏ: tác giả được rút cả truyện đã xuất bản.
+   * Nhưng truyện đang chờ duyệt thì vẫn chặn — xoá giữa lượt duyệt là rút nội
+   * dung ngay dưới tay người đang đọc để duyệt.
+   *
+   * Hàm này không đụng tới tiền. Ai gọi phải hoàn hết lượt mua trước.
+   */
+  async deleteOwned(
     input: DeleteAuthorStoryInput,
   ): Promise<DeleteAuthorStoryResult> {
     try {
@@ -664,13 +673,9 @@ export class PrismaStoryPersistence
           };
         }
 
-        if (
-          !(
-            [StoryStatus.DRAFT, StoryStatus.REJECTED] as StoryStatus[]
-          ).includes(current.status)
-        ) {
+        if (current.status === StoryStatus.PENDING_REVIEW) {
           return {
-            status: 'not_draft',
+            status: 'story_pending_review',
           };
         }
 
@@ -717,7 +722,7 @@ export class PrismaStoryPersistence
         await tx.auditLog.create({
           data: {
             actorId: input.userId,
-            action: 'story.draft.deleted',
+            action: 'story.deleted',
             entityType: 'story',
             entityId: current.id,
             oldValues: {
@@ -746,7 +751,7 @@ export class PrismaStoryPersistence
       });
     } catch (error: unknown) {
       throw mapPrismaError(error, {
-        operation: 'story-draft-delete',
+        operation: 'story-delete',
         resource: 'Truyện',
       });
     }

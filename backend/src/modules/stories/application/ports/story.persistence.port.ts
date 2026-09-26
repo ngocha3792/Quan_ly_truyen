@@ -205,7 +205,7 @@ export type DeleteAuthorStoryResult =
       readonly status: 'not_found';
     }
   | {
-      readonly status: 'not_draft';
+      readonly status: 'story_pending_review';
     };
 
 export interface StorySubmissionRecord {
@@ -334,7 +334,13 @@ export interface StoryPersistencePort {
 
   updateDraft(input: UpdateAuthorStoryInput): Promise<UpdateAuthorStoryResult>;
 
-  deleteDraft(input: DeleteAuthorStoryInput): Promise<DeleteAuthorStoryResult>;
+  /**
+   * Xoá mềm một truyện ở bất kỳ trạng thái nào, kể cả đã xuất bản, kéo theo
+   * mọi chương của nó.
+   *
+   * Không tự hoàn tiền: nơi gọi phải hoàn xong mọi lượt mua chương trước.
+   */
+  deleteOwned(input: DeleteAuthorStoryInput): Promise<DeleteAuthorStoryResult>;
 
   submitForReview(
     input: SubmitAuthorStoryInput,

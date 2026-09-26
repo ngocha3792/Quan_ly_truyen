@@ -153,6 +153,23 @@ export interface RefundChapterPurchaseInput {
   readonly requestId?: string;
 }
 
+/** Một giao dịch mua còn hoàn được, đủ để gọi `refundChapterPurchase`. */
+export interface RefundableChapterPurchaseRecord {
+  readonly id: string;
+
+  readonly chapterId: string;
+}
+
+export interface ListRefundableChapterPurchasesInput {
+  /** Gói theo chương, hoặc theo cả truyện khi xoá truyện. */
+  readonly chapterId?: string;
+
+  readonly storyId?: string;
+
+  /** Lấy dư một bản ghi so với trần để biết còn sót hay không. */
+  readonly limit: number;
+}
+
 export interface AdminPurchaseExplorerInput {
   readonly page: number;
   readonly pageSize: number;
@@ -189,6 +206,10 @@ export interface MonetizationPersistencePort {
   listAdminPurchases(
     input: AdminPurchaseExplorerInput,
   ): Promise<AdminChapterPurchasePageRecord>;
+  listRefundableChapterPurchases(
+    input: ListRefundableChapterPurchasesInput,
+  ): Promise<readonly RefundableChapterPurchaseRecord[]>;
+
   refundChapterPurchase(
     input: RefundChapterPurchaseInput,
   ): Promise<RefundChapterPurchaseRecord>;
