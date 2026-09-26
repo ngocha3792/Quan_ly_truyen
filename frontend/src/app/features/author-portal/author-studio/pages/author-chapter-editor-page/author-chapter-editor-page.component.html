@@ -125,6 +125,7 @@
               [content]="session.draft().content"
               [disabled]="!isEditable() || session.restoring() || workflow.busy()"
               (contentChange)="contentChanged($event)"
+              (imagePasted)="pasteIllustration($event)"
             />
             @if (isCreate()) {
               <small>Cần nhập tiêu đề chương trước khi chèn ảnh.</small>

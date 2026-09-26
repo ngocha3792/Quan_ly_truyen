@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
 import { AuthorChapterMediaPage } from '../../domain/author-story-management.models';
 import { validateChapterImage } from '../../domain/chapter-image-validation';
+import { isTypingTarget, readPastedImages } from '../../domain/clipboard-image';
 
 @Component({
   selector: 'app-manga-page-uploader',
@@ -93,6 +101,30 @@ export class MangaPageUploaderComponent {
     this.dropTargetId.set(null);
   }
 
+  /* Dán ảnh từ clipboard ------------------------------------------------ */
+
+  /**
+   * Nghe ở mức `document` để chụp màn hình xong bấm Ctrl+V là xong, không phải
+   * bấm chuột vào khung ảnh trước. Đổi lại, nó phải tự tránh mọi chỗ người dùng
+   * đang gõ chữ, nếu không thao tác dán chữ bình thường sẽ bị nuốt.
+   */
+  @HostListener('document:paste', ['$event'])
+  protected pasteFiles(event: ClipboardEvent): void {
+    if (this.disabled() || this.uploading() || isTypingTarget(event.target)) {
+      return;
+    }
+
+    const pasted = readPastedImages(Array.from(event.clipboardData?.files ?? []), new Date());
+
+    // Clipboard không có ảnh thì để yên cho trình duyệt dán như thường.
+    if (!pasted.carriedImage) {
+      return;
+    }
+
+    event.preventDefault();
+    this.acceptFiles(pasted.files, pasted.error);
+  }
+
   /* Kéo file từ ngoài vào để tải lên ------------------------------------ */
 
   private carriesFiles(event: DragEvent): boolean {
@@ -123,11 +155,16 @@ export class MangaPageUploaderComponent {
     this.acceptFiles(Array.from(event.dataTransfer?.files ?? []));
   }
 
-  private acceptFiles(files: readonly File[]): void {
-    if (files.length === 0) return;
+  /**
+   * @param initialError Lỗi phát hiện trước khi tới đây — ảnh dán vào sai kiểu
+   *   chẳng hạn. Truyền vào chứ không đọc lại signal, vì đọc lại thì lỗi cũ sẽ
+   *   dính mãi không xoá được.
+   */
+  private acceptFiles(files: readonly File[], initialError: string | null = null): void {
+    if (files.length === 0 && !initialError) return;
 
     const validFiles: File[] = [];
-    let message: string | null = null;
+    let message = initialError;
 
     for (const file of files) {
       const error = validateChapterImage(file);

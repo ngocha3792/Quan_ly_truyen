@@ -25,6 +25,8 @@ export async function mockAuthorEditorApi(
     storyStatus?: string;
     chapterStatus?: string;
     storyFormat?: string;
+    /** Quyền cộng thêm cho các trang ngoài trình soạn chương. */
+    extraPermissions?: readonly string[];
     /** Độ trễ giả của lần tải ảnh thứ n, tính bằng ms. */
     uploadDelaysMs?: readonly number[];
   } = {},
@@ -99,6 +101,7 @@ export async function mockAuthorEditorApi(
           'chapter.update.own',
           'chapter.create',
           ...(options.reviewer ? ['chapter.manage.any'] : []),
+          ...(options.extraPermissions ?? []),
         ],
         sessionId: 'editor-test',
         bio: null,
