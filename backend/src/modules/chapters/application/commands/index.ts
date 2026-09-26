@@ -1,3 +1,4 @@
+export * from './import-author-chapters';
 export * from './create-author-chapter';
 export * from './update-author-chapter';
 export * from './restore-author-chapter-version';

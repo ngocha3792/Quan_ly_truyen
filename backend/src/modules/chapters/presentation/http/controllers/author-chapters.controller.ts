@@ -32,6 +32,8 @@ import { GetVersionDiffQueryHandler } from '../../../application/queries/get-ver
 import {
   CreateAuthorChapterCommand,
   CreateAuthorChapterCommandHandler,
+  ImportAuthorChaptersCommand,
+  ImportAuthorChaptersCommandHandler,
   DeleteAuthorChapterCommand,
   DeleteAuthorChapterCommandHandler,
   GetAuthorChapterQuery,
@@ -62,6 +64,7 @@ import {
 import {
   AttachChapterMediaRequest,
   CreateAuthorChapterRequest,
+  ImportAuthorChaptersRequest,
   ListAuthorChapterVersionsRequest,
   ReorderChapterMediaRequest,
   ScheduleAuthorChapterRequest,
@@ -85,6 +88,7 @@ export class AuthorChaptersController {
   constructor(
     private readonly versionDiff: GetVersionDiffQueryHandler,
     private readonly createChapter: CreateAuthorChapterCommandHandler,
+    private readonly importChapters: ImportAuthorChaptersCommandHandler,
     private readonly updateChapter: UpdateAuthorChapterCommandHandler,
     private readonly deleteChapter: DeleteAuthorChapterCommandHandler,
     private readonly listChapters: ListAuthorChaptersQueryHandler,
@@ -238,6 +242,36 @@ export class AuthorChaptersController {
     );
 
     return toChapterResponse(result);
+  }
+
+  /**
+   * Nhập nhiều chương nháp từ một bản thảo đã tách sẵn ở trình duyệt.
+   *
+   * Chỉ có một đoạn đường dẫn nên không đụng route `:chapterId/...`.
+   */
+  @Post('import')
+  @UseGuards(ActiveAuthorGuard)
+  @HttpCode(HttpStatus.OK)
+  @Idempotent({ required: true, ttlSeconds: 86_400 })
+  @RequirePermissions(PermissionCode.CHAPTER_CREATE)
+  async import(
+    @CurrentUserId() userId: string | undefined,
+    @Param('storyId', new ParseUUIDPipe({ version: '4' })) storyId: string,
+    @Body() request: ImportAuthorChaptersRequest,
+    @ClientIp() ipAddress: string | undefined,
+    @UserAgent() userAgent: string | undefined,
+    @RequestId() requestId: string | undefined,
+  ) {
+    return this.importChapters.execute(
+      new ImportAuthorChaptersCommand(
+        userId,
+        storyId,
+        request.chapters,
+        ipAddress,
+        userAgent,
+        requestId,
+      ),
+    );
   }
 
   @Post(':chapterId/publish')
