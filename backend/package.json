@@ -192,7 +192,7 @@
     "diff": "9.0.0",
     "dotenv": "^17.4.2",
     "helmet": "^8.3.0",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^9.1.1",
     "passport": "^0.7.0",
